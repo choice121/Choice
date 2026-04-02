@@ -1,0 +1,17 @@
+{
+  "name": "choice-properties",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static site deployed via Cloudflare Pages. Backend = Supabase cloud. Served locally on Replit via Express.",
+  "scripts": {
+    "build": "node generate-config.js",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.22.1"
+  }
+}
