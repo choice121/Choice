@@ -472,6 +472,33 @@
   animation: landlordSpin 0.7s linear infinite;
 }
 
+/* ── BUTTON LOADING STATE ────────────────────────────────── */
+button:disabled, .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+button.loading, .btn.loading {
+  color: transparent;
+  pointer-events: none;
+  position: relative;
+}
+
+button.loading::after, .btn.loading::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: landlordSpin 0.7s linear infinite;
+}
+
 /* ── SKELETON SHIMMER (I-010) ─────────────────────────────── */
 @keyframes cp-shimmer {
   0%   { background-position: -400px 0; }

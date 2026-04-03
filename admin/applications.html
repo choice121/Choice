@@ -333,9 +333,12 @@ function openStatusModal(appId, currentStatus) {
 }
 
 async function submitStatus() {
+  const btn = document.querySelector('#status-modal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
   const status = document.getElementById('m-status').value;
   const notes  = document.getElementById('m-status-notes').value;
   const res = await CP.Applications.updateStatus(currentAppId, status, notes);
+  if (btn) { btn.disabled = false; btn.textContent = 'Update Status'; }
   if (res.ok) { closeModal('status-modal'); CP.UI.toast('Status updated', 'success'); await loadApps(); }
   else CP.UI.toast('Error: ' + res.error, 'error');
 }
@@ -392,7 +395,10 @@ function openMsgModal(appId) { currentAppId = appId; document.getElementById('m-
 async function submitMessage() {
   const msg = document.getElementById('m-msg').value.trim();
   if (!msg) return;
+  const btn = document.querySelector('#msg-modal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   const res = await CP.Applications.sendMessage(currentAppId, msg, 'admin', 'Choice Properties');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send Message'; }
   if (res.ok) { closeModal('msg-modal'); CP.UI.toast('Message sent to tenant.', 'success'); }
   else CP.UI.toast('Error: ' + res.error, 'error');
 }

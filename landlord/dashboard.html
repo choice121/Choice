@@ -339,21 +339,21 @@
                 <i class="fas fa-edit"></i> Edit
               </a>
               ${l.status === 'active' ? `
-                <button class="btn btn-sm btn-ghost" onclick="pauseListing('${l.id}')">
+                <button class="btn btn-sm btn-ghost" onclick="pauseListing(event, '${l.id}')">
                   <i class="fas fa-pause"></i> Pause
                 </button>
-                <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented('${l.id}')">
+                <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented(event, '${l.id}')">
                   <i class="fas fa-check"></i> Rented
                 </button>` :
               l.status === 'paused' ? `
-                <button class="btn btn-sm btn-ghost" onclick="reactivateListing('${l.id}')">
+                <button class="btn btn-sm btn-ghost" onclick="reactivateListing(event, '${l.id}')">
                   <i class="fas fa-play"></i> Activate
                 </button>
-                <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented('${l.id}')">
+                <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented(event, '${l.id}')">
                   <i class="fas fa-check"></i> Rented
                 </button>` :
               l.status === 'rented' ? `
-                <button class="btn btn-sm btn-ghost" onclick="reactivateListing('${l.id}')">
+                <button class="btn btn-sm btn-ghost" onclick="reactivateListing(event, '${l.id}')">
                   <i class="fas fa-redo"></i> Re-list
                 </button>` :
               l.status === 'draft' ?
@@ -437,14 +437,14 @@
           let statusBtns = '';
           if (newStatus === 'active') {
             statusBtns = `
-              <button class="btn btn-sm btn-ghost" onclick="pauseListing('${id}')"><i class="fas fa-pause"></i> Pause</button>
-              <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented('${id}')"><i class="fas fa-check"></i> Rented</button>`;
+              <button class="btn btn-sm btn-ghost" onclick="pauseListing(event, '${id}')"><i class="fas fa-pause"></i> Pause</button>
+              <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented(event, '${id}')"><i class="fas fa-check"></i> Rented</button>`;
           } else if (newStatus === 'paused') {
             statusBtns = `
-              <button class="btn btn-sm btn-ghost" onclick="reactivateListing('${id}')"><i class="fas fa-play"></i> Activate</button>
-              <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented('${id}')"><i class="fas fa-check"></i> Rented</button>`;
+              <button class="btn btn-sm btn-ghost" onclick="reactivateListing(event, '${id}')"><i class="fas fa-play"></i> Activate</button>
+              <button class="btn btn-sm" style="background:#e8f8f0;color:#1a7a52;border:1px solid #a7f3d0" onclick="markRented(event, '${id}')"><i class="fas fa-check"></i> Rented</button>`;
           } else if (newStatus === 'rented') {
-            statusBtns = `<button class="btn btn-sm btn-ghost" onclick="reactivateListing('${id}')"><i class="fas fa-redo"></i> Re-list</button>`;
+            statusBtns = `<button class="btn btn-sm btn-ghost" onclick="reactivateListing(event, '${id}')"><i class="fas fa-redo"></i> Re-list</button>`;
           }
           wrap.innerHTML = viewBtn + editBtn + statusBtns;
         }
@@ -452,25 +452,34 @@
     });
   }
 
-  window.pauseListing = async (id) => {
+  window.pauseListing = async (event, id) => {
     if (!await CP.UI.cpConfirm('Pause this listing? It will be hidden from search results until you reactivate it.', { confirmLabel: 'Pause Listing' })) return;
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
     const { error } = await supabase.from('properties').update({ status: 'paused' }).eq('id', id).eq('landlord_id', profile.id);
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     if (error) return CP.UI.toast('Failed to pause listing.', 'error');
     CP.UI.toast('Listing paused.', 'success');
     updateListingRow(id, 'paused');
   };
 
-  window.reactivateListing = async (id) => {
+  window.reactivateListing = async (event, id) => {
     if (!await CP.UI.cpConfirm('Make this listing active and visible to renters?', { confirmLabel: 'Activate Listing' })) return;
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
     const { error } = await supabase.from('properties').update({ status: 'active' }).eq('id', id).eq('landlord_id', profile.id);
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     if (error) return CP.UI.toast('Failed to reactivate listing.', 'error');
     CP.UI.toast('Listing is now active!', 'success');
     updateListingRow(id, 'active');
   };
 
-  window.markRented = async (id) => {
+  window.markRented = async (event, id) => {
     if (!await CP.UI.cpConfirm('Mark this property as Rented? It will be removed from public search.', { confirmLabel: 'Mark Rented' })) return;
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
     const { error } = await supabase.from('properties').update({ status: 'rented' }).eq('id', id).eq('landlord_id', profile.id);
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     if (error) return CP.UI.toast('Failed to update status.', 'error');
     CP.UI.toast('Marked as Rented. Congratulations!', 'success');
     updateListingRow(id, 'rented');
