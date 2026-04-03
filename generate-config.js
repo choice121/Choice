@@ -266,38 +266,10 @@ htmlFiles.forEach(function(file) {
   }
 });
 console.log('✅ Cache-bust token replaced in HTML files (BUILD_VERSION: ' + BUILD_VERSION + ')');
-
-const crypto = require('crypto');
-const nonce = crypto.randomBytes(16).toString('base64');
-
-let nonceInjected = 0;
-htmlFiles.forEach(function(file) {
-  const src = fs.readFileSync(file, 'utf8');
-  // Add nonce to bare <script> and <script type="module"> — but NOT to external src= scripts
-  // (those don't need nonces; only inline scripts do)
-  const updated = src
-    .replace(/<script>([\s\S])/g, '<script nonce="' + nonce + '">$1')
-    .replace(/<script type="module">([\s\S])/g, '<script type="module" nonce="' + nonce + '">$1');
-  if (updated !== src) {
-    fs.writeFileSync(file, updated);
-    nonceInjected++;
-  }
-});
-console.log('✅ CSP nonce injected into ' + nonceInjected + ' HTML files (nonce length: ' + nonce.length + ' chars)');
-
-// Rewrite _headers — replace 'unsafe-inline' in script-src with nonce
-if (fs.existsSync('_headers')) {
-  const headers = fs.readFileSync('_headers', 'utf8');
-  // Replace unsafe-inline in script-src only (style-src keeps it for inline style="" attributes)
-  const updatedHeaders = headers.replace(
-    /(script-src[^;]*)'unsafe-inline'/,
-    "$1'nonce-" + nonce + "'"
-  );
-  if (updatedHeaders !== headers) {
-    fs.writeFileSync('_headers', updatedHeaders);
-    console.log('✅ _headers CSP updated — script-src unsafe-inline replaced with nonce');
-  }
-}
+// NOTE: Nonce-based CSP injection was removed. _headers uses 'unsafe-inline' for script-src
+// because the onload="this.rel='stylesheet'" CSS preload pattern requires it, and nonces
+// were causing CSP mismatches on every Cloudflare deploy (nonce in _headers changed each
+// build but HTML nonces stayed baked-in from a previous committed build output).
 
 })().catch(function(err) {
   console.error('Build script error:', err);

@@ -41,7 +41,7 @@
 <thead><tr><th>App ID</th><th>Tenant</th><th>Property</th><th>Lease Status</th><th>Rent/mo</th><th>Deposit</th><th>Move-In Total</th><th>Sent</th><th>Signed</th><th>Expires</th><th>Actions</th></tr></thead>
 <tbody id="tbody"></tbody></table></div></div></div></div>
 <script type="module" src="/js/cp-api.js"></script>
-<script nonce="Lchkcpgq7g1Z6hLi5iJlyg==">
+<script>
 let all=[];
 document.addEventListener('DOMContentLoaded', async()=>{
   const ok = await CP.Auth.requireAdmin();
@@ -119,7 +119,7 @@ function applyFilter(){
   </tr>`).join('');
 }
 </script>
-<script nonce="Lchkcpgq7g1Z6hLi5iJlyg==">
+<script>
 // Mobile sidebar toggle
 (function(){
   var btn = document.getElementById('menuBtn');

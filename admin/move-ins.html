@@ -45,7 +45,7 @@
 <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submit()">Confirm Move-In</button></div>
 </div></div>
 <script type="module" src="/js/cp-api.js"></script>
-<script nonce="Lchkcpgq7g1Z6hLi5iJlyg==">
+<script>
 let cur=null;
 document.addEventListener('DOMContentLoaded', async()=>{
   const ok = await CP.Auth.requireAdmin();
@@ -84,7 +84,7 @@ async function submit(){
   else CP.UI.toast('Error: '+res.error,'error');
 }
 </script>
-<script nonce="Lchkcpgq7g1Z6hLi5iJlyg==">
+<script>
 // Mobile sidebar toggle
 (function(){
   var btn = document.getElementById('menuBtn');
