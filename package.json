@@ -2,16 +2,15 @@
   "name": "choice-properties",
   "version": "1.0.0",
   "private": true,
-  "description": "Static site deployed via Cloudflare Pages. Backend = Supabase cloud. Served locally on Replit via Express.",
+  "description": "Static site for Cloudflare Pages. Backend is Supabase (cloud). Replit is used for CODE EDITING ONLY — nothing runs here.",
   "scripts": {
     "build": "node generate-config.js",
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "echo 'ERROR: This is a static site. There is no local server. Deploy via Cloudflare Pages.' && exit 1",
+    "dev": "echo 'ERROR: This is a static site. There is no local server. Deploy via Cloudflare Pages.' && exit 1",
+    "preinstall": "echo 'WARNING: No npm install needed. This is a static site edited in Replit and deployed to Cloudflare Pages.'"
   },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {
-    "express": "^4.22.1"
-  }
+  "nota_bene": "express was a legacy dependency and is no longer used. Do not install or run anything here."
 }

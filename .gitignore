@@ -1,51 +1,47 @@
 # ============================================================
-# CHOICE PROPERTIES — CRITICAL GITIGNORE
-# This protects the project from:
-#   ❌ Leaking secrets to GitHub
-#   ❌ Committing auto-generated files
-#   ❌ Polluting repo with environment-specific files
-#   ❌ Breaking deployment pipeline
+# CHOICE PROPERTIES — GITIGNORE
 # ============================================================
 
-# CRITICAL: config.js is generated at Cloudflare/Replit build time ONLY
-# ⚠️  Never commit this file — it leaks credentials and breaks deployment
+# CRITICAL: config.js is generated at Cloudflare Pages build time ONLY.
+# Never commit — it would leak credentials and break the deployment pipeline.
 config.js
 config.*.js
 
-# CRITICAL: Secrets belong in Supabase and Cloudflare, NOT in this repository
-# ⚠️  DO NOT commit .env files (they contain API keys, private keys, etc.)
+# CRITICAL: Never commit .env files — secrets belong in Supabase and Cloudflare dashboards.
 .env
 .env.*
 *.env
 .env.local
 .env.*.local
 
-# CRITICAL: Dependencies — this project has ZERO runtime npm packages
-# ⚠️  If npm install was run, node_modules/ should NEVER be committed
+# Node modules — never commit generated/installed files
 node_modules/
 package-lock.json.bak
 
-# Replit-specific auto-generated files
-# ⚠️  Never commit Replit environment-specific data
-.replit
+# ============================================================
+# REPLIT ENVIRONMENT FILES
+#
+# .replit and replit.nix ARE committed so their protections
+# (run = "", editor-only config) travel with the repo to every
+# new Replit account that imports from GitHub.
+#
+# .agents/instructions.md IS committed so the mandatory agent
+# rules travel with the repo and apply in every new Replit account.
+#
+# Only auto-generated Replit runtime/cache files are ignored.
+# ============================================================
 .replit-guard.js
-replit.nix
 .replit-cache/
 .replit-backup/
 .upm/
 replit_zip_error_log.txt
-.agents/
-
-# Local development files (Replit environment)
-# ⚠️  These are machine-specific and auto-generated
 .cache/
 .local/
 .config/
 .npm/
 .nvm/
 
-# Database files (NOT APPLICABLE — DB is Supabase, not local)
-# Just in case: prevent commits of local SQL/database files
+# Database files (not applicable — DB is Supabase cloud-hosted)
 *.db
 *.sqlite
 *.sqlite3
@@ -61,45 +57,20 @@ Thumbs.db
 *.tmp
 .idea/
 .vscode/settings.json
-.VS/
-.visualstudiocode
 launch.json
 
-# Uploaded assets (user-uploaded files from testing)
+# Uploaded / temporary assets
 attached_assets/
 uploads/
 downloads/
 temp/
 tmp/
 
-# Build artifacts (if anyone tries to build locally)
+# Build artifacts
 dist/
 build/
 out/
 
-# Log files (development/testing)
+# Logs
 *.log
 logs/
-.log
-
-# IDE temporary files
-.project
-.pydevproject
-.c9/
-
-# ============================================================
-# WHY THESE RULES MATTER:
-#
-# config.js: Generated at deploy time with secrets injected.
-#           Committing it breaks everything.
-#
-# .env: Contains API keys, private keys. NEVER goes to GitHub.
-#       Supabase secrets and Cloudflare environment vars instead.
-#
-# node_modules/: Auto-installed from package.json.
-#               Never commit generated files.
-#
-# .replit*: Replit environment-specific. Doesn't belong in git.
-#
-# Result: This project can be safely imported anywhere! 🏰
-# ============================================================
