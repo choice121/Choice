@@ -204,7 +204,7 @@
 </section>
 
 <!-- ── Trust Strip ── -->
-<div class="trust-strip">
+<div class="trust-strip" id="trust-section">
   <div class="trust-strip-inner">
     <div class="trust-strip-item"><i class="fas fa-shield-alt"></i> Verified Listings</div>
     <div class="trust-strip-item"><i class="fas fa-clock"></i> 15-Min Application</div>
@@ -311,7 +311,7 @@
 </section>
 
 <!-- ── Why Choose Us ── -->
-<section class="why-section">
+<section class="why-section" id="why-section">
   <div class="why-bg"></div>
   <div class="container">
     <div style="text-align:center">
@@ -365,6 +365,7 @@ document.addEventListener('error', function(e) {
 
 (async () => {
   setupScrollTop();
+  setupSmoothScrollSections();
 
   // Load featured listings + hero stat count in parallel
   const statEl = document.getElementById('statListings');
@@ -590,6 +591,50 @@ function setupScrollTop() {
   const btn = document.getElementById('scrollTopBtn');
   window.addEventListener('scroll', () => btn.classList.toggle('visible', window.scrollY > 400), { passive: true });
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+// ── Smooth Scroll Section Highlighting ────────────────────
+function setupSmoothScrollSections() {
+  const sections = document.querySelectorAll('[id$="-section"], [id="how-it-works"]');
+  const navLinks = document.querySelectorAll('[data-scroll-to]');
+  
+  if (!sections.length) return;
+  
+  // Handle click events on scroll links
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const targetId = link.getAttribute('data-scroll-to');
+      const target = document.getElementById(targetId);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+  
+  // Use Intersection Observer to highlight active section
+  const observerOptions = {
+    root: null,
+    rootMargin: '-30% 0px -70% 0px', // Trigger when section is 30% from top
+    threshold: 0
+  };
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Remove active class from all nav links
+        navLinks.forEach(link => link.classList.remove('active'));
+        
+        // Add active class to matching link
+        const sectionId = entry.target.id;
+        const activeLink = document.querySelector(`[data-scroll-to="${sectionId}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      }
+    });
+  }, observerOptions);
+  
+  // Observe all sections
+  sections.forEach(section => observer.observe(section));
 }
 </script>
 </body>
