@@ -2121,3 +2121,39 @@ label.field-label { display: block; font-size: 11px; font-weight: 700; color: va
   .hiw-section { padding: var(--space-12) 0 var(--space-10); }
   .hiw-cta { flex-direction: column; gap: var(--space-3); }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   IMAGE LAZY-LOADING & BLUR-UP PERFORMANCE
+   ══════════════════════════════════════════════════════════════ */
+
+/* Fade-in animation for lazy-loaded images */
+@keyframes fadeInImage {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* All images with loading="lazy" or loading="eager" */
+img {
+  /* Placeholder grey while loading (if image fails or is placeholder) */
+  background: linear-gradient(135deg, #e0e0e0 0%, #f0f0f0 100%);
+  /* Smooth fade-in when image finishes loading */
+  animation: fadeInImage 0.4s ease-out;
+}
+
+/* Reduce animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  img {
+    animation: none;
+  }
+}
+
+/* Hero images should load instantly (eager priority) */
+img[fetchpriority="high"] {
+  animation-duration: 0.2s;
+  animation-delay: 0s;
+}
+
+/* Lazy-loaded images below fold get normal fade-in */
+img[loading="lazy"] {
+  animation-duration: 0.5s;
+}
