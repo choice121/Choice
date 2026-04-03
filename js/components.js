@@ -31,6 +31,42 @@
     if (navSlot)    navSlot.innerHTML    = navHtml;
     if (footerSlot) footerSlot.innerHTML = footerHtml;
 
+    /* ── Customize nav for apply pages ── */
+    if (window.location.pathname.startsWith('/apply/')) {
+      var navInner = document.querySelector('.nav-inner');
+      if (navInner) {
+        // Add back link before logo
+        var backLink = document.createElement('a');
+        backLink.href = '/listings.html';
+        backLink.className = 'nav-back-link';
+        backLink.innerHTML = '← <span>Back to Listings</span>';
+        var navLogo = navInner.querySelector('.nav-logo');
+        if (navLogo) {
+          navInner.insertBefore(backLink, navLogo);
+        }
+        // Add language toggle to nav-links
+        var navLinks = navInner.querySelector('.nav-links');
+        if (navLinks) {
+          var langBtn = document.createElement('button');
+          langBtn.type = 'button';
+          langBtn.id = 'langToggle';
+          langBtn.className = 'nav-lang-toggle';
+          langBtn.innerHTML = '<i class="fas fa-language"></i> <span id="langText">Español</span>';
+          navLinks.appendChild(langBtn);
+        }
+      }
+      // Add to mobile drawer
+      var drawerBody = document.querySelector('.nav-drawer-body');
+      if (drawerBody) {
+        var langBtnDrawer = document.createElement('button');
+        langBtnDrawer.type = 'button';
+        langBtnDrawer.id = 'langToggleDrawer';
+        langBtnDrawer.className = 'nav-drawer-link';
+        langBtnDrawer.innerHTML = '<i class="fas fa-language"></i> <span id="langTextDrawer">Español</span>';
+        drawerBody.appendChild(langBtnDrawer);
+      }
+    }
+
     /* ── I-030: Set og:url to the real current URL ── */
     /* Overrides any hardcoded staging domain in the HTML meta tag.    */
     /* property.html manages its own #ogUrl dynamically — querySelector */
@@ -38,11 +74,25 @@
     var ogUrlMeta = document.querySelector('meta[property="og:url"]');
     if (ogUrlMeta) ogUrlMeta.setAttribute('content', location.href);
 
-    /* ── 3. Set active nav link by pathname ── */
+    /* ── 3. Set active nav link by pathname or route prefix ── */
     var path = window.location.pathname;
     document.querySelectorAll('[data-nav-path]').forEach(function (el) {
-      if (el.getAttribute('data-nav-path') === path) {
+      var targetPath = el.getAttribute('data-nav-path');
+      if (!targetPath) return;
+
+      if (targetPath === path) {
         el.classList.add('active');
+        return;
+      }
+
+      // Landlord/admin pages share top-level context with toggle links.
+      if (targetPath === '/landlord/register.html' && path.indexOf('/landlord/') === 0) {
+        el.classList.add('active');
+        return;
+      }
+      if (targetPath === '/admin/login.html' && path.indexOf('/admin/') === 0) {
+        el.classList.add('active');
+        return;
       }
     });
 

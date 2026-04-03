@@ -18,6 +18,51 @@
   contain: layout style;
 }
 
+@media (max-width: 900px) {
+  .gallery-mosaic {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    height: auto;
+  }
+
+  .mosaic-main,
+  .mosaic-side,
+  .mosaic-cell,
+  .mosaic-main-img,
+  .mosaic-cell img {
+    height: auto;
+  }
+
+  .mosaic-main,
+  .mosaic-cell {
+    border-radius: var(--radius-lg);
+  }
+
+  .mosaic-side {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(98px, 1fr));
+  }
+
+  .mosaic-nav-btn,
+  .mosaic-mobile-count,
+  .mosaic-expand-btn {
+    display: block;
+  }
+}
+
+@media (max-width: 500px) {
+  .gallery-mosaic {
+    height: auto;
+    box-shadow: none;
+    border-radius: var(--radius-xl);
+  }
+
+  .mosaic-main:hover .mosaic-main-img,
+  .mosaic-cell:hover img {
+    transform: none;
+  }
+}
+
 /* ── GALLERY SKELETON ─── shown while JS/data loads ─────── */
 .gallery-mosaic.skeleton-loading .mosaic-main,
 .gallery-mosaic.skeleton-loading .mosaic-cell {

@@ -379,6 +379,491 @@ html {
 
 }
 
+/* ============================================================
+   MOBILE.CSS CONTENT APPENDED BELOW
+   Mobile-first responsive layer. Loaded after all other CSS.
+   ============================================================ */
+
+/* ── SAFE AREA & ROOT TOKENS ─────────────────────────────── */
+:root {
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+}
+
+/* ── BASE BODY ───────────────────────────────────────────── */
+/* Prevent iOS font inflation and horizontal overflow */
+html {
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+body {
+  overflow-x: hidden;
+}
+
+/* ── INPUTS — prevent iOS zoom ───────────────────────────── */
+/* iOS Safari zooms the page when an input < 16px is focused */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+input[type="date"],
+input[type="url"],
+input[type="color"],
+input[type="range"],
+select,
+textarea {
+  font-size: 16px !important;
+}
+@media (min-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="date"],
+  input[type="url"],
+  input[type="color"],
+  input[type="range"],
+  select,
+  textarea {
+    font-size: inherit !important;
+  }
+}
+
+/* ── TOUCH TARGETS ───────────────────────────────────────── */
+/* Ensure all interactive elements are at least 44×44px */
+button,
+[role="button"],
+.btn,
+a.btn,
+input[type="submit"],
+input[type="button"],
+input[type="reset"] {
+  min-height: 44px;
+}
+
+/* ── NAVIGATION ──────────────────────────────────────────── */
+/* On mobile: show hamburger, hide desktop nav links */
+.nav-mobile-toggle {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+.nav-links {
+  display: none !important;
+}
+/* On desktop: flip it */
+@media (min-width: 769px) {
+  .nav-mobile-toggle {
+    display: none !important;
+  }
+  .nav-links {
+    display: flex !important;
+  }
+}
+
+/* Nav inner padding tighter on mobile */
+.nav-inner {
+  padding: 0 var(--space-4);
+}
+@media (min-width: 769px) {
+  .nav-inner {
+    padding: 0 var(--space-6);
+  }
+}
+
+/* Nav drawer — full safe-area-aware height, iOS notch support */
+.nav-drawer {
+  padding-top: calc(var(--space-6) + var(--safe-top));
+  padding-bottom: calc(var(--space-6) + var(--safe-bottom));
+}
+
+/* Nav drawer links — larger touch targets */
+.nav-drawer-link {
+  min-height: 48px;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+}
+
+/* ── HERO — SEARCH BAR ───────────────────────────────────── */
+/* Stack fields vertically on all mobile screen sizes */
+.search-bar-top,
+.search-box {
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--radius-xl);
+}
+
+.search-field {
+  min-width: 100% !important;
+  border-right: none !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  width: 100%;
+}
+.search-field:first-child {
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+}
+.search-field:last-of-type {
+  border-bottom: none !important;
+}
+
+.search-btn,
+.search-submit {
+  width: 100% !important;
+  justify-content: center !important;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl) !important;
+  min-height: 52px;
+}
+
+/* Slightly shrink hero padding on small phones */
+.hero {
+  padding-top: var(--space-12);
+  padding-bottom: var(--space-12);
+  min-height: auto !important;
+}
+@media (min-width: 769px) {
+  .search-bar-top,
+  .search-box {
+    flex-direction: row;
+  }
+  .search-field {
+    min-width: unset !important;
+    border-right: 1px solid var(--color-border) !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    width: auto;
+  }
+  .search-field:first-child {
+    border-radius: var(--radius-full) 0 0 var(--radius-full) !important;
+  }
+  .search-btn,
+  .search-submit {
+    width: auto !important;
+    justify-content: flex-start !important;
+    border-radius: 0 var(--radius-full) var(--radius-full) 0 !important;
+    min-height: unset;
+  }
+  .hero {
+    padding-top: unset;
+    padding-bottom: unset;
+    min-height: revert;
+  }
+}
+
+/* Hero stats — compact on mobile */
+.hero-stats {
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+  justify-content: center;
+}
+.hero-stat-divider {
+  display: none;
+}
+@media (min-width: 640px) {
+  .hero-stat-divider {
+    display: block;
+  }
+}
+
+/* ── PROPERTY GRID ───────────────────────────────────────── */
+/* Mobile-first: single column on small phones, widens at each breakpoint */
+.property-grid {
+  grid-template-columns: 1fr !important;
+  gap: var(--space-4);
+}
+@media (min-width: 540px) {
+  .property-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-4) !important;
+  }
+}
+@media (min-width: 900px) {
+  .property-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: var(--space-5) !important;
+  }
+}
+@media (min-width: 1320px) {
+  .property-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: var(--space-6) !important;
+  }
+}
+
+/* ── FILTER BAR ──────────────────────────────────────────── */
+/* Make filter pills scrollable row on mobile */
+.filter-bar-inner {
+  padding: 0 var(--space-4);
+  -webkit-overflow-scrolling: touch;
+}
+.listings-controls {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── FOOTER (public pages) ───────────────────────────────── */
+.footer-grid,
+.footer-grid.footer-grid {
+  grid-template-columns: 1fr !important;
+  gap: var(--space-8);
+}
+@media (min-width: 640px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-8);
+  }
+}
+@media (min-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: 2.4fr 1fr 1fr 1fr !important;
+    gap: var(--space-12);
+  }
+}
+
+/* Footer bottom: stack on mobile */
+.footer-bottom {
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (min-width: 640px) {
+  .footer-bottom {
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+  }
+}
+
+/* ── MODALS — bottom sheet on mobile ────────────────────── */
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal,
+  .modal-sm,
+  .modal-lg,
+  .modal-xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0 !important;
+    max-height: 92vh !important;
+    animation: mobileSheetIn 260ms var(--ease-out) forwards !important;
+    padding-bottom: var(--safe-bottom);
+  }
+  @keyframes mobileSheetIn {
+    from { transform: translateY(100%); opacity: 0.8; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+}
+
+/* ── TOAST — safe area aware ────────────────────────────── */
+@media (max-width: 640px) {
+  .toast-container {
+    bottom: calc(var(--space-4) + var(--safe-bottom));
+    left: var(--space-4);
+    right: var(--space-4);
+  }
+  .toast {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+/* ── ADMIN DASHBOARD ─────────────────────────────────────── */
+/* Mobile menu button — show by default (hidden on desktop) */
+.mobile-menu-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--adm-border, #E0E0E0);
+  color: var(--adm-muted2, #565656);
+  width: 40px;
+  height: 40px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+@media (min-width: 1025px) {
+  .mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+/* Admin content padding — tighter on mobile */
+.content {
+  padding: 16px;
+}
+@media (min-width: 1025px) {
+  .content {
+    padding: 28px;
+  }
+}
+
+/* Admin stats grid — single column on phones */
+.stats-grid {
+  grid-template-columns: 1fr !important;
+  gap: 12px;
+}
+@media (min-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (min-width: 1025px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  }
+}
+
+/* Admin form rows — single column on phones */
+.form-row {
+  grid-template-columns: 1fr !important;
+}
+@media (min-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Admin topbar — tighter on small screens */
+.topbar {
+  padding: 12px 16px;
+}
+@media (min-width: 1025px) {
+  .topbar {
+    padding: 16px 28px;
+  }
+}
+
+/* Admin table font — legible on small screens */
+@media (max-width: 640px) {
+  th, td {
+    padding: 10px 10px;
+    font-size: 0.75rem;
+  }
+  .truncate {
+    max-width: 120px;
+  }
+}
+
+/* ── LANDLORD PORTAL ─────────────────────────────────────── */
+/* Bottom nav — safe area aware */
+.mobile-bottom-nav {
+  padding-bottom: calc(var(--space-2) + var(--safe-bottom));
+}
+
+/* Dashboard main — account for bottom nav + safe area */
+@media (max-width: 1024px) {
+  .dashboard-main {
+    padding-bottom: calc(var(--space-20) + var(--safe-bottom)) !important;
+  }
+}
+
+/* App row — single column on small phones */
+@media (max-width: 480px) {
+  .app-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── APPLY FORM ──────────────────────────────────────────── */
+/* Step indicator — tighter on phones */
+@media (max-width: 480px) {
+  .progress-steps,
+  .step-indicator {
+    gap: var(--space-1);
+    font-size: 11px;
+  }
+  .step-number {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+}
+
+/* Apply form nav buttons — full width on phones */
+@media (max-width: 480px) {
+  .form-nav,
+  .form-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .btn-next,
+  .btn-prev,
+  .btn-submit {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ── PROPERTY DETAIL ─────────────────────────────────────── */
+/* Gallery swipe — full bleed on mobile */
+@media (max-width: 768px) {
+  .gallery-mosaic {
+    border-radius: 0;
+    margin-left: calc(-1 * var(--space-5));
+    margin-right: calc(-1 * var(--space-5));
+  }
+}
+
+/* Detail layout — single column on mobile already at 900px,
+   but ensure sidebar stacks below content on smaller screens */
+@media (max-width: 900px) {
+  .detail-layout,
+  .property-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .detail-sidebar,
+  .property-sidebar {
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+/* ── CONTENT PAGES (about, faq, etc.) ───────────────────── */
+@media (max-width: 640px) {
+  .content-card {
+    padding: var(--space-5) var(--space-5);
+  }
+  .content-page-hero h1 {
+    font-size: clamp(24px, 8vw, 36px);
+  }
+}
+
+/* ── GENERAL SPACING — mobile container ─────────────────── */
+.container {
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+@media (min-width: 640px) {
+  .container {
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
+}
+@media (min-width: 1024px) {
+  .container {
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+  }
+}
+
 /* FOCUS VISIBLE — keyboard nav only, no mouse outlines */
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: var(--r-sm); }

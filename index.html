@@ -32,10 +32,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/listings.css?v=1775137055043">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
+  <link rel="preload" href="/css/main.css?v=1775137055043" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
+  <link rel="preload" href="/css/listings.css?v=1775137055043" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/css/listings.css?v=1775137055043"></noscript>
+  <link rel="stylesheet" href="/assets/fontawesome.css">
   <style>
     /* ── CRITICAL CSS — above-fold paint for index.html ──────────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
@@ -218,11 +219,11 @@
   <div class="container">
     <div class="featured-header">
       <div>
-        <div class="section-eyebrow"><i class="fas fa-bolt" style="font-size:9px"></i> Available Now</div>
+        <div class="section-eyebrow"><i class="fas fa-bolt"></i> Available Now</div>
         <h2 class="featured-title">Featured Listings</h2>
         <p class="featured-subtitle">Our newest available homes — updated in real time.</p>
       </div>
-      <a href="/listings.html" class="featured-view-all">View All Listings <i class="fas fa-arrow-right" style="font-size:10px"></i></a>
+      <a href="/listings.html" class="featured-view-all">View All Listings <i class="fas fa-arrow-right"></i></a>
     </div>
 
     <div class="property-grid" id="featuredGrid">
@@ -253,7 +254,7 @@
     </div>
 
     <div class="featured-cta">
-      <a href="/listings.html" class="btn btn-primary btn-lg">Browse All Listings <i class="fas fa-arrow-right" style="font-size:12px;margin-left:4px"></i></a>
+      <a href="/listings.html" class="btn btn-primary btn-lg">Browse All Listings <i class="fas fa-arrow-right"></i></a>
     </div>
   </div>
 </section>
@@ -261,7 +262,7 @@
 <!-- ── How It Works ── -->
 <section class="hiw-section" id="how-it-works">
   <div class="hiw-section-glow"></div>
-  <div class="container" style="position:relative;z-index:1">
+  <div class="container">
     <div class="hiw-header">
       <div class="section-eyebrow hiw-eyebrow">Simple Process</div>
       <h2 class="hiw-title">Rent Your Next Home in 3 Easy Steps</h2>
@@ -304,7 +305,7 @@
     </div>
     <div class="hiw-cta">
       <a href="/listings.html" class="btn btn-primary btn-lg">Browse Listings</a>
-      <a href="/how-to-apply.html" class="hiw-cta-link">Learn more about the process <i class="fas fa-arrow-right" style="font-size:11px"></i></a>
+      <a href="/how-to-apply.html" class="hiw-cta-link">Learn more about the process <i class="fas fa-arrow-right"></i></a>
     </div>
   </div>
 </section>
@@ -334,7 +335,7 @@
         <p>Our team is dedicated, responsive, and genuinely invested in helping you find the right home — not just closing a deal.</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:var(--space-12)">
+    <div style="text-align:center">
       <a href="/listings.html" class="btn btn-primary why-cta-btn">Browse Available Listings</a>
     </div>
   </div>

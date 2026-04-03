@@ -844,6 +844,8 @@ class RentalApplication {
         const t = this.translations[this.state.language] || this.translations.en;
         const langBtn = document.getElementById('langText');
         if (langBtn) langBtn.textContent = t.langText;
+        const langBtnDrawer = document.getElementById('langTextDrawer');
+        if (langBtnDrawer) langBtnDrawer.textContent = t.langText;
 
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
@@ -918,6 +920,14 @@ class RentalApplication {
         const btn = document.getElementById('langToggle');
         if (btn) {
             btn.addEventListener('click', () => {
+                this.state.language = this.state.language === 'en' ? 'es' : 'en';
+                this.applyTranslations();
+                this.saveProgress();
+            });
+        }
+        const btnDrawer = document.getElementById('langToggleDrawer');
+        if (btnDrawer) {
+            btnDrawer.addEventListener('click', () => {
                 this.state.language = this.state.language === 'en' ? 'es' : 'en';
                 this.applyTranslations();
                 this.saveProgress();
