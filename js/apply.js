@@ -328,6 +328,7 @@ class RentalApplication {
         this.setupEventListeners();
         this.setupOfflineDetection();
         this.setupRealTimeValidation();
+        this.setupCharacterCounters();
         this.setupSSNToggle();
         this.setupCoSSNToggle();
         this.setupFileUploads();
@@ -481,6 +482,7 @@ class RentalApplication {
     // Implementation lives in apply-validation.js (loaded before this file).
     // Kept as stubs so call sites are unchanged.
     setupRealTimeValidation()           { /* → apply-validation.js */ }
+    setupCharacterCounters()            { /* → apply-validation.js */ }
     validateField(field)                { /* → apply-validation.js */ return true; }
     showError(field, message)           { /* → apply-validation.js */ }
     clearError(field)                   { /* → apply-validation.js */ }

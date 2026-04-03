@@ -360,6 +360,10 @@
     <!-- Map View -->
     <div id="mapPanel">
       <div id="listingsMap"></div>
+      <div id="mapLoadingSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; align-items: center; justify-content: center; flex-direction: column; gap: 12px;">
+        <div class="spinner" style="width: 40px; height: 40px;"></div>
+        <p style="color: var(--color-text-muted); font-size: 13px; margin: 0;">Loading map...</p>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -470,6 +474,11 @@ function syncControls() {
   readURL();
   syncControls();
   setupFilters();
+  // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
+  const filterDropdown = document.getElementById('moreFiltersDropdown');
+  if (filterDropdown && sessionStorage.getItem('filters_dropdown_open') === 'true') {
+    filterDropdown.classList.add('open');
+  }
   await fetchAndRender();
   window.addEventListener('popstate', async () => {
     readURL();
@@ -483,6 +492,12 @@ async function fetchAndRender() {
   if (isLoading) return;
   isLoading = true;
   showSkeletons();
+  
+  // Update subheading with loading indicator
+  const subheading = document.getElementById('listingsSubheading');
+  if (subheading) {
+    subheading.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:6px;"></i><span style="font-size:0.9rem;">Searching...</span>';
+  }
 
   try {
     const result = await CP.Properties.getListings({
@@ -499,6 +514,9 @@ async function fetchAndRender() {
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
+      if (subheading) {
+        subheading.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Unable to load listings. Please try again.</span>';
+      }
       renderError();
       return;
     }
@@ -510,11 +528,24 @@ async function fetchAndRender() {
     const counter = document.getElementById('statListings');
     if (counter) counter.textContent = total.toLocaleString();
 
+    // Update subheading with result count or no-results message
+    if (subheading) {
+      if (total === 0) {
+        subheading.innerHTML = '<span style="color:var(--color-text-secondary);font-size:0.9rem;">No listings match your filters. <a href="?">Clear filters</a></span>';
+      } else {
+        const plural = total === 1 ? 'listing' : 'listings';
+        subheading.textContent = `Showing ${rows.length} of ${total} ${plural}`;
+      }
+    }
+
     renderProperties(rows);
     renderPagination();
     if (currentView === 'map') initMap(rows);
   } catch (err) {
     console.error('fetchAndRender error:', err);
+    if (subheading) {
+      subheading.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Something went wrong. Please try again.</span>';
+    }
     renderError();
   } finally {
     isLoading = false;
@@ -776,8 +807,18 @@ function loadLeaflet() {
     const script = document.createElement('script');
     script.src = _LEAFLET_JS;
     script.crossOrigin = 'anonymous';
-    script.onload = resolve;
-    script.onerror = reject;
+    script.onload = () => {
+      // Remove map loading spinner when Leaflet loads
+      const mapSpinner = document.getElementById('mapLoadingSpinner');
+      if (mapSpinner) mapSpinner.style.display = 'none';
+      resolve();
+    };
+    script.onerror = () => {
+      // Hide spinner on error  
+      const mapSpinner = document.getElementById('mapLoadingSpinner');
+      if (mapSpinner) mapSpinner.style.display = 'none';
+      reject();
+    };
     document.head.appendChild(script);
   });
 }
@@ -836,6 +877,9 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   document.getElementById('mapPanel').style.display = 'block';
   document.getElementById('btnMapView').classList.add('active');
   document.getElementById('btnListView').classList.remove('active');
+  // Show loading spinner while Leaflet loads
+  const mapSpinner = document.getElementById('mapLoadingSpinner');
+  if (mapSpinner) mapSpinner.style.display = 'flex';
   // Lazy-load Leaflet on first map view, then fetch and render markers
   await loadLeaflet();
   const result = await CP.Properties.getListings({
@@ -863,11 +907,17 @@ function setupFilters() {
 
   document.getElementById('moreFiltersBtn').addEventListener('click', e => {
     e.stopPropagation();
-    document.getElementById('moreFiltersDropdown').classList.toggle('open');
+    const dropdown = document.getElementById('moreFiltersDropdown');
+    dropdown.classList.toggle('open');
+    // Persist filter dropdown state to sessionStorage on mobile
+    const isOpen = dropdown.classList.contains('open');
+    sessionStorage.setItem('filters_dropdown_open', isOpen ? 'true' : 'false');
   });
   document.addEventListener('click', e => {
-    if (!document.getElementById('moreFiltersWrap').contains(e.target))
+    if (!document.getElementById('moreFiltersWrap').contains(e.target)) {
       document.getElementById('moreFiltersDropdown').classList.remove('open');
+      sessionStorage.setItem('filters_dropdown_open', 'false');
+    }
   });
 
   document.getElementById('applyAdvFilters').addEventListener('click', () => {
@@ -879,6 +929,7 @@ function setupFilters() {
     if (advType) activeType = advType;
     if (advBeds !== '') activeBeds = advBeds;
     document.getElementById('moreFiltersDropdown').classList.remove('open');
+    sessionStorage.setItem('filters_dropdown_open', 'false');
     refreshResults();
     showToast('Filters applied', 'success');
   });
@@ -889,6 +940,7 @@ function setupFilters() {
     });
     window.clearAllFilters();
     document.getElementById('moreFiltersDropdown').classList.remove('open');
+    sessionStorage.setItem('filters_dropdown_open', 'false');
   });
 }
 
@@ -923,16 +975,22 @@ function setupScrollTop() {
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
-function renderError() {
+function renderError(errorMsg = 'Failed to load listings') {
   const grid = document.getElementById('propertyGrid');
   if (!grid) return;
   grid.innerHTML = `
-    <div class="empty-state" style="grid-column:1/-1;text-align:center;padding:var(--s-16) var(--s-6)">
-      <div class="empty-state-icon"><i class="fas fa-exclamation-circle" style="font-size:40px;color:var(--color-text-muted)"></i></div>
-      <h3 style="margin:var(--s-4) 0 var(--s-2)">Failed to load listings</h3>
-      <p style="color:var(--color-text-secondary)">Please check your connection and <button onclick="location.reload()" style="background:none;border:none;color:var(--color-brand);cursor:pointer;font-size:inherit;padding:0;text-decoration:underline">try again</button></p>
+    <div class="empty-state" style="grid-column:1/-1;text-align:center;padding:var(--space-16) var(--space-6)">
+      <div class="empty-state-icon"><i class="fas fa-exclamation-triangle" style="font-size:48px;color:var(--color-error);margin-bottom:16px;opacity:0.7"></i></div>
+      <h3 style="margin:var(--space-4) 0 var(--space-2);color:var(--color-text-primary);font-size:1.1rem">Something went wrong</h3>
+      <p style="color:var(--color-text-secondary);margin-bottom:24px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5">
+        ${errorMsg || 'We couldn\'t load listings from the server. Please check your connection and try again.'}
+      </p>
+      <button onclick="location.reload()" style="background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-size:0.9rem;font-weight:500;transition:background 160ms ease">
+        <i class="fas fa-redo" style="margin-right:6px"></i>Retry
+      </button>
     </div>`;
 }
+
 
 function showToast(msg, type = 'info') {
   const c = document.getElementById('toastContainer');

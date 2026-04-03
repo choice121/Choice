@@ -1495,6 +1495,58 @@ footer {
     .apply-nav-lang { padding: 5px 9px; }
 }
 
+/* ── INLINE HELP TEXT ─────────────────────────────────────── */
+.field-help {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+    line-height: 1.5;
+    display: none;
+    font-weight: 400;
+}
+input:focus ~ .field-help,
+textarea:focus ~ .field-help,
+select:focus ~ .field-help {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ── CHARACTER COUNTER ────────────────────────────────────── */
+.char-count {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+    text-align: right;
+    line-height: 1.4;
+    font-weight: 400;
+}
+.char-count.warning {
+    color: var(--color-warning, #f59e0b);
+    font-weight: 500;
+}
+.char-count.exceeded {
+    color: var(--color-error);
+    font-weight: 600;
+}
+
+/* ── VALIDATION STATE ENHANCEMENTS ──────────────────────── */
+input.is-valid,
+select.is-valid,
+textarea.is-valid {
+    border-color: var(--color-success, #10b981);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
 /* ── MOBILE: reduce form group spacing ──────────────────── */
 @media (max-width: 640px) {
     .form-group { margin-bottom: var(--space-5); }

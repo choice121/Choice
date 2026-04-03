@@ -61,6 +61,30 @@
   .mosaic-cell:hover img {
     transform: none;
   }
+
+  /* Hide confusing nav arrows on mobile, replace with "View all photos" button */
+  .mosaic-nav-btn {
+    display: none !important;
+  }
+
+  .mosaic-mobile-count {
+    display: none !important;
+  }
+
+  .mosaic-side {
+    display: none !important;
+  }
+
+  /* Show full-width view-all button */
+  .mosaic-expand-btn {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.92) !important;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
 }
 
 /* ── GALLERY SKELETON ─── shown while JS/data loads ─────── */

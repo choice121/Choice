@@ -367,15 +367,26 @@ document.addEventListener('error', function(e) {
   setupScrollTop();
 
   // Load featured listings + hero stat count in parallel
+  const statEl = document.getElementById('statListings');
+  if (statEl) {
+    // Show loading feedback while fetching stats
+    statEl.style.opacity = '0.6';
+    statEl.style.transition = 'opacity 0.3s ease';
+  }
+
   const [, countResult] = await Promise.allSettled([
     loadFeaturedListings(),
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('status', 'active'),
   ]);
-  const el = document.getElementById('statListings');
-  if (el) {
+  
+  if (statEl) {
     const count = countResult.status === 'fulfilled' ? countResult.value?.data?.length ?? countResult.value?.count : null;
-    if (count != null) el.textContent = count;
-    else el.closest('.hero-stat').style.display = 'none';
+    if (count != null) {
+      statEl.textContent = count;
+      statEl.style.opacity = '1'; // Fade in the actual count
+    } else {
+      statEl.closest('.hero-stat').style.display = 'none';
+    }
   }
 })();
 
@@ -386,6 +397,21 @@ async function loadFeaturedListings() {
   if (!section || !grid) return;
   if (!CONFIG.SUPABASE_URL) return; // no credentials yet — stay hidden
 
+  // Show section with skeleton initially
+  section.style.display = '';
+
+  // Loading timeout: if fetch takes > 2.5s, show loading indicator
+  const loadingTimeout = setTimeout(() => {
+    const skeleton = grid.querySelector('.property-card-skeleton');
+    if (skeleton) {
+      const loadingMsg = document.createElement('div');
+      loadingMsg.style.cssText = 'grid-column:1/-1;text-align:center;padding:32px 24px;color:var(--color-text-secondary);font-size:0.9rem;';
+      loadingMsg.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px;"></i>Loading featured listings...';
+      grid.insertAdjacentElement('afterend', loadingMsg);
+      loadingMsg.id = 'loadingIndicator';
+    }
+  }, 2500);
+
   try {
     const { data: props, error } = await supabase
       .from('properties')
@@ -393,6 +419,10 @@ async function loadFeaturedListings() {
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(6);
+
+    clearTimeout(loadingTimeout);
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) indicator.remove();
 
     if (error || !props || !props.length) {
       // I-033: Show a warm empty state instead of hiding the section entirely.
@@ -408,7 +438,6 @@ async function loadFeaturedListings() {
             Browse All Listings
           </a>
         </div>`;
-      section.style.display = '';
       return;
     }
 
@@ -422,9 +451,11 @@ async function loadFeaturedListings() {
       });
     });
 
-    section.style.display = '';
     animateFeaturedCards();
   } catch (_) {
+    clearTimeout(loadingTimeout);
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) indicator.remove();
     // silently hide — never break the homepage
   }
 }

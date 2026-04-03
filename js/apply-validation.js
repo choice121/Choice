@@ -286,4 +286,46 @@ window.APPLY_VALIDATION = {
         setTimeout(() => field.classList.remove('shake', 'highlight-field'), 2000);
     },
 
+    // ---------- Character counter for textareas ----------
+    setupCharacterCounters() {
+        const form = document.getElementById('rentalApplication');
+        if (!form) return;
+        const textareas = form.querySelectorAll('textarea[data-maxlength]');
+        textareas.forEach(textarea => {
+            const maxLength = parseInt(textarea.getAttribute('data-maxlength'), 10);
+            if (!maxLength || maxLength <= 0) return;
+
+            // Find or create character counter element
+            let counter = textarea.closest('.form-group')?.querySelector('.char-count');
+            if (!counter) {
+                counter = document.createElement('div');
+                counter.className = 'char-count';
+                textarea.parentNode.insertBefore(counter, textarea.nextSibling);
+            }
+
+            // Update counter on input
+            const updateCounter = () => {
+                const current = textarea.value.length;
+                const remaining = maxLength - current;
+                counter.textContent = `${current}/${maxLength} characters`;
+                
+                // Apply warning/exceeded classes
+                counter.classList.remove('warning', 'exceeded');
+                if (remaining < 0) counter.classList.add('exceeded');
+                else if (remaining < maxLength * 0.2) counter.classList.add('warning');
+                
+                // Prevent exceeded input
+                if (current > maxLength) {
+                    textarea.value = textarea.value.substring(0, maxLength);
+                    counter.textContent = `${maxLength}/${maxLength} characters`;
+                    counter.classList.add('exceeded');
+                }
+            };
+
+            textarea.addEventListener('input', updateCounter);
+            textarea.addEventListener('change', updateCounter);
+            updateCounter(); // Initialize
+        });
+    },
+
 };
