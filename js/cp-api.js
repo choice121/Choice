@@ -678,7 +678,7 @@ function buildApplyURL(property) {
   // If APPLY_FORM_URL is set in config (e.g. https://apply-choice-properties.pages.dev),
   // redirect there. Otherwise fall back to the local /apply.html.
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
-    ? CONFIG.APPLY_FORM_URL + '/apply.html'
+    ? CONFIG.APPLY_FORM_URL
     : '/apply.html';
 
   return `${base}?${p.toString()}`;
