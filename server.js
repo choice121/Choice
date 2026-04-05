@@ -11,6 +11,7 @@ const config = {
   SUPABASE_URL:      process.env.SUPABASE_URL      || '',
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
   SITE_URL:          (process.env.SITE_URL || '').replace(/\/$/, ''),
+  APPLY_FORM_URL:    (process.env.APPLY_FORM_URL || '').replace(/\/$/, ''),
   IMAGEKIT_URL:      process.env.IMAGEKIT_URL        || '',
   IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
   GEOAPIFY_API_KEY:  process.env.GEOAPIFY_API_KEY   || '',
