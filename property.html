@@ -221,8 +221,9 @@
           <i class="fas fa-lock" style="color:var(--gold)"></i>
           Your info is encrypted & secure. Fee collected after review.
         </p>
-        <a href="/apply/dashboard.html"
+        <a href="https://apply-choice-properties.pages.dev/?path=dashboard"
            target="_blank"
+           rel="noopener noreferrer"
            class="apply-track-link">
           <i class="fas fa-search"></i> Already applied? Track your application →
         </a>
@@ -527,7 +528,7 @@ function renderProperty(p) {
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
-      "target": window.location.origin + "/apply.html?property=" + (p.id || "")
+      "target": "https://apply-choice-properties.pages.dev/?id=" + (p.id || "")
     }
   });
   document.head.appendChild(sd);

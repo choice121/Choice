@@ -1,173 +1,130 @@
-# 📤 DEPLOYMENT GUIDE
-**Push the Critical Photo Upload Fix to Production**
+# Choice Properties — Deployment Guide
+
+This site deploys automatically via Cloudflare Pages on every push to `main`. This document covers the full deployment flow, environment variables, and manual steps for first-time setup and ongoing changes.
 
 ---
 
-## 🚀 Option 1: Auto-Deploy (Easiest)
+## Normal Deployment (Day-to-Day)
 
-If you're using Replit:
-1. Changes should auto-commit to GitHub when you save
-2. GitHub → Cloudflare Pages auto-deploys
-3. Supabase auto-deploys Edge Functions from git
-
-**Check deployment status:**
-- Cloudflare Pages: https://dash.cloudflare.com → Pages → choicepropertiesofficial → Deployments
-- Supabase: Supabase Dashboard → Edge Functions → imagekit-upload → Deployment history
-
----
-
-## 🚀 Option 2: Manual Push (If Auto-Deploy Didn't Work)
-
-### From Your Development Machine:
-
-```bash
-# Navigate to project
-cd /workspaces/choicepropertiesofficial
-
-# Check what changed
-git status
-
-# Stage all changes
-git add .
-
-# Commit with clear message
-git commit -m "Critical fix: Convert base64 to binary in imagekit-upload
-
-- ImageKit API expects Blob, not base64 string
-- Added comprehensive debug logging to all layers
-- Added error context for troubleshooting
-- This fixes all photo upload failures"
-
-# Push to GitHub
+```
+Edit files locally or in your editor
+       ↓
+git add . && git commit -m "your message"
+       ↓
 git push origin main
+       ↓
+Cloudflare Pages detects the push → runs: node generate-config.js
+       ↓
+Site is live globally within ~1–2 minutes
 ```
 
----
-
-## ⏳ After Push: What Happens Next
-
-### 1. **GitHub Receives Changes** (< 1 min)
-   - Changes appear in your GitHub repo
-   - Commit shows in your repo → Commits
-
-### 2. **Supabase Auto-Deploys** (1-2 min)
-   - Supabase watches your GitHub repo
-   - Detects changes to `supabase/functions/imagekit-upload/`
-   - Automatically deploys new version
-
-### 3. **Cloudflare Auto-Deploys** (1-2 min)
-   - Cloudflare watches your GitHub repo
-   - Detects push to main branch
-   - Auto-redeploys website
-
-### 4. **Ready to Test** (3-5 min total)
-   - File changes here: `/workspaces/choicepropertiesofficial/supabase/functions/imagekit-upload/index.ts`
-   - File here too: `/workspaces/choicepropertiesofficial/CRITICAL_FIX_EXPLANATION.md`
+No manual steps required after the initial setup is complete.
 
 ---
 
-## ✅ Verify Deployment
+## What the Build Step Does
 
-### Check Supabase Deployment
+`node generate-config.js` runs at Cloudflare Pages build time and:
 
-1. Go to https://supabase.com/dashboard
-2. Select your project
-3. Click **Edge Functions**
-4. Click **imagekit-upload**
-5. Look for **Deployment history** or **Recent deploys**
-6. Should show a recent deployment (last 5 minutes)
+1. Reads all environment variables set in Cloudflare Pages dashboard
+2. Writes `config.js` — injects all public config values the frontend needs
+3. Injects CSP nonces into all HTML inline scripts
+4. Rewrites `sitemap.xml` and `robots.txt` with `SITE_URL`
 
-### Check Git
+`config.js` is gitignored — it is never committed. It is generated fresh on every deploy.
+
+---
+
+## Environment Variables (Cloudflare Pages)
+
+Set these in Cloudflare Pages → your project → **Settings → Environment variables**:
+
+| Variable | Required | Value |
+|---|---|---|
+| `SUPABASE_URL` | ✅ Yes | Your Supabase project URL (`https://xxxx.supabase.co`) |
+| `SUPABASE_ANON_KEY` | ✅ Yes | Your Supabase anon public key |
+| `SITE_URL` | ✅ Yes | Your production domain — no trailing slash (e.g. `https://choiceproperties.com`) |
+| `APPLY_FORM_URL` | Optional | External application form URL. Defaults to `https://apply-choice-properties.pages.dev`. Only set this if the form URL ever changes. |
+| `IMAGEKIT_URL` | ✅ Yes | `https://ik.imagekit.io/your-id` |
+| `IMAGEKIT_PUBLIC_KEY` | ✅ Yes | Your ImageKit public key |
+| `GEOAPIFY_API_KEY` | ✅ Yes | Your Geoapify API key |
+| `COMPANY_NAME` | ✅ Yes | Your business name |
+| `COMPANY_EMAIL` | ✅ Yes | Your business email |
+| `COMPANY_PHONE` | ✅ Yes | Your phone number |
+| `COMPANY_ADDRESS` | ✅ Yes | Your business address |
+| `COMPANY_TAGLINE` | Optional | Brand tagline shown in footer |
+| `ADMIN_EMAILS` | Optional | Comma-separated admin emails for UI display |
+
+After adding or changing any variable: **trigger a redeploy** (Cloudflare Pages → Deployments → Retry deployment, or push any commit).
+
+---
+
+## Deploying Supabase Edge Functions
+
+Edge Functions are deployed separately from the frontend. Only needed when you edit files inside `/supabase/functions/`.
 
 ```bash
-git log --oneline -5
+# Log in (one time)
+npx supabase login
+
+# Deploy all functions
+npx supabase functions deploy --project-ref YOUR_PROJECT_REF
+
+# Deploy a single function
+npx supabase functions deploy send-inquiry --project-ref YOUR_PROJECT_REF
 ```
 
-Should show your commit as the most recent.
+Your project ref is visible in Supabase → Settings → General.
+
+> If deploying from a machine without CLI access, use **Supabase Dashboard → Edge Functions → Deploy via UI**.
 
 ---
 
-## 🧪 Test the Fix
+## When You Change Domains
 
-### On Any Page with Photo Upload:
+Update **all** of these — missing even one breaks something:
 
-1. **Go to Landlord Settings**
-   - https://choiceproperties.com/landlord/profile.html
-   
-2. **Or Go to Create Listing**
-   - https://choiceproperties.com/landlord/new-listing.html
-
-3. **Try uploading a small photo (1 MB)**
-
-4. **Check Supabase Logs for Your Upload**
-   - Supabase Dashboard → Edge Functions → imagekit-upload → Recent Logs
-   - Filter by timestamp of your upload
-   - Should see new detailed logging output now
-
-5. **Expected Result:**
-   - ✅ Photo uploads successfully
-   - ✅ No "service not configured" error
-   - ✅ Progress bar completes
-   - ✅ Photo appears in UI
+1. Cloudflare Pages → your project → **Custom domains**
+2. Cloudflare Pages → **Environment variables** → `SITE_URL`
+3. Supabase → **Settings → Edge Functions** → secrets: `DASHBOARD_URL` and `FRONTEND_ORIGIN`
+4. Supabase → **Authentication → URL Configuration**: Site URL + both Redirect URLs
+5. GAS Script Properties: `DASHBOARD_URL`
 
 ---
 
-## 🔍 If Still Failing After Deployment
+## Verifying a Deployment
 
-Check the logs to see the new debug information:
+After any deploy, check these:
 
-1. **Supabase Dashboard** → **Edge Functions** → **imagekit-upload** → **Logs**
-2. Look for your most recent upload attempt
-3. **You should see detailed logging now:**
-   ```
-   [imagekit-upload] Secret check: { hasPrivateKey: true, hasUrlEndpoint: true, ... }
-   [imagekit-upload] Request parsed: { hasFileData: true, fileDataLength: 12345, ... }
-   [imagekit-upload] Base64 processing: { hadPrefix: true, originalLength: 12345, strippedLength: 9876 }
-   [imagekit-upload] Sending to ImageKit: { status: 200, ok: true }
-   [imagekit-upload] Upload successful
-   ```
-
-4. **Share the exact log output** and I'll diagnose from there
+- `/health.html` on your live site — runs live checks against Supabase and config
+- Cloudflare Pages → your project → **Deployments** — build log shows any errors
+- Supabase → **Edge Functions** — each function shows its last deployment timestamp
 
 ---
 
-## 📊 Files Changed in This Fix
+## Troubleshooting
 
-| File | What Changed | Why |
-|------|---------|------|
-| `supabase/functions/imagekit-upload/index.ts` | Code to convert base64 to Blob + logging | ⭐ CRITICAL FIX |
-| `CRITICAL_FIX_EXPLANATION.md` | Documentation | For reference |
+**Site loads but CONFIG errors appear in the console**
+→ Environment variables not set or a redeploy hasn't run yet
+→ Cloudflare Pages → Deployments → Retry deployment
 
----
+**"Apply Now" button goes to wrong URL**
+→ Check `APPLY_FORM_URL` in environment variables (should be `https://apply-choice-properties.pages.dev`)
+→ If not set, the default in `generate-config.js` is used — also correct
 
-## ⚠️ Important Notes
+**Emails not sending**
+→ Supabase → Edge Functions → click the function → Logs tab for the exact error
+→ Most common: `GAS_EMAIL_URL` secret wrong, or `GAS_RELAY_SECRET` doesn't match GAS Script Properties
 
-1. **Only `supabase/functions/imagekit-upload/index.ts` needs to be deployed**
-   - This is an Edge Function (serverless)
-   - Supabase auto-deploys from git
+**Images not loading**
+→ `IMAGEKIT_URL` not set or wrong in Cloudflare Pages environment variables
 
-2. **The fix changes no public APIs**
-   - Frontend code stays the same
-   - Database stays the same
-   - No migration needed
+**Admin or landlord login redirects incorrectly**
+→ Update Redirect URLs in Supabase → Authentication → URL Configuration
 
-3. **This is a backward-compatible fix**
-   - Old uploads still work
-   - New uploads work too
-   - Safe to deploy immediately
+**Lease signing link broken after domain change**
+→ Update `DASHBOARD_URL` in Supabase Edge Function secrets
 
 ---
 
-## 📞 Need Help?
-
-If deployment doesn't work:
-1. Share your git commit hash (`git log -1 --format=%H`)
-2. Share Supabase deployment history screenshot
-3. Share exactly what error you see when uploading
-4. I'll diagnose from there
-
----
-
-**Status:** Ready to deploy  
-**Deployment Time:** 3-5 minutes total  
-**Risk Level:** Very Low (fixes broken functionality only)
+*Choice Properties · Your trust is our standard.*

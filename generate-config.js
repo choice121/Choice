@@ -20,10 +20,9 @@ const config = {
   SITE_URL: (process.env.SITE_URL || '').replace(/\/$/, ''),
 
   // APPLY_FORM_URL: Base URL of the external application form.
-  // When set, Apply Now buttons redirect here instead of /apply.html.
-  // Example: https://apply-choice-properties.pages.dev
-  // Leave blank to use the built-in /apply.html (same-origin form).
-  APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '').replace(/\/$/, ''),
+  // Apply Now buttons on all property listings redirect here.
+  // Override via APPLY_FORM_URL environment variable in Cloudflare Pages if needed.
+  APPLY_FORM_URL: (process.env.APPLY_FORM_URL || 'https://apply-choice-properties.pages.dev').replace(/\/$/, ''),
 
   IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || '',
   IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',

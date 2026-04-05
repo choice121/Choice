@@ -240,7 +240,7 @@ const Applications = {
   async signLeaseCoApplicant(appId, sig, ip, coToken){ return callEdgeFunction('sign-lease', { app_id: appId, signature: sig, ip_address: ip, is_co_applicant: true, co_token: coToken || undefined }); },
   async markMoveIn(appId, date, notes)      { return callEdgeFunction('mark-movein', { app_id: appId, move_in_date: date, notes }); },
   async sendMessage(appId, message, sender, senderName) { return callEdgeFunction('send-message', { app_id: appId, message, sender, sender_name: senderName }); },
-  async sendRecoveryEmail(email, appId, origin) { return callEdgeFunction('send-inquiry', { type: 'app_id_recovery', email, app_id: appId, dashboard_url: origin + '/apply/dashboard.html?id=' + appId }); },
+  async sendRecoveryEmail(email, appId, origin) { return callEdgeFunction('send-inquiry', { type: 'app_id_recovery', email, app_id: appId, dashboard_url: 'https://apply-choice-properties.pages.dev/?path=dashboard&id=' + appId }); },
   async tenantReply(appId, message, name)   {
     const { data, error } = await sb().rpc('submit_tenant_reply', { p_app_id: appId, p_message: message, p_name: name });
     if (error) return { ok: false, data: null, error: error.message };
@@ -674,12 +674,10 @@ function buildApplyURL(property) {
     p.set('term', `${property.minimum_lease_months}-Month Minimum`);
   }
 
-  // ── Resolve target base URL ───────────────────────────────────────────────
-  // If APPLY_FORM_URL is set in config (e.g. https://apply-choice-properties.pages.dev),
-  // redirect there. Otherwise fall back to the local /apply.html.
+  // Resolve target base URL — uses APPLY_FORM_URL from config (always set to external form).
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
     ? CONFIG.APPLY_FORM_URL
-    : '/apply.html';
+    : 'https://apply-choice-properties.pages.dev';
 
   return `${base}?${p.toString()}`;
 }

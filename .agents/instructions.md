@@ -34,13 +34,28 @@ Replit is used **exclusively as a code editor**. Nothing more.
 
 ## ✅ WHAT YOU MAY DO (ONLY THESE)
 
-1. **Edit HTML files** — `index.html`, `listings.html`, `property.html`, `apply.html`, etc.
+1. **Edit HTML files** — `index.html`, `listings.html`, `property.html`, etc.
 2. **Edit CSS files** — anything inside `/css/`
-3. **Edit JavaScript files** — anything inside `/js/`, `/admin/`, `/landlord/`, `/apply/`
+3. **Edit JavaScript files** — anything inside `/js/`, `/admin/`, `/landlord/`
 4. **Edit Supabase Edge Function source** — files in `/supabase/functions/` (TypeScript, Deno)
 5. **Edit SQL migration files** — files named `*.sql` or in `/supabase/`
 6. **Read and search files** for context when the user asks a question
 7. **Answer questions** about code, architecture, or Supabase/Cloudflare
+
+> **Note — Legacy files:** `apply.html` and the `/apply/` directory remain in the repository but are **no longer part of the user-facing flow**. All tenant applications are handled by the external form at `https://apply-choice-properties.pages.dev`. Do NOT edit or re-link these legacy files. Do NOT add any new links to `/apply.html` or `/apply/dashboard.html` anywhere on the site.
+
+---
+
+## EXTERNAL APPLICATION FORM
+
+Tenant applications are handled by a **completely separate system** at `https://apply-choice-properties.pages.dev`.
+
+- When a tenant clicks "Apply Now", they are redirected there with property data in URL params
+- That system has its own GAS backend, Google Sheets storage, lease flow, and admin panel
+- This repository has **no role** in processing, storing, or displaying application data
+- All "Track My Application" links point to the external applicant dashboard: `https://apply-choice-properties.pages.dev/?path=dashboard`
+- The `buildApplyURL(property)` function in `js/cp-api.js` is the **only integration point** — it builds the redirect URL. Do not modify it to point anywhere else.
+- Do NOT attempt to reconnect `apply.html` or any internal apply page to the user-facing flow
 
 ---
 

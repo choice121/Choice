@@ -50,7 +50,10 @@ Browser
   │
   ├── ImageKit.io           ← property photo CDN + transforms
   │
-  └── Geoapify              ← address autocomplete API
+  ├── Geoapify              ← address autocomplete API
+  │
+  └── apply-choice-properties.pages.dev  ← external application form
+        (separate system — receives one-way redirect with URL params)
 ```
 
 ---
@@ -215,19 +218,81 @@ Create a local `config.js` from `config.example.js` with your Supabase credentia
 
 ---
 
-## Data Flow — Tenant Submits Application
+## Data Flow — Tenant Applies for a Property
+
+Applications are handled entirely by the **external application form** at `https://apply-choice-properties.pages.dev`. This platform's role is only to redirect the tenant with property context.
 
 ```
-Browser → POST /functions/v1/process-application
+Tenant clicks "Apply Now" on listings.html or property.html
+  │
+  └── buildApplyURL(property) in js/cp-api.js
+        │
+        ├── Writes property context to sessionStorage (same-origin fallback)
+        └── Builds redirect URL with query params:
+              ?id=<id>&pn=<title>&addr=<address>&city=<city>
+              &state=<state>&rent=<rent>&beds=<beds>&baths=<baths>
+              &pets=<pet_policy>&term=<lease_term>
+              │
+              └── window.location → https://apply-choice-properties.pages.dev
+                    │
+                    ├── Form pre-fills from URL params
+                    ├── Tenant completes 6-step application
+                    ├── GAS backend stores data in Google Sheets
+                    ├── Confirmation email sent to tenant
+                    └── Admin notified — manages lease via GAS admin panel
+```
+
+This platform does **not** receive, store, or process application data. All application state lives in the external form's Google Sheets backend.
+
+---
+
+## Data Flow — Property Inquiry (Contact Landlord)
+
+```
+Browser → POST /functions/v1/send-inquiry
             │
             ├── Rate limit check (in-memory, per IP)
-            ├── Duplicate check (email + property)
-            ├── INSERT into applications (SSN masked server-side)
-            ├── INSERT into email_logs (pending)
-            └── POST to GAS relay → Gmail sends confirmation email
-                    │
-                    └── email_logs updated to success/failed
+            ├── Fetch landlord email from properties table
+            └── POST to GAS relay → Gmail sends inquiry to landlord
 ```
+
+---
+
+## External Application Form
+
+Tenant applications are handled by a completely separate system:
+
+| Property | Value |
+|---|---|
+| URL | `https://apply-choice-properties.pages.dev` |
+| Frontend | Vanilla HTML/CSS/JS — single `index.html` |
+| Backend | Google Apps Script (`code.gs`) |
+| Storage | Google Sheets (auto-managed by GAS) |
+| Admin panel | `?path=admin` — served by GAS |
+| Applicant dashboard | `?path=dashboard&id=<appId>` |
+
+### Integration contract (one-way, read-only)
+
+This platform sends the following URL params when redirecting to the form. The external form treats them as **display-only** — they pre-fill fields and show context banners but are never used for backend validation.
+
+| Param | Value |
+|---|---|
+| `id` | `property.id` |
+| `pn` | `property.title` |
+| `addr` | `property.address` |
+| `city` | `property.city` |
+| `state` | `property.state` |
+| `rent` | `property.monthly_rent` |
+| `beds` | `property.bedrooms` |
+| `baths` | `property.bathrooms` |
+| `pets` | Derived pet policy string |
+| `term` | Lease term string |
+
+**This platform never calls the external form's API and the external form never calls this platform.**
+
+### Configuration
+
+`APPLY_FORM_URL` in `generate-config.js` defaults to `https://apply-choice-properties.pages.dev`. Override with the `APPLY_FORM_URL` Cloudflare Pages environment variable if the URL changes.
 
 ---
 
@@ -237,15 +302,10 @@ Browser → POST /functions/v1/process-application
 - [ ] Supabase Edge Function secrets set (see SETUP.md Step 4 for full list)
 - [ ] Google Apps Script deployed, URL added as `GAS_EMAIL_URL` secret
 - [ ] Supabase Auth redirect URLs configured (Site URL + landlord + admin redirect URLs)
-- [ ] Cloudflare Pages project created, all environment variables set (see SETUP.md Step 6)
+- [ ] Cloudflare Pages project created, all environment variables set (see SETUP.md Step 6) — including `APPLY_FORM_URL`
 - [ ] Edge Functions deployed — see SETUP.md Step 7. If deploying from mobile/no CLI, use the Supabase Dashboard → Edge Functions → Deploy via UI
 - [ ] Admin account created via SQL insert into `admin_roles` (see SETUP.md Step 8)
 - [ ] `health.html` checks passing on the live site
 - [ ] At least 3–5 listings seeded via landlord dashboard so homepage shows live content
-
----
-
-## Issue Registry
-
-All tracked issues are resolved as of Session 019. See `ISSUES.md` for the full history.
-For post-launch improvements (saved listings UI, rate limiting, lazy-load translations), see the Phase 3 backlog in `.agents/instructions.md`.
+- [ ] Verify "Apply Now" buttons redirect to `https://apply-choice-properties.pages.dev` with correct property params
+- [ ] Verify "Track My Application" links in nav, footer, and FAQ point to the external applicant dashboard

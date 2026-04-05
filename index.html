@@ -466,7 +466,7 @@ function buildFeaturedCard(p) {
   const photos   = p.photo_urls?.length ? p.photo_urls : ['/assets/placeholder-property.jpg'];
   const avail    = p.available_date ? featFmtAvail(p.available_date) : 'Available Now';
   const availNow = !p.available_date || new Date(p.available_date) <= new Date();
-  const applyURL = `/apply.html?property_id=${p.id}${p.title ? '&property_name=' + encodeURIComponent(p.title) : ''}`;
+  const applyURL = CP.buildApplyURL(p);
   const imgSizes = '(max-width: 539px) calc(100vw - 32px), (max-width: 899px) calc(50vw - 28px), calc(33vw - 32px)';
 
   const slidesHtml = photos.map((url, i) => {
