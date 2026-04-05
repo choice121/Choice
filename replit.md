@@ -41,6 +41,7 @@ Set in Replit's environment (already configured):
 | `COMPANY_PHONE` | Company phone number |
 | `COMPANY_ADDRESS` | Company address |
 | `SITE_URL` | Canonical site URL |
+| `APPLY_FORM_URL` | External apply form base URL (e.g. `https://apply-choice-properties.pages.dev`). When set, Apply Now buttons redirect here with property data as URL params. Leave blank to use built-in `/apply.html`. |
 | `PORT` | Server port (default: 5000) |
 
 ## Key Files

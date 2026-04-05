@@ -67,11 +67,17 @@ _disableSection1Next(reason) {
     btn.title = reason || '';
 }
 
-// ---------- Build a property object from sessionStorage (or bare stub) ----------
-// Reads the cp_property_context written by buildApplyURL(). Falls back to a
-// minimal stub when sessionStorage is empty (e.g. direct URL share, new tab).
-// The full live record is always fetched by _verifyAndRefreshProperty(). (M-03)
+// ---------- Build a property object from sessionStorage or URL params ----------
+// Priority order:
+//   1. sessionStorage cp_property_context (same-origin: set by buildApplyURL)
+//   2. URL query params (cross-origin: set by buildApplyURL on the listing site)
+//   3. Bare stub — _verifyAndRefreshProperty() always fetches the live record.
+//
+// This three-layer approach means the locked card renders instantly for both
+// same-origin clicks (sessionStorage) and cross-origin redirects (URL params),
+// while the background Supabase fetch always validates and enriches the data.
 _buildPropertyFromURLParams(id) {
+    // ── Layer 1: sessionStorage (same-origin fast path) ──────────────────────
     try {
         const raw = sessionStorage.getItem('cp_property_context');
         if (raw) {
@@ -96,8 +102,64 @@ _buildPropertyFromURLParams(id) {
             }
         }
     } catch (_) {}
-    // Fallback: sessionStorage unavailable or context is for a different property.
-    // _verifyAndRefreshProperty() will fill in all fields shortly.
+
+    // ── Layer 2: URL query params (cross-origin: from external listing site) ──
+    // buildApplyURL() encodes public fields as query params so the form can
+    // pre-fill even when sessionStorage is unavailable across origins.
+    // landlord_name / landlord_id are NEVER in the URL — they are resolved
+    // server-side from property_id at lease generation time.
+    try {
+        const qp   = new URLSearchParams(window.location.search);
+        const addr  = qp.get('addr')  || '';
+        const city  = qp.get('city')  || '';
+        const state = qp.get('state') || '';
+        const zip   = qp.get('zip')   || '';
+        const title = qp.get('pn')    || '';
+        const rent  = qp.get('rent')  || null;
+        const fee   = qp.get('fee')   || null;
+        const avail = qp.get('avail') || null;
+        const beds  = qp.get('beds')  || null;
+        const baths = qp.get('baths') || null;
+        const pets  = qp.get('pets')  || null;
+        const term  = qp.get('term')  || null;
+
+        if (title || addr || rent) {
+            const formatted = [addr, city, state, zip].filter(Boolean).join(', ');
+            const prop = {
+                id,
+                _formattedAddress: formatted,
+                address:           addr,
+                city:              city,
+                state:             state,
+                zip:               zip,
+                title:             title || 'Selected Property',
+                monthly_rent:      rent  ? parseFloat(rent)  : null,
+                application_fee:   fee   ? parseFloat(fee)   : 0,
+                available_date:    avail || null,
+                bedrooms:          beds  ? parseInt(beds, 10) : null,
+                bathrooms:         baths ? parseFloat(baths)  : null,
+            };
+            if (pets) prop._petPolicy = pets;
+            if (term) prop._leaseTerm = term;
+
+            // Persist to sessionStorage so page refreshes, sub-steps, and
+            // the success page all have context without re-parsing the URL.
+            try {
+                sessionStorage.setItem('cp_property_context', JSON.stringify({
+                    id, title: prop.title, address: addr, city, state, zip,
+                    monthly_rent:    prop.monthly_rent,
+                    application_fee: prop.application_fee,
+                    available_date:  avail,
+                    bedrooms:        prop.bedrooms,
+                    bathrooms:       prop.bathrooms,
+                }));
+            } catch (_) {}
+
+            return prop;
+        }
+    } catch (_) {}
+
+    // ── Layer 3: Bare stub — background fetch will fill in all fields ─────────
     return { id, _formattedAddress: '', address: '', city: '', state: '', zip: '',
              title: 'Loading…', monthly_rent: null, application_fee: 0,
              available_date: null, bedrooms: null, bathrooms: null };

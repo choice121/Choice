@@ -617,8 +617,11 @@ function esc(str) {
 // via both window.CP (inline scripts) and ES named exports below.
 
 function buildApplyURL(property) {
-  // Write full context to sessionStorage — keeps sensitive fields (landlordId, fee)
-  // out of the URL, browser history, and server access logs. (M-03)
+  // ── Layer 1: sessionStorage (same-origin only) ────────────────────────────
+  // Stores the full context including landlord_id (never in the URL).
+  // apply-property.js reads this on the same site for an instant pre-fill.
+  // Cross-origin opens (external apply form) cannot read this — they rely on
+  // the URL params below plus a live Supabase fetch.
   try {
     sessionStorage.setItem('cp_property_context', JSON.stringify({
       id:              property.id,
@@ -635,10 +638,50 @@ function buildApplyURL(property) {
       bathrooms:       property.bathrooms       || null,
     }));
   } catch (_) {
-    // sessionStorage unavailable (private browsing edge case) — fall through,
-    // apply-property.js will fetch from DB using the id param.
+    // sessionStorage unavailable (private browsing) — URL params are the fallback.
   }
-  return `/apply.html?id=${encodeURIComponent(property.id)}`;
+
+  // ── Layer 2: URL query params (cross-origin safe) ─────────────────────────
+  // Only public, non-sensitive fields go into the URL.
+  // landlord_name / landlord_id are NEVER included here — the backend resolves
+  // them from property_id at lease generation time (see generate-lease edge fn).
+  // security_deposit is set per-lease by the admin, not stored on the property.
+  const p = new URLSearchParams();
+  p.set('id', property.id);
+  if (property.title)           p.set('pn',    property.title);
+  if (property.address)         p.set('addr',  property.address);
+  if (property.city)            p.set('city',  property.city);
+  if (property.state)           p.set('state', property.state);
+  if (property.zip)             p.set('zip',   property.zip);
+  if (property.monthly_rent)    p.set('rent',  property.monthly_rent);
+  if (property.application_fee) p.set('fee',   property.application_fee);
+  if (property.available_date)  p.set('avail', property.available_date);
+  if (property.bedrooms)        p.set('beds',  property.bedrooms);
+  if (property.bathrooms)       p.set('baths', property.bathrooms);
+
+  // Pet policy: derive a human-readable value from the property flags.
+  if (property.pets_allowed !== undefined) {
+    let petText = property.pets_allowed ? 'Pets allowed' : 'No pets';
+    if (property.pets_allowed && property.pet_types_allowed) petText += ` (${property.pet_types_allowed})`;
+    if (property.pets_allowed && property.pet_weight_limit)  petText += ` — max ${property.pet_weight_limit} lbs`;
+    p.set('pets', petText);
+  }
+
+  // Lease term: prefer lease_terms array joined, else minimum_lease_months.
+  if (property.lease_terms && property.lease_terms.length) {
+    p.set('term', Array.isArray(property.lease_terms) ? property.lease_terms.join(', ') : property.lease_terms);
+  } else if (property.minimum_lease_months) {
+    p.set('term', `${property.minimum_lease_months}-Month Minimum`);
+  }
+
+  // ── Resolve target base URL ───────────────────────────────────────────────
+  // If APPLY_FORM_URL is set in config (e.g. https://apply-choice-properties.pages.dev),
+  // redirect there. Otherwise fall back to the local /apply.html.
+  const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
+    ? CONFIG.APPLY_FORM_URL + '/apply.html'
+    : '/apply.html';
+
+  return `${base}?${p.toString()}`;
 }
 
 async function incrementCounter(table, id, column) {
