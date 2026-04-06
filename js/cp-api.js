@@ -618,63 +618,121 @@ function esc(str) {
 
 function buildApplyURL(property) {
   // ── Layer 1: sessionStorage (same-origin only) ────────────────────────────
-  // Stores the full context including landlord_id (never in the URL).
-  // apply-property.js reads this on the same site for an instant pre-fill.
-  // Cross-origin opens (external apply form) cannot read this — they rely on
-  // the URL params below plus a live Supabase fetch.
+  // Stores full context for same-origin use. Cross-origin (external form)
+  // cannot read sessionStorage — it relies entirely on the URL params below.
+  // landlord_id is included here only — never in the URL.
   try {
     sessionStorage.setItem('cp_property_context', JSON.stringify({
-      id:              property.id,
-      title:           property.title,
-      address:         property.address,
-      city:            property.city,
-      state:           property.state,
-      zip:             property.zip             || '',
-      monthly_rent:    property.monthly_rent    || null,
-      application_fee: property.application_fee || 0,
-      available_date:  property.available_date  || null,
-      landlord_id:     property.landlord_id     || null,
-      bedrooms:        property.bedrooms        || null,
-      bathrooms:       property.bathrooms       || null,
+      id:               property.id,
+      title:            property.title,
+      address:          property.address,
+      city:             property.city,
+      state:            property.state,
+      zip:              property.zip              || '',
+      monthly_rent:     property.monthly_rent     || null,
+      security_deposit: property.security_deposit || null,
+      application_fee:  property.application_fee  || 0,
+      available_date:   property.available_date   || null,
+      landlord_id:      property.landlord_id      || null,
+      bedrooms:         property.bedrooms         || null,
+      bathrooms:        property.bathrooms        || null,
+      lease_terms:      property.lease_terms      || [],
+      minimum_lease_months: property.minimum_lease_months || null,
+      pets_allowed:     property.pets_allowed     ?? false,
+      pet_types_allowed:property.pet_types_allowed|| [],
+      pet_weight_limit: property.pet_weight_limit || null,
+      pet_deposit:      property.pet_deposit      || null,
+      pet_details:      property.pet_details      || null,
+      smoking_allowed:  property.smoking_allowed  ?? false,
+      utilities_included: property.utilities_included || [],
+      parking:          property.parking          || null,
+      parking_fee:      property.parking_fee      || null,
     }));
   } catch (_) {
     // sessionStorage unavailable (private browsing) — URL params are the fallback.
   }
 
   // ── Layer 2: URL query params (cross-origin safe) ─────────────────────────
-  // Only public, non-sensitive fields go into the URL.
-  // landlord_name / landlord_id are NEVER included here — the backend resolves
-  // them from property_id at lease generation time (see generate-lease edge fn).
-  // security_deposit is set per-lease by the admin, not stored on the property.
+  // Structured, machine-readable values so the external GAS form can:
+  //   • Pre-fill fields from the property data
+  //   • Restrict choices to only what this property allows (lease terms, pets, etc.)
+  //   • Enforce move-in date minimums from available_date
+  //   • Show/hide sections based on boolean flags (pets, smoking)
+  //
+  // landlord_id is NEVER included — resolved server-side from property_id.
+  // Arrays use pipe "|" as a separator so GAS can split on it easily.
   const p = new URLSearchParams();
-  p.set('id', property.id);
-  if (property.title)           p.set('pn',    property.title);
-  if (property.address)         p.set('addr',  property.address);
-  if (property.city)            p.set('city',  property.city);
-  if (property.state)           p.set('state', property.state);
-  if (property.zip)             p.set('zip',   property.zip);
-  if (property.monthly_rent)    p.set('rent',  property.monthly_rent);
-  if (property.application_fee) p.set('fee',   property.application_fee);
-  if (property.available_date)  p.set('avail', property.available_date);
-  if (property.bedrooms)        p.set('beds',  property.bedrooms);
-  if (property.bathrooms)       p.set('baths', property.bathrooms);
 
-  // Pet policy: derive a human-readable value from the property flags.
-  if (property.pets_allowed !== undefined) {
-    let petText = property.pets_allowed ? 'Pets allowed' : 'No pets';
-    if (property.pets_allowed && property.pet_types_allowed) petText += ` (${property.pet_types_allowed})`;
-    if (property.pets_allowed && property.pet_weight_limit)  petText += ` — max ${property.pet_weight_limit} lbs`;
-    p.set('pets', petText);
-  }
+  // ── Identity & location ───────────────────────────────────────────────────
+  p.set('id',    property.id);
+  if (property.title)   p.set('pn',    property.title);
+  if (property.address) p.set('addr',  property.address);
+  if (property.city)    p.set('city',  property.city);
+  if (property.state)   p.set('state', property.state);
+  if (property.zip)     p.set('zip',   property.zip);
 
-  // Lease term: prefer lease_terms array joined, else minimum_lease_months.
+  // ── Financials ────────────────────────────────────────────────────────────
+  if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
+  if (property.security_deposit) p.set('deposit', property.security_deposit);
+  if (property.application_fee)  p.set('fee',     property.application_fee);
+
+  // ── Unit details ──────────────────────────────────────────────────────────
+  if (property.bedrooms  != null) p.set('beds',  property.bedrooms);
+  if (property.bathrooms != null) p.set('baths', property.bathrooms);
+
+  // ── Availability & lease terms ────────────────────────────────────────────
+  // avail: ISO date string — GAS uses this as the minimum allowed move-in date.
+  // terms: pipe-separated list of allowed lease term options — GAS builds a
+  //        constrained dropdown/radio group from this, hiding disallowed options.
+  // min_months: numeric minimum — fallback when lease_terms array is empty.
+  if (property.available_date) p.set('avail', property.available_date);
+
   if (property.lease_terms && property.lease_terms.length) {
-    p.set('term', Array.isArray(property.lease_terms) ? property.lease_terms.join(', ') : property.lease_terms);
+    const terms = Array.isArray(property.lease_terms)
+      ? property.lease_terms.join('|')
+      : property.lease_terms;
+    p.set('terms', terms);
   } else if (property.minimum_lease_months) {
-    p.set('term', `${property.minimum_lease_months}-Month Minimum`);
+    p.set('terms',      `${property.minimum_lease_months} months`);
+    p.set('min_months', property.minimum_lease_months);
+  }
+  if (property.minimum_lease_months) p.set('min_months', property.minimum_lease_months);
+
+  // ── Pet policy ────────────────────────────────────────────────────────────
+  // pets: boolean string "true"/"false" — GAS shows/hides the pet section.
+  // pet_types: pipe-separated allowed pet types — GAS uses for validation.
+  // pet_weight: numeric max weight in lbs — GAS validates weight input against it.
+  // pet_deposit: numeric — GAS displays as expected cost in the pet section.
+  p.set('pets', property.pets_allowed ? 'true' : 'false');
+  if (property.pets_allowed) {
+    if (property.pet_types_allowed && property.pet_types_allowed.length) {
+      const types = Array.isArray(property.pet_types_allowed)
+        ? property.pet_types_allowed.join('|')
+        : property.pet_types_allowed;
+      p.set('pet_types', types);
+    }
+    if (property.pet_weight_limit) p.set('pet_weight',  property.pet_weight_limit);
+    if (property.pet_deposit)      p.set('pet_deposit', property.pet_deposit);
+    if (property.pet_details)      p.set('pet_details', property.pet_details);
   }
 
-  // Resolve target base URL — uses APPLY_FORM_URL from config (always set to external form).
+  // ── Smoking policy ────────────────────────────────────────────────────────
+  // smoking: boolean string "true"/"false" — GAS pre-sets and locks the field.
+  p.set('smoking', property.smoking_allowed ? 'true' : 'false');
+
+  // ── Utilities & parking ───────────────────────────────────────────────────
+  // utilities: pipe-separated list — GAS displays as included utilities context.
+  // parking: text value — GAS displays as parking info context.
+  if (property.utilities_included && property.utilities_included.length) {
+    const utils = Array.isArray(property.utilities_included)
+      ? property.utilities_included.join('|')
+      : property.utilities_included;
+    p.set('utilities', utils);
+  }
+  if (property.parking)     p.set('parking',     property.parking);
+  if (property.parking_fee) p.set('parking_fee', property.parking_fee);
+
+  // ── Resolve target base URL ───────────────────────────────────────────────
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
     ? CONFIG.APPLY_FORM_URL
     : 'https://apply-choice-properties.pages.dev';
