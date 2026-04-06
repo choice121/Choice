@@ -83,4 +83,4 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 - Supabase Edge Functions have their own uptime dashboard at [app.supabase.com](https://app.supabase.com) → your project → Edge Functions.
 - GAS (Google Apps Script) email relay does **not** have a public health endpoint. Monitor email delivery by reviewing the Email Logs page in the admin panel regularly, or set up a daily cron alert via UptimeRobot pointed at your live site.
-- The internal `/apply/` directory and `apply.html` remain in the repository as legacy files but are no longer linked from any user-facing page. Do not delete them — they may still be referenced by direct email links sent before the April 2026 integration.
+- The internal `/apply/` directory, `apply.html`, and all apply-specific JS files (`apply.js`, `apply-submit.js`, etc.) have been **removed**. Old email links and bookmarks pointing to `/apply/*` are handled by `_redirects`, which sends them to the external form automatically.

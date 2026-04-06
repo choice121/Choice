@@ -41,7 +41,7 @@ Set in Replit's environment (already configured):
 | `COMPANY_PHONE` | Company phone number |
 | `COMPANY_ADDRESS` | Company address |
 | `SITE_URL` | Canonical site URL |
-| `APPLY_FORM_URL` | External apply form base URL (e.g. `https://apply-choice-properties.pages.dev`). When set, Apply Now buttons redirect here with property data as URL params. Leave blank to use built-in `/apply.html`. |
+| `APPLY_FORM_URL` | External apply form base URL (e.g. `https://apply-choice-properties.pages.dev`). Apply Now buttons redirect here with property data as URL params. All applications are handled by this external system. |
 | `PORT` | Server port (default: 5000) |
 
 ## Key Files
@@ -55,10 +55,15 @@ Set in Replit's environment (already configured):
 | `SETUP.sql` | Database schema (applied in Supabase dashboard) |
 | `webfonts/` | Font Awesome webfont files |
 
+## Application System
+
+All rental applications are handled by the **external application system** at `https://apply-choice-properties.pages.dev` (Google Apps Script / Google Sheets backend). "Apply Now" buttons across the site redirect there with property details pre-filled as URL params.
+
+The internal application form (`apply.html`, `apply/` pages, apply JS files) has been retired and removed. Redirects in `_redirects` send any old bookmarks or email links to the external form automatically.
+
 ## Supabase Edge Functions
 
 The backend logic lives in `supabase/functions/`. These are deployed to Supabase directly (not run on Replit). They handle:
-- `process-application` — application submissions
 - `generate-lease` — lease generation
 - `sign-lease` — tenant e-signatures
 - `update-status` — application status updates
@@ -72,8 +77,5 @@ The backend logic lives in `supabase/functions/`. These are deployed to Supabase
 - `/` — Homepage with property search
 - `/listings.html` — Browse available properties
 - `/property.html?id=...` — Individual property page
-- `/apply.html` — Rental application form
 - `/admin/` — Admin portal (login-protected)
 - `/landlord/` — Landlord portal (login-protected)
-- `/apply/lease.html` — Tenant lease signing
-- `/apply/success.html` — Application success page
