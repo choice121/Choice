@@ -257,6 +257,40 @@
           <label>Max Price</label>
           <input type="number" id="advMaxRent" placeholder="e.g. 1500" min="0" step="50">
         </div>
+        <div class="filter-dropdown-row">
+          <label>Laundry</label>
+          <select id="advLaundryFilter">
+            <option value="">Any</option>
+            <option value="in-unit">In-Unit W/D</option>
+            <option value="hookups">W/D Hookups</option>
+            <option value="shared">Shared Laundry</option>
+            <option value="laundromat">Laundromat Nearby</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Heating</label>
+          <select id="advHeatingFilter">
+            <option value="">Any</option>
+            <option value="gas-forced-air">Gas Forced Air</option>
+            <option value="electric">Electric</option>
+            <option value="baseboard">Baseboard</option>
+            <option value="radiant">Radiant</option>
+            <option value="heat-pump">Heat Pump</option>
+            <option value="boiler">Boiler</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Pet Type</label>
+          <select id="advPetTypeFilter">
+            <option value="">Any</option>
+            <option value="Dogs">Dogs</option>
+            <option value="Cats">Cats</option>
+            <option value="Birds">Birds</option>
+            <option value="Small Animals">Small Animals</option>
+            <option value="Reptiles">Reptiles</option>
+          </select>
+        </div>
         <div class="filter-dropdown-actions">
           <button class="filter-btn-clear" id="clearAdvFilters">Clear</button>
           <button class="filter-btn-apply" id="applyAdvFilters">Apply Filters</button>
