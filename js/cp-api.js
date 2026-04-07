@@ -733,7 +733,7 @@ function buildApplyURL(property) {
   // ── Financials ────────────────────────────────────────────────────────────
   if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
-  if (property.application_fee)  p.set('fee',     property.application_fee);
+  if (property.application_fee != null)  p.set('fee', property.application_fee);
 
   // ── Unit details ──────────────────────────────────────────────────────────
   if (property.bedrooms  != null) p.set('beds',  property.bedrooms);
