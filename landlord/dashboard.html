@@ -126,14 +126,6 @@
         </div>
         <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
       </div>
-      <div class="stat-card">
-        <div>
-          <div class="stat-card-label">Approval Rate</div>
-          <div class="stat-card-value" id="statConversion">—</div>
-          <div id="statConversionSub" style="font-size:11px;color:#8892a2;margin-top:2px"></div>
-        </div>
-        <div class="stat-card-icon" style="background:#ede9fe;color:#6d28d9"><i class="fas fa-percentage"></i></div>
-      </div>
       <a href="/landlord/inquiries.html" class="stat-card" style="text-decoration:none;cursor:pointer">
         <div>
           <div class="stat-card-label">Inquiries</div>
@@ -222,7 +214,6 @@
 
   // Load data
   document.getElementById('listingsTbody').innerHTML = CP.UI.skeletonRows(3, 6);
-  document.getElementById('appsContent').innerHTML = CP.UI.emptyState('Loading…', '⏳');
   loadListingsAndApps(profile.id);
   loadInquiries(profile.id);
 
@@ -266,28 +257,6 @@
     document.getElementById('statRentRoll').textContent  = rentRoll > 0 ? '$' + rentRoll.toLocaleString('en-US') : '—';
     document.getElementById('statOccupancy').textContent = occupiable > 0 ? occupancyPct + '%' : '—';
     document.getElementById('statOccupancySub').textContent = occupiable > 0 ? `${rented} rented of ${occupiable} units` : 'No active units';
-
-    // Load applications once — reused for both approval rate stat and the summary list below
-    let allApps = [];
-    if (landlordId) {
-      const { data: apps } = await supabase.from('applications')
-        .select('app_id, created_at, status, payment_status, lease_status, first_name, last_name, property_address')
-        .eq('landlord_id', landlordId)
-        .order('created_at', { ascending: false });
-      allApps = apps || [];
-    }
-
-    // Approval rate stat
-    if (allApps.length > 0) {
-      const approved = allApps.filter(a => a.status === 'approved').length;
-      const decided  = allApps.filter(a => a.status === 'approved' || a.status === 'denied').length;
-      const rate     = decided > 0 ? Math.round((approved / decided) * 100) : null;
-      document.getElementById('statConversion').textContent    = rate !== null ? rate + '%' : '—';
-      document.getElementById('statConversionSub').textContent = decided > 0 ? `${approved} approved of ${decided} decided` : 'No decisions yet';
-    }
-
-    // Render application summaries using already-fetched apps data
-    loadApplicationSummaries(allApps);
 
     // Table
     const tbody = document.getElementById('listingsTbody');
@@ -364,37 +333,6 @@
           </td>
         </tr>`;
     }).join('');
-  }
-
-  // ── Load application summaries ────────────────────────────
-  // Accepts pre-fetched apps array from loadListings to avoid a second DB round-trip.
-  function loadApplicationSummaries(apps) {
-    const data = (apps || []).slice(0, 5);
-    const container = document.getElementById('appsContent');
-    if (!data.length) {
-      container.innerHTML = CP.UI.emptyState('No applications yet. Applications submitted via your listings will appear here.', '📋');
-      return;
-    }
-
-    container.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:var(--s-3)">
-        ${data.map(app => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--s-3) var(--s-4);border:1px solid var(--slate-pale);border-radius:var(--r);background:var(--surface)">
-            <div>
-              <div style="font-weight:600;font-size:14px;color:#0e0e0f">${app.first_name} ${app.last_name}</div>
-              <div style="font-size:12px;color:#8892a2">${app.app_id} · ${new Date(app.created_at).toLocaleDateString()}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:var(--s-3)">
-              ${statusBadgeHtml(app.status)}
-              <a href="/landlord/applications.html?highlight=${app.app_id}" class="btn btn-sm btn-outline">
-                <i class="fas fa-arrow-right"></i> View
-              </a>
-            </div>
-          </div>`).join('')}
-        <div style="padding:var(--s-2) 0;text-align:right">
-          <a href="/landlord/applications.html" style="font-size:13px;color:#2563eb;font-weight:500">View all applications →</a>
-        </div>
-      </div>`;
   }
 
   // ── Load inquiry count + unread badge ────────────────────────────────────
