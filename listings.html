@@ -501,13 +501,16 @@ async function fetchAndRender() {
 
   try {
     const result = await CP.Properties.getListings({
-      q:         activeSearch,
-      type:      activeType,
-      beds:      activeBeds,
-      min_baths: activeMinBaths,
-      min_rent:  activeMinRent,
-      max_rent:  activeMaxRent,
-      sort:      sortBy,
+      q:            activeSearch,
+      type:         activeType,
+      beds:         activeBeds,
+      min_baths:    activeMinBaths,
+      min_rent:     activeMinRent,
+      max_rent:     activeMaxRent,
+      laundry_type: activeLaundry,
+      heating_type: activeHeating,
+      pet_type:     activePetType,
+      sort:         sortBy,
       page:      currentPage,
       per_page:  PER_PAGE,
     });
@@ -924,6 +927,9 @@ function setupFilters() {
     activeMinRent  = document.getElementById('advMinRent').value;
     activeMaxRent  = document.getElementById('advMaxRent').value || activeMaxRent;
     activeMinBaths = document.getElementById('advMinBaths').value;
+    activeLaundry  = document.getElementById('advLaundryFilter').value;
+    activeHeating  = document.getElementById('advHeatingFilter').value;
+    activePetType  = document.getElementById('advPetTypeFilter').value;
     const advType = document.getElementById('advTypeFilter').value;
     const advBeds = document.getElementById('advMinBeds').value;
     if (advType) activeType = advType;
@@ -947,6 +953,7 @@ function setupFilters() {
 window.clearAllFilters = function() {
   activeType = 'all'; activeSearch = ''; activeBeds = '';
   activeMaxRent = ''; activeMinRent = ''; activeMinBaths = '';
+  activeLaundry = ''; activeHeating = ''; activePetType = '';
   sortBy = 'newest'; currentPage = 1;
   syncControls();
   pushURL(true);
