@@ -105,6 +105,12 @@ const server = http.createServer((req, res) => {
     return res.end(configJs);
   }
 
+  // Redirect browser-auto-requested icons to the SVG favicon to avoid 404 noise
+  if (urlPath === '/favicon.ico' || urlPath === '/apple-touch-icon.png' || urlPath === '/apple-touch-icon-precomposed.png') {
+    res.writeHead(302, { 'Location': '/assets/favicon.svg' });
+    return res.end();
+  }
+
   // Resolve file path
   let filePath = path.join(ROOT, urlPath);
 
