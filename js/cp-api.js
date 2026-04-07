@@ -223,6 +223,15 @@ const Properties = {
       q = q.lte('monthly_rent', parseInt(filters.max_rent));
     }
 
+    // Laundry type filter
+    if (filters.laundry_type) q = q.eq('laundry_type', filters.laundry_type);
+
+    // Heating type filter
+    if (filters.heating_type) q = q.eq('heating_type', filters.heating_type);
+
+    // Pet type filter — checks if pet_types_allowed array contains the requested type
+    if (filters.pet_type) q = q.contains('pet_types_allowed', [filters.pet_type]);
+
     // Sort
     switch (filters.sort) {
       case 'price_asc':  q = q.order('monthly_rent', { ascending: true });  break;
