@@ -296,11 +296,36 @@
       </div>
     </div>
 
-    <div class="form-nav">
-      <button class="btn btn-ghost" id="prev2"><i class="fas fa-arrow-left"></i> Back</button>
-      <button class="btn btn-primary" id="next2">Next: Features <i class="fas fa-arrow-right"></i></button>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Last Month's Rent</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+            <input type="number" class="form-input" id="lastMonthRent" placeholder="0" style="padding-left:28px" min="0">
+          </div>
+          <div class="form-hint">Enter 0 if not required. Some landlords require last month's rent in addition to the security deposit.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admin / Move-in Fee</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+            <input type="number" class="form-input" id="adminFee" placeholder="0" style="padding-left:28px" min="0">
+          </div>
+          <div class="form-hint">One-time lease setup or admin fee charged at move-in. Enter 0 if none.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Move-in Special <span style="color:#8892a2;font-weight:400;font-size:13px">(optional)</span></label>
+        <input type="text" class="form-input" id="moveInSpecial" placeholder="e.g. First month free, Reduced deposit for qualified applicants" maxlength="200">
+        <div class="form-hint">Highlight any current promotions or incentives. Displayed prominently on your listing.</div>
+      </div>
+
+      <div class="form-nav">
+        <button class="btn btn-ghost" id="prev2"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-primary" id="next2">Next: Features <i class="fas fa-arrow-right"></i></button>
+      </div>
     </div>
-  </div>
 
   <!-- ── Step 3: Features ───────────────────────────── -->
   <div class="form-section" id="step3">
@@ -308,34 +333,99 @@
     <div class="form-section-subtitle">Let tenants know what's included.</div>
 
     <div class="form-group">
-      <label class="form-label">Pets</label>
-      <div style="display:flex;gap:var(--s-3)">
-        <label class="checkbox-pill" style="flex:1;justify-content:center">
-          <input type="radio" name="pets" value="true"> <i class="fas fa-paw"></i> Pets Allowed
-        </label>
-        <label class="checkbox-pill" style="flex:1;justify-content:center">
-          <input type="radio" name="pets" value="false" checked> <i class="fas fa-ban"></i> No Pets
-        </label>
+        <label class="form-label">Pets</label>
+        <div style="display:flex;gap:var(--s-3)">
+          <label class="checkbox-pill" style="flex:1;justify-content:center">
+            <input type="radio" name="pets" value="true"> <i class="fas fa-paw"></i> Pets Allowed
+          </label>
+          <label class="checkbox-pill" style="flex:1;justify-content:center">
+            <input type="radio" name="pets" value="false" checked> <i class="fas fa-ban"></i> No Pets
+          </label>
+        </div>
+        <div id="petDetailsWrap" style="display:none;margin-top:var(--s-4)">
+          <div class="form-group" style="margin-bottom:var(--s-3)">
+            <label class="form-label" style="font-size:13px;margin-bottom:var(--s-2)">Pet Types Allowed</label>
+            <div class="checkbox-group" id="petTypesGroup">
+              <label class="checkbox-pill"><input type="checkbox" name="petTypes" value="Dogs"> <i class="fas fa-dog"></i> Dogs</label>
+              <label class="checkbox-pill"><input type="checkbox" name="petTypes" value="Cats"> <i class="fas fa-cat"></i> Cats</label>
+              <label class="checkbox-pill"><input type="checkbox" name="petTypes" value="Birds"> Birds</label>
+              <label class="checkbox-pill"><input type="checkbox" name="petTypes" value="Small Animals"> Small Animals</label>
+              <label class="checkbox-pill"><input type="checkbox" name="petTypes" value="Reptiles"> Reptiles</label>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group" style="margin-bottom:var(--s-3)">
+              <label class="form-label" style="font-size:13px">Dog Weight Limit</label>
+              <select class="form-select" id="petWeightLimit">
+                <option value="">No limit</option>
+                <option value="15">Under 15 lbs</option>
+                <option value="25">Under 25 lbs</option>
+                <option value="50">Under 50 lbs</option>
+                <option value="75">Under 75 lbs</option>
+                <option value="100">Under 100 lbs</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:var(--s-3)">
+              <label class="form-label" style="font-size:13px">Pet Deposit</label>
+              <div style="position:relative">
+                <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+                <input type="number" class="form-input" id="petDeposit" placeholder="0" style="padding-left:28px" min="0">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:13px">Additional Pet Notes</label>
+            <input type="text" class="form-input" id="petDetails" placeholder="e.g. Max 2 pets, breed restrictions apply">
+          </div>
+        </div>
       </div>
-      <div id="petDetailsWrap" style="display:none;margin-top:var(--s-3)">
-        <input type="text" class="form-input" id="petDetails" placeholder="e.g. Dogs up to 40 lbs, cats OK, pet deposit required">
+
+      <div class="form-group">
+        <label class="form-label">Parking Type</label>
+        <select class="form-select" id="parking">
+          <option value="">Select parking type</option>
+          <option value="None">No Parking Available</option>
+          <option value="Street">Street Parking Only</option>
+          <option value="Driveway">Driveway</option>
+          <option value="Parking lot">Parking Lot</option>
+          <option value="Covered">Covered Parking</option>
+          <option value="Garage">Garage (Attached)</option>
+          <option value="Detached Garage">Garage (Detached)</option>
+          <option value="Gated">Gated Lot</option>
+        </select>
       </div>
-    </div>
 
-    <div class="form-group">
-      <label class="form-label">Parking</label>
-      <select class="form-select" id="parking">
-        <option value="">Select parking</option>
-        <option value="None">No Parking</option>
-        <option value="Street">Street Parking</option>
-        <option value="1 car garage">1-Car Garage</option>
-        <option value="2 car garage">2-Car Garage</option>
-        <option value="Driveway">Driveway</option>
-        <option value="Parking lot">Parking Lot</option>
-      </select>
-    </div>
+      <div class="form-grid-3">
+        <div class="form-group">
+          <label class="form-label">Spaces Included</label>
+          <select class="form-select" id="garageSpaces">
+            <option value="">Select</option>
+            <option value="0">0 (none)</option>
+            <option value="1">1 space</option>
+            <option value="2">2 spaces</option>
+            <option value="3">3 spaces</option>
+            <option value="4">4+ spaces</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Parking Fee</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+            <input type="number" class="form-input" id="parkingFee" placeholder="0" style="padding-left:28px" min="0">
+          </div>
+          <div class="form-hint">Enter 0 if parking is included in rent.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">EV Charging</label>
+          <select class="form-select" id="evCharging">
+            <option value="none">Not Available</option>
+            <option value="available">Available (Level 1/2)</option>
+            <option value="included">Included in Rent</option>
+          </select>
+        </div>
+      </div>
 
-    <div class="form-group">
+      <div class="form-group">
       <label class="form-label">Utilities Included in Rent</label>
       <div class="checkbox-group" id="utilitiesGroup">
         <label class="checkbox-pill"><input type="checkbox" value="Water"> Water</label>
@@ -365,7 +455,46 @@
       </div>
     </div>
 
-    <div class="form-nav">
+    <div class="form-group">
+        <label class="form-label">Laundry</label>
+        <select class="form-select" id="laundryType">
+          <option value="">Select laundry situation</option>
+          <option value="In-unit washer/dryer">In-unit washer/dryer included</option>
+          <option value="Hookups only">Washer/dryer hookups only (tenant brings)</option>
+          <option value="Shared laundry">Shared laundry on-site</option>
+          <option value="Laundromat nearby">No on-site laundry (laundromat nearby)</option>
+          <option value="None">No laundry facilities</option>
+        </select>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Heating</label>
+          <select class="form-select" id="heatingType">
+            <option value="">Select heating type</option>
+            <option value="Forced air (gas)">Forced air — gas</option>
+            <option value="Forced air (electric)">Forced air — electric</option>
+            <option value="Baseboard electric">Baseboard electric</option>
+            <option value="Radiant/in-floor">Radiant / in-floor</option>
+            <option value="Heat pump">Heat pump</option>
+            <option value="Boiler/radiator">Boiler / radiator</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cooling / A/C</label>
+          <select class="form-select" id="coolingType">
+            <option value="">Select cooling type</option>
+            <option value="Central A/C">Central A/C</option>
+            <option value="Mini-split">Mini-split (ductless)</option>
+            <option value="Window units">Window units</option>
+            <option value="Evaporative cooler">Evaporative cooler</option>
+            <option value="None">No A/C</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-nav">
       <button class="btn btn-ghost" id="prev3"><i class="fas fa-arrow-left"></i> Back</button>
       <button class="btn btn-primary" id="next3">Next: Photos <i class="fas fa-arrow-right"></i></button>
     </div>
@@ -525,34 +654,46 @@
   let _draftDirty = false;
 
   function autosaveDraft() {
-    _draftDirty = true;
-    const draft = {
-      savedAt:       Date.now(),
-      title:         document.getElementById('title').value,
-      propertyType:  document.getElementById('propertyType').value,
-      address:       document.getElementById('address').value,
-      city:          document.getElementById('city').value,
-      state:         document.getElementById('state').value,
-      zip:           document.getElementById('zip').value,
-      bedrooms:      document.getElementById('bedrooms').value,
-      bathrooms:     document.getElementById('bathrooms').value,
-      sqft:          document.getElementById('sqft').value,
-      rent:          document.getElementById('rent').value,
-      deposit:       document.getElementById('deposit').value,
-      availDate:     document.getElementById('availDate').value,
-      appFee:        document.getElementById('appFee').value,
-      parking:       document.getElementById('parking').value,
-      petDetails:    document.getElementById('petDetails').value,
-      description:   document.getElementById('description').value,
-      showingInstructions: document.getElementById('showingInstructions').value,
-      petsAllowed:   document.querySelector('input[name="pets"]:checked')?.value || 'false',
-      availType:     document.querySelector('input[name="availType"]:checked')?.value || 'now',
-      leaseTerms:    [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value),
-      utilities:     [...document.querySelectorAll('#utilitiesGroup input:checked')].map(c => c.value),
-      amenities:     [...document.querySelectorAll('#amenitiesGroup input:checked')].map(c => c.value),
-    };
-    localStorage.setItem('cp_draft_s1', JSON.stringify(draft));
-  }
+      _draftDirty = true;
+      const draft = {
+        savedAt:       Date.now(),
+        title:         document.getElementById('title').value,
+        propertyType:  document.getElementById('propertyType').value,
+        address:       document.getElementById('address').value,
+        city:          document.getElementById('city').value,
+        state:         document.getElementById('state').value,
+        zip:           document.getElementById('zip').value,
+        bedrooms:      document.getElementById('bedrooms').value,
+        bathrooms:     document.getElementById('bathrooms').value,
+        sqft:          document.getElementById('sqft').value,
+        rent:          document.getElementById('rent').value,
+        deposit:       document.getElementById('deposit').value,
+        lastMonthRent: document.getElementById('lastMonthRent').value,
+        adminFee:      document.getElementById('adminFee').value,
+        moveInSpecial: document.getElementById('moveInSpecial').value,
+        availDate:     document.getElementById('availDate').value,
+        appFee:        document.getElementById('appFee').value,
+        parking:       document.getElementById('parking').value,
+        garageSpaces:  document.getElementById('garageSpaces').value,
+        parkingFee:    document.getElementById('parkingFee').value,
+        evCharging:    document.getElementById('evCharging').value,
+        petDetails:    document.getElementById('petDetails').value,
+        petWeightLimit:document.getElementById('petWeightLimit').value,
+        petDeposit:    document.getElementById('petDeposit').value,
+        laundryType:   document.getElementById('laundryType').value,
+        heatingType:   document.getElementById('heatingType').value,
+        coolingType:   document.getElementById('coolingType').value,
+        description:   document.getElementById('description').value,
+        showingInstructions: document.getElementById('showingInstructions').value,
+        petsAllowed:   document.querySelector('input[name="pets"]:checked')?.value || 'false',
+        petTypes:      [...document.querySelectorAll('#petTypesGroup input:checked')].map(c => c.value),
+        availType:     document.querySelector('input[name="availType"]:checked')?.value || 'now',
+        leaseTerms:    [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value),
+        utilities:     [...document.querySelectorAll('#utilitiesGroup input:checked')].map(c => c.value),
+        amenities:     [...document.querySelectorAll('#amenitiesGroup input:checked')].map(c => c.value),
+      };
+      localStorage.setItem('cp_draft_s1', JSON.stringify(draft));
+    }
 
   // Wire autosave to all text/select inputs across steps
   ['title','address','city','zip','sqft','rent','deposit','availDate','appFee','petDetails','description','showingInstructions']
@@ -572,44 +713,58 @@
 
   // ── Draft restore helper ───────────────────────────────
   function applyDraftToForm(s1) {
-    if (s1.title)        { document.getElementById('title').value = s1.title; document.getElementById('titleCount').textContent = s1.title.length; }
-    if (s1.propertyType) document.getElementById('propertyType').value = s1.propertyType;
-    if (s1.address)      document.getElementById('address').value = s1.address;
-    if (s1.city)         document.getElementById('city').value = s1.city;
-    if (s1.state)        document.getElementById('state').value = s1.state;
-    if (s1.zip)          document.getElementById('zip').value = s1.zip;
-    if (s1.bedrooms)     document.getElementById('bedrooms').value = s1.bedrooms;
-    if (s1.bathrooms)    document.getElementById('bathrooms').value = s1.bathrooms;
-    if (s1.sqft)         document.getElementById('sqft').value = s1.sqft;
-    if (s1.rent)         document.getElementById('rent').value = s1.rent;
-    if (s1.deposit)      document.getElementById('deposit').value = s1.deposit;
-    if (s1.availDate)    document.getElementById('availDate').value = s1.availDate;
-    if (s1.appFee !== undefined) document.getElementById('appFee').value = s1.appFee;
-    if (s1.parking)      document.getElementById('parking').value = s1.parking;
-    if (s1.petDetails)   document.getElementById('petDetails').value = s1.petDetails;
-    if (s1.availType) {
-      const availRadio = document.querySelector(`input[name="availType"][value="${s1.availType}"]`);
-      if (availRadio) { availRadio.checked = true; _setAvailDateVisibility(s1.availType); }
+      if (s1.title)        { document.getElementById('title').value = s1.title; document.getElementById('titleCount').textContent = s1.title.length; }
+      if (s1.propertyType) document.getElementById('propertyType').value = s1.propertyType;
+      if (s1.address)      document.getElementById('address').value = s1.address;
+      if (s1.city)         document.getElementById('city').value = s1.city;
+      if (s1.state)        document.getElementById('state').value = s1.state;
+      if (s1.zip)          document.getElementById('zip').value = s1.zip;
+      if (s1.bedrooms)     document.getElementById('bedrooms').value = s1.bedrooms;
+      if (s1.bathrooms)    document.getElementById('bathrooms').value = s1.bathrooms;
+      if (s1.sqft)         document.getElementById('sqft').value = s1.sqft;
+      if (s1.rent)         document.getElementById('rent').value = s1.rent;
+      if (s1.deposit)      document.getElementById('deposit').value = s1.deposit;
+      if (s1.lastMonthRent !== undefined) document.getElementById('lastMonthRent').value = s1.lastMonthRent;
+      if (s1.adminFee !== undefined)      document.getElementById('adminFee').value = s1.adminFee;
+      if (s1.moveInSpecial) document.getElementById('moveInSpecial').value = s1.moveInSpecial;
+      if (s1.availDate)    document.getElementById('availDate').value = s1.availDate;
+      if (s1.appFee !== undefined) document.getElementById('appFee').value = s1.appFee;
+      if (s1.parking)      document.getElementById('parking').value = s1.parking;
+      if (s1.garageSpaces !== undefined) document.getElementById('garageSpaces').value = s1.garageSpaces;
+      if (s1.parkingFee !== undefined)   document.getElementById('parkingFee').value = s1.parkingFee;
+      if (s1.evCharging)   document.getElementById('evCharging').value = s1.evCharging;
+      if (s1.petDetails)   document.getElementById('petDetails').value = s1.petDetails;
+      if (s1.petWeightLimit !== undefined) document.getElementById('petWeightLimit').value = s1.petWeightLimit;
+      if (s1.petDeposit !== undefined)   document.getElementById('petDeposit').value = s1.petDeposit;
+      if (s1.laundryType)  document.getElementById('laundryType').value = s1.laundryType;
+      if (s1.heatingType)  document.getElementById('heatingType').value = s1.heatingType;
+      if (s1.coolingType)  document.getElementById('coolingType').value = s1.coolingType;
+      if (s1.availType) {
+        const availRadio = document.querySelector(`input[name="availType"][value="${s1.availType}"]`);
+        if (availRadio) { availRadio.checked = true; _setAvailDateVisibility(s1.availType); }
+      }
+      if (s1.petsAllowed) {
+        const petsRadio = document.querySelector(`input[name="pets"][value="${s1.petsAllowed}"]`);
+        if (petsRadio) { petsRadio.checked = true; document.getElementById('petDetailsWrap').style.display = s1.petsAllowed === 'true' ? '' : 'none'; }
+      }
+      if (Array.isArray(s1.petTypes) && s1.petTypes.length) {
+        document.querySelectorAll('#petTypesGroup input').forEach(cb => { cb.checked = s1.petTypes.includes(cb.value); });
+      }
+      if (Array.isArray(s1.leaseTerms) && s1.leaseTerms.length) {
+        document.querySelectorAll('#step2 .checkbox-group input').forEach(cb => { cb.checked = s1.leaseTerms.includes(cb.value); });
+      }
+      if (Array.isArray(s1.utilities) && s1.utilities.length) {
+        document.querySelectorAll('#utilitiesGroup input').forEach(cb => { cb.checked = s1.utilities.includes(cb.value); });
+      }
+      if (Array.isArray(s1.amenities) && s1.amenities.length) {
+        document.querySelectorAll('#amenitiesGroup input').forEach(cb => { cb.checked = s1.amenities.includes(cb.value); });
+      }
+      if (s1.description) {
+        document.getElementById('description').value = s1.description;
+        document.getElementById('descCount').textContent = s1.description.length;
+      }
+      if (s1.showingInstructions)  document.getElementById('showingInstructions').value = s1.showingInstructions;
     }
-    if (s1.petsAllowed) {
-      const petsRadio = document.querySelector(`input[name="pets"][value="${s1.petsAllowed}"]`);
-      if (petsRadio) { petsRadio.checked = true; document.getElementById('petDetailsWrap').style.display = s1.petsAllowed === 'true' ? '' : 'none'; }
-    }
-    if (Array.isArray(s1.leaseTerms) && s1.leaseTerms.length) {
-      document.querySelectorAll('#step2 .checkbox-group input').forEach(cb => { cb.checked = s1.leaseTerms.includes(cb.value); });
-    }
-    if (Array.isArray(s1.utilities) && s1.utilities.length) {
-      document.querySelectorAll('#utilitiesGroup input').forEach(cb => { cb.checked = s1.utilities.includes(cb.value); });
-    }
-    if (Array.isArray(s1.amenities) && s1.amenities.length) {
-      document.querySelectorAll('#amenitiesGroup input').forEach(cb => { cb.checked = s1.amenities.includes(cb.value); });
-    }
-    if (s1.description) {
-      document.getElementById('description').value = s1.description;
-      document.getElementById('descCount').textContent = s1.description.length;
-    }
-    if (s1.showingInstructions)  document.getElementById('showingInstructions').value = s1.showingInstructions;
-  }
 
   // ── Check for saved draft on page load ────────────────
   // Show resume banner if draft exists and is < 7 days old; clear it if stale.
@@ -1142,35 +1297,49 @@
     const leaseTerms = [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value);
 
     const listingData = {
-      id               : propId,
-      landlord_id      : profile.id,
-      status           : 'active',
-      title            : v('title'),
-      property_type    : v('propertyType'),
-      address          : v('address'),
-      city             : v('city'),
-      state            : v('state'),
-      zip              : v('zip'),
-      lat              : geocodedLat,
-      lng              : geocodedLng,
-      bedrooms         : v('bedrooms') ? parseInt(v('bedrooms')) : null,
-      bathrooms        : v('bathrooms') ? parseFloat(v('bathrooms')) : null,
-      square_footage   : v('sqft') ? parseInt(v('sqft')) : null,
-      monthly_rent     : parseInt(v('rent')),
-      security_deposit : v('deposit') ? parseInt(v('deposit')) : null,
-      available_date   : v('availDate') || null,
-      application_fee  : v('appFee') !== null && v('appFee') !== '' ? parseInt(v('appFee')) : 0,
-      lease_terms      : leaseTerms,
-      pets_allowed     : document.querySelector('input[name="pets"]:checked')?.value === 'true',
-      pet_details      : v('petDetails') || null,
-      parking          : v('parking') || null,
-      utilities_included: getChecked('utilitiesGroup'),
-      amenities        : getChecked('amenitiesGroup'),
-      photo_urls       : photoUrls,
-      photo_file_ids   : photoFileIds, // I-028: persist fileIds for CDN deletion
-      description      : v('description'),
-      showing_instructions : v('showingInstructions') || null,
-    };
+        id               : propId,
+        landlord_id      : profile.id,
+        status           : 'active',
+        title            : v('title'),
+        property_type    : v('propertyType'),
+        address          : v('address'),
+        city             : v('city'),
+        state            : v('state'),
+        zip              : v('zip'),
+        lat              : geocodedLat,
+        lng              : geocodedLng,
+        bedrooms         : v('bedrooms') ? parseInt(v('bedrooms')) : null,
+        bathrooms        : v('bathrooms') ? parseFloat(v('bathrooms')) : null,
+        square_footage   : v('sqft') ? parseInt(v('sqft')) : null,
+        monthly_rent     : parseInt(v('rent')),
+        security_deposit : v('deposit') ? parseInt(v('deposit')) : null,
+        last_months_rent : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
+        admin_fee        : v('adminFee') ? parseInt(v('adminFee')) : null,
+        move_in_special  : v('moveInSpecial') || null,
+        available_date   : v('availDate') || null,
+        application_fee  : v('appFee') !== null && v('appFee') !== '' ? parseInt(v('appFee')) : 0,
+        minimum_lease_months: null,
+        lease_terms      : leaseTerms,
+        pets_allowed     : document.querySelector('input[name="pets"]:checked')?.value === 'true',
+        pet_types_allowed: document.querySelector('input[name="pets"]:checked')?.value === 'true'
+                             ? [...document.querySelectorAll('#petTypesGroup input:checked')].map(c => c.value)
+                             : [],
+        pet_weight_limit : v('petWeightLimit') ? parseInt(v('petWeightLimit')) : null,
+        pet_deposit      : v('petDeposit') ? parseInt(v('petDeposit')) : null,
+        pet_details      : v('petDetails') || null,
+        parking          : v('parking') || null,
+        garage_spaces    : v('garageSpaces') ? parseInt(v('garageSpaces')) : null,
+        parking_fee      : v('parkingFee') ? parseInt(v('parkingFee')) : null,
+        utilities_included: getChecked('utilitiesGroup'),
+        amenities        : getChecked('amenitiesGroup'),
+        laundry_type     : v('laundryType') || null,
+        heating_type     : v('heatingType') || null,
+        cooling_type     : v('coolingType') || null,
+        photo_urls       : photoUrls,
+        photo_file_ids   : photoFileIds, // I-028: persist fileIds for CDN deletion
+        description      : v('description'),
+        showing_instructions : v('showingInstructions') || null,
+      };
 
     // I-069: Validate array sync before insert — prevents index misalignment on deletion
     if (photoUrls.length !== photoFileIds.length) {
