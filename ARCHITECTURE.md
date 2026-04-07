@@ -44,7 +44,7 @@ Browser
   │     ├── Supabase Auth (landlord + admin login)
   │     ├── Realtime (application status updates)
   │     ├── Storage (lease PDFs, application docs — private)
-  │     └── Edge Functions (10 Deno functions — API layer)
+  │     └── Edge Functions (4 active Deno functions — 7 decommissioned, pending Supabase dashboard deletion)
   │
   ├── Google Apps Script    ← email relay (deployed separately)
   │
@@ -79,25 +79,36 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
 
 ### Backend API — Supabase Edge Functions
 
-10 Deno-based Edge Functions deployed to Supabase's infrastructure:
+  4 Deno-based Edge Functions are active. 7 application-related functions were removed from this repository and must be deleted from the Supabase dashboard (they are still deployed).
 
-| Function | Purpose | Auth required |
-|---|---|---|
-| `process-application` | Receive and store rental applications | Public (rate-limited) |
-| `generate-lease` | Generate lease PDF and send signing link | Admin only |
-| `sign-lease` | Process digital signatures | Token-based (no login) |
-| `update-status` | Update application status | Admin / Landlord |
-| `mark-paid` | Mark first month paid | Admin only |
-| `mark-movein` | Confirm move-in | Admin only |
-| `send-inquiry` | Send property inquiry to landlord | Public (rate-limited) |
-| `send-message` | Send message in thread | Admin only |
-| `imagekit-upload` | Authenticated photo upload to ImageKit | Authenticated user |
-| `get-application-status` | Tenant status check by Application ID | Public (rate-limited) |
+  #### Active Functions
 
-**Deployment:** `npx supabase functions deploy --project-ref cfsdhylbwzyuvcvbnrel` (one-time; see SETUP.md → Step 7)
+  | Function | Purpose | Auth required |
+  |---|---|---|
+  | `send-inquiry` | Send property inquiry to landlord | Public (rate-limited) |
+  | `send-message` | Send message in thread | Admin only |
+  | `imagekit-upload` | Authenticated photo upload to ImageKit | Authenticated user |
+  | `imagekit-delete` | Delete photo from ImageKit CDN | Authenticated user |
 
-These functions are NOT part of this repository's local runtime. They run on Deno in Supabase's cloud and never execute locally.
+  #### Decommissioned Functions — Action Required
 
+  All application and lease processing moved to the external GAS system. The 7 functions below have been removed from this repository but are **still running on Supabase** and should be deleted to eliminate unnecessary live endpoints.
+
+  **Go to:** [Supabase Dashboard → Edge Functions](https://supabase.com/dashboard/project/tlfmwetmhthpyrytrcfo/functions) → delete each:
+
+  | Function | Was responsible for |
+  |---|---|
+  | `process-application` | Application intake (now handled by GAS `doPost()`) |
+  | `generate-lease` | Lease generation (now: GAS admin panel) |
+  | `sign-lease` | E-signature processing (now: GAS lease portal) |
+  | `update-status` | Status updates (now: GAS admin panel) |
+  | `mark-paid` | Payment marking (now: GAS admin panel) |
+  | `mark-movein` | Move-in confirmation (now: GAS admin panel) |
+  | `get-application-status` | Tenant status check (now: GAS `?path=dashboard`) |
+
+  **Deployment (active functions only):** `npx supabase functions deploy --project-ref tlfmwetmhthpyrytrcfo` (see SETUP.md → Step 7)
+
+  These functions are NOT part of this repository's local runtime. They run on Deno in Supabase's cloud.
 ---
 
 ### Database — Supabase PostgreSQL
