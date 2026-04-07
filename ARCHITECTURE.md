@@ -324,3 +324,37 @@ This platform sends the following URL params when redirecting to the form. The e
 - [ ] At least 3–5 listings seeded via landlord dashboard so homepage shows live content
 - [ ] Verify "Apply Now" buttons redirect to `https://apply-choice-properties.pages.dev` with correct property params
 - [ ] Verify "Track My Application" links in nav, footer, and FAQ point to the external applicant dashboard
+
+  ---
+
+  ## Changelog
+
+  ### 2026-04-07 — Property Data Completeness Improvements
+
+  Addressed systematic gap where DB columns existed but were never collected in landlord forms.
+
+  **Financial Fields (new inputs in Step 2 of new-listing / edit-listing):**
+  - last_months_rent — Last month rent amount (was always NULL before)
+  - admin_fee — One-time move-in/admin fee (was always NULL before)
+  - move_in_special — Free-text move-in promotion/special (was always NULL before)
+
+  **Structured Pet Policy (replaces single text-box in Step 3):**
+  - pet_types_allowed — Array of allowed pet types: Dogs, Cats, Birds, Small Animals, Reptiles
+  - pet_weight_limit — Dog weight limit in lbs (dropdown: none / 15 / 25 / 50 / 75 / 100)
+  - pet_deposit — Separate pet deposit amount (was always NULL before)
+  - pet_details — Free-text notes now a secondary field, not the primary input
+
+  **Structured Parking (replaces single select in Step 3):**
+  - parking — Now includes Covered, Garage (Attached/Detached), Gated options
+  - garage_spaces — Number of spaces included (was always NULL before)
+  - parking_fee — Monthly parking fee separate from rent (was always NULL before)
+  - ev_charging — EV charging availability: none / available / included
+
+  **Systems and Appliances (new selects added to Step 3):**
+  - laundry_type — In-unit / hookups / shared / laundromat / none
+  - heating_type — Gas forced air / electric / baseboard / radiant / heat pump / boiler / other
+  - cooling_type — Central A/C / mini-split / window units / evaporative / none
+
+  All fields write to columns that already existed in the DB schema (zero schema changes required).
+  Draft autosave and draft restore updated to persist all new fields.
+  
