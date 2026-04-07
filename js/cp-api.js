@@ -291,7 +291,9 @@ const Properties = {
     // Special pills
     if (filters.type === 'pets')      q = q.eq('pets_allowed', true);
     if (filters.type === 'parking')   q = q.not('parking', 'is', null).neq('parking', '').neq('parking', 'None');
-    if (filters.type === 'available') q = q.lte('available_date', new Date().toISOString().slice(0,10));
+    // C1 FIX: "Move-in Ready" must also match properties where available_date IS NULL
+    // (those are immediately available — landlords who didn't set a date).
+    if (filters.type === 'available') q = q.or(`available_date.is.null,available_date.lte.${new Date().toISOString().slice(0,10)}`);
 
     // Bedrooms — exact match from quick filter, gte from advanced min_beds
     if (filters.beds !== undefined && filters.beds !== '') {
@@ -373,6 +375,63 @@ const Properties = {
   },
   async delete(id)        { return sb().from('properties').delete().eq('id', id); },
   async incrementView(id) { return sb().rpc('increment_counter', { p_table: 'properties', p_id: id, p_column: 'views_count' }); },
+};
+
+// ── Saved Properties API ──────────────────────────────────
+// C4 FIX: Connects the heart/save button to the saved_properties DB table
+// for authenticated users (saves persist across devices).  Falls back to
+// localStorage for anonymous visitors so the experience still works.
+// The DB trigger trg_saves_count() auto-updates properties.saves_count on INSERT/DELETE.
+const SavedProperties = {
+  // Load saved property IDs for the current user.
+  // Authenticated → DB query; anonymous → localStorage.
+  // Always returns a Set<string>.
+  async getIds() {
+    const user = await Auth.getUser();
+    if (!user) return new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+    const { data, error } = await sb()
+      .from('saved_properties')
+      .select('property_id')
+      .eq('user_id', user.id);
+    if (error) return new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+    return new Set((data || []).map(r => r.property_id));
+  },
+
+  // Toggle save state for one property.
+  // Returns { saved: boolean }.
+  async toggle(propertyId) {
+    const user = await Auth.getUser();
+    if (!user) {
+      // Anonymous — localStorage only
+      const ids = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+      const saved = !ids.has(propertyId);
+      if (saved) ids.add(propertyId); else ids.delete(propertyId);
+      localStorage.setItem('cp_saved', JSON.stringify([...ids]));
+      return { saved };
+    }
+    // Authenticated — check DB first to determine current state
+    const { data: existing } = await sb()
+      .from('saved_properties')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('property_id', propertyId)
+      .maybeSingle();
+    let saved;
+    if (existing) {
+      // Currently saved → unsave (delete row; trigger decrements saves_count)
+      await sb().from('saved_properties').delete().eq('id', existing.id);
+      saved = false;
+    } else {
+      // Not saved → save (insert row; trigger increments saves_count)
+      await sb().from('saved_properties').insert({ user_id: user.id, property_id: propertyId });
+      saved = true;
+    }
+    // Keep localStorage in sync so anonymous fallback stays accurate
+    const ids = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+    if (saved) ids.add(propertyId); else ids.delete(propertyId);
+    localStorage.setItem('cp_saved', JSON.stringify([...ids]));
+    return { saved };
+  },
 };
 
 // ── Inquiries API ─────────────────────────────────────────
@@ -788,7 +847,7 @@ async function updateNav() {
 // edit when adding or changing any function.
 window.CP_esc = esc;
 window.CP = {
-  sb, Auth, ApplicantAuth, Applications, Properties, Inquiries, Landlords, EmailLogs, UI,
+  sb, Auth, ApplicantAuth, Applications, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
   subscribeToApplication, subscribeToApplications, subscribeToMessages,
   generatePropertyId, buildApplyURL, incrementCounter,
   getSession, getLandlordProfile, requireAuth,

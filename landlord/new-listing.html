@@ -263,8 +263,18 @@
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label class="form-label">Available Date</label>
-        <input type="date" class="form-input" id="availDate">
+        <label class="form-label">Availability</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+            <input type="radio" name="availType" id="availNow" value="now" checked style="width:16px;height:16px;accent-color:var(--color-brand)">
+            <span>Available immediately</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+            <input type="radio" name="availType" id="availFuture" value="future" style="width:16px;height:16px;accent-color:var(--color-brand)">
+            <span>Available on a specific date</span>
+          </label>
+        </div>
+        <input type="date" class="form-input" id="availDate" style="display:none">
       </div>
       <div class="form-group">
         <label class="form-label">Application Fee <span style="color:#8892a2;font-weight:400;font-size:13px">(charged to applicant)</span></label>
@@ -536,6 +546,7 @@
       description:   document.getElementById('description').value,
       showingInstructions: document.getElementById('showingInstructions').value,
       petsAllowed:   document.querySelector('input[name="pets"]:checked')?.value || 'false',
+      availType:     document.querySelector('input[name="availType"]:checked')?.value || 'now',
       leaseTerms:    [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value),
       utilities:     [...document.querySelectorAll('#utilitiesGroup input:checked')].map(c => c.value),
       amenities:     [...document.querySelectorAll('#amenitiesGroup input:checked')].map(c => c.value),
@@ -576,6 +587,10 @@
     if (s1.appFee !== undefined) document.getElementById('appFee').value = s1.appFee;
     if (s1.parking)      document.getElementById('parking').value = s1.parking;
     if (s1.petDetails)   document.getElementById('petDetails').value = s1.petDetails;
+    if (s1.availType) {
+      const availRadio = document.querySelector(`input[name="availType"][value="${s1.availType}"]`);
+      if (availRadio) { availRadio.checked = true; _setAvailDateVisibility(s1.availType); }
+    }
     if (s1.petsAllowed) {
       const petsRadio = document.querySelector(`input[name="pets"][value="${s1.petsAllowed}"]`);
       if (petsRadio) { petsRadio.checked = true; document.getElementById('petDetailsWrap').style.display = s1.petsAllowed === 'true' ? '' : 'none'; }
@@ -638,9 +653,24 @@
     }
   } catch(e) {}
 
+  // ── Availability toggle (C2 FIX) ──────────────────────
+  // "Available immediately" hides the date picker (available_date stored as null).
+  // "Available on a specific date" shows it with a future-only min constraint.
+  function _setAvailDateVisibility(type) {
+    const el = document.getElementById('availDate');
+    if (type === 'future') {
+      el.style.display = '';
+      el.min = new Date().toISOString().split('T')[0];
+    } else {
+      el.style.display = 'none';
+      el.value = '';
+    }
+  }
+  document.querySelectorAll('input[name="availType"]').forEach(r => {
+    r.addEventListener('change', () => { _setAvailDateVisibility(r.value); autosaveDraft(); });
+  });
+
   // ── Navigation ─────────────────────────────────────────
-  // I-041: Prevent past dates in the Available Date picker
-  document.getElementById('availDate').min = new Date().toISOString().split('T')[0];
   document.getElementById('next1').addEventListener('click', () => validate1() && goTo(2));
   document.getElementById('next2').addEventListener('click', () => validate2() && goTo(3));
   document.getElementById('next3').addEventListener('click', () => validate3() && goTo(4));
@@ -653,11 +683,34 @@
   document.getElementById('prev6').addEventListener('click', () => goTo(5));
   document.getElementById('submitBtn').addEventListener('click', submitListing);
 
+  // ── C3 FIX: Compress preview photos before sessionStorage ──
+  // Raw data URLs for 20 × 10 MB photos can exceed the 5 MB sessionStorage limit.
+  // We downscale each to max 900 px wide at 72 % JPEG quality — plenty for preview.
+  function _compressForPreview(dataUrl, maxW = 900, quality = 0.72) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale  = Math.min(1, maxW / img.naturalWidth);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.naturalWidth  * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: keep original on error
+      img.src = dataUrl;
+    });
+  }
+
   // ── Preview listing (P2-E) ─────────────────────────────
-  document.getElementById('previewBtn').addEventListener('click', () => {
+  document.getElementById('previewBtn').addEventListener('click', async () => {
     const getChecked = (groupId) =>
       [...document.querySelectorAll(`#${groupId} input:checked`)].map(c => c.value);
     const leaseTerms = [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value);
+
+    // C3 FIX: Compress up to 5 photos to stay well under sessionStorage limits.
+    const rawPreviews  = pendingPreviews.slice(0, 5);
+    const previewPhotos = await Promise.all(rawPreviews.map(url => _compressForPreview(url)));
 
     const previewData = {
       title:             v('title') || 'Untitled Listing',
@@ -681,11 +734,18 @@
       amenities:         getChecked('amenitiesGroup'),
       description:       v('description'),
       showing_instructions: v('showingInstructions') || null,
-      photo_urls:        pendingPreviews.slice(0, 5), // I-050: data URLs work cross-tab (blob: URLs are tab-scoped and break on iOS Safari)
+      photo_urls:        previewPhotos, // compressed — safe for sessionStorage (was: raw data URLs)
       status:            'preview',
       landlords:         { contact_name: profile.contact_name, business_name: profile.business_name, tagline: profile.tagline, avatar_url: profile.avatar_url, verified: profile.verified },
     };
-    sessionStorage.setItem('cp_listing_preview', JSON.stringify(previewData));
+    try {
+      sessionStorage.setItem('cp_listing_preview', JSON.stringify(previewData));
+    } catch (e) {
+      // Last resort: drop all but the first photo if still over limit
+      previewData.photo_urls = previewPhotos.slice(0, 1);
+      try { sessionStorage.setItem('cp_listing_preview', JSON.stringify(previewData)); }
+      catch (_) { CP.UI.toast('Preview unavailable — your browser storage is full. Try clearing site data.', 'error'); return; }
+    }
     // Use same-tab navigation — window.open() is blocked by iOS Safari popup blocker (L-03)
     window.location.href = '/property.html?preview=true';
   });
