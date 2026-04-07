@@ -54,15 +54,25 @@
     <div class="topbar-right"><div class="live-dot" title="Live updates active"></div><span style="font-size:.72rem;color:var(--muted)">Live</span></div>
   </div>
   <div class="content">
+      <div class="stats-grid" id="stats">
+        <div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value gold" id="s-listings">—</div><div class="stat-sub">Live on platform</div></div>
+      </div>
+      <div id="stats-refresh-ts" style="font-size:11px;color:var(--text-muted,#6b7280);text-align:right;margin-top:-10px;margin-bottom:16px;"></div>
 
-    <!-- Stats -->
-    <div class="stats-grid" id="stats">
-      <div class="stat-card"><div class="stat-label">Total Applications</div><div class="stat-value gold" id="s-total">—</div><div class="stat-sub">All time</div></div>
-      <div class="stat-card"><div class="stat-label">Pending Review</div><div class="stat-value" id="s-pending">—</div><div class="stat-sub">Awaiting action</div></div>
-      <div class="stat-card"><div class="stat-label">Fee Unpaid</div><div class="stat-value red" id="s-unpaid">—</div><div class="stat-sub">Needs collection</div></div>
-      <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value green" id="s-approved">—</div><div class="stat-sub">All time</div></div>
-      <div class="stat-card"><div class="stat-label">Leases Sent</div><div class="stat-value blue" id="s-leases">—</div><div class="stat-sub">Awaiting signature · <span id="s-leases-signed">—</span> executed</div></div>
-      <div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value gold" id="s-listings">—</div><div class="stat-sub">Live on platform</div></div>
+      <!-- Application Management Panel — links to external system -->
+      <div class="card" style="margin-bottom:24px;padding:28px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+        <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 16px rgba(37,99,235,.3);">📋</div>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px;">Application Management</div>
+          <div style="font-size:.83rem;color:var(--muted);line-height:1.5;">All applications, approvals, payments, lease generation, and status tracking are managed in the Choice Properties Application System.</div>
+        </div>
+        <a href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=admin" target="_blank" rel="noopener noreferrer"
+           style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:12px 22px;border-radius:9px;font-weight:700;font-size:.875rem;white-space:nowrap;box-shadow:0 4px 14px rgba(37,99,235,.3);flex-shrink:0;">
+          <i class="fas fa-external-link-alt"></i> Open Admin Panel
+        </a>
+      </div>
+    </div>
+  </div>
     </div>
     <div id="stats-refresh-ts" style="font-size:11px;color:var(--text-muted,#6b7280);text-align:right;margin-top:-10px;margin-bottom:16px;"></div>
 
