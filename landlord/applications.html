@@ -96,49 +96,26 @@
   </aside>
 
   <main class="dashboard-main">
-    <div style="margin-bottom:var(--s-8)">
-      <div class="section-eyebrow">Landlord Portal</div>
-      <h1 class="section-title" style="font-size:28px">Applications</h1>
-    </div>
-
-    <div class="stats-row" style="margin-bottom:var(--s-6)">
-      <div class="stat-card"><div><div class="stat-card-label">Total</div><div class="stat-card-value" id="statTotal">—</div></div><div class="stat-card-icon"><i class="fas fa-file-alt"></i></div></div>
-      <div class="stat-card"><div><div class="stat-card-label">Pending Payment</div><div class="stat-card-value" id="statPending">—</div></div><div class="stat-card-icon" style="background:#fef3c7;color:#b45309"><i class="fas fa-clock"></i></div></div>
-      <div class="stat-card"><div><div class="stat-card-label">Approved</div><div class="stat-card-value" id="statApproved">—</div></div><div class="stat-card-icon" style="background:#d1fae5;color:#1a7a52"><i class="fas fa-check-circle"></i></div></div>
-      <div class="stat-card"><div><div class="stat-card-label">Lease Signed</div><div class="stat-card-value" id="statSigned">—</div></div><div class="stat-card-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-file-signature"></i></div></div>
-    </div>
-
-    <div class="dashboard-section" style="margin-bottom:var(--s-4)">
-      <div style="padding:var(--s-4) var(--s-5);display:flex;gap:var(--s-3);flex-wrap:wrap">
-        <div style="position:relative;flex:1;min-width:200px">
-          <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:13px"></i>
-          <input type="text" class="form-input" id="searchInput" placeholder="Search name, email, ID…" style="padding-left:36px" oninput="applyFilters()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s-8)">
+        <div>
+          <div class="section-eyebrow">Landlord Portal</div>
+          <h1 class="section-title" style="font-size:28px">Applications</h1>
         </div>
-        <select class="form-select" id="statusFilter" style="width:180px" onchange="applyFilters()">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending Payment</option>
-          <option value="under_review">Under Review</option>
-          <option value="approved">Approved</option>
-          <option value="denied">Denied</option>
-          <option value="waitlisted">Waitlisted</option>
-          <option value="withdrawn">Withdrawn</option>
-        </select>
-        <select class="form-select" id="propertyFilter" style="width:220px" onchange="applyFilters()">
-          <option value="">All Properties</option>
-        </select>
       </div>
-    </div>
 
-    <div class="dashboard-section">
-      <div class="dashboard-section-header">
-        <div class="dashboard-section-title">All Applications</div>
-        <span id="resultCount" style="font-size:13px;color:#8892a2"></span>
+      <div class="dashboard-section" style="text-align:center;padding:48px 32px;">
+        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 24px;box-shadow:0 8px 24px rgba(37,99,235,.3);">📋</div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-primary,#0a1628);margin:0 0 12px;">Applications Managed Externally</h2>
+        <p style="color:#8892a2;font-size:.9rem;line-height:1.65;max-width:520px;margin:0 auto 32px;">All rental applications for your properties are received, reviewed, and managed through the Choice Properties Application System. Click below to open the admin panel where you can view all applications, mark payments, approve or deny applicants, and send leases.</p>
+        <a href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=admin" target="_blank" rel="noopener noreferrer"
+           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;box-shadow:0 4px 18px rgba(37,99,235,.35);">
+          <i class="fas fa-external-link-alt"></i> Open Application Admin Panel
+        </a>
+        <p style="margin:28px auto 0;max-width:480px;font-size:.78rem;color:#8892a2;padding:12px 16px;background:rgba(37,99,235,.05);border-radius:8px;border:1px solid rgba(37,99,235,.1);">
+          <i class="fas fa-info-circle" style="color:#3b82f6;margin-right:6px;"></i>Applicants apply via <strong>apply-choice-properties.pages.dev</strong> when they click "Apply Now" on your listings. All application data is securely stored in the application system.
+        </p>
       </div>
-      <div id="appsContainer" style="padding:var(--s-4) var(--s-5)">
-        <div style="text-align:center;padding:40px;color:#8892a2"><i class="fas fa-spinner fa-pulse" style="font-size:24px"></i></div>
-      </div>
-    </div>
-  </main>
+    </main>
 </div>
 
 <!-- Status Modal -->
