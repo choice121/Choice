@@ -516,12 +516,6 @@ function subscribeToApplication(appId, callback) {
     }, callback)
     .subscribe();
 }
-// Keep old name as alias for admin use (intentionally broad)
-function subscribeToApplications(callback) {
-  return sb().channel('applications-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, callback)
-    .subscribe();
-}
 function subscribeToMessages(appId, callback) {
   return sb().channel('messages-' + appId)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `app_id=eq.${appId}` }, callback)
