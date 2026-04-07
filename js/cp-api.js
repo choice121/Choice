@@ -833,7 +833,7 @@ window.CP = {
   // NOTE: Applications object removed — all application management is
   // handled by the external GAS system at apply-choice-properties.pages.dev
   sb, Auth, ApplicantAuth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
-  subscribeToApplication, subscribeToApplications, subscribeToMessages,
+  subscribeToApplication, subscribeToMessages,
   generatePropertyId, buildApplyURL, incrementCounter,
   getSession, getLandlordProfile, requireAuth,
   signIn, signUp, signOut, resetPassword, updateNav,
