@@ -210,23 +210,6 @@ async function callEdgeFunction(name, payload) {
   }
 }
 
-// ── Application API ───────────────────────────────────────
-const Applications = {
-  async submit(formData)        { return callEdgeFunction('process-application', formData); },
-  async getStatus(appId, lastName)  { return callEdgeFunction('get-application-status', { app_id: appId, last_name: lastName }); },
-  async getAll(filters = {})    {
-    const page    = filters.page    || 0;
-    const perPage = filters.perPage || 50;
-    let q = sb().from('admin_application_view').select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(page * perPage, (page + 1) * perPage - 1);
-    if (filters.status)         q = q.eq('status', filters.status);
-    if (filters.landlord_id)    q = q.eq('landlord_id', filters.landlord_id);
-    if (filters.search) {
-      q = q.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,app_id.ilike.%${filters.search}%`);
-    }
-    const { data, error, count } = await q;
-    if (error) return { ok: false, data: null, error: error.message };
     return { ok: true, data: data || [], error: null, count: count || 0, page, perPage };
   },
   async getOne(appId)           {
@@ -847,7 +830,9 @@ async function updateNav() {
 // edit when adding or changing any function.
 window.CP_esc = esc;
 window.CP = {
-  sb, Auth, ApplicantAuth, Applications, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
+  // NOTE: Applications object removed — all application management is
+  // handled by the external GAS system at apply-choice-properties.pages.dev
+  sb, Auth, ApplicantAuth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
   subscribeToApplication, subscribeToApplications, subscribeToMessages,
   generatePropertyId, buildApplyURL, incrementCounter,
   getSession, getLandlordProfile, requireAuth,
