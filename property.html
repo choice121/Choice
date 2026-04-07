@@ -616,6 +616,12 @@ function renderProperty(p) {
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included.map(u =>
     `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${u} Included</div>`));
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${p.parking}</div>`);
+    if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${p.laundry_type}</div>`);
+    if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${p.heating_type}</div>`);
+    if (p.cooling_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-snowflake"></i>Cooling: ${p.cooling_type}</div>`);
+    if (p.ev_charging && p.ev_charging !== 'none') utilRows.push(`<div class="amenity-item"><i class="fas fa-charging-station icon-green"></i>EV Charging: ${p.ev_charging}</div>`);
+    if (p.garage_spaces) utilRows.push(`<div class="amenity-item"><i class="fas fa-car-side"></i>Parking Spaces: ${p.garage_spaces}</div>`);
+    if (p.parking_fee) utilRows.push(`<div class="amenity-item"><i class="fas fa-dollar-sign icon-amber"></i>Parking Fee: ${Number(p.parking_fee).toLocaleString()}/mo</div>`);
   if (utilRows.length) {
     hasUtilities = true;
     document.getElementById('utilitiesGrid').innerHTML = utilRows.join('');
@@ -623,7 +629,13 @@ function renderProperty(p) {
 
   const leaseItems = [];
   if (p.lease_terms?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${p.lease_terms.join(', ')}</div>`);
-  if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Deposit: $${p.security_deposit.toLocaleString()}</div>`);
+  if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: ${p.security_deposit.toLocaleString()}</div>`);
+    if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: ${Number(p.last_months_rent).toLocaleString()}</div>`);
+    if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: ${Number(p.admin_fee).toLocaleString()}</div>`);
+    if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
+    if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: ${Number(p.pet_deposit).toLocaleString()}</div>`);
+    if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.join(', ')}</div>`);
+    if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${p.pet_weight_limit} lbs max</div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${p.showing_instructions}</span></div>`);
   if (leaseItems.length) {
     hasLease = true;
