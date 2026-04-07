@@ -935,7 +935,7 @@ function setupFilters() {
   });
 
   document.getElementById('clearAdvFilters').addEventListener('click', () => {
-    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent'].forEach(id => {
+    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
       document.getElementById(id).value = '';
     });
     window.clearAllFilters();
@@ -961,7 +961,7 @@ function doSearch() {
 function updateFilterBadge() {
   const badge = document.getElementById('filterActiveBadge');
   if (!badge) return;
-  const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch].filter(Boolean).length;
+  const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
   if (count > 0) { badge.textContent = count; badge.style.display = 'inline-flex'; }
   else badge.style.display = 'none';
 }
