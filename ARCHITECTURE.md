@@ -161,14 +161,18 @@ Replace `photo_urls TEXT[]` on the `properties` table with a dedicated `property
 
 ---
 
-### Lease Storage — Supabase Storage
+### Application & Lease Storage — External GAS System
 
-| Bucket | Access | Contents |
+All application intake, lease generation, e-signatures, and document storage are handled by the **external application system** at `apply-choice-properties.pages.dev` — not by this platform's Supabase instance.
+
+| Data | Where stored | How accessed |
 |---|---|---|
-| `lease-pdfs` | Private | Signed lease HTML files |
-| `application-docs` | Authenticated users only | Tenant-uploaded documents |
+| Rental applications | Google Sheets (GAS backend) | GAS admin panel at `?path=admin` |
+| Lease documents | Google Sheets + Google Drive | GAS admin panel |
+| Applicant-uploaded docs | Google Drive (GAS backend) | GAS admin panel |
+| Application status | Google Sheets (GAS backend) | Applicant dashboard at `?path=dashboard` |
 
-Signed URLs (7-day expiry) are generated on-demand by the `get-application-status` function. Files are never publicly accessible.
+**This platform does not store, read, or process applications.** All admin pages that previously showed Supabase application data now redirect to the GAS admin panel. The Supabase `lease-pdfs` and `application-docs` storage buckets referenced in older documentation are no longer in use.
 
 ---
 
