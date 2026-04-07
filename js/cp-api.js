@@ -129,54 +129,6 @@ const Auth = {
   },
 };
 
-// ── Applicant Auth (passwordless OTP) ─────────────────────
-// Separate from landlord/admin Auth — applicants sign in with
-// a one-time code emailed to them (no password required).
-const ApplicantAuth = {
-  async sendOTP(email) {
-    const { error } = await sb().auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    if (error) throw error;
-  },
-  async verifyOTP(email, token) {
-    const { data, error } = await sb().auth.verifyOtp({ email, token, type: 'email' });
-    if (error) throw error;
-    return data;
-  },
-  async getUser()    { return Auth.getUser(); },
-  async getSession() { return Auth.getSession(); },
-  async signOut() {
-    await sb().auth.signOut();
-    location.href = '/apply/login.html';
-  },
-  // Returns { ok, data, error } for the currently signed-in applicant.
-  async getMyApplications() {
-    const { data, error } = await sb().rpc('get_my_applications');
-    if (error) return { ok: false, data: null, error: error.message };
-    // RPC returns { success, applications, error } — unwrap into our shape.
-    if (data && 'success' in data) {
-      if (!data.success) return { ok: false, data: null, error: data.error || 'Unknown error' };
-      return { ok: true, data: data.applications ?? data, error: null };
-    }
-    return { ok: true, data, error: null };
-  },
-  // Links a legacy (pre-auth) application to the current user by verifying email match.
-  async claimApplication(appId, email) {
-    const { data, error } = await sb().rpc('claim_application', {
-      p_app_id: appId,
-      p_email:  email,
-    });
-    if (error) return { ok: false, data: null, error: error.message };
-    if (data && 'success' in data) {
-      if (!data.success) return { ok: false, data: null, error: data.error || 'Unknown error' };
-      return { ok: true, data, error: null };
-    }
-    return { ok: true, data, error: null };
-  },
-};
-
 // ── Edge Function caller ──────────────────────────────────
 // Returns { ok, data, error } — never throws.
 async function callEdgeFunction(name, payload) {
@@ -209,35 +161,6 @@ async function callEdgeFunction(name, payload) {
     return { ok: false, data: null, error: err.message || String(err) };
   }
 }
-
-    return { ok: true, data: data || [], error: null, count: count || 0, page, perPage };
-  },
-  async getOne(appId)           {
-    const { data, error } = await sb().from('applications').select('*').eq('app_id', appId).maybeSingle();
-    return _ok(data, error);
-  },
-  async updateStatus(appId, status, notes)  { return callEdgeFunction('update-status', { app_id: appId, status, notes }); },
-  async markPaid(appId, notes)              { return callEdgeFunction('mark-paid', { app_id: appId, notes }); },
-  async generateLease(payload)              { return callEdgeFunction('generate-lease', payload); },
-  async signLease(appId, sig, ip, token)    { return callEdgeFunction('sign-lease', { app_id: appId, signature: sig, ip_address: ip, token: token || undefined }); },
-  async signLeaseCoApplicant(appId, sig, ip, coToken){ return callEdgeFunction('sign-lease', { app_id: appId, signature: sig, ip_address: ip, is_co_applicant: true, co_token: coToken || undefined }); },
-  async markMoveIn(appId, date, notes)      { return callEdgeFunction('mark-movein', { app_id: appId, move_in_date: date, notes }); },
-  async sendMessage(appId, message, sender, senderName) { return callEdgeFunction('send-message', { app_id: appId, message, sender, sender_name: senderName }); },
-  async sendRecoveryEmail(email, appId, origin) { return callEdgeFunction('send-inquiry', { type: 'app_id_recovery', email, app_id: appId, dashboard_url: 'https://apply-choice-properties.pages.dev/?path=dashboard&id=' + appId }); },
-  async tenantReply(appId, message, name)   {
-    const { data, error } = await sb().rpc('submit_tenant_reply', { p_app_id: appId, p_message: message, p_name: name });
-    if (error) return { ok: false, data: null, error: error.message };
-    // P1-B: Non-blocking landlord notification — submit_tenant_reply() is a DB RPC with no HTTP
-    // capability, so we fire the notification here after the reply is persisted successfully.
-    fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-inquiry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_ANON_KEY },
-      body: JSON.stringify({ type: 'tenant_reply', app_id: appId, tenant_name: name, message }),
-    }).catch(() => {}); // fire-and-forget — never block the tenant UX
-    return { ok: true, data, error: null };
-  },
-};
-
 // ── Properties API ────────────────────────────────────────
 const Properties = {
   // getListings — server-side filtered, sorted, paginated query for the listings page.
@@ -503,24 +426,6 @@ const EmailLogs = {
   },
 };
 
-// ── Realtime helper ───────────────────────────────────────
-// Subscribes to status changes for a SPECIFIC application only.
-// Scoped by app_id filter to prevent cross-tenant reload pollution.
-function subscribeToApplication(appId, callback) {
-  return sb().channel('application-' + appId)
-    .on('postgres_changes', {
-      event  : '*',
-      schema : 'public',
-      table  : 'applications',
-      filter : `app_id=eq.${appId}`
-    }, callback)
-    .subscribe();
-}
-function subscribeToMessages(appId, callback) {
-  return sb().channel('messages-' + appId)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `app_id=eq.${appId}` }, callback)
-    .subscribe();
-}
 
 // ── UI utilities ──────────────────────────────────────────
 const UI = {
@@ -628,13 +533,6 @@ const UI = {
     return cols ? `<tr><td colspan="${cols}">${inner}</td></tr>` : inner;
   },
 };
-
-// ── Generate property ID ──────────────────────────────────
-function generatePropertyId() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const rand = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `PROP-${rand}`;
-}
 
 // ── XSS-safe HTML escape ─────────────────────────────────
 // Use esc() whenever injecting user-supplied text into innerHTML.
@@ -824,14 +722,13 @@ async function updateNav() {
 // edit when adding or changing any function.
 window.CP_esc = esc;
 window.CP = {
-  // NOTE: Applications object removed — all application management is
-  // handled by the external GAS system at apply-choice-properties.pages.dev
-  sb, Auth, ApplicantAuth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
-  subscribeToApplication, subscribeToMessages,
-  generatePropertyId, buildApplyURL, incrementCounter,
-  getSession, getLandlordProfile, requireAuth,
-  signIn, signUp, signOut, resetPassword, updateNav,
-};
+    // NOTE: Applications object removed — all application management is
+    // handled by the external GAS system at apply-choice-properties.pages.dev
+    sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
+    buildApplyURL, incrementCounter,
+    getSession, getLandlordProfile, requireAuth,
+    signIn, signUp, signOut, resetPassword, updateNav,
+  };
 
 // ── ES Module exports ─────────────────────────────────────
 // Landlord pages and property.html import these by name.
