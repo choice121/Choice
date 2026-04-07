@@ -219,7 +219,7 @@
         </a>
         <p class="apply-disclaimer">
           <i class="fas fa-lock" style="color:var(--gold)"></i>
-          Your info is encrypted & secure. Fee collected after review.
+          You'll be taken to our secure application portal. Info is encrypted &amp; protected. Fee collected only after review.
         </p>
         <a href="https://apply-choice-properties.pages.dev/?path=dashboard"
            target="_blank"
@@ -702,7 +702,17 @@ function renderProperty(p) {
 
   // Apply button — build URL with full property context for form prefill
   const applyURL = buildApplyURL(p);
-  document.getElementById('applyBtn').href = applyURL;
+  const _wireApply = (id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.href = applyURL;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast('Taking you to our secure application portal…', 'info');
+        setTimeout(() => { window.location.href = applyURL; }, 1100);
+      });
+    };
+    _wireApply('applyBtn');
 
   // Guard apply button for non-active listings
   if (p.status !== 'active') {
@@ -718,7 +728,7 @@ function renderProperty(p) {
   // Mobile sticky Apply bar — only for active listings
   if (p.status === 'active') {
     document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
-    document.getElementById('mobApplyBtn').href       = applyURL;
+    _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
   }
