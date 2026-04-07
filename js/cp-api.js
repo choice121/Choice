@@ -581,6 +581,14 @@ function buildApplyURL(property) {
       utilities_included: property.utilities_included || [],
       parking:          property.parking          || null,
       parking_fee:      property.parking_fee      || null,
+      garage_spaces:    property.garage_spaces    || null,
+      ev_charging:      property.ev_charging      || null,
+      laundry_type:     property.laundry_type     || null,
+      heating_type:     property.heating_type     || null,
+      cooling_type:     property.cooling_type     || null,
+      last_months_rent: property.last_months_rent || null,
+      admin_fee:        property.admin_fee        || null,
+      move_in_special:  property.move_in_special  || null,
     }));
   } catch (_) {
     // sessionStorage unavailable (private browsing) — URL params are the fallback.
@@ -665,6 +673,16 @@ function buildApplyURL(property) {
   }
   if (property.parking)     p.set('parking',     property.parking);
   if (property.parking_fee) p.set('parking_fee', property.parking_fee);
+  if (property.garage_spaces) p.set('garage_spaces', property.garage_spaces);
+  if (property.ev_charging && property.ev_charging !== 'none') p.set('ev_charging', property.ev_charging);
+  if (property.laundry_type) p.set('laundry_type', property.laundry_type);
+  if (property.heating_type) p.set('heating_type', property.heating_type);
+  if (property.cooling_type) p.set('cooling_type', property.cooling_type);
+
+  // ── Financial move-in costs ───────────────────────────────────────────────────
+  if (property.last_months_rent) p.set('last_months_rent', property.last_months_rent);
+  if (property.admin_fee)        p.set('admin_fee',        property.admin_fee);
+  if (property.move_in_special)  p.set('move_in_special',  property.move_in_special);
 
   // ── Resolve target base URL ───────────────────────────────────────────────
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
