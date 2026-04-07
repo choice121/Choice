@@ -214,6 +214,18 @@
           <span class="apply-cost-label">Available From</span>
           <span class="apply-cost-value" id="sidebarMoveIn">—</span>
         </div>
+        <div class="apply-cost-row" id="sidebarLastMonthRow" style="display:none">
+          <span class="apply-cost-label">Last Month's Rent</span>
+          <span class="apply-cost-value" id="sidebarLastMonth">—</span>
+        </div>
+        <div class="apply-cost-row" id="sidebarAdminFeeRow" style="display:none">
+          <span class="apply-cost-label">Admin / Move-in Fee</span>
+          <span class="apply-cost-value" id="sidebarAdminFee">—</span>
+        </div>
+        <div class="apply-cost-row" id="sidebarMoveInSpecialRow" style="display:none">
+          <span class="apply-cost-label">Move-in Special</span>
+          <span class="apply-cost-value" id="sidebarMoveInSpecial" style="color:var(--color-success)">—</span>
+        </div>
         <a href="#" class="apply-btn" id="applyBtn">
           Apply Now <i class="fas fa-paper-plane" style="font-size:14px"></i>
         </a>
@@ -696,6 +708,1282 @@ function renderProperty(p) {
   if (p.available_date) {
     document.getElementById('sidebarMoveInRow').style.display = '';
     document.getElementById('sidebarMoveIn').textContent = formatDate(p.available_date);
+  }
+  if (p.last_months_rent) {
+    document.getElementById('sidebarLastMonthRow').style.display = '';
+    document.getElementById('sidebarLastMonth').textContent = '
+
+  // Landlord card
+  if (p.landlords) {
+    const ll = p.landlords;
+    const name = ll.business_name || ll.contact_name;
+    const card = document.getElementById('landlordCard');
+    card.style.display = 'flex';
+    document.getElementById('landlordName').textContent = name;
+    if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
+    const avatarEl = document.getElementById('landlordAvatar');
+    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy">`;
+    else avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
+  }
+
+  // Apply button — build URL with full property context for form prefill
+  const applyURL = buildApplyURL(p);
+  const _wireApply = (id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.href = applyURL;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast('Taking you to our secure application portal…', 'info');
+        setTimeout(() => { window.location.href = applyURL; }, 1100);
+      });
+    };
+    _wireApply('applyBtn');
+
+  // Guard apply button for non-active listings
+  if (p.status !== 'active') {
+    const applyBtn = document.getElementById('applyBtn');
+    applyBtn.removeAttribute('href');
+    applyBtn.style.pointerEvents = 'none';
+    applyBtn.style.opacity       = '0.5';
+    applyBtn.style.cursor        = 'not-allowed';
+    applyBtn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
+    document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
+  }
+
+  // Mobile sticky Apply bar — only for active listings
+  if (p.status === 'active') {
+    document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
+    _wireApply('mobApplyBtn');
+    document.getElementById('mobile-apply-bar').classList.add('active');
+    document.body.classList.add('mob-bar-active');
+  }
+
+  // Save button state
+  const saveBtn = document.getElementById('savePropBtn');
+  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+  saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
+}
+
+/* ── Leaflet mini-map (lazy-loaded via IntersectionObserver) ── */
+// M-10: Leaflet CSS+JS (~180KB gzipped) is only injected when the map
+// container scrolls into the viewport, saving bandwidth on every page visit.
+const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+const LEAFLET_JS  = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+
+function loadLeaflet() {
+  return new Promise((resolve, reject) => {
+    if (window.L) { resolve(); return; }
+    // Inject CSS first (non-blocking)
+    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = LEAFLET_CSS;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }
+    // Inject JS and resolve when loaded
+    const script = document.createElement('script');
+    script.src = LEAFLET_JS;
+    script.crossOrigin = 'anonymous';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function _initLeafletMap(p) {
+  const container = document.getElementById('mapContainer');
+  const lat = parseFloat(p.lat);
+  const lng = parseFloat(p.lng);
+  container.innerHTML = '<div id="propertyMiniMap"></div>';
+  const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">$${p.monthly_rent.toLocaleString()}/mo</div>`,
+    iconAnchor: [45, 16], iconSize: [90, 32]
+  });
+  L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
+}
+
+function renderMap(p) {
+  const container = document.getElementById('mapContainer');
+  if (p.lat && p.lng) {
+    const lat = parseFloat(p.lat);
+    const lng = parseFloat(p.lng);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Use IntersectionObserver to defer Leaflet load until map is in viewport
+      const observer = new IntersectionObserver((entries, obs) => {
+        if (!entries[0].isIntersecting) return;
+        obs.disconnect();
+        loadLeaflet()
+          .then(() => _initLeafletMap(p))
+          .catch(() => {
+            // Leaflet failed to load — fall back to Google embed
+            const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip}`);
+            container.innerHTML = `<iframe src="https://maps.google.com/maps?q=${mapAddr}&output=embed&z=15" title="Property location" loading="lazy" style="width:100%;height:100%;border:none"></iframe>`;
+          });
+      }, { rootMargin: '200px' });
+      observer.observe(container);
+      return;
+    }
+  }
+  // Fallback: Google embed (no lat/lng available)
+  const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip}`);
+  document.getElementById('mapAddressLabel').textContent = `${p.address}, ${p.city}`;
+  container.innerHTML = `<iframe src="https://maps.google.com/maps?q=${mapAddr}&output=embed&z=15" title="Property location" loading="lazy" style="width:100%;height:100%;border:none"></iframe>`;
+}
+
+/* ── Gallery Mosaic ── */
+function renderGallery(photos) {
+  photoIndex = 0;
+  const mainImg    = document.getElementById('mosaicMainImg');
+  const mosaicMain = document.getElementById('mosaicMain');
+  const mosaicSide = document.getElementById('mosaicSide');
+  const expandBtn  = document.getElementById('mosaicExpandBtn');
+  const mobileCount = document.getElementById('mosaicMobileCount');
+  const prevBtn    = document.getElementById('mosaicPrev');
+  const nextBtn    = document.getElementById('mosaicNext');
+
+  // Remove skeleton once we have real photos to show
+  document.getElementById('gallery').classList.remove('skeleton-loading');
+
+  // Hero image — LCP candidate, load at high priority with srcset for retina
+  mainImg.src    = CONFIG.img(photos[0], 'gallery');
+  mainImg.srcset = `${CONFIG.img(photos[0], 'card')} 600w, ${CONFIG.img(photos[0], 'gallery')} 1200w, ${CONFIG.img(photos[0], 'gallery_2x')} 2400w`;
+  mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
+  mainImg.alt    = 'Property photo 1';
+
+  // LQIP blur-up for hero image — tiny blurred placeholder fades out once full image loads
+  const heroLqip = lqipUrl(photos[0]);
+  if (heroLqip) {
+    const lqBg = document.createElement('div');
+    lqBg.className = 'lqip-bg';
+    lqBg.style.backgroundImage = `url('${heroLqip}')`;
+    mosaicMain.insertBefore(lqBg, mainImg);
+    const fadeLqip = () => lqBg.classList.add('faded');
+    mainImg.addEventListener('load', fadeLqip, { once: true });
+    if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
+  }
+
+  mosaicMain.addEventListener('click', () => openLightbox(0));
+
+  // Side 2×2 grid — use gallery preset for crisp quality, lazy-load each cell
+  const sidePanels = photos.slice(1, 5);
+  if (sidePanels.length > 0) {
+    mosaicSide.innerHTML = sidePanels.map((url, i) => {
+      const idx = i + 1;
+      const isLast = (i === sidePanels.length - 1) && (photos.length > 5);
+      const remaining = photos.length - 5;
+      const lqUrl = lqipUrl(url);
+      return `
+        <div class="mosaic-cell" data-idx="${idx}">
+          ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
+          <img src="${CONFIG.img(url,'gallery')}"
+               srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
+               sizes="(max-width: 768px) 50vw, 25vw"
+               alt="Property photo ${idx+1}"
+               loading="${i === 0 ? 'eager' : 'lazy'}"
+               ${i === 0 ? 'fetchpriority="high"' : ''}
+               decoding="async">
+          ${isLast ? `
+            <div class="mosaic-cell-overlay">
+              <span class="mosaic-overlay-icon"><i class="fas fa-images"></i></span>
+              <span class="mosaic-overlay-label">+${remaining} more</span>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+    // Fade out each cell's LQIP placeholder once its image loads
+    mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
+      const img = cell.querySelector('img');
+      const bg  = cell.querySelector('.lqip-bg');
+      if (img && bg) {
+        const fadeBg = () => bg.classList.add('faded');
+        img.addEventListener('load', fadeBg, { once: true });
+        if (img.complete && img.naturalWidth > 0) fadeBg();
+      }
+    });
+  } else {
+    mosaicSide.style.display = 'none';
+    document.getElementById('gallery').style.gridTemplateColumns = '1fr';
+  }
+
+  expandBtn.innerHTML = `<i class="fas fa-th-large"></i> See All Photos <span class="mosaic-photo-count">${photos.length}</span>`;
+  expandBtn.addEventListener('click', () => openLightbox(0));
+
+  if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
+  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
+  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
+
+  // Touch swipe on mosaic (mobile carousel) — velocity-aware
+  let touchX = 0, touchT = 0;
+  mosaicMain.addEventListener('touchstart', e => {
+    touchX = e.touches[0].clientX;
+    touchT = Date.now();
+  }, { passive: true });
+  mosaicMain.addEventListener('touchend', e => {
+    const diff = touchX - e.changedTouches[0].clientX;
+    const dt   = Date.now() - touchT;
+    const vel  = Math.abs(diff) / dt; // px/ms
+    if (Math.abs(diff) > 30 || vel > 0.3) {
+      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
+    }
+  }, { passive: true });
+
+  // Keyboard — lightbox arrows + escape
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('lightbox').classList.contains('open')) {
+      if (e.key === 'ArrowLeft')  lightboxNav(-1);
+      if (e.key === 'ArrowRight') lightboxNav(1);
+      if (e.key === 'Escape')     closeLightbox();
+    }
+  });
+
+  document.getElementById('galleryExpand').addEventListener('click', () => openLightbox(photoIndex));
+
+  // Build thumbnail strip
+  buildGalleryStrip(photos);
+}
+
+/* ── Thumbnail Strip ── */
+function buildGalleryStrip(photos) {
+  const strip = document.getElementById('galleryStrip');
+  if (!strip) return;
+  if (photos.length < 2) { strip.style.display = 'none'; return; }
+
+  strip.innerHTML = photos.map((url, i) => `
+    <button class="gallery-strip-thumb${i === 0 ? ' active' : ''}"
+            data-idx="${i}" role="listitem"
+            aria-label="View photo ${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">
+      <img src="${CONFIG.img(url, 'strip')}"
+           srcset="${CONFIG.img(url, 'strip')} 1x, ${CONFIG.img(url, 'thumb')} 2x"
+           alt="Photo ${i + 1}"
+           loading="${i < 5 ? 'eager' : 'lazy'}"
+           decoding="async">
+    </button>`).join('');
+
+  strip.querySelectorAll('.gallery-strip-thumb').forEach(btn => {
+    btn.addEventListener('click', () => showPhoto(parseInt(btn.dataset.idx)));
+  });
+}
+
+function syncStripActive(idx) {
+  const thumbs = document.querySelectorAll('.gallery-strip-thumb');
+  thumbs.forEach((t, i) => {
+    const active = i === idx;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  const activeThumb = document.querySelector('.gallery-strip-thumb.active');
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+function showPhoto(idx) {
+  photoIndex = idx;
+  const mainImg = document.getElementById('mosaicMainImg');
+  mainImg.style.opacity = '0';
+  mainImg.style.transition = 'opacity 150ms';
+  setTimeout(() => {
+    mainImg.src    = CONFIG.img(allPhotos[idx], 'gallery');
+    mainImg.srcset = `${CONFIG.img(allPhotos[idx], 'card')} 600w, ${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w`;
+    mainImg.alt    = `Property photo ${idx + 1}`;
+    mainImg.style.opacity = '1';
+  }, 150);
+  const mobileCount = document.getElementById('mosaicMobileCount');
+  if (mobileCount) mobileCount.textContent = `${idx + 1} / ${allPhotos.length}`;
+  syncStripActive(idx);
+}
+
+/* ── Lightbox ── */
+let lightboxThumbsBuilt = false;
+let _lbOpener = null;  // element that opened the lightbox — restored on close
+
+// Focus trap — keep keyboard navigation inside the lightbox while open
+function _lbFocusTrap(e) {
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  const focusable = lb.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  const first = focusable[0];
+  const last  = focusable[focusable.length - 1];
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+    }
+  }
+}
+
+function openLightbox(idx) {
+  _lbOpener = document.activeElement;
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!lightboxThumbsBuilt) {
+    buildLightboxThumbs();
+    lightboxThumbsBuilt = true;
+  }
+  lightboxShow(idx);
+  document.addEventListener('keydown', _lbFocusTrap);
+  // Move keyboard focus into the lightbox for accessibility
+  requestAnimationFrame(() => document.getElementById('lightboxClose').focus());
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _lbFocusTrap);
+  // Return focus to the element that triggered the lightbox
+  if (_lbOpener && typeof _lbOpener.focus === 'function') _lbOpener.focus();
+  _lbOpener = null;
+}
+
+function buildLightboxThumbs() {
+  const thumbsEl = document.getElementById('lightboxThumbs');
+  if (!thumbsEl || !allPhotos.length) return;
+  thumbsEl.innerHTML = allPhotos.map((url, i) =>
+    `<button class="lb-thumb" data-idx="${i}" aria-label="View photo ${i + 1}">
+      <img src="${CONFIG.img(url, 'thumb')}" alt="" loading="lazy" decoding="async">
+    </button>`
+  ).join('');
+  thumbsEl.querySelectorAll('.lb-thumb').forEach(btn => {
+    btn.addEventListener('click', () => lightboxShow(parseInt(btn.dataset.idx)));
+  });
+}
+
+let _lbNavDir = 0;  // -1 = prev, 1 = next, 0 = direct click
+
+function lightboxShow(idx) {
+  photoIndex = idx;
+  const wrap    = document.getElementById('lightboxImgWrap');
+  const img     = document.getElementById('lightboxImg');
+  const spinner = document.getElementById('lbSpinner');
+  const lqipBg  = document.getElementById('lbLqipBg');
+
+  // Directional slide-out animation on previous image
+  if (_lbNavDir !== 0) {
+    const outClass = _lbNavDir > 0 ? 'slide-out-left' : 'slide-out-right';
+    wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+    wrap.classList.add(outClass);
+  }
+
+  const slideInClass = _lbNavDir > 0 ? 'slide-in-left' : _lbNavDir < 0 ? 'slide-in-right' : null;
+
+  // Show LQIP blur-up while the full image loads
+  if (lqipBg) {
+    const lqip = lqipUrl(allPhotos[idx]);
+    if (lqip) {
+      lqipBg.style.backgroundImage = `url('${lqip}')`;
+      lqipBg.classList.remove('faded');
+      lqipBg.classList.add('visible');
+    } else {
+      lqipBg.classList.remove('visible');
+    }
+  }
+
+  setTimeout(() => {
+    // Hide image and show spinner while new src loads
+    img.classList.add('loading');
+    spinner.classList.add('visible');
+
+    wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+
+    // Full-quality lightbox image with srcset for retina screens
+    const newSrc = CONFIG.img(allPhotos[idx], 'lightbox');
+    img.src    = newSrc;
+    img.srcset = `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w`;
+    img.sizes  = '100vw';
+    img.alt    = `Property photo ${idx + 1}`;
+
+    const reveal = () => {
+      img.classList.remove('loading');
+      spinner.classList.remove('visible');
+      // Fade out the LQIP once the real image has loaded
+      if (lqipBg) { lqipBg.classList.add('faded'); }
+      if (slideInClass) {
+        wrap.classList.add(slideInClass);
+        // Clean up animation class after it completes
+        const cleanup = () => { wrap.classList.remove(slideInClass); wrap.removeEventListener('animationend', cleanup); };
+        wrap.addEventListener('animationend', cleanup, { once: true });
+      }
+      // Preload surrounding images for instant navigation
+      preloadLightboxAdjacentImages(idx);
+    };
+
+    if (img.complete && img.naturalWidth > 0) {
+      reveal();
+    } else {
+      img.addEventListener('load',  reveal, { once: true });
+      img.addEventListener('error', reveal, { once: true });
+    }
+  }, _lbNavDir !== 0 ? 120 : 0);
+
+  document.getElementById('lightboxCounter').textContent = `${idx + 1} / ${allPhotos.length}`;
+
+  // Sync lightbox filmstrip
+  document.querySelectorAll('.lb-thumb').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  const activeThumb = document.querySelector('.lb-thumb.active');
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // Also sync the main page thumbnail strip so it tracks lightbox navigation
+  syncStripActive(idx);
+}
+
+function lightboxNav(dir) {
+  _lbNavDir = dir;
+  lightboxShow((photoIndex + dir + allPhotos.length) % allPhotos.length);
+  _lbNavDir = 0;
+}
+
+/* Lightbox swipe support — velocity-aware */
+(function() {
+  let lbTouchX = 0, lbTouchT = 0;
+  const lb = document.getElementById('lightbox');
+  lb.addEventListener('touchstart', e => {
+    lbTouchX = e.touches[0].clientX;
+    lbTouchT = Date.now();
+  }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    const diff = lbTouchX - e.changedTouches[0].clientX;
+    const dt   = Date.now() - lbTouchT;
+    const vel  = Math.abs(diff) / dt; // px/ms
+    if (Math.abs(diff) > 30 || vel > 0.3) lightboxNav(diff > 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev').addEventListener('click', () => lightboxNav(-1));
+document.getElementById('lightboxNext').addEventListener('click', () => lightboxNav(1));
+document.getElementById('lightbox').addEventListener('click', e => {
+  if (e.target === document.getElementById('lightbox') ||
+      e.target === document.getElementById('lightboxImgWrap')) closeLightbox();
+});
+
+/* ── Inquiry ── */
+document.getElementById('inqMessage').addEventListener('input', function() {
+  document.getElementById('inqCharCount').textContent = this.value.length;
+});
+
+let inquiryCooldown = false;
+document.getElementById('sendInquiryBtn').addEventListener('click', async () => {
+  if (inquiryCooldown) { showToast('Please wait before sending another message.', 'info'); return; }
+
+  const name    = document.getElementById('inqName').value.trim();
+  const email   = document.getElementById('inqEmail').value.trim();
+  const phone   = document.getElementById('inqPhone').value.trim();
+  const message = document.getElementById('inqMessage').value.trim();
+  if (!name || !email || !message) { showToast('Please fill in name, email, and message.', 'error'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email address.', 'error'); return; }
+
+  const btn = document.getElementById('sendInquiryBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending\u2026';
+
+  // Use CP.Inquiries.submit() so the edge function fires confirmation + landlord emails.
+  const { error } = await CP.Inquiries.submit({
+    property_id:  currentProperty.id,
+    tenant_name:  name,
+    tenant_email: email,
+    tenant_phone: phone || null,
+    message
+  });
+
+  if (error) {
+    showToast('Failed to send. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+  } else {
+    showToast('Message sent! The landlord will be in touch soon.', 'success');
+    btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+
+    // Clear form fields after successful send
+    document.getElementById('inqName').value    = '';
+    document.getElementById('inqEmail').value   = '';
+    document.getElementById('inqPhone').value   = '';
+    document.getElementById('inqMessage').value = '';
+
+    // 60-second rate limit cooldown
+    inquiryCooldown = true;
+    let secs = 60;
+    const countdown = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(countdown);
+        inquiryCooldown = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+        btn.disabled = false;
+      } else {
+        btn.innerHTML = `<i class="fas fa-clock"></i> Wait ${secs}s`;
+      }
+    }, 1000);
+  }
+});
+
+/* ── Detail Tabs ── */
+document.getElementById('detailTabs')?.addEventListener('click', e => {
+  const tab = e.target.closest('.detail-tab');
+  if (!tab || tab.classList.contains('active')) return;
+  document.querySelectorAll('.detail-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  document.querySelectorAll('.detail-tab-panel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  tab.setAttribute('aria-selected', 'true');
+  const panelId = tab.dataset.panel;
+  document.getElementById(panelId)?.classList.add('active');
+});
+
+/* ── Contact Drawer (mobile) ── */
+(function() {
+  const contactCard     = document.getElementById('contactCard');
+  const drawerOverlay   = document.getElementById('contactDrawerOverlay');
+  const mobMsgBtn       = document.getElementById('mobMsgBtn');
+  const drawerCloseBtn  = document.getElementById('contactDrawerCloseBtn');
+
+  function openContactDrawer() {
+    contactCard?.classList.add('drawer-open');
+    drawerOverlay?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeContactDrawer() {
+    contactCard?.classList.remove('drawer-open');
+    drawerOverlay?.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  mobMsgBtn?.addEventListener('click', openContactDrawer);
+  drawerOverlay?.addEventListener('click', closeContactDrawer);
+  drawerCloseBtn?.addEventListener('click', closeContactDrawer);
+})();
+
+/* ── Share & Save ── */
+window.shareProp = () => {
+  if (navigator.share) navigator.share({ title: currentProperty?.title, url: window.location.href });
+  else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!', 'success'); }
+};
+
+function toggleSave(id, btn) {
+  if (savedIds.has(id)) {
+    savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
+  } else {
+    savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+    showToast('Property saved!', 'success');
+  }
+  localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
+}
+
+/* ── Mobile Drawer ── */
+/* ── Helpers ── */
+function setMeta(id, val) { document.getElementById(id)?.setAttribute('content', val); }
+function formatDate(str) {
+  // Append T00:00:00 so JS parses as local time, not UTC midnight (avoids day-off bug)
+  const d = new Date(str.includes('T') ? str : str + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ── LQIP helper — delegates to CP.UI.lqipUrl (defined in cp-api.js) ── */
+function lqipUrl(url) { return CP.UI.lqipUrl(url); }
+
+/* ── Preload ±2 adjacent lightbox images for instant prev/next navigation ── */
+function preloadLightboxAdjacentImages(idx) {
+  const n = allPhotos.length;
+  if (n < 2) return;
+  [-1, 1, -2, 2].forEach(offset => {
+    const i = (idx + offset + n) % n;
+    if (i !== idx) {
+      const pre = new Image();
+      pre.src = CONFIG.img(allPhotos[i], 'lightbox');
+    }
+  });
+}
+
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+  t.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i> ${msg}`;
+  c.appendChild(t);
+  const duration = type === 'error' ? 5000 : 3200;
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(6px) scale(0.97)';
+    t.style.transition = 'all 280ms';
+    setTimeout(() => t.remove(), 280);
+  }, duration);
+}
+
+</script>
+
+<!-- Contact drawer overlay (mobile) -->
+<div class="contact-drawer-overlay" id="contactDrawerOverlay" aria-hidden="true"></div>
+
+<!-- Mobile-only sticky Apply bar — populated by renderProperty() -->
+<div id="mobile-apply-bar" role="complementary" aria-label="Apply for this property">
+  <div class="mob-price">
+    <span>Monthly Rent</span>
+    <strong id="mobBarRent">—</strong>
+  </div>
+  <div class="mob-actions">
+    <button class="mob-msg-btn" id="mobMsgBtn" aria-label="Message landlord">
+      <i class="fas fa-comment-dots"></i>
+    </button>
+    <a href="#" id="mobApplyBtn" class="mob-btn">Apply Now</a>
+  </div>
+</div>
+</body>
+</html>
+ + Number(p.last_months_rent).toLocaleString();
+  }
+  if (p.admin_fee) {
+    document.getElementById('sidebarAdminFeeRow').style.display = '';
+    document.getElementById('sidebarAdminFee').textContent = '
+
+  // Landlord card
+  if (p.landlords) {
+    const ll = p.landlords;
+    const name = ll.business_name || ll.contact_name;
+    const card = document.getElementById('landlordCard');
+    card.style.display = 'flex';
+    document.getElementById('landlordName').textContent = name;
+    if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
+    const avatarEl = document.getElementById('landlordAvatar');
+    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy">`;
+    else avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
+  }
+
+  // Apply button — build URL with full property context for form prefill
+  const applyURL = buildApplyURL(p);
+  const _wireApply = (id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.href = applyURL;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast('Taking you to our secure application portal…', 'info');
+        setTimeout(() => { window.location.href = applyURL; }, 1100);
+      });
+    };
+    _wireApply('applyBtn');
+
+  // Guard apply button for non-active listings
+  if (p.status !== 'active') {
+    const applyBtn = document.getElementById('applyBtn');
+    applyBtn.removeAttribute('href');
+    applyBtn.style.pointerEvents = 'none';
+    applyBtn.style.opacity       = '0.5';
+    applyBtn.style.cursor        = 'not-allowed';
+    applyBtn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
+    document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
+  }
+
+  // Mobile sticky Apply bar — only for active listings
+  if (p.status === 'active') {
+    document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
+    _wireApply('mobApplyBtn');
+    document.getElementById('mobile-apply-bar').classList.add('active');
+    document.body.classList.add('mob-bar-active');
+  }
+
+  // Save button state
+  const saveBtn = document.getElementById('savePropBtn');
+  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+  saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
+}
+
+/* ── Leaflet mini-map (lazy-loaded via IntersectionObserver) ── */
+// M-10: Leaflet CSS+JS (~180KB gzipped) is only injected when the map
+// container scrolls into the viewport, saving bandwidth on every page visit.
+const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+const LEAFLET_JS  = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+
+function loadLeaflet() {
+  return new Promise((resolve, reject) => {
+    if (window.L) { resolve(); return; }
+    // Inject CSS first (non-blocking)
+    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = LEAFLET_CSS;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }
+    // Inject JS and resolve when loaded
+    const script = document.createElement('script');
+    script.src = LEAFLET_JS;
+    script.crossOrigin = 'anonymous';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function _initLeafletMap(p) {
+  const container = document.getElementById('mapContainer');
+  const lat = parseFloat(p.lat);
+  const lng = parseFloat(p.lng);
+  container.innerHTML = '<div id="propertyMiniMap"></div>';
+  const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">$${p.monthly_rent.toLocaleString()}/mo</div>`,
+    iconAnchor: [45, 16], iconSize: [90, 32]
+  });
+  L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
+}
+
+function renderMap(p) {
+  const container = document.getElementById('mapContainer');
+  if (p.lat && p.lng) {
+    const lat = parseFloat(p.lat);
+    const lng = parseFloat(p.lng);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Use IntersectionObserver to defer Leaflet load until map is in viewport
+      const observer = new IntersectionObserver((entries, obs) => {
+        if (!entries[0].isIntersecting) return;
+        obs.disconnect();
+        loadLeaflet()
+          .then(() => _initLeafletMap(p))
+          .catch(() => {
+            // Leaflet failed to load — fall back to Google embed
+            const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip}`);
+            container.innerHTML = `<iframe src="https://maps.google.com/maps?q=${mapAddr}&output=embed&z=15" title="Property location" loading="lazy" style="width:100%;height:100%;border:none"></iframe>`;
+          });
+      }, { rootMargin: '200px' });
+      observer.observe(container);
+      return;
+    }
+  }
+  // Fallback: Google embed (no lat/lng available)
+  const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip}`);
+  document.getElementById('mapAddressLabel').textContent = `${p.address}, ${p.city}`;
+  container.innerHTML = `<iframe src="https://maps.google.com/maps?q=${mapAddr}&output=embed&z=15" title="Property location" loading="lazy" style="width:100%;height:100%;border:none"></iframe>`;
+}
+
+/* ── Gallery Mosaic ── */
+function renderGallery(photos) {
+  photoIndex = 0;
+  const mainImg    = document.getElementById('mosaicMainImg');
+  const mosaicMain = document.getElementById('mosaicMain');
+  const mosaicSide = document.getElementById('mosaicSide');
+  const expandBtn  = document.getElementById('mosaicExpandBtn');
+  const mobileCount = document.getElementById('mosaicMobileCount');
+  const prevBtn    = document.getElementById('mosaicPrev');
+  const nextBtn    = document.getElementById('mosaicNext');
+
+  // Remove skeleton once we have real photos to show
+  document.getElementById('gallery').classList.remove('skeleton-loading');
+
+  // Hero image — LCP candidate, load at high priority with srcset for retina
+  mainImg.src    = CONFIG.img(photos[0], 'gallery');
+  mainImg.srcset = `${CONFIG.img(photos[0], 'card')} 600w, ${CONFIG.img(photos[0], 'gallery')} 1200w, ${CONFIG.img(photos[0], 'gallery_2x')} 2400w`;
+  mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
+  mainImg.alt    = 'Property photo 1';
+
+  // LQIP blur-up for hero image — tiny blurred placeholder fades out once full image loads
+  const heroLqip = lqipUrl(photos[0]);
+  if (heroLqip) {
+    const lqBg = document.createElement('div');
+    lqBg.className = 'lqip-bg';
+    lqBg.style.backgroundImage = `url('${heroLqip}')`;
+    mosaicMain.insertBefore(lqBg, mainImg);
+    const fadeLqip = () => lqBg.classList.add('faded');
+    mainImg.addEventListener('load', fadeLqip, { once: true });
+    if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
+  }
+
+  mosaicMain.addEventListener('click', () => openLightbox(0));
+
+  // Side 2×2 grid — use gallery preset for crisp quality, lazy-load each cell
+  const sidePanels = photos.slice(1, 5);
+  if (sidePanels.length > 0) {
+    mosaicSide.innerHTML = sidePanels.map((url, i) => {
+      const idx = i + 1;
+      const isLast = (i === sidePanels.length - 1) && (photos.length > 5);
+      const remaining = photos.length - 5;
+      const lqUrl = lqipUrl(url);
+      return `
+        <div class="mosaic-cell" data-idx="${idx}">
+          ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
+          <img src="${CONFIG.img(url,'gallery')}"
+               srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
+               sizes="(max-width: 768px) 50vw, 25vw"
+               alt="Property photo ${idx+1}"
+               loading="${i === 0 ? 'eager' : 'lazy'}"
+               ${i === 0 ? 'fetchpriority="high"' : ''}
+               decoding="async">
+          ${isLast ? `
+            <div class="mosaic-cell-overlay">
+              <span class="mosaic-overlay-icon"><i class="fas fa-images"></i></span>
+              <span class="mosaic-overlay-label">+${remaining} more</span>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+    // Fade out each cell's LQIP placeholder once its image loads
+    mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
+      const img = cell.querySelector('img');
+      const bg  = cell.querySelector('.lqip-bg');
+      if (img && bg) {
+        const fadeBg = () => bg.classList.add('faded');
+        img.addEventListener('load', fadeBg, { once: true });
+        if (img.complete && img.naturalWidth > 0) fadeBg();
+      }
+    });
+  } else {
+    mosaicSide.style.display = 'none';
+    document.getElementById('gallery').style.gridTemplateColumns = '1fr';
+  }
+
+  expandBtn.innerHTML = `<i class="fas fa-th-large"></i> See All Photos <span class="mosaic-photo-count">${photos.length}</span>`;
+  expandBtn.addEventListener('click', () => openLightbox(0));
+
+  if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
+  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
+  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
+
+  // Touch swipe on mosaic (mobile carousel) — velocity-aware
+  let touchX = 0, touchT = 0;
+  mosaicMain.addEventListener('touchstart', e => {
+    touchX = e.touches[0].clientX;
+    touchT = Date.now();
+  }, { passive: true });
+  mosaicMain.addEventListener('touchend', e => {
+    const diff = touchX - e.changedTouches[0].clientX;
+    const dt   = Date.now() - touchT;
+    const vel  = Math.abs(diff) / dt; // px/ms
+    if (Math.abs(diff) > 30 || vel > 0.3) {
+      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
+    }
+  }, { passive: true });
+
+  // Keyboard — lightbox arrows + escape
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('lightbox').classList.contains('open')) {
+      if (e.key === 'ArrowLeft')  lightboxNav(-1);
+      if (e.key === 'ArrowRight') lightboxNav(1);
+      if (e.key === 'Escape')     closeLightbox();
+    }
+  });
+
+  document.getElementById('galleryExpand').addEventListener('click', () => openLightbox(photoIndex));
+
+  // Build thumbnail strip
+  buildGalleryStrip(photos);
+}
+
+/* ── Thumbnail Strip ── */
+function buildGalleryStrip(photos) {
+  const strip = document.getElementById('galleryStrip');
+  if (!strip) return;
+  if (photos.length < 2) { strip.style.display = 'none'; return; }
+
+  strip.innerHTML = photos.map((url, i) => `
+    <button class="gallery-strip-thumb${i === 0 ? ' active' : ''}"
+            data-idx="${i}" role="listitem"
+            aria-label="View photo ${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">
+      <img src="${CONFIG.img(url, 'strip')}"
+           srcset="${CONFIG.img(url, 'strip')} 1x, ${CONFIG.img(url, 'thumb')} 2x"
+           alt="Photo ${i + 1}"
+           loading="${i < 5 ? 'eager' : 'lazy'}"
+           decoding="async">
+    </button>`).join('');
+
+  strip.querySelectorAll('.gallery-strip-thumb').forEach(btn => {
+    btn.addEventListener('click', () => showPhoto(parseInt(btn.dataset.idx)));
+  });
+}
+
+function syncStripActive(idx) {
+  const thumbs = document.querySelectorAll('.gallery-strip-thumb');
+  thumbs.forEach((t, i) => {
+    const active = i === idx;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  const activeThumb = document.querySelector('.gallery-strip-thumb.active');
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+function showPhoto(idx) {
+  photoIndex = idx;
+  const mainImg = document.getElementById('mosaicMainImg');
+  mainImg.style.opacity = '0';
+  mainImg.style.transition = 'opacity 150ms';
+  setTimeout(() => {
+    mainImg.src    = CONFIG.img(allPhotos[idx], 'gallery');
+    mainImg.srcset = `${CONFIG.img(allPhotos[idx], 'card')} 600w, ${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w`;
+    mainImg.alt    = `Property photo ${idx + 1}`;
+    mainImg.style.opacity = '1';
+  }, 150);
+  const mobileCount = document.getElementById('mosaicMobileCount');
+  if (mobileCount) mobileCount.textContent = `${idx + 1} / ${allPhotos.length}`;
+  syncStripActive(idx);
+}
+
+/* ── Lightbox ── */
+let lightboxThumbsBuilt = false;
+let _lbOpener = null;  // element that opened the lightbox — restored on close
+
+// Focus trap — keep keyboard navigation inside the lightbox while open
+function _lbFocusTrap(e) {
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  const focusable = lb.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  const first = focusable[0];
+  const last  = focusable[focusable.length - 1];
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+    }
+  }
+}
+
+function openLightbox(idx) {
+  _lbOpener = document.activeElement;
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!lightboxThumbsBuilt) {
+    buildLightboxThumbs();
+    lightboxThumbsBuilt = true;
+  }
+  lightboxShow(idx);
+  document.addEventListener('keydown', _lbFocusTrap);
+  // Move keyboard focus into the lightbox for accessibility
+  requestAnimationFrame(() => document.getElementById('lightboxClose').focus());
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _lbFocusTrap);
+  // Return focus to the element that triggered the lightbox
+  if (_lbOpener && typeof _lbOpener.focus === 'function') _lbOpener.focus();
+  _lbOpener = null;
+}
+
+function buildLightboxThumbs() {
+  const thumbsEl = document.getElementById('lightboxThumbs');
+  if (!thumbsEl || !allPhotos.length) return;
+  thumbsEl.innerHTML = allPhotos.map((url, i) =>
+    `<button class="lb-thumb" data-idx="${i}" aria-label="View photo ${i + 1}">
+      <img src="${CONFIG.img(url, 'thumb')}" alt="" loading="lazy" decoding="async">
+    </button>`
+  ).join('');
+  thumbsEl.querySelectorAll('.lb-thumb').forEach(btn => {
+    btn.addEventListener('click', () => lightboxShow(parseInt(btn.dataset.idx)));
+  });
+}
+
+let _lbNavDir = 0;  // -1 = prev, 1 = next, 0 = direct click
+
+function lightboxShow(idx) {
+  photoIndex = idx;
+  const wrap    = document.getElementById('lightboxImgWrap');
+  const img     = document.getElementById('lightboxImg');
+  const spinner = document.getElementById('lbSpinner');
+  const lqipBg  = document.getElementById('lbLqipBg');
+
+  // Directional slide-out animation on previous image
+  if (_lbNavDir !== 0) {
+    const outClass = _lbNavDir > 0 ? 'slide-out-left' : 'slide-out-right';
+    wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+    wrap.classList.add(outClass);
+  }
+
+  const slideInClass = _lbNavDir > 0 ? 'slide-in-left' : _lbNavDir < 0 ? 'slide-in-right' : null;
+
+  // Show LQIP blur-up while the full image loads
+  if (lqipBg) {
+    const lqip = lqipUrl(allPhotos[idx]);
+    if (lqip) {
+      lqipBg.style.backgroundImage = `url('${lqip}')`;
+      lqipBg.classList.remove('faded');
+      lqipBg.classList.add('visible');
+    } else {
+      lqipBg.classList.remove('visible');
+    }
+  }
+
+  setTimeout(() => {
+    // Hide image and show spinner while new src loads
+    img.classList.add('loading');
+    spinner.classList.add('visible');
+
+    wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+
+    // Full-quality lightbox image with srcset for retina screens
+    const newSrc = CONFIG.img(allPhotos[idx], 'lightbox');
+    img.src    = newSrc;
+    img.srcset = `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w`;
+    img.sizes  = '100vw';
+    img.alt    = `Property photo ${idx + 1}`;
+
+    const reveal = () => {
+      img.classList.remove('loading');
+      spinner.classList.remove('visible');
+      // Fade out the LQIP once the real image has loaded
+      if (lqipBg) { lqipBg.classList.add('faded'); }
+      if (slideInClass) {
+        wrap.classList.add(slideInClass);
+        // Clean up animation class after it completes
+        const cleanup = () => { wrap.classList.remove(slideInClass); wrap.removeEventListener('animationend', cleanup); };
+        wrap.addEventListener('animationend', cleanup, { once: true });
+      }
+      // Preload surrounding images for instant navigation
+      preloadLightboxAdjacentImages(idx);
+    };
+
+    if (img.complete && img.naturalWidth > 0) {
+      reveal();
+    } else {
+      img.addEventListener('load',  reveal, { once: true });
+      img.addEventListener('error', reveal, { once: true });
+    }
+  }, _lbNavDir !== 0 ? 120 : 0);
+
+  document.getElementById('lightboxCounter').textContent = `${idx + 1} / ${allPhotos.length}`;
+
+  // Sync lightbox filmstrip
+  document.querySelectorAll('.lb-thumb').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  const activeThumb = document.querySelector('.lb-thumb.active');
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // Also sync the main page thumbnail strip so it tracks lightbox navigation
+  syncStripActive(idx);
+}
+
+function lightboxNav(dir) {
+  _lbNavDir = dir;
+  lightboxShow((photoIndex + dir + allPhotos.length) % allPhotos.length);
+  _lbNavDir = 0;
+}
+
+/* Lightbox swipe support — velocity-aware */
+(function() {
+  let lbTouchX = 0, lbTouchT = 0;
+  const lb = document.getElementById('lightbox');
+  lb.addEventListener('touchstart', e => {
+    lbTouchX = e.touches[0].clientX;
+    lbTouchT = Date.now();
+  }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    const diff = lbTouchX - e.changedTouches[0].clientX;
+    const dt   = Date.now() - lbTouchT;
+    const vel  = Math.abs(diff) / dt; // px/ms
+    if (Math.abs(diff) > 30 || vel > 0.3) lightboxNav(diff > 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev').addEventListener('click', () => lightboxNav(-1));
+document.getElementById('lightboxNext').addEventListener('click', () => lightboxNav(1));
+document.getElementById('lightbox').addEventListener('click', e => {
+  if (e.target === document.getElementById('lightbox') ||
+      e.target === document.getElementById('lightboxImgWrap')) closeLightbox();
+});
+
+/* ── Inquiry ── */
+document.getElementById('inqMessage').addEventListener('input', function() {
+  document.getElementById('inqCharCount').textContent = this.value.length;
+});
+
+let inquiryCooldown = false;
+document.getElementById('sendInquiryBtn').addEventListener('click', async () => {
+  if (inquiryCooldown) { showToast('Please wait before sending another message.', 'info'); return; }
+
+  const name    = document.getElementById('inqName').value.trim();
+  const email   = document.getElementById('inqEmail').value.trim();
+  const phone   = document.getElementById('inqPhone').value.trim();
+  const message = document.getElementById('inqMessage').value.trim();
+  if (!name || !email || !message) { showToast('Please fill in name, email, and message.', 'error'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email address.', 'error'); return; }
+
+  const btn = document.getElementById('sendInquiryBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending\u2026';
+
+  // Use CP.Inquiries.submit() so the edge function fires confirmation + landlord emails.
+  const { error } = await CP.Inquiries.submit({
+    property_id:  currentProperty.id,
+    tenant_name:  name,
+    tenant_email: email,
+    tenant_phone: phone || null,
+    message
+  });
+
+  if (error) {
+    showToast('Failed to send. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+  } else {
+    showToast('Message sent! The landlord will be in touch soon.', 'success');
+    btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+
+    // Clear form fields after successful send
+    document.getElementById('inqName').value    = '';
+    document.getElementById('inqEmail').value   = '';
+    document.getElementById('inqPhone').value   = '';
+    document.getElementById('inqMessage').value = '';
+
+    // 60-second rate limit cooldown
+    inquiryCooldown = true;
+    let secs = 60;
+    const countdown = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(countdown);
+        inquiryCooldown = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+        btn.disabled = false;
+      } else {
+        btn.innerHTML = `<i class="fas fa-clock"></i> Wait ${secs}s`;
+      }
+    }, 1000);
+  }
+});
+
+/* ── Detail Tabs ── */
+document.getElementById('detailTabs')?.addEventListener('click', e => {
+  const tab = e.target.closest('.detail-tab');
+  if (!tab || tab.classList.contains('active')) return;
+  document.querySelectorAll('.detail-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  document.querySelectorAll('.detail-tab-panel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  tab.setAttribute('aria-selected', 'true');
+  const panelId = tab.dataset.panel;
+  document.getElementById(panelId)?.classList.add('active');
+});
+
+/* ── Contact Drawer (mobile) ── */
+(function() {
+  const contactCard     = document.getElementById('contactCard');
+  const drawerOverlay   = document.getElementById('contactDrawerOverlay');
+  const mobMsgBtn       = document.getElementById('mobMsgBtn');
+  const drawerCloseBtn  = document.getElementById('contactDrawerCloseBtn');
+
+  function openContactDrawer() {
+    contactCard?.classList.add('drawer-open');
+    drawerOverlay?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeContactDrawer() {
+    contactCard?.classList.remove('drawer-open');
+    drawerOverlay?.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  mobMsgBtn?.addEventListener('click', openContactDrawer);
+  drawerOverlay?.addEventListener('click', closeContactDrawer);
+  drawerCloseBtn?.addEventListener('click', closeContactDrawer);
+})();
+
+/* ── Share & Save ── */
+window.shareProp = () => {
+  if (navigator.share) navigator.share({ title: currentProperty?.title, url: window.location.href });
+  else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!', 'success'); }
+};
+
+function toggleSave(id, btn) {
+  if (savedIds.has(id)) {
+    savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
+  } else {
+    savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+    showToast('Property saved!', 'success');
+  }
+  localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
+}
+
+/* ── Mobile Drawer ── */
+/* ── Helpers ── */
+function setMeta(id, val) { document.getElementById(id)?.setAttribute('content', val); }
+function formatDate(str) {
+  // Append T00:00:00 so JS parses as local time, not UTC midnight (avoids day-off bug)
+  const d = new Date(str.includes('T') ? str : str + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ── LQIP helper — delegates to CP.UI.lqipUrl (defined in cp-api.js) ── */
+function lqipUrl(url) { return CP.UI.lqipUrl(url); }
+
+/* ── Preload ±2 adjacent lightbox images for instant prev/next navigation ── */
+function preloadLightboxAdjacentImages(idx) {
+  const n = allPhotos.length;
+  if (n < 2) return;
+  [-1, 1, -2, 2].forEach(offset => {
+    const i = (idx + offset + n) % n;
+    if (i !== idx) {
+      const pre = new Image();
+      pre.src = CONFIG.img(allPhotos[i], 'lightbox');
+    }
+  });
+}
+
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+  t.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i> ${msg}`;
+  c.appendChild(t);
+  const duration = type === 'error' ? 5000 : 3200;
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(6px) scale(0.97)';
+    t.style.transition = 'all 280ms';
+    setTimeout(() => t.remove(), 280);
+  }, duration);
+}
+
+</script>
+
+<!-- Contact drawer overlay (mobile) -->
+<div class="contact-drawer-overlay" id="contactDrawerOverlay" aria-hidden="true"></div>
+
+<!-- Mobile-only sticky Apply bar — populated by renderProperty() -->
+<div id="mobile-apply-bar" role="complementary" aria-label="Apply for this property">
+  <div class="mob-price">
+    <span>Monthly Rent</span>
+    <strong id="mobBarRent">—</strong>
+  </div>
+  <div class="mob-actions">
+    <button class="mob-msg-btn" id="mobMsgBtn" aria-label="Message landlord">
+      <i class="fas fa-comment-dots"></i>
+    </button>
+    <a href="#" id="mobApplyBtn" class="mob-btn">Apply Now</a>
+  </div>
+</div>
+</body>
+</html>
+ + Number(p.admin_fee).toLocaleString();
+  }
+  if (p.move_in_special) {
+    document.getElementById('sidebarMoveInSpecialRow').style.display = '';
+    document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
   // Landlord card
