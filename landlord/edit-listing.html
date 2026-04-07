@@ -374,6 +374,32 @@
           <div class="form-hint">Enter 0 if free to apply. Shown to applicants before they submit.</div>
         </div>
       </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Last Month's Rent</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+              <input type="number" class="form-input" id="lastMonthRent" value="${prop.last_months_rent||''}" style="padding-left:28px" min="0" placeholder="0">
+            </div>
+            <div class="form-hint">Enter 0 if not required. Some landlords require last month's rent in addition to the security deposit.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin / Move-in Fee</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+              <input type="number" class="form-input" id="adminFee" value="${prop.admin_fee||''}" style="padding-left:28px" min="0" placeholder="0">
+            </div>
+            <div class="form-hint">One-time lease setup or admin fee charged at move-in. Enter 0 if none.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Move-in Special <span style="color:#8892a2;font-weight:400;font-size:13px">(optional)</span></label>
+          <input type="text" class="form-input" id="moveInSpecial" value="${esc(prop.move_in_special||'')}" placeholder="e.g. First month free, Reduced deposit for qualified applicants" maxlength="200">
+          <div class="form-hint">Highlight any current promotions or incentives. Displayed prominently on your listing.</div>
+        </div>
+
+  
       <div class="form-group">
         <label class="form-label">Listing Status</label>
         <select class="form-select" id="status">
@@ -387,23 +413,76 @@
 
       <hr style="border:none;border-top:1px solid var(--slate-pale);margin:var(--s-6) 0">
       <div class="form-section-title" style="font-size:20px">Features & Policies</div>
-      <div class="form-group">
-        <label class="form-label">Pets</label>
-        <div style="display:flex;gap:var(--s-3)">
-          <label class="checkbox-pill" style="flex:1;justify-content:center"><input type="radio" name="pets" value="true" ${prop.pets_allowed?'checked':''}> <i class="fas fa-paw"></i> Pets Allowed</label>
-          <label class="checkbox-pill" style="flex:1;justify-content:center"><input type="radio" name="pets" value="false" ${!prop.pets_allowed?'checked':''}> <i class="fas fa-ban"></i> No Pets</label>
+        <div class="form-group">
+          <label class="form-label">Pets</label>
+          <div style="display:flex;gap:var(--s-3)">
+            <label class="checkbox-pill" style="flex:1;justify-content:center"><input type="radio" name="pets" value="true" ${prop.pets_allowed?'checked':''}> <i class="fas fa-paw"></i> Pets Allowed</label>
+            <label class="checkbox-pill" style="flex:1;justify-content:center"><input type="radio" name="pets" value="false" ${!prop.pets_allowed?'checked':''}> <i class="fas fa-ban"></i> No Pets</label>
+          </div>
+          <div id="petDetailsWrap" style="${prop.pets_allowed?'':'display:none'};margin-top:var(--s-4)">
+            <div class="form-group" style="margin-bottom:var(--s-3)">
+              <label class="form-label" style="font-size:13px;margin-bottom:var(--s-2)">Pet Types Allowed</label>
+              <div class="checkbox-group" id="petTypesGroup">
+                ${['Dogs','Cats','Birds','Small Animals','Reptiles'].map(t=>`<label class="checkbox-pill"><input type="checkbox" name="petTypes" value="${t}" ${chk(prop.pet_types_allowed,t)}> ${t}</label>`).join('')}
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin-bottom:var(--s-3)">
+                <label class="form-label" style="font-size:13px">Dog Weight Limit</label>
+                <select class="form-select" id="petWeightLimit">
+                  <option value="">No limit</option>
+                  ${[15,25,50,75,100].map(w=>`<option value="${w}" ${prop.pet_weight_limit==w?'selected':''}>${w === 15 ? 'Under 15 lbs' : w === 25 ? 'Under 25 lbs' : w === 50 ? 'Under 50 lbs' : w === 75 ? 'Under 75 lbs' : 'Under 100 lbs'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:var(--s-3)">
+                <label class="form-label" style="font-size:13px">Pet Deposit</label>
+                <div style="position:relative">
+                  <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+                  <input type="number" class="form-input" id="petDeposit" value="${prop.pet_deposit||''}" style="padding-left:28px" min="0" placeholder="0">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:13px">Additional Pet Notes</label>
+              <input type="text" class="form-input" id="petDetails" value="${esc(prop.pet_details||'')}" placeholder="e.g. Max 2 pets, breed restrictions apply">
+            </div>
+          </div>
         </div>
-        <div id="petDetailsWrap" style="${prop.pets_allowed?'':'display:none'};margin-top:var(--s-3)">
-          <input type="text" class="form-input" id="petDetails" value="${esc(prop.pet_details||'')}" placeholder="e.g. Dogs up to 40 lbs, cats OK">
+  
+        <div class="form-group">
+          <label class="form-label">Parking Type</label>
+          <select class="form-select" id="parking">
+            <option value="">Select parking type</option>
+            ${['None','Street','Driveway','Parking lot','Covered','Garage','Detached Garage','Gated'].map(p=>`<option value="${p}" ${sel(prop.parking,p)}>${p === 'None' ? 'No Parking Available' : p === 'Street' ? 'Street Parking Only' : p === 'Garage' ? 'Garage (Attached)' : p === 'Detached Garage' ? 'Garage (Detached)' : p === 'Parking lot' ? 'Parking Lot' : p}</option>`).join('')}
+          </select>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Parking</label>
-        <select class="form-select" id="parking">
-          <option value="">Select parking</option>
-          ${['None','Street','1 car garage','2 car garage','Driveway','Parking lot'].map(p=>`<option value="${p}" ${sel(prop.parking,p)}>${p}</option>`).join('')}
-        </select>
-      </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Spaces Included</label>
+            <select class="form-select" id="garageSpaces">
+              <option value="">Select</option>
+              ${[0,1,2,3,4].map(n=>`<option value="${n}" ${prop.garage_spaces==n?'selected':''}>${n === 4 ? '4+ spaces' : n === 0 ? '0 (none)' : n + ' space' + (n>1?'s':'')}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monthly Parking Fee</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8892a2;font-size:15px">$</span>
+              <input type="number" class="form-input" id="parkingFee" value="${prop.parking_fee||''}" style="padding-left:28px" min="0" placeholder="0">
+            </div>
+            <div class="form-hint">Enter 0 if included in rent.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">EV Charging</label>
+            <select class="form-select" id="evCharging">
+              <option value="none" ${!prop.ev_charging||prop.ev_charging==='none'?'selected':''}>Not Available</option>
+              <option value="available" ${prop.ev_charging==='available'?'selected':''}>Available (Level 1/2)</option>
+              <option value="included" ${prop.ev_charging==='included'?'selected':''}>Included in Rent</option>
+            </select>
+          </div>
+        </div>
+  
       <div class="form-group">
         <label class="form-label">Utilities Included</label>
         <div class="checkbox-group">
@@ -423,7 +502,52 @@
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--slate-pale);margin:var(--s-6) 0">
+      
+        <div class="form-group">
+          <label class="form-label">Laundry</label>
+          <select class="form-select" id="laundryType">
+            <option value="" ${!prop.laundry_type?'selected':''}>Select laundry situation</option>
+            ${[
+              ['In-unit washer/dryer','In-unit washer/dryer included'],
+              ['Hookups only','Washer/dryer hookups only (tenant brings)'],
+              ['Shared laundry','Shared laundry on-site'],
+              ['Laundromat nearby','No on-site laundry (laundromat nearby)'],
+              ['None','No laundry facilities']
+            ].map(([v,l])=>`<option value="${v}" ${prop.laundry_type===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Heating</label>
+            <select class="form-select" id="heatingType">
+              <option value="" ${!prop.heating_type?'selected':''}>Select heating type</option>
+              ${[
+                ['Forced air (gas)','Forced air — gas'],
+                ['Forced air (electric)','Forced air — electric'],
+                ['Baseboard electric','Baseboard electric'],
+                ['Radiant/in-floor','Radiant / in-floor'],
+                ['Heat pump','Heat pump'],
+                ['Boiler/radiator','Boiler / radiator'],
+                ['Other','Other']
+              ].map(([v,l])=>`<option value="${v}" ${prop.heating_type===v?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cooling / A/C</label>
+            <select class="form-select" id="coolingType">
+              <option value="" ${!prop.cooling_type?'selected':''}>Select cooling type</option>
+              ${[
+                ['Central A/C','Central A/C'],
+                ['Mini-split','Mini-split (ductless)'],
+                ['Window units','Window units'],
+                ['Evaporative cooler','Evaporative cooler'],
+                ['None','No A/C']
+              ].map(([v,l])=>`<option value="${v}" ${prop.cooling_type===v?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+  <hr style="border:none;border-top:1px solid var(--slate-pale);margin:var(--s-6) 0">
       <div class="form-section-title" style="font-size:20px">Photos</div>
       <p class="photo-count-hint">
         <i class="fas fa-info-circle" style="color:var(--gold)"></i>
@@ -741,33 +865,47 @@
     let updateQuery = supabase
       .from('properties')
       .update({
-        title               : v('title'),
-        property_type       : v('propertyType'),
-        address             : v('address'),
-        city                : v('city'),
-        state               : v('state') || null,
-        zip                 : v('zip') || null,
-        lat                 : lat,
-        lng                 : lng,
-        bedrooms            : parseInt(v('bedrooms')),
-        bathrooms           : parseFloat(v('bathrooms')),
-        square_footage      : parseInt(v('sqft')) || null,
-        monthly_rent        : parseInt(v('rent')),
-        security_deposit    : parseInt(v('deposit')) || null,
-        available_date      : v('availDate') || null,
-        application_fee     : parseInt(v('appFee')) || 0,
-        status              : v('status'),
-        pets_allowed        : document.querySelector('input[name="pets"]:checked')?.value === 'true',
-        pet_details         : v('petDetails') || null,
-        parking             : v('parking') || null,
-        utilities_included  : getChecked('utilities'),
-        amenities           : getChecked('amenities'),
-        lease_terms         : getChecked('leaseTerms'),
-        description         : v('description'),
-        showing_instructions: v('showingInstructions') || null,
-        photo_urls          : finalPhotoUrls,
-        photo_file_ids      : finalPhotoFileIds, // I-028: persist fileIds for CDN deletion
-        updated_at          : new Date().toISOString()
+          title               : v('title'),
+          property_type       : v('propertyType'),
+          address             : v('address'),
+          city                : v('city'),
+          state               : v('state') || null,
+          zip                 : v('zip') || null,
+          lat                 : lat,
+          lng                 : lng,
+          bedrooms            : parseInt(v('bedrooms')),
+          bathrooms           : parseFloat(v('bathrooms')),
+          square_footage      : parseInt(v('sqft')) || null,
+          monthly_rent        : parseInt(v('rent')),
+          security_deposit    : parseInt(v('deposit')) || null,
+          last_months_rent    : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
+          admin_fee           : v('adminFee') ? parseInt(v('adminFee')) : null,
+          move_in_special     : v('moveInSpecial') || null,
+          available_date      : v('availDate') || null,
+          application_fee     : parseInt(v('appFee')) || 0,
+          status              : v('status'),
+          pets_allowed        : document.querySelector('input[name="pets"]:checked')?.value === 'true',
+          pet_types_allowed   : document.querySelector('input[name="pets"]:checked')?.value === 'true'
+                                  ? [...document.querySelectorAll('#petTypesGroup input:checked')].map(c => c.value)
+                                  : [],
+          pet_weight_limit    : v('petWeightLimit') ? parseInt(v('petWeightLimit')) : null,
+          pet_deposit         : v('petDeposit') ? parseInt(v('petDeposit')) : null,
+          pet_details         : v('petDetails') || null,
+          parking             : v('parking') || null,
+          garage_spaces       : v('garageSpaces') ? parseInt(v('garageSpaces')) : null,
+          parking_fee         : v('parkingFee') ? parseInt(v('parkingFee')) : null,
+          ev_charging         : v('evCharging') || null,
+          utilities_included  : getChecked('utilities'),
+          amenities           : getChecked('amenities'),
+          lease_terms         : getChecked('leaseTerms'),
+          laundry_type        : v('laundryType') || null,
+          heating_type        : v('heatingType') || null,
+          cooling_type        : v('coolingType') || null,
+          description         : v('description'),
+          showing_instructions: v('showingInstructions') || null,
+          photo_urls          : finalPhotoUrls,
+          photo_file_ids      : finalPhotoFileIds, // I-028: persist fileIds for CDN deletion
+          updated_at          : new Date().toISOString()
       })
       .eq('id', propertyId);
     
