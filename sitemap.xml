@@ -50,4 +50,35 @@
     <priority>0.4</priority>
   </url>
 
-</urlset>
+
+    <url>
+      <loc>https://choicepropertiesofficial.pages.dev/fair-housing.html</loc>
+      <changefreq>yearly</changefreq>
+      <priority>0.4</priority>
+    </url>
+
+    <url>
+      <loc>https://choicepropertiesofficial.pages.dev/holding-deposit-policy.html</loc>
+      <changefreq>yearly</changefreq>
+      <priority>0.4</priority>
+    </url>
+
+    <url>
+      <loc>https://choicepropertiesofficial.pages.dev/rental-application-policy.html</loc>
+      <changefreq>yearly</changefreq>
+      <priority>0.4</priority>
+    </url>
+
+    <url>
+      <loc>https://choicepropertiesofficial.pages.dev/application-credit-policy.html</loc>
+      <changefreq>yearly</changefreq>
+      <priority>0.4</priority>
+    </url>
+
+    <url>
+      <loc>https://choicepropertiesofficial.pages.dev/landlord-platform-agreement.html</loc>
+      <changefreq>yearly</changefreq>
+      <priority>0.4</priority>
+    </url>
+
+  </urlset>
