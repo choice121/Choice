@@ -568,8 +568,27 @@
       <span><strong>Your listing goes live immediately.</strong> Once you click Submit, it will appear instantly in search results on Choice Properties. You can edit or manage it any time from your Landlord Dashboard.</span>
     </div>
 
-    <div class="form-nav" style="flex-wrap:wrap;gap:var(--s-3)">
-      <button class="btn btn-ghost" id="prev6"><i class="fas fa-arrow-left"></i> Back</button>
+    <div style="background:#fff;border:1px solid var(--color-border);border-radius:var(--r);padding:var(--s-5);margin-bottom:var(--s-5);">
+        <h4 style="font-size:14px;font-weight:700;color:var(--color-dark);margin:0 0 var(--s-4);display:flex;align-items:center;gap:8px;"><i class="fas fa-shield-alt" style="color:var(--color-primary);"></i> Landlord Attestation</h4>
+        <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 var(--s-4);">By publishing this listing, you attest to the following. All three are required.</p>
+        <div style="display:flex;flex-direction:column;gap:var(--s-3);">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">
+            <input type="checkbox" id="attestAccuracy" required style="margin-top:3px;flex-shrink:0;">
+            <span>The information in this listing is accurate and truthful to the best of my knowledge, and this property is legally available for rent at the listed price.</span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">
+            <input type="checkbox" id="attestFairHousing" required style="margin-top:3px;flex-shrink:0;">
+            <span>I agree to comply with the <a href="/fair-housing.html" target="_blank" style="color:var(--color-primary);">Fair Housing Act</a> and all applicable fair housing laws. I will not discriminate against any applicant based on any protected class.</span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">
+            <input type="checkbox" id="attestPlatformPolicy" required style="margin-top:3px;flex-shrink:0;">
+            <span>I agree to the Choice Properties <a href="/terms.html" target="_blank" style="color:var(--color-primary);">Terms of Service</a> and platform policies.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-nav" style="flex-wrap:wrap;gap:var(--s-3)">
+        <button class="btn btn-ghost" id="prev6"><i class="fas fa-arrow-left"></i> Back</button>
       <div style="display:flex;gap:var(--s-3)">
         <button class="btn btn-ghost" id="previewBtn" type="button">
           <i class="fas fa-eye"></i> Preview as Tenant
