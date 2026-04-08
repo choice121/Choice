@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Shared API Client (cp-api.js)
+// Choice Properties â Shared API Client (cp-api.js)
 // All pages import this after config.js
 // ============================================================
 
@@ -32,19 +32,19 @@ function sb() {
   return _sb;
 }
 
-// ── Normalized return shape ───────────────────────────────
+// ââ Normalized return shape âââââââââââââââââââââââââââââââ
 // Every public API method returns { ok, data, error }.
-//   ok    — boolean, true on success
-//   data  — payload on success, null on failure
-//   error — human-readable string on failure, null on success
+//   ok    â boolean, true on success
+//   data  â payload on success, null on failure
+//   error â human-readable string on failure, null on success
 //
-// Internal helper — wraps a Supabase { data, error } pair.
+// Internal helper â wraps a Supabase { data, error } pair.
 function _ok(data, error) {
   if (error) return { ok: false, data: null, error: error.message || String(error) };
   return { ok: true, data: data ?? null, error: null };
 }
 
-// ── Auth helpers ──────────────────────────────────────────
+// ââ Auth helpers ââââââââââââââââââââââââââââââââââââââââââ
 const Auth = {
   async getUser()       { const { data } = await sb().auth.getUser(); return data?.user || null; },
   async getSession()    { const { data } = await sb().auth.getSession(); return data?.session || null; },
@@ -66,7 +66,7 @@ const Auth = {
       // refreshSession() throws on network error but returns { error } on auth error.
       // Only flag as auth failure when the server actually rejected the token.
       if (!token && re) refreshFailed = true;
-    } catch { /* network failure — fall through to cached session */ }
+    } catch { /* network failure â fall through to cached session */ }
 
     // Fall back to cached session if refresh failed (e.g. no network at all)
     if (!token) {
@@ -95,7 +95,7 @@ const Auth = {
         return null;
       }
     } catch {
-      // Network too slow to verify — trust the refreshed token and let the upload try.
+      // Network too slow to verify â trust the refreshed token and let the upload try.
       // If it fails, the improved error handler will catch it.
     }
 
@@ -129,8 +129,8 @@ const Auth = {
   },
 };
 
-// ── Edge Function caller ──────────────────────────────────
-// Returns { ok, data, error } — never throws.
+// ââ Edge Function caller ââââââââââââââââââââââââââââââââââ
+// Returns { ok, data, error } â never throws.
 async function callEdgeFunction(name, payload) {
   try {
     const session = await Auth.getSession();
@@ -150,7 +150,7 @@ async function callEdgeFunction(name, payload) {
       const msg = json.error || json.message || res.statusText || `HTTP ${res.status}`;
       return { ok: false, data: null, error: msg };
     }
-    // Edge Functions return { success, error, ...payload } — unwrap into our shape.
+    // Edge Functions return { success, error, ...payload } â unwrap into our shape.
     if ('success' in json) {
       if (!json.success) return { ok: false, data: null, error: json.error || 'Unknown error' };
       const { success: _s, error: _e, ...rest } = json;
@@ -161,9 +161,9 @@ async function callEdgeFunction(name, payload) {
     return { ok: false, data: null, error: err.message || String(err) };
   }
 }
-// ── Properties API ────────────────────────────────────────
+// ââ Properties API ââââââââââââââââââââââââââââââââââââââââ
 const Properties = {
-  // getListings — server-side filtered, sorted, paginated query for the listings page.
+  // getListings â server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
   // Returns { ok, data: { rows, total, page, per_page, total_pages }, error }
   async getListings(filters = {}) {
@@ -177,7 +177,7 @@ const Properties = {
       .select('*, landlords(contact_name, business_name, avatar_url, verified)', { count: 'exact' })
       .eq('status', 'active');
 
-    // Text search — uses the GIN-indexed search_tsv generated column.
+    // Text search â uses the GIN-indexed search_tsv generated column.
     // Falls back to ilike on title only if the term contains characters
     // that would break tsquery (e.g. bare punctuation).
     if (filters.q) {
@@ -198,10 +198,10 @@ const Properties = {
     if (filters.type === 'pets')      q = q.eq('pets_allowed', true);
     if (filters.type === 'parking')   q = q.not('parking', 'is', null).neq('parking', '').neq('parking', 'None');
     // C1 FIX: "Move-in Ready" must also match properties where available_date IS NULL
-    // (those are immediately available — landlords who didn't set a date).
+    // (those are immediately available â landlords who didn't set a date).
     if (filters.type === 'available') q = q.or(`available_date.is.null,available_date.lte.${new Date().toISOString().slice(0,10)}`);
 
-    // Bedrooms — exact match from quick filter, gte from advanced min_beds
+    // Bedrooms â exact match from quick filter, gte from advanced min_beds
     if (filters.beds !== undefined && filters.beds !== '') {
       const beds = parseInt(filters.beds);
       if (beds === 4) { q = q.gte('bedrooms', 4); }
@@ -229,7 +229,7 @@ const Properties = {
     // Heating type filter
     if (filters.heating_type) q = q.eq('heating_type', filters.heating_type);
 
-    // Pet type filter — checks if pet_types_allowed array contains the requested type
+    // Pet type filter â checks if pet_types_allowed array contains the requested type
     if (filters.pet_type) q = q.contains('pet_types_allowed', [filters.pet_type]);
 
     // Sort
@@ -273,7 +273,7 @@ const Properties = {
     const { data, error } = await sb().from('properties').select('*, landlords(*)').eq('id', id).single();
     return _ok(data, error);
   },
-  // I-026: NOTE — this method is not currently used by new-listing.html.
+  // I-026: NOTE â this method is not currently used by new-listing.html.
   // That page calls generate_property_id() RPC + .insert() directly so it
   // can cache the propId in localStorage for retry-safe photo uploads.
   // If you update the insert payload shape here, update new-listing.html too.
@@ -292,14 +292,14 @@ const Properties = {
   async incrementView(id) { return sb().rpc('increment_counter', { p_table: 'properties', p_id: id, p_column: 'views_count' }); },
 };
 
-// ── Saved Properties API ──────────────────────────────────
+// ââ Saved Properties API ââââââââââââââââââââââââââââââââââ
 // C4 FIX: Connects the heart/save button to the saved_properties DB table
 // for authenticated users (saves persist across devices).  Falls back to
 // localStorage for anonymous visitors so the experience still works.
 // The DB trigger trg_saves_count() auto-updates properties.saves_count on INSERT/DELETE.
 const SavedProperties = {
   // Load saved property IDs for the current user.
-  // Authenticated → DB query; anonymous → localStorage.
+  // Authenticated â DB query; anonymous â localStorage.
   // Always returns a Set<string>.
   async getIds() {
     const user = await Auth.getUser();
@@ -317,14 +317,14 @@ const SavedProperties = {
   async toggle(propertyId) {
     const user = await Auth.getUser();
     if (!user) {
-      // Anonymous — localStorage only
+      // Anonymous â localStorage only
       const ids = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
       const saved = !ids.has(propertyId);
       if (saved) ids.add(propertyId); else ids.delete(propertyId);
       localStorage.setItem('cp_saved', JSON.stringify([...ids]));
       return { saved };
     }
-    // Authenticated — check DB first to determine current state
+    // Authenticated â check DB first to determine current state
     const { data: existing } = await sb()
       .from('saved_properties')
       .select('id')
@@ -333,11 +333,11 @@ const SavedProperties = {
       .maybeSingle();
     let saved;
     if (existing) {
-      // Currently saved → unsave (delete row; trigger decrements saves_count)
+      // Currently saved â unsave (delete row; trigger decrements saves_count)
       await sb().from('saved_properties').delete().eq('id', existing.id);
       saved = false;
     } else {
-      // Not saved → save (insert row; trigger increments saves_count)
+      // Not saved â save (insert row; trigger increments saves_count)
       await sb().from('saved_properties').insert({ user_id: user.id, property_id: propertyId });
       saved = true;
     }
@@ -349,7 +349,7 @@ const SavedProperties = {
   },
 };
 
-// ── Inquiries API ─────────────────────────────────────────
+// ââ Inquiries API âââââââââââââââââââââââââââââââââââââââââ
 const Inquiries = {
   async submit(payload)       {
     // Client-side throttle: max 1 inquiry per 60 s per browser session.
@@ -383,7 +383,7 @@ const Inquiries = {
   },
   async getForLandlord(landlordId) {
     // Single query: PostgREST !inner join filters inquiries to only those
-    // whose property.landlord_id matches — no separate property-ID fetch needed.
+    // whose property.landlord_id matches â no separate property-ID fetch needed.
     const { data, error } = await sb()
       .from('inquiries')
       .select('*, properties!inner(id, title, address, landlord_id)')
@@ -394,7 +394,7 @@ const Inquiries = {
   async markRead(id) { return sb().from('inquiries').update({ read: true }).eq('id', id); },
 };
 
-// ── Landlords API ─────────────────────────────────────────
+// ââ Landlords API âââââââââââââââââââââââââââââââââââââââââ
 const Landlords = {
   async getProfile(userId)  {
     const { data, error } = await sb().from('landlords').select('*').eq('user_id', userId).maybeSingle();
@@ -417,7 +417,7 @@ const Landlords = {
   },
 };
 
-// ── Email Logs API ────────────────────────────────────────
+// ââ Email Logs API ââââââââââââââââââââââââââââââââââââââââ
 const EmailLogs = {
   async getAll(filters = {}) {
     const perPage = filters.perPage || 50;
@@ -436,13 +436,13 @@ const EmailLogs = {
 };
 
 
-// ── UI utilities ──────────────────────────────────────────
+// ââ UI utilities ââââââââââââââââââââââââââââââââââââââââââ
 const UI = {
   fmt: {
     currency: (n) => `$${parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
-    dateTime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
-    status:   (s) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '—',
+    date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'â',
+    dateTime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'â',
+    status:   (s) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'â',
     phone:    (p) => p ? p.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3') : '',
   },
   statusBadge(status) {
@@ -473,10 +473,10 @@ const UI = {
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, duration);
   },
   loading(el, on) {
-    if (on) { el.dataset.origText = el.textContent; el.disabled = true; el.textContent = 'Loading…'; }
+    if (on) { el.dataset.origText = el.textContent; el.disabled = true; el.textContent = 'Loadingâ¦'; }
     else    { el.textContent = el.dataset.origText || el.textContent; el.disabled = false; }
   },
-  // Promise-based confirm dialog — replaces native confirm() with inline modal
+  // Promise-based confirm dialog â replaces native confirm() with inline modal
   cpConfirm(message, { confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false } = {}) {
     return new Promise((resolve) => {
       const existing = document.getElementById('_cpConfirmOverlay');
@@ -505,7 +505,7 @@ const UI = {
     });
   },
 
-  // ── LQIP — returns a tiny blurred ImageKit URL for blur-up loading ─────────
+  // ââ LQIP â returns a tiny blurred ImageKit URL for blur-up loading âââââââââ
   // Usage: img.style.backgroundImage = `url(${CP.UI.lqipUrl(url)})`;
   // Returns null if ImageKit is not configured (safe to ignore).
   lqipUrl(url) {
@@ -516,34 +516,34 @@ const UI = {
     return base.replace(CONFIG.IMAGEKIT_URL, CONFIG.IMAGEKIT_URL + '/tr:w-30,bl-20,q-20,f-webp');
   },
 
-  // ── Table skeleton rows (shimmer placeholders while data loads) ──────────
+  // ââ Table skeleton rows (shimmer placeholders while data loads) ââââââââââ
   // Usage: tbody.innerHTML = CP.UI.skeletonRows(5, 6);
-  // cols  — number of <td> cells per row (match your table's column count)
-  // rows  — number of placeholder rows to show (default 5)
+  // cols  â number of <td> cells per row (match your table's column count)
+  // rows  â number of placeholder rows to show (default 5)
   skeletonRows(rows = 5, cols = 4) {
     const cells = Array(cols).fill('<td><div class="sk-cell"></div></td>').join('');
     return Array(rows).fill(`<tr class="sk-row">${cells}</tr>`).join('');
   },
 
-  // ── Empty state for tables (no results) ─────────────────────────────────
-  // Usage (table): tbody.innerHTML = CP.UI.emptyState('No applications yet', '📋', cols);
-  // Usage (div):   container.innerHTML = CP.UI.emptyState('No messages yet', '💬');
+  // ââ Empty state for tables (no results) âââââââââââââââââââââââââââââââââ
+  // Usage (table): tbody.innerHTML = CP.UI.emptyState('No applications yet', 'ð', cols);
+  // Usage (div):   container.innerHTML = CP.UI.emptyState('No messages yet', 'ð¬');
   // If cols is provided, wraps in a single <tr><td colspan="cols"> for table use.
-  emptyState(message, icon = '📭', cols = 0) {
+  emptyState(message, icon = 'ð­', cols = 0) {
     const inner = `<div class="cp-empty-state"><span class="cp-empty-icon">${icon}</span><span class="cp-empty-msg">${message}</span></div>`;
     return cols ? `<tr><td colspan="${cols}">${inner}</td></tr>` : inner;
   },
 
-  // ── Error state for tables / divs (load failure) ─────────────────────────
+  // ââ Error state for tables / divs (load failure) âââââââââââââââââââââââââ
   // Usage (table): tbody.innerHTML = CP.UI.errorState('Failed to load data', cols);
   // Usage (div):   container.innerHTML = CP.UI.errorState('Failed to load data');
   errorState(message = 'Failed to load data. Please refresh and try again.', cols = 0) {
-    const inner = `<div class="cp-error-state"><span class="cp-error-icon">⚠️</span><span class="cp-error-msg">${message}</span></div>`;
+    const inner = `<div class="cp-error-state"><span class="cp-error-icon">â ï¸</span><span class="cp-error-msg">${message}</span></div>`;
     return cols ? `<tr><td colspan="${cols}">${inner}</td></tr>` : inner;
   },
 };
 
-// ── XSS-safe HTML escape ─────────────────────────────────
+// ââ XSS-safe HTML escape âââââââââââââââââââââââââââââââââ
 // Use esc() whenever injecting user-supplied text into innerHTML.
 function esc(str) {
   if (str == null) return '';
@@ -555,15 +555,15 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
-// ── Landlord helper functions ─────────────────────────────
+// ââ Landlord helper functions âââââââââââââââââââââââââââââ
 // Defined here so they live in one place and are accessible
 // via both window.CP (inline scripts) and ES named exports below.
 
 function buildApplyURL(property) {
-  // ── Layer 1: sessionStorage (same-origin only) ────────────────────────────
+  // ââ Layer 1: sessionStorage (same-origin only) ââââââââââââââââââââââââââââ
   // Stores full context for same-origin use. Cross-origin (external form)
-  // cannot read sessionStorage — it relies entirely on the URL params below.
-  // landlord_id is included here only — never in the URL.
+  // cannot read sessionStorage â it relies entirely on the URL params below.
+  // landlord_id is included here only â never in the URL.
   try {
     sessionStorage.setItem('cp_property_context', JSON.stringify({
       id:               property.id,
@@ -600,21 +600,21 @@ function buildApplyURL(property) {
       move_in_special:  property.move_in_special  || null,
     }));
   } catch (_) {
-    // sessionStorage unavailable (private browsing) — URL params are the fallback.
+    // sessionStorage unavailable (private browsing) â URL params are the fallback.
   }
 
-  // ── Layer 2: URL query params (cross-origin safe) ─────────────────────────
+  // ââ Layer 2: URL query params (cross-origin safe) âââââââââââââââââââââââââ
   // Structured, machine-readable values so the external GAS form can:
-  //   • Pre-fill fields from the property data
-  //   • Restrict choices to only what this property allows (lease terms, pets, etc.)
-  //   • Enforce move-in date minimums from available_date
-  //   • Show/hide sections based on boolean flags (pets, smoking)
+  //   â¢ Pre-fill fields from the property data
+  //   â¢ Restrict choices to only what this property allows (lease terms, pets, etc.)
+  //   â¢ Enforce move-in date minimums from available_date
+  //   â¢ Show/hide sections based on boolean flags (pets, smoking)
   //
-  // landlord_id is NEVER included — resolved server-side from property_id.
+  // landlord_id is NEVER included â resolved server-side from property_id.
   // Arrays use pipe "|" as a separator so GAS can split on it easily.
   const p = new URLSearchParams();
 
-  // ── Identity & location ───────────────────────────────────────────────────
+  // ââ Identity & location âââââââââââââââââââââââââââââââââââââââââââââââââââ
   p.set('id',    property.id);
   if (property.title)   p.set('pn',    property.title);
   if (property.address) p.set('addr',  property.address);
@@ -622,20 +622,20 @@ function buildApplyURL(property) {
   if (property.state)   p.set('state', property.state);
   if (property.zip)     p.set('zip',   property.zip);
 
-  // ── Financials ────────────────────────────────────────────────────────────
+  // ââ Financials ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
   p.set('fee', property.application_fee != null ? property.application_fee : 0); // 9C-1: always send fee, even if zero
 
-  // ── Unit details ──────────────────────────────────────────────────────────
+  // ââ Unit details ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (property.bedrooms  != null) p.set('beds',  property.bedrooms);
   if (property.bathrooms != null) p.set('baths', property.bathrooms);
 
-  // ── Availability & lease terms ────────────────────────────────────────────
-  // avail: ISO date string — GAS uses this as the minimum allowed move-in date.
-  // terms: pipe-separated list of allowed lease term options — GAS builds a
+  // ââ Availability & lease terms ââââââââââââââââââââââââââââââââââââââââââââ
+  // avail: ISO date string â GAS uses this as the minimum allowed move-in date.
+  // terms: pipe-separated list of allowed lease term options â GAS builds a
   //        constrained dropdown/radio group from this, hiding disallowed options.
-  // min_months: numeric minimum — fallback when lease_terms array is empty.
+  // min_months: numeric minimum â fallback when lease_terms array is empty.
   if (property.available_date) p.set('avail', property.available_date);
 
   if (property.lease_terms && property.lease_terms.length) {
@@ -649,11 +649,11 @@ function buildApplyURL(property) {
   }
   if (property.minimum_lease_months) p.set('min_months', property.minimum_lease_months);
 
-  // ── Pet policy ────────────────────────────────────────────────────────────
-  // pets: boolean string "true"/"false" — GAS shows/hides the pet section.
-  // pet_types: pipe-separated allowed pet types — GAS uses for validation.
-  // pet_weight: numeric max weight in lbs — GAS validates weight input against it.
-  // pet_deposit: numeric — GAS displays as expected cost in the pet section.
+  // ââ Pet policy ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // pets: boolean string "true"/"false" â GAS shows/hides the pet section.
+  // pet_types: pipe-separated allowed pet types â GAS uses for validation.
+  // pet_weight: numeric max weight in lbs â GAS validates weight input against it.
+  // pet_deposit: numeric â GAS displays as expected cost in the pet section.
   p.set('pets', property.pets_allowed ? 'true' : 'false');
   if (property.pets_allowed) {
     if (property.pet_types_allowed && property.pet_types_allowed.length) {
@@ -667,13 +667,13 @@ function buildApplyURL(property) {
     if (property.pet_details)      p.set('pet_details', property.pet_details);
   }
 
-  // ── Smoking policy ────────────────────────────────────────────────────────
-  // smoking: boolean string "true"/"false" — GAS pre-sets and locks the field.
+  // ââ Smoking policy ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // smoking: boolean string "true"/"false" â GAS pre-sets and locks the field.
   p.set('smoking', property.smoking_allowed ? 'true' : 'false');
 
-  // ── Utilities & parking ───────────────────────────────────────────────────
-  // utilities: pipe-separated list — GAS displays as included utilities context.
-  // parking: text value — GAS displays as parking info context.
+  // ââ Utilities & parking âââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // utilities: pipe-separated list â GAS displays as included utilities context.
+  // parking: text value â GAS displays as parking info context.
   if (property.utilities_included && property.utilities_included.length) {
     const utils = Array.isArray(property.utilities_included)
       ? property.utilities_included.join('|')
@@ -688,20 +688,26 @@ function buildApplyURL(property) {
   if (property.heating_type) p.set('heating_type', property.heating_type);
   if (property.cooling_type) p.set('cooling_type', property.cooling_type);
 
-  // ── Financial move-in costs ───────────────────────────────────────────────────
+  // ââ Financial move-in costs âââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (property.last_months_rent) p.set('last_months_rent', property.last_months_rent);
   if (property.admin_fee)        p.set('admin_fee',        property.admin_fee);
   if (property.move_in_special)  p.set('move_in_special',  property.move_in_special);
 
-  // ── Resolve target base URL ───────────────────────────────────────────────
+  // ââ Resolve target base URL âââââââââââââââââââââââââââââââââââââââââââââââ
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
     ? CONFIG.APPLY_FORM_URL
     : 'https://apply-choice-properties.pages.dev';
 
   // 9C-2: pass current page URL so apply form can show 'Back to listing' link
   try { p.set('source', window.location.href); } catch (_) {}
-  return `${base}?${p.toString()}`;
-}
+
+    // B2: Warn if URL length may exceed browser/proxy limits on data-rich listings
+    const _finalUrl = `${base}?${p.toString()}`;
+    if (_finalUrl.length > 7000) {
+      console.warn('[buildApplyURL] URL length ' + _finalUrl.length + ' chars — may truncate on some mobile browsers or proxies');
+    }
+    return _finalUrl;
+  }
 
 async function incrementCounter(table, id, column) {
   return sb().rpc('increment_counter', { p_table: table, p_id: id, p_column: column });
@@ -744,14 +750,14 @@ async function updateNav() {
   }
 }
 
-// ── Single source of truth: window.CP ────────────────────
+// ââ Single source of truth: window.CP ââââââââââââââââââââ
 // Admin pages, apply.js, and inline <script> blocks all read
-// from window.CP. ES exports below are thin re-exports — they
+// from window.CP. ES exports below are thin re-exports â they
 // add no logic of their own, so there is only ONE place to
 // edit when adding or changing any function.
 window.CP_esc = esc;
 window.CP = {
-    // NOTE: Applications object removed — all application management is
+    // NOTE: Applications object removed â all application management is
     // handled by the external GAS system at apply-choice-properties.pages.dev
     sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
     buildApplyURL, incrementCounter,
@@ -759,9 +765,9 @@ window.CP = {
     signIn, signUp, signOut, resetPassword, updateNav,
   };
 
-// ── ES Module exports ─────────────────────────────────────
+// ââ ES Module exports âââââââââââââââââââââââââââââââââââââ
 // Landlord pages and property.html import these by name.
-// Each export delegates to the function defined above — no
+// Each export delegates to the function defined above â no
 // duplicated logic, no separate window.* assignments needed.
 export const supabase = sb();
 export { buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
