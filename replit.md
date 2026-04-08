@@ -60,25 +60,46 @@ All non-sensitive configuration is stored as Replit environment variables (share
 
 ## Site Pages
 
-- `/` — Homepage with property search
-- `/listings.html` — Browse available properties
-- `/property.html?id=...` — Individual property page
-- `/admin/login.html` — Admin portal login
-- `/admin/dashboard.html` — Admin dashboard (login-protected)
-- `/landlord/login.html` — Landlord portal login
-- `/landlord/dashboard.html` — Landlord dashboard (login-protected)
+  **Public pages:**
+  - `/` — Homepage with property search
+  - `/listings.html` — Browse available properties
+  - `/property.html?id=...` — Individual property detail page
+  - `/about.html` — About Choice Properties
+  - `/faq.html` — Frequently asked questions
+  - `/how-it-works.html` — How the platform works
+  - `/how-to-apply.html` — Application guide for tenants
+
+  **Policy pages (added April 2026):**
+  - `/fair-housing.html` — Fair Housing Policy
+  - `/holding-deposit-policy.html` — Holding Deposit Policy
+  - `/rental-application-policy.html` — Rental Application Policy
+  - `/application-credit-policy.html` — Application Credit Policy
+  - `/landlord-platform-agreement.html` — Landlord Platform Agreement
+  - `/privacy.html` — Privacy Policy
+  - `/terms.html` — Terms of Service
+
+  **Admin portal (login-protected):**
+  - `/admin/login.html` — Admin login
+  - `/admin/dashboard.html` — Admin dashboard
+
+  **Landlord portal (login-protected):**
+  - `/landlord/login.html` — Landlord login
+  - `/landlord/dashboard.html` — Landlord dashboard
 
 ## Supabase Edge Functions
 
-The backend logic lives in `supabase/functions/`. These are deployed to Supabase directly (not run on Replit). They handle:
-- `generate-lease` — lease generation
-- `sign-lease` — tenant e-signatures
-- `update-status` — application status updates
-- `send-message` / `send-inquiry` — messaging
-- `imagekit-upload` / `imagekit-delete` — photo management
-- `mark-paid` / `mark-movein` — move-in tracking
-- `get-application-status` — public status lookup
-- `process-application` — rental application submission
+  The backend logic lives in `supabase/functions/`. These are deployed to Supabase directly (not run on Replit).
+
+  **4 active functions:**
+  - `send-inquiry` — sends property inquiry to landlord (public, rate-limited)
+  - `send-message` — sends message in an application thread (admin only)
+  - `imagekit-upload` — authenticates and proxies photo uploads to ImageKit CDN
+  - `imagekit-delete` — deletes a photo from ImageKit CDN
+
+  **7 decommissioned functions** (moved to external GAS system — pending deletion from Supabase dashboard):
+  `generate-lease`, `sign-lease`, `update-status`, `mark-paid`, `mark-movein`, `get-application-status`, `process-application`
+
+  See `ARCHITECTURE.md` for full details on the decommission list and what replaced each function.
 
 ## Application System
 
