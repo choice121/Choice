@@ -625,7 +625,7 @@ function buildApplyURL(property) {
   // ── Financials ────────────────────────────────────────────────────────────
   if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
-  if (property.application_fee != null)  p.set('fee', property.application_fee);
+  p.set('fee', property.application_fee != null ? property.application_fee : 0); // 9C-1: always send fee, even if zero
 
   // ── Unit details ──────────────────────────────────────────────────────────
   if (property.bedrooms  != null) p.set('beds',  property.bedrooms);
@@ -698,6 +698,8 @@ function buildApplyURL(property) {
     ? CONFIG.APPLY_FORM_URL
     : 'https://apply-choice-properties.pages.dev';
 
+  // 9C-2: pass current page URL so apply form can show 'Back to listing' link
+  try { p.set('source', window.location.href); } catch (_) {}
   return `${base}?${p.toString()}`;
 }
 
