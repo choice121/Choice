@@ -712,7 +712,16 @@ function renderProperty(p) {
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
-    document.getElementById('sidebarLastMonth').textContent = '
+    document.getElementById('sidebarLastMonth').textContent = `${Number(p.last_months_rent).toLocaleString()}`;
+  }
+  if (p.admin_fee) {
+    document.getElementById('sidebarAdminFeeRow').style.display = '';
+    document.getElementById('sidebarAdminFee').textContent = `${Number(p.admin_fee).toLocaleString()}`;
+  }
+  if (p.move_in_special) {
+    document.getElementById('sidebarMoveInSpecialRow').style.display = '';
+    document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
+  }
 
   // Landlord card
   if (p.landlords) {
