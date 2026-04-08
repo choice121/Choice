@@ -53,7 +53,15 @@ Set these in Cloudflare Pages → your project → **Settings → Environment va
 | `COMPANY_PHONE` | ✅ Yes | Your phone number |
 | `COMPANY_ADDRESS` | ✅ Yes | Your business address |
 | `COMPANY_TAGLINE` | Optional | Brand tagline shown in footer |
-| `ADMIN_EMAILS` | Optional | Comma-separated admin emails for UI display |
+| `ADMIN_EMAILS` | — Removed | Previously used for UI display; no longer read by `generate-config.js` or `server.js` — safe to leave unset |
+  | `LEASE_DEFAULT_LATE_FEE_FLAT` | Optional | Flat late fee amount in dollars. Defaults to `50` |
+  | `LEASE_DEFAULT_LATE_FEE_DAILY` | Optional | Daily late fee accrual in dollars. Defaults to `10` |
+  | `LEASE_DEFAULT_EXPIRY_DAYS` | Optional | Days until a generated lease expires unsigned. Defaults to `7` |
+  | `FEATURE_CO_APPLICANT` | Optional | Set to `false` to disable the co-applicant section. Defaults to enabled |
+  | `FEATURE_VEHICLE_INFO` | Optional | Set to `false` to disable vehicle info fields. Defaults to enabled |
+  | `FEATURE_DOCUMENT_UPLOAD` | Optional | Set to `false` to disable document upload. Defaults to enabled |
+  | `FEATURE_MESSAGING` | Optional | Set to `false` to disable in-app messaging. Defaults to enabled |
+  | `FEATURE_REALTIME_UPDATES` | Optional | Set to `false` to disable realtime status updates. Defaults to enabled |
 
 After adding or changing any variable: **trigger a redeploy** (Cloudflare Pages → Deployments → Retry deployment, or push any commit).
 
