@@ -480,7 +480,7 @@ function renderProperty(p) {
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
-  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · $${p.monthly_rent.toLocaleString()}/mo · ${p.address}, ${p.city}, ${p.state}`;
+  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
   ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
@@ -571,7 +571,7 @@ function renderProperty(p) {
   renderGallery(allPhotos);
 
   // Header
-  document.getElementById('detailPrice').innerHTML = `$${p.monthly_rent.toLocaleString()}<span>/month</span>`;
+  document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('detailTitle').textContent = p.title;
   document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`;
 
@@ -701,9 +701,9 @@ function renderProperty(p) {
   const availNow = !p.available_date || new Date(p.available_date) <= new Date();
 
   // Sidebar
-  document.getElementById('sidebarPrice').innerHTML = `$${p.monthly_rent.toLocaleString()}<span>/month</span>`;
+  document.getElementById('sidebarPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:${availNow?'var(--color-success)':'var(--gold)'}"></i> ${availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date)}`;
-  document.getElementById('sidebarRent').textContent    = `$${p.monthly_rent.toLocaleString()}`;
+  document.getElementById('sidebarRent').textContent    = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}`;
   document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${p.security_deposit.toLocaleString()}` : 'Contact landlord';
   document.getElementById('sidebarFee').textContent     = (p.application_fee != null && p.application_fee > 0) ? `$${p.application_fee}` : 'Free';
   if (p.available_date) {
@@ -764,7 +764,7 @@ function renderProperty(p) {
 
   // Mobile sticky Apply bar — only for active listings
   if (p.status === 'active') {
-    document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
+    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -812,7 +812,7 @@ function _initLeafletMap(p) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">$${p.monthly_rent.toLocaleString()}/mo</div>`,
+    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
     iconAnchor: [45, 16], iconSize: [90, 32]
   });
   L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
@@ -1400,7 +1400,7 @@ function showToast(msg, type = 'info') {
 
   // Mobile sticky Apply bar — only for active listings
   if (p.status === 'active') {
-    document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
+    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -1448,7 +1448,7 @@ function _initLeafletMap(p) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">$${p.monthly_rent.toLocaleString()}/mo</div>`,
+    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
     iconAnchor: [45, 16], iconSize: [90, 32]
   });
   L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
@@ -2037,7 +2037,7 @@ function showToast(msg, type = 'info') {
 
   // Mobile sticky Apply bar — only for active listings
   if (p.status === 'active') {
-    document.getElementById('mobBarRent').textContent = `$${p.monthly_rent.toLocaleString()}/mo`;
+    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -2085,7 +2085,7 @@ function _initLeafletMap(p) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">$${p.monthly_rent.toLocaleString()}/mo</div>`,
+    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
     iconAnchor: [45, 16], iconSize: [90, 32]
   });
   L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
