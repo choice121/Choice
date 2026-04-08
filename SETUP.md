@@ -55,7 +55,7 @@ In Supabase → **Settings → Edge Functions → Environment Variables**, add t
 | `IMAGEKIT_PRIVATE_KEY` | From ImageKit → Developer Options |
 | `IMAGEKIT_URL_ENDPOINT` | From ImageKit → Developer Options |
 | `ADMIN_EMAIL` | Your admin email address |
-| `DASHBOARD_URL` | Your public site base URL e.g. `https://yourdomain.com` — **required for lease signing**. Used by the `generate-lease` and `sign-lease` Edge Functions to build the signing link sent to tenants. If missing or wrong, lease signing links will be broken and tenants will not be able to sign. |
+| `DASHBOARD_URL` | Your public site base URL e.g. `https://yourdomain.com`. Used by active Edge Functions for CORS validation and email link construction. Must match `FRONTEND_ORIGIN` exactly (no trailing slash). |
 | `FRONTEND_ORIGIN` | Same value as `DASHBOARD_URL` — used for CORS origin validation in Edge Functions. Must match exactly (no trailing slash). |
 
 > ⚠️ **`DASHBOARD_URL` is critical.** Without it, generated leases will contain broken signing links. Set this before generating any lease.
