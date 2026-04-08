@@ -374,3 +374,15 @@ label.field-label {
   .modal-body { padding: 16px; }
   .topbar-right .live-dot { display: none; }
 }
+
+@media (max-width: 480px) {
+  .content { padding: 10px; }
+  .topbar { padding: 10px 12px; flex-wrap: wrap; gap: 6px; }
+  .page-title { font-size: 0.9rem; }
+  .page-sub { font-size: 0.7rem; }
+  th, td { padding: 8px 6px; font-size: 0.68rem; }
+  .card-body { padding: 12px; }
+  .btn { font-size: 0.78rem; padding: 7px 10px; }
+  .modal { margin: 6px; }
+  .modal-body { padding: 12px; }
+}
