@@ -111,9 +111,11 @@ After deployment, verify these scenarios work:
 | I-068 | Avatar upload fails silently on signup | 🔴 CRITICAL |
 | I-069 | Database array sync validation | 🟠 HIGH |
 
-**Open Issues Remaining:** 2 (Phase 2)  
+**Open Issues at Time of Writing:** 2
 - I-066 (Worker pool callback exception)
 - I-067 (HTTP 429 rate limit retry)
+
+> **Note (April 8, 2026):** Development has continued through Phase 9. These two issues were not explicitly closed in any subsequent phase document. Verify their current status before acting on them.
 
 ---
 
