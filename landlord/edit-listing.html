@@ -690,6 +690,7 @@
   });
 
   function handleNewFiles(files) {
+    const MAX_PHOTOS = 40;
     files.forEach(file => {
       if (!file.type.startsWith('image/')) return;
 
@@ -706,6 +707,11 @@
         return;
       }
       if (pendingNewFiles.find(f => f.name === file.name && f.size === file.size)) return; // dedupe
+      const existingCount = document.querySelectorAll('#existingPhotosGrid .existing-photo-item').length;
+      if (existingCount + pendingNewFiles.length >= MAX_PHOTOS) {
+        CP.UI.toast(`Maximum ${MAX_PHOTOS} photos allowed per listing.`, 'error');
+        return;
+      }
       pendingNewFiles.push(file);
       const reader = new FileReader();
       reader.onload = (e) => addNewPhotoPreview(e.target.result, file);
