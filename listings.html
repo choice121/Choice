@@ -533,7 +533,21 @@ async function fetchAndRender() {
     subheading.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:6px;"></i><span style="font-size:0.9rem;">Searching...</span>';
   }
 
-  try {
+  // Swap min/max rent if user entered them backwards — prevents silent empty results
+    if (activeMinRent && activeMaxRent) {
+      const _minR = parseFloat(activeMinRent);
+      const _maxR = parseFloat(activeMaxRent);
+      if (!isNaN(_minR) && !isNaN(_maxR) && _minR > _maxR) {
+        activeMinRent = String(_maxR);
+        activeMaxRent = String(_minR);
+        const minEl = document.getElementById('advMinRent');
+        const maxEl = document.getElementById('advMaxRent');
+        if (minEl) minEl.value = activeMinRent;
+        if (maxEl) maxEl.value = activeMaxRent;
+      }
+    }
+
+    try {
     const result = await CP.Properties.getListings({
       q:            activeSearch,
       type:         activeType,
