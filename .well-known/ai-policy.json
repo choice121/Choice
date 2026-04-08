@@ -3,7 +3,6 @@
   "project": "Choice Properties",
   "type": "static-site",
   "description": "Pure static website. No server. No runtime. Deployed via Cloudflare Pages only.",
-
   "deployment": {
     "method": "cloudflare-pages",
     "trigger": "github-push",
@@ -12,7 +11,6 @@
     "local_execution": false,
     "local_server": false
   },
-
   "ai_agent_policy": {
     "allowed_actions": [
       "read any file",
@@ -39,23 +37,21 @@
       "generate-config.js",
       "_headers",
       "SETUP.sql",
-      "js/cp-api.js",
-      "js/apply.js",
-      "js/apply-files.js",
-      "js/apply-property.js",
-      "js/apply-submit.js",
-      "js/apply-validation.js",
-      "js/apply-translations.js"
+      "js/cp-api.js"
     ],
     "rules_file": ".agents/instructions.md",
     "enforcement": "strict"
   },
-
   "environment": {
     "runtime_dependencies": false,
     "local_database": false,
     "local_server": false,
     "requires_npm_install": false,
-    "gitignored_files": ["config.js", ".env", ".env.*", "node_modules/"]
+    "gitignored_files": [
+      "config.js",
+      ".env",
+      ".env.*",
+      "node_modules/"
+    ]
   }
 }
