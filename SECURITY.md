@@ -8,7 +8,7 @@ Choice Properties is a **static frontend** connected to Supabase cloud. All secu
 |---|---|---|
 | Database | Supabase PostgreSQL | RLS policies + table grants on all tables |
 | Auth | Supabase Auth | JWT verification server-side |
-| API | Supabase Edge Functions | 10 Deno functions in Supabase's cloud |
+| API | Supabase Edge Functions | 4 active Deno functions in Supabase's cloud (7 decommissioned — see ARCHITECTURE.md) |
 | Email | Google Apps Script | HMAC secret verified on every request |
 | CDN | Cloudflare Pages | Static files only; `_headers` enforces CSP, HSTS |
 | Images | ImageKit.io | Public CDN; private key stays in Supabase secrets |
