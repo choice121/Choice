@@ -25,7 +25,7 @@ That's it. Replit is step 1 and 2 only.
 
 ## Why Nothing Runs Locally
 
-- There is **no `server.js`** — the `npm start` script is a legacy artifact; ignore it.
+- A lightweight `server.js` exists and is used on Replit to serve static files locally. It is the Replit entry point documented in `replit.md`. This does **not** mean Replit is the production server — Cloudflare Pages is still the only production deployment.
 - There is **no local database** — Supabase is fully cloud-hosted.
 - `generate-config.js` runs **only on Cloudflare Pages** as a build step, never locally.
 - Supabase Edge Functions (in `/supabase/functions/`) are deployed via the Supabase CLI
@@ -42,9 +42,7 @@ See `.agents/instructions.md` for mandatory rules.
 
 ## If the "Start application" Workflow Shows as Failed
 
-This is expected and harmless. The workflow tries to run `node server.js` which
-does not exist. The failure is intentional — there is no server to start.
-Ignore it. Do not attempt to fix it by creating a server.
+Check the Replit console for the actual error. `server.js` exists and runs on port 5000 using only Node.js built-in modules. If it fails, it is likely due to a missing environment variable, not the file itself. The Cloudflare Pages deployment is unaffected regardless.
 
 ---
 
