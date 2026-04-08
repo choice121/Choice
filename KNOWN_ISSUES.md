@@ -1,5 +1,5 @@
-START HERE — Any AI working on the Choice listing platform MUST read this file.
-  Cross-reference with PHASE9_BUG_FIXES.md in the choice121/Apply_choice_properties repo.
+REFERENCE DOCUMENT — All issues listed here are resolved as of April 8, 2026.
+  For ongoing project status, read PROJECT_STATUS.md in choice121/Apply_choice_properties.
 
   ---
 
@@ -7,7 +7,7 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
 
   **Deep scan completed:** April 8, 2026
   **Companion fix document:** `PHASE9_BUG_FIXES.md` in choice121/Apply_choice_properties
-  **Status:** Issues documented — fixes not yet applied
+  **Status:** All issues resolved — April 8, 2026
 
   ---
 
@@ -22,11 +22,12 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
 
   ---
 
-  ## CRITICAL — Fix Immediately
+  ## CRITICAL — Resolved
 
   ### ISSUE-C1 — Property detail page crashes when monthly_rent is null
 
   **Priority:** 🔴 Critical (Phase 9A-3)
+  **Status:** ✅ Resolved — April 8, 2026 (commit: `fix: Phase 9A-3 — null-guard all p.monthly_rent.toLocaleString() calls in renderProperty()`)
   **File:** `property.html`
   **Function:** `renderProperty(p)` — OG meta description block
 
@@ -56,11 +57,12 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
 
   ---
 
-  ## IMPORTANT — Fix After Criticals
+  ## IMPORTANT — Resolved
 
   ### ISSUE-C2 — Pets/smoking "false" URL param is truthy
 
   **Priority:** 🟡 Important (Phase 9B-3)
+  **Status:** ✅ Verified Safe — April 8, 2026 (no truthy conditional found in Apply form; Supabase returns native booleans in Choice repo — no code change needed)
   **File:** `property.html` (also `js/script.js` in Apply repo)
   **Relevant function:** Any code that reads `pets_allowed` or `smoking_allowed` for display
 
@@ -100,6 +102,7 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
   ### ISSUE-C3 — Min/max rent filter returns empty results with no explanation
 
   **Priority:** 🟡 Important (Phase 9B-4)
+  **Status:** ✅ Resolved — April 8, 2026 (commit: `fix: Phase 9B-4 — add min/max rent swap guard before fetchAndRender query`)
   **File:** `listings.html`
   **Location:** Filter state application logic, before the Supabase query fires
 
@@ -137,11 +140,12 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
 
   ---
 
-  ## IMPROVEMENTS — Do After All Bugs Are Fixed
+  ## IMPROVEMENTS — Resolved
 
   ### ISSUE-C4 — Application fee URL param should always be present
 
   **Priority:** 🟢 Improvement (Phase 9C-1)
+  **Status:** ✅ Resolved — April 8, 2026 (commit: `fix: Phase 9C — 9C-1 always send fee param; 9C-2 add source param to buildApplyURL`)
   **File:** `js/cp-api.js`
   **Function:** `buildApplyURL(property)`
 
@@ -176,6 +180,7 @@ START HERE — Any AI working on the Choice listing platform MUST read this file
   ### ISSUE-C5 — Add source URL param to buildApplyURL for return link
 
   **Priority:** 🟢 Improvement (Phase 9C-2)
+  **Status:** ✅ Resolved — April 8, 2026 (commit: `fix: Phase 9C — 9C-1 always send fee param; 9C-2 add source param to buildApplyURL`)
   **File:** `js/cp-api.js`
   **Function:** `buildApplyURL(property)`
 
