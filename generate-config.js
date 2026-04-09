@@ -24,6 +24,10 @@ const config = {
   // Override via APPLY_FORM_URL environment variable in Cloudflare Pages if needed.
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || 'https://apply-choice-properties.pages.dev').replace(/\/$/, ''),
 
+    // GAS_URL: Google Apps Script backend URL — handles dashboard routing and form submissions.
+    // Used by the "Already applied? Track your application" link on property listings.
+    GAS_URL: (process.env.GAS_URL || 'https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec').replace(/\/$/, ''),
+
   IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || '',
   IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
 
