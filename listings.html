@@ -24,7 +24,8 @@
 <noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
   <link rel="preload" href="/css/listings.css?v=1775137055043" as="style" onload="this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/css/listings.css?v=1775137055043"></noscript>
-  <link rel="stylesheet" href="/assets/fontawesome.css">
+  <link rel="preload" href="/assets/fontawesome.css" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/fontawesome.css"></noscript>
   <style>
     /* ── CRITICAL CSS — above-fold paint for listings.html ───────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
@@ -950,8 +951,16 @@ function setupFilters() {
     });
   });
 
+  // Debounce helper — prevents API calls on every keystroke
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
+  }
+  const debouncedSearch = debounce(doSearch, 400);
+
   document.getElementById('searchBtn').addEventListener('click', doSearch);
   document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  document.getElementById('searchInput').addEventListener('input', debouncedSearch);
   document.getElementById('bedroomsFilter').addEventListener('change', e => { activeBeds = e.target.value; refreshResults(); });
   document.getElementById('sortSelect').addEventListener('change', e => { sortBy = e.target.value; refreshResults(); });
 
