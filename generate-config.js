@@ -271,18 +271,79 @@ const htmlFiles = (function walk(dir) {
 
 const BUILD_VERSION = Date.now().toString();
 
+// ── I-052 (fixed): CSP nonce + cache-busting in a single pass ───────────────
+// Previous attempt failed because HTML nonces were baked into committed files
+// while _headers got a fresh nonce each build (mismatch). The fix: generate-config.js
+// rewrites BOTH HTML files AND _headers in the same build step, so nonces always match.
+//
+// What this does per build:
+//   1. Generates a fresh random nonce.
+//   2. In each HTML file:
+//      a. Replaces ?v=__BUILD_VERSION__ cache-bust tokens.
+//      b. Converts <link rel="preload" ... onload="this.rel='stylesheet'"> to a plain
+//         <link rel="stylesheet"> — the preload trick used inline event handlers which
+//         required 'unsafe-inline' in script-src. Plain stylesheets are equally fast on
+//         modern CDNs and remove the only remaining script-src inline requirement.
+//      c. Adds nonce="VALUE" to every inline <script> tag (no src= attr, not JSON-LD).
+//   3. Rewrites _headers: replaces 'unsafe-inline' in script-src with 'nonce-VALUE'.
+//
+// Since Cloudflare Pages deploys _headers and HTML files from the same build output,
+// the nonce is guaranteed consistent within each deployment.
+
+const crypto = require('crypto');
+const nonce = crypto.randomBytes(16).toString('base64url'); // URL-safe, no padding chars
+
 htmlFiles.forEach(function(file) {
-  const src = fs.readFileSync(file, 'utf8');
-  const updated = src.replace(/\?v=__BUILD_VERSION__/g, '?v=' + BUILD_VERSION);
-  if (updated !== src) {
-    fs.writeFileSync(file, updated);
-  }
+  let src = fs.readFileSync(file, 'utf8');
+  let modified = false;
+
+  // Step A: cache busting
+  const afterCB = src.replace(/\?v=__BUILD_VERSION__/g, '?v=' + BUILD_VERSION);
+  if (afterCB !== src) { src = afterCB; modified = true; }
+
+  // Step B: convert CSS preload+onload to plain stylesheet links
+  // Handles: <link rel="preload" href="..." as="style" onload="this.rel='stylesheet'">
+  // (attribute order may vary)
+  const afterPreload = src.replace(
+    /<link\b([^>]*)\bonload=["']this\.rel='stylesheet'["']([^>]*)>/gi,
+    function(match, before, after) {
+      if (!/(\brel=["']preload["']|\bas=["']style["'])/.test(match)) return match;
+      const hrefM = match.match(/\bhref=["']([^"']+)["']/);
+      return hrefM ? `<link rel="stylesheet" href="${hrefM[1]}">` : match;
+    }
+  );
+  if (afterPreload !== src) { src = afterPreload; modified = true; }
+
+  // Step C: add nonce to inline <script> tags
+  // Skip: <script src="..."> (external), <script type="application/ld+json"> (JSON-LD data)
+  const afterNonce = src.replace(/<script\b([^>]*)>/gi, function(match, attrs) {
+    if (/\bsrc\s*=/.test(attrs)) return match;                                     // external script
+    if (/\btype\s*=\s*["']application\/ld\+json["']/.test(attrs)) return match;  // JSON-LD
+    const cleanAttrs = attrs.replace(/\s+nonce=["'][^"']*["']/gi, '').trimEnd();    // remove stale nonce
+    return `<script${cleanAttrs} nonce="${nonce}">`;
+  });
+  if (afterNonce !== src) { src = afterNonce; modified = true; }
+
+  if (modified) fs.writeFileSync(file, src);
 });
-console.log('✅ Cache-bust token replaced in HTML files (BUILD_VERSION: ' + BUILD_VERSION + ')');
-// NOTE: Nonce-based CSP injection was removed. _headers uses 'unsafe-inline' for script-src
-// because the onload="this.rel='stylesheet'" CSS preload pattern requires it, and nonces
-// were causing CSP mismatches on every Cloudflare deploy (nonce in _headers changed each
-// build but HTML nonces stayed baked-in from a previous committed build output).
+console.log('✅ HTML files processed: cache-bust, CSS preload fix, nonce injected (BUILD_VERSION: ' + BUILD_VERSION + ')');
+
+// Rewrite _headers: remove 'unsafe-inline' from script-src, replace with nonce
+try {
+  let headers = fs.readFileSync('_headers', 'utf8');
+  const fixed = headers.replace(
+    /(script-src\b[^;]*?)\s*'unsafe-inline'([^;]*;)/,
+    `$1 'nonce-${nonce}'$2`
+  );
+  if (fixed !== headers) {
+    fs.writeFileSync('_headers', fixed);
+    console.log("✅ CSP: 'unsafe-inline' removed from script-src, nonce applied to _headers");
+  } else {
+    console.log("ℹ  _headers script-src already clean or pattern not found — no change");
+  }
+} catch(e) {
+  console.warn('⚠  Could not rewrite _headers:', e.message);
+}
 
 })().catch(function(err) {
   console.error('Build script error:', err);
