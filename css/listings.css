@@ -1034,3 +1034,27 @@
     .mobile-filters-btn { display: none !important; }
   }
   
+
+  /* ── Fix 4: Badge priority — no style change needed, handled in JS */
+
+  /* ── Fix 5: Share button in card footer */
+  .property-card-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--primary, #1a4f8a);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary, #1a4f8a);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    white-space: nowrap;
+  }
+  .property-card-share:hover {
+    background: var(--primary, #1a4f8a);
+    color: #fff;
+  }
+  
