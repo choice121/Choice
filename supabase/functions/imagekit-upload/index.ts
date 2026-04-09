@@ -31,36 +31,13 @@ Deno.serve(async (req) => {
     const IMAGEKIT_PRIVATE_KEY  = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
     const IMAGEKIT_URL_ENDPOINT = Deno.env.get('IMAGEKIT_URL_ENDPOINT');
 
-    // DEBUG: Log secret presence
-    console.log('[imagekit-upload] Secret check:', {
-      hasPrivateKey: !!IMAGEKIT_PRIVATE_KEY,
-      hasUrlEndpoint: !!IMAGEKIT_URL_ENDPOINT,
-      privateKeyLength: IMAGEKIT_PRIVATE_KEY?.length ?? 0,
-      urlEndpointLength: IMAGEKIT_URL_ENDPOINT?.length ?? 0,
-    });
-
     if (!IMAGEKIT_PRIVATE_KEY || !IMAGEKIT_URL_ENDPOINT) {
-      console.error('[imagekit-upload] Secrets missing or empty');
-      return jsonResponse({
-        success: false,
-        error: 'ImageKit not configured',
-        debug: {
-          hasPrivateKey: !!IMAGEKIT_PRIVATE_KEY,
-          hasUrlEndpoint: !!IMAGEKIT_URL_ENDPOINT,
-        },
-      }, 500);
+      return jsonResponse({ success: false, error: 'ImageKit not configured' }, 500);
     }
 
     const { fileData, fileName, folder } = await req.json();
-    console.log('[imagekit-upload] Request parsed:', {
-      hasFileData: !!fileData,
-      fileDataLength: typeof fileData === 'string' ? fileData.length : 'not-string',
-      hasFileName: !!fileName,
-      hasFolder: !!folder,
-    });
 
     if (!fileData || !fileName) {
-      console.error('[imagekit-upload] Missing fileData or fileName');
       return jsonResponse({ success: false, error: 'fileData and fileName required' }, 400);
     }
 
