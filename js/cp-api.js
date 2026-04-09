@@ -11,7 +11,31 @@
 // called before window.supabase or CONFIG is ready, we throw a clear error instead
 // of a cryptic "Cannot read properties of undefined" that silently kills uploads.
 let _sb = null;
-function sb() {
+
+  // Proactive init — creates the Supabase client as soon as both
+  // window.supabase and CONFIG are ready, without waiting for the first API call.
+  // This eliminates the race window where sb() could throw during page load.
+  (function initWhenReady() {
+    function tryInit() {
+      if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
+        if (!_sb) {
+          _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true }
+          });
+        }
+        return;
+      }
+      // Not ready yet — retry on next animation frame (runs after defer scripts execute)
+      requestAnimationFrame(tryInit);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryInit);
+    } else {
+      tryInit();
+    }
+  })();
+
+  function sb() {
   if (!_sb) {
     if (!window.supabase) {
       throw new Error(
