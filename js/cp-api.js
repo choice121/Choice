@@ -616,8 +616,8 @@ function buildApplyURL(property) {
 
   // ââ Identity & location âââââââââââââââââââââââââââââââââââââââââââââââââââ
   p.set('id',    property.id);
-  if (property.title)   p.set('pn',    property.title);
-  if (property.address) p.set('addr',  property.address);
+  if (property.title)   p.set('pn',    property.title.substring(0, 120));
+  if (property.address) p.set('addr',  property.address.substring(0, 100));
   if (property.city)    p.set('city',  property.city);
   if (property.state)   p.set('state', property.state);
   if (property.zip)     p.set('zip',   property.zip);
@@ -664,7 +664,7 @@ function buildApplyURL(property) {
     }
     if (property.pet_weight_limit) p.set('pet_weight',  property.pet_weight_limit);
     if (property.pet_deposit)      p.set('pet_deposit', property.pet_deposit);
-    if (property.pet_details)      p.set('pet_details', property.pet_details);
+    if (property.pet_details)      p.set('pet_details', property.pet_details.substring(0, 200));
   }
 
   // ââ Smoking policy ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -691,7 +691,7 @@ function buildApplyURL(property) {
   // ââ Financial move-in costs âââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (property.last_months_rent) p.set('last_months_rent', property.last_months_rent);
   if (property.admin_fee)        p.set('admin_fee',        property.admin_fee);
-  if (property.move_in_special)  p.set('move_in_special',  property.move_in_special);
+  if (property.move_in_special)  p.set('move_in_special',  property.move_in_special.substring(0, 200));
 
   // ââ Resolve target base URL âââââââââââââââââââââââââââââââââââââââââââââââ
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
@@ -699,15 +699,20 @@ function buildApplyURL(property) {
     : 'https://apply-choice-properties.pages.dev';
 
   // 9C-2: pass current page URL so apply form can show 'Back to listing' link
-  try { p.set('source', window.location.href); } catch (_) {}
+  try { p.set('source', window.location.href.substring(0, 300)); } catch (_) {}
 
-    // B2: Warn if URL length may exceed browser/proxy limits on data-rich listings
-    const _finalUrl = `${base}?${p.toString()}`;
-    if (_finalUrl.length > 7000) {
-      console.warn('[buildApplyURL] URL length ' + _finalUrl.length + ' chars — may truncate on some mobile browsers or proxies');
+    // B2: Guard URL length — if over 7000 chars, drop optional free-text fields and retry
+      let _finalUrl = `${base}?${p.toString()}`;
+      if (_finalUrl.length > 7000) {
+        console.warn('[buildApplyURL] URL length ' + _finalUrl.length + ' chars — dropping optional params to reduce size');
+        ['pet_details', 'move_in_special', 'source', 'utilities', 'parking', 'laundry_type', 'heating_type', 'cooling_type'].forEach(k => p.delete(k));
+        _finalUrl = `${base}?${p.toString()}`;
+        if (_finalUrl.length > 7000) {
+          console.warn('[buildApplyURL] URL still ' + _finalUrl.length + ' chars after reduction — may truncate on some browsers');
+        }
+      }
+      return _finalUrl;
     }
-    return _finalUrl;
-  }
 
 async function incrementCounter(table, id, column) {
   return sb().rpc('increment_counter', { p_table: table, p_id: id, p_column: column });
