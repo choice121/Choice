@@ -946,3 +946,91 @@
 @media (max-width: 480px) {
   .pg-btn { min-width: 34px; height: 34px; font-size: 13px; }
 }
+
+
+  /* ───────────────────────────────────────────
+     Fix 2: Mobile-first filter bar
+     On ≤640px: hide pills, show single "Filters" button
+     On >640px: hide mobile button
+  ─────────────────────────────────────────── */
+  .mobile-filters-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px solid var(--primary, #1a4f8a);
+    border-radius: 24px;
+    background: #fff;
+    color: var(--primary, #1a4f8a);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mobile-filters-btn:hover {
+    background: var(--primary, #1a4f8a);
+    color: #fff;
+  }
+  .mobile-filters-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e53e3e;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    font-weight: 700;
+  }
+
+  /* Fix 3: Clear All pill (desktop) */
+  .filter-pill-clear {
+    border-color: #e53e3e !important;
+    color: #e53e3e !important;
+  }
+  .filter-pill-clear:hover {
+    background: #e53e3e !important;
+    color: #fff !important;
+  }
+
+  /* Fix 3: Clear All button inside More Filters dropdown header */
+  .filter-dropdown-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .filter-dropdown-mobile-header .filter-dropdown-title {
+    margin-bottom: 0;
+  }
+  .filter-dropdown-clear-all {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .filter-dropdown-clear-all:hover { background: #fff5f5; }
+
+  @media (max-width: 640px) {
+    /* Fix 2: show mobile button, hide pill row */
+    .mobile-filters-btn { display: inline-flex; }
+    .filter-bar-inner .filter-pill,
+    .filter-bar-inner .filter-divider,
+    .filter-bar-inner #moreFiltersWrap {
+      display: none !important;
+    }
+    /* Keep Clear All pill hidden on mobile (drawer has its own Clear All) */
+    .filter-bar-inner #clearAllPill { display: none !important; }
+  }
+  @media (min-width: 641px) {
+    .mobile-filters-btn { display: none !important; }
+  }
+  
