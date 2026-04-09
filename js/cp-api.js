@@ -271,6 +271,9 @@ const Properties = {
   },
   async getOne(id) {
     const { data, error } = await sb().from('properties').select('*, landlords(*)').eq('id', id).single();
+    if (data && data.landlords && !data.landlords.avatar_url) {
+      data.landlords.avatar_url = '/assets/avatar-placeholder.png';
+    }
     return _ok(data, error);
   },
   // I-026: NOTE â this method is not currently used by new-listing.html.
