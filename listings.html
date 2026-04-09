@@ -668,6 +668,20 @@ function renderProperties(props) {
     if (savedIds.has(id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
     btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); toggleSave(id, btn); });
   });
+    grid.querySelectorAll('.property-card-share').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        const url = location.origin + btn.dataset.url;
+        const title = btn.dataset.title || 'Check out this property';
+        if (navigator.share) {
+          navigator.share({ title, url }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(url)
+            .then(() => showToast('Link copied to clipboard!', 'success'))
+            .catch(() => showToast('Could not copy link', 'error'));
+        }
+      });
+    });
   grid.querySelectorAll('.property-card').forEach(card => {
     initCarousel(card);
     card.addEventListener('click', e => {
@@ -737,22 +751,22 @@ function buildCard(p) {
   const specsHtml = specParts.map((s, i) => i === 0 ? s : `<span class="property-card-spec-sep">·</span>${s}`).join('');
 
   const ageDays = p.created_at ? Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000) : 999;
-  let badge = '';
-  if (p.featured) {
-    badge = `<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>`;
-  } else if (ageDays <= 3) {
-    badge = `<div class="property-card-badge badge-hot"><i class="fas fa-fire"></i> Hot Deal</div>`;
-  } else if (ageDays <= 7) {
-    badge = `<div class="property-card-badge badge-new"><i class="fas fa-tag"></i> New Listing</div>`;
-  } else if (p.landlords?.verified) {
-    badge = `<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>`;
-  } else if (availNow || !p.available_date) {
-    badge = `<div class="property-card-badge badge-available"><i class="fas fa-circle-check"></i> Available Now</div>`;
-  } else {
-    const availLabel = new Date(p.available_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    badge = `<div class="property-card-badge badge-available"><i class="fas fa-calendar"></i> Avail. ${availLabel}</div>`;
-  }
-  const photoCountHtml = photos.length > 1 ? `<div class="property-card-photo-count"><i class="fas fa-camera"></i> ${photos.length}</div>` : '';
+    let badge = '';
+    if (ageDays <= 3) {
+      badge = `<div class="property-card-badge badge-hot"><i class="fas fa-fire"></i> Hot Deal</div>`;
+    } else if (ageDays <= 7) {
+      badge = `<div class="property-card-badge badge-new"><i class="fas fa-tag"></i> New Listing</div>`;
+    } else if (p.featured) {
+      badge = `<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>`;
+    } else if (p.landlords?.verified) {
+      badge = `<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>`;
+    } else if (availNow || !p.available_date) {
+      badge = `<div class="property-card-badge badge-available"><i class="fas fa-circle-check"></i> Available Now</div>`;
+    } else {
+      const availLabel = new Date(p.available_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      badge = `<div class="property-card-badge badge-available"><i class="fas fa-calendar"></i> Avail. ${availLabel}</div>`;
+    }
+    const photoCountHtml = photos.length > 1 ? `<div class="property-card-photo-count"><i class="fas fa-camera"></i> ${photos.length}</div>` : '';
 
   return `
     <article class="property-card" data-id="${p.id}">
@@ -778,9 +792,9 @@ function buildCard(p) {
         ${tags.length ? `<div class="property-card-tags">${tags.join('')}</div>` : ''}
       </div>
       <div class="property-card-footer">
-        <a href="/property.html?id=${p.id}" class="property-card-view">View Details</a>
-        <a href="${applyURL}" class="property-card-cta" onclick="window.trackApply && window.trackApply('${esc(p.id)}')">Apply Now <i class="fas fa-arrow-right"></i></a>
-      </div>
+          <a href="/property.html?id=${p.id}" class="property-card-view">View Details</a>
+          <button class="property-card-share" data-id="${p.id}" data-title="${p.title}" data-url="/property.html?id=${p.id}" aria-label="Share property"><i class="fas fa-share-nodes"></i> Share</button>
+        </div>
     </article>`;
 }
 
