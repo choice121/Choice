@@ -74,7 +74,8 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 | Date | Changes |
 |---|---|
-| April 2026 | **External application form integration.** All "Apply Now" buttons across `listings.html`, `property.html`, and `index.html` now redirect to `https://apply-choice-properties.pages.dev` with full property context via URL params. All "Track My Application" links in nav, footer, and `faq.html` updated to the external applicant dashboard. `js/cp-api.js` updated: `buildApplyURL()` fallback hardened, `sendRecoveryEmail()` dashboard URL updated. `generate-config.js` `APPLY_FORM_URL` default set. |
+| April 2026 | **Security hardening.** Removed exposure of Geoapify API key from the Apply repo source code. Added build system to Apply site (`generate-config.js` + `package.json`). Synced Cloudflare Pages preview environment variables (was missing 14 vars). Documented correct deployment process for both platforms. |
+  | April 2026 | **External application form integration.** All "Apply Now" buttons across `listings.html`, `property.html`, and `index.html` now redirect to `https://apply-choice-properties.pages.dev` with full property context via URL params. All "Track My Application" links in nav, footer, and `faq.html` updated to the external applicant dashboard. `js/cp-api.js` updated: `buildApplyURL()` fallback hardened, `sendRecoveryEmail()` dashboard URL updated. `generate-config.js` `APPLY_FORM_URL` default set. |
 | April 2026 | **Frontend audit & mobile optimisation.** Responsive layouts, 44px touch targets, local Font Awesome hosting, CSS preload strategy, image lazy loading, critical CSS inlining, shared nav component, portal links, route highlighting, inline style cleanup, semantic HTML improvements. |
 
 ---

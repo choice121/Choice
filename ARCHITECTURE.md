@@ -66,11 +66,11 @@ Browser
 |---|---|
 | Language | Vanilla JavaScript (ES6+), HTML5, CSS3 |
 | Framework | None |
-| Build step | `node generate-config.js` — injects env vars into `config.js`, injects CSP nonces into all HTML inline scripts, rewrites `sitemap.xml` + `robots.txt` with `SITE_URL` |
+| Build step | `node generate-config.js` — injects env vars into `config.js`, rewrites `sitemap.xml` + `robots.txt` with `SITE_URL`, and cache-busts `?v=__BUILD_VERSION__` tokens in HTML files |
 | Structured data | JSON-LD on `index.html` (WebSite+SearchAction), `listings.html` (CollectionPage), `property.html` (RealEstateListing+BreadcrumbList) |
 | Deployment | Cloudflare Pages (auto-deploy on push to `main`) |
 | CDN | Cloudflare global CDN (automatic, no configuration needed) |
-| Security headers | `_headers` file (X-Frame-Options, CSP, HSTS, etc.) — CSP `script-src` uses a per-build nonce injected by `generate-config.js` (I-052); `unpkg.com` removed from allowlist (I-054) |
+| Security headers | `_headers` file (X-Frame-Options, CSP, HSTS, etc.) — CSP `script-src` uses `'unsafe-inline'` intentionally (CSS preload pattern requires it; nonce-based CSP was planned in I-052 but removed due to CSP mismatches on Cloudflare deploys) |
 | 404 handling | `_redirects` file (catch-all → `404.html`) |
 
 The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm packages are installed during the build.

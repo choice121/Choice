@@ -197,7 +197,16 @@ Update **all** of these — missing even one breaks something:
 
 ---
 
-## Verifying a Deployment
+## Security Notes
+
+  - `SUPABASE_SERVICE_ROLE_KEY`, `IMAGEKIT_PRIVATE_KEY`, `GAS_RELAY_SECRET` are stored in Cloudflare Pages env vars but are **not used** by the Cloudflare build process. They are only needed in Supabase Edge Function secrets and the Replit dev server (`server.js`). Consider keeping them in Supabase secrets only and removing them from Cloudflare to reduce secret sprawl.
+  - `config.js` is gitignored and contains only public-safe keys (Supabase anon key, ImageKit public key, Geoapify key). Never add private keys to `generate-config.js` output.
+  - The Supabase service role key must never reach the browser or be written to `config.js`.
+  - Geoapify API keys can be rotated at **app.geoapify.com → API Keys** without any code changes — just update the `GEOAPIFY_API_KEY` env var in Cloudflare and redeploy.
+
+  ---
+
+  ## Verifying a Deployment
 
 After any deploy, verify with these:
 
