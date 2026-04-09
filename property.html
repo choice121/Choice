@@ -26,7 +26,8 @@
   <meta name="twitter:description" id="twDescription" content="View property details and apply online.">
   <meta name="twitter:image"       id="twImage"       content="">
   <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
-  <link rel="stylesheet" href="/assets/fontawesome.css">
+  <link rel="preload" href="/assets/fontawesome.css" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/fontawesome.css"></noscript>
     <link rel="preload" href="/css/main.css?v=1775137055043" as="style" onload="this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
   <link rel="stylesheet" href="/css/property.css?v=1775137055043">
@@ -192,15 +193,15 @@
     <!-- Apply Card -->
     <div class="apply-card">
       <div class="apply-card-header">
-        <div class="apply-card-price" id="sidebarPrice">—</div>
+        <div class="apply-card-price" id="sidebarPrice"><div class="skeleton" style="height:32px;width:140px;border-radius:6px;display:inline-block"></div></div>
         <div class="apply-card-avail" id="sidebarAvail">
-          <i class="fas fa-circle"></i> Checking availability…
+          <div class="skeleton" style="height:14px;width:160px;border-radius:4px"></div>
         </div>
       </div>
       <div class="apply-card-body">
         <div class="apply-cost-row">
           <span class="apply-cost-label">Monthly Rent</span>
-          <span class="apply-cost-value" id="sidebarRent">—</span>
+          <span class="apply-cost-value" id="sidebarRent"><span class="skeleton" style="height:13px;width:60px;border-radius:3px;display:inline-block"></span></span>
         </div>
         <div class="apply-cost-row">
           <span class="apply-cost-label">Security Deposit</span>
