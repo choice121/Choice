@@ -176,23 +176,7 @@
           <option value="4">4+ Beds</option>
         </select>
       </div>
-      <div class="search-field sf-select">
-        <i class="fas fa-dollar-sign"></i>
-        <select id="maxRentFilter" aria-label="Max rent">
-          <option value="">Any price</option>
-          <option value="700">Up to $700</option>
-          <option value="900">Up to $900</option>
-          <option value="1100">Up to $1,100</option>
-          <option value="1400">Up to $1,400</option>
-          <option value="1700">Up to $1,700</option>
-          <option value="2200">Up to $2,200</option>
-          <option value="2500">Up to $2,500</option>
-          <option value="3000">Up to $3,000</option>
-          <option value="3500">Up to $3,500</option>
-          <option value="4000">Up to $4,000</option>
-          <option value="5000">Up to $5,000</option>
-        </select>
-      </div>
+      
       <button class="listings-search-btn" id="searchBtn" aria-label="Search">
         <i class="fas fa-search"></i> Search
       </button>
@@ -203,7 +187,16 @@
 <!-- ── Filter Bar ── -->
 <div class="filter-bar">
   <div class="filter-bar-inner">
-    <button class="filter-pill active" data-filter="all"><i class="fas fa-th"></i> All</button>
+    <!-- Mobile-only Filters button (Fix 2) -->
+      <button class="mobile-filters-btn" id="mobileFiltersBtn">
+        <i class="fas fa-sliders-h"></i> Filters
+        <span class="mobile-filters-badge" id="mobileFiltersBadge" style="display:none"></span>
+      </button>
+      <!-- Clear All pill — desktop, shown when filters active (Fix 3) -->
+      <button class="filter-pill filter-pill-clear" id="clearAllPill" style="display:none">
+        <i class="fas fa-times-circle"></i> Clear all
+      </button>
+      <button class="filter-pill active" data-filter="all"><i class="fas fa-th"></i> All</button>
     <button class="filter-pill" data-filter="apartment"><i class="fas fa-building"></i> Apartments</button>
     <button class="filter-pill" data-filter="house"><i class="fas fa-home"></i> Houses</button>
     <button class="filter-pill" data-filter="condo"><i class="fas fa-city"></i> Condos</button>
@@ -219,17 +212,12 @@
         <span class="filter-active-badge" id="filterActiveBadge" style="display:none"></span>
       </button>
       <div class="filter-dropdown" id="moreFiltersDropdown">
-        <div class="filter-dropdown-title">Advanced Filters</div>
-        <div class="filter-dropdown-row">
-          <label>Property Type</label>
-          <select id="advTypeFilter">
-            <option value="">Any type</option>
-            <option value="apartment">Apartment</option>
-            <option value="house">House</option>
-            <option value="condo">Condo</option>
-            <option value="townhouse">Townhouse</option>
-          </select>
-        </div>
+        <div class="filter-dropdown-mobile-header">
+            <span class="filter-dropdown-title">Advanced Filters</span>
+            <button class="filter-dropdown-clear-all" id="clearAllMobile">
+              <i class="fas fa-times-circle"></i> Clear all
+            </button>
+          </div>
         <div class="filter-dropdown-row">
           <label>Min Bedrooms</label>
           <select id="advMinBeds">
@@ -480,11 +468,9 @@ function pushURL(replace = false) {
 function syncControls() {
   const si = document.getElementById('searchInput');
   const bf = document.getElementById('bedroomsFilter');
-  const mf = document.getElementById('maxRentFilter');
   const ss = document.getElementById('sortSelect');
   if (si) si.value = activeSearch;
   if (bf) bf.value = activeBeds;
-  if (mf) mf.value = activeMaxRent;
   if (ss) ss.value = sortBy;
   document.querySelectorAll('.filter-pill[data-filter]').forEach(pill => {
     pill.classList.toggle('active', pill.dataset.filter === activeType);
@@ -953,17 +939,41 @@ function setupFilters() {
   document.getElementById('searchBtn').addEventListener('click', doSearch);
   document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   document.getElementById('bedroomsFilter').addEventListener('change', e => { activeBeds = e.target.value; refreshResults(); });
-  document.getElementById('maxRentFilter').addEventListener('change', e => { activeMaxRent = e.target.value; refreshResults(); });
   document.getElementById('sortSelect').addEventListener('change', e => { sortBy = e.target.value; refreshResults(); });
 
   document.getElementById('moreFiltersBtn').addEventListener('click', e => {
-    e.stopPropagation();
-    const dropdown = document.getElementById('moreFiltersDropdown');
-    dropdown.classList.toggle('open');
-    // Persist filter dropdown state to sessionStorage on mobile
-    const isOpen = dropdown.classList.contains('open');
-    sessionStorage.setItem('filters_dropdown_open', isOpen ? 'true' : 'false');
-  });
+      e.stopPropagation();
+      const dropdown = document.getElementById('moreFiltersDropdown');
+      dropdown.classList.toggle('open');
+      const isOpen = dropdown.classList.contains('open');
+      sessionStorage.setItem('filters_dropdown_open', isOpen ? 'true' : 'false');
+    });
+
+    // Fix 2: Mobile Filters button opens the same dropdown bottom-sheet
+    const mfBtn = document.getElementById('mobileFiltersBtn');
+    if (mfBtn) {
+      mfBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('moreFiltersDropdown');
+        dropdown.classList.toggle('open');
+        sessionStorage.setItem('filters_dropdown_open', dropdown.classList.contains('open') ? 'true' : 'false');
+      });
+    }
+
+    // Fix 3: Clear All pill (desktop bar)
+    const clearAllPill = document.getElementById('clearAllPill');
+    if (clearAllPill) clearAllPill.addEventListener('click', () => window.clearAllFilters());
+
+    // Fix 3: Clear All inside dropdown header (mobile)
+    const clearAllMobile = document.getElementById('clearAllMobile');
+    if (clearAllMobile) clearAllMobile.addEventListener('click', () => {
+      ['advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      window.clearAllFilters();
+      document.getElementById('moreFiltersDropdown').classList.remove('open');
+      sessionStorage.setItem('filters_dropdown_open', 'false');
+    });
   document.addEventListener('click', e => {
     if (!document.getElementById('moreFiltersWrap').contains(e.target)) {
       document.getElementById('moreFiltersDropdown').classList.remove('open');
@@ -978,9 +988,7 @@ function setupFilters() {
     activeLaundry  = document.getElementById('advLaundryFilter').value;
     activeHeating  = document.getElementById('advHeatingFilter').value;
     activePetType  = document.getElementById('advPetTypeFilter').value;
-    const advType = document.getElementById('advTypeFilter').value;
     const advBeds = document.getElementById('advMinBeds').value;
-    if (advType) activeType = advType;
     if (advBeds !== '') activeBeds = advBeds;
     document.getElementById('moreFiltersDropdown').classList.remove('open');
     sessionStorage.setItem('filters_dropdown_open', 'false');
@@ -1014,12 +1022,14 @@ function doSearch() {
 }
 
 function updateFilterBadge() {
-  const badge = document.getElementById('filterActiveBadge');
-  if (!badge) return;
-  const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
-  if (count > 0) { badge.textContent = count; badge.style.display = 'inline-flex'; }
-  else badge.style.display = 'none';
-}
+    const badge = document.getElementById('filterActiveBadge');
+    const clearAllPill = document.getElementById('clearAllPill');
+    const mobileBadge = document.getElementById('mobileFiltersBadge');
+    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
+    if (badge) { badge.textContent = count || ''; badge.style.display = count > 0 ? 'inline-flex' : 'none'; }
+    if (clearAllPill) clearAllPill.style.display = count > 0 ? '' : 'none';
+    if (mobileBadge) { mobileBadge.textContent = count || ''; mobileBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
+  }
 
 /* ─── Utilities ─── */
 
