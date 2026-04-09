@@ -769,6 +769,8 @@
 }
 
 @media (max-width: 768px) {
+  .detail-main { display: flex; flex-direction: column; }
+  .map-container { order: 10; }
   .gallery-mosaic {
     grid-template-columns: 1fr;
     height: clamp(280px, 75vw, 420px);
@@ -970,6 +972,7 @@
   color: var(--color-brand);
   border-bottom-color: var(--color-brand);
 }
+.detail-tabs-wrap { min-height: 120px; }
 .detail-tab-panel { display: none; }
 .detail-tab-panel.active { display: block; }
 
