@@ -103,9 +103,14 @@ await (async function validateSupabaseCredentials() {
           res.on('end', function() {
             try {
               const parsed = JSON.parse(body);
-              if (parsed.message && parsed.message.includes('Access to schema is forbidden')) {
-                // Key is valid — project restricts schema listing to service_role only
-                console.log('✅ Supabase credentials validated (schema-restricted project, key accepted)');
+              // Two valid-project 401 shapes from Supabase:
+              //  1. 'Access to schema is forbidden'  — project restricts schema listing to service_role
+              //  2. hint includes 'service_role'     — the /rest/v1/ root requires service_role;
+              //     the anon key is structurally valid and works for row-level table access
+              const schemaRestricted = parsed.message && parsed.message.includes('Access to schema is forbidden');
+              const serviceRoleRoot  = parsed.hint    && parsed.hint.includes('service_role');
+              if (schemaRestricted || serviceRoleRoot) {
+                console.log('✅ Supabase project reachable; anon key is valid for row-level table access');
                 resolve();
                 return;
               }
