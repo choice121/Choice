@@ -357,4 +357,31 @@ This platform sends the following URL params when redirecting to the form. The e
 
   All fields write to columns that already existed in the DB schema (zero schema changes required).
   Draft autosave and draft restore updated to persist all new fields.
-  
+
+
+---
+
+## Application System Architecture Decision (2026-04-09)
+
+All rental application processing is handled exclusively by the external GAS system at **apply-choice-properties.pages.dev**. The Supabase applications table and related database objects are legacy and should be removed by running MIGRATION_drop_applications_tables.sql in the Supabase SQL Editor.
+
+### What moved to GAS
+
+| Capability | Was (Supabase) | Now (GAS) |
+|---|---|---|
+| Application submission | Edge Functions + PostgreSQL | GAS doPost + Google Sheets |
+| Lease generation | sign_lease stored procedure | GAS generateAndSendLease |
+| Lease e-signing | Supabase stored procedure | GAS lease signing page |
+| Application status | applications table | Google Sheets row |
+| Email notifications | GAS relay via Edge Function | GAS MailApp directly |
+| Admin dashboard | admin_application_view | GAS web app admin panel |
+
+### What stays in Supabase
+
+landlords, properties, inquiries, email_logs, saved_properties, rate_limit_log, admin_roles, admin_actions, and the 4 active Edge Functions: send-inquiry, send-message, imagekit-upload, imagekit-delete.
+
+### Cleanup actions required
+
+1. Run MIGRATION_drop_applications_tables.sql in Supabase SQL Editor (includes pre-flight row-count check).
+2. Delete the 7 decommissioned application Edge Functions from Supabase Dashboard -> Edge Functions.
+3. Update or remove admin/applications.html and admin/leases.html — they reference the removed Supabase applications table and should redirect to the GAS admin dashboard.
