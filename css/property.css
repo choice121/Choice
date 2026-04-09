@@ -974,7 +974,8 @@
 }
 .detail-tabs-wrap { min-height: 120px; }
 .detail-tab-panel { display: none; }
-.detail-tab-panel.active { display: block; }
+.detail-tab-panel.active { display: block; animation: tabFadeIn 0.22s ease; }
+@keyframes tabFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ── READ MORE (description truncation) ───────────────────── */
 .detail-desc.truncated {
