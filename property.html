@@ -109,7 +109,7 @@
   <!-- Main column -->
   <div class="detail-main" id="detailMain">
     <div class="detail-breadcrumb">
-      <a href="/listings.html">Listings</a>
+      <a href="/listings.html" id="backToResults">Listings</a>
       <i class="fas fa-chevron-right" style="font-size:10px"></i>
       <span id="breadcrumbCity">Loading…</span>
       <span id="breadcrumbTitleGroup" style="display:none">
@@ -231,7 +231,7 @@
         </a>
         <p class="apply-disclaimer">
           <i class="fas fa-lock" style="color:var(--gold)"></i>
-          You'll be taken to our secure application portal. Info is encrypted &amp; protected. Fee collected only after review.
+          Application fee is due at time of submission and is non-refundable.
         </p>
         <a id="trackAppLink" href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=dashboard"
            target="_blank"
@@ -732,7 +732,7 @@ function renderProperty(p) {
     document.getElementById('landlordName').textContent = name;
     if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
     const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy">`;
+    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.png';">`;
     else avatarEl.textContent = name.charAt(0).toUpperCase();
     if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
   }
@@ -1363,5 +1363,15 @@ function showToast(msg, type = 'info') {
     <a href="#" id="mobApplyBtn" class="mob-btn">Apply Now</a>
   </div>
 </div>
-</body>
+
+  <script>
+    // Fix 11 — Back-to-results preserves filters
+    document.addEventListener('DOMContentLoaded', function() {
+      const backLink = document.getElementById('backToResults');
+      if (backLink && document.referrer.includes('listings')) {
+        backLink.href = document.referrer;
+      }
+    });
+  </script>
+  </body>
 </html>
