@@ -52,6 +52,8 @@ const config = {
   },
 };
 
+const EXPECTED_SUPABASE_PROJECT_REF = 'tlfmwetmhthpyrytrcfo';
+
 // Validate required values
 // I-051: SITE_URL is required — without it, sitemap.xml and robots.txt ship with
 // YOUR-DOMAIN.com placeholders, breaking SEO and crawler discovery in production.
@@ -64,6 +66,19 @@ if (missing.length) {
     console.error('   SITE_URL example: https://choiceproperties.com  (no trailing slash)');
     console.error('   Without SITE_URL, sitemap.xml ships with YOUR-DOMAIN.com placeholders.');
   }
+  process.exit(1);
+}
+
+try {
+  const supabaseHost = new URL(config.SUPABASE_URL).hostname;
+  if (!supabaseHost.startsWith(EXPECTED_SUPABASE_PROJECT_REF + '.')) {
+    console.error('❌ SUPABASE_URL points to the wrong Supabase project:', supabaseHost);
+    console.error('   Expected project ref:', EXPECTED_SUPABASE_PROJECT_REF);
+    console.error('   Update Cloudflare Pages environment variables before deploying.');
+    process.exit(1);
+  }
+} catch {
+  console.error('❌ SUPABASE_URL is not a valid URL.');
   process.exit(1);
 }
 
@@ -428,18 +443,22 @@ await (async function injectInitialListings() {
   console.log('✅ Property pre-load: ' + data.rows.length + ' listings embedded in listings.html (total: ' + data.total + ')');
 })();
 
-// Rewrite _headers: remove 'unsafe-inline' from script-src, replace with nonce
+// Rewrite _headers: keep script-src nonce synchronized with the generated HTML
 try {
   let headers = fs.readFileSync('_headers', 'utf8');
-  const fixed = headers.replace(
+  let fixed = headers.replace(
+    /(script-src\b[^;]*?)\s*'nonce-[^']+'([^;]*;)/,
+    `$1 'nonce-${nonce}'$2`
+  );
+  fixed = fixed.replace(
     /(script-src\b[^;]*?)\s*'unsafe-inline'([^;]*;)/,
     `$1 'nonce-${nonce}'$2`
   );
   if (fixed !== headers) {
     fs.writeFileSync('_headers', fixed);
-    console.log("✅ CSP: 'unsafe-inline' removed from script-src, nonce applied to _headers");
+    console.log('✅ CSP: script-src nonce synchronized in _headers');
   } else {
-    console.log("ℹ  _headers script-src already clean or pattern not found — no change");
+    console.warn('⚠  CSP: script-src nonce pattern not found in _headers');
   }
 } catch(e) {
   console.warn('⚠  Could not rewrite _headers:', e.message);
