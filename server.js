@@ -128,7 +128,8 @@ function fetchListingsFromSupabase() {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
-        if (res.statusCode !== 200) {
+        // Supabase returns 206 Partial Content when Prefer: count=exact is used
+        if (res.statusCode !== 200 && res.statusCode !== 206) {
           console.warn(`⚠ Property cache: Supabase returned HTTP ${res.statusCode} — ${body.slice(0, 200)}`);
           resolve(null); return;
         }

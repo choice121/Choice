@@ -14,17 +14,25 @@ Choice Properties is a nationwide rental marketplace — a static HTML/CSS/JS si
 
 ## How It Runs on Replit
 
-A lightweight Node.js server (`server.js`) serves the static files and dynamically generates `config.js` from environment variables. No npm packages are required — only built-in Node.js modules are used.
+A lightweight Node.js server (`server.js`) serves the static files with several performance optimisations applied at serve time. No npm packages are required — only built-in Node.js modules are used.
 
 ```
 node server.js   → listens on port 5000
 ```
 
 The server:
-1. Generates `/config.js` on every request from environment variables
-2. Serves all static files (HTML, CSS, JS, images, fonts) from the project root
-3. Handles directory index resolution and `.html` extension inference
-4. Redirects browser-auto-requested icons (`/favicon.ico`, `/apple-touch-icon.png`) to `/assets/favicon.svg`
+1. Generates `/config.js` on every request from environment variables (no-cache)
+2. **Injects nav + footer server-side** — reads `components/nav.html` and `components/footer.html` at startup and inserts them directly into every HTML response, eliminating 2 fetch() calls per page load
+3. **Pre-fetches and caches property listings** — fetches the first 24 active properties from Supabase REST API at startup (refreshes every 3 minutes), embeds as `window.__INITIAL_LISTINGS__` in `listings.html` so properties render instantly on first paint with no loading spinner
+4. Serves all static files (HTML, CSS, JS, images, fonts) from the project root
+5. Applies **Cache-Control headers** — static assets (CSS/JS/fonts/images) get `max-age=31536000 immutable`; HTML gets `no-cache` for freshness
+6. Handles directory index resolution and `.html` extension inference
+7. Redirects browser-auto-requested icons to `/assets/favicon.svg`
+
+The **Supabase JS library** (`js/supabase.min.js`) is self-hosted locally — all 23 HTML files reference the local copy instead of the jsdelivr CDN, removing a cross-origin dependency.
+
+### Client-side optimisation (listings.html)
+`fetchAndRender()` checks for `window.__INITIAL_LISTINGS__` on the first unfiltered page-1 load. If the server has injected data, it renders immediately and skips the Supabase API round-trip entirely. Filter changes and pagination always fetch fresh data from the live API.
 
 ## Environment Variables
 
