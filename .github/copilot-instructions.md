@@ -1,31 +1,32 @@
 # Choice Properties — GitHub Copilot Instructions
-# Official Copilot instruction file: .github/copilot-instructions.md
-# Full rule set: .agents/instructions.md
 
 ## Project Type
 
-Pure static website. No server. No backend in this repository.
+Static website deployed by Cloudflare Pages from GitHub. Supabase is the only backend.
 
-- Frontend: Vanilla HTML, CSS, JavaScript
-- Build: `node generate-config.js` (Node.js built-ins only, no npm packages)
-- Deploy: Cloudflare Pages (auto-deploys on push to `main`)
-- Backend: Supabase cloud (Edge Functions, PostgreSQL)
+- Frontend: vanilla HTML, CSS, JavaScript
+- Build: `npm run build`
+- Build internals: `node generate-config.js`
+- Deploy: Cloudflare Pages on push to `main`
+- Backend: Supabase cloud PostgreSQL, Auth, Storage, and Edge Functions
+- Replit role: editing only, never runtime hosting
 
-## Rules for Copilot
+## Do Not Suggest
 
-DO NOT suggest:
-- `npm install <anything>` — no runtime dependencies
-- Server setup, Express, Fastify, or any Node.js server
-- Database connections, ORMs, or migration commands
-- Creating `config.js` — it is generated at build time and gitignored
-- Using `DATABASE_URL` or `PG*` environment variables
+- Replit hosting, Replit Database, Replit PostgreSQL, Neon, local Postgres, SQLite, or `DATABASE_URL`
+- `npm install <package>` for runtime/server/database packages
+- Express, Fastify, Node API routes, `server.js`, ORM setup, or migration tooling
+- Drizzle, Prisma, Knex, Sequelize, TypeORM, `pg`, or `postgres`
+- Moving Supabase Edge Functions into this repository as Node routes
+- Creating or committing `config.js`
 
-DO suggest:
-- Static HTML, CSS, and vanilla JavaScript edits
-- Supabase client calls using the existing `cp-api.js` patterns
-- Deno TypeScript for Supabase Edge Functions in `supabase/functions/`
+## Do Suggest
 
-## Deployment
+- Static HTML/CSS/browser JavaScript edits
+- Existing Supabase client patterns in `js/cp-api.js`
+- Deno TypeScript edits inside `supabase/functions/`
+- Cloudflare Pages environment variable configuration
 
-The only valid path to production is: push to GitHub → Cloudflare Pages auto-deploys.
-There is no local preview server. There is no local build step needed during development.
+## Deployment Rule
+
+The only valid production path is GitHub push to Cloudflare Pages. Any database or auth work must remain in Supabase.

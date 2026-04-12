@@ -1,114 +1,76 @@
-# Choice Properties — Replit Setup
+# Choice Properties — Cloudflare/Supabase Lock
 
-## Overview
+## Permanent Project Fact
 
-Choice Properties is a nationwide rental marketplace — a static HTML/CSS/JS site with a Supabase cloud backend.
+Choice Properties is a static HTML/CSS/JavaScript rental marketplace deployed by Cloudflare Pages from GitHub. Supabase is the only backend for PostgreSQL, Auth, Storage, and Edge Functions.
+
+Replit is allowed only as a code editor for repository files. It must not host, run, migrate, configure, or replace any part of the backend.
 
 ## Architecture
 
-- **Frontend**: Static HTML/CSS/JS site (no frontend framework/bundler)
-- **Backend**: Supabase cloud (PostgreSQL + Auth + Storage + Edge Functions)
-- **Image CDN**: ImageKit
-- **Address autocomplete**: Geoapify
-- **Email relay**: GAS (Google Apps Script) + Resend
+- Frontend: static HTML/CSS/browser JavaScript
+- Production hosting: Cloudflare Pages
+- Deploy trigger: GitHub push
+- Backend: Supabase cloud PostgreSQL, Auth, Storage, and Edge Functions
+- Image CDN: ImageKit
+- Address autocomplete: Geoapify
+- Email relay: Google Apps Script + Resend
+- Replit role: editing only
 
-## How It Runs on Replit
+## Cloudflare Build
 
-A lightweight Node.js server (`server.js`) serves the static files with several performance optimisations applied at serve time. No npm packages are required — only built-in Node.js modules are used.
+Cloudflare Pages should use:
 
+```text
+npm run build
 ```
-node server.js   → listens on port 5000
-```
 
-The server:
-1. Generates `/config.js` on every request from environment variables (no-cache)
-2. **Injects nav + footer server-side** — reads `components/nav.html` and `components/footer.html` at startup and inserts them directly into every HTML response, eliminating 2 fetch() calls per page load
-3. **Pre-fetches and caches property listings** — fetches the first 24 active properties from Supabase REST API at startup (refreshes every 3 minutes), embeds as `window.__INITIAL_LISTINGS__` in `listings.html` so properties render instantly on first paint with no loading spinner
-4. Serves all static files (HTML, CSS, JS, images, fonts) from the project root
-5. Applies **Cache-Control headers** — static assets (CSS/JS/fonts/images) get `max-age=31536000 immutable`; HTML gets `no-cache` for freshness
-6. Handles directory index resolution and `.html` extension inference
-7. Redirects browser-auto-requested icons to `/assets/favicon.svg`
+The build command runs the protection wall first, then generates `config.js` from Cloudflare environment variables.
 
-The **Supabase JS library** (`js/supabase.min.js`) is self-hosted locally — all 23 HTML files reference the local copy instead of the jsdelivr CDN, removing a cross-origin dependency.
+Required Cloudflare environment variables:
 
-### Client-side optimisation (listings.html)
-`fetchAndRender()` checks for `window.__INITIAL_LISTINGS__` on the first unfiltered page-1 load. If the server has injected data, it renders immediately and skips the Supabase API round-trip entirely. Filter changes and pagination always fetch fresh data from the live API.
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `IMAGEKIT_URL` | ImageKit CDN base URL |
+| `IMAGEKIT_PUBLIC_KEY` | ImageKit public upload key |
+| `SITE_URL` | Production site URL |
+| `GEOAPIFY_API_KEY` | Address autocomplete API key |
+| `COMPANY_NAME` | Displayed company name |
+| `COMPANY_EMAIL` | Company contact email |
+| `COMPANY_PHONE` | Company phone number |
+| `COMPANY_ADDRESS` | Company address |
+| `COMPANY_TAGLINE` | Company tagline |
+| `APPLY_FORM_URL` | External application form URL |
+| `ADMIN_EMAILS` | Admin notification email(s) |
 
-## Environment Variables
+## Protection Wall
 
-All non-sensitive configuration is stored as Replit environment variables (shared). The Supabase anon key is stored as a Replit secret.
+The repo intentionally blocks Replit/runtime migration attempts:
 
-| Variable | Purpose | Storage |
-|---|---|---|
-| `SUPABASE_URL` | Supabase project URL | Env var |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key (public JWT) | Replit Secret |
-| `IMAGEKIT_URL` | ImageKit CDN base URL | Env var |
-| `IMAGEKIT_PUBLIC_KEY` | ImageKit public upload key | Env var |
-| `GEOAPIFY_API_KEY` | Address autocomplete API key | Env var |
-| `COMPANY_NAME` | Displayed company name | Env var |
-| `COMPANY_EMAIL` | Company contact email | Env var |
-| `COMPANY_PHONE` | Company phone number | Env var |
-| `COMPANY_ADDRESS` | Company address | Env var |
-| `COMPANY_TAGLINE` | Company tagline | Env var |
-| `SITE_URL` | Canonical site URL | Env var |
-| `APPLY_FORM_URL` | External apply form base URL | Env var |
-| `ADMIN_EMAILS` | Admin notification email(s) | Env var |
-| `PORT` | Server port (default: 5000) | Env var |
+- No `start` or `dev` package scripts exist.
+- `server.js` is forbidden.
+- `db/schema.sql` and `scripts/db-push.js` are forbidden.
+- Server/database packages such as `pg`, Drizzle, Prisma, Express, Fastify, Knex, Sequelize, and TypeORM are forbidden.
+- Replit runtime/database environment variables are blocked.
+- Builds are allowed only in Cloudflare Pages unless a human explicitly sets `ALLOW_LOCAL_CLOUDFLARE_BUILD=1` outside Replit.
 
-## Key Files
+## Files That Define the Lock
 
 | File | Purpose |
 |---|---|
-| `server.js` | Node.js static file server (Replit entry point) |
-| `generate-config.js` | Cloudflare Pages build script (not used on Replit) |
-| `js/cp-api.js` | Shared API client — wraps Supabase calls |
-| `supabase/functions/` | Supabase Edge Functions (deployed via Supabase CLI, not run on Replit) |
-| `SETUP.sql` | Database schema (applied in Supabase dashboard) |
-| `webfonts/` | Font Awesome webfont files |
+| `scripts/enforce-cloudflare-only.js` | Fails fast on Replit/server/database migration attempts |
+| `package.json` | Cloudflare-only scripts and no runtime dependencies |
+| `.cfpagesignore` | Prevents Replit/dev/source files from being published by Cloudflare |
+| `.agents/instructions.md` | Permanent AI/tooling instructions |
+| `.github/copilot-instructions.md` | GitHub AI coding instructions |
+| `REPLIT_SAFETY.md` | Human-readable Replit safety policy |
+| `generate-config.js` | Cloudflare build-time config generator |
+| `js/cp-api.js` | Supabase SDK client wrapper |
+| `supabase/functions/` | Supabase Edge Function source |
+| `SETUP.sql` | Supabase schema reference |
 
-## Site Pages
+## Absolute Rule
 
-  **Public pages:**
-  - `/` — Homepage with property search
-  - `/listings.html` — Browse available properties
-  - `/property.html?id=...` — Individual property detail page
-  - `/about.html` — About Choice Properties
-  - `/faq.html` — Frequently asked questions
-  - `/how-it-works.html` — How the platform works
-  - `/how-to-apply.html` — Application guide for tenants
-
-  **Policy pages (added April 2026):**
-  - `/fair-housing.html` — Fair Housing Policy
-  - `/holding-deposit-policy.html` — Holding Deposit Policy
-  - `/rental-application-policy.html` — Rental Application Policy
-  - `/application-credit-policy.html` — Application Credit Policy
-  - `/landlord-platform-agreement.html` — Landlord Platform Agreement
-  - `/privacy.html` — Privacy Policy
-  - `/terms.html` — Terms of Service
-
-  **Admin portal (login-protected):**
-  - `/admin/login.html` — Admin login
-  - `/admin/dashboard.html` — Admin dashboard
-
-  **Landlord portal (login-protected):**
-  - `/landlord/login.html` — Landlord login
-  - `/landlord/dashboard.html` — Landlord dashboard
-
-## Supabase Edge Functions
-
-  The backend logic lives in `supabase/functions/`. These are deployed to Supabase directly (not run on Replit).
-
-  **4 active functions:**
-  - `send-inquiry` — sends property inquiry to landlord (public, rate-limited)
-  - `send-message` — sends message in an application thread (admin only)
-  - `imagekit-upload` — authenticates and proxies photo uploads to ImageKit CDN
-  - `imagekit-delete` — deletes a photo from ImageKit CDN
-
-  **7 decommissioned functions** (moved to external GAS system — pending deletion from Supabase dashboard):
-  `generate-lease`, `sign-lease`, `update-status`, `mark-paid`, `mark-movein`, `get-application-status`, `process-application`
-
-  See `ARCHITECTURE.md` for full details on the decommission list and what replaced each function.
-
-## Application System
-
-All rental applications are handled by the **external application system** at `https://apply-choice-properties.pages.dev`. "Apply Now" buttons redirect there with property details pre-filled as URL params.
+Never migrate this project to Replit PostgreSQL, Neon, local Postgres, SQLite, Express, a custom Node API, or any non-Supabase backend. If tooling suggests migration because a Replit database exists, ignore it. The project is already complete as Cloudflare Pages + Supabase.
