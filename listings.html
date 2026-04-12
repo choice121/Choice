@@ -61,7 +61,7 @@
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
   </style>
 <script defer src="/config.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<script defer src="/js/supabase.min.js"></script>
 <script type="module" src="/js/cp-api.js"></script>
 <script defer src="/js/components.js"></script>
 <style>
@@ -515,8 +515,35 @@ function syncControls() {
 async function fetchAndRender() {
   if (isLoading) return;
   isLoading = true;
+
+  // ── Use server-injected initial data on first unfiltered page-1 load ──
+  // The server embeds window.__INITIAL_LISTINGS__ directly into listings.html
+  // so properties paint immediately without waiting for a Supabase round-trip.
+  const hasNoFilters = !activeSearch && (activeType === 'all' || !activeType) &&
+    !activeBeds && !activeMinRent && !activeMaxRent && !activeMinBaths &&
+    !activeLaundry && !activeHeating && !activePetType && currentPage === 1 &&
+    sortBy === 'newest';
+  if (hasNoFilters && window.__INITIAL_LISTINGS__) {
+    const cached = window.__INITIAL_LISTINGS__;
+    window.__INITIAL_LISTINGS__ = null; // consume once; filter changes use live API
+    isLoading = false;
+    const { rows, total, total_pages } = cached;
+    totalCount = total;
+    totalPages = total_pages;
+    const counter = document.getElementById('statListings');
+    if (counter) counter.textContent = total.toLocaleString();
+    const subheading = document.getElementById('listingsSubheading');
+    if (subheading) {
+      const plural = total === 1 ? 'listing' : 'listings';
+      subheading.textContent = `Showing ${rows.length} of ${total} ${plural}`;
+    }
+    renderProperties(rows);
+    renderPagination();
+    return;
+  }
+
   showSkeletons();
-  
+
   // Update subheading with loading indicator
   const subheading = document.getElementById('listingsSubheading');
   if (subheading) {
