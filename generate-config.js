@@ -251,6 +251,19 @@ if (config.SITE_URL) {
   });
 }
 
+// ── Build-time nav + footer injection ────────────────────────────────────────
+// Reads component files once and injects their HTML into every page's slot,
+// eliminating the 2 fetch() calls per page that components.js otherwise makes.
+let buildNavHtml = '';
+let buildFooterHtml = '';
+try {
+  buildNavHtml    = fs.readFileSync('components/nav.html',    'utf8');
+  buildFooterHtml = fs.readFileSync('components/footer.html', 'utf8');
+  console.log('✅ Nav + footer components loaded for build-time injection');
+} catch (e) {
+  console.warn('⚠  Could not read nav/footer components — skipping injection:', e.message);
+}
+
 // ── I-052: CSP nonce injection — eliminates 'unsafe-inline' from script-src ─
 // Generates a fresh random nonce on every build.
 // Injects nonce="<value>" into every inline <script> and <script type="module">
@@ -329,9 +342,91 @@ htmlFiles.forEach(function(file) {
   });
   if (afterNonce !== src) { src = afterNonce; modified = true; }
 
+  // Step D: inject nav + footer into their placeholder slots
+  if (buildNavHtml) {
+    const afterNav = src.replace(
+      /<div\s+id="site-nav"\s*><\/div>/g,
+      `<div id="site-nav" data-server-injected="1">${buildNavHtml}</div>`
+    );
+    if (afterNav !== src) { src = afterNav; modified = true; }
+  }
+  if (buildFooterHtml) {
+    const afterFooter = src.replace(
+      /<div\s+id="site-footer"\s*><\/div>/g,
+      `<div id="site-footer" data-server-injected="1">${buildFooterHtml}</div>`
+    );
+    if (afterFooter !== src) { src = afterFooter; modified = true; }
+  }
+
   if (modified) fs.writeFileSync(file, src);
 });
-console.log('✅ HTML files processed: cache-bust, CSS preload fix, nonce injected (BUILD_VERSION: ' + BUILD_VERSION + ')');
+console.log('✅ HTML files processed: cache-bust, CSS preload fix, nonce + nav/footer injected (BUILD_VERSION: ' + BUILD_VERSION + ')');
+
+// ── Build-time property snapshot for listings.html ───────────────────────────
+// Fetches the first page of active listings at build time and embeds them as
+// window.__INITIAL_LISTINGS__ so properties render on first paint with no
+// loading spinner. The client fetches fresh data on any filter change or
+// pagination — this snapshot only speeds up the cold initial page load.
+await (async function injectInitialListings() {
+  const listingsFile = 'listings.html';
+  if (!fs.existsSync(listingsFile)) { console.warn('⚠  listings.html not found — skipping property pre-load'); return; }
+
+  const https = require('https');
+  const PER_PAGE = 24;
+  const supabaseUrl = config.SUPABASE_URL.replace(/\/$/, '');
+  const apiPath = '/rest/v1/properties'
+    + '?select=*,landlords(contact_name,business_name,avatar_url,verified)'
+    + '&status=eq.active'
+    + '&order=created_at.desc'
+    + '&limit=' + PER_PAGE
+    + '&offset=0';
+
+  const data = await new Promise(function(resolve) {
+    const urlObj = new URL(supabaseUrl + apiPath);
+    const req = https.request({
+      hostname: urlObj.hostname,
+      path:     urlObj.pathname + urlObj.search,
+      method:   'GET',
+      headers: {
+        'apikey':        config.SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + config.SUPABASE_ANON_KEY,
+        'Prefer':        'count=exact',
+      },
+      timeout: 12000,
+    }, function(res) {
+      let body = '';
+      res.on('data', function(chunk) { body += chunk; });
+      res.on('end', function() {
+        // Supabase returns 206 when Prefer: count=exact is used with a range
+        if (res.statusCode !== 200 && res.statusCode !== 206) {
+          console.warn('⚠  Property pre-load: Supabase returned HTTP ' + res.statusCode + ' — skipping');
+          resolve(null); return;
+        }
+        try {
+          const rows = JSON.parse(body);
+          if (!Array.isArray(rows)) { console.warn('⚠  Property pre-load: unexpected response shape'); resolve(null); return; }
+          let total = rows.length;
+          const rangeHeader = res.headers['content-range'];
+          if (rangeHeader) { const m = rangeHeader.match(/\/(\d+)/); if (m) total = parseInt(m[1], 10); }
+          resolve({ rows: rows, total: total, page: 1, per_page: PER_PAGE, total_pages: Math.ceil(total / PER_PAGE) });
+        } catch (e) { console.warn('⚠  Property pre-load: JSON parse error:', e.message); resolve(null); }
+      });
+    });
+    req.on('error',   function(e) { console.warn('⚠  Property pre-load network error:', e.message); resolve(null); });
+    req.on('timeout', function()  { req.destroy(); console.warn('⚠  Property pre-load timed out'); resolve(null); });
+    req.end();
+  });
+
+  if (!data) return;
+
+  let html = fs.readFileSync(listingsFile, 'utf8');
+  // Remove any existing snapshot injected by a previous build
+  html = html.replace(/<script[^>]*>window\.__INITIAL_LISTINGS__[\s\S]*?<\/script>\n?/g, '');
+  const snippet = '<script nonce="' + nonce + '">window.__INITIAL_LISTINGS__=' + JSON.stringify(data) + ';window.__INITIAL_LISTINGS_TS__=' + Date.now() + ';</script>\n';
+  html = html.replace('</head>', snippet + '</head>');
+  fs.writeFileSync(listingsFile, html);
+  console.log('✅ Property pre-load: ' + data.rows.length + ' listings embedded in listings.html (total: ' + data.total + ')');
+})();
 
 // Rewrite _headers: remove 'unsafe-inline' from script-src, replace with nonce
 try {

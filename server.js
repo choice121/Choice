@@ -193,6 +193,8 @@ function injectIntoHtml(html, filePath) {
   // Embed initial property data for listings.html only
   const isListings = filePath.endsWith('listings.html');
   if (isListings && propertyCache) {
+    // Strip any build-time snapshot baked in by generate-config.js so we don't double-inject
+    html = html.replace(/<script[^>]*>window\.__INITIAL_LISTINGS__[\s\S]*?<\/script>\n?/g, '');
     const dataScript =
       `<script>window.__INITIAL_LISTINGS__=${JSON.stringify(propertyCache)};` +
       `window.__INITIAL_LISTINGS_TS__=${propertyCacheTime};</script>`;
