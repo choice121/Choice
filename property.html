@@ -432,7 +432,7 @@
 
 <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
 
-<script type="module" nonce="ltCsB-6fPdCs63grQuakbg">
+<script type="module" nonce="PxUQQx5ZUVVGw3LJsG-78Q">
 import { supabase, buildApplyURL, incrementCounter, getSession } from './js/cp-api.js';
 import { updateNav as _updateNav } from './js/cp-api.js';
 
@@ -1058,7 +1058,7 @@ function renderGallery(photos) {
     document.getElementById('gallery').style.gridTemplateColumns = '1fr';
   }
 
-  expandBtn.innerHTML = `<i class="fas fa-th-large"></i> See All Photos <span class="mosaic-photo-count">${photos.length}</span>`;
+  expandBtn.innerHTML = `<i class="fas fa-th-large"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
   expandBtn.addEventListener('click', () => openLightbox(0));
 
   if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
@@ -1489,7 +1489,7 @@ function showToast(msg, type = 'info') {
   </div>
 </div>
 
-  <script nonce="ltCsB-6fPdCs63grQuakbg">
+  <script nonce="PxUQQx5ZUVVGw3LJsG-78Q">
     // Fix 11 — Back-to-results preserves filters
     document.addEventListener('DOMContentLoaded', function() {
       const backLink = document.getElementById('backToResults');
