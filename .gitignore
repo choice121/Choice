@@ -19,17 +19,13 @@ node_modules/
 package-lock.json.bak
 
 # ============================================================
-# REPLIT ENVIRONMENT FILES
-#
-# .replit and replit.nix ARE committed so their protections
-# (run = "", editor-only config) travel with the repo to every
-# new Replit account that imports from GitHub.
-#
-# .agents/instructions.md IS committed so the mandatory agent
-# rules travel with the repo and apply in every new Replit account.
-#
-# Only auto-generated Replit runtime/cache files are ignored.
+# REPLIT — ALL FILES IGNORED (project runs on Cloudflare only)
+# These files must never appear in GitHub or any deployment.
 # ============================================================
+.replit
+replit.nix
+replit.md
+REPLIT_SAFETY.md
 .replit-guard.js
 .replit-cache/
 .replit-backup/
