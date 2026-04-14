@@ -166,7 +166,7 @@ const output = `// ============================================================
 // Edit environment variables in your hosting platform dashboard
 // ============================================================
 
-const CONFIG = {
+var CONFIG = {
   SUPABASE_URL:      '${config.SUPABASE_URL}',
   SUPABASE_ANON_KEY: '${config.SUPABASE_ANON_KEY}',
 
