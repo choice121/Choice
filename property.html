@@ -603,6 +603,10 @@ function amenityIconColor(text) {
 function renderProperty(p) {
   document.title = `${p.title} — Choice Properties`;
 
+  // Build apply URL early — used by both the structured data potentialAction
+  // and the Apply button wiring later in this function.
+  const applyURL = buildApplyURL(p);
+
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
   const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
@@ -666,7 +670,7 @@ function renderProperty(p) {
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
-      "target": "https://apply-choice-properties.pages.dev/?id=" + (p.id || "")
+      "target": applyURL
     }
   });
   document.head.appendChild(sd);
@@ -862,8 +866,7 @@ function renderProperty(p) {
     if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
   }
 
-  // Apply button — build URL with full property context for form prefill
-  const applyURL = buildApplyURL(p);
+  // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -871,7 +874,7 @@ function renderProperty(p) {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         showToast('Taking you to our secure application portal…', 'info');
-        setTimeout(() => { window.location.href = applyURL; }, 1100);
+        setTimeout(() => { window.location.href = applyURL; }, 700);
       });
     };
     _wireApply('applyBtn');

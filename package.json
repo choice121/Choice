@@ -2,9 +2,9 @@
   "name": "choice-properties",
   "version": "1.0.0",
   "private": true,
-  "description": "Choice Properties — static rental marketplace. Supabase backend, served via Replit for preview.",
+  "description": "Choice Properties — Cloudflare Pages static site with Supabase backend. Replit is for code editing only and must not run, migrate, or host this project.",
   "scripts": {
-    "start": "node generate-config-replit.js && node server.js",
+    "preinstall": "node scripts/enforce-cloudflare-only.js install",
     "build": "node scripts/enforce-cloudflare-only.js build && node generate-config.js",
     "verify:cloudflare-only": "node scripts/enforce-cloudflare-only.js build"
   },
