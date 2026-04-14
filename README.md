@@ -1,8 +1,10 @@
 # Choice Properties
 
-## STATIC SITE — No backend server required
+## STATIC SITE — Deployed exclusively on Cloudflare Pages
 
-This repository contains a **pure static frontend** deployed via Cloudflare Pages. There is no application server, no Node.js runtime server, no Python server, and no Docker configuration in this codebase.
+This repository contains a **pure static frontend** deployed via Cloudflare Pages. There is no application server, no Node.js runtime server, no Python server, no Docker configuration, and no Replit dependency in this codebase.
+
+> **Cloudflare-only policy:** This project runs exclusively on Cloudflare Pages. No other hosting platform is permitted. CI enforces this on every push via `.github/workflows/cloudflare-only.yml`.
 
 All server-side logic runs on fully hosted third-party platforms:
 
