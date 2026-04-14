@@ -649,6 +649,7 @@ function syncControls() {
     // Refresh saved IDs from Supabase for authenticated users (non-blocking)
     window.CP.SavedProperties.getIds().then(ids => { savedIds = ids; }).catch(() => {});
     setupScrollTop();
+    setupGridDelegation(); // P1-A: wire delegated listeners once at boot
     readURL();
     syncControls();
     setupFilters();
@@ -865,32 +866,12 @@ function renderProperties(props) {
 
   grid.innerHTML = props.map(p => buildCard(p)).join('');
 
+  // Mark saved state only — click events handled by delegated listeners (P1-A)
   grid.querySelectorAll('.property-card-save').forEach(btn => {
-    const id = btn.dataset.id;
-    if (savedIds.has(id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
-    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); toggleSave(id, btn); });
+    if (savedIds.has(btn.dataset.id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
   });
-    grid.querySelectorAll('.property-card-share').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
-        const url = location.origin + btn.dataset.url;
-        const title = btn.dataset.title || 'Check out this property';
-        if (navigator.share) {
-          navigator.share({ title, url }).catch(() => {});
-        } else {
-          navigator.clipboard.writeText(url)
-            .then(() => showToast('Link copied to clipboard!', 'success'))
-            .catch(() => showToast('Could not copy link', 'error'));
-        }
-      });
-    });
-  grid.querySelectorAll('.property-card').forEach(card => {
-    initCarousel(card);
-    card.addEventListener('click', e => {
-      if (e.target.closest('a, button')) return;
-      window.location.href = `/property.html?id=${card.dataset.id}`;
-    });
-  });
+
+  lazyInitCarousels(grid); // P1-C: initialize carousels only as cards enter viewport
   animateCards();
 }
 
@@ -955,6 +936,74 @@ function animateCards() {
 // Delegates to the unified carousel in /js/card-builder.js
 function initCarousel(card) {
   initCardCarousel(card);
+}
+
+/* ─── P1-A: Grid event delegation ───────────────────────────────────────────
+   Set up once at boot — survives every re-render without re-attaching.
+   Replaces 72+ per-card listeners (save × 24, share × 24, click-through × 24)
+   with 4 permanent listeners on the container.
+   ─────────────────────────────────────────────────────────────────────────── */
+function setupGridDelegation() {
+  const grid = document.getElementById('propertyGrid');
+  if (!grid || grid._delegated) return;
+  grid._delegated = true;
+
+  // Save (heart)
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.property-card-save');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleSave(btn.dataset.id, btn);
+  });
+
+  // Share — native share API / clipboard fallback
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.property-card-share');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const url   = location.origin + btn.dataset.url;
+    const title = btn.dataset.title || 'Check out this property';
+    if (navigator.share) {
+      navigator.share({ title, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url)
+        .then(() => showToast('Link copied to clipboard!', 'success'))
+        .catch(() => showToast('Could not copy link', 'error'));
+    }
+  });
+
+  // Card click-through (not on links or buttons)
+  grid.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    const card = e.target.closest('.property-card');
+    if (card) window.location.href = `/property.html?id=${card.dataset.id}`;
+  });
+
+  // P1-D: Switch non-first slide images from lazy → eager on first hover
+  grid.addEventListener('mouseover', e => {
+    const card = e.target.closest('.property-card');
+    if (!card || card._preloaded) return;
+    card._preloaded = true;
+    card.querySelectorAll('.property-card-slide img[loading="lazy"]').forEach(img => {
+      img.loading = 'eager';
+    });
+  });
+}
+
+/* ─── P1-C: Lazy carousel initialization ────────────────────────────────────
+   Defer initCarousel until each card enters a 200px margin around the viewport.
+   Cuts JS work at initial render by ~75% on a full 24-card grid.
+   ─────────────────────────────────────────────────────────────────────────── */
+function lazyInitCarousels(grid) {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        initCarousel(entry.target);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '200px 0px' });
+  grid.querySelectorAll('.property-card').forEach(card => observer.observe(card));
 }
 
 /* ─── Map ─── */

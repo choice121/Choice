@@ -570,13 +570,22 @@ async function loadFeaturedListings() {
     const featImgSizes = '(max-width: 539px) calc(100vw - 32px), (max-width: 899px) calc(50vw - 28px), calc(33vw - 32px)';
     grid.innerHTML = props.map(p => buildPropertyCard(p, { imgSizes: featImgSizes })).join('');
 
-    // Save (heart) — localStorage-backed, shared with listings page
+    // Mark saved state — click events handled by delegated listeners (P1-A)
     const featSaved = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
     grid.querySelectorAll('.property-card-save').forEach(btn => {
-      const id = btn.dataset.id;
-      if (featSaved.has(id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
-      btn.addEventListener('click', e => {
+      if (featSaved.has(btn.dataset.id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
+    });
+
+    // P1-A: Wire delegated listeners once (guard against re-runs if loadFeatured is called again)
+    if (!grid._delegated) {
+      grid._delegated = true;
+
+      // Save (heart)
+      grid.addEventListener('click', e => {
+        const btn = e.target.closest('.property-card-save');
+        if (!btn) return;
         e.preventDefault(); e.stopPropagation();
+        const id = btn.dataset.id;
         if (featSaved.has(id)) {
           featSaved.delete(id); btn.classList.remove('saved'); btn.innerHTML = '<i class="far fa-heart"></i>';
         } else {
@@ -584,11 +593,11 @@ async function loadFeaturedListings() {
         }
         localStorage.setItem('cp_saved', JSON.stringify([...featSaved]));
       });
-    });
 
-    // Share button — native share API with clipboard fallback
-    grid.querySelectorAll('.property-card-share').forEach(btn => {
-      btn.addEventListener('click', e => {
+      // Share
+      grid.addEventListener('click', e => {
+        const btn = e.target.closest('.property-card-share');
+        if (!btn) return;
         e.preventDefault(); e.stopPropagation();
         const url   = location.origin + btn.dataset.url;
         const title = btn.dataset.title || 'Check out this property';
@@ -598,15 +607,32 @@ async function loadFeaturedListings() {
           navigator.clipboard.writeText(url).catch(() => {});
         }
       });
-    });
 
-    grid.querySelectorAll('.property-card').forEach(card => {
-      initCardCarousel(card);
-      card.addEventListener('click', e => {
+      // Card click-through (not on links or buttons)
+      grid.addEventListener('click', e => {
         if (e.target.closest('a, button')) return;
-        window.location.href = `/property.html?id=${card.dataset.id}`;
+        const card = e.target.closest('.property-card');
+        if (card) window.location.href = `/property.html?id=${card.dataset.id}`;
       });
-    });
+
+      // P1-D: Preload non-first slide images on first hover
+      grid.addEventListener('mouseover', e => {
+        const card = e.target.closest('.property-card');
+        if (!card || card._preloaded) return;
+        card._preloaded = true;
+        card.querySelectorAll('.property-card-slide img[loading="lazy"]').forEach(img => {
+          img.loading = 'eager';
+        });
+      });
+    }
+
+    // P1-C: Lazy carousel init via IntersectionObserver
+    const featObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { initCardCarousel(entry.target); featObserver.unobserve(entry.target); }
+      });
+    }, { rootMargin: '200px 0px' });
+    grid.querySelectorAll('.property-card').forEach(card => featObserver.observe(card));
 
     animateFeaturedCards();
   } catch (_) {
