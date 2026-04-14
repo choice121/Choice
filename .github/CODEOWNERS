@@ -1,4 +1,5 @@
 # Choice Properties — CODEOWNERS
+# Protected files require owner review on all pull requests.
 
 * @choicepropertyofficial1-collab
 
@@ -6,6 +7,7 @@ package.json @choicepropertyofficial1-collab
 package-lock.json @choicepropertyofficial1-collab
 generate-config.js @choicepropertyofficial1-collab
 scripts/enforce-cloudflare-only.js @choicepropertyofficial1-collab
+.github/workflows/cloudflare-only.yml @choicepropertyofficial1-collab
 .cfpagesignore @choicepropertyofficial1-collab
 _headers @choicepropertyofficial1-collab
 _redirects @choicepropertyofficial1-collab
@@ -15,7 +17,4 @@ supabase/functions/** @choicepropertyofficial1-collab
 .agents/instructions.md @choicepropertyofficial1-collab
 .github/copilot-instructions.md @choicepropertyofficial1-collab
 .github/CODEOWNERS @choicepropertyofficial1-collab
-REPLIT_SAFETY.md @choicepropertyofficial1-collab
-replit.md @choicepropertyofficial1-collab
-.replit @choicepropertyofficial1-collab
-replit.nix @choicepropertyofficial1-collab
+.githooks/pre-commit @choicepropertyofficial1-collab
