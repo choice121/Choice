@@ -2,11 +2,10 @@
   "name": "choice-properties",
   "version": "1.0.0",
   "private": true,
-  "description": "Choice Properties — Nationwide rental property marketplace. Served on Replit, deployed to Cloudflare Pages.",
+  "description": "Choice Properties — Nationwide rental property marketplace. Deployed exclusively to Cloudflare Pages.",
   "scripts": {
-    "start": "node scripts/generate-config-replit.js && node server.js",
     "build": "node generate-config.js",
-    "dev": "node scripts/generate-config-replit.js && node server.js"
+    "preinstall": "node scripts/enforce-cloudflare-only.js"
   },
   "engines": {
     "node": ">=18"
