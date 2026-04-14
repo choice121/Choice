@@ -73,12 +73,13 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo 'Choice Properties is a static site. Edit files here and push to GitHub to deploy via Cloudflare Pages. There is no local server.'"
-
-[workflows.workflow.metadata]
-outputType = "console"
+args = "node serve.js"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
