@@ -2,23 +2,22 @@
 
 ## Permanent Architecture
 
-This repository is a static HTML/CSS/JavaScript website deployed by Cloudflare Pages from GitHub. Supabase is the only backend for PostgreSQL, Auth, Storage, and Edge Functions. Replit is only a code editor.
+This repository is a static HTML/CSS/JavaScript website deployed **exclusively by Cloudflare Pages** from GitHub. Supabase is the only backend for PostgreSQL, Auth, Storage, and Edge Functions. No other hosting platform is used or permitted. Replit is fully removed from this project.
 
 ## Absolute Prohibitions
 
-1. Do not run `npm install` in Replit.
-2. Do not run `npm start`, `npm run dev`, `node server.js`, port checks, health checks, or preview servers in Replit.
-3. Do not create, restore, or configure `server.js`.
-4. Do not create Express, Fastify, Replit API routes, compatibility API layers, or Node backend routes.
-5. Do not add `pg`, `postgres`, Prisma, Drizzle, Knex, Sequelize, TypeORM, Neon, SQLite, or any database package.
-6. Do not use `DATABASE_URL`, `PGHOST`, Replit PostgreSQL, Neon, or local database credentials.
-7. Do not run migrations, `db:push`, ORM generation, Supabase CLI, or database setup commands in Replit.
-8. Do not create `db/schema.sql`, `scripts/db-push.js`, migration runners, ORM configs, Docker files, containers, or runtime setup files.
-9. Do not move Supabase Edge Functions into Replit or Node server routes.
-10. Do not replace Supabase SDK calls in `js/cp-api.js` with a custom Replit API layer.
-11. Do not edit `.replit` or `replit.nix` to add runtime behavior, workflows, packages, databases, ports, or deployment settings.
-12. Do not generate or commit `config.js`; it is generated only by Cloudflare Pages during build.
-13. Do not reinterpret Replit-provided database availability as permission to use it.
+1. Do not introduce `.replit`, `replit.nix`, `replit.md`, or any Replit-specific file. Replit is fully removed from this project.
+2. Do not create, restore, or commit `server.js` — there is no local server.
+3. Do not run `npm install` — there are no runtime dependencies. The `preinstall` guard will block it.
+4. Do not run `npm start`, `npm run dev`, port checks, health checks, or local preview servers.
+5. Do not create Express, Fastify, or any Node.js backend routes or compatibility API layers.
+6. Do not add `pg`, `postgres`, Prisma, Drizzle, Knex, Sequelize, TypeORM, Neon, SQLite, or any database package.
+7. Do not use `DATABASE_URL`, `PGHOST`, or any local database credentials — the database is Supabase cloud.
+8. Do not run migrations, `db:push`, ORM generation, Supabase CLI, or database setup commands locally.
+9. Do not create `db/schema.sql`, migration runners, ORM configs, Docker files, or runtime setup files.
+10. Do not move Supabase Edge Functions into local Node server routes.
+11. Do not replace Supabase SDK calls in `js/cp-api.js` with any custom API layer.
+12. Do not generate or commit `config.js` — it is generated only by Cloudflare Pages during build.
 
 ## Allowed Work
 
