@@ -107,7 +107,6 @@ const Auth = {
     // Route to the correct login page based on current URL path
     const path = location.pathname;
     if (path.includes('/admin/'))  { location.href = '/admin/login.html'; }
-    else if (path.includes('/apply/')) { location.href = '/apply/login.html'; }
     else { location.href = '/landlord/login.html'; }
   },
   async isAdmin()       {
@@ -273,7 +272,7 @@ const Properties = {
   async getOne(id) {
     const { data, error } = await sb().from('properties').select('*, landlords(*)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
-      data.landlords.avatar_url = '/assets/avatar-placeholder.png';
+      data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }
     return _ok(data, error);
   },

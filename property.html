@@ -873,7 +873,7 @@ function renderProperty(p) {
     document.getElementById('landlordName').textContent = name;
     if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
     const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.png';">`;
+    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.svg';">`;
     else avatarEl.textContent = name.charAt(0).toUpperCase();
     if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
   }
