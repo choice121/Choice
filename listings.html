@@ -12,7 +12,7 @@
   <meta property="og:description" content="Verified rental listings nationwide. Apartments, houses, condos — apply in 15 minutes.">
   <meta property="og:image" content="/assets/og-cover.jpg">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://choice-properties.pages.dev/listings">
+  <meta property="og:url" content="https://choicepropertiesofficial.pages.dev/listings">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Browse Rentals — Choice Properties">
   <meta name="twitter:description" content="Verified rental listings nationwide. Apply online in minutes.">
@@ -139,11 +139,11 @@
     "@type": "CollectionPage",
     "name": "Rental Listings — Choice Properties",
     "description": "Browse verified rental listings across the United States. Filter by price, bedrooms, and more.",
-    "url": "https://choice-properties.pages.dev/listings.html",
+    "url": "https://choicepropertiesofficial.pages.dev/listings.html",
     "isPartOf": {
       "@type": "WebSite",
       "name": "Choice Properties",
-      "url": "https://choice-properties.pages.dev/"
+      "url": "https://choicepropertiesofficial.pages.dev/"
     }
   }
   </script>
@@ -561,7 +561,7 @@ let currentView    = 'list';
 let isLoading      = false;
 let mapInstance    = null;
 let mapMarkers     = [];
-const savedIds     = loadSavedIds();
+let savedIds       = loadSavedIds();
 const PER_PAGE     = 24;
 
 function loadSavedIds() {
@@ -645,6 +645,8 @@ function syncControls() {
 (async () => {
   try {
     await waitForCP();
+    // Refresh saved IDs from Supabase for authenticated users (non-blocking)
+    window.CP.SavedProperties.getIds().then(ids => { savedIds = ids; }).catch(() => {});
     setupScrollTop();
     readURL();
     syncControls();
@@ -720,20 +722,26 @@ async function fetchAndRender() {
     }
 
     try {
-    const result = await CP.Properties.getListings({
-      q:            activeSearch,
-      type:         activeType,
-      beds:         activeBeds,
-      min_baths:    activeMinBaths,
-      min_rent:     activeMinRent,
-      max_rent:     activeMaxRent,
-      laundry_type: activeLaundry,
-      heating_type: activeHeating,
-      pet_type:     activePetType,
-      sort:         sortBy,
-      page:      currentPage,
-      per_page:  PER_PAGE,
-    });
+    const fetchTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
+    );
+    const result = await Promise.race([
+      CP.Properties.getListings({
+        q:            activeSearch,
+        type:         activeType,
+        beds:         activeBeds,
+        min_baths:    activeMinBaths,
+        min_rent:     activeMinRent,
+        max_rent:     activeMaxRent,
+        laundry_type: activeLaundry,
+        heating_type: activeHeating,
+        pet_type:     activePetType,
+        sort:         sortBy,
+        page:      currentPage,
+        per_page:  PER_PAGE,
+      }),
+      fetchTimeout,
+    ]);
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
@@ -769,7 +777,7 @@ async function fetchAndRender() {
     if (subheading) {
       subheading.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Something went wrong. Please try again.</span>';
     }
-    renderError();
+    renderError(err?.message);
   } finally {
     isLoading = false;
   }
@@ -1260,7 +1268,7 @@ function renderError(errorMsg = 'Failed to load listings') {
       <p style="color:var(--color-text-secondary);margin-bottom:24px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5">
         ${errorMsg || 'We couldn\'t load listings from the server. Please check your connection and try again.'}
       </p>
-      <button onclick="location.reload()" style="background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-size:0.9rem;font-weight:500;transition:background 160ms ease">
+      <button onclick="refreshResults()" style="background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-size:0.9rem;font-weight:500;transition:background 160ms ease">
         <i class="fas fa-redo" style="margin-right:6px"></i>Retry
       </button>
     </div>`;
@@ -1284,18 +1292,32 @@ function showToast(msg, type = 'info') {
   }, duration);
 }
 
-function toggleSave(id, btn) {
-  if (savedIds.has(id)) {
-    savedIds.delete(id);
-    btn.classList.remove('saved');
-    btn.innerHTML = '<i class="far fa-heart"></i>';
-  } else {
-    savedIds.add(id);
-    btn.classList.add('saved');
-    btn.innerHTML = '<i class="fas fa-heart"></i>';
-    showToast('Property saved!', 'success');
+async function toggleSave(id, btn) {
+  btn.disabled = true;
+  try {
+    const { saved } = await window.CP.SavedProperties.toggle(id);
+    if (saved) {
+      savedIds.add(id);
+      btn.classList.add('saved');
+      btn.innerHTML = '<i class="fas fa-heart"></i>';
+      showToast('Property saved!', 'success');
+    } else {
+      savedIds.delete(id);
+      btn.classList.remove('saved');
+      btn.innerHTML = '<i class="far fa-heart"></i>';
+    }
+  } catch(_) {
+    // Fallback: localStorage only
+    if (savedIds.has(id)) {
+      savedIds.delete(id); btn.classList.remove('saved'); btn.innerHTML = '<i class="far fa-heart"></i>';
+    } else {
+      savedIds.add(id); btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>';
+      showToast('Property saved!', 'success');
+    }
+    localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
+  } finally {
+    btn.disabled = false;
   }
-  localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
 }
 
 /* ─── Mobile Drawer ─── */

@@ -433,7 +433,7 @@
 <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
 
 <script type="module" nonce="VZEkWatH2Jtta2vFy8dRhA">
-import { supabase, buildApplyURL, incrementCounter, getSession } from './js/cp-api.js';
+import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from './js/cp-api.js';
 import { updateNav as _updateNav } from './js/cp-api.js';
 
 // Extended nav init — wires both navAuthLink and drawerAuthLink, populates contacts
@@ -474,7 +474,7 @@ if (!propertyId && !isPreview) {
 let currentProperty = null;
 let photoIndex      = 0;
 let allPhotos       = [];
-const savedIds = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+let savedIds = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
 
 if (isPreview) {
   // ── Preview mode — load from sessionStorage ──
@@ -534,6 +534,18 @@ async function loadProperty(id) {
     currentProperty = prop;
     await incrementCounter('properties', id, 'views_count');
     renderProperty(prop);
+    // Refresh save state from Supabase for authenticated users (non-blocking)
+    SavedProperties.getIds().then(ids => {
+      savedIds = ids;
+      const saveBtn = document.getElementById('savePropBtn');
+      if (saveBtn) {
+        if (savedIds.has(prop.id)) {
+          saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+        } else {
+          saveBtn.innerHTML = '<i class="far fa-heart"></i> Save';
+        }
+      }
+    }).catch(() => {});
   } catch(e) {
     showToast('Property not found.', 'error');
     setTimeout(() => window.location.href = '/index.html', 2000);
@@ -882,8 +894,8 @@ function renderProperty(p) {
       // Fix: wire "Track your application" link to the correct GAS dashboard URL
       const _trackLink = document.getElementById('trackAppLink');
       if (_trackLink) {
-        const _gasBase = (window.CP_CONFIG && window.CP_CONFIG.GAS_URL)
-          ? window.CP_CONFIG.GAS_URL
+        const _gasBase = (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL)
+          ? CONFIG.GAS_URL
           : 'https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec';
         _trackLink.href = _gasBase + '?path=dashboard';
       }
@@ -1005,6 +1017,7 @@ function renderGallery(photos) {
   mainImg.srcset = `${CONFIG.img(photos[0], 'card')} 600w, ${CONFIG.img(photos[0], 'gallery')} 1200w, ${CONFIG.img(photos[0], 'gallery_2x')} 2400w`;
   mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
   mainImg.alt    = 'Property photo 1';
+  mainImg.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
 
   // LQIP blur-up for hero image — tiny blurred placeholder fades out once full image loads
   const heroLqip = lqipUrl(photos[0]);
@@ -1037,7 +1050,8 @@ function renderGallery(photos) {
                alt="Property photo ${idx+1}"
                loading="${i === 0 ? 'eager' : 'lazy'}"
                ${i === 0 ? 'fetchpriority="high"' : ''}
-               decoding="async">
+               decoding="async"
+               onerror="this.onerror=null;this.srcset='';this.src='/assets/placeholder-property.jpg'">
           ${isLast ? `
             <div class="mosaic-cell-overlay">
               <span class="mosaic-overlay-icon"><i class="fas fa-images"></i></span>
@@ -1421,14 +1435,30 @@ window.shareProp = () => {
   else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!', 'success'); }
 };
 
-function toggleSave(id, btn) {
-  if (savedIds.has(id)) {
-    savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
-  } else {
-    savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
-    showToast('Property saved!', 'success');
+async function toggleSave(id, btn) {
+  btn.disabled = true;
+  try {
+    const { saved } = await SavedProperties.toggle(id);
+    if (saved) {
+      savedIds.add(id);
+      btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+      showToast('Property saved!', 'success');
+    } else {
+      savedIds.delete(id);
+      btn.innerHTML = '<i class="far fa-heart"></i> Save';
+    }
+  } catch(_) {
+    // Fallback: localStorage only
+    if (savedIds.has(id)) {
+      savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
+    } else {
+      savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+      showToast('Property saved!', 'success');
+    }
+    localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
+  } finally {
+    btn.disabled = false;
   }
-  localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
 }
 
 /* ── Mobile Drawer ── */

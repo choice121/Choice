@@ -779,4 +779,4 @@ window.CP = {
 // Each export delegates to the function defined above â no
 // duplicated logic, no separate window.* assignments needed.
 export const supabase = sb();
-export { buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
+export { SavedProperties, buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
