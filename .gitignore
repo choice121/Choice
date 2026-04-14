@@ -36,6 +36,9 @@ replit_zip_error_log.txt
 .config/
 .npm/
 .nvm/
+server.js
+_dev_preview.js
+.agents/
 
 # Database files (not applicable — DB is Supabase cloud-hosted)
 *.db
