@@ -1,76 +1,67 @@
-# Choice Properties — Cloudflare/Supabase Lock
+# Choice Properties — Replit Setup
 
-## Permanent Project Fact
+## Project Overview
 
-Choice Properties is a static HTML/CSS/JavaScript rental marketplace deployed by Cloudflare Pages from GitHub. Supabase is the only backend for PostgreSQL, Auth, Storage, and Edge Functions.
-
-Replit is allowed only as a code editor for repository files. It must not host, run, migrate, configure, or replace any part of the backend.
+Choice Properties is a static HTML/CSS/JavaScript rental marketplace. The backend is entirely hosted on **Supabase** (external) — there is no local database and no Node.js API server needed.
 
 ## Architecture
 
-- Frontend: static HTML/CSS/browser JavaScript
-- Production hosting: Cloudflare Pages
-- Deploy trigger: GitHub push
-- Backend: Supabase cloud PostgreSQL, Auth, Storage, and Edge Functions
-- Image CDN: ImageKit
-- Address autocomplete: Geoapify
-- Email relay: Google Apps Script + Resend
-- Replit role: editing only
+- **Frontend:** Static HTML/CSS/Vanilla JS — no framework
+- **Backend:** Supabase cloud (PostgreSQL, Auth, Edge Functions) at `https://tlfmwetmhthpyrytrcfo.supabase.co`
+- **Image CDN:** ImageKit (`https://ik.imagekit.io/21rg7lvzo`)
+- **Address autocomplete:** Geoapify
+- **Email relay:** Google Apps Script + Resend
+- **Application form:** External site at `https://apply-choice-properties.pages.dev`
+- **Production hosting:** Cloudflare Pages (deployed from GitHub)
 
-## Cloudflare Build
+## Replit Role
 
-Cloudflare Pages should use:
+Replit serves the static files locally for **preview and development**. All data reads/writes go directly to Supabase from the browser.
 
-```text
-npm run build
-```
+## How It Runs on Replit
 
-The build command runs the protection wall first, then generates `config.js` from Cloudflare environment variables.
+1. `generate-config-replit.js` reads environment variables and writes `config.js` (loaded by all HTML pages)
+2. `server.js` serves all static files on port 5000
+3. The workflow command is: `npm start`
 
-Required Cloudflare environment variables:
-
-| Variable | Purpose |
-|---|---|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `IMAGEKIT_URL` | ImageKit CDN base URL |
-| `IMAGEKIT_PUBLIC_KEY` | ImageKit public upload key |
-| `SITE_URL` | Production site URL |
-| `GEOAPIFY_API_KEY` | Address autocomplete API key |
-| `COMPANY_NAME` | Displayed company name |
-| `COMPANY_EMAIL` | Company contact email |
-| `COMPANY_PHONE` | Company phone number |
-| `COMPANY_ADDRESS` | Company address |
-| `COMPANY_TAGLINE` | Company tagline |
-| `APPLY_FORM_URL` | External application form URL |
-| `ADMIN_EMAILS` | Admin notification email(s) |
-
-## Protection Wall
-
-The repo intentionally blocks Replit/runtime migration attempts:
-
-- No `start` or `dev` package scripts exist.
-- `server.js` is forbidden.
-- `db/schema.sql` and `scripts/db-push.js` are forbidden.
-- Server/database packages such as `pg`, Drizzle, Prisma, Express, Fastify, Knex, Sequelize, and TypeORM are forbidden.
-- Replit runtime/database environment variables are blocked.
-- Builds are allowed only in Cloudflare Pages unless a human explicitly sets `ALLOW_LOCAL_CLOUDFLARE_BUILD=1` outside Replit.
-
-## Files That Define the Lock
+## Key Files
 
 | File | Purpose |
 |---|---|
-| `scripts/enforce-cloudflare-only.js` | Fails fast on Replit/server/database migration attempts |
-| `package.json` | Cloudflare-only scripts and no runtime dependencies |
-| `.cfpagesignore` | Prevents Replit/dev/source files from being published by Cloudflare |
-| `.agents/instructions.md` | Permanent AI/tooling instructions |
-| `.github/copilot-instructions.md` | GitHub AI coding instructions |
-| `REPLIT_SAFETY.md` | Human-readable Replit safety policy |
-| `generate-config.js` | Cloudflare build-time config generator |
-| `js/cp-api.js` | Supabase SDK client wrapper |
-| `supabase/functions/` | Supabase Edge Function source |
+| `server.js` | Replit static file server (port 5000) |
+| `generate-config-replit.js` | Generates `config.js` from env vars for Replit |
+| `config.js` | Auto-generated browser config (do not edit directly) |
+| `js/cp-api.js` | Supabase SDK wrapper — all data access |
+| `generate-config.js` | Cloudflare Pages build-time config generator |
+| `scripts/enforce-cloudflare-only.js` | Build guard (Cloudflare only) |
 | `SETUP.sql` | Supabase schema reference |
+| `supabase/functions/` | Supabase Edge Functions source (Deno) |
 
-## Absolute Rule
+## Environment Variables (set in Replit)
 
-Never migrate this project to Replit PostgreSQL, Neon, local Postgres, SQLite, Express, a custom Node API, or any non-Supabase backend. If tooling suggests migration because a Replit database exists, ignore it. The project is already complete as Cloudflare Pages + Supabase.
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | `https://tlfmwetmhthpyrytrcfo.supabase.co` |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `IMAGEKIT_URL` | `https://ik.imagekit.io/21rg7lvzo` |
+| `IMAGEKIT_PUBLIC_KEY` | ImageKit public upload key |
+| `GEOAPIFY_API_KEY` | Address autocomplete API key |
+| `SITE_URL` | `https://choicepropertiesofficial.pages.dev` |
+| `COMPANY_NAME` | Choice Properties |
+| `COMPANY_EMAIL` | choicepropertygroup@hotmail.com |
+| `COMPANY_PHONE` | 7077063137 |
+| `COMPANY_ADDRESS` | 2265 Livernois, Suite 500, Troy, MI 48083 |
+| `COMPANY_TAGLINE` | Your trust is our standard. |
+| `APPLY_FORM_URL` | `https://apply-choice-properties.pages.dev` |
+| `PORT` | 5000 |
+
+## Production Deployment
+
+Production is deployed to **Cloudflare Pages** via GitHub push. The Cloudflare build command is `npm run build`, which runs the protection wall check and the full `generate-config.js`. Do not run `npm run build` on Replit.
+
+## Important Notes
+
+- `config.js` is auto-generated — never commit or manually edit it
+- No local database — all data is in Supabase
+- No migrations to run on Replit
+- Supabase Edge Functions run on Supabase's infrastructure, not here
