@@ -18,11 +18,11 @@
   }
 
   // ── Rent formatter ──────────────────────────────────────────
-  // Mirrors fmtRent in listings.html: $0 / falsy → "Contact"
+  // P2-D: Wrap $ in branded span so it renders in brand blue.
   function fmtRent(v) {
     const n = Number(v);
     if (!n || n <= 0) return 'Contact';
-    return '$' + n.toLocaleString();
+    return '<span class="property-card-price-dollar">$</span>' + n.toLocaleString();
   }
 
   // ── Unified card builder ────────────────────────────────────
@@ -99,12 +99,28 @@
       badge = '<div class="property-card-badge badge-available"><i class="fas fa-calendar"></i> Avail. ' + availLabel + '</div>';
     }
 
-    var photoCountHtml = photos.length > 1
-      ? '<div class="property-card-photo-count"><i class="fas fa-camera"></i> ' + photos.length + '</div>'
-      : '';
+    // P2-B: Dots (≤6 photos) OR count pill (>6 photos) — never both
+    var dotsHtml = '';
+    var photoCountHtml = '';
+    if (photos.length > 1) {
+      if (photos.length <= 6) {
+        var dotItems = photos.map(function(_, i) {
+          return '<span class="property-card-dot' + (i === 0 ? ' active' : '') + '"></span>';
+        }).join('');
+        dotsHtml = '<div class="property-card-dots">' + dotItems + '</div>';
+      } else {
+        photoCountHtml = '<div class="property-card-photo-count"><i class="fas fa-camera"></i> ' + photos.length + '</div>';
+      }
+    }
 
     // ── Address ───────────────────────────────────────────────
     var addrLine = [p.address, p.city, p.state].filter(Boolean).join(', ');
+
+    // P2-C: Property type label ────────────────────────────────
+    var typeMap = { apartment: 'Apartment', house: 'House', condo: 'Condo', townhouse: 'Townhouse',
+                    townhome: 'Townhome', studio: 'Studio', loft: 'Loft', room: 'Room', duplex: 'Duplex' };
+    var typeLabel = p.property_type ? (typeMap[String(p.property_type).toLowerCase()] || esc(p.property_type)) : '';
+    var typeHtml  = typeLabel ? '<div class="property-card-type">' + typeLabel + '</div>' : '';
 
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
@@ -131,11 +147,13 @@
             '<div class="property-card-slides">' + slidesHtml + '</div>' +
             navHtml +
             badge +
+            dotsHtml +
             photoCountHtml +
           '</div>' +
         '</a>' +
         '<button class="property-card-save" data-id="' + id + '" aria-label="Save property"><i class="far fa-heart"></i></button>' +
         '<div class="property-card-body">' +
+          typeHtml +
           '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
           '<a href="/property.html?id=' + id + '" style="text-decoration:none">' +
@@ -161,10 +179,13 @@
 
     var idx   = 0;
     var total = card.querySelectorAll('.property-card-slide').length;
+    var dots  = card.querySelectorAll('.property-card-dot');
 
     function goTo(n) {
       idx = (n + total) % total;
       slides.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      // P2-B: Update active dot
+      dots.forEach(function(dot, i) { dot.classList.toggle('active', i === idx); });
     }
 
     navBtns.forEach(function (btn) {
