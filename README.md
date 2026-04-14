@@ -24,8 +24,48 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a full breakdown of every component
 - **Cloudflare Pages root directory:** `/` (repository root)
 - **Build command:** `node generate-config.js`
 - **Build output directory:** `.`
+- **Production URL:** `https://choice-properties-site.pages.dev`
 
 No npm packages are installed at runtime. The build step uses only Node.js built-in modules.
+
+---
+
+## Development Workflow
+
+**The editor is Replit. The deployment target is Cloudflare Pages.**
+
+```
+Edit code in Replit
+       ↓
+Preview locally via _dev_preview.js (port 5000, real Supabase data)
+       ↓
+git push origin main
+       ↓
+GitHub CI validates the push (blocks forbidden files)
+       ↓
+Cloudflare Pages auto-builds and deploys (~1–2 min)
+```
+
+### Gitignored files (Replit-local only — never pushed to GitHub)
+
+| File | Purpose |
+|------|---------|
+| `_dev_preview.js` | Static file server for Replit preview |
+| `config.js` | Generated from live Cloudflare values for local preview |
+| `replit.md` | Replit workspace notes |
+| `.replit` | Replit project config |
+| `.agents/` | AI agent instructions |
+
+These files support local development in Replit but must never appear in GitHub or Cloudflare.
+The `.gitignore` excludes them, and the GitHub CI workflow actively rejects any push that
+contains `server.js`, `replit.md`, or similar files.
+
+### What gets committed to GitHub
+
+Only the actual product files: HTML pages, CSS stylesheets, JavaScript, static assets,
+Edge Function source, build script (`generate-config.js`), and documentation.
+
+See [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) for the full step-by-step workflow.
 
 ---
 

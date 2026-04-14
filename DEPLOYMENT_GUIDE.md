@@ -16,9 +16,9 @@
 | Email relay | Google Apps Script | Google's GAS runtime |
 | Edge functions | Supabase Edge Functions | Supabase cloud |
 
-> **Replit is a code editor only.** `server.js` in the repo root is a local preview server for
-> the Replit environment — it is **not used in production**. Cloudflare Pages serves the static
-> files directly. Do not run `npm start` and expect to be running the production stack.
+> **Replit is the code editor and preview environment.** Changes are written in Replit,
+> previewed locally via `_dev_preview.js` (gitignored), then pushed to GitHub which
+> triggers an automatic Cloudflare Pages deploy. Replit-specific files never reach GitHub.
 
 > **`deploy.sh` and `push.sh` are stale and broken.** They reference a deleted Codespaces
 > workspace path (`/workspaces/choicepropertiesofficial`) and a deleted GitHub org
@@ -26,29 +26,49 @@
 
 ---
 
-## Day-to-Day Deployment
+## Day-to-Day Workflow
 
-All frontend changes deploy automatically on every push to `main`:
+### Step 1 — Edit in Replit
+
+Make code changes to HTML, CSS, or JS files. The local preview server (`_dev_preview.js`)
+serves the site at port 5000 with real Supabase data so you can verify changes immediately.
+
+`_dev_preview.js` and `config.js` are gitignored — they exist only in Replit and will never
+be pushed to GitHub.
+
+### Step 2 — Push to GitHub
+
+```bash
+git add .
+git commit -m "describe your change"
+git push origin main
+```
+
+### Step 3 — GitHub CI validates the push
+
+`.github/workflows/cloudflare-only.yml` runs automatically and will **block the push** if
+it detects any of the following:
+- Forbidden files: `server.js`, `replit.md`, `replit.nix`, `REPLIT_SAFETY.md`, `scripts/generate-config-replit.js`
+- Forbidden backend packages in `package.json`
+- A committed `config.js`
+
+If CI fails, fix the issue and push again.
+
+### Step 4 — Cloudflare auto-deploys
+
+Once CI passes, Cloudflare Pages picks up the push and runs:
 
 ```
-Edit files in your editor
-       ↓
-git add .
-git commit -m "your message"
-git push origin main
-       ↓
-Cloudflare Pages detects the push
-       ↓
-Build step runs: node generate-config.js
+node generate-config.js
   - Reads all env vars from Cloudflare Pages dashboard
   - Writes config.js (injecting all public API keys)
   - Rewrites sitemap.xml + robots.txt with SITE_URL
   - Replaces ?v=__BUILD_VERSION__ cache-bust tokens in all HTML files
-       ↓
-Site is live globally in ~1–2 minutes
 ```
 
-**config.js is gitignored.** It is generated fresh on every deploy and never committed.
+Site is live globally in ~1–2 minutes after the push.
+
+**`config.js` is gitignored.** It is generated fresh on every deploy and never committed.
 
 ---
 
@@ -67,6 +87,24 @@ Site is live globally in ~1–2 minutes
 > Nonce-based CSP was planned and then removed. The `_headers` file uses `'unsafe-inline'`
 > for `script-src` intentionally, because the CSS preload pattern requires it and nonces were
 > causing CSP mismatches on every Cloudflare deploy.
+
+---
+
+## Local Preview (Replit)
+
+The Replit environment runs `node _dev_preview.js` which serves all static files on port 5000.
+`config.js` is generated locally using the live Cloudflare environment variable values so that
+the local preview connects to the real Supabase instance with real data.
+
+**Files that are local-only (gitignored — never pushed to GitHub):**
+
+| File | Purpose |
+|------|---------|
+| `_dev_preview.js` | Static file server for Replit preview (port 5000) |
+| `config.js` | Generated from live Cloudflare values for real-data local preview |
+| `replit.md` | Replit workspace notes |
+| `.replit` | Replit project configuration |
+| `.agents/` | AI agent instructions (local only) |
 
 ---
 
@@ -104,7 +142,7 @@ Set these in **Cloudflare Pages → your project → Settings → Environment va
 | `FEATURE_MESSAGING` | `true` | Set to `false` to disable in-app messaging |
 | `FEATURE_REALTIME_UPDATES` | `true` | Set to `false` to disable realtime status updates |
 
-> **ADMIN_EMAILS is removed** — it no longer exists in `generate-config.js` or `server.js`.
+> **`ADMIN_EMAILS` is removed** — it no longer exists in `generate-config.js`.
 > For server-side admin notifications, use `ADMIN_EMAIL` (singular) in Supabase Edge Function secrets.
 
 After adding or changing any variable, trigger a redeploy:
@@ -199,14 +237,19 @@ Update **all** of these — missing even one breaks something:
 
 ## Security Notes
 
-  - `SUPABASE_SERVICE_ROLE_KEY`, `IMAGEKIT_PRIVATE_KEY`, `GAS_RELAY_SECRET` are stored in Cloudflare Pages env vars but are **not used** by the Cloudflare build process. They are only needed in Supabase Edge Function secrets and the Replit dev server (`server.js`). Consider keeping them in Supabase secrets only and removing them from Cloudflare to reduce secret sprawl.
-  - `config.js` is gitignored and contains only public-safe keys (Supabase anon key, ImageKit public key, Geoapify key). Never add private keys to `generate-config.js` output.
-  - The Supabase service role key must never reach the browser or be written to `config.js`.
-  - Geoapify API keys can be rotated at **app.geoapify.com → API Keys** without any code changes — just update the `GEOAPIFY_API_KEY` env var in Cloudflare and redeploy.
+- `SUPABASE_SERVICE_ROLE_KEY`, `IMAGEKIT_PRIVATE_KEY`, `GAS_RELAY_SECRET` are stored in
+  Cloudflare Pages env vars but are **not written to `config.js`** — they are not used by
+  the frontend. They are only needed in Supabase Edge Function secrets. Consider keeping them
+  in Supabase secrets only to reduce secret sprawl.
+- `config.js` is gitignored and contains only public-safe keys (Supabase anon key, ImageKit
+  public key, Geoapify key). Never add private keys to `generate-config.js` output.
+- The Supabase service role key must never reach the browser or be written to `config.js`.
+- Geoapify API keys can be rotated at **app.geoapify.com → API Keys** without any code
+  changes — just update the `GEOAPIFY_API_KEY` env var in Cloudflare and redeploy.
 
-  ---
+---
 
-  ## Verifying a Deployment
+## Verifying a Deployment
 
 After any deploy, verify with these:
 
@@ -247,6 +290,11 @@ After any deploy, verify with these:
 
 **Lease signing link broken after domain change**
 → Update `DASHBOARD_URL` in Supabase Edge Function secrets
+
+**GitHub CI rejects a push ("Replit artifacts detected")**
+→ A file that should be gitignored was accidentally committed
+→ Check `.gitignore` — `server.js`, `replit.md`, `_dev_preview.js`, `config.js` must never be committed
+→ Run `git rm --cached <filename>` to untrack it, then push again
 
 ---
 

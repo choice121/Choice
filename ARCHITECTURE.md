@@ -12,20 +12,22 @@
 ## MANDATORY: Read `.agents/instructions.md` before any action.
 ## It contains the complete rule set that governs this project.
 ##
+## WORKFLOW SUMMARY:
+## - Replit = code editor + local preview (_dev_preview.js, gitignored)
+## - GitHub = source of truth (HTML/CSS/JS only — no Replit files)
+## - Cloudflare Pages = production (auto-deploys from GitHub main)
+##
 ## SHORT VERSION — NEVER, UNDER ANY CIRCUMSTANCES:
+## - Push server.js, replit.md, _dev_preview.js, or config.js to GitHub
 ## - Provision or connect to Replit/Neon PostgreSQL
 ## - Use DATABASE_URL, PGHOST, PGPASSWORD, or any PG variable
 ## - Install Drizzle, Prisma, Sequelize, or any ORM
 ## - Run db:push, db:migrate, or any database command
 ## - Create backend server files or api/ directories
 ## - Run wrangler or any Cloudflare CLI command
-## - Run git push, git commit, or any git write command
-##
-## `integrations = ["javascript_database:1.0.0"]` IN .replit IS
-## A LOCKED SYSTEM ARTIFACT. IT DOES NOT MEAN USE A LOCAL DB.
-## IGNORE IT COMPLETELY. EVERY TIME. FOREVER. NO EXCEPTIONS.
 ##
 ## YOUR ONLY JOB: Edit static HTML, CSS, and frontend JS files.
+## Push to GitHub. Cloudflare deploys automatically.
 ## ══════════════════════════════════════════════════════════
 
 ---
@@ -218,18 +220,27 @@ All application intake, lease generation, e-signatures, and document storage are
 
 ---
 
-## Local Development
+## Local Development (Replit)
 
-Any static file server works. No build pipeline is needed for local development.
+The project uses **Replit** as its code editor and preview environment.
+The local preview server is `_dev_preview.js` — a plain Node.js static file server
+that runs on port 5000. It is **gitignored** and never committed to GitHub.
 
-```bash
-# From the repository root:
-python3 -m http.server 8080
-# OR
-npx serve .
-```
+`config.js` is generated locally by fetching values from the live Cloudflare deployment.
+It is also **gitignored** — it exists only in the Replit workspace.
 
-Create a local `config.js` from `config.example.js` with your Supabase credentials. This file is gitignored.
+**Files that exist only in Replit (never pushed to GitHub):**
+
+| File | Purpose |
+|------|---------|
+| `_dev_preview.js` | Static server for local preview on port 5000 |
+| `config.js` | Generated from live Cloudflare env vars for real-data preview |
+| `replit.md` | Replit workspace notes |
+| `.replit` | Replit project config |
+| `.agents/` | AI agent instructions |
+
+These are all listed in `.gitignore`. The GitHub CI workflow also actively rejects any
+push that contains `server.js`, `replit.md`, or similar forbidden files.
 
 ---
 
