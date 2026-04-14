@@ -202,6 +202,17 @@
       var diff = touchX - e.changedTouches[0].clientX;
       if (Math.abs(diff) > 40) goTo(idx + (diff > 0 ? 1 : -1));
     }, { passive: true });
+
+    // P3-B: Keyboard navigation — ArrowLeft/ArrowRight when card has focus
+    function onKeyDown(e) {
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goTo(idx - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goTo(idx + 1); }
+    }
+    card.setAttribute('tabindex', card.getAttribute('tabindex') || '0');
+    card.addEventListener('focus',  function () { document.addEventListener('keydown', onKeyDown); });
+    card.addEventListener('blur',   function (e) {
+      if (!card.contains(e.relatedTarget)) { document.removeEventListener('keydown', onKeyDown); }
+    });
   }
 
   // ── Expose globally ─────────────────────────────────────────
