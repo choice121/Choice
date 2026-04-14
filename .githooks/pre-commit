@@ -2,18 +2,17 @@
 # ============================================================
 # CHOICE PROPERTIES — GIT PRE-COMMIT HOOK
 # Prevents commits with:
+#   ❌ Replit config files (.replit, replit.nix, replit.md)
 #   ❌ node_modules/
 #   ❌ .env files
-#   ❌ config.js (auto-generated, never commit)
-#   ❌ .replit-cache
-#   ❌ Auto-generated files
+#   ❌ config.js (auto-generated, contains credentials)
+#   ❌ server.js or Replit-only scripts
+#   ❌ Forbidden backend packages
+#   ❌ Database migration files
 #
 # To install:
 #   chmod +x .githooks/pre-commit
 #   git config core.hooksPath .githooks
-#
-# To test:
-#   git commit (will run this script)
 #
 # To bypass (NOT recommended):
 #   git commit --no-verify
@@ -30,80 +29,78 @@ ERRORS=()
 
 echo -e "${GREEN}Running pre-commit checks...${NC}"
 
-# Check 1: Prevent node_modules/ from being committed
+# Check 1: Block Replit configuration files
+REPLIT_FILES=(".replit" "replit.nix" "replit.md" "REPLIT_SAFETY.md" "scripts/generate-config-replit.js")
+for f in "${REPLIT_FILES[@]}"; do
+  if git diff --cached --name-only | grep -qF "$f"; then
+    ERRORS+=("${RED}❌ ERROR: '$f' cannot be committed — this project runs on Cloudflare only${NC}")
+    ERRORS+=("   → Remove from staging: git reset $f")
+  fi
+done
+
+# Check 2: Block server.js (Replit-only static file server)
+if git diff --cached --name-only | grep -q '^server\.js$'; then
+  ERRORS+=("${RED}❌ ERROR: server.js cannot be committed — this is a static site, no local server${NC}")
+  ERRORS+=("   → Fix: git reset server.js")
+fi
+
+# Check 3: Prevent node_modules/ from being committed
 if git diff --cached --name-only | grep -q '^node_modules/'; then
   ERRORS+=("${RED}❌ ERROR: node_modules/ cannot be committed${NC}")
-  ERRORS+=("   → This is auto-generated and GITIGNORED")
   ERRORS+=("   → Fix: git reset node_modules/")
 fi
 
-# Check 2: Prevent .env files from being committed
-if git diff --cached --name-only | grep -qE '\.env(\.local)?'; then
-  ERRORS+=("${RED}❌ ERROR: .env files cannot be committed${NC}")
-  ERRORS+=("   → Secrets must never go to GitHub")
+# Check 4: Prevent .env files from being committed
+if git diff --cached --name-only | grep -qE '\.env(\.local)?$|^\.env$'; then
+  ERRORS+=("${RED}❌ ERROR: .env files cannot be committed — secrets live in Cloudflare & Supabase dashboards${NC}")
   ERRORS+=("   → Fix: git reset .env")
 fi
 
-# Check 3: Prevent config.js from being committed
+# Check 5: Prevent config.js from being committed (it contains credentials)
 if git diff --cached --name-only | grep -q '^config\.js$'; then
-  ERRORS+=("${RED}❌ ERROR: config.js cannot be committed${NC}")
-  ERRORS+=("   → This is generated at deploy time")
-  ERRORS+=("   → It contains secrets and is GITIGNORED")
+  ERRORS+=("${RED}❌ ERROR: config.js cannot be committed — it contains credentials and is generated at build time${NC}")
   ERRORS+=("   → Fix: git reset config.js")
 fi
 
-# Check 4: Prevent .replit-cache files
-if git diff --cached --name-only | grep -q '\.replit'; then
-  ERRORS+=("${RED}❌ ERROR: .replit-* files cannot be committed${NC}")
-  ERRORS+=("   → These are Replit auto-generated and GITIGNORED")
-  ERRORS+=("   → Fix: git reset .replit-*")
-fi
-
-# Check 5: Verify no package-lock.json changes (if only adding express)
-if git diff --cached package-lock.json 2>/dev/null | grep -q '^+'; then
-  ERRORS+=("${YELLOW}⚠️  WARNING: package-lock.json is being modified${NC}")
-  ERRORS+=("   → Make sure no new dependencies were added")
-  ERRORS+=("   → Only 'express' should be in package.json")
-fi
-
 # Check 6: Prevent accidental DB migration files
-if git diff --cached --name-only | grep -qE '(migration|migration_|\.sql\.bak)'; then
-  ERRORS+=("${RED}❌ ERROR: Database migrations cannot be committed here${NC}")
-  ERRORS+=("   → Migrations live in Supabase, not this repo")
+if git diff --cached --name-only | grep -qE '(^|/)migration[s]?/.*\.sql$|\.sql\.bak$'; then
+  ERRORS+=("${RED}❌ ERROR: Database migration files cannot be committed here${NC}")
+  ERRORS+=("   → Migrations belong in Supabase, not this repo")
   ERRORS+=("   → Fix: git reset <file>")
+fi
+
+# Check 7: Block forbidden backend packages in package.json
+if git diff --cached --name-only | grep -q '^package\.json$'; then
+  FORBIDDEN=("express" "fastify" "koa" "pg" "postgres" "mysql" "mysql2" "sqlite" "prisma" "drizzle-orm" "sequelize" "typeorm" "knex" "@neondatabase/serverless")
+  for pkg in "${FORBIDDEN[@]}"; do
+    if git diff --cached package.json | grep -q "\"$pkg\""; then
+      ERRORS+=("${RED}❌ ERROR: Forbidden package '$pkg' added to package.json${NC}")
+      ERRORS+=("   → This is a static site with no backend packages")
+    fi
+  done
 fi
 
 # If we found errors, display them and block commit
 if [ ${#ERRORS[@]} -gt 0 ]; then
   echo ""
   echo -e "${RED}═══════════════════════════════════════════════${NC}"
-  echo -e "${RED}COMMIT BLOCKED - SAFETY CHECK FAILED${NC}"
+  echo -e "${RED}COMMIT BLOCKED — CLOUDFLARE-ONLY POLICY VIOLATED${NC}"
   echo -e "${RED}═══════════════════════════════════════════════${NC}"
   echo ""
-  
   for error in "${ERRORS[@]}"; do
     echo -e "$error"
   done
-  
   echo ""
-  echo -e "${YELLOW}This project is a STATIC WEBSITE.${NC}"
-  echo -e "${YELLOW}It does not use:${NC}"
-  echo "   • npm packages (except express for testing)"
-  echo "   • .env files in repo"
-  echo "   • config.js file in repo"
-  echo "   • Database migrations in repo"
+  echo -e "${YELLOW}This project is a static site deployed exclusively on Cloudflare Pages.${NC}"
   echo ""
-  echo -e "${YELLOW}If you believe this is a mistake:${NC}"
-  echo "   1. Review your staged changes: git diff --cached"
-  echo "   2. Unstage bad files: git reset <file>"
-  echo "   3. Commit again"
+  echo "   Correct workflow:"
+  echo "     1. Edit HTML / CSS / JS files"
+  echo "     2. git push to GitHub"
+  echo "     3. Cloudflare Pages builds and deploys automatically"
+  echo "     4. Supabase remains the only backend"
   echo ""
-  echo -e "${YELLOW}To bypass (NOT recommended):${NC}"
-  echo "   git commit --no-verify"
-  echo ""
-  
   exit 1
 fi
 
-echo -e "${GREEN}✅ All checks passed!${NC}"
+echo -e "${GREEN}✅ All checks passed — Cloudflare-only policy satisfied.${NC}"
 exit 0
