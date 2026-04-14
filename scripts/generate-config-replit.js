@@ -105,5 +105,5 @@ Object.freeze(CONFIG);
 Object.freeze(CONFIG.FEATURES);
 `;
 
-fs.writeFileSync('js/config.js', output);
-console.log('✅ js/config.js generated successfully');
+fs.writeFileSync('config.js', output);
+console.log('✅ config.js generated successfully (at project root)');

@@ -680,7 +680,11 @@ async function fetchAndRender() {
     !activeBeds && !activeMinRent && !activeMaxRent && !activeMinBaths &&
     !activeLaundry && !activeHeating && !activePetType && currentPage === 1 &&
     sortBy === 'newest';
-  if (hasNoFilters && window.__INITIAL_LISTINGS__) {
+  // Only use the build-time snapshot when it has actual rows.
+  // If rows is empty (build happened before listings were active, or Supabase
+  // was slow during deploy), fall through to the live API call below so
+  // users always see the current state of the database.
+  if (hasNoFilters && window.__INITIAL_LISTINGS__ && window.__INITIAL_LISTINGS__.rows?.length > 0) {
     const cached = window.__INITIAL_LISTINGS__;
     window.__INITIAL_LISTINGS__ = null; // consume once; filter changes use live API
     isLoading = false;
@@ -698,6 +702,8 @@ async function fetchAndRender() {
     renderPagination();
     return;
   }
+  // Discard empty snapshot so live API takes over
+  if (window.__INITIAL_LISTINGS__) window.__INITIAL_LISTINGS__ = null;
 
   showSkeletons();
 
