@@ -29,6 +29,13 @@ function sb() {
     _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
+    // I-406: autoRefreshToken fires on every page load. When a stored refresh token
+    // has expired or is invalid (e.g. after a long absence), the Supabase client
+    // makes a background POST to /auth/v1/token that can return 406, which the
+    // browser logs as an uncaught network error even though auth recovers gracefully.
+    // Subscribing here means the SDK knows something is listening and handles the
+    // failure path cleanly; the subscription itself is a no-op.
+    _sb.auth.onAuthStateChange(() => {});
   }
   return _sb;
 }
@@ -47,7 +54,16 @@ function _ok(data, error) {
 
 // ââ Auth helpers ââââââââââââââââââââââââââââââââââââââââââ
 const Auth = {
-  async getUser()       { const { data } = await sb().auth.getUser(); return data?.user || null; },
+  async getUser() {
+    // I-406: auth.getUser() always makes a server round-trip to validate the JWT.
+    // For anonymous visitors (nothing in localStorage) this triggers an unnecessary
+    // network request that can surface as a 406/401 console error when a stale token
+    // exists. Check the local session first; only hit the server if we have a token.
+    const { data: sd } = await sb().auth.getSession();
+    if (!sd?.session) return null;
+    const { data } = await sb().auth.getUser();
+    return data?.user || null;
+  },
   async getSession()    { const { data } = await sb().auth.getSession(); return data?.session || null; },
   // Returns a server-verified access token, or null if the session is invalid.
   // Strategy:
