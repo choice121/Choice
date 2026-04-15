@@ -78,24 +78,25 @@
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
 
-    // ── Badge — priority: featured > hot(≤3d) > new(≤7d) > verified > available ─
-    var ageDays  = p.created_at ? Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000) : 999;
+    // ── Badge — priority: featured > verified > availability ────
+    // Shows useful, data-driven info — no marketing-only labels.
     var availNow = !p.available_date || new Date(p.available_date) <= new Date();
     var badge = '';
     if (p.featured) {
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
-    } else if (ageDays <= 3) {
-      badge = '<div class="property-card-badge badge-hot"><i class="fas fa-fire"></i> Hot Deal</div>';
-    } else if (ageDays <= 7) {
-      badge = '<div class="property-card-badge badge-new"><i class="fas fa-tag"></i> New Listing</div>';
     } else if (p.landlords && p.landlords.verified) {
       badge = '<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>';
     } else if (availNow || !p.available_date) {
       badge = '<div class="property-card-badge badge-available"><i class="fas fa-circle-check"></i> Available Now</div>';
     } else {
       var availLabel = new Date(p.available_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      badge = '<div class="property-card-badge badge-available"><i class="fas fa-calendar"></i> Avail. ' + availLabel + '</div>';
+      badge = '<div class="property-card-badge badge-avail-date"><i class="fas fa-calendar-days"></i> Avail. ' + availLabel + '</div>';
     }
+
+    // ── Property type chip (bottom-left of image) ─────────────
+    var typeChipHtml = typeLabel
+      ? '<div class="property-card-type-chip">' + typeLabel + '</div>'
+      : '';
 
     // P2-B: Dots (≤6 photos) OR count pill (>6 photos) — never both
     var dotsHtml = '';
@@ -131,12 +132,16 @@
         // Not wrapped in <a>; card click-through is handled by event delegation.
         '<div class="property-card-img">' +
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
+          // Availability / status badge — top-left
           badge +
+          // Carousel position indicators — bottom-center
           dotsHtml +
           photoCountHtml +
-          // Save button — always visible, top-right
+          // Property type chip — bottom-left
+          typeChipHtml +
+          // Save heart — top-right, always visible
           '<button class="property-card-save" data-id="' + id + '" aria-label="Save property"><i class="far fa-heart"></i></button>' +
-          // Share icon — hover-reveal, bottom-left
+          // Share icon — bottom-right, always visible
           '<button class="property-card-share" data-id="' + id + '" data-title="' + title + '" data-url="/property.html?id=' + id + '" aria-label="Share property"><i class="fas fa-share-nodes"></i></button>' +
         '</div>' +
 
