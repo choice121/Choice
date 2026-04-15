@@ -253,11 +253,6 @@
         <!-- Stats -->
         <div class="hero-stats">
           <div class="hero-stat">
-            <div class="hero-stat-num" id="statListings">—</div>
-            <div class="hero-stat-label">Active Listings</div>
-          </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
             <div class="hero-stat-num">15 min</div>
             <div class="hero-stat-label">Avg. Apply Time</div>
           </div>
@@ -491,29 +486,7 @@ document.addEventListener('error', function(e) {
 (async () => {
   setupScrollTop();
   setupSmoothScrollSections();
-
-  // Load featured listings + hero stat count in parallel
-  const statEl = document.getElementById('statListings');
-  if (statEl) {
-    // Show loading feedback while fetching stats
-    statEl.style.opacity = '0.6';
-    statEl.style.transition = 'opacity 0.3s ease';
-  }
-
-  const [, countResult] = await Promise.allSettled([
-    loadFeaturedListings(),
-    supabase.from('properties').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-  ]);
-  
-  if (statEl) {
-    const count = countResult.status === 'fulfilled' ? countResult.value?.data?.length ?? countResult.value?.count : null;
-    if (count != null) {
-      statEl.textContent = count;
-      statEl.style.opacity = '1'; // Fade in the actual count
-    } else {
-      statEl.closest('.hero-stat').style.display = 'none';
-    }
-  }
+  await loadFeaturedListings();
 })();
 
 // ── Featured listings loader ───────────────────────────────

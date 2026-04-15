@@ -226,9 +226,6 @@
 <div class="listings-page-header">
   <div class="container">
     <h1 class="listings-page-title">Available Rentals</h1>
-    <p class="listings-page-subtitle">
-      <strong id="statListings">—</strong> verified properties nationwide
-    </p>
     <div class="listings-search-row">
       <div class="search-field sf-text">
         <i class="fas fa-search"></i>
@@ -367,7 +364,6 @@
     <div class="listings-header">
       <div class="listings-header-left">
         <h2 class="listings-heading" id="listingsHeading">Results</h2>
-        <div class="listings-subheading" id="listingsSubheading"></div>
       </div>
       <div class="listings-controls">
         <div class="view-toggle">
@@ -693,13 +689,6 @@ async function fetchAndRender() {
     const { rows, total, total_pages } = cached;
     totalCount = total;
     totalPages = total_pages;
-    const counter = document.getElementById('statListings');
-    if (counter) counter.textContent = total.toLocaleString();
-    const subheading = document.getElementById('listingsSubheading');
-    if (subheading) {
-      const plural = total === 1 ? 'listing' : 'listings';
-      subheading.textContent = `Showing ${rows.length} of ${total} ${plural}`;
-    }
     renderProperties(rows);
     renderPagination();
     return;
@@ -708,12 +697,6 @@ async function fetchAndRender() {
   if (window.__INITIAL_LISTINGS__) window.__INITIAL_LISTINGS__ = null;
 
   showSkeletons();
-
-  // Update subheading with loading indicator
-  const subheading = document.getElementById('listingsSubheading');
-  if (subheading) {
-    subheading.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:6px;"></i><span style="font-size:0.9rem;">Searching...</span>';
-  }
 
   // Swap min/max rent if user entered them backwards — prevents silent empty results
     if (activeMinRent && activeMaxRent) {
@@ -764,27 +747,11 @@ async function fetchAndRender() {
     totalCount = total;
     totalPages = total_pages;
 
-    const counter = document.getElementById('statListings');
-    if (counter) counter.textContent = total.toLocaleString();
-
-    // Update subheading with result count or no-results message
-    if (subheading) {
-      if (total === 0) {
-        subheading.innerHTML = '<span style="color:var(--color-text-secondary);font-size:0.9rem;">No listings match your filters. <a href="?">Clear filters</a></span>';
-      } else {
-        const plural = total === 1 ? 'listing' : 'listings';
-        subheading.textContent = `Showing ${rows.length} of ${total} ${plural}`;
-      }
-    }
-
     renderProperties(rows);
     renderPagination();
     if (currentView === 'map') initMap(rows);
   } catch (err) {
     console.error('fetchAndRender error:', err);
-    if (subheading) {
-      subheading.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Something went wrong. Please try again.</span>';
-    }
     renderError(err?.message);
   } finally {
     isLoading = false;
@@ -840,19 +807,11 @@ function renderProperties(props) {
   const grid      = document.getElementById('propertyGrid');
   if (!grid) return;
   const heading   = document.getElementById('listingsHeading');
-  const subheading = document.getElementById('listingsSubheading');
   const hasFilters = activeType !== 'all' || activeSearch || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
-  const start = (currentPage - 1) * PER_PAGE + 1;
-  const end   = Math.min(currentPage * PER_PAGE, totalCount);
 
   if (heading) heading.textContent = hasFilters
-    ? `${totalCount.toLocaleString()} Result${totalCount !== 1 ? 's' : ''}`
+    ? 'Results'
     : 'All Listings';
-  if (subheading) subheading.textContent = totalCount > 0
-    ? (totalPages > 1
-        ? `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${totalCount.toLocaleString()}`
-        : (hasFilters ? 'Matching your filters' : 'Sorted by newest first'))
-    : '';
 
   if (!props.length) {
     grid.innerHTML = `
