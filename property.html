@@ -225,6 +225,10 @@
       </div>
       <div class="detail-tab-panel active" id="panelAmenities" role="tabpanel" aria-labelledby="tabAmenities">
         <div class="amenities-grid" id="amenitiesGrid"></div>
+        <div id="appliancesSection" style="display:none;margin-top:20px">
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Appliances</div>
+          <div class="amenities-grid" id="appliancesGrid"></div>
+        </div>
       </div>
       <div class="detail-tab-panel" id="panelUtilities" role="tabpanel" aria-labelledby="tabUtilities">
         <div class="amenities-grid" id="utilitiesGrid"></div>
@@ -733,6 +737,9 @@ function renderProperty(p) {
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: capitalize(p.property_type), icon:'fa-home' });
   if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
+  if (p.year_built)     metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
+  if (p.floors > 1)    metas.push({ label:'Floors', value: p.floors, icon:'fa-layer-group' });
+  if (p.lot_size_sqft)  metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   document.getElementById('detailMeta').innerHTML = metas.map(m => `
     <div class="detail-meta-item">
       <div class="detail-meta-icon"><i class="fas ${m.icon}"></i></div>
@@ -757,6 +764,16 @@ function renderProperty(p) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
+  if (p.virtual_tour_url) {
+    const vtBtn = document.createElement('a');
+    vtBtn.href = p.virtual_tour_url;
+    vtBtn.target = '_blank';
+    vtBtn.rel = 'noopener noreferrer';
+    vtBtn.className = 'btn btn-outline';
+    vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem';
+    vtBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> Virtual Tour';
+    descEl.closest('.detail-section').appendChild(vtBtn);
+  }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
@@ -764,6 +781,12 @@ function renderProperty(p) {
     hasAmenities = true;
     document.getElementById('amenitiesGrid').innerHTML = p.amenities.map(a =>
       `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${a}</div>`).join('');
+  }
+  if (p.appliances?.length) {
+    hasAmenities = true;
+    document.getElementById('appliancesSection').style.display = '';
+    document.getElementById('appliancesGrid').innerHTML = p.appliances.map(a =>
+      `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${a}</div>`).join('');
   }
 
   const utilRows = [];
