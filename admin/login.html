@@ -2,88 +2,444 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#006aff">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Admin Login — Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-<link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
+<title>Admin Login — Choice Properties</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Georgia',serif;background:#060d1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:#0d1b2e;border:1px solid #1e3a5f;border-radius:12px;padding:48px 40px;width:100%;max-width:420px}
-.logo{text-align:center;margin-bottom:36px}
-.logo-name{font-size:1.5rem;color:#c9a84c;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
-.logo-sub{font-size:.72rem;color:#4a6a8a;letter-spacing:.2em;text-transform:uppercase;margin-top:4px}
-.divider{width:40px;height:2px;background:linear-gradient(90deg,#c9a84c,#a8863c);margin:16px auto}
-h2{font-size:1rem;color:#7a9ab5;text-align:center;margin-bottom:32px;font-weight:400;letter-spacing:.05em}
-label{display:block;font-size:.72rem;color:#4a6a8a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-input{width:100%;background:#060d1a;border:1px solid #1e3a5f;border-radius:6px;color:#e8e0d0;padding:12px 16px;font-size:.9rem;outline:none;transition:border-color .2s;margin-bottom:20px}
-input:focus{border-color:#c9a84c}
-.btn{width:100%;background:linear-gradient(135deg,#c9a84c,#a8863c);color:#060d1a;border:none;border-radius:6px;padding:14px;font-weight:700;font-size:.9rem;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:opacity .2s;margin-top:4px}
-.btn:hover{opacity:.88}.btn:disabled{opacity:.4;cursor:not-allowed}
-.err{background:#1a0808;border:1px solid #5c1a1a;border-radius:6px;padding:12px 16px;color:#f87171;font-size:.82rem;margin-bottom:20px;display:none}
-.footer-note{text-align:center;font-size:.72rem;color:#2a4a6a;margin-top:24px}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  font-family: 'Inter', 'Georgia', serif;
+  background: #060d1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.card {
+  background: #0d1b2e;
+  border: 1px solid #1e3a5f;
+  border-radius: 16px;
+  padding: 44px 36px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+@media (max-width: 480px) {
+  .card { padding: 36px 24px 28px; border-radius: 14px; }
+}
+
+.logo { text-align: center; margin-bottom: 32px; }
+.logo-name {
+  font-size: 1.4rem; color: #c9a84c;
+  letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+}
+.logo-sub {
+  font-size: .68rem; color: #4a6a8a;
+  letter-spacing: .2em; text-transform: uppercase; margin-top: 4px;
+}
+.divider { width: 40px; height: 2px; background: linear-gradient(90deg,#c9a84c,#a8863c); margin: 14px auto 0; }
+
+.subtitle {
+  font-size: .9rem; color: #7a9ab5; text-align: center;
+  margin-bottom: 28px; font-weight: 400; letter-spacing: .02em;
+}
+
+/* Loading overlay while scripts initialise */
+.init-overlay {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 20px 0; color: #4a6a8a; font-size: .8rem;
+}
+.spinner {
+  width: 28px; height: 28px; border: 3px solid #1e3a5f;
+  border-top-color: #c9a84c; border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Alert boxes */
+.alert {
+  border-radius: 8px; padding: 13px 16px;
+  font-size: .82rem; line-height: 1.5; margin-bottom: 20px; display: none;
+}
+.alert-error   { background: #1a0808; border: 1px solid #5c1a1a; color: #f87171; }
+.alert-success { background: #0a1f0a; border: 1px solid #14532d; color: #86efac; }
+.alert.visible { display: block; }
+
+/* Fields */
+.field { margin-bottom: 20px; }
+.field label {
+  display: block; font-size: .68rem; color: #4a6a8a;
+  text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px;
+  font-weight: 600;
+}
+.input-wrap { position: relative; }
+.field input {
+  width: 100%; background: #060d1a; border: 1px solid #1e3a5f;
+  border-radius: 8px; color: #e8e0d0; padding: 13px 16px;
+  font-size: 1rem; /* ≥16px prevents iOS zoom */
+  outline: none; transition: border-color .2s; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.field input:focus { border-color: #c9a84c; }
+.field input.has-toggle { padding-right: 48px; }
+
+/* Password toggle button */
+.pw-toggle {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 48px; background: none; border: none; cursor: pointer;
+  color: #4a6a8a; display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-toggle:hover { color: #c9a84c; }
+
+/* Submit button */
+.btn-submit {
+  width: 100%; background: linear-gradient(135deg, #c9a84c, #a8863c);
+  color: #060d1a; border: none; border-radius: 8px;
+  padding: 15px; font-weight: 700; font-size: .9rem;
+  cursor: pointer; letter-spacing: .06em; text-transform: uppercase;
+  transition: opacity .2s, transform .1s; margin-top: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-submit:hover:not(:disabled) { opacity: .88; }
+.btn-submit:active:not(:disabled) { transform: scale(.98); }
+.btn-submit:disabled { opacity: .45; cursor: not-allowed; }
+.btn-submit .btn-spinner {
+  width: 18px; height: 18px; border: 2px solid rgba(6,13,26,.3);
+  border-top-color: #060d1a; border-radius: 50%;
+  animation: spin .7s linear infinite; display: none;
+}
+.btn-submit.loading .btn-text { display: none; }
+.btn-submit.loading .btn-spinner { display: block; }
+
+/* Links row */
+.links-row {
+  display: flex; justify-content: center; margin-top: 18px;
+}
+.link-btn {
+  background: none; border: none; color: #4a6a8a; font-size: .78rem;
+  cursor: pointer; text-decoration: underline; padding: 4px;
+  font-family: inherit; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.link-btn:hover { color: #7a9ab5; }
+
+.footer-note {
+  text-align: center; font-size: .68rem; color: #1e3a5f; margin-top: 24px;
+}
+
+/* Session notice */
+.session-notice {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(201,168,76,.06); border: 1px solid rgba(201,168,76,.18);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: .74rem; color: #8a9ab0; margin-bottom: 20px; display: none;
+}
+.session-notice.visible { display: flex; }
+.session-notice .dot { width: 7px; height: 7px; border-radius: 50%; background: #c9a84c; flex-shrink: 0; }
 </style>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 </head>
 <body>
+
 <div class="card">
   <div class="logo">
     <div class="logo-name">Choice Properties</div>
     <div class="logo-sub">Administration Portal</div>
     <div class="divider"></div>
   </div>
-  <h2>Sign in to continue</h2>
-  <div class="err" id="err"></div>
-  <form onsubmit="event.preventDefault();login()">
-  <label>Email Address</label>
-  <input type="email" id="email" placeholder="admin@example.com" autocomplete="email">
-  <label>Password</label>
-  <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
-  <button class="btn" id="btn" type="submit">Sign In</button>
-  </form>
-  <div style="text-align:center;margin-top:16px"><a href="#" id="forgotLink" style="font-size:.75rem;color:#4a6a8a;text-decoration:none">Forgot password?</a></div>
-  <div class="footer-note">Admin access only. Unauthorized access is prohibited.</div>
+
+  <!-- Shown while scripts load -->
+  <div class="init-overlay" id="initOverlay">
+    <div class="spinner"></div>
+    <span>Initialising…</span>
+  </div>
+
+  <!-- Main form (hidden until scripts ready) -->
+  <div id="formWrap" style="display:none">
+    <p class="subtitle">Sign in to continue</p>
+
+    <!-- Session restore notice -->
+    <div class="session-notice" id="sessionNotice">
+      <div class="dot"></div>
+      <span>Checking existing session…</span>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alert alert-error"   id="alertError"></div>
+    <div class="alert alert-success" id="alertSuccess"></div>
+
+    <form id="loginForm" autocomplete="on" novalidate>
+      <div class="field">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email"
+               placeholder="admin@example.com"
+               autocomplete="username email"
+               inputmode="email" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password"
+                 placeholder="••••••••"
+                 autocomplete="current-password"
+                 class="has-toggle" required>
+          <button type="button" class="pw-toggle" id="pwToggle"
+                  aria-label="Show password" title="Show/hide password">
+            <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="btnSubmit">
+        <span class="btn-text">Sign In</span>
+        <div class="btn-spinner"></div>
+      </button>
+    </form>
+
+    <div class="links-row">
+      <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+    </div>
+
+    <div class="footer-note">Admin access only. Unauthorised access is prohibited.</div>
+  </div>
 </div>
-<script type="module" src="/js/cp-api.js"></script>
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
-document.addEventListener('DOMContentLoaded', () => {
-  CP.Auth.isAdmin().then(is => { if (is) location.href = 'dashboard.html'; });
-  document.getElementById('forgotLink').addEventListener('click', async e => {
-    e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    if (!email) { showErr('Enter your email address above, then click "Forgot password?".'); return; }
-    const { error } = await CP.sb().auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/admin/login.html' });
-    if (error) { showErr(error.message); }
-    else { document.getElementById('err').style.display='block'; document.getElementById('err').style.background='#0a1f0a'; document.getElementById('err').style.borderColor='#14532d'; document.getElementById('err').style.color='#86efac'; document.getElementById('err').textContent='Password reset email sent! Check your inbox.'; }
+
+<script>
+// ─── Wait for Supabase SDK + CONFIG to be available ───────────────────────
+// Both are loaded via `defer` so they run before DOMContentLoaded,
+// but we poll to be safe across all browsers and network speeds.
+function waitForDeps() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const max    = 100; // 5 seconds max
+    const id = setInterval(() => {
+      attempts++;
+      const ready =
+        typeof window.supabase !== 'undefined' &&
+        typeof window.CONFIG    !== 'undefined' &&
+        window.CONFIG.SUPABASE_URL;
+      if (ready) { clearInterval(id); resolve(); return; }
+      if (attempts >= max) {
+        clearInterval(id);
+        reject(new Error('Supabase or config failed to load. Please refresh the page.'));
+      }
+    }, 50);
   });
+}
+
+// ─── Supabase client (created once deps are ready) ────────────────────────
+let _sb = null;
+function sb() { return _sb; }
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const initOverlay  = $('initOverlay');
+const formWrap     = $('formWrap');
+const loginForm    = $('loginForm');
+const emailInput   = $('email');
+const passInput    = $('password');
+const btnSubmit    = $('btnSubmit');
+const alertError   = $('alertError');
+const alertSuccess = $('alertSuccess');
+const sessionNotice= $('sessionNotice');
+const pwToggle     = $('pwToggle');
+const eyeOpen      = $('eyeOpen');
+const eyeClosed    = $('eyeClosed');
+const forgotBtn    = $('forgotBtn');
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function showError(msg) {
+  alertError.textContent = msg;
+  alertError.classList.add('visible');
+  alertSuccess.classList.remove('visible');
+}
+function showSuccess(msg) {
+  alertSuccess.textContent = msg;
+  alertSuccess.classList.add('visible');
+  alertError.classList.remove('visible');
+}
+function clearAlerts() {
+  alertError.classList.remove('visible');
+  alertSuccess.classList.remove('visible');
+}
+function setLoading(on) {
+  btnSubmit.disabled = on;
+  btnSubmit.classList.toggle('loading', on);
+}
+
+// ─── Password toggle ──────────────────────────────────────────────────────
+pwToggle.addEventListener('click', () => {
+  const show = passInput.type === 'password';
+  passInput.type = show ? 'text' : 'password';
+  eyeOpen  .style.display = show ? 'none'  : '';
+  eyeClosed.style.display = show ? ''      : 'none';
+  pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  passInput.focus();
 });
 
-async function login() {
-  const email = document.getElementById('email').value.trim();
-  const pass  = document.getElementById('password').value;
-  const btn   = document.getElementById('btn');
-  const err   = document.getElementById('err');
-  err.style.display = 'none';
-  if (!email || !pass) { showErr('Please enter email and password.'); return; }
-  CP.UI.loading(btn, true);
-  const { error } = await CP.sb().auth.signInWithPassword({ email, password: pass });
-  if (error) { CP.UI.loading(btn, false); showErr(error.message); return; }
-  const isAdmin = await CP.Auth.isAdmin();
-  if (!isAdmin) { await CP.sb().auth.signOut(); CP.UI.loading(btn, false); showErr('Access denied. This account does not have admin privileges.'); return; }
-  location.href = 'dashboard.html';
-}
-function showErr(msg) { const e = document.getElementById('err'); e.textContent = msg; e.style.display = 'block'; }
+// ─── Forgot password ──────────────────────────────────────────────────────
+forgotBtn.addEventListener('click', async () => {
+  const email = emailInput.value.trim();
+  if (!email) {
+    showError('Enter your email address above first, then click "Forgot password?".');
+    emailInput.focus();
+    return;
+  }
+  clearAlerts();
+  forgotBtn.disabled = true;
+  forgotBtn.textContent = 'Sending…';
+  try {
+    const { error } = await sb().auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + '/admin/login.html'
+    });
+    if (error) { showError(error.message); }
+    else        { showSuccess('Password reset email sent! Check your inbox.'); }
+  } catch (e) {
+    showError('Could not send reset email. Please try again.');
+  } finally {
+    forgotBtn.disabled = false;
+    forgotBtn.textContent = 'Forgot password?';
+  }
+});
+
+// ─── Login ────────────────────────────────────────────────────────────────
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAlerts();
+
+  const email = emailInput.value.trim();
+  const pass  = passInput.value;
+
+  if (!email || !pass) {
+    showError('Please enter your email and password.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // Sign in — Supabase persists the session in localStorage automatically
+    const { error: signInErr } = await sb().auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (signInErr) {
+      let msg = signInErr.message;
+      // Make common Supabase error messages more human-readable
+      if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        msg = 'Incorrect email or password. Please check and try again.';
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        msg = 'Your email address has not been confirmed. Check your inbox.';
+      } else if (msg.toLowerCase().includes('too many requests')) {
+        msg = 'Too many login attempts. Please wait a moment and try again.';
+      }
+      showError(msg);
+      setLoading(false);
+      return;
+    }
+
+    // Check admin role
+    const { data: { user } } = await sb().auth.getUser();
+    if (!user) {
+      showError('Authentication error. Please refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
+    const { data: adminRow } = await sb()
+      .from('admin_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!adminRow) {
+      await sb().auth.signOut();
+      showError('Access denied — this account does not have admin privileges.');
+      setLoading(false);
+      return;
+    }
+
+    // Success — redirect to dashboard
+    location.href = 'dashboard.html';
+
+  } catch (err) {
+    console.error('[Login error]', err);
+    showError('An unexpected error occurred. Please refresh and try again.');
+    setLoading(false);
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+(async function init() {
+  try {
+    await waitForDeps();
+
+    // Create Supabase client with persistent session
+    _sb = window.supabase.createClient(
+      window.CONFIG.SUPABASE_URL,
+      window.CONFIG.SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession:   true,   // session survives page refreshes & stays logged in
+          autoRefreshToken: true,   // silently renews tokens in the background
+        }
+      }
+    );
+
+    // Check for existing session — if valid admin, skip login entirely
+    sessionNotice.classList.add('visible');
+    formWrap.style.display = 'block';
+    initOverlay.style.display = 'none';
+
+    const { data: { session } } = await sb().auth.getSession();
+    if (session?.user) {
+      const { data: adminRow } = await sb()
+        .from('admin_roles')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (adminRow) {
+        // Already logged in as admin — go straight to dashboard
+        sessionNotice.querySelector('span').textContent = 'Restoring session…';
+        location.href = 'dashboard.html';
+        return;
+      }
+    }
+
+    // No valid admin session — show the form
+    sessionNotice.classList.remove('visible');
+    emailInput.focus();
+
+  } catch (err) {
+    initOverlay.style.display = 'none';
+    formWrap.style.display = 'block';
+    sessionNotice.classList.remove('visible');
+    showError(err.message || 'Failed to initialise. Please refresh the page.');
+  }
+})();
 </script>
 </body>
 </html>
