@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#006aff">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Watermark Review — Choice Properties Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script defer src="/config.js"></script>
+<link rel="stylesheet" href="/css/main.css?v=1775137055043">
+<link rel="stylesheet" href="/assets/fontawesome.css">
+<link rel="stylesheet" href="/css/admin.css?v=1775137055043">
+<link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
+<script defer src="/js/supabase.min.js"></script>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<style>
+  :root {
+    --red-flag: #ef4444;
+    --yellow-flag: #f59e0b;
+    --green-ok: #22c55e;
+  }
+
+  .wm-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 14px 18px;
+    background: var(--surface, #1c2333);
+    border-radius: 10px;
+    border: 1px solid var(--border, #2a3347);
+  }
+  .wm-toolbar .spacer { flex: 1; }
+
+  .scan-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: .85rem;
+    cursor: pointer; border: none; transition: all .2s;
+  }
+  .scan-btn.primary { background: #006aff; color: #fff; }
+  .scan-btn.primary:hover { background: #0055d4; }
+  .scan-btn.danger  { background: var(--red-flag); color: #fff; }
+  .scan-btn.danger:hover  { background: #c53030; }
+  .scan-btn.danger:disabled { opacity: .4; cursor: not-allowed; }
+  .scan-btn.outline { background: transparent; color: var(--text-muted,#8892a2); border: 1px solid var(--border,#2a3347); }
+  .scan-btn.outline:hover { background: var(--border,#2a3347); color: #fff; }
+
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    padding: 5px 14px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+    cursor: pointer; border: 1.5px solid transparent; transition: all .15s;
+  }
+  .pill.all   { border-color: #4b5563; color: #9ca3af; }
+  .pill.red   { border-color: var(--red-flag); color: var(--red-flag); }
+  .pill.yellow{ border-color: var(--yellow-flag); color: var(--yellow-flag); }
+  .pill.clean { border-color: var(--green-ok); color: var(--green-ok); }
+  .pill.active { color: #fff !important; }
+  .pill.all.active    { background: #4b5563; border-color: #4b5563; }
+  .pill.red.active    { background: var(--red-flag); }
+  .pill.yellow.active { background: var(--yellow-flag); }
+  .pill.clean.active  { background: var(--green-ok); }
+
+  .progress-bar-wrap {
+    background: var(--border, #2a3347); border-radius: 6px; height: 6px;
+    margin: 10px 0; overflow: hidden; display: none;
+  }
+  .progress-bar { height: 100%; background: #006aff; transition: width .3s; border-radius: 6px; }
+
+  .properties-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .prop-card {
+    background: var(--surface, #1c2333);
+    border: 2px solid var(--border, #2a3347);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .prop-card.flag-all    { border-color: var(--red-flag); }
+  .prop-card.flag-some   { border-color: var(--yellow-flag); }
+  .prop-card.flag-clean  { border-color: var(--green-ok); }
+  .prop-card.selected    { box-shadow: 0 0 0 3px rgba(239,68,68,.4); }
+
+  .prop-card-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border, #2a3347);
+  }
+  .prop-card-header input[type=checkbox] {
+    width: 18px; height: 18px; accent-color: var(--red-flag); cursor: pointer; flex-shrink: 0;
+  }
+  .prop-card-title { flex: 1; min-width: 0; }
+  .prop-card-title h3 {
+    font-size: .9rem; font-weight: 700; margin: 0 0 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .prop-card-title p {
+    font-size: .75rem; color: var(--text-muted,#8892a2); margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .flag-badge {
+    font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .flag-badge.all    { background: rgba(239,68,68,.15); color: var(--red-flag); }
+  .flag-badge.some   { background: rgba(245,158,11,.15); color: var(--yellow-flag); }
+  .flag-badge.clean  { background: rgba(34,197,94,.12); color: var(--green-ok); }
+  .flag-badge.scanning{ background: rgba(99,102,241,.15); color: #818cf8; }
+
+  .prop-card-images {
+    display: flex;
+    gap: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .prop-card-images::-webkit-scrollbar { height: 4px; }
+  .prop-card-images::-webkit-scrollbar-thumb { background: #3a4558; border-radius: 4px; }
+
+  .img-wrapper {
+    position: relative; flex-shrink: 0; cursor: pointer;
+    border-radius: 8px; overflow: hidden;
+    border: 2px solid transparent;
+    transition: border-color .2s;
+    width: 200px; height: 140px;
+  }
+  .img-wrapper.flag-watermark { border-color: var(--red-flag); }
+  .img-wrapper.flag-branding  { border-color: var(--yellow-flag); }
+  .img-wrapper.flag-clean     { border-color: transparent; }
+
+  .img-wrapper img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: opacity .2s;
+  }
+  .img-wrapper img.loading { opacity: .3; }
+
+  .img-flag-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    font-size: .65rem; font-weight: 700; padding: 3px 6px;
+    text-align: center;
+  }
+  .img-flag-label.wm  { background: rgba(239,68,68,.85); color: #fff; }
+  .img-flag-label.br  { background: rgba(245,158,11,.85); color: #fff; }
+  .img-flag-label.ok  { background: rgba(34,197,94,.7); color: #fff; }
+  .img-flag-label.sc  { background: rgba(99,102,241,.7); color: #fff; }
+
+  .img-no-photo {
+    width: 160px; height: 120px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted,#8892a2); font-size: .75rem;
+    background: var(--border,#2a3347); border-radius: 8px; flex-shrink: 0;
+  }
+
+  .prop-card-footer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border, #2a3347);
+    font-size: .75rem; color: var(--text-muted,#8892a2);
+  }
+  .prop-card-footer .spacer { flex: 1; }
+  .delete-one-btn {
+    font-size: .75rem; font-weight: 600; padding: 5px 14px;
+    border-radius: 6px; border: 1px solid var(--red-flag); color: var(--red-flag);
+    background: transparent; cursor: pointer; transition: all .15s;
+  }
+  .delete-one-btn:hover { background: var(--red-flag); color: #fff; }
+
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.92); align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+  .lightbox-close {
+    position: absolute; top: 20px; right: 24px;
+    background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer;
+    line-height: 1;
+  }
+  .lightbox-caption {
+    position: absolute; bottom: 20px; left: 0; right: 0; text-align: center;
+    color: #cbd5e1; font-size: .8rem;
+  }
+
+  .summary-bar {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .summary-pill {
+    font-size: .78rem; font-weight: 600; padding: 4px 12px; border-radius: 6px;
+  }
+  .summary-pill.red    { background: rgba(239,68,68,.15); color: var(--red-flag); }
+  .summary-pill.yellow { background: rgba(245,158,11,.15); color: var(--yellow-flag); }
+  .summary-pill.green  { background: rgba(34,197,94,.12); color: var(--green-ok); }
+  .summary-pill.blue   { background: rgba(99,102,241,.15); color: #818cf8; }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-muted,#8892a2); font-size: .9rem;
+  }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+  .select-all-bar {
+    display: flex; align-items: center; gap: 10px;
+    font-size: .82rem; color: var(--text-muted,#8892a2);
+    margin-bottom: 12px;
+  }
+  .select-all-bar input { accent-color: var(--red-flag); width: 16px; height: 16px; cursor: pointer; }
+  .select-all-bar label { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="adminSidebar">
+  <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
+  <nav>
+    <div class="nav-section">Overview</div>
+    <a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
+    <div class="nav-section">Applications</div>
+    <a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
+    <a class="nav-item" href="leases.html"><span class="icon">📄</span> Leases</a>
+    <a class="nav-item" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
+    <a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
+    <div class="nav-section">Platform</div>
+    <a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
+    <a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
+    <a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
+    <a class="nav-item" href="audit-log.html"><span class="icon">🔍</span> Audit Log</a>
+    <div class="nav-section">Tools</div>
+    <a class="nav-item active" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:var(--muted,#8892a2);text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
+    <div class="admin-name" id="admin-name">Loading…</div>
+    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div>
+      <div class="page-title">Watermark Review</div>
+      <div class="page-sub" id="page-sub">Load all properties to begin scanning</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Toolbar -->
+    <div class="wm-toolbar">
+      <div class="filter-pills">
+        <span class="pill all active" onclick="setFilter('all', this)">All</span>
+        <span class="pill red"    onclick="setFilter('all-watermarked', this)">All Images Watermarked</span>
+        <span class="pill yellow" onclick="setFilter('some-watermarked', this)">Some Images Flagged</span>
+        <span class="pill clean"  onclick="setFilter('clean', this)">Clean</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="scan-btn outline" id="btn-load" onclick="loadProperties()">
+        <i class="fas fa-download"></i> Load Properties
+      </button>
+      <button class="scan-btn primary" id="btn-scan" onclick="startScan()" style="display:none">
+        <i class="fas fa-search"></i> Run Scan
+      </button>
+      <button class="scan-btn danger" id="btn-delete-sel" onclick="deleteSelected()" disabled>
+        <i class="fas fa-trash"></i> Delete Selected (<span id="sel-count">0</span>)
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar-wrap" id="progress-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div id="progress-label" style="font-size:.75rem;color:#8892a2;margin-bottom:12px;display:none"></div>
+
+    <!-- Summary -->
+    <div class="summary-bar" id="summary-bar" style="display:none">
+      <span class="summary-pill red"    id="sum-all">0 fully watermarked</span>
+      <span class="summary-pill yellow" id="sum-some">0 partially flagged</span>
+      <span class="summary-pill green"  id="sum-clean">0 clean</span>
+      <span class="summary-pill blue"   id="sum-total">0 total</span>
+    </div>
+
+    <!-- Select all bar -->
+    <div class="select-all-bar" id="select-all-bar" style="display:none">
+      <input type="checkbox" id="select-all-chk" onchange="toggleSelectAll(this.checked)">
+      <label for="select-all-chk">Select all visible</label>
+    </div>
+
+    <!-- Cards -->
+    <div class="properties-grid" id="cards-container">
+      <div class="empty-state">
+        <div class="icon">🔎</div>
+        <div>Click <strong>Load Properties</strong> to fetch all listings, then <strong>Run Scan</strong> to detect watermarks and branding in every image.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox(null)">&times;</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script type="module" src="/js/cp-api.js"></script>
+<script>
+let allProperties = [];
+let scanResults   = {};  // propertyId -> { images: [{ url, flag }], overallFlag }
+let currentFilter = 'all';
+let selectedIds   = new Set();
+
+// ─── Auth ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await CP.Auth.requireAdmin();
+  if (!ok) return;
+  const user = await CP.Auth.getUser();
+  document.getElementById('admin-name').textContent = user?.email || 'Admin';
+
+  // Mobile sidebar
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById('adminSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+  });
+  document.getElementById('sidebarOverlay').addEventListener('click', () => {
+    document.getElementById('adminSidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+  });
+});
+
+// ─── Load properties ──────────────────────────────────────────────────────
+async function loadProperties() {
+  const btn = document.getElementById('btn-load');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…';
+
+  const { data, error } = await CP.sb()
+    .from('properties')
+    .select('id, title, address, city, state, status, photo_urls, photo_file_ids')
+    .order('created_at', { ascending: false });
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-sync"></i> Reload';
+
+  if (error) {
+    CP.UI.toast('Failed to load: ' + error.message, 'error');
+    return;
+  }
+
+  allProperties = (data || []).filter(p => p.photo_urls && p.photo_urls.length > 0);
+  scanResults   = {};
+  selectedIds   = new Set();
+  updateSelCount();
+
+  document.getElementById('btn-scan').style.display = 'inline-flex';
+  document.getElementById('summary-bar').style.display = 'none';
+  document.getElementById('select-all-bar').style.display = 'none';
+
+  document.getElementById('page-sub').textContent =
+    `${allProperties.length} properties with photos — click Run Scan to analyze`;
+
+  // Render cards without scan results (show images, mark as unscanned)
+  renderCards();
+}
+
+// ─── Render cards ─────────────────────────────────────────────────────────
+function renderCards() {
+  const container = document.getElementById('cards-container');
+
+  let visible = allProperties;
+  if (currentFilter === 'all-watermarked') {
+    visible = allProperties.filter(p => scanResults[p.id]?.overallFlag === 'all');
+  } else if (currentFilter === 'some-watermarked') {
+    visible = allProperties.filter(p => {
+      const f = scanResults[p.id]?.overallFlag;
+      return f === 'all' || f === 'some';
+    });
+  } else if (currentFilter === 'clean') {
+    visible = allProperties.filter(p => scanResults[p.id]?.overallFlag === 'clean');
+  }
+
+  if (!visible.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">✅</div><div>No properties match this filter.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = visible.map(p => buildCard(p)).join('');
+}
+
+function buildCard(p) {
+  const res      = scanResults[p.id];
+  const photos   = p.photo_urls || [];
+  const overall  = res?.overallFlag || 'unscanned';
+
+  const flagClass = overall === 'all' ? 'flag-all'
+    : overall === 'some' ? 'flag-some'
+    : overall === 'clean' ? 'flag-clean'
+    : '';
+
+  const badgeClass = overall === 'all'    ? 'all'
+    : overall === 'some'   ? 'some'
+    : overall === 'clean'  ? 'clean'
+    : 'scanning';
+
+  const badgeText = overall === 'all'    ? '⛔ All images flagged'
+    : overall === 'some'   ? '⚠️ Some images flagged'
+    : overall === 'clean'  ? '✅ Clean'
+    : '— Not scanned';
+
+  const isSelected = selectedIds.has(p.id);
+
+  const imagesHtml = photos.length === 0
+    ? `<div class="img-no-photo">No photos</div>`
+    : photos.map((url, i) => {
+        const imgRes = res?.images?.[i];
+        const imgFlag = imgRes?.flag || 'unscanned';
+        let wrapperClass = '';
+        let labelHtml = '';
+
+        if (imgFlag === 'watermark') {
+          wrapperClass = 'flag-watermark';
+          labelHtml = `<div class="img-flag-label wm">WATERMARK</div>`;
+        } else if (imgFlag === 'branding') {
+          wrapperClass = 'flag-branding';
+          labelHtml = `<div class="img-flag-label br">BRANDING / TEXT</div>`;
+        } else if (imgFlag === 'clean') {
+          labelHtml = `<div class="img-flag-label ok">CLEAN</div>`;
+        } else {
+          labelHtml = `<div class="img-flag-label sc">NOT SCANNED</div>`;
+        }
+
+        return `<div class="img-wrapper ${wrapperClass}" onclick="openLightbox('${escHtml(url)}', '${escHtml(p.title)} — Image ${i+1}')">
+          <img src="${escHtml(url)}" alt="Photo ${i+1}" class="loading"
+               onload="this.classList.remove('loading')"
+               onerror="this.src='/assets/placeholder-property.jpg'; this.classList.remove('loading')">
+          ${labelHtml}
+        </div>`;
+      }).join('');
+
+  return `<div class="prop-card ${flagClass} ${isSelected ? 'selected' : ''}" id="card-${p.id}">
+    <div class="prop-card-header">
+      <input type="checkbox" ${isSelected ? 'checked' : ''}
+             onchange="toggleSelect('${p.id}', this.checked)">
+      <div class="prop-card-title">
+        <h3>${escHtml(p.title)}</h3>
+        <p>${escHtml(p.address)}, ${escHtml(p.city)}, ${escHtml(p.state)} &nbsp;·&nbsp;
+           <span class="badge badge-${p.status === 'active' ? 'success' : 'secondary'}">${p.status}</span>
+           &nbsp;·&nbsp; ${photos.length} photo${photos.length !== 1 ? 's' : ''}
+        </p>
+      </div>
+      <span class="flag-badge ${badgeClass}">${badgeText}</span>
+    </div>
+    <div class="prop-card-images">${imagesHtml}</div>
+    <div class="prop-card-footer">
+      <span>${p.id}</span>
+      <div class="spacer"></div>
+      <button class="delete-one-btn" onclick="deleteOne('${p.id}', ${JSON.stringify(escHtml(p.title))})">
+        <i class="fas fa-trash"></i> Delete Property
+      </button>
+    </div>
+  </div>`;
+}
+
+// ─── AI-Assisted Scan ─────────────────────────────────────────────────────
+// Uses canvas pixel analysis as a heuristic to detect watermarks/branding.
+// Checks: corner logo regions, uniform overlay strips (semi-transparent text bars),
+// and high-contrast blobs in corners typical of watermarks.
+async function startScan() {
+  if (!allProperties.length) {
+    CP.UI.toast('Load properties first.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-scan');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning…';
+
+  const progressWrap  = document.getElementById('progress-wrap');
+  const progressBar   = document.getElementById('progress-bar');
+  const progressLabel = document.getElementById('progress-label');
+  progressWrap.style.display  = 'block';
+  progressLabel.style.display = 'block';
+
+  // Count total images
+  let totalImages = 0;
+  allProperties.forEach(p => { totalImages += (p.photo_urls || []).length; });
+  let doneImages  = 0;
+
+  for (const p of allProperties) {
+    const photos = p.photo_urls || [];
+    if (!photos.length) {
+      scanResults[p.id] = { images: [], overallFlag: 'clean' };
+      continue;
+    }
+
+    const imageResults = await Promise.all(photos.map(async url => {
+      try {
+        const flag = await analyzeImage(url);
+        doneImages++;
+        const pct = Math.round((doneImages / totalImages) * 100);
+        progressBar.style.width = pct + '%';
+        progressLabel.textContent = `Scanning… ${doneImages} / ${totalImages} images (${pct}%)`;
+        return { url, flag };
+      } catch {
+        doneImages++;
+        return { url, flag: 'unscanned' };
+      }
+    }));
+
+    // Determine overall flag
+    const flags = imageResults.map(r => r.flag);
+    const hasBad   = flags.some(f => f === 'watermark' || f === 'branding');
+    const allBad   = flags.every(f => f === 'watermark' || f === 'branding');
+    const overallFlag = allBad && hasBad ? 'all' : hasBad ? 'some' : 'clean';
+
+    scanResults[p.id] = { images: imageResults, overallFlag };
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-redo"></i> Re-scan';
+  progressLabel.textContent = `Scan complete — ${totalImages} images analyzed`;
+
+  updateSummary();
+  renderCards();
+  document.getElementById('select-all-bar').style.display = 'flex';
+}
+
+// ─── Canvas-based image analysis ─────────────────────────────────────────
+// Loads image cross-origin, draws to canvas, samples pixels in:
+//   • four corners (20% each dimension) — where watermarks/logos typically live
+//   • top & bottom strips (5% height) — where text bars appear
+// Scores by: contrast ratio, non-neutral colour saturation, and brightness uniformity.
+// Returns 'watermark' | 'branding' | 'clean'
+function analyzeImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const W = img.naturalWidth  || img.width;
+        const H = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        const scale  = Math.min(1, 300 / Math.max(W, H));  // downsample for speed
+        canvas.width  = Math.round(W * scale);
+        canvas.height = Math.round(H * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const cW = canvas.width;
+        const cH = canvas.height;
+
+        // Region samplers: [x, y, w, h] as fractions
+        const regions = [
+          [0,    0,    0.25, 0.25],  // top-left corner
+          [0.75, 0,    0.25, 0.25],  // top-right corner
+          [0,    0.75, 0.25, 0.25],  // bottom-left corner
+          [0.75, 0.75, 0.25, 0.25],  // bottom-right corner
+          [0,    0,    1,    0.06],   // top strip
+          [0,    0.94, 1,    0.06],   // bottom strip
+          [0,    0.42, 0.1,  0.16],   // left-centre band
+          [0.9,  0.42, 0.1,  0.16],   // right-centre band
+        ];
+
+        let maxScore = 0;
+
+        for (const [fx, fy, fw, fh] of regions) {
+          const rx = Math.round(fx * cW);
+          const ry = Math.round(fy * cH);
+          const rw = Math.max(2, Math.round(fw * cW));
+          const rh = Math.max(2, Math.round(fh * cH));
+
+          let data;
+          try {
+            data = ctx.getImageData(rx, ry, rw, rh).data;
+          } catch { continue; }
+
+          const score = scoreRegion(data);
+          if (score > maxScore) maxScore = score;
+        }
+
+        // Thresholds tuned for typical real-estate watermarks
+        if (maxScore >= 72)  resolve('watermark');
+        else if (maxScore >= 42) resolve('branding');
+        else resolve('clean');
+
+      } catch { resolve('unscanned'); }
+    };
+
+    img.onerror = () => resolve('unscanned');
+
+    // Add cache-bust param stripped so CDN still caches, but crossOrigin works
+    const sep = url.includes('?') ? '&' : '?';
+    img.src = url + sep + '_wm=1';
+
+    // Timeout fallback
+    setTimeout(() => resolve('unscanned'), 8000);
+  });
+}
+
+// Compute a 0-100 watermark-likelihood score for raw RGBA pixel data.
+function scoreRegion(data) {
+  const len = data.length / 4;
+  if (!len) return 0;
+
+  let rSum=0, gSum=0, bSum=0, aSum=0;
+  let rMin=255, gMin=255, bMin=255;
+  let rMax=0, gMax=0, bMax=0;
+  let lowAlphaCount=0, highContrastCount=0;
+  let prevLum = -1, contrastPairs = 0;
+
+  for (let i=0; i<data.length; i+=4) {
+    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+    rSum += r; gSum += g; bSum += b; aSum += a;
+    rMin = Math.min(rMin, r); rMax = Math.max(rMax, r);
+    gMin = Math.min(gMin, g); gMax = Math.max(gMax, g);
+    bMin = Math.min(bMin, b); bMax = Math.max(bMax, b);
+
+    if (a < 200) lowAlphaCount++;
+
+    const lum = 0.299*r + 0.587*g + 0.114*b;
+    if (prevLum >= 0 && Math.abs(lum - prevLum) > 90) highContrastCount++;
+    prevLum = lum;
+
+    // Neutral = near-grey (low saturation)
+    const maxC = Math.max(r,g,b), minC = Math.min(r,g,b);
+    if (maxC > 20 && (maxC - minC) < 20 && Math.abs(r-g) < 15 && Math.abs(g-b) < 15) {
+      contrastPairs++;
+    }
+  }
+
+  const avgA = aSum / len;
+  const rRange = rMax - rMin;
+  const gRange = gMax - gMin;
+  const bRange = bMax - bMin;
+  const maxRange = Math.max(rRange, gRange, bRange);
+
+  let score = 0;
+
+  // Semi-transparent region (typical watermark overlay)
+  if (avgA < 200 && avgA > 20) score += 35;
+  else if (lowAlphaCount / len > 0.3) score += 25;
+
+  // Very high contrast within region → text / logo
+  if (maxRange > 180) score += 30;
+  else if (maxRange > 120) score += 15;
+
+  // Frequent local contrast transitions → text edges
+  const contrastRatio = highContrastCount / len;
+  if (contrastRatio > 0.25) score += 25;
+  else if (contrastRatio > 0.12) score += 12;
+
+  // Near-grey dominance in a corner → white/grey watermark text
+  const neutralRatio = contrastPairs / len;
+  if (neutralRatio > 0.6 && maxRange > 100) score += 18;
+
+  return Math.min(100, score);
+}
+
+// ─── Selection ────────────────────────────────────────────────────────────
+function toggleSelect(id, checked) {
+  if (checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  updateSelCount();
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.toggle('selected', checked);
+}
+
+function toggleSelectAll(checked) {
+  let visible = getVisibleProperties();
+  visible.forEach(p => {
+    if (checked) selectedIds.add(p.id);
+    else selectedIds.delete(p.id);
+    const card = document.getElementById('card-' + p.id);
+    if (card) {
+      card.classList.toggle('selected', checked);
+      const chk = card.querySelector('input[type=checkbox]');
+      if (chk) chk.checked = checked;
+    }
+  });
+  updateSelCount();
+}
+
+function getVisibleProperties() {
+  if (currentFilter === 'all') return allProperties;
+  if (currentFilter === 'all-watermarked')
+    return allProperties.filter(p => scanResults[p.id]?.overallFlag === 'all');
+  if (currentFilter === 'some-watermarked')
+    return allProperties.filter(p => ['all','some'].includes(scanResults[p.id]?.overallFlag));
+  if (currentFilter === 'clean')
+    return allProperties.filter(p => scanResults[p.id]?.overallFlag === 'clean');
+  return allProperties;
+}
+
+function updateSelCount() {
+  document.getElementById('sel-count').textContent = selectedIds.size;
+  document.getElementById('btn-delete-sel').disabled = selectedIds.size === 0;
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderCards();
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────
+async function deleteOne(id, title) {
+  if (!confirm(`Delete "${title}"?\n\nThis will permanently remove the property and all its data. This cannot be undone.`)) return;
+  await doDelete([id]);
+}
+
+async function deleteSelected() {
+  if (!selectedIds.size) return;
+  const ids = [...selectedIds];
+  if (!confirm(`Delete ${ids.length} selected propert${ids.length === 1 ? 'y' : 'ies'}?\n\nThis will permanently remove them and all related data. This cannot be undone.`)) return;
+  await doDelete(ids);
+}
+
+async function doDelete(ids) {
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const id of ids) {
+    const { error } = await CP.sb().from('properties').delete().eq('id', id);
+    if (error) {
+      console.error('Delete error for', id, error);
+      failed++;
+    } else {
+      succeeded++;
+      // Remove from local state
+      allProperties = allProperties.filter(p => p.id !== id);
+      delete scanResults[id];
+      selectedIds.delete(id);
+      const card = document.getElementById('card-' + id);
+      if (card) {
+        card.style.transition = 'opacity .3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 320);
+      }
+    }
+  }
+
+  updateSelCount();
+  updateSummary();
+
+  if (succeeded) CP.UI.toast(`${succeeded} propert${succeeded === 1 ? 'y' : 'ies'} deleted.`, 'success');
+  if (failed)    CP.UI.toast(`${failed} failed to delete — check console.`, 'error');
+
+  document.getElementById('page-sub').textContent =
+    `${allProperties.length} properties remaining`;
+}
+
+// ─── Summary ──────────────────────────────────────────────────────────────
+function updateSummary() {
+  const scanned = allProperties.filter(p => scanResults[p.id]);
+  if (!scanned.length) return;
+
+  const allFlag  = scanned.filter(p => scanResults[p.id]?.overallFlag === 'all').length;
+  const someFlag = scanned.filter(p => scanResults[p.id]?.overallFlag === 'some').length;
+  const clean    = scanned.filter(p => scanResults[p.id]?.overallFlag === 'clean').length;
+
+  document.getElementById('sum-all').textContent   = `${allFlag} fully watermarked`;
+  document.getElementById('sum-some').textContent  = `${someFlag} partially flagged`;
+  document.getElementById('sum-clean').textContent = `${clean} clean`;
+  document.getElementById('sum-total').textContent = `${scanned.length} total`;
+  document.getElementById('summary-bar').style.display = 'flex';
+}
+
+// ─── Lightbox ─────────────────────────────────────────────────────────────
+function openLightbox(url, caption) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent = caption;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(e) {
+  if (e && e.target !== document.getElementById('lightbox')) return;
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(null); });
+
+// ─── Utility ──────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
