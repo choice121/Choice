@@ -261,11 +261,6 @@
             <div class="hero-stat-num">50 States</div>
             <div class="hero-stat-label">Coverage</div>
           </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
-            <div class="hero-stat-num" id="heroListingCount">—</div>
-            <div class="hero-stat-label">Active Listings</div>
-          </div>
         </div>
       </div>
     </div>
@@ -491,21 +486,8 @@ document.addEventListener('error', function(e) {
 (async () => {
   setupScrollTop();
   setupSmoothScrollSections();
-  loadListingCount();
   await loadFeaturedListings();
 })();
-
-async function loadListingCount() {
-  if (!CONFIG.SUPABASE_URL) return;
-  try {
-    const { count } = await supabase
-      .from('properties')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active');
-    const el = document.getElementById('heroListingCount');
-    if (el && count != null) el.textContent = count.toLocaleString();
-  } catch (_) {}
-}
 
 // ── Featured listings loader ───────────────────────────────
 async function loadFeaturedListings() {
