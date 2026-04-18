@@ -226,8 +226,11 @@ Rationale:
   | Phase 4 | Move-In Management (confirmation emails) | **COMPLETE** â admin/move-ins.html: sendMoveInEmail() for movein_confirmed type on confirmation. Last updated: 2026-04-18 |
   | Phase 5 | Properties Management (full CRUD admin page) | **COMPLETE** â admin/properties.html: add/edit/delete, status filters, search, modal form. Properties link added to all admin sidebars. Last updated: 2026-04-18 |
   | Phase 6 | Dashboard enhancements | **COMPLETE** â admin/dashboard.html: Properties nav link, Move-Ins Confirmed stat card, Tenant Portal quick action. Last updated: 2026-04-18 |
-  | Phase 7 | GAS Cutover (receive-application Edge Function) | **IN PROGRESS** — receive-application Edge Function built and pushed. Needs: (1) `supabase functions deploy receive-application`, (2) update Cloudflare Pages BACKEND_URL env var to Supabase function URL. Last updated: 2026-04-18 |
-  | Phase 8 | Archive GAS | NOT STARTED |
+  | Phase 7 | GAS Cutover (receive-application Edge Function) | **COMPLETE** — Edge Function deployed ACTIVE on Supabase. Cloudflare Pages BACKEND_URL verified set. New submissions route through Supabase only. Last updated: 2026-04-18 |
+  | Phase 8 | Full email template parity (all 13 types) | **COMPLETE** — supabase/functions/_shared/email.ts rewritten with all 13 templates. send-email Edge Function handles: holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert, admin review summary, plus existing approved/denied/movein. serve.js /send-email updated to match. Last updated: 2026-04-18 |
+  | Phase 9 | Admin actions: holding fee, payment, countersign, prep guide | **COMPLETE** — admin/applications.html: Mark Contacted, Request Holding Fee modal, Mark Fee Paid modal, Record Payment modal. admin/leases.html: Send Signing Reminder, Management Countersign. admin/move-ins.html: Send Prep Guide. DB migration: MIGRATION_new_columns.sql (14 new columns). Last updated: 2026-04-18 |
+  | Phase 10 | Tenant portal: withdraw + denied state | **COMPLETE** — tenant/portal.html: Withdraw Application button (pending-only, updates status to withdrawn), denied state card with reapplication guidance and properties link. Last updated: 2026-04-18 |
+  | Phase 11 | Archive GAS | NOT STARTED — Run MIGRATION_new_columns.sql, verify end-to-end in production, then disable GAS doPost |
   
 ### Phase 0 ÃÂ¢ÃÂÃÂ Apply SETUP.sql (Prerequisite)
 
