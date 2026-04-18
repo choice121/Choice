@@ -67,6 +67,10 @@
   .movein-title{font-size:.95rem;font-weight:700;color:#4ade80;margin-bottom:12px}
   .no-app{text-align:center;padding:40px 20px;color:#64748b}
   .no-app h3{color:#94a3b8;margin-bottom:8px;font-size:1rem}
+  .btn-withdraw{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:14px}
+  .btn-withdraw:hover{background:rgba(239,68,68,.18)}
+  .denied-card{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:18px 20px;margin-top:20px}
+  .denied-card-title{font-size:.92rem;font-weight:700;color:#f87171;margin-bottom:10px}
   </style>
   </head>
   <body>
@@ -203,6 +207,22 @@
       </div>`;
     }
 
+    // Denied card
+    let deniedHtml = '';
+    if (status === 'denied') {
+      deniedHtml = `<div class="denied-card">
+        <div class="denied-card-title">Application Not Approved</div>
+        <p style="color:#fca5a5;font-size:.85rem;line-height:1.6;margin-bottom:10px">Unfortunately your application was not approved at this time. This decision was based on our standard screening criteria.</p>
+        <p style="color:#94a3b8;font-size:.82rem;line-height:1.6">You are welcome to apply for other available Choice Properties listings. Applications remain on file for 60 days and may be considered for other units. Contact us to discuss your options.</p>
+        <a href="/" style="display:inline-block;margin-top:12px;padding:8px 16px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:#60a5fa;border-radius:7px;font-size:.8rem;font-weight:600;text-decoration:none">View Available Properties &rarr;</a>
+      </div>`;
+    }
+
+    // Withdraw button — only for pending, before any lease activity
+    const withdrawHtml = (status === 'pending' && leaseStatus === 'none')
+      ? `<button class="btn-withdraw" onclick="withdrawApplication()">&#8592; Withdraw Application</button>`
+      : '';
+
     return `
       <div class="section">
         <div class="section-label">Your Application</div>
@@ -226,11 +246,13 @@
           <div class="section-label" style="margin-bottom:14px">Application Status</div>
           <ul class="step-list">${stepsHtml}</ul>
           ${leaseHtml}
+          ${deniedHtml}
+          ${withdrawHtml}
         </div>
       </div>
       ${moveInHtml}
       <div style="text-align:center;margin-top:32px;font-size:.78rem;color:#475569">
-        Questions? Contact us at <a href="mailto:Choicepropertyofficial1@gmail.com" style="color:#60a5fa">Choicepropertyofficial1@gmail.com</a>
+        Questions? Contact us at <a href="mailto:choicepropertygroup@hotmail.com" style="color:#60a5fa">choicepropertygroup@hotmail.com</a> &middot; <a href="tel:7077063137" style="color:#60a5fa">707-706-3137</a>
       </div>`;
   }
 
@@ -252,6 +274,22 @@
       if (d.signedUrl) { window.open(d.signedUrl, '_blank'); }
       else { alert(d.error || 'Could not retrieve lease download link.'); }
     } catch(e) { alert(e.message); }
+  }
+
+  async function withdrawApplication() {
+    if (!confirm('Are you sure you want to withdraw your application?\n\nThis cannot be undone. Please contact us if you wish to reapply.')) return;
+    const sb = getSB();
+    const { error } = await sb.from('applications').update({
+      status: 'withdrawn',
+      updated_at: new Date().toISOString(),
+    }).eq('app_id', window._appId);
+    if (error) { alert('Error: ' + error.message + '\nPlease contact us directly.'); return; }
+    document.getElementById('portal-content').innerHTML = `
+      <div class="card" style="text-align:center;padding:32px">
+        <div style="font-size:2rem;margin-bottom:12px">✓</div>
+        <h3 style="color:#f1f5f9;margin-bottom:8px">Application Withdrawn</h3>
+        <p style="color:#94a3b8;font-size:.88rem">Your application has been withdrawn. If you would like to reapply in the future, please contact us at <a href="tel:7077063137" style="color:#60a5fa">707-706-3137</a>.</p>
+      </div>`;
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
