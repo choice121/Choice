@@ -31,7 +31,7 @@ import nodemailer from 'npm:nodemailer@6.9.16';
       <p style="color:#718096;font-size:13px">This link is unique to you and expires in 7 days. Do not share it.</p>
       <p style="color:#718096;font-size:13px">Application ID: <strong>${appId}</strong></p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083 · choicepropertyofficial1@gmail.com · 707-706-3137</p>
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Â· 2265 Livernois Suite 500, Troy MI 48083 Â· choicepropertyofficial1@gmail.com Â· 707-706-3137</p>
     </div>
   </div>`;
   }
@@ -47,7 +47,7 @@ import nodemailer from 'npm:nodemailer@6.9.16';
       ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
       <p style="color:#4a5568;font-size:14px">Our team will be in touch shortly regarding your lease agreement. Questions? Call 707-706-3137.</p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083</p>
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Â· 2265 Livernois Suite 500, Troy MI 48083</p>
     </div>
   </div>`;
   }
@@ -63,7 +63,7 @@ import nodemailer from 'npm:nodemailer@6.9.16';
       ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
       <p style="color:#4a5568;font-size:14px">We appreciate your interest and wish you the best in your search.</p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083</p>
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Â· 2265 Livernois Suite 500, Troy MI 48083</p>
     </div>
   </div>`;
   }
@@ -80,7 +80,7 @@ import nodemailer from 'npm:nodemailer@6.9.16';
       ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
       <p style="color:#4a5568;font-size:14px">Questions? Call 707-706-3137.</p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083</p>
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Â· 2265 Livernois Suite 500, Troy MI 48083</p>
     </div>
   </div>`;
   }
@@ -96,7 +96,48 @@ import nodemailer from 'npm:nodemailer@6.9.16';
       <p style="color:#718096;font-size:13px">Application ID: <strong>${appId}</strong></p>
       <p style="color:#4a5568;font-size:14px">Our team will be in touch about your move-in. Questions? Call 707-706-3137.</p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083</p>
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Â· 2265 Livernois Suite 500, Troy MI 48083</p>
+    </div>
+  </div>`;
+  }
+  
+  export function applicationConfirmationHtml(firstName: string, propertyAddress: string, appId: string) {
+    return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+    <div style="background:#006aff;padding:24px 32px;border-radius:8px 8px 0 0">
+      <h1 style="color:#fff;margin:0;font-size:22px">Application Received</h1>
+    </div>
+    <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+      <p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
+      <p style="color:#4a5568;font-size:14px">We have received your rental application for <strong>${propertyAddress}</strong>. Our team will review it and be in touch within 1&ndash;2 business days.</p>
+      <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
+        <p style="margin:0;color:#4a5568;font-size:13px">Your Application Reference ID:</p>
+        <p style="margin:6px 0 0;color:#006aff;font-size:20px;font-weight:700;letter-spacing:1px">${appId}</p>
+      </div>
+      <p style="color:#4a5568;font-size:14px">Save this reference number &mdash; you may need it if you contact us about your application.</p>
+      <p style="color:#4a5568;font-size:14px">Questions? Call or text <strong>707-706-3137</strong> or email <strong>choicepropertygroup@hotmail.com</strong></p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
+      <p style="color:#a0aec0;font-size:12px">Choice Properties &middot; 2265 Livernois Suite 500, Troy MI 48083</p>
+    </div>
+  </div>`;
+  }
+
+  export function adminNotificationHtml(firstName: string, lastName: string, email: string, propertyAddress: string, appId: string) {
+    return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+    <div style="background:#1a202c;padding:24px 32px;border-radius:8px 8px 0 0">
+      <h1 style="color:#fff;margin:0;font-size:20px">New Application Received</h1>
+    </div>
+    <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr><td style="padding:8px 0;color:#718096;width:160px">Application ID</td><td style="padding:8px 0;font-weight:700;color:#006aff">${appId}</td></tr>
+        <tr><td style="padding:8px 0;color:#718096">Applicant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName} ${lastName}</td></tr>
+        <tr><td style="padding:8px 0;color:#718096">Email</td><td style="padding:8px 0;color:#4a5568">${email}</td></tr>
+        <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
+      </table>
+      <div style="margin-top:20px">
+        <a href="https://choice-properties-site.pages.dev/admin/applications.html" style="display:inline-block;padding:12px 24px;background:#006aff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
+      </div>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
+      <p style="color:#a0aec0;font-size:12px">Choice Properties Internal System</p>
     </div>
   </div>`;
   }
