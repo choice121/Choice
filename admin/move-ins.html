@@ -186,6 +186,11 @@ async function updateMI(id, status) {
 
   async function sendMoveInEmail(id) {
     try {
+      const appResult = await CP.Applications.getOne(id);
+      if (!appResult.ok || !appResult.data?.app_id) {
+        alert('Status saved, but email failed: could not load application ID.');
+        return;
+      }
       const session = await CP.Auth.getSession();
       const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
       const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
@@ -195,7 +200,7 @@ async function updateMI(id, status) {
           'apikey': CONFIG.SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + token,
         },
-        body: JSON.stringify({ app_id_or_row_id: id, type: 'movein_confirmed' }),
+        body: JSON.stringify({ app_id: appResult.data.app_id, type: 'movein_confirmed' }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) { alert('Status saved, but email failed: ' + (json.error || res.statusText)); return; }
