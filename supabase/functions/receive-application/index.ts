@@ -47,6 +47,35 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     const cors = handleCors(req);
     if (cors) return cors;
 
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const path = url.searchParams.get('path');
+      const email = fv(url.searchParams.get('email')).toLowerCase();
+
+      if (path === 'checkRecentSubmission') {
+        if (!email || !email.includes('@')) return jsonOk({ found: false });
+
+        const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+          .from('applications')
+          .select('app_id, created_at')
+          .ilike('email', email)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Verify error:', JSON.stringify(error));
+          return jsonErr(500, 'Failed to verify submission');
+        }
+
+        return jsonOk({ found: !!data, appId: data?.app_id || null });
+      }
+
+      return jsonErr(400, 'Unsupported verification request');
+    }
+
     let fields: Record<string, string> = {};
     const ct = req.headers.get('content-type') || '';
 
