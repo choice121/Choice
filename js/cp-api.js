@@ -779,11 +779,114 @@ async function updateNav() {
 // from window.CP. ES exports below are thin re-exports â they
 // add no logic of their own, so there is only ONE place to
 // edit when adding or changing any function.
+
+  // ── Applications API ─────────────────────────────────────────
+  // Phase 1 migration: reads/writes to the Supabase applications table.
+  // DO NOT call these from the apply form (it still posts to GAS in Phase 1).
+  // These are admin-only methods used by admin/applications.html, leases.html, move-ins.html.
+  const Applications = {
+    async getAll(filters = {}) {
+      let q = sb()
+        .from('applications')
+        .select(
+          'id,app_id,created_at,updated_at,status,payment_status,payment_date,' +
+          'admin_notes,application_fee,property_id,property_address,' +
+          'first_name,last_name,email,phone,dob,ssn,' +
+          'requested_move_in_date,desired_lease_term,' +
+          'current_address,residency_duration,current_rent_amount,reason_for_leaving,' +
+          'current_landlord_name,landlord_phone,' +
+          'previous_address,previous_landlord_name,previous_landlord_phone,' +
+          'employment_status,employer,employer_address,job_title,employment_duration,' +
+          'monthly_income,other_income,' +
+          'has_bankruptcy,bankruptcy_explanation,has_criminal_history,criminal_history_explanation,' +
+          'government_id_type,government_id_number,' +
+          'reference_1_name,reference_1_phone,reference_2_name,reference_2_phone,' +
+          'emergency_contact_name,emergency_contact_phone,emergency_contact_relationship,' +
+          'primary_payment_method,alternative_payment_method,' +
+          'has_pets,pet_details,total_occupants,additional_occupants,ever_evicted,smoker,' +
+          'preferred_contact_method,preferred_time,' +
+          'vehicle_make,vehicle_model,vehicle_year,vehicle_license_plate,' +
+          'has_co_applicant,landlord_email,document_urls,' +
+          'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,' +
+          'monthly_rent,security_deposit,move_in_costs,lease_notes,lease_pdf_url,' +
+          'tenant_signature,signature_timestamp,' +
+          'move_in_status,move_in_date_actual,move_in_notes,move_in_confirmed_by'
+        )
+        .order('created_at', { ascending: false });
+
+      if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status);
+      if (filters.lease_status && filters.lease_status !== 'all') q = q.eq('lease_status', filters.lease_status);
+      if (filters.move_in_status && filters.move_in_status !== 'all') q = q.eq('move_in_status', filters.move_in_status);
+      if (filters.payment_status) q = q.eq('payment_status', filters.payment_status);
+      if (filters.property_id) q = q.eq('property_id', filters.property_id);
+      if (filters.search) {
+        const s = filters.search.trim().replace(/'/g, "''");
+        q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,app_id.ilike.%${s}%,property_address.ilike.%${s}%`);
+      }
+      if (filters.limit)  q = q.limit(filters.limit);
+      if (filters.offset && filters.limit) q = q.range(filters.offset, filters.offset + filters.limit - 1);
+
+      const { data, error } = await q;
+      return _ok(data || [], error);
+    },
+
+    async getOne(id) {
+      const { data, error } = await sb().from('applications').select('*').eq('id', id).single();
+      return _ok(data, error);
+    },
+
+    async updateStatus(id, status, adminNotes) {
+      const patch = { status, updated_at: new Date().toISOString() };
+      if (adminNotes !== undefined) patch.admin_notes = adminNotes;
+      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,status,admin_notes,updated_at').single();
+      return _ok(data, error);
+    },
+
+    async updatePayment(id, paymentStatus) {
+      const patch = { payment_status: paymentStatus, payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null, updated_at: new Date().toISOString() };
+      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,payment_status,payment_date').single();
+      return _ok(data, error);
+    },
+
+    async saveNotes(id, adminNotes) {
+      const { data, error } = await sb().from('applications').update({ admin_notes: adminNotes, updated_at: new Date().toISOString() }).eq('id', id).select('id,admin_notes').single();
+      return _ok(data, error);
+    },
+
+    async updateMoveIn(id, moveInStatus, moveInDateActual, moveInNotes) {
+      const patch = { move_in_status: moveInStatus, updated_at: new Date().toISOString() };
+      if (moveInDateActual) patch.move_in_date_actual = moveInDateActual;
+      if (moveInNotes !== undefined) patch.move_in_notes = moveInNotes;
+      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,move_in_status,move_in_date_actual,move_in_notes').single();
+      return _ok(data, error);
+    },
+
+    async getCounts() {
+      const { data, error } = await sb().from('applications').select('status,lease_status,move_in_status,payment_status,created_at');
+      if (error) return _ok(null, error);
+      const now = new Date();
+      const som = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const rows = data || [];
+      return _ok({
+        total:            rows.length,
+        pending:          rows.filter(r => r.status === 'pending').length,
+        approved:         rows.filter(r => r.status === 'approved').length,
+        denied:           rows.filter(r => r.status === 'denied').length,
+        waitlisted:       rows.filter(r => r.status === 'waitlisted').length,
+        this_month:       rows.filter(r => r.created_at >= som).length,
+        lease_pending:    rows.filter(r => r.lease_status === 'pending').length,
+        lease_sent:       rows.filter(r => r.lease_status === 'sent').length,
+        lease_signed:     rows.filter(r => r.lease_status === 'signed').length,
+        movein_pending:   rows.filter(r => r.move_in_status === 'pending').length,
+        movein_confirmed: rows.filter(r => r.move_in_status === 'confirmed').length,
+        unpaid_approved:  rows.filter(r => r.payment_status === 'unpaid' && r.status === 'approved').length,
+      }, null);
+    },
+  };
+  
 window.CP_esc = esc;
 window.CP = {
-    // NOTE: Applications object removed â all application management is
-    // handled by the external GAS system at apply-choice-properties.pages.dev
-    sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
+    Applications, sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
     buildApplyURL, incrementCounter,
     getSession, getLandlordProfile, requireAuth,
     signIn, signUp, signOut, resetPassword, updateNav,
