@@ -270,8 +270,8 @@ async function setStatus(id, status) {
     const { ok, error } = await CP.Applications.updateStatus(id, status);
     if (!ok) { alert('Error: ' + error); if (card) card.style.opacity = '1'; return; }
     if (status === 'approved' || status === 'denied') {
-      const emailType = status === 'approved' ? 'approval' : 'denial';
-      const send = confirm('Status updated to ' + status + '.\n\nSend ' + emailType + ' email to applicant?');
+      const emailType = status;
+      const send = confirm('Status updated to ' + status + '.\n\nSend ' + (emailType === 'approved' ? 'approval' : 'denial') + ' email to applicant?');
       if (send) await sendStatusEmail(id, emailType);
     }
     await loadApps();
@@ -279,6 +279,11 @@ async function setStatus(id, status) {
 
   async function sendStatusEmail(id, type) {
     try {
+      const appResult = await CP.Applications.getOne(id);
+      if (!appResult.ok || !appResult.data?.app_id) {
+        alert('Status saved, but email failed: could not load application ID.');
+        return;
+      }
       const session = await CP.Auth.getSession();
       const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
       const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
@@ -288,7 +293,7 @@ async function setStatus(id, status) {
           'apikey': CONFIG.SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + token,
         },
-        body: JSON.stringify({ app_id_or_row_id: id, type }),
+        body: JSON.stringify({ app_id: appResult.data.app_id, type }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) { alert('Status saved, but email failed: ' + (json.error || res.statusText)); return; }
