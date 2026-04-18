@@ -58,14 +58,16 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
     try {
       await sendEmail({ to: app.email, subject, html });
-      // Log to email_logs
-      await supabase.from('email_logs').insert({
-        recipient_email: app.email,
-        subject,
-        type,
-        related_id: app.id,
-        sent_at: new Date().toISOString(),
-      }).catch(() => {});
+      // Log to email_logs — silent fail so logging never blocks email delivery
+      try {
+        await supabase.from('email_logs').insert({
+          recipient_email: app.email,
+          subject,
+          type,
+          related_id: app.id,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (_) {}
       return jsonOk({ success: true, to: app.email });
     } catch (e) {
       return jsonErr(500, 'Email send failed: ' + (e as Error).message);
