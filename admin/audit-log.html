@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#006aff">
   <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Audit Log — Choice Properties Admin</title>
+<title>Audit Log â Choice Properties Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -72,21 +72,22 @@
   <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
   <nav>
     <div class="nav-section">Overview</div>
-    <a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
+    <a class="nav-item" href="dashboard.html"><span class="icon">â</span> Dashboard</a>
     <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon">📄</span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
-    <a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
+    <a class="nav-item" href="applications.html"><span class="icon">ð</span> All Applications</a>
+    <a class="nav-item" href="leases.html"><span class="icon">ð</span> Leases</a>
+    <a class="nav-item" href="move-ins.html"><span class="icon">ð </span> Move-Ins</a>
+    <a class="nav-item" href="messages.html"><span class="icon">ð¬</span> Messages</a>
     <div class="nav-section">Platform</div>
-    <a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
-    <a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
-    <a class="nav-item active" href="audit-log.html"><span class="icon">🔍</span> Audit Log</a>
+    <a class="nav-item" href="landlords.html"><span class="icon">ð¤</span> Landlords</a>
+    <a class="nav-item" href="properties.html"><span class="icon">&#127962;</span> Properties</a>
+    <a class="nav-item" href="listings.html"><span class="icon">ð¢</span> Listings</a>
+    <a class="nav-item" href="email-logs.html"><span class="icon">ð§</span> Email Logs</a>
+    <a class="nav-item active" href="audit-log.html"><span class="icon">ð</span> Audit Log</a>
   </nav>
   <div class="sidebar-footer">
     <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:var(--muted,#8892a2);text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading…</div>
+    <div class="admin-name" id="admin-name">Loadingâ¦</div>
     <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
   </div>
 </aside>
@@ -120,7 +121,7 @@
           <option value="tenant_signed_lease">Tenant Signed</option>
           <option value="co_applicant_signed_lease">Co-Applicant Signed</option>
         </select>
-        <input id="filter-app-id" type="text" placeholder="Filter by App ID…" oninput="applyFilters()" style="text-transform:uppercase" maxlength="12">
+        <input id="filter-app-id" type="text" placeholder="Filter by App IDâ¦" oninput="applyFilters()" style="text-transform:uppercase" maxlength="12">
         <button class="btn-reset" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
         <span id="result-count" style="font-size:.8rem;color:var(--muted,#8892a2);margin-left:auto"></span>
       </div>
@@ -138,7 +139,7 @@
             </tr>
           </thead>
           <tbody id="audit-tbody">
-            <tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loading audit log…</td></tr>
+            <tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loading audit logâ¦</td></tr>
           </tbody>
         </table>
       </div>
@@ -161,7 +162,7 @@ let totalCount  = 0;
 let activeAction = '';
 let activeAppId  = '';
 
-// Cache of user_id → email for display
+// Cache of user_id â email for display
 const userCache = {};
 
 async function init() {
@@ -185,7 +186,7 @@ async function init() {
 async function loadPage(page) {
   currentPage = page;
   const tbody = document.getElementById('audit-tbody');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loadingâ¦</td></tr>';
 
   const from = (page - 1) * PAGE_SIZE;
   const to   = from + PAGE_SIZE - 1;
@@ -232,10 +233,10 @@ function renderTable(rows) {
     const badge    = actionBadge(row.action);
     const target   = row.target_id
       ? `<a class="target-link" href="applications.html?id=${CP_esc(row.target_id)}" title="View application">${CP_esc(row.target_id)}</a>`
-      : `<span style="color:var(--muted)">${CP_esc(row.target_type || '—')}</span>`;
+      : `<span style="color:var(--muted)">${CP_esc(row.target_type || 'â')}</span>`;
     const meta     = formatMeta(row.metadata);
     const actor    = row.user_id
-      ? `<span class="actor-cell">${CP_esc(row.user_id.slice(0, 8))}…</span>`
+      ? `<span class="actor-cell">${CP_esc(row.user_id.slice(0, 8))}â¦</span>`
       : `<span class="actor-cell actor-system">System / Tenant</span>`;
 
     return `<tr>
@@ -264,15 +265,15 @@ function actionBadge(action) {
 }
 
 function formatMeta(meta) {
-  if (!meta || typeof meta !== 'object') return '<span style="color:var(--muted)">—</span>';
+  if (!meta || typeof meta !== 'object') return '<span style="color:var(--muted)">â</span>';
   const pills = Object.entries(meta)
     .filter(([, v]) => v !== null && v !== undefined && v !== '')
     .map(([k, v]) => `<span class="meta-pill">${CP_esc(k)}: ${CP_esc(String(v).slice(0, 40))}</span>`);
-  return pills.length ? pills.join('') : '<span style="color:var(--muted)">—</span>';
+  return pills.length ? pills.join('') : '<span style="color:var(--muted)">â</span>';
 }
 
 function formatTime(iso) {
-  if (!iso) return '—';
+  if (!iso) return 'â';
   const d = new Date(iso);
   const now = new Date();
   const diffMs = now - d;
