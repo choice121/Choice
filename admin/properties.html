@@ -235,7 +235,7 @@
         <div class="prop-meta">
           ${p.bedrooms != null ? `<span><i class="fas fa-bed"></i> ${p.bedrooms}bd</span>` : ''}
           ${p.bathrooms != null ? `<span><i class="fas fa-bath"></i> ${p.bathrooms}ba</span>` : ''}
-          ${p.monthly_rent ? `<span>${fmtMoney(p.rent_amount||p.monthly_rent)}/mo</span>` : ''}
+          ${p.monthly_rent ? `<span>${fmtMoney(p.monthly_rent)}/mo</span>` : ''}
           ${p.square_footage ? `<span>${p.square_footage} sqft</span>` : ''}
         </div>
         <div class="prop-actions">
