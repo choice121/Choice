@@ -219,8 +219,8 @@ Rationale:
 
 | Phase | Name | Status |
 |-------|------|--------|
-| Phase 0 | Apply SETUP.sql to live database | **NOT DONE** — must happen first |
-| Phase 1 | Build native system in admin panel (GAS untouched) | NOT STARTED |
+| Phase 0 | Apply SETUP.sql to live database | **Pending confirmation** — SETUP.sql must be manually run in Supabase SQL Editor before Phase 1 pages will work |
+| Phase 1 | Build native system in admin panel (GAS untouched) | **IN PROGRESS** — admin pages built (applications, leases, move-ins, dashboard, cp-api.js), serve.js endpoints added (generate-lease, get-lease, sign-lease, send-email, download-lease), lease-sign.html built. Last updated: 2026-04-18 |
 | Phase 2 | Cutover (change apply form endpoint) | NOT STARTED |
 | Phase 3 | Archive GAS | NOT STARTED |
 
