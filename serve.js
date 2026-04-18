@@ -8,10 +8,11 @@ const http = require('http');
   const ROOT = __dirname;
 
   // ─── Supabase admin client (service role — server-side only) ───────────────
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_KEY || ''
-  );
+  const SUPABASE_URL = process.env.SUPABASE_URL || '';
+  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+  const supabaseAdmin = (SUPABASE_URL && SUPABASE_SERVICE_KEY)
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    : null;
 
   // ─── MIME types ───────────────────────────────────────────────────────────
   const MIME = {
@@ -59,6 +60,7 @@ const http = require('http');
 
   // ─── Auth helper — verifies Bearer token and checks admin_roles ───────────
   async function verifyAdmin(req) {
+    if (!supabaseAdmin) return { ok: false, status: 503, error: 'Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables' };
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) return { ok: false, status: 401, error: 'Missing authorization header' };
@@ -299,6 +301,7 @@ const http = require('http');
   // Query: ?token=<tenant_sign_token>
   async function handleGetLease(req, res) {
     setCORS(res);
+    if (!supabaseAdmin) return jsonError(res, 503, 'Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
     const urlObj = new URL(req.url, 'http://localhost');
     const token = urlObj.searchParams.get('token');
     if (!token) return jsonError(res, 400, 'Missing token');
@@ -331,6 +334,7 @@ const http = require('http');
   // Body: { token, signature, user_agent }
   async function handleSignLease(req, res) {
     setCORS(res);
+    if (!supabaseAdmin) return jsonError(res, 503, 'Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
     let body;
     try { body = JSON.parse(await readBody(req)); } catch { return jsonError(res, 400, 'Invalid JSON body'); }
 
@@ -428,73 +432,206 @@ const http = require('http');
     const name = (app.first_name || 'Applicant');
     const prop = app.property_address || 'your property';
 
+    const FOOTER = `<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0"><p style="color:#a0aec0;font-size:12px">Choice Properties &middot; choicepropertygroup@hotmail.com &middot; 707-706-3137</p>`;
+    const fmtMoney = (v) => v != null ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '';
+    const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
+    const ADMIN_EMAILS = ['choicepropertyofficial1@gmail.com', 'choicepropertygroup@hotmail.com'];
+
+    // DB side-effects per type
+    const now = new Date().toISOString();
+    if (type === 'holding_fee_request') {
+      const { fee_amount, due_date } = body;
+      await supabaseAdmin.from('applications').update({
+        holding_fee_requested: true, holding_fee_requested_at: now,
+        ...(fee_amount != null ? { holding_fee_amount: fee_amount } : {}),
+        ...(due_date ? { holding_fee_due_date: due_date } : {}),
+        updated_at: now,
+      }).eq('app_id', app_id).catch(() => {});
+    } else if (type === 'holding_fee_received') {
+      await supabaseAdmin.from('applications').update({
+        holding_fee_paid: true, holding_fee_paid_at: now, updated_at: now,
+      }).eq('app_id', app_id).catch(() => {});
+    } else if (type === 'payment_confirmed') {
+      const { payment_method, transaction_ref, amount_collected } = body;
+      await supabaseAdmin.from('applications').update({
+        payment_method_confirmed: payment_method,
+        payment_transaction_ref: transaction_ref,
+        payment_amount_collected: amount_collected,
+        payment_confirmed_at: now,
+        updated_at: now,
+      }).eq('app_id', app_id).catch(() => {});
+    }
+
+    const feeAmt  = body.fee_amount        || app.holding_fee_amount;
+    const feeDue  = body.due_date          || app.holding_fee_due_date;
+    const payMeth = body.payment_method    || app.payment_method_confirmed;
+    const txRef   = body.transaction_ref   || app.payment_transaction_ref;
+    const amtColl = body.amount_collected  || app.payment_amount_collected;
+    const portal  = 'https://choice-properties.pages.dev/tenant/portal.html';
+
     const templates = {
       approved: {
         subject: 'Your Application Has Been Approved — Choice Properties',
         html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-    <div style="background:#16a34a;padding:24px 32px;border-radius:8px 8px 0 0">
-      <h1 style="color:#fff;margin:0;font-size:22px">Application Approved</h1>
-    </div>
-    <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
-      <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
-      <p style="color:#4a5568;font-size:14px">Congratulations! Your application for <strong>${prop}</strong> has been approved.</p>
-      <p style="color:#4a5568;font-size:14px">Our team will be in touch shortly regarding your lease agreement. If you have questions, reply to this email or call us at 707-706-3137.</p>
-      ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083 · choicepropertygroup@hotmail.com · 707-706-3137</p>
-    </div>
-  </div>`,
+  <div style="background:#16a34a;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Application Approved</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Congratulations! Your application for <strong>${prop}</strong> has been approved.</p>
+    <p style="color:#4a5568;font-size:14px">Our team will be in touch shortly regarding next steps. If you have questions, reply to this email or call us at 707-706-3137.</p>
+    ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
+    ${FOOTER}
+  </div></div>`,
       },
       denied: {
         subject: 'Update on Your Application — Choice Properties',
         html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-    <div style="background:#374151;padding:24px 32px;border-radius:8px 8px 0 0">
-      <h1 style="color:#fff;margin:0;font-size:22px">Application Status Update</h1>
-    </div>
-    <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
-      <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
-      <p style="color:#4a5568;font-size:14px">Thank you for applying to <strong>${prop}</strong>. After careful review, we are unable to move forward with your application at this time.</p>
-      ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
-      <p style="color:#4a5568;font-size:14px">We appreciate your interest in Choice Properties and wish you the best in your housing search.</p>
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083 · choicepropertygroup@hotmail.com · 707-706-3137</p>
-    </div>
-  </div>`,
+  <div style="background:#374151;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Application Status Update</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Thank you for applying to <strong>${prop}</strong>. After careful review, we are unable to move forward at this time.</p>
+    ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
+    <p style="color:#4a5568;font-size:14px">We appreciate your interest and wish you the best in your housing search.</p>
+    ${FOOTER}
+  </div></div>`,
       },
       movein_confirmed: {
         subject: 'Move-In Confirmed — Choice Properties',
         html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-    <div style="background:#006aff;padding:24px 32px;border-radius:8px 8px 0 0">
-      <h1 style="color:#fff;margin:0;font-size:22px">Move-In Confirmed</h1>
-    </div>
-    <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
-      <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
-      <p style="color:#4a5568;font-size:14px">Your move-in to <strong>${prop}</strong> has been confirmed.</p>
-      ${app.move_in_date_actual ? `<p style="color:#4a5568;font-size:14px">Move-in Date: <strong>${new Date(app.move_in_date_actual).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>` : ''}
-      ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
-      <p style="color:#4a5568;font-size:14px">Please contact us at 707-706-3137 if you need assistance.</p>
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-      <p style="color:#a0aec0;font-size:12px">Choice Properties · 2265 Livernois Suite 500, Troy MI 48083 · choicepropertygroup@hotmail.com · 707-706-3137</p>
-    </div>
-  </div>`,
+  <div style="background:#006aff;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Move-In Confirmed</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Your move-in to <strong>${prop}</strong> has been confirmed.</p>
+    ${app.move_in_date_actual ? `<p style="color:#4a5568;font-size:14px">Move-in Date: <strong>${fmtDate(app.move_in_date_actual)}</strong></p>` : ''}
+    ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
+    <p style="color:#4a5568;font-size:14px">Contact us at 707-706-3137 if you need assistance.</p>
+    ${FOOTER}
+  </div></div>`,
+      },
+      holding_fee_request: {
+        subject: 'Holding Fee Request — Choice Properties',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#7c3aed;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Holding Fee Required</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Your application for <strong>${prop}</strong> has been approved and we are ready to hold the unit for you.</p>
+    <p style="color:#4a5568;font-size:14px">To secure your spot, please submit a holding fee${feeAmt ? ` of <strong>${fmtMoney(feeAmt)}</strong>` : ''} by <strong>${feeDue ? new Date(feeDue).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'as soon as possible'}</strong>.</p>
+    <p style="color:#4a5568;font-size:14px">Accepted payment methods: Zelle, Venmo, or Cashier's Check. Contact us at 707-706-3137 to arrange payment.</p>
+    ${message ? `<p style="color:#4a5568;font-size:14px;background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0">${message}</p>` : ''}
+    ${FOOTER}
+  </div></div>`,
+      },
+      holding_fee_received: {
+        subject: 'Holding Fee Received — Choice Properties',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#16a34a;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Holding Fee Confirmed</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">We have received your holding fee for <strong>${prop}</strong>. Your unit is now reserved.</p>
+    <p style="color:#4a5568;font-size:14px">Our team will contact you shortly with lease signing details. You can also track your application status in your <a href="${portal}" style="color:#2563eb">tenant portal</a>.</p>
+    ${FOOTER}
+  </div></div>`,
+      },
+      payment_confirmed: {
+        subject: 'Payment Confirmed — Choice Properties',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#16a34a;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Payment Confirmed</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Your payment for <strong>${prop}</strong> has been received and confirmed.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      ${amtColl ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;font-weight:600">${fmtMoney(amtColl)}</td></tr>` : ''}
+      ${payMeth  ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Method</td><td style="padding:6px 0;font-size:13px;font-weight:600">${payMeth}</td></tr>` : ''}
+      ${txRef    ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Reference</td><td style="padding:6px 0;font-size:13px;font-weight:600;font-family:monospace">${txRef}</td></tr>` : ''}
+    </table>
+    <p style="color:#4a5568;font-size:14px">Please keep this email as your receipt. View your portal at <a href="${portal}" style="color:#2563eb">tenant portal</a>.</p>
+    ${FOOTER}
+  </div></div>`,
+      },
+      move_in_prep: {
+        subject: 'Your Move-In Preparation Guide — Choice Properties',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#2563eb;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Move-In Preparation Guide</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">Congratulations on your upcoming move to <strong>${prop}</strong>! Here is everything you need to prepare.</p>
+    <h3 style="color:#1a202c;font-size:14px;margin:20px 0 8px">Before Move-In Day</h3>
+    <ul style="color:#4a5568;font-size:14px;line-height:1.8;padding-left:20px">
+      <li>Set up utilities in your name (gas, electric, water if applicable)</li>
+      <li>Arrange renter's insurance — required before key handover</li>
+      <li>Update your mailing address with USPS and relevant accounts</li>
+      <li>Confirm your move-in date and time with our team</li>
+    </ul>
+    <h3 style="color:#1a202c;font-size:14px;margin:20px 0 8px">Move-In Day</h3>
+    <ul style="color:#4a5568;font-size:14px;line-height:1.8;padding-left:20px">
+      <li>Bring a valid photo ID</li>
+      <li>Bring your renter's insurance proof of coverage</li>
+      <li>Complete and sign the move-in inspection checklist with our team</li>
+      <li>Receive keys and parking/access information</li>
+    </ul>
+    <p style="color:#4a5568;font-size:14px">Questions? Call us at 707-706-3137 or reply to this email.</p>
+    ${FOOTER}
+  </div></div>`,
+      },
+      lease_signing_reminder: {
+        subject: 'Reminder: Please Sign Your Lease — Choice Properties',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#d97706;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Lease Signing Reminder</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:15px">Dear ${name},</p>
+    <p style="color:#4a5568;font-size:14px">This is a friendly reminder that your lease for <strong>${prop}</strong> is ready for your signature and has not yet been completed.</p>
+    <p style="color:#4a5568;font-size:14px">Please log in to your <a href="${portal}" style="color:#2563eb;font-weight:600">tenant portal</a> to review and sign your lease at your earliest convenience.</p>
+    <p style="color:#4a5568;font-size:14px">If you have questions about the lease terms, please call us at 707-706-3137 before signing.</p>
+    ${FOOTER}
+  </div></div>`,
       },
     };
 
-    const tmpl = templates[type];
-    const subject = tmpl?.subject || 'Message from Choice Properties';
-    const html = tmpl?.html || `<p>Dear ${name},</p><p>${message || ''}</p><p>— Choice Properties</p>`;
+    // Build subject/html — admin-only types handled separately
+    let subject, html, adminOnly = false;
+    if (type === 'lease_expiry_alert') {
+      adminOnly = true;
+      subject = `Lease Expiry Alert — ${prop}`;
+      const expDate = app.lease_end_date ? fmtDate(app.lease_end_date) : 'unknown date';
+      html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#dc2626;padding:24px 32px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:22px">Lease Expiry Alert</h1></div>
+  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
+    <p style="color:#1a202c;font-size:14px">The lease for <strong>${name}</strong> at <strong>${prop}</strong> expires on <strong>${expDate}</strong>.</p>
+    <p style="color:#4a5568;font-size:14px">App ID: ${app.app_id || app.id}<br>Tenant email: ${app.email}</p>
+    ${message ? `<p style="color:#4a5568;font-size:14px">${message}</p>` : ''}
+    ${FOOTER}
+  </div></div>`;
+    } else {
+      const tmpl = templates[type];
+      subject = tmpl?.subject || 'Message from Choice Properties';
+      html = tmpl?.html || `<p style="font-family:Arial,sans-serif">Dear ${name},</p><p>${message || ''}</p><p>— Choice Properties</p>`;
+    }
 
     try {
-      await sendEmail({ to: app.email, subject, html });
-      // Log to email_logs
-      await supabaseAdmin.from('email_logs').insert({
-        recipient_email: app.email,
-        subject,
-        type,
-        related_id: app.id,
-        sent_at: new Date().toISOString(),
-      }).catch(() => {});
-      jsonOk(res, { success: true, to: app.email });
+      if (adminOnly) {
+        for (const adminEmail of ADMIN_EMAILS) {
+          await sendEmail({ to: adminEmail, subject, html });
+        }
+        await supabaseAdmin.from('email_logs').insert({
+          recipient_email: ADMIN_EMAILS.join(','), subject, type,
+          related_id: app.id, sent_at: new Date().toISOString(),
+        }).catch(() => {});
+        jsonOk(res, { success: true, to: ADMIN_EMAILS });
+      } else {
+        await sendEmail({ to: app.email, subject, html });
+        await supabaseAdmin.from('email_logs').insert({
+          recipient_email: app.email, subject, type,
+          related_id: app.id, sent_at: new Date().toISOString(),
+        }).catch(() => {});
+        // Admin CC for key events
+        if (['payment_confirmed', 'holding_fee_received'].includes(type)) {
+          const adminSubj = `[Admin] ${subject}`;
+          for (const adminEmail of ADMIN_EMAILS) {
+            await sendEmail({ to: adminEmail, subject: adminSubj, html }).catch(() => {});
+          }
+        }
+        jsonOk(res, { success: true, to: app.email });
+      }
     } catch (e) {
       jsonError(res, 500, 'Email send failed: ' + e.message);
     }
