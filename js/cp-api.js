@@ -874,7 +874,7 @@ async function updateNav() {
         denied:           rows.filter(r => r.status === 'denied').length,
         waitlisted:       rows.filter(r => r.status === 'waitlisted').length,
         this_month:       rows.filter(r => r.created_at >= som).length,
-        lease_pending:    rows.filter(r => r.lease_status === 'pending').length,
+        lease_pending:    rows.filter(r => !r.lease_status || r.lease_status === 'none').length,
         lease_sent:       rows.filter(r => r.lease_status === 'sent').length,
         lease_signed:     rows.filter(r => r.lease_status === 'signed').length,
         movein_pending:   rows.filter(r => r.move_in_status === 'pending').length,
