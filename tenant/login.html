@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#006aff">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Tenant Login &mdash; Choice Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:'Inter',sans-serif}
+  body{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);width:100%;max-width:420px;padding:40px 36px}
+  .logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+  .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;flex-shrink:0}
+  .logo-text{font-size:1rem;font-weight:700;color:#0f172a;line-height:1.2}
+  .logo-sub{font-size:.72rem;color:#64748b;font-weight:400}
+  h1{font-size:1.45rem;font-weight:800;color:#0f172a;margin-bottom:6px}
+  .subtitle{font-size:.85rem;color:#64748b;margin-bottom:28px}
+  .form-group{margin-bottom:18px}
+  .form-group label{display:block;font-size:.76rem;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+  .form-group input{width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:9px;font-size:.9rem;font-family:inherit;color:#0f172a;background:#f9fafb;transition:border-color .15s}
+  .form-group input:focus{outline:none;border-color:#2563eb;background:#fff}
+  .btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;margin-bottom:8px}
+  .btn-primary:hover:not(:disabled){opacity:.9}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+  .status-msg{text-align:center;font-size:.82rem;padding:10px 14px;border-radius:8px;margin-top:12px;display:none}
+  .status-msg.success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;display:block}
+  .status-msg.error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;display:block}
+  .back-link{display:block;text-align:center;margin-top:20px;font-size:.8rem;color:#64748b;text-decoration:none}
+  .back-link:hover{color:#2563eb}
+  </style>
+  </head>
+  <body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">CP</div>
+      <div>
+        <div class="logo-text">Choice Properties</div>
+        <div class="logo-sub">Tenant Portal</div>
+      </div>
+    </div>
+    <h1>Sign In</h1>
+    <p class="subtitle">Enter your email to receive a secure sign-in link.</p>
+    <div id="login-form">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <button class="btn-primary" id="send-btn" onclick="sendMagicLink()">Send Sign-In Link</button>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+    <a href="/index.html" class="back-link">&larr; Back to Choice Properties</a>
+  </div>
+
+  <script>
+  document.getElementById('email').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendMagicLink();
+  });
+
+  async function waitForSB(attempts) {
+    for (let i = 0; i < (attempts || 40); i++) {
+      if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
+  }
+
+  async function sendMagicLink() {
+    const emailEl = document.getElementById('email');
+    const btn = document.getElementById('send-btn');
+    const msg = document.getElementById('status-msg');
+    const email = emailEl.value.trim().toLowerCase();
+
+    msg.className = 'status-msg';
+    msg.style.display = 'none';
+
+    if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+      msg.textContent = 'Please enter a valid email address.';
+      msg.className = 'status-msg error';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    const ready = await waitForSB();
+    if (!ready) {
+      msg.textContent = 'Page not ready. Please refresh and try again.';
+      msg.className = 'status-msg error';
+      btn.disabled = false;
+      btn.textContent = 'Send Sign-In Link';
+      return;
+    }
+
+    try {
+      const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      const redirectTo = window.location.origin + '/tenant/portal.html';
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (error) throw error;
+      msg.textContent = 'Check your email! A secure sign-in link has been sent to ' + email + '.';
+      msg.className = 'status-msg success';
+      document.getElementById('login-form').style.opacity = '0.5';
+      document.getElementById('login-form').style.pointerEvents = 'none';
+    } catch (err) {
+      msg.textContent = err.message || 'Failed to send link. Please try again.';
+      msg.className = 'status-msg error';
+      btn.disabled = false;
+      btn.textContent = 'Send Sign-In Link';
+    }
+  }
+  </script>
+  </body>
+  </html>
