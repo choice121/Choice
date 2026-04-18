@@ -176,9 +176,9 @@
 
     // Lease actions
     let leaseHtml = '';
-    if (leaseStatus === 'sent' && app.lease_token) {
+    if (leaseStatus === 'sent' && app.tenant_sign_token) {
       leaseHtml = `<div class="lease-section">
-        <a href="/lease-sign.html?token=${esc(app.lease_token)}" class="btn-sign">&#9998; Sign Your Lease</a>
+        <a href="/lease-sign.html?token=${esc(app.tenant_sign_token)}" class="btn-sign">&#9998; Sign Your Lease</a>
       </div>`;
     } else if (leaseStatus === 'signed' && app.lease_pdf_url) {
       leaseHtml = `<div class="lease-section">
@@ -283,7 +283,7 @@
       .select('id,app_id,created_at,status,payment_status,first_name,last_name,email,phone,' +
               'property_address,property_id,lease_status,lease_sent_date,lease_signed_date,' +
               'lease_start_date,lease_end_date,monthly_rent,security_deposit,move_in_costs,' +
-              'move_in_status,move_in_date_actual,move_in_notes,lease_token')
+              'move_in_status,move_in_date_actual,move_in_notes,tenant_sign_token')
       .eq('email', userEmail.toLowerCase())
       .order('created_at', { ascending: false });
 
