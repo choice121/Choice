@@ -1,4 +1,6 @@
 # _redirects — Cloudflare Pages
+/admin                      /admin/dashboard.html                        302
+/admin/                    /admin/dashboard.html                        302
 #
 # Format: /source-path   destination   status-code
 # External redirects (to a different domain) are fully supported.
