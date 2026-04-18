@@ -21,7 +21,6 @@
 </head>
 <body>
 
-<!-- Sidebar -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="adminSidebar">
   <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
@@ -48,7 +47,6 @@
   </div>
 </aside>
 
-<!-- Main -->
 <div class="main">
   <div class="topbar">
     <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
@@ -57,29 +55,48 @@
   </div>
   <div class="content">
 
-    <!-- Listing stats — sourced from Supabase -->
+    <!-- Listings + Applications stats grid -->
     <div class="stats-grid" id="stats">
-      <div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value gold" id="s-listings">—</div><div class="stat-sub">Live on platform</div></div>
+      <div class="stat-card">
+        <div class="stat-label">Active Listings</div>
+        <div class="stat-value gold" id="s-listings">—</div>
+        <div class="stat-sub">Live on platform</div>
+      </div>
+      <a class="stat-card" href="applications.html" style="text-decoration:none;display:block;cursor:pointer">
+        <div class="stat-label">Total Applications</div>
+        <div class="stat-value" id="s-total">—</div>
+        <div class="stat-sub" id="s-month">— this month</div>
+      </a>
+      <a class="stat-card" href="applications.html?status=pending" style="text-decoration:none;display:block;cursor:pointer">
+        <div class="stat-label">Pending Review</div>
+        <div class="stat-value" style="color:#ca8a04" id="s-pending">—</div>
+        <div class="stat-sub">Awaiting decision</div>
+      </a>
+      <a class="stat-card" href="applications.html?status=approved" style="text-decoration:none;display:block;cursor:pointer">
+        <div class="stat-label">Approved</div>
+        <div class="stat-value" style="color:#16a34a" id="s-approved">—</div>
+        <div class="stat-sub" id="s-unpaid">— unpaid fee</div>
+      </a>
+      <a class="stat-card" href="leases.html" style="text-decoration:none;display:block;cursor:pointer">
+        <div class="stat-label">Leases Pending</div>
+        <div class="stat-value" style="color:#2563eb" id="s-lease-pending">—</div>
+        <div class="stat-sub" id="s-lease-sent">— sent for signing</div>
+      </a>
+      <a class="stat-card" href="move-ins.html" style="text-decoration:none;display:block;cursor:pointer">
+        <div class="stat-label">Leases Signed</div>
+        <div class="stat-value" style="color:#16a34a" id="s-lease-signed">—</div>
+        <div class="stat-sub" id="s-mi-pending">— move-ins pending</div>
+      </a>
     </div>
     <div id="stats-refresh-ts" style="font-size:11px;color:var(--text-muted,#6b7280);text-align:right;margin-top:-10px;margin-bottom:24px;"></div>
 
-    <!-- Application Management Panel — links to external GAS system -->
-    <div class="card" style="margin-bottom:24px;padding:28px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-      <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 16px rgba(37,99,235,.3);">📋</div>
-      <div style="flex:1;min-width:200px;">
-        <div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px;">Application Management</div>
-        <div style="font-size:.83rem;color:var(--muted);line-height:1.5;">All applications, approvals, payments, lease generation, and status tracking are managed in the Choice Properties Application System.</div>
-      </div>
-      <a href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=admin" target="_blank" rel="noopener noreferrer"
-         style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:12px 22px;border-radius:9px;font-weight:700;font-size:.875rem;white-space:nowrap;box-shadow:0 4px 14px rgba(37,99,235,.3);flex-shrink:0;">
-        <i class="fas fa-external-link-alt"></i> Open Admin Panel
-      </a>
-    </div>
-
-    <!-- Quick Actions — platform pages only -->
-    <div class="card">
+    <!-- Quick Actions -->
+    <div class="card" style="margin-bottom:24px">
       <div class="card-header"><span class="card-title">Quick Actions</span></div>
       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="applications.html" class="btn btn-ghost">📋 Applications</a>
+        <a href="leases.html" class="btn btn-ghost">📄 Lease Pipeline</a>
+        <a href="move-ins.html" class="btn btn-ghost">🏠 Move-Ins</a>
         <a href="listings.html" class="btn btn-ghost">🏢 Manage Listings</a>
         <a href="landlords.html" class="btn btn-ghost">👤 Landlords</a>
         <a href="messages.html" class="btn btn-ghost">💬 Tenant Messages</a>
@@ -87,57 +104,109 @@
       </div>
     </div>
 
+    <!-- Recent Applications -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Applications</span>
+        <a href="applications.html" style="font-size:.76rem;color:var(--color-primary,#2563eb)">View all →</a>
+      </div>
+      <div class="card-body" id="recent-apps">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script type="module" src="/js/cp-api.js"></script>
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
+<script>
+(function(){
+  var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
+  if(!btn)return;
+  btn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open');});
+  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+})();
+</script>
+<script>
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
+function statusBadge(s){
+  const map={pending:'background:rgba(234,179,8,.15);color:#ca8a04',approved:'background:rgba(34,197,94,.15);color:#16a34a',denied:'background:rgba(239,68,68,.15);color:#dc2626',waitlisted:'background:rgba(168,85,247,.15);color:#9333ea'};
+  const style=map[s]||map.pending;
+  return `<span style="padding:2px 8px;border-radius:10px;font-size:.66rem;font-weight:700;text-transform:uppercase;${style}">${s||'pending'}</span>`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const ok = await CP.Auth.requireAdmin();
   if (!ok) return;
   const user = await CP.Auth.getUser();
   document.getElementById('admin-name').textContent = user?.email || 'Admin';
 
-  // Load listing stats from Supabase
-  const { data: listings } = await CP.sb().from('properties').select('status');
-  document.getElementById('s-listings').textContent = (listings || []).filter(l => l.status === 'active').length;
-  document.getElementById('stats-refresh-ts').textContent = 'Last updated: ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  // Load listing count
+  CP.sb().from('properties').select('status').then(({ data }) => {
+    document.getElementById('s-listings').textContent = (data||[]).filter(l=>l.status==='active').length;
+  });
+
+  // Load application stats
+  const { ok: countsOk, data: counts } = await CP.Applications.getCounts();
+  if (countsOk && counts) {
+    document.getElementById('s-total').textContent    = counts.total;
+    document.getElementById('s-month').textContent    = `${counts.this_month} this month`;
+    document.getElementById('s-pending').textContent  = counts.pending;
+    document.getElementById('s-approved').textContent = counts.approved;
+    document.getElementById('s-unpaid').textContent   = `${counts.unpaid_approved} unpaid fee`;
+    document.getElementById('s-lease-pending').textContent = counts.lease_pending;
+    document.getElementById('s-lease-sent').textContent    = `${counts.lease_sent} sent for signing`;
+    document.getElementById('s-lease-signed').textContent  = counts.lease_signed;
+    document.getElementById('s-mi-pending').textContent    = `${counts.movein_pending} move-ins pending`;
+  }
+
+  document.getElementById('stats-refresh-ts').textContent = 'Last updated: ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 
   // Failed email alert — last 48 hours
   const cutoff48h = new Date(Date.now() - 172800000).toISOString();
-  const { data: failedEmails } = await CP.sb().from('email_logs').select('id,type,recipient,created_at,error_msg').eq('status','failed').gte('created_at', cutoff48h).order('created_at',{ascending:false}).limit(20);
+  const { data: failedEmails } = await CP.sb().from('email_logs').select('id,type,recipient,created_at,error_msg').eq('status','failed').gte('created_at',cutoff48h).order('created_at',{ascending:false}).limit(20);
   if (failedEmails?.length) {
     const banner = document.createElement('div');
     banner.style.cssText = 'background:#1a0a0a;border:1px solid #7f1d1d;border-radius:8px;padding:16px 20px;margin-bottom:24px;';
     banner.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:1.2rem">⚠️</span>
           <div>
-            <div style="color:#fca5a5;font-weight:700;font-size:.85rem">${failedEmails.length} Failed Email${failedEmails.length > 1 ? 's' : ''} in the Last 48 Hours</div>
-            <div style="color:#f87171;font-size:.75rem;margin-top:2px">${failedEmails.slice(0,3).map(e => `${e.type} → ${e.recipient}`).join(' · ')}${failedEmails.length > 3 ? ` · +${failedEmails.length - 3} more` : ''}</div>
+            <div style="color:#fca5a5;font-weight:700;font-size:.85rem">${failedEmails.length} Failed Email${failedEmails.length>1?'s':''} in the Last 48 Hours</div>
+            <div style="color:#f87171;font-size:.75rem;margin-top:2px">${failedEmails.slice(0,3).map(e=>`${esc(e.type)} → ${esc(e.recipient)}`).join(' · ')}${failedEmails.length>3?` · +${failedEmails.length-3} more`:''}</div>
           </div>
         </div>
-        <a href="email-logs.html?status=failed" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b;border-radius:6px;padding:7px 14px;font-size:.75rem;font-weight:700;text-decoration:none;white-space:nowrap;">View Failed Logs →</a>
+        <a href="email-logs.html?status=failed" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b;border-radius:6px;padding:7px 14px;font-size:.75rem;font-weight:700;text-decoration:none;white-space:nowrap">View Failed Logs →</a>
       </div>`;
     const statsGrid = document.querySelector('.stats-grid');
     if (statsGrid) statsGrid.parentNode.insertBefore(banner, statsGrid);
   }
-});
-</script>
 
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
-// Mobile sidebar toggle
-(function(){
-  var btn = document.getElementById('menuBtn');
-  var sidebar = document.getElementById('adminSidebar');
-  var overlay = document.getElementById('sidebarOverlay');
-  if(!btn) return;
-  function open(){ sidebar.classList.add('open'); overlay.classList.add('open'); }
-  function close(){ sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-  btn.addEventListener('click', open);
-  overlay.addEventListener('click', close);
-})();
+  // Recent applications (last 10)
+  const { ok: appsOk, data: recentApps } = await CP.Applications.getAll({ limit: 10 });
+  const recentEl = document.getElementById('recent-apps');
+  if (!appsOk || !recentApps?.length) {
+    recentEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem">No applications yet — they will appear here once SETUP.sql is run and applications are imported.</div>';
+  } else {
+    recentEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <thead><tr style="text-align:left;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--color-border)">
+        <th style="padding:6px 0">Applicant</th>
+        <th style="padding:6px 8px">Property</th>
+        <th style="padding:6px 8px">Status</th>
+        <th style="padding:6px 0;text-align:right">Submitted</th>
+      </tr></thead>
+      <tbody>${recentApps.map(a=>`<tr style="border-bottom:1px solid rgba(30,58,95,.2)">
+        <td style="padding:8px 0"><a href="applications.html" style="color:var(--text);font-weight:600;text-decoration:none">${esc(`${a.first_name||''} ${a.last_name||''}`.trim()||'(no name)')}</a>
+          <div style="font-size:.67rem;color:var(--muted)">${esc(a.email||'')}</div></td>
+        <td style="padding:8px;color:var(--muted2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.property_address||a.property_id||'—')}</td>
+        <td style="padding:8px">${statusBadge(a.status)}</td>
+        <td style="padding:8px 0;text-align:right;color:var(--muted)">${fmtDate(a.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+});
 </script>
 </body>
 </html>
