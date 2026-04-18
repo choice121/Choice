@@ -186,7 +186,7 @@ function fmtDate(d) { if(!d)return 'â'; try{return new Date(d).toLocaleDate
 function fmtMoney(v) { if(v==null)return 'â'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function leaseBadge(s) {
-  const map = {none:'badge-none',pending:'badge-pending',sent:'badge-sent',signed:'badge-signed',voided:'badge-voided'};
+  const map = {none:'badge-none',sent:'badge-sent',signed:'badge-signed',awaiting_co_sign:'badge-pending',co_signed:'badge-signed',voided:'badge-voided',expired:'badge-voided'};
   return `<span class="badge ${map[s]||'badge-none'}">${s||'none'}</span>`;
 }
 
@@ -212,12 +212,14 @@ function renderLease(app) {
       <div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>
       <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
       <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
-      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? 'â ' + fmtDate(app.signature_timestamp) : 'â'}</span></div>
+      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? 'Yes - ' + fmtDate(app.signature_timestamp) : 'No'}</span></div>
     </div>
     <div class="lease-actions">
-      <a href="applications.html" class="btn-ghost-sm">â All Applications</a>
-      ${app.lease_pdf_url ? `<a href="${esc(app.lease_pdf_url)}" target="_blank" class="btn-ghost-sm"><i class="fas fa-file-pdf"></i> View Lease PDF</a>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${app.id}')">Notes / Details â¾</button>
+      <button class="btn-generate" onclick="openLeaseMod('${esc(app.app_id||'')}', window._leaseRows && window._leaseRows['${esc(app.id||app.app_id||'')}'])">${app.lease_status === 'sent' || app.lease_status === 'signed' || app.lease_status === 'co_signed' ? 'Regenerate & Send Lease' : 'Generate & Send Lease'}</button>
+      ${app.lease_pdf_url ? `<button class="btn-download" onclick="downloadLease('${esc(app.app_id||'')}')">Download PDF</button>` : ''}
+      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm" onclick="voidLease('${esc(app.id||'')}')">Void Lease</button>` : ''}
+      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${esc(app.id||'')}')">Notes / Details</button>
+      <a href="applications.html" class="btn-ghost-sm">View Applications</a>
     </div>
     <div class="detail-panel" id="ldetail-${app.id}">
       <div style="margin-bottom:8px;font-size:.76rem;color:var(--text)">
@@ -226,7 +228,7 @@ function renderLease(app) {
         ${app.tenant_signature ? `<div style="margin-top:4px;font-size:.72rem;color:#16a34a"><i class="fas fa-check-circle"></i> Tenant signed: ${fmtDate(app.signature_timestamp)}</div>` : ''}
       </div>
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
-      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notesâ¦">${esc(app.admin_notes||'')}</textarea>
+      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notes...">${esc(app.admin_notes||'')}</textarea>
       <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveLNotes('${app.id}')">Save Notes</button>
     </div>
   </div>`;
@@ -273,6 +275,7 @@ async function loadLeases() {
     list.innerHTML = `<div class="empty-state"><h3>No records found</h3><p>No applications match this filter.</p></div>`;
     return;
   }
+  window._leaseRows = Object.fromEntries(rows.map(app => [app.id || app.app_id, app]));
   list.innerHTML = rows.map(renderLease).join('');
 }
 
