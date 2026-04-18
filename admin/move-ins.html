@@ -137,6 +137,7 @@ function renderMI(app) {
       ${miStatus !== 'confirmed' ? `<button class="btn-sm btn-confirm" onclick="updateMI('${app.id}','confirmed')"><i class="fas fa-check"></i> Confirm Move-In</button>` : ''}
       ${miStatus !== 'scheduled' ? `<button class="btn-sm btn-schedule" onclick="updateMI('${app.id}','scheduled')"><i class="fas fa-calendar-check"></i> Mark Scheduled</button>` : ''}
       ${miStatus !== 'pending'   ? `<button class="btn-ghost-sm" onclick="updateMI('${app.id}','pending')">Reset ¢ Pending</button>` : ''}
+      <button class="btn-ghost-sm" onclick="sendPrepGuide('${esc(app.app_id||app.id||"")}')"><i class="fas fa-clipboard-list" style="margin-right:4px"></i>Send Prep Guide</button>
       <button class="btn-ghost-sm" onclick="toggleMIDetail('${app.id}')">Notes / Date ¢¾</button>
     </div>
     <div class="detail-panel" id="midetail-${app.id}">
@@ -193,6 +194,22 @@ async function updateMI(id, status) {
       if (!res.ok || json.success === false) { alert('Status saved, but email failed: ' + (json.error || res.statusText)); return; }
       showToast('Move-in confirmation email sent to tenant.');
     } catch(e) { alert('Email error: ' + e.message); }
+  }
+
+  async function sendPrepGuide(appId) {
+    if (!confirm('Send the Move-In Preparation Guide to this tenant?')) return;
+    const session = await CP.Auth.getSession();
+    const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+    try {
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ app_id: appId, type: 'move_in_prep' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { showToast('Email failed: ' + (json.error || res.statusText)); return; }
+      showToast('Move-in preparation guide sent to tenant.');
+    } catch(e) { showToast('Error: ' + e.message); }
   }
 
   function showToast(msg) {
