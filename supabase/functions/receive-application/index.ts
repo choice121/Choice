@@ -36,6 +36,13 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     return isNaN(n) ? null : n;
   }
 
+  const VALID_PAYMENT_STATUSES = new Set(['unpaid', 'paid', 'waived', 'refunded']);
+
+  function fPaymentStatus(val: FormDataEntryValue | string | null | undefined): string {
+    const status = fv(val).toLowerCase();
+    return VALID_PAYMENT_STATUSES.has(status) ? status : 'unpaid';
+  }
+
   Deno.serve(async (req: Request) => {
     const cors = handleCors(req);
     if (cors) return cors;
@@ -73,7 +80,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     const application: Record<string, unknown> = {
       app_id: appId,
       status: 'pending',
-      payment_status: fv(fields['Payment Status']) || 'pending',
+      payment_status: fPaymentStatus(fields['Payment Status']),
       first_name: firstName,
       last_name: lastName,
       email,
