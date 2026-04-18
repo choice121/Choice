@@ -16,3 +16,10 @@
 /apply/success.html         https://apply-choice-properties.pages.dev/?path=dashboard      301
 /apply/lease.html           https://apply-choice-properties.pages.dev                      301
 /apply/*                    https://apply-choice-properties.pages.dev/?path=dashboard      301
+# Legacy landlord routes
+/landlord/properties.html   /landlord/dashboard.html                      302
+/landlord/properties        /landlord/dashboard.html                      302
+/landlord/listings.html     /landlord/dashboard.html                      302
+/landlord/listings          /landlord/dashboard.html                      302
+/landlord/messages.html     /landlord/inquiries.html                     302
+/landlord/messages          /landlord/inquiries.html                     302
