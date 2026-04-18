@@ -364,12 +364,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SERVER_URL) ? CONFIG.SERVER_URL : '';
+    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
     let resp, json;
     try {
       resp = await fetch(serverBase + '/generate-lease', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
         body: JSON.stringify({ app_id: appId, lease_data: leaseData }),
       });
       json = await resp.json();
@@ -408,11 +408,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function downloadLease(appId) {
     const token = await CP.Auth.getAccessToken();
     if (!token) { showToast('Session expired', 'error'); return; }
-    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SERVER_URL) ? CONFIG.SERVER_URL : '';
+    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
     let resp, json;
     try {
-      resp = await fetch(serverBase + '/download-lease?app_id=' + encodeURIComponent(appId), {
-        headers: { 'Authorization': 'Bearer ' + token },
+      resp = await fetch(serverBase + '/download-lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ app_id: appId }),
       });
       json = await resp.json();
     } catch(e) { showToast('Error: ' + e.message, 'error'); return; }
