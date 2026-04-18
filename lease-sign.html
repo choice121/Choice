@@ -157,9 +157,10 @@
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
 
-    const SERVER_BASE = typeof CONFIG !== 'undefined' && CONFIG.SERVER_URL
-      ? CONFIG.SERVER_URL
+    const SERVER_BASE = typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL
+      ? CONFIG.SUPABASE_URL + '/functions/v1'
       : '';
+    const ANON_KEY = typeof CONFIG !== 'undefined' ? (CONFIG.SUPABASE_ANON_KEY || '') : '';
 
     function showState(state) {
       ['loading','error','success','form'].forEach(s => {
@@ -226,10 +227,14 @@
         return;
       }
 
-      const url = SERVER_BASE + '/get-lease?token=' + encodeURIComponent(token);
+      const url = SERVER_BASE + '/get-lease';
       let resp, json;
       try {
-        resp = await fetch(url);
+        resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
+          body: JSON.stringify({ token }),
+        });
         json = await resp.json();
       } catch(e) {
         document.getElementById('err-title').textContent = 'Connection Error';
@@ -245,7 +250,7 @@
         return;
       }
 
-      const { app, template_body } = json;
+      const { app, rendered_lease } = json;
       window._leaseApp = app;
       window._leaseToken = token;
 
@@ -253,9 +258,8 @@
       document.getElementById('form-appid').textContent = app.app_id || '—';
       document.getElementById('info-grid').innerHTML = buildInfoGrid(app);
 
-      if (template_body) {
-        const rendered = substituteVars(template_body, app);
-        document.getElementById('lease-text-body').textContent = rendered;
+      if (rendered_lease) {
+        document.getElementById('lease-text-body').textContent = rendered_lease;
         document.getElementById('rendered-notice').textContent = 'Scroll to review full lease';
       } else {
         document.getElementById('lease-text-body').textContent = 'Lease template unavailable. Please contact Choice Properties.';
@@ -302,7 +306,7 @@
       try {
         resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
           body: JSON.stringify({
             token: window._leaseToken,
             signature,
