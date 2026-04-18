@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#006aff">
   <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Move-Ins Ã¢ÂÂ Choice Properties Admin</title>
+<title>Move-Ins ¢ Choice Properties Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -59,24 +59,11 @@
   <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
   <nav>
     <div class="nav-section">Overview</div>
-    <a class="nav-item" href="dashboard.html"><span class="icon">Ã¢ÂÂ</span> Dashboard</a>
-    <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon">Ã°ÂÂÂ</span> All Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon">Ã°ÂÂÂ</span> Leases</a>
-    <a class="nav-item active" href="move-ins.html"><span class="icon">Ã°ÂÂÂ </span> Move-Ins</a>
-    <a class="nav-item" href="messages.html"><span class="icon">Ã°ÂÂÂ¬</span> Messages</a>
-    <div class="nav-section">Platform</div>
-    <a class="nav-item" href="landlords.html"><span class="icon">Ã°ÂÂÂ¤</span> Landlords</a>
-    <a class="nav-item" href="properties.html"><span class="icon">&#127962;</span> Properties</a>
-    <a class="nav-item" href="listings.html"><span class="icon">Ã°ÂÂÂ¢</span> Listings</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon">Ã°ÂÂÂ§</span> Email Logs</a>
-    <a class="nav-item" href="audit-log.html"><span class="icon">Ã°ÂÂÂ</span> Audit Log</a>
-    <div class="nav-section">Tools</div>
-    <a class="nav-item" href="watermark-review.html"><span class="icon">Ã°ÂÂÂ</span> Watermark Review</a>
+    <a class="nav-item" href="dashboard.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a>
   </nav>
   <div class="sidebar-footer">
     <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">LoadingÃ¢ÂÂ¦</div>
+    <div class="admin-name" id="admin-name">Loading¢¦</div>
     <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
   </div>
 </aside>
@@ -84,7 +71,7 @@
 <div class="main">
   <div class="topbar">
     <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div><div class="page-title">Move-In Confirmations</div><div class="page-sub" id="page-sub">LoadingÃ¢ÂÂ¦</div></div>
+    <div><div class="page-title">Move-In Confirmations</div><div class="page-sub" id="page-sub">Loading¢¦</div></div>
   </div>
   <div class="content">
 
@@ -95,7 +82,7 @@
       <button class="filter-tab" data-mi="all_signed">All Signed</button>
     </div>
 
-    <div id="mi-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading move-in recordsÃ¢ÂÂ¦</div></div>
+    <div id="mi-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading move-in records¢¦</div></div>
 
   </div>
 </div>
@@ -113,8 +100,8 @@
 let _miFilter = 'signed';
 
 function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-function fmtDate(d) { if(!d)return 'Ã¢ÂÂ'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
-function fmtMoney(v) { if(v==null)return 'Ã¢ÂÂ'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
+function fmtDate(d) { if(!d)return '¢'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
+function fmtMoney(v) { if(v==null)return '¢'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
 
 function miBadge(s) {
   const map = {pending:'badge-pending',scheduled:'badge-scheduled',confirmed:'badge-confirmed',cancelled:'badge-cancelled'};
@@ -123,7 +110,7 @@ function miBadge(s) {
 
 function renderMI(app) {
   const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
-  const prop = esc(app.property_address || app.property_id || 'Ã¢ÂÂ');
+  const prop = esc(app.property_address || app.property_id || '¢');
   const miStatus = app.move_in_status || 'pending';
   return `<div class="mi-card" id="micard-${app.id}">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -143,14 +130,14 @@ function renderMI(app) {
       <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
       <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
       <div class="meta-item"><span class="meta-label">Lease Signed</span><span class="meta-val">${fmtDate(app.lease_signed_date)}</span></div>
-      <div class="meta-item"><span class="meta-label">Email</span><span class="meta-val" style="font-size:.7rem">${esc(app.email||'Ã¢ÂÂ')}</span></div>
-      <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-val">${esc(app.phone||'Ã¢ÂÂ')}</span></div>
+      <div class="meta-item"><span class="meta-label">Email</span><span class="meta-val" style="font-size:.7rem">${esc(app.email||'¢')}</span></div>
+      <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-val">${esc(app.phone||'¢')}</span></div>
     </div>
     <div class="mi-actions">
-      ${miStatus !== 'confirmed' ? `<button class="btn-sm btn-confirm" onclick="updateMI('${app.id}','confirmed')">Ã¢ÂÂ Confirm Move-In</button>` : ''}
-      ${miStatus !== 'scheduled' ? `<button class="btn-sm btn-schedule" onclick="updateMI('${app.id}','scheduled')">Ã°ÂÂÂ Mark Scheduled</button>` : ''}
-      ${miStatus !== 'pending'   ? `<button class="btn-ghost-sm" onclick="updateMI('${app.id}','pending')">Reset Ã¢ÂÂ Pending</button>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleMIDetail('${app.id}')">Notes / Date Ã¢ÂÂ¾</button>
+      ${miStatus !== 'confirmed' ? `<button class="btn-sm btn-confirm" onclick="updateMI('${app.id}','confirmed')"><i class="fas fa-check"></i> Confirm Move-In</button>` : ''}
+      ${miStatus !== 'scheduled' ? `<button class="btn-sm btn-schedule" onclick="updateMI('${app.id}','scheduled')"><i class="fas fa-calendar-check"></i> Mark Scheduled</button>` : ''}
+      ${miStatus !== 'pending'   ? `<button class="btn-ghost-sm" onclick="updateMI('${app.id}','pending')">Reset ¢ Pending</button>` : ''}
+      <button class="btn-ghost-sm" onclick="toggleMIDetail('${app.id}')">Notes / Date ¢¾</button>
     </div>
     <div class="detail-panel" id="midetail-${app.id}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -161,7 +148,7 @@ function renderMI(app) {
       ${app.move_in_notes ? `<div style="font-size:.76rem;margin-bottom:8px;color:var(--text)"><strong>Notes:</strong> ${esc(app.move_in_notes)}</div>` : ''}
       ${app.move_in_confirmed_by ? `<div style="font-size:.73rem;color:#16a34a;margin-bottom:8px">Confirmed by: ${esc(app.move_in_confirmed_by)}</div>` : ''}
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Move-In Notes</div>
-      <textarea class="notes-area" id="minotes-${app.id}" placeholder="Move-in notes, key pickup details, inspection notesÃ¢ÂÂ¦">${esc(app.move_in_notes||'')}</textarea>
+      <textarea class="notes-area" id="minotes-${app.id}" placeholder="Move-in notes, key pickup details, inspection notes¢¦">${esc(app.move_in_notes||'')}</textarea>
       <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveMINotes('${app.id}')">Save Notes</button>
     </div>
   </div>`;
@@ -264,7 +251,7 @@ async function loadMI() {
     rows = rows.filter(r => r.move_in_status !== 'confirmed');
   }
 
-  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''} Ã¢ÂÂ ${_miFilter === 'signed' ? 'awaiting move-in confirmation' : _miFilter}`;
+  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''} ¢ ${_miFilter === 'signed' ? 'awaiting move-in confirmation' : _miFilter}`;
   if (!rows.length) {
     list.innerHTML = `<div class="empty-state"><h3>No records</h3><p>No signed leases match this filter.</p></div>`;
     return;
