@@ -459,9 +459,9 @@ const EmailLogs = {
 const UI = {
   fmt: {
     currency: (n) => `$${parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'â',
-    dateTime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'â',
-    status:   (s) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'â',
+    date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-',
+    dateTime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-',
+    status:   (s) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-',
     phone:    (p) => p ? p.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3') : '',
   },
   statusBadge(status) {
@@ -492,7 +492,7 @@ const UI = {
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, duration);
   },
   loading(el, on) {
-    if (on) { el.dataset.origText = el.textContent; el.disabled = true; el.textContent = 'Loadingâ¦'; }
+    if (on) { el.dataset.origText = el.textContent; el.disabled = true; el.textContent = 'Loading...'; }
     else    { el.textContent = el.dataset.origText || el.textContent; el.disabled = false; }
   },
   // Promise-based confirm dialog - replaces native confirm() with inline modal
