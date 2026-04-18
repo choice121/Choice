@@ -46,7 +46,35 @@
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state h3{color:var(--text);margin-bottom:8px}
 .loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
-</style>
+
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:16px}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--surface1,#fff);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.22);width:100%;max-width:580px;max-height:90vh;overflow-y:auto}
+  .modal-header{padding:18px 22px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between}
+  .modal-header h3{font-size:.97rem;font-weight:700;color:var(--text)}
+  .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:4px;line-height:1}
+  .modal-close:hover{color:var(--text);background:var(--surface2)}
+  .modal-body{padding:18px 22px}
+  .modal-footer{padding:14px 22px;border-top:1px solid var(--color-border);display:flex;gap:8px;justify-content:flex-end}
+  .form-row{margin-bottom:14px}
+  .form-row label{display:block;font-size:.73rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+  .form-row input,.form-row textarea,.form-row select{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.82rem;font-family:inherit}
+  .form-row input:focus,.form-row textarea:focus,.form-row select:focus{outline:none;border-color:var(--color-primary,#2563eb)}
+  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn-primary{background:var(--color-primary,#2563eb);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+  .btn-danger{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.25);padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+  .btn-danger:hover{background:rgba(239,68,68,.2)}
+  .btn-download{background:rgba(34,197,94,.1);color:#16a34a;border:1px solid rgba(34,197,94,.2);padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+  .btn-download:hover{background:rgba(34,197,94,.2)}
+  .btn-generate{background:var(--color-primary,#2563eb);color:#fff;padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+  .btn-generate:hover{filter:brightness(1.1)}
+  .toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:9px;font-size:.82rem;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .toast.success{background:#16a34a;color:#fff}
+  .toast.error{background:#dc2626;color:#fff}
+  </style>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 </head>
 <body>
@@ -93,9 +121,54 @@
     <div id="leases-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading lease pipeline…</div></div>
 
   </div>
-</div>
 
-<script type="module" src="/js/cp-api.js"></script>
+  <!-- Generate & Send Lease Modal -->
+  <div class="modal-backdrop" id="lease-modal-backdrop" onclick="if(event.target===this)closeLeaseMod()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Generate &amp; Send Lease</h3>
+        <button class="modal-close" onclick="closeLeaseMod()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-app-info" style="font-size:.8rem;color:var(--muted);margin-bottom:16px;padding:10px 12px;background:var(--surface2);border-radius:7px"></div>
+        <input type="hidden" id="modal-app-id">
+        <div class="form-2col">
+          <div class="form-row"><label>Lease Start Date</label><input type="date" id="m-lease-start"></div>
+          <div class="form-row"><label>Lease End Date</label><input type="date" id="m-lease-end"></div>
+        </div>
+        <div class="form-2col">
+          <div class="form-row"><label>Monthly Rent ($)</label><input type="number" id="m-monthly-rent" min="0" step="0.01" placeholder="e.g. 1200.00"></div>
+          <div class="form-row"><label>Security Deposit ($)</label><input type="number" id="m-security-deposit" min="0" step="0.01" placeholder="e.g. 1200.00"></div>
+        </div>
+        <div class="form-2col">
+          <div class="form-row"><label>Move-In Costs ($)</label><input type="number" id="m-move-in-costs" min="0" step="0.01" placeholder="e.g. 2400.00"></div>
+          <div class="form-row"><label>Late Fee (flat, $)</label><input type="number" id="m-late-fee-flat" min="0" placeholder="e.g. 50"></div>
+        </div>
+        <div class="form-2col">
+          <div class="form-row"><label>Landlord Name</label><input type="text" id="m-landlord-name" placeholder="Choice Properties"></div>
+          <div class="form-row"><label>State Code</label><input type="text" id="m-state-code" maxlength="2" placeholder="MI"></div>
+        </div>
+        <div class="form-row"><label>Landlord Address</label><input type="text" id="m-landlord-address" placeholder="2265 Livernois Suite 500, Troy MI 48083"></div>
+        <div class="form-row"><label>Pets Policy</label><input type="text" id="m-pets-policy" placeholder="No pets allowed."></div>
+        <div class="form-row"><label>Smoking Policy</label><input type="text" id="m-smoking-policy" placeholder="No smoking permitted on premises."></div>
+        <div class="form-row"><label>Lease Notes (internal)</label><textarea id="m-lease-notes" rows="2" placeholder="Internal notes for this lease…"></textarea></div>
+        <div id="modal-err" style="display:none;color:#dc2626;font-size:.78rem;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost-sm" onclick="closeLeaseMod()" style="font-size:.82rem">Cancel</button>
+        <button class="btn-primary" id="modal-submit-btn" onclick="submitGenerateLease()">
+          <span id="modal-submit-text">Generate &amp; Send Lease</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  </div>
+
+  <script type="module" src="/js/cp-api.js"></script>
 <script>
 (function(){
   var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
@@ -219,6 +292,133 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadLeases();
 });
-</script>
+
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (type || 'success') + ' show';
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function openLeaseMod(appId, appData) {
+    const app = typeof appData === 'string' ? JSON.parse(appData) : appData;
+    document.getElementById('modal-app-id').value = appId;
+    document.getElementById('modal-app-info').textContent =
+      (app.first_name||'') + ' ' + (app.last_name||'') + '  ·  ' + (app.property_address||appId);
+
+    // Prefill fields from existing app data
+    if (app.lease_start_date) document.getElementById('m-lease-start').value = app.lease_start_date.slice(0,10);
+    if (app.lease_end_date)   document.getElementById('m-lease-end').value   = app.lease_end_date.slice(0,10);
+    if (app.monthly_rent)     document.getElementById('m-monthly-rent').value = app.monthly_rent;
+    if (app.security_deposit) document.getElementById('m-security-deposit').value = app.security_deposit;
+    if (app.move_in_costs)    document.getElementById('m-move-in-costs').value = app.move_in_costs;
+    if (app.lease_late_fee_flat) document.getElementById('m-late-fee-flat').value = app.lease_late_fee_flat;
+    document.getElementById('m-landlord-name').value    = app.lease_landlord_name    || 'Choice Properties';
+    document.getElementById('m-landlord-address').value = app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083';
+    document.getElementById('m-state-code').value       = app.lease_state_code       || 'MI';
+    document.getElementById('m-pets-policy').value      = app.lease_pets_policy      || '';
+    document.getElementById('m-smoking-policy').value   = app.lease_smoking_policy   || '';
+    document.getElementById('m-lease-notes').value      = app.lease_notes            || '';
+    document.getElementById('modal-err').style.display  = 'none';
+    document.getElementById('modal-submit-btn').disabled = false;
+    document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
+
+    document.getElementById('lease-modal-backdrop').classList.add('open');
+  }
+
+  function closeLeaseMod() {
+    document.getElementById('lease-modal-backdrop').classList.remove('open');
+  }
+
+  async function submitGenerateLease() {
+    const appId = document.getElementById('modal-app-id').value;
+    if (!appId) return;
+
+    const leaseData = {
+      lease_start_date:       document.getElementById('m-lease-start').value       || null,
+      lease_end_date:         document.getElementById('m-lease-end').value         || null,
+      monthly_rent:           parseFloat(document.getElementById('m-monthly-rent').value)     || null,
+      security_deposit:       parseFloat(document.getElementById('m-security-deposit').value) || null,
+      move_in_costs:          parseFloat(document.getElementById('m-move-in-costs').value)    || null,
+      lease_late_fee_flat:    parseFloat(document.getElementById('m-late-fee-flat').value)    || null,
+      lease_landlord_name:    document.getElementById('m-landlord-name').value    || 'Choice Properties',
+      lease_landlord_address: document.getElementById('m-landlord-address').value || '2265 Livernois Suite 500, Troy MI 48083',
+      lease_state_code:       document.getElementById('m-state-code').value       || 'MI',
+      lease_pets_policy:      document.getElementById('m-pets-policy').value      || null,
+      lease_smoking_policy:   document.getElementById('m-smoking-policy').value   || null,
+      lease_notes:            document.getElementById('m-lease-notes').value      || null,
+    };
+
+    const btn = document.getElementById('modal-submit-btn');
+    btn.disabled = true;
+    document.getElementById('modal-submit-text').textContent = 'Generating…';
+    document.getElementById('modal-err').style.display = 'none';
+
+    const token = await CP.Auth.getAccessToken();
+    if (!token) {
+      document.getElementById('modal-err').textContent = 'Session expired. Please sign in again.';
+      document.getElementById('modal-err').style.display = 'block';
+      btn.disabled = false;
+      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
+      return;
+    }
+
+    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SERVER_URL) ? CONFIG.SERVER_URL : '';
+    let resp, json;
+    try {
+      resp = await fetch(serverBase + '/generate-lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ app_id: appId, lease_data: leaseData }),
+      });
+      json = await resp.json();
+    } catch(e) {
+      document.getElementById('modal-err').textContent = 'Network error: ' + e.message;
+      document.getElementById('modal-err').style.display = 'block';
+      btn.disabled = false;
+      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
+      return;
+    }
+
+    if (!resp.ok || !json.success) {
+      document.getElementById('modal-err').textContent = json.error || 'Generation failed.';
+      document.getElementById('modal-err').style.display = 'block';
+      btn.disabled = false;
+      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
+      return;
+    }
+
+    closeLeaseMod();
+    showToast('Lease generated and signing email sent!', 'success');
+    await loadLeases();
+  }
+
+  async function voidLease(id) {
+    if (!confirm('Void this lease? The tenant will no longer be able to sign.')) return;
+    const { ok, error } = await CP.Applications.saveNotes(id, undefined);
+    const { error: voidErr } = await CP.sb().from('applications')
+      .update({ lease_status: 'voided', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (voidErr) { showToast('Error: ' + voidErr.message, 'error'); return; }
+    showToast('Lease voided.', 'success');
+    await loadLeases();
+  }
+
+  async function downloadLease(appId) {
+    const token = await CP.Auth.getAccessToken();
+    if (!token) { showToast('Session expired', 'error'); return; }
+    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SERVER_URL) ? CONFIG.SERVER_URL : '';
+    let resp, json;
+    try {
+      resp = await fetch(serverBase + '/download-lease?app_id=' + encodeURIComponent(appId), {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      json = await resp.json();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); return; }
+    if (!resp.ok || !json.signed_url) { showToast(json.error || 'Could not get download link', 'error'); return; }
+    window.open(json.signed_url, '_blank');
+  }
+  </script>
 </body>
 </html>
