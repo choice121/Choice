@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
   <meta name="theme-color" content="#006aff">
   <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -7,67 +9,244 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script><link rel="stylesheet" href="/css/main.css?v=1775137055043">
+  <script defer src="/config.js"></script>
+<link rel="stylesheet" href="/css/main.css?v=1775137055043">
 <noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
 <link rel="stylesheet" href="/assets/fontawesome.css">
   <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
   <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
 <noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
 <script defer src="/js/supabase.min.js"></script>
+<style>
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--color-border);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+.filter-tab.active{background:var(--color-primary,#2563eb);color:#fff;border-color:transparent}
+.mi-card{background:var(--surface2);border:1px solid var(--color-border);border-radius:10px;padding:18px 20px;margin-bottom:12px;transition:border-color .15s}
+.mi-card:hover{border-color:rgba(37,99,235,.3)}
+.app-id{font-family:monospace;font-size:.68rem;color:var(--muted);margin-bottom:3px}
+.mi-name{font-size:.97rem;font-weight:700;color:var(--text)}
+.mi-prop{font-size:.76rem;color:var(--muted2);margin-top:2px}
+.badge{padding:3px 9px;border-radius:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge-pending{background:rgba(234,179,8,.15);color:#ca8a04}
+.badge-scheduled{background:rgba(59,130,246,.15);color:#2563eb}
+.badge-confirmed{background:rgba(34,197,94,.15);color:#16a34a}
+.badge-cancelled{background:rgba(239,68,68,.12);color:#dc2626}
+.mi-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0;padding:12px 0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);font-size:.74rem}
+.meta-item{display:flex;flex-direction:column;gap:2px}
+.meta-label{color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.06em}
+.meta-val{color:var(--text);font-weight:600}
+.mi-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn-sm{padding:5px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-confirm{background:#16a34a;color:#fff}
+.btn-confirm:hover{background:#15803d}
+.btn-schedule{background:#2563eb;color:#fff}
+.btn-schedule:hover{background:#1d4ed8}
+.btn-ghost-sm{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:.72rem;cursor:pointer}
+.btn-ghost-sm:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.notes-area{width:100%;margin-top:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.78rem;resize:vertical;min-height:56px;font-family:inherit}
+.date-input{padding:6px 10px;border-radius:7px;border:1px solid var(--color-border);background:var(--surface2);color:var(--text);font-size:.78rem;margin-right:8px}
+.detail-panel{display:none;margin-top:14px;padding:14px;background:var(--bg);border:1px solid var(--color-border);border-radius:8px;font-size:.76rem}
+.detail-panel.open{display:block}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state h3{color:var(--text);margin-bottom:8px}
+.loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
+</style>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-</head><body>
+</head>
+<body>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar"><div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-<nav><div class="nav-section">Overview</div><a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
-<div class="nav-section">Applications</div><a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
-<a class="nav-item" href="leases.html"><span class="icon">📄</span> Leases</a>
-<a class="nav-item active" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
-<a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
-<div class="nav-section">Platform</div><a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
-<a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
-<a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
+<aside class="sidebar" id="adminSidebar">
+  <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
+  <nav>
+    <div class="nav-section">Overview</div>
+    <a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
+    <div class="nav-section">Applications</div>
+    <a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
+    <a class="nav-item" href="leases.html"><span class="icon">📄</span> Leases</a>
+    <a class="nav-item active" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
+    <a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
+    <div class="nav-section">Platform</div>
+    <a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
+    <a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
+    <a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
     <a class="nav-item" href="audit-log.html"><span class="icon">🔍</span> Audit Log</a>
     <div class="nav-section">Tools</div>
-    <a class="nav-item" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a></nav>
-<div class="sidebar-footer"><a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
+    <a class="nav-item" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
     <div class="admin-name" id="admin-name">Loading…</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button></div></aside>
+    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
+  </div>
+</aside>
+
 <div class="main">
-    <div class="topbar">
-      <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-      <div><div class="page-title">Move-In Confirmations</div><div class="page-sub">Managed by the Choice Properties Application System</div></div>
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div><div class="page-title">Move-In Confirmations</div><div class="page-sub" id="page-sub">Loading…</div></div>
+  </div>
+  <div class="content">
+
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" data-mi="signed">Signed Leases (Pending Move-In)</button>
+      <button class="filter-tab" data-mi="scheduled">Scheduled</button>
+      <button class="filter-tab" data-mi="confirmed">Confirmed</button>
+      <button class="filter-tab" data-mi="all_signed">All Signed</button>
     </div>
-    <div class="content">
-      <div class="card" style="max-width:680px;margin:0 auto;text-align:center;padding:48px 40px;">
-        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 24px;box-shadow:0 8px 24px rgba(37,99,235,.3);">🏠</div>
-        <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);margin:0 0 12px;">Move-In Management</h2>
-        <p style="color:var(--muted);font-size:.9rem;line-height:1.65;margin:0 0 32px;">Move-in confirmations and tracking are handled by the Choice Properties Application System. Open the admin panel to view signed leases and confirm move-ins.</p>
-        <a href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=admin" target="_blank" rel="noopener noreferrer"
-           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;box-shadow:0 4px 18px rgba(37,99,235,.35);">
-          <i class="fas fa-external-link-alt"></i> Open Application System Admin Panel
-        </a>
-        <p style="margin:24px 0 0;font-size:.78rem;color:var(--muted);padding:12px 16px;background:rgba(37,99,235,.06);border-radius:8px;border:1px solid rgba(37,99,235,.12);"><i class="fas fa-info-circle" style="color:#3b82f6;margin-right:6px;"></i>After a lease is signed in the application system, move-in confirmation is completed there as well. All records are stored in Google Sheets.</p>
+
+    <div id="mi-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading move-in records…</div></div>
+
+  </div>
+</div>
+
+<script type="module" src="/js/cp-api.js"></script>
+<script>
+(function(){
+  var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
+  if(!btn)return;
+  btn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open');});
+  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+})();
+</script>
+<script>
+let _miFilter = 'signed';
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function fmtDate(d) { if(!d)return '—'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
+function fmtMoney(v) { if(v==null)return '—'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
+
+function miBadge(s) {
+  const map = {pending:'badge-pending',scheduled:'badge-scheduled',confirmed:'badge-confirmed',cancelled:'badge-cancelled'};
+  return `<span class="badge ${map[s]||'badge-pending'}">${s||'pending'}</span>`;
+}
+
+function renderMI(app) {
+  const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
+  const prop = esc(app.property_address || app.property_id || '—');
+  const miStatus = app.move_in_status || 'pending';
+  return `<div class="mi-card" id="micard-${app.id}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="app-id">${esc(app.app_id||app.id)}</div>
+        <div class="mi-name">${name}</div>
+        <div class="mi-prop"><i class="fas fa-map-marker-alt" style="margin-right:4px;font-size:.65rem"></i>${prop}</div>
+        <div style="margin-top:8px">${miBadge(miStatus)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;font-size:.76rem;color:var(--muted)">
+        <div>Lease Start: <strong>${fmtDate(app.lease_start_date)}</strong></div>
+        ${app.move_in_date_actual ? `<div style="margin-top:2px">Move-In Date: <strong style="color:#16a34a">${fmtDate(app.move_in_date_actual)}</strong></div>` : ''}
       </div>
     </div>
-  </div>
-  <script type="module" src="/js/cp-api.js"></script>
-  <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-  document.addEventListener('DOMContentLoaded', async () => {
-    const ok = await CP.Auth.requireAdmin();
-    if (!ok) return;
-    const user = await CP.Auth.getUser();
-    const adminName = document.getElementById('admin-name');
-    if (adminName) adminName.textContent = user?.email || 'Admin';
+    <div class="mi-meta">
+      <div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>
+      <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
+      <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
+      <div class="meta-item"><span class="meta-label">Lease Signed</span><span class="meta-val">${fmtDate(app.lease_signed_date)}</span></div>
+      <div class="meta-item"><span class="meta-label">Email</span><span class="meta-val" style="font-size:.7rem">${esc(app.email||'—')}</span></div>
+      <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-val">${esc(app.phone||'—')}</span></div>
+    </div>
+    <div class="mi-actions">
+      ${miStatus !== 'confirmed' ? `<button class="btn-sm btn-confirm" onclick="updateMI('${app.id}','confirmed')">✅ Confirm Move-In</button>` : ''}
+      ${miStatus !== 'scheduled' ? `<button class="btn-sm btn-schedule" onclick="updateMI('${app.id}','scheduled')">📅 Mark Scheduled</button>` : ''}
+      ${miStatus !== 'pending'   ? `<button class="btn-ghost-sm" onclick="updateMI('${app.id}','pending')">Reset → Pending</button>` : ''}
+      <button class="btn-ghost-sm" onclick="toggleMIDetail('${app.id}')">Notes / Date ▾</button>
+    </div>
+    <div class="detail-panel" id="midetail-${app.id}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="font-size:.75rem;color:var(--muted)">Actual Move-In Date:</label>
+        <input type="date" class="date-input" id="midate-${app.id}" value="${esc(app.move_in_date_actual||'')}">
+        <button class="btn-ghost-sm" onclick="saveMIDate('${app.id}')">Save Date</button>
+      </div>
+      ${app.move_in_notes ? `<div style="font-size:.76rem;margin-bottom:8px;color:var(--text)"><strong>Notes:</strong> ${esc(app.move_in_notes)}</div>` : ''}
+      ${app.move_in_confirmed_by ? `<div style="font-size:.73rem;color:#16a34a;margin-bottom:8px">Confirmed by: ${esc(app.move_in_confirmed_by)}</div>` : ''}
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Move-In Notes</div>
+      <textarea class="notes-area" id="minotes-${app.id}" placeholder="Move-in notes, key pickup details, inspection notes…">${esc(app.move_in_notes||'')}</textarea>
+      <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveMINotes('${app.id}')">Save Notes</button>
+    </div>
+  </div>`;
+}
+
+function toggleMIDetail(id) {
+  const p = document.getElementById('midetail-' + id);
+  if (p) p.classList.toggle('open');
+}
+
+async function updateMI(id, status) {
+  const card = document.getElementById('micard-' + id);
+  if (card) card.style.opacity = '0.5';
+  const { ok, error } = await CP.Applications.updateMoveIn(id, status);
+  if (!ok) { alert('Error: ' + error); if (card) card.style.opacity='1'; return; }
+  await loadMI();
+}
+
+async function saveMIDate(id) {
+  const input = document.getElementById('midate-' + id);
+  if (!input) return;
+  const { ok, error } = await CP.Applications.updateMoveIn(id, undefined, input.value);
+  if (!ok) { alert('Error: ' + error); return; }
+  input.style.borderColor = '#16a34a';
+  setTimeout(() => { input.style.borderColor = ''; }, 1500);
+}
+
+async function saveMINotes(id) {
+  const ta = document.getElementById('minotes-' + id);
+  if (!ta) return;
+  const { ok, error } = await CP.Applications.updateMoveIn(id, undefined, undefined, ta.value);
+  if (!ok) { alert('Error: ' + error); return; }
+  ta.style.borderColor = '#16a34a';
+  setTimeout(() => { ta.style.borderColor = ''; }, 1500);
+}
+
+async function loadMI() {
+  const list = document.getElementById('mi-list');
+  const sub  = document.getElementById('page-sub');
+
+  let filters = {};
+  if (_miFilter === 'signed') {
+    filters = { lease_status: 'signed' };
+  } else if (_miFilter === 'all_signed') {
+    filters = { lease_status: 'signed' };
+  } else {
+    filters = { lease_status: 'signed', move_in_status: _miFilter };
+  }
+
+  const { ok, data, error } = await CP.Applications.getAll(filters);
+  if (!ok) {
+    list.innerHTML = `<div class="empty-state"><h3>Error loading records</h3><p>${esc(error)}</p></div>`;
+    return;
+  }
+
+  let rows = data || [];
+  // For "signed" default tab: show those without a confirmed move-in
+  if (_miFilter === 'signed') {
+    rows = rows.filter(r => r.move_in_status !== 'confirmed');
+  }
+
+  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''} — ${_miFilter === 'signed' ? 'awaiting move-in confirmation' : _miFilter}`;
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-state"><h3>No records</h3><p>No signed leases match this filter.</p></div>`;
+    return;
+  }
+  list.innerHTML = rows.map(renderMI).join('');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await CP.Auth.requireAdmin();
+  if (!ok) return;
+  const user = await CP.Auth.getUser();
+  document.getElementById('admin-name').textContent = user?.email || 'Admin';
+
+  document.getElementById('filter-tabs').addEventListener('click', async e => {
+    const btn = e.target.closest('.filter-tab');
+    if (!btn) return;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _miFilter = btn.dataset.mi;
+    await loadMI();
   });
-  (function(){
-    var btn = document.getElementById('menuBtn');
-    var sidebar = document.getElementById('adminSidebar');
-    var overlay = document.getElementById('sidebarOverlay');
-    if(!btn) return;
-    function open(){ sidebar.classList.add('open'); overlay.classList.add('open'); }
-    function close(){ sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-    btn.addEventListener('click', open);
-    overlay.addEventListener('click', close);
-  })();
-  </script>
-  </body></html>
+
+  await loadMI();
+});
+</script>
+</body>
+</html>
