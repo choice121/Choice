@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
   <meta name="theme-color" content="#006aff">
   <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -7,69 +9,216 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script><link rel="stylesheet" href="/css/main.css?v=1775137055043">
+  <script defer src="/config.js"></script>
+<link rel="stylesheet" href="/css/main.css?v=1775137055043">
 <noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
 <link rel="stylesheet" href="/assets/fontawesome.css">
   <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
   <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
 <noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
 <script defer src="/js/supabase.min.js"></script>
+<style>
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--color-border);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+.filter-tab.active{background:var(--color-primary,#2563eb);color:#fff;border-color:transparent}
+.lease-card{background:var(--surface2);border:1px solid var(--color-border);border-radius:10px;padding:18px 20px;margin-bottom:12px;transition:border-color .15s}
+.lease-card:hover{border-color:rgba(37,99,235,.3)}
+.app-id{font-family:monospace;font-size:.68rem;color:var(--muted);margin-bottom:3px}
+.lease-name{font-size:.97rem;font-weight:700;color:var(--text)}
+.lease-prop{font-size:.76rem;color:var(--muted2);margin-top:2px}
+.badge{padding:3px 9px;border-radius:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge-none{background:rgba(107,114,128,.12);color:#6b7280}
+.badge-pending{background:rgba(234,179,8,.15);color:#ca8a04}
+.badge-sent{background:rgba(59,130,246,.15);color:#2563eb}
+.badge-signed{background:rgba(34,197,94,.15);color:#16a34a}
+.badge-voided{background:rgba(239,68,68,.12);color:#dc2626}
+.lease-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0;padding:12px 0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);font-size:.74rem}
+.meta-item{display:flex;flex-direction:column;gap:2px}
+.meta-label{color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.06em}
+.meta-val{color:var(--text);font-weight:600}
+.lease-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn-sm{padding:5px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-ghost-sm{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:.72rem;cursor:pointer}
+.btn-ghost-sm:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.notes-area{width:100%;margin-top:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.78rem;resize:vertical;min-height:60px;font-family:inherit}
+.detail-panel{display:none;margin-top:14px;padding:14px;background:var(--bg);border:1px solid var(--color-border);border-radius:8px;font-size:.76rem}
+.detail-panel.open{display:block}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state h3{color:var(--text);margin-bottom:8px}
+.loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
+</style>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-</head><body>
+</head>
+<body>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar"><div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-<nav><div class="nav-section">Overview</div><a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
-<div class="nav-section">Applications</div><a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
-<a class="nav-item active" href="leases.html"><span class="icon">📄</span> Leases</a>
-<a class="nav-item" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
-<a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
-<div class="nav-section">Platform</div><a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
-<a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
-<a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
+<aside class="sidebar" id="adminSidebar">
+  <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
+  <nav>
+    <div class="nav-section">Overview</div>
+    <a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
+    <div class="nav-section">Applications</div>
+    <a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
+    <a class="nav-item active" href="leases.html"><span class="icon">📄</span> Leases</a>
+    <a class="nav-item" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
+    <a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
+    <div class="nav-section">Platform</div>
+    <a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
+    <a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
+    <a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
     <a class="nav-item" href="audit-log.html"><span class="icon">🔍</span> Audit Log</a>
     <div class="nav-section">Tools</div>
-    <a class="nav-item" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a></nav>
-<div class="sidebar-footer"><a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
+    <a class="nav-item" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
     <div class="admin-name" id="admin-name">Loading…</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button></div></aside>
+    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
+  </div>
+</aside>
+
 <div class="main">
-    <div class="topbar">
-      <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-      <div><div class="page-title">Lease Pipeline</div><div class="page-sub">Managed by the Choice Properties Application System</div></div>
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div><div class="page-title">Lease Pipeline</div><div class="page-sub" id="page-sub">Loading…</div></div>
+  </div>
+  <div class="content">
+
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" data-lease="all">All</button>
+      <button class="filter-tab" data-lease="pending">Pending Lease</button>
+      <button class="filter-tab" data-lease="sent">Sent for Signing</button>
+      <button class="filter-tab" data-lease="signed">Signed</button>
     </div>
-    <div class="content">
-      <div class="card" style="max-width:680px;margin:0 auto;text-align:center;padding:48px 40px;">
-        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 24px;box-shadow:0 8px 24px rgba(37,99,235,.3);">📄</div>
-        <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);margin:0 0 12px;">Lease Management</h2>
-        <p style="color:var(--muted);font-size:.9rem;line-height:1.65;margin:0 0 32px;">All lease generation, e-signing, countersigning, and lease status tracking is handled by the Choice Properties Application System. Open the admin panel below to view and manage all leases.</p>
-        <a href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=admin" target="_blank" rel="noopener noreferrer"
-           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;box-shadow:0 4px 18px rgba(37,99,235,.35);transition:box-shadow .15s;">
-          <i class="fas fa-external-link-alt"></i> Open Application System Admin Panel
-        </a>
-        <p style="margin:24px 0 0;font-size:.78rem;color:var(--muted);padding:12px 16px;background:rgba(37,99,235,.06);border-radius:8px;border:1px solid rgba(37,99,235,.12);"><i class="fas fa-info-circle" style="color:#3b82f6;margin-right:6px;"></i>Leases are stored in Google Sheets. Use the Application System admin panel to generate leases, track signatures, and confirm move-ins.</p>
+
+    <div id="leases-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading lease pipeline…</div></div>
+
+  </div>
+</div>
+
+<script type="module" src="/js/cp-api.js"></script>
+<script>
+(function(){
+  var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
+  if(!btn)return;
+  btn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open');});
+  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+})();
+</script>
+<script>
+let _leaseFilter = 'all';
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function fmtDate(d) { if(!d)return '—'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
+function fmtMoney(v) { if(v==null)return '—'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function leaseBadge(s) {
+  const map = {none:'badge-none',pending:'badge-pending',sent:'badge-sent',signed:'badge-signed',voided:'badge-voided'};
+  return `<span class="badge ${map[s]||'badge-none'}">${s||'none'}</span>`;
+}
+
+function renderLease(app) {
+  const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
+  const prop = esc(app.property_address || app.property_id || '—');
+  return `<div class="lease-card" id="lcard-${app.id}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="app-id">${esc(app.app_id||app.id)}</div>
+        <div class="lease-name">${name}</div>
+        <div class="lease-prop"><i class="fas fa-map-marker-alt" style="margin-right:4px;font-size:.65rem"></i>${prop}</div>
+        <div style="margin-top:8px">${leaseBadge(app.lease_status)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;font-size:.76rem;color:var(--muted)">
+        ${app.lease_sent_date   ? `<div>Sent: <strong>${fmtDate(app.lease_sent_date)}</strong></div>` : ''}
+        ${app.lease_signed_date ? `<div>Signed: <strong style="color:#16a34a">${fmtDate(app.lease_signed_date)}</strong></div>` : ''}
       </div>
     </div>
-  </div>
-  <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-  (function(){
-    var btn = document.getElementById('menuBtn');
-    var sidebar = document.getElementById('adminSidebar');
-    var overlay = document.getElementById('sidebarOverlay');
-    if(!btn) return;
-    function open(){ sidebar.classList.add('open'); overlay.classList.add('open'); }
-    function close(){ sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-    btn.addEventListener('click', open);
-    overlay.addEventListener('click', close);
-  })();
-  </script>
-  <script type="module" src="/js/cp-api.js"></script>
-  <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-  document.addEventListener('DOMContentLoaded', async () => {
-    const ok = await CP.Auth.requireAdmin();
-    if (!ok) return;
-    const user = await CP.Auth.getUser();
-    const adminName = document.getElementById('admin-name');
-    if (adminName) adminName.textContent = user?.email || 'Admin';
+    <div class="lease-meta">
+      <div class="meta-item"><span class="meta-label">Lease Start</span><span class="meta-val">${fmtDate(app.lease_start_date)}</span></div>
+      <div class="meta-item"><span class="meta-label">Lease End</span><span class="meta-val">${fmtDate(app.lease_end_date)}</span></div>
+      <div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>
+      <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
+      <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
+      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? '✅ ' + fmtDate(app.signature_timestamp) : '—'}</span></div>
+    </div>
+    <div class="lease-actions">
+      <a href="applications.html" class="btn-ghost-sm">← All Applications</a>
+      ${app.lease_pdf_url ? `<a href="${esc(app.lease_pdf_url)}" target="_blank" class="btn-ghost-sm"><i class="fas fa-file-pdf"></i> View Lease PDF</a>` : ''}
+      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${app.id}')">Notes / Details ▾</button>
+    </div>
+    <div class="detail-panel" id="ldetail-${app.id}">
+      <div style="margin-bottom:8px;font-size:.76rem;color:var(--text)">
+        ${app.lease_notes ? `<div><strong>Lease Notes:</strong> ${esc(app.lease_notes)}</div>` : ''}
+        <div style="margin-top:4px"><strong>Email:</strong> ${esc(app.email||'—')} &nbsp;|&nbsp; <strong>Landlord Email:</strong> ${esc(app.landlord_email||'—')}</div>
+        ${app.tenant_signature ? `<div style="margin-top:4px;font-size:.72rem;color:#16a34a"><i class="fas fa-check-circle"></i> Tenant signed: ${fmtDate(app.signature_timestamp)}</div>` : ''}
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
+      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notes…">${esc(app.admin_notes||'')}</textarea>
+      <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveLNotes('${app.id}')">Save Notes</button>
+    </div>
+  </div>`;
+}
+
+function toggleLeaseDetail(id) {
+  const p = document.getElementById('ldetail-' + id);
+  if (p) p.classList.toggle('open');
+}
+
+async function saveLNotes(id) {
+  const ta = document.getElementById('lnotes-' + id);
+  if (!ta) return;
+  const { ok, error } = await CP.Applications.saveNotes(id, ta.value);
+  if (!ok) { alert('Error: ' + error); return; }
+  ta.style.borderColor = '#16a34a';
+  setTimeout(() => { ta.style.borderColor = ''; }, 1500);
+}
+
+async function loadLeases() {
+  const list = document.getElementById('leases-list');
+  const sub  = document.getElementById('page-sub');
+
+  // Show all approved apps + any with lease activity
+  const filters = { status: 'approved' };
+  if (_leaseFilter !== 'all') filters.lease_status = _leaseFilter;
+
+  // For "all" tab: get approved status OR any lease_status != none
+  // Supabase doesn't support OR across different columns easily in getAll,
+  // so we fetch approved apps and let the filter tab handle lease_status separately.
+  const { ok, data, error } = await CP.Applications.getAll(
+    _leaseFilter === 'all'
+      ? { status: 'approved' }
+      : { lease_status: _leaseFilter }
+  );
+
+  if (!ok) {
+    list.innerHTML = `<div class="empty-state"><h3>Error loading leases</h3><p>${esc(error)}</p></div>`;
+    return;
+  }
+  const rows = data || [];
+  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}${_leaseFilter !== 'all' ? ' — lease ' + _leaseFilter : ' — approved applications'}`;
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-state"><h3>No records found</h3><p>No applications match this filter.</p></div>`;
+    return;
+  }
+  list.innerHTML = rows.map(renderLease).join('');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await CP.Auth.requireAdmin();
+  if (!ok) return;
+  const user = await CP.Auth.getUser();
+  document.getElementById('admin-name').textContent = user?.email || 'Admin';
+
+  document.getElementById('filter-tabs').addEventListener('click', async e => {
+    const btn = e.target.closest('.filter-tab');
+    if (!btn) return;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _leaseFilter = btn.dataset.lease;
+    await loadLeases();
   });
-  </script>
-  </body></html>
+
+  await loadLeases();
+});
+</script>
+</body>
+</html>
