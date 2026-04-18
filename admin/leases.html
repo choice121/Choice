@@ -204,9 +204,11 @@ function renderLease(app) {
     <div class="lease-actions">
       <button class="btn-generate" onclick="openLeaseMod('${esc(app.app_id||'')}', window._leaseRows && window._leaseRows['${esc(app.id||app.app_id||'')}'])">${app.lease_status === 'sent' || app.lease_status === 'signed' || app.lease_status === 'co_signed' ? 'Regenerate & Send Lease' : 'Generate & Send Lease'}</button>
       ${app.lease_pdf_url ? `<button class="btn-download" onclick="downloadLease('${esc(app.app_id||'')}')">Download PDF</button>` : ''}
-      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm" onclick="voidLease('${esc(app.id||'')}')">Void Lease</button>` : ''}
+      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm" onclick="sendSigningReminder('${esc(app.app_id||'')}','${esc(app.id||'')}')"><i class="fas fa-bell" style="margin-right:4px"></i>Send Reminder</button>` : ''}
+      ${app.lease_status === 'signed' && !app.management_cosigned ? `<button class="btn-ghost-sm" onclick="cosignLease('${esc(app.id||'')}','${esc(app.app_id||'')}')"><i class="fas fa-pen" style="margin-right:4px"></i>Countersign</button>` : ''}
+      ${app.management_cosigned ? `<span style="font-size:.72rem;color:#16a34a;font-weight:600"><i class="fas fa-check-circle" style="margin-right:3px"></i>Countersigned</span>` : ''}
+      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm btn-danger" onclick="voidLease('${esc(app.id||'')}')">Void</button>` : ''}
       <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${esc(app.id||'')}')">Notes / Details</button>
-      <a href="applications.html" class="btn-ghost-sm">View Applications</a>
     </div>
     <div class="detail-panel" id="ldetail-${app.id}">
       <div style="margin-bottom:8px;font-size:.76rem;color:var(--text)">
@@ -382,6 +384,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     closeLeaseMod();
     showToast('Lease generated and signing email sent!', 'success');
+    await loadLeases();
+  }
+
+  async function sendSigningReminder(appId, id) {
+    if (!confirm('Send a lease signing reminder email to this tenant?')) return;
+    const session = await CP.Auth.getSession();
+    const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+    try {
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ app_id: appId, type: 'lease_signing_reminder' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { showToast('Email failed: ' + (json.error || res.statusText), 'error'); return; }
+      showToast('Signing reminder sent to tenant.', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function cosignLease(id, appId) {
+    const sig = prompt('Enter management countersignature name:');
+    if (!sig || !sig.trim()) return;
+    const { error } = await CP.sb().from('applications').update({
+      management_cosigned: true,
+      management_cosigned_by: sig.trim(),
+      management_cosigned_at: new Date().toISOString(),
+      lease_status: 'co_signed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast('Lease countersigned by ' + sig.trim(), 'success');
     await loadLeases();
   }
 
