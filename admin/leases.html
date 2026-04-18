@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#006aff">
   <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Leases — Choice Properties Admin</title>
+<title>Leases â Choice Properties Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -83,23 +83,24 @@
   <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
   <nav>
     <div class="nav-section">Overview</div>
-    <a class="nav-item" href="dashboard.html"><span class="icon">⊞</span> Dashboard</a>
+    <a class="nav-item" href="dashboard.html"><span class="icon">â</span> Dashboard</a>
     <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon">📋</span> All Applications</a>
-    <a class="nav-item active" href="leases.html"><span class="icon">📄</span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon">🏠</span> Move-Ins</a>
-    <a class="nav-item" href="messages.html"><span class="icon">💬</span> Messages</a>
+    <a class="nav-item" href="applications.html"><span class="icon">ð</span> All Applications</a>
+    <a class="nav-item active" href="leases.html"><span class="icon">ð</span> Leases</a>
+    <a class="nav-item" href="move-ins.html"><span class="icon">ð </span> Move-Ins</a>
+    <a class="nav-item" href="messages.html"><span class="icon">ð¬</span> Messages</a>
     <div class="nav-section">Platform</div>
-    <a class="nav-item" href="landlords.html"><span class="icon">👤</span> Landlords</a>
-    <a class="nav-item" href="listings.html"><span class="icon">🏢</span> Listings</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon">📧</span> Email Logs</a>
-    <a class="nav-item" href="audit-log.html"><span class="icon">🔍</span> Audit Log</a>
+    <a class="nav-item" href="landlords.html"><span class="icon">ð¤</span> Landlords</a>
+    <a class="nav-item" href="properties.html"><span class="icon">&#127962;</span> Properties</a>
+    <a class="nav-item" href="listings.html"><span class="icon">ð¢</span> Listings</a>
+    <a class="nav-item" href="email-logs.html"><span class="icon">ð§</span> Email Logs</a>
+    <a class="nav-item" href="audit-log.html"><span class="icon">ð</span> Audit Log</a>
     <div class="nav-section">Tools</div>
-    <a class="nav-item" href="watermark-review.html"><span class="icon">🔎</span> Watermark Review</a>
+    <a class="nav-item" href="watermark-review.html"><span class="icon">ð</span> Watermark Review</a>
   </nav>
   <div class="sidebar-footer">
     <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading…</div>
+    <div class="admin-name" id="admin-name">Loadingâ¦</div>
     <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
   </div>
 </aside>
@@ -107,7 +108,7 @@
 <div class="main">
   <div class="topbar">
     <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div><div class="page-title">Lease Pipeline</div><div class="page-sub" id="page-sub">Loading…</div></div>
+    <div><div class="page-title">Lease Pipeline</div><div class="page-sub" id="page-sub">Loadingâ¦</div></div>
   </div>
   <div class="content">
 
@@ -118,7 +119,7 @@
       <button class="filter-tab" data-lease="signed">Signed</button>
     </div>
 
-    <div id="leases-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading lease pipeline…</div></div>
+    <div id="leases-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading lease pipelineâ¦</div></div>
 
   </div>
 
@@ -127,7 +128,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3>Generate &amp; Send Lease</h3>
-        <button class="modal-close" onclick="closeLeaseMod()">✕</button>
+        <button class="modal-close" onclick="closeLeaseMod()">â</button>
       </div>
       <div class="modal-body">
         <div id="modal-app-info" style="font-size:.8rem;color:var(--muted);margin-bottom:16px;padding:10px 12px;background:var(--surface2);border-radius:7px"></div>
@@ -151,7 +152,7 @@
         <div class="form-row"><label>Landlord Address</label><input type="text" id="m-landlord-address" placeholder="2265 Livernois Suite 500, Troy MI 48083"></div>
         <div class="form-row"><label>Pets Policy</label><input type="text" id="m-pets-policy" placeholder="No pets allowed."></div>
         <div class="form-row"><label>Smoking Policy</label><input type="text" id="m-smoking-policy" placeholder="No smoking permitted on premises."></div>
-        <div class="form-row"><label>Lease Notes (internal)</label><textarea id="m-lease-notes" rows="2" placeholder="Internal notes for this lease…"></textarea></div>
+        <div class="form-row"><label>Lease Notes (internal)</label><textarea id="m-lease-notes" rows="2" placeholder="Internal notes for this leaseâ¦"></textarea></div>
         <div id="modal-err" style="display:none;color:#dc2626;font-size:.78rem;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px"></div>
       </div>
       <div class="modal-footer">
@@ -181,8 +182,8 @@
 let _leaseFilter = 'all';
 
 function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-function fmtDate(d) { if(!d)return '—'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
-function fmtMoney(v) { if(v==null)return '—'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d) { if(!d)return 'â'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
+function fmtMoney(v) { if(v==null)return 'â'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function leaseBadge(s) {
   const map = {none:'badge-none',pending:'badge-pending',sent:'badge-sent',signed:'badge-signed',voided:'badge-voided'};
@@ -191,7 +192,7 @@ function leaseBadge(s) {
 
 function renderLease(app) {
   const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
-  const prop = esc(app.property_address || app.property_id || '—');
+  const prop = esc(app.property_address || app.property_id || 'â');
   return `<div class="lease-card" id="lcard-${app.id}">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
@@ -211,21 +212,21 @@ function renderLease(app) {
       <div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>
       <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
       <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
-      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? '✅ ' + fmtDate(app.signature_timestamp) : '—'}</span></div>
+      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? 'â ' + fmtDate(app.signature_timestamp) : 'â'}</span></div>
     </div>
     <div class="lease-actions">
-      <a href="applications.html" class="btn-ghost-sm">← All Applications</a>
+      <a href="applications.html" class="btn-ghost-sm">â All Applications</a>
       ${app.lease_pdf_url ? `<a href="${esc(app.lease_pdf_url)}" target="_blank" class="btn-ghost-sm"><i class="fas fa-file-pdf"></i> View Lease PDF</a>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${app.id}')">Notes / Details ▾</button>
+      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${app.id}')">Notes / Details â¾</button>
     </div>
     <div class="detail-panel" id="ldetail-${app.id}">
       <div style="margin-bottom:8px;font-size:.76rem;color:var(--text)">
         ${app.lease_notes ? `<div><strong>Lease Notes:</strong> ${esc(app.lease_notes)}</div>` : ''}
-        <div style="margin-top:4px"><strong>Email:</strong> ${esc(app.email||'—')} &nbsp;|&nbsp; <strong>Landlord Email:</strong> ${esc(app.landlord_email||'—')}</div>
+        <div style="margin-top:4px"><strong>Email:</strong> ${esc(app.email||'â')} &nbsp;|&nbsp; <strong>Landlord Email:</strong> ${esc(app.landlord_email||'â')}</div>
         ${app.tenant_signature ? `<div style="margin-top:4px;font-size:.72rem;color:#16a34a"><i class="fas fa-check-circle"></i> Tenant signed: ${fmtDate(app.signature_timestamp)}</div>` : ''}
       </div>
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
-      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notes…">${esc(app.admin_notes||'')}</textarea>
+      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notesâ¦">${esc(app.admin_notes||'')}</textarea>
       <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveLNotes('${app.id}')">Save Notes</button>
     </div>
   </div>`;
@@ -267,7 +268,7 @@ async function loadLeases() {
     return;
   }
   const rows = data || [];
-  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}${_leaseFilter !== 'all' ? ' — lease ' + _leaseFilter : ' — approved applications'}`;
+  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}${_leaseFilter !== 'all' ? ' â lease ' + _leaseFilter : ' â approved applications'}`;
   if (!rows.length) {
     list.innerHTML = `<div class="empty-state"><h3>No records found</h3><p>No applications match this filter.</p></div>`;
     return;
@@ -305,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const app = typeof appData === 'string' ? JSON.parse(appData) : appData;
     document.getElementById('modal-app-id').value = appId;
     document.getElementById('modal-app-info').textContent =
-      (app.first_name||'') + ' ' + (app.last_name||'') + '  ·  ' + (app.property_address||appId);
+      (app.first_name||'') + ' ' + (app.last_name||'') + '  Â·  ' + (app.property_address||appId);
 
     // Prefill fields from existing app data
     if (app.lease_start_date) document.getElementById('m-lease-start').value = app.lease_start_date.slice(0,10);
@@ -352,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const btn = document.getElementById('modal-submit-btn');
     btn.disabled = true;
-    document.getElementById('modal-submit-text').textContent = 'Generating…';
+    document.getElementById('modal-submit-text').textContent = 'Generatingâ¦';
     document.getElementById('modal-err').style.display = 'none';
 
     const token = await CP.Auth.getAccessToken();
