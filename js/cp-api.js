@@ -848,6 +848,62 @@ async function updateNav() {
       return _ok(data, error);
     },
 
+    async updatePaymentWithDetails(id, paymentStatus, amount, method, notes) {
+      const now = new Date().toISOString();
+      const patch = {
+        payment_status: paymentStatus,
+        payment_date: paymentStatus === 'paid' ? now : null,
+        updated_at: now,
+      };
+      if (amount  != null) patch.payment_amount_recorded = amount;
+      if (method)          patch.payment_method_recorded  = method;
+      if (notes)           patch.payment_notes            = notes;
+      const { data, error } = await sb().from('applications')
+        .update(patch).eq('id', id)
+        .select('id,payment_status,payment_date,payment_amount_recorded,payment_method_recorded,payment_notes').single();
+      return _ok(data, error);
+    },
+
+    async getLandlordApplications(landlordId) {
+      const { data, error } = await sb()
+        .from('applications')
+        .select(
+          'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,' +
+          'property_id,property_address,' +
+          'first_name,last_name,email,phone,dob,' +
+          'requested_move_in_date,desired_lease_term,' +
+          'employment_status,employer,job_title,monthly_income,' +
+          'has_bankruptcy,has_criminal_history,' +
+          'has_pets,pet_details,total_occupants,smoker,' +
+          'has_co_applicant,admin_notes,' +
+          'lease_status,lease_start_date,lease_end_date,monthly_rent,' +
+          'move_in_status,move_in_date_actual'
+        )
+        .eq('landlord_id', landlordId)
+        .order('created_at', { ascending: false });
+      return _ok(data || [], error);
+    },
+
+    async getLandlordApplicationsByProperty(propertyIds) {
+      if (!propertyIds || !propertyIds.length) return _ok([], null);
+      const { data, error } = await sb()
+        .from('applications')
+        .select(
+          'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,' +
+          'property_id,property_address,' +
+          'first_name,last_name,email,phone,' +
+          'requested_move_in_date,desired_lease_term,' +
+          'employment_status,employer,job_title,monthly_income,' +
+          'has_bankruptcy,has_criminal_history,' +
+          'has_pets,pet_details,total_occupants,smoker,' +
+          'has_co_applicant,admin_notes,' +
+          'lease_status,monthly_rent,move_in_status'
+        )
+        .in('property_id', propertyIds)
+        .order('created_at', { ascending: false });
+      return _ok(data || [], error);
+    },
+
     async saveNotes(id, adminNotes) {
       const { data, error } = await sb().from('applications').update({ admin_notes: adminNotes, updated_at: new Date().toISOString() }).eq('id', id).select('id,admin_notes').single();
       return _ok(data, error);

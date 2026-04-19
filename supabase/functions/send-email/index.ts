@@ -4,6 +4,7 @@ import { sendEmail } from '../_shared/send-email.ts';
 import {
   approvalEmailHtml,
   denialEmailHtml,
+  waitlistedEmailHtml,
   moveinEmailHtml,
   holdingFeeRequestHtml,
   holdingFeeReceivedHtml,
@@ -106,6 +107,10 @@ Deno.serve(async (req: Request) => {
     subject = 'Update on Your Application — Choice Properties';
     html    = denialEmailHtml(name, prop, message);
 
+  } else if (type === 'waitlisted') {
+    subject = 'Update on Your Application — Choice Properties';
+    html    = waitlistedEmailHtml(name, prop, message);
+
   } else if (type === 'movein_confirmed') {
     const moveDate = app.move_in_date_actual ? formatDate(app.move_in_date_actual) : undefined;
     subject = 'Move-In Confirmed — Choice Properties';
@@ -175,7 +180,7 @@ Deno.serve(async (req: Request) => {
     sendToAdmin = true;
 
   } else {
-    return jsonErr(400, `Unsupported email type: "${type}". Supported types: approved, denied, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
+    return jsonErr(400, `Unsupported email type: "${type}". Supported types: approved, denied, waitlisted, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
   }
 
   // ── Send ───────────────────────────────────────────────────────────────────

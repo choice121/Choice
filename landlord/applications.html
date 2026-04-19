@@ -1,26 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Applications — Choice Properties</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="stylesheet" href="/assets/fontawesome.css">
-    <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-  <link rel="stylesheet" href="/css/landlord.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-  <script defer src="/config.js"></script>
-  <script defer src="/js/supabase.min.js"></script>
-  <script type="module" src="/js/cp-api.js"></script>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#006aff">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Applications — Choice Properties Landlord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="stylesheet" href="/assets/fontawesome.css">
+<link rel="stylesheet" href="/css/main.css?v=1775137055043">
+<link rel="stylesheet" href="/css/landlord.css?v=1775137055043">
+<link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script type="module" src="/js/cp-api.js"></script>
+<style>
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--surface3:#e2e8f0;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --red:#dc2626;--red-light:#fef2f2;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --amber:#b45309;--amber-light:#fffbeb;
+  --radius:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Nav ── */
+.nav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.nav-inner{max-width:1100px;margin:0 auto;padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-mark{width:36px;height:36px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.9rem}
+.nav-logo-text{font-size:.95rem;font-weight:700;color:var(--text)}
+.nav-logo-sub{font-size:.7rem;color:var(--muted)}
+.nav-links{display:flex;align-items:center;gap:10px}
+.nav-link{color:var(--muted);font-size:.84rem;font-weight:500;text-decoration:none;padding:6px 12px;border-radius:7px;transition:all .15s}
+.nav-link:hover{background:var(--blue-light);color:var(--blue)}
+.btn-sm{padding:7px 16px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+
+/* ── Layout ── */
+.layout{display:flex;max-width:1100px;margin:0 auto;gap:0;min-height:calc(100vh - 60px)}
+.sidebar{width:220px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);padding:20px 0}
+@media(max-width:768px){.sidebar{display:none}}
+.sidebar-section{padding:0 12px;margin-bottom:6px}
+.sidebar-section-label{font-size:.62rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;padding:8px 8px 4px}
+.sidebar-nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--muted);font-size:.84rem;font-weight:500;text-decoration:none;transition:all .15s;margin:1px 0}
+.sidebar-nav-item:hover{background:var(--blue-light);color:var(--blue)}
+.sidebar-nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.sidebar-nav-item i{width:18px;text-align:center;font-size:.82rem}
+.sidebar-user{margin:auto 12px 0;padding-top:20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-user-avatar{width:36px;height:36px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;flex-shrink:0}
+.sidebar-user-name{font-size:.82rem;font-weight:600;color:var(--text)}
+.sidebar-user-email{font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.main-content{flex:1;padding:24px 20px;min-width:0}
+
+/* ── Page header ── */
+.page-header{margin-bottom:20px}
+.page-eyebrow{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.page-title{font-size:1.5rem;font-weight:800;color:var(--text)}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:24px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-num{font-size:1.5rem;font-weight:800;color:var(--text)}
+.stat-label{font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
+/* ── Filters ── */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filter-pill{padding:7px 15px;border-radius:20px;border:1px solid var(--border2);background:#fff;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.filter-pill.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.filter-pill:hover:not(.active){border-color:var(--blue);color:var(--blue)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:.82rem}
+.search-box{width:100%;padding:9px 14px 9px 36px;background:#fff;border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:.84rem;font-family:inherit;outline:none}
+.search-box:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+
+/* ── Cards ── */
+.apps-list{display:flex;flex-direction:column;gap:10px}
+.app-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow .15s,border-color .15s}
+.app-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08);border-color:var(--blue)}
+.app-card-header{padding:16px 18px;display:flex;align-items:flex-start;gap:14px;cursor:pointer}
+.app-avatar{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;flex-shrink:0;color:#fff}
+.app-info{flex:1;min-width:0}
+.app-meta-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.app-id{font-family:monospace;font-size:.67rem;color:var(--muted);background:var(--surface2);padding:2px 7px;border-radius:5px;border:1px solid var(--border)}
+.app-date{font-size:.67rem;color:var(--muted)}
+.app-name{font-size:.97rem;font-weight:700;color:var(--text)}
+.app-prop{font-size:.77rem;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px}
+.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 9px;border-radius:10px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.b-pending{background:rgba(180,83,9,.1);color:#92400e}
+.b-approved{background:var(--green-light);color:var(--green)}
+.b-denied{background:var(--red-light);color:var(--red)}
+.b-waitlisted{background:var(--purple-light);color:var(--purple)}
+.b-withdrawn{background:#f1f5f9;color:var(--muted)}
+.b-paid{background:var(--green-light);color:var(--green)}
+.b-unpaid{background:var(--red-light);color:var(--red)}
+.b-co{background:#fff7ed;color:#c2410c}
+.b-pets{background:#f0fdf4;color:#15803d}
+.b-lease{background:var(--blue-light);color:var(--blue)}
+.expand-icon{flex-shrink:0;color:var(--muted2);font-size:.85rem;align-self:center;transition:transform .2s}
+.expand-icon.open{transform:rotate(180deg)}
+
+/* ── Detail panel ── */
+.detail-panel{display:none;border-top:1px solid var(--border);background:var(--surface2)}
+.detail-panel.open{display:block}
+.detail-inner{padding:20px}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:.64rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0}
+.detail-row{padding:7px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{font-size:.62rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em}
+.detail-val{font-size:.82rem;color:var(--text);font-weight:500}
+
+/* ── Notes ── */
+.notes-section{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:16px}
+.notes-title{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.notes-area{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:.83rem;resize:vertical;min-height:72px;font-family:inherit;outline:none}
+.notes-area:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.btn-save-notes{margin-top:8px;padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-save-notes:hover{opacity:.88}
+
+/* ── Contact card ── */
+.contact-card{background:var(--blue-light);border:1px solid rgba(37,99,235,.2);border-radius:var(--radius);padding:14px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.contact-item{display:flex;align-items:center;gap:6px;font-size:.83rem;color:var(--blue);font-weight:500}
+.contact-item a{color:var(--blue);text-decoration:none}
+.contact-item a:hover{text-decoration:underline}
+
+/* ── Co-app card ── */
+.coapp-card{background:#fff7ed;border:1px solid rgba(194,65,12,.15);border-radius:var(--radius);padding:14px 16px;margin-top:12px}
+.coapp-title{font-size:.72rem;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+
+/* ── Empty/loading ── */
+.empty-state{text-align:center;padding:72px 20px;background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
+.empty-icon{font-size:2.5rem;margin-bottom:14px;opacity:.35}
+.empty-state h3{font-size:1rem;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:.85rem;color:var(--muted)}
+.loading-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--muted);font-size:.88rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
+
+/* ── Toast ── */
+#cp-toast{position:fixed;bottom:20px;right:20px;padding:11px 20px;border-radius:10px;font-size:.83rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
+
+/* ── Mobile bar ── */
+.mobile-nav-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:10px 0 env(safe-area-inset-bottom,0);z-index:90}
+@media(max-width:768px){
+  .mobile-nav-bar{display:flex;justify-content:space-around}
+  .main-content{padding-bottom:80px}
+}
+.mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:.65rem;font-weight:600;text-decoration:none;padding:4px 12px;border-radius:8px;transition:color .15s;flex:1}
+.mobile-nav-item.active,.mobile-nav-item:hover{color:var(--blue)}
+.mobile-nav-item i{font-size:1.1rem}
+</style>
 </head>
 <body>
 
@@ -28,84 +168,371 @@
   <div class="nav-inner">
     <a href="/index.html" class="nav-logo">
       <div class="nav-logo-mark">C</div>
-      <div><div class="nav-logo-text">Choice Properties</div><div class="nav-logo-sub">Landlord Portal</div></div>
+      <div>
+        <div class="nav-logo-text">Choice Properties</div>
+        <div class="nav-logo-sub">Landlord Portal</div>
+      </div>
     </a>
     <div class="nav-links">
-      <a href="/index.html" class="nav-link">View Listings →</a>
-      <button class="btn btn-ghost btn-sm" id="signOutBtn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+      <span id="user-email-nav" style="font-size:.78rem;color:var(--muted);display:none"></span>
+      <button class="btn-sm btn-outline" id="signOutBtn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
     </div>
   </div>
 </nav>
 
-<div class="dashboard-layout">
-  <aside class="dashboard-sidebar">
-    <div class="sidebar-section-label">Menu</div>
-    <a href="/landlord/dashboard.html" class="sidebar-nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
-    <a href="/landlord/new-listing.html" class="sidebar-nav-item"><i class="fas fa-plus-circle"></i> Add Listing</a>
-    <a href="/landlord/applications.html" class="sidebar-nav-item active"><i class="fas fa-file-alt"></i> Applications</a>
-    <a href="/landlord/inquiries.html" class="sidebar-nav-item"><i class="fas fa-envelope"></i> Inquiries</a>
-    <div class="sidebar-section-label" style="margin-top:var(--s-4)">Account</div>
-    <a href="/landlord/settings.html" class="sidebar-nav-item"><i class="fas fa-cog"></i> Settings</a>
-    <a href="#" class="sidebar-nav-item" id="viewProfileSide"><i class="fas fa-id-badge"></i> My Profile</a>
-    <a href="#" class="sidebar-nav-item" id="sideSignOut"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Menu</div>
+      <a href="/landlord/dashboard.html" class="sidebar-nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="/landlord/new-listing.html" class="sidebar-nav-item"><i class="fas fa-plus-circle"></i> Add Listing</a>
+      <a href="/landlord/applications.html" class="sidebar-nav-item active"><i class="fas fa-file-alt"></i> Applications</a>
+      <a href="/landlord/inquiries.html" class="sidebar-nav-item"><i class="fas fa-envelope"></i> Inquiries</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Account</div>
+      <a href="/landlord/profile.html" class="sidebar-nav-item"><i class="fas fa-id-badge"></i> My Profile</a>
+      <a href="/landlord/settings.html" class="sidebar-nav-item"><i class="fas fa-cog"></i> Settings</a>
+      <a href="#" class="sidebar-nav-item" id="sideSignOut"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+    </div>
     <div style="flex:1"></div>
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="userAvatar">?</div>
-      <div>
-        <div class="sidebar-user-name" id="userName">Loading…</div>
-        <div class="sidebar-user-email" id="userEmail"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="userAvatar">?</div>
+        <div>
+          <div class="sidebar-user-name" id="userName">Loading…</div>
+          <div class="sidebar-user-email" id="userEmail"></div>
+        </div>
       </div>
     </div>
   </aside>
 
-  <main class="dashboard-main">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s-8)">
-        <div>
-          <div class="section-eyebrow">Landlord Portal</div>
-          <h1 class="section-title" style="font-size:28px">Applications</h1>
-        </div>
-      </div>
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-eyebrow">Landlord Portal</div>
+      <div class="page-title">My Applications</div>
+    </div>
 
-      <div class="dashboard-section" style="text-align:center;padding:48px 32px;">
-        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#1d3f72,#2563eb);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 24px;box-shadow:0 8px 24px rgba(37,99,235,.3);">📋</div>
-        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-primary,#0a1628);margin:0 0 12px;">Applications Managed in the Application System</h2>
-        <p style="color:#8892a2;font-size:.9rem;line-height:1.65;max-width:520px;margin:0 auto 32px;">All rental applications for your properties are received, reviewed, and managed through the Choice Properties Application System. Click below to open the admin panel where you can view all applications, mark payments, approve or deny applicants, and send leases.</p>
-        <a href="/admin/applications.html" target="_blank" rel="noopener noreferrer"
-           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;box-shadow:0 4px 18px rgba(37,99,235,.35);">
-          <i class="fas fa-external-link-alt"></i> Open Application Admin Panel
-        </a>
-        <p style="margin:28px auto 0;max-width:480px;font-size:.78rem;color:#8892a2;padding:12px 16px;background:rgba(37,99,235,.05);border-radius:8px;border:1px solid rgba(37,99,235,.1);">
-          <i class="fas fa-info-circle" style="color:#3b82f6;margin-right:6px;"></i>Applicants apply through the internal <strong>/apply/</strong> frontend when they click "Apply Now" on your listings. All application data is securely submitted to the application backend.
-        </p>
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row" style="display:none"></div>
+
+    <!-- Filters -->
+    <div class="filter-row" id="filter-tabs" style="margin-bottom:10px">
+      <button class="filter-pill active" data-status="all">All</button>
+      <button class="filter-pill" data-status="pending">Pending</button>
+      <button class="filter-pill" data-status="approved">Approved</button>
+      <button class="filter-pill" data-status="waitlisted">Waitlisted</button>
+      <button class="filter-pill" data-status="denied">Denied</button>
+    </div>
+    <div class="filter-row" style="margin-bottom:20px">
+      <div class="search-wrap">
+        <i class="fas fa-search si"></i>
+        <input class="search-box" id="search-input" type="text" placeholder="Search name, email, app ID…">
       </div>
-    </main>
+    </div>
+
+    <div class="apps-list" id="apps-list">
+      <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading your applications…</div>
+    </div>
+  </main>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
-
-<script type="module" nonce="VZEkWatH2Jtta2vFy8dRhA">
-  import { requireAuth, getLandlordProfile, signOut } from '../js/cp-api.js';
-
-  const session = await requireAuth('/landlord/login.html');
-  if (!session) throw new Error('Not authenticated');
-  const profile = await getLandlordProfile();
-  if (!profile) { window.location.href = '/landlord/login.html'; throw new Error(); }
-
-  document.getElementById('userName').textContent  = profile.business_name || profile.contact_name;
-  document.getElementById('userEmail').textContent = profile.email;
-  document.getElementById('userAvatar').textContent = profile.contact_name.charAt(0).toUpperCase();
-  document.getElementById('viewProfileSide').href = `/landlord/profile.html?id=${profile.id}`;
-  [document.getElementById('signOutBtn'), document.getElementById('sideSignOut')]
-    .forEach(b => b?.addEventListener('click', signOut));
-
-</script>
-
-<nav class="mobile-bottom-nav">
-  <a href="/landlord/dashboard.html" class="mobile-bottom-nav-item"><i class="fas fa-th-large"></i>Dashboard</a>
-  <a href="/landlord/applications.html" class="mobile-bottom-nav-item active"><i class="fas fa-file-alt"></i>Apps</a>
-  <a href="/landlord/inquiries.html" class="mobile-bottom-nav-item"><i class="fas fa-envelope"></i>Inquiries</a>
-  <a href="/landlord/new-listing.html" class="mobile-bottom-nav-item"><i class="fas fa-plus-circle"></i>New</a>
-  <a href="/landlord/settings.html" class="mobile-bottom-nav-item"><i class="fas fa-cog"></i>Settings</a>
+<!-- Mobile nav -->
+<nav class="mobile-nav-bar">
+  <a href="/landlord/dashboard.html" class="mobile-nav-item"><i class="fas fa-th-large"></i>Dashboard</a>
+  <a href="/landlord/applications.html" class="mobile-nav-item active"><i class="fas fa-file-alt"></i>Applications</a>
+  <a href="/landlord/new-listing.html" class="mobile-nav-item"><i class="fas fa-plus-circle"></i>Add Listing</a>
+  <a href="/landlord/inquiries.html" class="mobile-nav-item"><i class="fas fa-envelope"></i>Inquiries</a>
+  <a href="/landlord/profile.html" class="mobile-nav-item"><i class="fas fa-user"></i>Profile</a>
 </nav>
+
+<div id="cp-toast"></div>
+
+<script>
+'use strict';
+
+let _landlord = null;
+let _allApps  = [];
+let _status   = 'all';
+let _search   = '';
+let _debounce = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
+function fmtMoney(v){if(v==null||v==='')return '—';return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function showToast(msg,type='success'){
+  const t=document.getElementById('cp-toast');
+  t.textContent=msg;
+  t.style.background=type==='error'?'#dc2626':type==='warn'?'#b45309':'#16a34a';
+  t.style.color='#fff';t.style.opacity='1';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',3500);
+}
+
+function avatar(app){
+  const initials=((app.first_name||'?')[0]+(app.last_name||'?')[0]).toUpperCase();
+  const colors=['#1d4ed8','#7c3aed','#0e7490','#15803d','#b45309','#be185d','#1e40af'];
+  const color=colors[(app.first_name||'').charCodeAt(0)%colors.length];
+  return `<div class="app-avatar" style="background:${color};width:46px;height:46px;border-radius:12px;flex-shrink:0">${initials}</div>`;
+}
+
+function statusBadge(s){
+  const m={pending:'b-pending',approved:'b-approved',denied:'b-denied',waitlisted:'b-waitlisted',withdrawn:'b-withdrawn'};
+  const l={pending:'Pending',approved:'Approved',denied:'Denied',waitlisted:'Waitlisted',withdrawn:'Withdrawn'};
+  return `<span class="badge ${m[s]||'b-pending'}">${l[s]||s}</span>`;
+}
+function payBadge(s){const m={paid:'b-paid',unpaid:'b-unpaid',waived:'b-paid',refunded:'b-withdrawn'};const l={paid:'Fee Paid',unpaid:'Fee Unpaid',waived:'Fee Waived',refunded:'Refunded'};return `<span class="badge ${m[s]||'b-unpaid'}">${l[s]||s}</span>`;}
+function leaseBadge(s){if(!s||s==='none')return '';const l={sent:'Lease Sent',signed:'Lease Signed',co_signed:'Fully Executed',awaiting_co_sign:'Awaiting Co-Sign',voided:'Voided',expired:'Expired'};return `<span class="badge b-lease">${l[s]||s}</span>`;}
+
+// ── Filter & render ──────────────────────────────────────────────────────────
+function applyFilters(){
+  let rows=_allApps;
+  if(_status!=='all')rows=rows.filter(r=>r.status===_status);
+  if(_search){
+    const q=_search.toLowerCase();
+    rows=rows.filter(r=>(r.first_name||'').toLowerCase().includes(q)||(r.last_name||'').toLowerCase().includes(q)||(r.email||'').toLowerCase().includes(q)||(r.app_id||'').toLowerCase().includes(q)||(r.property_address||'').toLowerCase().includes(q));
+  }
+  renderList(rows);
+}
+
+function renderList(rows){
+  const list=document.getElementById('apps-list');
+  if(!rows.length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><h3>No applications</h3><p>${_status==='all'&&!_search?'Applications for your properties will appear here.':'No applications match these filters.'}</p></div>`;
+    return;
+  }
+  list.innerHTML=rows.map(renderCard).join('');
+}
+
+function renderCard(app){
+  const name=esc(`${app.first_name||''} ${app.last_name||''}`.trim())||'(no name)';
+  const prop=esc(app.property_address||app.property_id||'—');
+  return `<div class="app-card" id="lcard-${app.id}">
+    <div class="app-card-header" onclick="toggleDetail('${app.id}')">
+      ${avatar(app)}
+      <div class="app-info">
+        <div class="app-meta-top">
+          <span class="app-id">${esc(app.app_id||app.id)}</span>
+          <span class="app-date">${fmtDate(app.created_at)}</span>
+          ${app.has_co_applicant?'<span class="badge b-co">Co-Applicant</span>':''}
+          ${app.has_pets?'<span class="badge b-pets">Pets</span>':''}
+        </div>
+        <div class="app-name">${name}</div>
+        <div class="app-prop"><i class="fas fa-map-marker-alt" style="font-size:.65rem"></i>${prop}</div>
+        <div class="badges">
+          ${statusBadge(app.status)}
+          ${payBadge(app.payment_status)}
+          ${leaseBadge(app.lease_status)}
+        </div>
+      </div>
+      <i class="fas fa-chevron-down expand-icon" id="lchev-${app.id}"></i>
+    </div>
+    <div class="detail-panel" id="ldetail-${app.id}">
+      <div class="detail-inner" id="ldetail-inner-${app.id}">
+        <div style="color:var(--muted);font-size:.82rem">Loading…</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function toggleDetail(id){
+  const panel=document.getElementById('ldetail-'+id);
+  const chev=document.getElementById('lchev-'+id);
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){panel.classList.remove('open');if(chev)chev.classList.remove('open');return;}
+  panel.classList.add('open');if(chev)chev.classList.add('open');
+  if(panel.dataset.loaded)return;
+  panel.dataset.loaded='1';
+  const app=_allApps.find(a=>a.id===id);
+  if(!app)return;
+  let coapp=null;
+  if(app.has_co_applicant){
+    try{const {data}=await CP.sb().from('co_applicants').select('*').eq('app_id',app.app_id).maybeSingle();coapp=data;}catch(_){}
+  }
+  document.getElementById('ldetail-inner-'+id).innerHTML=renderDetailInner(app,coapp);
+}
+
+function renderDetailInner(app,coapp){
+  function row(k,v){return `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(String(v||'—'))}</span></div>`;}
+  const coappHtml=coapp?`<div class="coapp-card">
+    <div class="coapp-title"><i class="fas fa-user-friends" style="margin-right:5px"></i>Co-Applicant</div>
+    <div class="detail-grid">
+      ${row('Name',(coapp.first_name||'')+' '+(coapp.last_name||''))}
+      ${row('Email',coapp.email)}
+      ${row('Phone',coapp.phone)}
+      ${row('Role',coapp.role)}
+      ${row('Employer',coapp.employer)}
+      ${row('Job Title',coapp.job_title)}
+      ${row('Income/mo',coapp.monthly_income)}
+      ${row('Employment',coapp.employment_duration)}
+    </div>
+  </div>`:(app.has_co_applicant?'<div class="coapp-card"><div class="coapp-title">Co-Applicant (details not submitted yet)</div></div>':'');
+
+  return `
+    <div class="contact-card">
+      <div class="contact-item"><i class="fas fa-envelope" style="font-size:.85rem"></i><a href="mailto:${esc(app.email||'')}">${esc(app.email||'—')}</a></div>
+      <div class="contact-item"><i class="fas fa-phone" style="font-size:.85rem"></i><a href="tel:${esc(app.phone||'')}">${esc(app.phone||'—')}</a></div>
+      ${app.requested_move_in_date?`<div class="contact-item"><i class="fas fa-calendar" style="font-size:.85rem"></i>Move-in: ${esc(app.requested_move_in_date)}</div>`:''}
+    </div>
+    ${coappHtml}
+    <div class="detail-section" style="margin-top:16px">
+      <div class="detail-section-title">Personal</div>
+      <div class="detail-grid">
+        ${row('DOB',app.dob)}
+        ${row('Desired Lease Term',app.desired_lease_term)}
+        ${row('Total Occupants',app.total_occupants)}
+        ${row('Smoker',app.smoker?'Yes':'No')}
+        ${row('Pets',app.has_pets?(app.pet_details||'Yes'):'No')}
+        ${row('Ever Evicted',app.ever_evicted?'Yes':'No')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Employment & Income</div>
+      <div class="detail-grid">
+        ${row('Status',app.employment_status)}
+        ${row('Employer',app.employer)}
+        ${row('Job Title',app.job_title)}
+        ${row('Monthly Income',app.monthly_income)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Background</div>
+      <div class="detail-grid">
+        ${row('Bankruptcy',app.has_bankruptcy?'Yes':'No')}
+        ${row('Criminal History',app.has_criminal_history?'Yes':'No')}
+        ${row('Ever Evicted',app.ever_evicted?'Yes':'No')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Financials</div>
+      <div class="detail-grid">
+        ${row('Application Fee',fmtMoney(app.application_fee))}
+        ${row('Payment Status',app.payment_status||'—')}
+        ${row('Monthly Rent',fmtMoney(app.monthly_rent))}
+        ${row('Lease Status',app.lease_status||'none')}
+      </div>
+    </div>
+    <div class="notes-section">
+      <div class="notes-title"><i class="fas fa-sticky-note"></i>My Notes <span style="color:var(--muted2);font-weight:400;font-size:.68rem;text-transform:none">(visible to admin only)</span></div>
+      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Add notes about this applicant…">${esc(app.admin_notes||'')}</textarea>
+      <button class="btn-save-notes" onclick="saveNotes('${app.id}')"><i class="fas fa-save" style="margin-right:5px"></i>Save Notes</button>
+    </div>`;
+}
+
+async function saveNotes(id){
+  const ta=document.getElementById('lnotes-'+id);
+  if(!ta)return;
+  const {error}=await CP.sb().from('applications').update({admin_notes:ta.value,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){showToast('Error saving notes','error');return;}
+  showToast('Notes saved.');
+}
+
+function updateStats(rows){
+  const sr=document.getElementById('stats-row');
+  if(!sr)return;sr.style.display='grid';
+  const c={total:rows.length,pending:0,approved:0,waitlisted:0,denied:0};
+  rows.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++;});
+  sr.innerHTML=`
+    <div class="stat-box"><div class="stat-num">${c.total}</div><div class="stat-label">Total</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#92400e">${c.pending}</div><div class="stat-label">Pending</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#16a34a">${c.approved}</div><div class="stat-label">Approved</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#7c3aed">${c.waitlisted}</div><div class="stat-label">Waitlisted</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#dc2626">${c.denied}</div><div class="stat-label">Denied</div></div>`;
+}
+
+async function loadApplications(){
+  const list=document.getElementById('apps-list');
+  list.innerHTML='<div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+
+  // Get landlord's property IDs
+  const {data:props,error:propErr}=await CP.sb()
+    .from('properties')
+    .select('id')
+    .eq('landlord_id',_landlord.id);
+
+  if(propErr){list.innerHTML='<div class="loading-row" style="color:#dc2626">Error loading properties.</div>';return;}
+
+  const propertyIds=(props||[]).map(p=>p.id);
+
+  let apps=[];
+  if(propertyIds.length){
+    const {data,error}=await CP.sb()
+      .from('applications')
+      .select(
+        'id,app_id,created_at,status,payment_status,payment_date,application_fee,'+
+        'property_id,property_address,'+
+        'first_name,last_name,email,phone,dob,'+
+        'requested_move_in_date,desired_lease_term,'+
+        'employment_status,employer,job_title,monthly_income,'+
+        'has_bankruptcy,has_criminal_history,ever_evicted,smoker,'+
+        'has_pets,pet_details,total_occupants,'+
+        'has_co_applicant,admin_notes,'+
+        'lease_status,monthly_rent,move_in_status,move_in_date_actual'
+      )
+      .or(`property_id.in.(${propertyIds.map(id=>`"${id}"`).join(',')}),landlord_id.eq.${_landlord.id}`)
+      .order('created_at',{ascending:false});
+    if(!error)apps=data||[];
+  } else {
+    // Try by landlord_id directly
+    const {data}=await CP.sb()
+      .from('applications')
+      .select('id,app_id,created_at,status,payment_status,application_fee,property_id,property_address,first_name,last_name,email,phone,dob,requested_move_in_date,desired_lease_term,employment_status,employer,job_title,monthly_income,has_bankruptcy,has_criminal_history,ever_evicted,smoker,has_pets,pet_details,total_occupants,has_co_applicant,admin_notes,lease_status,monthly_rent,move_in_status')
+      .eq('landlord_id',_landlord.id)
+      .order('created_at',{ascending:false});
+    apps=data||[];
+  }
+
+  _allApps=apps;
+  updateStats(_allApps);
+  applyFilters();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',async()=>{
+  await new Promise(r=>{const t=setInterval(()=>{if(window.CP&&window.supabase&&typeof CONFIG!=='undefined'&&CONFIG.SUPABASE_URL){clearInterval(t);r();}},100);setTimeout(()=>{clearInterval(t);r();},8000);});
+
+  const landlord=await CP.Auth.requireLandlord('/landlord/login.html');
+  if(!landlord)return;
+  _landlord=landlord;
+
+  const user=await CP.Auth.getUser();
+  const email=user?.email||'';
+
+  // Nav
+  const emailNav=document.getElementById('user-email-nav');
+  if(emailNav){emailNav.textContent=email;emailNav.style.display='';}
+  const userName=document.getElementById('userName');
+  const userEmail=document.getElementById('userEmail');
+  const userAvatar=document.getElementById('userAvatar');
+  if(userName)userName.textContent=landlord.contact_name||landlord.business_name||email;
+  if(userEmail)userEmail.textContent=email;
+  if(userAvatar)userAvatar.textContent=(landlord.contact_name||email||'?')[0].toUpperCase();
+
+  // Sign out
+  const signOut=async()=>{await CP.sb().auth.signOut();location.href='/landlord/login.html';};
+  document.getElementById('signOutBtn')?.addEventListener('click',signOut);
+  document.getElementById('sideSignOut')?.addEventListener('click',e=>{e.preventDefault();signOut();});
+
+  // Filters
+  document.getElementById('filter-tabs').addEventListener('click',e=>{
+    const btn=e.target.closest('.filter-pill');
+    if(!btn)return;
+    document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _status=btn.dataset.status;
+    applyFilters();
+  });
+
+  // Search
+  document.getElementById('search-input').addEventListener('input',e=>{
+    _search=e.target.value;
+    clearTimeout(_debounce);
+    _debounce=setTimeout(applyFilters,300);
+  });
+
+  await loadApplications();
+});
+</script>
 </body>
 </html>

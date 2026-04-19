@@ -200,15 +200,6 @@ class RentalApplication {
         button.addEventListener('click', () => this._devFillTestData());
         document.body.appendChild(button);
 
-        // "Fill All + Go to Review" button
-        const fillAllBtn = document.createElement('button');
-        fillAllBtn.id = 'devFillAllBtn';
-        fillAllBtn.type = 'button';
-        fillAllBtn.title = 'Fill all steps with random test data and jump to review';
-        fillAllBtn.innerHTML = '&#x26A1; Fill All';
-        fillAllBtn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99998;background:#8e44ad;color:#fff;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.25)';
-        fillAllBtn.addEventListener('click', () => this._devFillAll());
-        document.body.appendChild(fillAllBtn);
     }
 
 

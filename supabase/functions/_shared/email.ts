@@ -268,6 +268,23 @@ export function adminReviewSummaryHtml(firstName: string, lastName: string, emai
   );
 }
 
+// ─── Waitlisted notification ──────────────────────────────────────────────────
+
+export function waitlistedEmailHtml(firstName: string, propertyAddress: string, message?: string) {
+  return wrap(
+    header('#7c3aed', 'Application Status Update'),
+    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
+    <p style="color:#4a5568;font-size:14px">Thank you for your application for <strong>${propertyAddress}</strong>. We have added you to our waitlist for this property.</p>
+    ${messageBlock(message)}
+    <p style="color:#4a5568;font-size:14px">We will contact you as soon as the property becomes available or a comparable unit opens up. We appreciate your patience.</p>
+    <p style="color:#4a5568;font-size:14px">In the meantime, feel free to browse our other available listings:</p>
+    <div style="margin:20px 0;text-align:center">
+      <a href="${getSiteUrl()}" style="display:inline-block;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View Available Properties</a>
+    </div>
+    <p style="color:#4a5568;font-size:14px">Questions? Call <strong>707-706-3137</strong>.</p>`
+  );
+}
+
 // ─── Phase 5 — Lease fully executed (management countersigned) ────────────────
 
 export function leaseFullyExecutedHtml(firstName: string, propertyAddress: string, portalUrl: string) {

@@ -2,71 +2,159 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#006aff">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Applications · Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script defer src="/config.js"></script>
 <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
 <link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-<script defer src="/js/supabase.min.js"></script>
-<style>
-.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--color-border);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
-.filter-tab.active{background:var(--color-primary,#2563eb);color:#fff;border-color:transparent}
-.search-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
-.search-row input{flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--surface2);color:var(--text);font-size:.82rem}
-.app-card{background:var(--surface2);border:1px solid var(--color-border);border-radius:10px;padding:18px 20px;margin-bottom:12px;transition:border-color .15s}
-.app-card:hover{border-color:rgba(37,99,235,.35)}
-.app-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.app-id{font-family:monospace;font-size:.68rem;color:var(--muted);margin-bottom:3px}
-.app-name{font-size:.97rem;font-weight:700;color:var(--text)}
-.app-sub{font-size:.76rem;color:var(--muted2);margin-top:2px}
-.app-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.badge{padding:3px 9px;border-radius:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.badge-pending{background:rgba(234,179,8,.15);color:#ca8a04}
-.badge-approved{background:rgba(34,197,94,.15);color:#16a34a}
-.badge-denied{background:rgba(239,68,68,.15);color:#dc2626}
-.badge-waitlisted{background:rgba(168,85,247,.15);color:#9333ea}
-.badge-paid{background:rgba(34,197,94,.15);color:#16a34a}
-.badge-unpaid{background:rgba(239,68,68,.12);color:#dc2626}
-.badge-refunded{background:rgba(107,114,128,.15);color:#6b7280}
-.app-meta{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0;font-size:.74rem;color:var(--muted)}
-.app-meta span{display:flex;align-items:center;gap:4px}
-.app-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.btn-sm{padding:5px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
-.btn-approve{background:#16a34a;color:#fff}
-.btn-approve:hover{background:#15803d}
-.btn-deny{background:#dc2626;color:#fff}
-.btn-deny:hover{background:#b91c1c}
-.btn-waitlist{background:#9333ea;color:#fff}
-.btn-waitlist:hover{background:#7e22ce}
-.btn-pending{background:var(--surface3,#1e3a5f);color:var(--text);border:1px solid var(--color-border)}
-.btn-paid{background:rgba(34,197,94,.15);color:#16a34a;border:1px solid rgba(34,197,94,.3)}
-.btn-unpaid{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.25)}
-.btn-ghost-sm{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:.72rem;cursor:pointer}
-.btn-ghost-sm:hover{border-color:var(--color-primary);color:var(--color-primary)}
-.detail-panel{display:none;margin-top:14px;padding:16px;background:var(--bg);border:1px solid var(--color-border);border-radius:8px;font-size:.76rem}
-.detail-panel.open{display:block}
-.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0}
-.detail-row{padding:6px 0;border-bottom:1px solid rgba(30,58,95,.25);display:flex;flex-direction:column;gap:2px}
-.detail-row:last-child{border-bottom:none}
-.detail-key{color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.06em}
-.detail-val{color:var(--text)}
-.notes-area{width:100%;margin-top:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.78rem;resize:vertical;min-height:64px;font-family:inherit}
-.notes-area:focus{outline:none;border-color:var(--color-primary)}
-.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-state h3{color:var(--text);margin-bottom:8px}
-.loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
-</style>
+<link rel="stylesheet" href="/css/admin.css?v=1775137055043">
+<link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<style>
+:root{
+  --bg:#0a0f1e;--surface:#111827;--surface2:#1a2235;--surface3:#1e2d45;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#f1f5f9;--muted:#94a3b8;--muted2:#64748b;
+  --blue:#3b82f6;--blue-dark:#1d4ed8;--green:#22c55e;--red:#ef4444;--purple:#a855f7;--amber:#f59e0b;--orange:#f97316;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Filters & search ── */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-pill{padding:7px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
+.filter-pill.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.filter-pill:hover:not(.active){border-color:var(--blue);color:var(--blue)}
+.search-box{flex:1;min-width:200px;padding:9px 14px 9px 36px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:.84rem;font-family:inherit;outline:none}
+.search-box:focus{border-color:var(--blue)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:.82rem}
+
+/* ── Stats bar ── */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;text-align:center}
+.stat-num{font-size:1.4rem;font-weight:800;color:var(--text)}
+.stat-label{font-size:.65rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
+/* ── App cards ── */
+.apps-grid{display:flex;flex-direction:column;gap:12px}
+.app-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .1s}
+.app-card:hover{border-color:rgba(59,130,246,.3)}
+.app-card-header{padding:16px 18px 14px;display:flex;align-items:flex-start;gap:14px;cursor:pointer}
+.app-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;flex-shrink:0;color:#fff}
+.app-info{flex:1;min-width:0}
+.app-id-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.app-id{font-family:monospace;font-size:.67rem;color:var(--muted2);background:var(--surface2);padding:2px 7px;border-radius:5px}
+.app-date{font-size:.67rem;color:var(--muted2)}
+.app-name{font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-addr{font-size:.76rem;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px}
+.badges-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 9px;border-radius:10px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.b-pending{background:rgba(245,158,11,.15);color:#f59e0b}
+.b-under_review{background:rgba(59,130,246,.15);color:#60a5fa}
+.b-approved{background:rgba(34,197,94,.15);color:#22c55e}
+.b-denied{background:rgba(239,68,68,.15);color:#ef4444}
+.b-waitlisted{background:rgba(168,85,247,.15);color:#a855f7}
+.b-withdrawn{background:rgba(100,116,139,.15);color:#94a3b8}
+.b-paid{background:rgba(34,197,94,.15);color:#22c55e}
+.b-unpaid{background:rgba(239,68,68,.12);color:#ef4444}
+.b-waived{background:rgba(245,158,11,.12);color:#f59e0b}
+.b-refunded{background:rgba(100,116,139,.12);color:#94a3b8}
+.b-lease-sent{background:rgba(59,130,246,.12);color:#60a5fa}
+.b-lease-signed{background:rgba(34,197,94,.12);color:#22c55e}
+.b-co{background:rgba(249,115,22,.12);color:#f97316}
+.b-pets{background:rgba(34,197,94,.1);color:#4ade80}
+
+/* ── Card actions bar ── */
+.card-actions{padding:0 18px 14px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.btn-act{padding:6px 14px;border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:5px}
+.btn-approve{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+.btn-approve:hover{background:#16a34a;color:#fff;border-color:#16a34a}
+.btn-deny{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.btn-deny:hover{background:#dc2626;color:#fff;border-color:#dc2626}
+.btn-waitlist{background:rgba(168,85,247,.12);color:#a855f7;border:1px solid rgba(168,85,247,.2)}
+.btn-waitlist:hover{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.btn-pending{background:var(--surface2);color:var(--muted);border:1px solid var(--border2)}
+.btn-pending:hover{border-color:var(--muted);color:var(--text)}
+.btn-pay{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.btn-pay:hover{background:#15803d;color:#fff;border-color:#15803d}
+.btn-unpay{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.btn-refund{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.btn-refund:hover{background:#b45309;color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-email{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.btn-email:hover{background:var(--blue);color:#fff}
+
+/* ── Detail panel ── */
+.detail-panel{display:none;border-top:1px solid var(--border);padding:18px}
+.detail-panel.open{display:block}
+.detail-section{margin-bottom:18px}
+.detail-section-title{font-size:.65rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0}
+.detail-row{padding:7px 0;border-bottom:1px solid rgba(30,45,69,.5);display:flex;flex-direction:column;gap:2px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:var(--muted2);font-size:.63rem;text-transform:uppercase;letter-spacing:.06em}
+.detail-val{color:var(--text);font-size:.82rem}
+.notes-area{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:.8rem;resize:vertical;min-height:72px;font-family:inherit;outline:none;margin-top:8px}
+.notes-area:focus{border-color:var(--blue)}
+.coapp-card{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:14px 16px;margin-top:10px}
+.coapp-title{font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+
+/* ── Empty / Loading ── */
+.empty-state{text-align:center;padding:72px 20px}
+.empty-icon{font-size:3rem;margin-bottom:16px;opacity:.4}
+.empty-state h3{color:var(--text);font-size:1.1rem;margin:0 0 8px}
+.empty-state p{color:var(--muted);font-size:.88rem;margin:0}
+.loading-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--muted);font-size:.88rem}
+
+/* ── Modals ── */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;align-items:center;justify-content:center;padding:16px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+.modal-head{padding:20px 22px 16px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:1rem;font-weight:700;color:var(--text);margin:0}
+.modal-sub{font-size:.8rem;color:var(--muted);margin:4px 0 0}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.field-label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+.field-input{width:100%;padding:10px 13px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none;margin-bottom:14px}
+.field-input:focus{border-color:var(--blue)}
+.field-select{width:100%;padding:10px 13px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none;margin-bottom:14px;-webkit-appearance:none}
+.field-select:focus{border-color:var(--blue)}
+.btn-primary{padding:9px 20px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-primary:hover{opacity:.88}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-cancel{padding:9px 20px;background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:8px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-cancel:hover{color:var(--text);border-color:var(--muted)}
+.btn-danger-primary{padding:9px 20px;background:#b45309;color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-danger-primary:hover{opacity:.88}
+
+/* ── Toast ── */
+#cp-toast{position:fixed;bottom:20px;right:20px;padding:11px 20px;border-radius:10px;font-size:.83rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.35);z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
+
+/* ── Docs ── */
+.doc-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.doc-row:last-child{border-bottom:none}
+
+/* ── Topbar & main ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+.topbar .page-title{font-size:1rem;font-weight:700;color:var(--text)}
+.topbar .page-sub{font-size:.74rem;color:var(--muted)}
+.mobile-menu-btn{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 6px;border-radius:6px}
+.mobile-menu-btn:hover{color:var(--text)}
+.content{padding:20px;max-width:900px;margin:0 auto}
+@media(min-width:1200px){.content{max-width:1000px}}
+
+/* ── Warning chip ── */
+.warn-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:#f59e0b;border-radius:6px;padding:4px 10px;font-size:.7rem;font-weight:600}
+</style>
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -74,7 +162,7 @@
   <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
   <nav>
     <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
+    <a class="nav-item active" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
     <a class="nav-item" href="leases.html"><span class="icon"><i class="fas fa-file-signature"></i></span> Leases</a>
     <a class="nav-item" href="move-ins.html"><span class="icon"><i class="fas fa-door-open"></i></span> Move-ins</a>
     <div class="nav-section">Properties</div>
@@ -89,7 +177,7 @@
     <a class="nav-item" href="dashboard.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a>
   </nav>
   <div class="sidebar-footer">
-    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
+    <a href="/index.html" target="_blank" style="display:block;font-size:11px;color:#64748b;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
     <div class="admin-name" id="admin-name">Loading…</div>
     <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
   </div>
@@ -97,31 +185,127 @@
 
 <div class="main">
   <div class="topbar">
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div><div class="page-title">Applications</div><div class="page-sub" id="page-sub">Loading…</div></div>
+    <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+    <div>
+      <div class="page-title">Applications</div>
+      <div class="page-sub" id="page-sub">Loading…</div>
+    </div>
   </div>
+
   <div class="content">
+    <!-- Stats -->
+    <div class="stats-bar" id="stats-bar" style="display:none"></div>
 
-    <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab active" data-status="all">All</button>
-      <button class="filter-tab" data-status="pending">Pending</button>
-      <button class="filter-tab" data-status="approved">Approved</button>
-      <button class="filter-tab" data-status="denied">Denied</button>
-      <button class="filter-tab" data-status="waitlisted">Waitlisted</button>
+    <!-- Filters -->
+    <div class="filter-row" id="filter-tabs">
+      <button class="filter-pill active" data-status="all">All</button>
+      <button class="filter-pill" data-status="pending">Pending</button>
+      <button class="filter-pill" data-status="approved">Approved</button>
+      <button class="filter-pill" data-status="waitlisted">Waitlisted</button>
+      <button class="filter-pill" data-status="denied">Denied</button>
+    </div>
+    <div class="filter-row" style="margin-bottom:20px">
+      <div class="search-wrap">
+        <i class="fas fa-search si"></i>
+        <input class="search-box" id="search-input" type="text" placeholder="Search name, email, app ID, address…">
+      </div>
+      <select class="field-select" id="pay-filter" style="width:auto;margin:0;min-width:130px;font-size:.78rem">
+        <option value="">All Payments</option>
+        <option value="unpaid">Unpaid</option>
+        <option value="paid">Paid</option>
+        <option value="waived">Waived</option>
+        <option value="refunded">Refunded</option>
+      </select>
     </div>
 
-    <div class="search-row">
-      <input type="text" id="search-input" placeholder="Search by name, email, address or App ID…">
+    <div class="apps-grid" id="apps-list">
+      <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading applications…</div>
     </div>
-
-    <div id="apps-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading applications…</div></div>
-
   </div>
 </div>
 
+<!-- ── Payment Modal ── -->
+<div class="modal-backdrop" id="pay-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Record Payment</div>
+      <div class="modal-sub" id="pay-modal-sub"></div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pay-modal-id">
+      <input type="hidden" id="pay-modal-appid">
+      <label class="field-label">Amount Collected</label>
+      <input class="field-input" id="pay-amount" type="number" min="0" step="0.01" placeholder="e.g. 50.00">
+      <label class="field-label">Payment Method</label>
+      <select class="field-select" id="pay-method">
+        <option value="">Select method…</option>
+        <option>Venmo</option>
+        <option>Zelle</option>
+        <option>Cash App</option>
+        <option>PayPal</option>
+        <option>Cash</option>
+        <option>Cashier's Check</option>
+        <option>Money Order</option>
+        <option>Other</option>
+      </select>
+      <label class="field-label">Reference / Notes (optional)</label>
+      <input class="field-input" id="pay-notes" type="text" placeholder="Transaction ID, confirmation #, etc.">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <input type="checkbox" id="pay-send-email" checked style="width:16px;height:16px;accent-color:var(--blue)">
+        <label for="pay-send-email" style="font-size:.82rem;color:var(--muted);cursor:pointer">Send payment confirmation email to applicant</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal('pay-modal')">Cancel</button>
+      <button class="btn-primary" id="pay-confirm-btn" onclick="confirmPayment()">Mark as Paid</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Refund Modal ── -->
+<div class="modal-backdrop" id="refund-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Mark as Refunded</div>
+      <div class="modal-sub" id="refund-modal-sub"></div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="refund-modal-id">
+      <p style="color:var(--muted);font-size:.85rem;line-height:1.6;margin:0 0 14px">This sets the payment status to <strong style="color:var(--text)">Refunded</strong>. No actual refund is processed here — this is a manual record. Ensure you have issued the refund outside the system before confirming.</p>
+      <label class="field-label">Refund Notes (optional)</label>
+      <input class="field-input" id="refund-notes" type="text" placeholder="Reason, reference, method used…">
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal('refund-modal')">Cancel</button>
+      <button class="btn-danger-primary" id="refund-confirm-btn" onclick="confirmRefund()">Confirm Refund</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Email Modal ── -->
+<div class="modal-backdrop" id="email-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Send Email to Applicant</div>
+      <div class="modal-sub" id="email-modal-sub"></div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="email-modal-appid">
+      <input type="hidden" id="email-modal-type">
+      <label class="field-label">Custom Message (optional)</label>
+      <textarea class="notes-area" id="email-modal-msg" placeholder="Add a personal message to the email…" style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal('email-modal')">Cancel</button>
+      <button class="btn-primary" id="email-confirm-btn" onclick="confirmEmail()"><i class="fas fa-paper-plane" style="margin-right:5px"></i>Send Email</button>
+    </div>
+  </div>
+</div>
+
+<div id="cp-toast"></div>
+
 <script type="module" src="/js/cp-api.js"></script>
 <script>
-// Mobile sidebar
 (function(){
   var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
   if(!btn)return;
@@ -130,324 +314,503 @@
 })();
 </script>
 <script>
-// Admin applications page
-// Uses CP.Applications (added in Phase 1 migration)
-// Requires: SETUP.sql must be run against Supabase first (Phase 0)
+'use strict';
 
-let _currentStatus = 'all';
-let _currentSearch = '';
+let _status = 'all';
+let _search = '';
+let _payFilter = '';
 let _debounce = null;
+let _allData = [];
 
-function statusBadge(s) {
-  const map = { pending:'badge-pending', approved:'badge-approved', denied:'badge-denied', waitlisted:'badge-waitlisted' };
-  return `<span class="badge ${map[s]||'badge-pending'}">${s||'unknown'}</span>`;
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
+function fmtMoney(v){if(v==null||v==='')return '—';return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function avatar(app){
+  const initials=((app.first_name||'?')[0]+(app.last_name||'?')[0]).toUpperCase();
+  const colors=['#1d4ed8','#7c3aed','#0e7490','#15803d','#b45309','#be185d','#1e40af'];
+  const color=colors[(app.first_name||'').charCodeAt(0)%colors.length];
+  return `<div class="app-avatar" style="background:${color}">${initials}</div>`;
 }
-function payBadge(s) {
-  const map = { paid:'badge-paid', unpaid:'badge-unpaid', refunded:'badge-refunded' };
-  return `<span class="badge ${map[s]||'badge-unpaid'}">${s||'unpaid'}</span>`;
-}
-function fmtDate(d) {
-  if (!d) return '—';
-  try { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch { return d; }
-}
-function esc(s) { return CP_esc ? CP_esc(s) : String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function statusBadge(s){const m={pending:'b-pending',under_review:'b-under_review',approved:'b-approved',denied:'b-denied',waitlisted:'b-waitlisted',withdrawn:'b-withdrawn'};const l={pending:'Pending',under_review:'In Review',approved:'Approved',denied:'Denied',waitlisted:'Waitlisted',withdrawn:'Withdrawn'};return `<span class="badge ${m[s]||'b-pending'}">${l[s]||s}</span>`;}
+function payBadge(s){const m={paid:'b-paid',unpaid:'b-unpaid',waived:'b-waived',refunded:'b-refunded'};return `<span class="badge ${m[s]||'b-unpaid'}">${s||'unpaid'}</span>`;}
+function leaseBadge(s){if(!s||s==='none')return '';const m={sent:'b-lease-sent',signed:'b-lease-signed',co_signed:'b-lease-signed',awaiting_co_sign:'b-lease-sent'};const l={sent:'Lease Sent',signed:'Lease Signed',co_signed:'Fully Executed',awaiting_co_sign:'Awaiting Co-Sign',voided:'Voided',expired:'Expired'};return `<span class="badge ${m[s]||''}">${l[s]||s}</span>`;}
 
-function renderCard(app) {
-  const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
-  const prop = esc(app.property_address || app.property_id || '—');
-  const hasCoApp = app.has_co_applicant ? '<span class="badge" style="background:rgba(201,168,76,.15);color:#b45309">Co-Applicant</span>' : '';
-  const hasPets  = app.has_pets ? '<span class="badge" style="background:rgba(16,185,129,.1);color:#059669">Pets</span>' : '';
+function showToast(msg, type='success'){
+  const t=document.getElementById('cp-toast');
+  t.textContent=msg;
+  t.style.background=type==='error'?'#b91c1c':type==='warn'?'#92400e':'#15803d';
+  t.style.color='#fff';
+  t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.opacity='0';},3500);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+
+// ── Render card ───────────────────────────────────────────────────────────────
+function renderCard(app){
+  const name=esc(`${app.first_name||''} ${app.last_name||''}`.trim())||'(no name)';
+  const prop=esc(app.property_address||app.property_id||'—');
+  const isPaid=app.payment_status==='paid';
+  const isWaived=app.payment_status==='waived';
+  const isRefunded=app.payment_status==='refunded';
+  const isApproved=app.status==='approved';
+  const isDenied=app.status==='denied';
+  const isWaitlisted=app.status==='waitlisted';
+
+  const paymentInfo = (app.payment_amount_recorded||app.payment_method_recorded)
+    ? `<span style="font-size:.7rem;color:var(--muted)">
+        ${app.payment_amount_recorded?fmtMoney(app.payment_amount_recorded):''}
+        ${app.payment_method_recorded?'via '+esc(app.payment_method_recorded):''}
+        ${app.payment_date?' on '+fmtDate(app.payment_date):''}
+       </span>` : '';
 
   return `<div class="app-card" id="card-${app.id}">
-    <div class="app-card-top">
-      <div>
-        <div class="app-id">${esc(app.app_id||app.id)}</div>
+    <div class="app-card-header" onclick="toggleDetail('${app.id}')">
+      ${avatar(app)}
+      <div class="app-info">
+        <div class="app-id-row">
+          <span class="app-id">${esc(app.app_id||app.id)}</span>
+          <span class="app-date">${fmtDate(app.created_at)}</span>
+          ${app.has_co_applicant?'<span class="badge b-co">Co-App</span>':''}
+          ${app.has_pets?'<span class="badge b-pets">Pets</span>':''}
+        </div>
         <div class="app-name">${name}</div>
-        <div class="app-sub"><i class="fas fa-map-marker-alt" style="margin-right:4px;font-size:.65rem"></i>${prop}</div>
-        <div class="app-badges">${statusBadge(app.status)}${payBadge(app.payment_status)}${hasCoApp}${hasPets}</div>
+        <div class="app-addr"><i class="fas fa-map-marker-alt" style="font-size:.65rem;color:var(--muted2)"></i>${prop}</div>
+        <div class="badges-row">
+          ${statusBadge(app.status)}
+          ${payBadge(app.payment_status)}
+          ${leaseBadge(app.lease_status)}
+          ${paymentInfo}
+        </div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:.7rem;color:var(--muted)">Submitted</div>
-        <div style="font-size:.78rem;font-weight:600;color:var(--text)">${fmtDate(app.created_at)}</div>
+      <div style="flex-shrink:0;align-self:center">
+        <i class="fas fa-chevron-down" style="color:var(--muted2);font-size:.8rem" id="chev-${app.id}"></i>
       </div>
     </div>
-    <div class="app-meta">
-      <span><i class="fas fa-envelope"></i> ${esc(app.email||'—')}</span>
-      <span><i class="fas fa-phone"></i> ${esc(app.phone||'—')}</span>
-      ${app.requested_move_in_date ? `<span><i class="fas fa-calendar"></i> Move-in: ${esc(app.requested_move_in_date)}</span>` : ''}
-      ${app.monthly_income ? `<span><i class="fas fa-dollar-sign"></i> Income: ${esc(app.monthly_income)}/mo</span>` : ''}
+
+    <div class="card-actions">
+      <!-- Status actions -->
+      ${!isApproved?`<button class="btn-act btn-approve" onclick="setStatus('${app.id}','${app.app_id}','approved',event)"><i class="fas fa-check"></i> Approve</button>`:''}
+      ${!isDenied?`<button class="btn-act btn-deny" onclick="setStatus('${app.id}','${app.app_id}','denied',event)"><i class="fas fa-times"></i> Deny</button>`:''}
+      ${!isWaitlisted?`<button class="btn-act btn-waitlist" onclick="setStatus('${app.id}','${app.app_id}','waitlisted',event)"><i class="fas fa-hourglass-half"></i> Waitlist</button>`:''}
+      ${app.status!=='pending'?`<button class="btn-act btn-pending" onclick="setStatus('${app.id}','${app.app_id}','pending',event)"><i class="fas fa-redo"></i> Reset</button>`:''}
+
+      <!-- Payment actions -->
+      ${!isPaid&&!isWaived?`<button class="btn-act btn-pay" onclick="openPayModal('${app.id}','${app.app_id}','${esc(name)}',event)"><i class="fas fa-dollar-sign"></i> Mark Paid</button>`:''}
+      ${isPaid?`<button class="btn-act btn-unpay" onclick="markUnpaid('${app.id}',event)"><i class="fas fa-undo"></i> Mark Unpaid</button>`:''}
+      ${isPaid?`<button class="btn-act btn-refund" onclick="openRefundModal('${app.id}','${esc(name)}',event)"><i class="fas fa-undo-alt"></i> Refund</button>`:''}
+      ${!isWaived?`<button class="btn-act btn-ghost" onclick="markWaived('${app.id}',event)" title="Waive fee"><i class="fas fa-hand-holding-usd"></i> Waive</button>`:''}
+
+      <!-- Email -->
+      <button class="btn-act btn-email" onclick="openEmailModal('${app.app_id}','${isApproved?'approved':isDenied?'denied':isWaitlisted?'waitlisted':'approved'}','${esc(name)}',event)"><i class="fas fa-envelope"></i> Email</button>
+
+      <!-- Detail toggle -->
+      <button class="btn-act btn-ghost" onclick="toggleDetail('${app.id}')"><i class="fas fa-info-circle"></i> Details</button>
     </div>
-    <div class="app-actions">
-      ${app.status !== 'approved'   ? `<button class="btn-sm btn-approve"   onclick="setStatus('${app.id}','approved')">Approve</button>` : ''}
-      ${app.status !== 'denied'     ? `<button class="btn-sm btn-deny"      onclick="setStatus('${app.id}','denied')">Deny</button>` : ''}
-      ${app.status !== 'waitlisted' ? `<button class="btn-sm btn-waitlist"  onclick="setStatus('${app.id}','waitlisted')">Waitlist</button>` : ''}
-      ${app.status !== 'pending'    ? `<button class="btn-sm btn-pending"   onclick="setStatus('${app.id}','pending')">Reset to Pending</button>` : ''}
-      <button class="btn-ghost-sm" onclick="togglePayment('${app.id}','${app.payment_status}')">
-        ${app.payment_status === 'paid' ? '✓ Mark Unpaid' : '✓ Mark Paid'}
-      </button>
-      ${app.payment_status === 'paid' ? `<button class="btn-ghost-sm" onclick="showRefundModal('${app.id}','${app.app_id||app.id}','${esc((app.first_name||'')+' '+(app.last_name||''))}')" style="color:#b45309;border-color:rgba(180,83,9,.3)"><i class="fas fa-undo" style="margin-right:4px"></i>Refund</button>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleDetail('${app.id}')">Details ▾</button>
-    </div>
+
     <div class="detail-panel" id="detail-${app.id}">
-      ${renderDetail(app)}
+      <div id="detail-inner-${app.id}">
+        <div style="color:var(--muted);font-size:.82rem;padding:12px 0">Loading details…</div>
+      </div>
     </div>
   </div>`;
 }
 
-function renderDetail(app) {
-  function row(label, val) {
-    return `<div class="detail-row"><span class="detail-key">${esc(label)}</span><span class="detail-val">${esc(String(val||'—'))}</span></div>`;
-  }
+// ── Render detail ─────────────────────────────────────────────────────────────
+function renderDetail(app, coapp){
+  function row(k,v){return `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(String(v||'—'))}</span></div>`;}
+  const coappHtml = coapp ? `
+    <div class="coapp-card">
+      <div class="coapp-title"><i class="fas fa-user-friends" style="margin-right:5px"></i>Co-Applicant</div>
+      <div class="detail-grid">
+        ${row('Name',(coapp.first_name||'')+' '+(coapp.last_name||''))}
+        ${row('Email',coapp.email)}
+        ${row('Phone',coapp.phone)}
+        ${row('DOB',coapp.dob)}
+        ${row('Role',coapp.role)}
+        ${row('Employer',coapp.employer)}
+        ${row('Job Title',coapp.job_title)}
+        ${row('Income/mo',coapp.monthly_income)}
+        ${row('Employment',coapp.employment_duration)}
+        ${row('Status',coapp.employment_status)}
+      </div>
+    </div>` : (app.has_co_applicant?'<div class="coapp-card"><div class="coapp-title">Co-Applicant (details not yet submitted)</div></div>':'');
+
   return `
-    <strong style="font-size:.78rem;color:var(--text)">Personal</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('DOB', app.dob)}
-      ${row('SSN (last 4)', app.ssn)}
-      ${row('Gov ID Type', app.government_id_type)}
-      ${row('Gov ID #', app.government_id_number)}
-      ${row('Desired Lease Term', app.desired_lease_term)}
-      ${row('Total Occupants', app.total_occupants)}
-      ${row('Smoker', app.smoker ? 'Yes' : 'No')}
-      ${row('Ever Evicted', app.ever_evicted ? 'Yes' : 'No')}
+    <div class="detail-section">
+      <div class="detail-section-title">Personal</div>
+      <div class="detail-grid">
+        ${row('Email',app.email)}
+        ${row('Phone',app.phone)}
+        ${row('DOB',app.dob)}
+        ${row('SSN (last 4)',app.ssn)}
+        ${row('Gov ID Type',app.government_id_type)}
+        ${row('Gov ID #',app.government_id_number)}
+        ${row('Move-in Date',app.requested_move_in_date)}
+        ${row('Lease Term',app.desired_lease_term)}
+        ${row('Occupants',app.total_occupants)}
+        ${row('Ever Evicted',app.ever_evicted?'Yes':'No')}
+        ${row('Smoker',app.smoker?'Yes':'No')}
+      </div>
+      ${coappHtml}
     </div>
-    <strong style="font-size:.78rem;color:var(--text)">Residence</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Current Address', app.current_address)}
-      ${row('Duration', app.residency_duration)}
-      ${row('Current Rent', app.current_rent_amount)}
-      ${row('Reason Leaving', app.reason_for_leaving)}
-      ${row('Current Landlord', app.current_landlord_name)}
-      ${row('Landlord Phone', app.landlord_phone)}
-      ${row('Prior Address', app.previous_address)}
-      ${row('Prior Landlord', app.previous_landlord_name)}
-    </div>
-    <strong style="font-size:.78rem;color:var(--text)">Employment</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Status', app.employment_status)}
-      ${row('Employer', app.employer)}
-      ${row('Job Title', app.job_title)}
-      ${row('Duration', app.employment_duration)}
-      ${row('Supervisor', app.supervisor_name)}
-      ${row('Monthly Income', app.monthly_income)}
-      ${row('Other Income', app.other_income)}
-    </div>
-    <strong style="font-size:.78rem;color:var(--text)">Background</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Bankruptcy', app.has_bankruptcy ? 'Yes — ' + (app.bankruptcy_explanation||'') : 'No')}
-      ${row('Criminal History', app.has_criminal_history ? 'Yes — ' + (app.criminal_history_explanation||'') : 'No')}
-    </div>
-    <strong style="font-size:.78rem;color:var(--text)">References & Emergency Contact</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Ref 1', app.reference_1_name ? app.reference_1_name + ' — ' + (app.reference_1_phone||'') : '—')}
-      ${row('Ref 2', app.reference_2_name ? app.reference_2_name + ' — ' + (app.reference_2_phone||'') : '—')}
-      ${row('Emergency Contact', app.emergency_contact_name ? app.emergency_contact_name + ' (' + (app.emergency_contact_relationship||'') + ') ' + (app.emergency_contact_phone||'') : '—')}
-    </div>
-    <strong style="font-size:.78rem;color:var(--text)">Vehicle & Preferences</strong>
-    <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Vehicle', [app.vehicle_year, app.vehicle_make, app.vehicle_model].filter(Boolean).join(' ') || '—')}
-      ${row('License Plate', app.vehicle_license_plate)}
-      ${row('Primary Payment', app.primary_payment_method)}
-      ${row('Alt Payment', app.alternative_payment_method)}
-      ${row('Preferred Contact', app.preferred_contact_method)}
-      ${row('Best Time', app.preferred_time)}
-    </div>
-    ${app.pet_details ? `<div class="detail-row"><span class="detail-key">Pet Details</span><span class="detail-val">${esc(app.pet_details)}</span></div>` : ''}
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#e2e8f0)">
-      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Uploaded Documents</div>
-      <div id="docs-${app.id}">
-        <button class="btn-ghost-sm" onclick="loadDocs('${app.id}','${app.app_id||app.id}')"><i class="fas fa-folder-open" style="margin-right:4px"></i>View Documents</button>
+    <div class="detail-section">
+      <div class="detail-section-title">Residence</div>
+      <div class="detail-grid">
+        ${row('Current Address',app.current_address)}
+        ${row('Duration',app.residency_duration)}
+        ${row('Current Rent',app.current_rent_amount)}
+        ${row('Reason Leaving',app.reason_for_leaving)}
+        ${row('Current Landlord',app.current_landlord_name)}
+        ${row('Landlord Phone',app.landlord_phone)}
+        ${row('Prior Address',app.previous_address)}
+        ${row('Prior Duration',app.previous_residency_duration)}
+        ${row('Prior Landlord',app.previous_landlord_name)}
+        ${row('Prior Landlord Ph.',app.previous_landlord_phone)}
       </div>
     </div>
-    <div style="margin-top:12px">
-      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
-      <textarea class="notes-area" id="notes-${app.id}" placeholder="Internal notes (not visible to applicant)…">${esc(app.admin_notes||'')}</textarea>
-      <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveNotes('${app.id}')">Save Notes</button>
+    <div class="detail-section">
+      <div class="detail-section-title">Employment</div>
+      <div class="detail-grid">
+        ${row('Status',app.employment_status)}
+        ${row('Employer',app.employer)}
+        ${row('Employer Address',app.employer_address)}
+        ${row('Job Title',app.job_title)}
+        ${row('Start Date',app.employment_start_date)}
+        ${row('Duration',app.employment_duration)}
+        ${row('Supervisor',app.supervisor_name)}
+        ${row('Supervisor Ph.',app.supervisor_phone)}
+        ${row('Monthly Income',app.monthly_income)}
+        ${row('Other Income',app.other_income)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Background</div>
+      <div class="detail-grid">
+        ${row('Bankruptcy',app.has_bankruptcy?'Yes — '+(app.bankruptcy_explanation||''):'No')}
+        ${row('Criminal History',app.has_criminal_history?'Yes — '+(app.criminal_history_explanation||''):'No')}
+        ${row('Evicted',app.ever_evicted?'Yes':'No')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">References & Emergency Contact</div>
+      <div class="detail-grid">
+        ${row('Reference 1',app.reference_1_name?(app.reference_1_name+' — '+(app.reference_1_phone||'')):'—')}
+        ${row('Reference 2',app.reference_2_name?(app.reference_2_name+' — '+(app.reference_2_phone||'')):'—')}
+        ${row('Emergency Contact',app.emergency_contact_name?(app.emergency_contact_name+' ('+( app.emergency_contact_relationship||'')+') '+(app.emergency_contact_phone||'')):'—')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Vehicle & Preferences</div>
+      <div class="detail-grid">
+        ${row('Vehicle',[app.vehicle_year,app.vehicle_make,app.vehicle_model].filter(Boolean).join(' ')||'—')}
+        ${row('License Plate',app.vehicle_license_plate)}
+        ${row('Preferred Contact',app.preferred_contact_method)}
+        ${row('Best Time',app.preferred_time)}
+        ${row('Primary Payment',app.primary_payment_method)}
+        ${row('Alt Payment',app.alternative_payment_method)}
+      </div>
+      ${app.pet_details?`<div class="detail-row"><span class="detail-key">Pet Details</span><span class="detail-val">${esc(app.pet_details)}</span></div>`:''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Payment Record</div>
+      <div class="detail-grid">
+        ${row('Fee',fmtMoney(app.application_fee))}
+        ${row('Status',app.payment_status||'—')}
+        ${row('Amount Collected',fmtMoney(app.payment_amount_recorded))}
+        ${row('Method',app.payment_method_recorded)}
+        ${row('Date',fmtDate(app.payment_date))}
+        ${row('Notes',app.payment_notes)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Documents</div>
+      <div id="docs-${app.id}">
+        <button class="btn-act btn-ghost" onclick="loadDocs('${app.id}','${app.app_id||app.id}')"><i class="fas fa-folder-open" style="margin-right:5px"></i>View Documents</button>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Admin Notes <span style="color:var(--muted2);font-weight:400;text-transform:none;font-size:.72rem">(not visible to applicant)</span></div>
+      <textarea class="notes-area" id="notes-${app.id}" placeholder="Internal notes…">${esc(app.admin_notes||'')}</textarea>
+      <button class="btn-act btn-ghost" style="margin-top:8px" onclick="saveNotes('${app.id}')"><i class="fas fa-save" style="margin-right:4px"></i>Save Notes</button>
     </div>`;
 }
 
-function toggleDetail(id) {
-  const panel = document.getElementById('detail-' + id);
-  if (panel) panel.classList.toggle('open');
+// ── Toggle detail ─────────────────────────────────────────────────────────────
+async function toggleDetail(id){
+  const panel=document.getElementById('detail-'+id);
+  const chev=document.getElementById('chev-'+id);
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){panel.classList.remove('open');if(chev)chev.style.transform='';return;}
+  panel.classList.add('open');
+  if(chev)chev.style.transform='rotate(180deg)';
+  const app=_allData.find(a=>a.id===id);
+  if(!app)return;
+  if(panel.dataset.loaded)return;
+  panel.dataset.loaded='1';
+  let coapp=null;
+  if(app.has_co_applicant){
+    const {data}=await CP.sb().from('co_applicants').select('*').eq('app_id',app.app_id).maybeSingle();
+    coapp=data;
+  }
+  document.getElementById('detail-inner-'+id).innerHTML=renderDetail(app,coapp);
 }
 
-async function setStatus(id, status) {
-    const card = document.getElementById('card-' + id);
-    if (card) card.style.opacity = '0.5';
-    const { ok, error } = await CP.Applications.updateStatus(id, status);
-    if (!ok) { alert('Error: ' + error); if (card) card.style.opacity = '1'; return; }
-    if (status === 'approved' || status === 'denied') {
-      const emailType = status;
-      const send = confirm('Status updated to ' + status + '.\n\nSend ' + (emailType === 'approved' ? 'approval' : 'denial') + ' email to applicant?');
-      if (send) await sendStatusEmail(id, emailType);
-    }
-    await loadApps();
+// ── Load apps ─────────────────────────────────────────────────────────────────
+async function loadApps(){
+  const list=document.getElementById('apps-list');
+  const sub=document.getElementById('page-sub');
+  list.innerHTML='<div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const filters={status:_status,search:_search};
+  if(_payFilter)filters.payment_status=_payFilter;
+  const {ok,data,error}=await CP.Applications.getAll(filters);
+  if(!ok){list.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠</div><h3>Error loading</h3><p>${esc(error)}</p></div>`;return;}
+  _allData=data||[];
+  sub.textContent=`${_allData.length} application${_allData.length!==1?'s':''}${_status!=='all'?' — '+_status:''}`;
+  updateStats(_allData);
+  if(!_allData.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><h3>No applications found</h3><p>Try adjusting the filters.</p></div>';
+    return;
   }
+  list.innerHTML=_allData.map(renderCard).join('');
+}
 
-  async function sendStatusEmail(id, type) {
-    try {
-      const appResult = await CP.Applications.getOne(id);
-      if (!appResult.ok || !appResult.data?.app_id) {
-        alert('Status saved, but email failed: could not load application ID.');
-        return;
-      }
-      const session = await CP.Auth.getSession();
-      const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
-      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': CONFIG.SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + token,
-        },
-        body: JSON.stringify({ app_id: appResult.data.app_id, type }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.success === false) { alert('Status saved, but email failed: ' + (json.error || res.statusText)); return; }
-      showToast('Email sent to applicant.');
-    } catch(e) { alert('Email error: ' + e.message); }
+function updateStats(rows){
+  const bar=document.getElementById('stats-bar');
+  if(!bar)return;
+  bar.style.display='grid';
+  const counts={total:rows.length,pending:0,approved:0,waitlisted:0,denied:0,unpaid:0};
+  rows.forEach(r=>{
+    if(r.status==='pending')counts.pending++;
+    if(r.status==='approved')counts.approved++;
+    if(r.status==='waitlisted')counts.waitlisted++;
+    if(r.status==='denied')counts.denied++;
+    if(r.payment_status==='unpaid'&&r.status==='approved')counts.unpaid++;
+  });
+  bar.innerHTML=`
+    <div class="stat-card"><div class="stat-num">${counts.total}</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#f59e0b">${counts.pending}</div><div class="stat-label">Pending</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#22c55e">${counts.approved}</div><div class="stat-label">Approved</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#a855f7">${counts.waitlisted}</div><div class="stat-label">Waitlisted</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#ef4444">${counts.denied}</div><div class="stat-label">Denied</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#f97316">${counts.unpaid}</div><div class="stat-label">Unpaid+Approved</div></div>`;
+}
+
+// ── Status change ─────────────────────────────────────────────────────────────
+async function setStatus(dbId, appId, status, evt){
+  if(evt)evt.stopPropagation();
+  const card=document.getElementById('card-'+dbId);
+  if(card)card.style.opacity='0.55';
+  const {ok,error}=await CP.Applications.updateStatus(dbId,status);
+  if(!ok){showToast('Error: '+error,'error');if(card)card.style.opacity='1';return;}
+  // Auto-send email for approve, deny, waitlist
+  if(['approved','denied','waitlisted'].includes(status)){
+    await autoSendEmail(appId, status);
   }
-
-  function showToast(msg) {
-    let t = document.getElementById('cp-toast');
-    if (!t) {
-      t = document.createElement('div');
-      t.id = 'cp-toast';
-      t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#16a34a;color:#fff;padding:10px 18px;border-radius:9px;font-size:.82rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;opacity:0;transition:opacity .2s';
-      document.body.appendChild(t);
-    }
-    t.textContent = msg;
-    t.style.opacity = '1';
-    setTimeout(() => { t.style.opacity = '0'; }, 3000);
-  }
-
-  async function togglePayment(id, currentStatus) {
-  const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
-  const { ok, error } = await CP.Applications.updatePayment(id, newStatus);
-  if (!ok) { alert('Error: ' + error); return; }
+  showToast('Status updated to '+status+'.');
   await loadApps();
 }
 
-async function saveNotes(id) {
-  const ta = document.getElementById('notes-' + id);
-  if (!ta) return;
-  const { ok, error } = await CP.Applications.saveNotes(id, ta.value);
-  if (!ok) { alert('Error saving notes: ' + error); return; }
-  ta.style.borderColor = '#16a34a';
-  setTimeout(() => { ta.style.borderColor = ''; }, 1500);
+async function autoSendEmail(appId, type, message){
+  try{
+    const session=await CP.Auth.getSession();
+    const token=session?.access_token||CONFIG.SUPABASE_ANON_KEY;
+    const body={app_id:appId,type};
+    if(message)body.message=message;
+    const res=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+token},
+      body:JSON.stringify(body),
+    });
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok||json.success===false)showToast('Status saved, email failed: '+(json.error||res.statusText),'warn');
+    else showToast('Email sent to applicant.');
+  }catch(e){showToast('Email error: '+e.message,'warn');}
 }
 
-async function loadApps() {
-  const list = document.getElementById('apps-list');
-  const sub  = document.getElementById('page-sub');
-  const { ok, data, error } = await CP.Applications.getAll({
-    status: _currentStatus,
-    search: _currentSearch,
-  });
-  if (!ok) {
-    list.innerHTML = `<div class="empty-state"><h3>Error loading applications</h3><p>${esc(error)}</p></div>`;
-    return;
-  }
-  const rows = data || [];
-  sub.textContent = `${rows.length} application${rows.length !== 1 ? 's' : ''}${_currentStatus !== 'all' ? ' — ' + _currentStatus : ''}`;
-  if (!rows.length) {
-    list.innerHTML = `<div class="empty-state"><h3>No applications found</h3><p>Try changing the filter or search term.</p></div>`;
-    return;
-  }
-  list.innerHTML = rows.map(renderCard).join('');
+// ── Payment ───────────────────────────────────────────────────────────────────
+function openPayModal(dbId, appId, name, evt){
+  if(evt)evt.stopPropagation();
+  document.getElementById('pay-modal-id').value=dbId;
+  document.getElementById('pay-modal-appid').value=appId;
+  document.getElementById('pay-modal-sub').textContent='For: '+name;
+  document.getElementById('pay-amount').value='';
+  document.getElementById('pay-method').value='';
+  document.getElementById('pay-notes').value='';
+  document.getElementById('pay-send-email').checked=true;
+  openModal('pay-modal');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const ok = await CP.Auth.requireAdmin();
-  if (!ok) return;
-  const user = await CP.Auth.getUser();
-  document.getElementById('admin-name').textContent = user?.email || 'Admin';
+async function confirmPayment(){
+  const dbId=document.getElementById('pay-modal-id').value;
+  const appId=document.getElementById('pay-modal-appid').value;
+  const amount=parseFloat(document.getElementById('pay-amount').value)||null;
+  const method=document.getElementById('pay-method').value||null;
+  const notes=document.getElementById('pay-notes').value||null;
+  const sendConf=document.getElementById('pay-send-email').checked;
+  const btn=document.getElementById('pay-confirm-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const {ok,error}=await CP.Applications.updatePaymentWithDetails(dbId,'paid',amount,method,notes);
+  btn.disabled=false;btn.textContent='Mark as Paid';
+  if(!ok){showToast('Error: '+error,'error');return;}
+  closeModal('pay-modal');
+  if(sendConf&&appId){
+    await sendPaymentConfirmEmail(appId, amount, method, notes);
+  }
+  showToast('Payment recorded.');
+  await loadApps();
+}
 
-  // Filter tabs
-  document.getElementById('filter-tabs').addEventListener('click', async e => {
-    const btn = e.target.closest('.filter-tab');
-    if (!btn) return;
-    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+async function sendPaymentConfirmEmail(appId, amount, method, ref){
+  try{
+    const session=await CP.Auth.getSession();
+    const token=session?.access_token||CONFIG.SUPABASE_ANON_KEY;
+    const body={app_id:appId,type:'payment_confirmed'};
+    if(amount!=null)body.amount_collected=amount;
+    if(method)body.payment_method=method;
+    if(ref)body.transaction_ref=ref;
+    const res=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+(session?.access_token||CONFIG.SUPABASE_ANON_KEY)},
+      body:JSON.stringify(body),
+    });
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok||json.success===false)showToast('Payment saved, email failed: '+(json.error||''),'warn');
+    else showToast('Payment confirmation email sent.');
+  }catch(e){showToast('Email error: '+e.message,'warn');}
+}
+
+async function markUnpaid(dbId, evt){
+  if(evt)evt.stopPropagation();
+  const {ok,error}=await CP.Applications.updatePayment(dbId,'unpaid');
+  if(!ok){showToast('Error: '+error,'error');return;}
+  showToast('Marked as unpaid.');
+  await loadApps();
+}
+
+async function markWaived(dbId, evt){
+  if(evt)evt.stopPropagation();
+  const {ok,error}=await CP.Applications.updatePayment(dbId,'waived');
+  if(!ok){showToast('Error: '+error,'error');return;}
+  showToast('Fee waived.');
+  await loadApps();
+}
+
+// ── Refund ────────────────────────────────────────────────────────────────────
+function openRefundModal(dbId, name, evt){
+  if(evt)evt.stopPropagation();
+  document.getElementById('refund-modal-id').value=dbId;
+  document.getElementById('refund-modal-sub').textContent='For: '+name;
+  document.getElementById('refund-notes').value='';
+  openModal('refund-modal');
+}
+
+async function confirmRefund(){
+  const dbId=document.getElementById('refund-modal-id').value;
+  const notes=document.getElementById('refund-notes').value||null;
+  const btn=document.getElementById('refund-confirm-btn');
+  btn.disabled=true;btn.textContent='Processing…';
+  const {error}=await CP.sb().from('applications').update({payment_status:'refunded',payment_notes:notes,updated_at:new Date().toISOString()}).eq('id',dbId);
+  btn.disabled=false;btn.textContent='Confirm Refund';
+  if(error){showToast('Error: '+error.message,'error');return;}
+  closeModal('refund-modal');
+  showToast('Marked as refunded.');
+  await loadApps();
+}
+
+// ── Manual email ──────────────────────────────────────────────────────────────
+function openEmailModal(appId, type, name, evt){
+  if(evt)evt.stopPropagation();
+  document.getElementById('email-modal-appid').value=appId;
+  document.getElementById('email-modal-type').value=type;
+  document.getElementById('email-modal-sub').textContent='To: '+name+' — '+type+' email';
+  document.getElementById('email-modal-msg').value='';
+  openModal('email-modal');
+}
+
+async function confirmEmail(){
+  const appId=document.getElementById('email-modal-appid').value;
+  const type=document.getElementById('email-modal-type').value;
+  const msg=document.getElementById('email-modal-msg').value||undefined;
+  const btn=document.getElementById('email-confirm-btn');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:5px"></i>Sending…';
+  await autoSendEmail(appId, type, msg);
+  btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:5px"></i>Send Email';
+  closeModal('email-modal');
+}
+
+// ── Notes ─────────────────────────────────────────────────────────────────────
+async function saveNotes(id){
+  const ta=document.getElementById('notes-'+id);
+  if(!ta)return;
+  const {ok,error}=await CP.Applications.saveNotes(id,ta.value);
+  if(!ok){showToast('Error: '+error,'error');return;}
+  showToast('Notes saved.');
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+async function loadDocs(dbId, appId){
+  const container=document.getElementById('docs-'+dbId);
+  if(!container)return;
+  container.innerHTML='<span style="font-size:.78rem;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
+  try{
+    const {data:files,error}=await CP.sb().storage.from('application-docs').list(appId,{limit:50,sortBy:{column:'created_at',order:'desc'}});
+    if(error){container.innerHTML='<span style="font-size:.78rem;color:#ef4444">Error: '+esc(error.message)+'</span>';return;}
+    if(!files||!files.length){container.innerHTML='<span style="font-size:.78rem;color:var(--muted)">No documents uploaded yet.</span>';return;}
+    const rows=files.map(f=>`<div class="doc-row">
+      <i class="fas fa-file" style="color:var(--muted2);font-size:.8rem"></i>
+      <span style="font-size:.78rem;flex:1">${esc(f.name||'—')}</span>
+      <button class="btn-act btn-ghost" style="font-size:.7rem;padding:3px 10px" onclick="downloadDoc('${esc(appId+'/'+f.name)}')">Download</button>
+    </div>`).join('');
+    container.innerHTML='<div style="margin-top:4px">'+rows+'</div>';
+  }catch(e){container.innerHTML='<span style="font-size:.78rem;color:#ef4444">Error loading docs.</span>';}
+}
+
+async function downloadDoc(path){
+  const {data,error}=await CP.sb().storage.from('application-docs').createSignedUrl(path,300);
+  if(error||!data?.signedUrl){showToast('Could not get download link','error');return;}
+  window.open(data.signedUrl,'_blank');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',async()=>{
+  const ok=await CP.Auth.requireAdmin();
+  if(!ok)return;
+  const user=await CP.Auth.getUser();
+  document.getElementById('admin-name').textContent=user?.email||'Admin';
+
+  // Filter pills
+  document.getElementById('filter-tabs').addEventListener('click',async e=>{
+    const btn=e.target.closest('.filter-pill');
+    if(!btn)return;
+    document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    _currentStatus = btn.dataset.status;
+    _status=btn.dataset.status;
     await loadApps();
   });
 
   // Search
-  document.getElementById('search-input').addEventListener('input', e => {
-    _currentSearch = e.target.value;
+  document.getElementById('search-input').addEventListener('input',e=>{
+    _search=e.target.value;
     clearTimeout(_debounce);
-    _debounce = setTimeout(loadApps, 350);
+    _debounce=setTimeout(loadApps,350);
+  });
+
+  // Payment filter
+  document.getElementById('pay-filter').addEventListener('change',e=>{
+    _payFilter=e.target.value;
+    loadApps();
+  });
+
+  // Close modals on backdrop click
+  document.querySelectorAll('.modal-backdrop').forEach(bd=>{
+    bd.addEventListener('click',e=>{if(e.target===bd)bd.classList.remove('open');});
   });
 
   await loadApps();
 });
-
-// ── Phase 4B — Mark as Refunded ────────────────────────────────────────────
-function showRefundModal(dbId, appId, name) {
-  document.getElementById('refund-app-db-id').value = dbId;
-  document.getElementById('refund-app-id').value    = appId;
-  document.getElementById('refund-name').textContent = name || appId;
-  const bd = document.getElementById('refund-modal-backdrop');
-  bd.style.display = 'flex';
-}
-function closeRefundModal() {
-  document.getElementById('refund-modal-backdrop').style.display = 'none';
-}
-async function markRefunded() {
-  const dbId = document.getElementById('refund-app-db-id').value;
-  const btn  = document.getElementById('refund-confirm-btn');
-  btn.disabled = true;
-  btn.textContent = 'Processing…';
-  const { error } = await CP.sb().from('applications')
-    .update({ payment_status: 'refunded', updated_at: new Date().toISOString() })
-    .eq('id', dbId);
-  if (error) { alert('Error: ' + error.message); btn.disabled = false; btn.textContent = 'Confirm Refund'; return; }
-  closeRefundModal();
-  showToast('Payment marked as refunded.');
-  await loadApps();
-}
-
-// ── Phase 8 — View uploaded documents ──────────────────────────────────────
-async function loadDocs(dbId, appId) {
-  const container = document.getElementById('docs-' + dbId);
-  if (!container) return;
-  container.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
-  try {
-    const { data: files, error } = await CP.sb().storage.from('application-docs').list(appId, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
-    if (error) { container.innerHTML = '<span style="font-size:.78rem;color:#dc2626">Error: ' + esc(error.message) + '</span>'; return; }
-    if (!files || !files.length) { container.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">No documents uploaded yet.</span>'; return; }
-    const rows = files.map(f => {
-      const name = esc(f.name || '—');
-      const path = appId + '/' + f.name;
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border,#e2e8f0)">' +
-        '<i class="fas fa-file" style="color:var(--muted);font-size:.8rem"></i>' +
-        '<span style="font-size:.78rem;flex:1">' + name + '</span>' +
-        '<button class="btn-ghost-sm" style="font-size:.72rem;padding:3px 8px" onclick="downloadDoc(\'' + esc(path) + '\')">Download</button>' +
-        '</div>';
-    }).join('');
-    container.innerHTML = '<div style="margin-top:4px">' + rows + '</div>';
-  } catch(e) { container.innerHTML = '<span style="font-size:.78rem;color:#dc2626">Error loading docs.</span>'; }
-}
-async function downloadDoc(path) {
-  const { data, error } = await CP.sb().storage.from('application-docs').createSignedUrl(path, 300);
-  if (error || !data?.signedUrl) { alert('Could not get download link: ' + (error?.message || 'unknown')); return; }
-  window.open(data.signedUrl, '_blank');
-}
-
 </script>
-
-<!-- Phase 4B — Refund Confirmation Modal -->
-<div id="refund-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center" onclick="if(event.target===this)closeRefundModal()">
-  <div style="background:#1e293b;border-radius:12px;padding:28px 32px;width:90%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
-    <h3 style="color:#f1f5f9;font-size:.95rem;margin-bottom:8px">Mark as Refunded</h3>
-    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:20px">Mark the holding fee payment as <strong style="color:#f1f5f9">Refunded</strong> for <span id="refund-name" style="color:#f1f5f9"></span>? This cannot be undone without manual DB edit.</p>
-    <input type="hidden" id="refund-app-db-id">
-    <input type="hidden" id="refund-app-id">
-    <div style="display:flex;gap:12px;justify-content:flex-end">
-      <button class="btn-ghost-sm" onclick="closeRefundModal()">Cancel</button>
-      <button id="refund-confirm-btn" onclick="markRefunded()" style="padding:8px 18px;background:#b45309;color:#fff;border:none;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer">Confirm Refund</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
