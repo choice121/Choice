@@ -270,8 +270,8 @@ After any deploy, verify with these:
 → Verify both values in Supabase → Settings → API
 
 **"Apply Now" button goes to wrong URL**
-→ Check `APPLY_FORM_URL` env var (default: `https://apply-choice-properties.pages.dev`)
-→ If not set, the default in `generate-config.js` is already correct
+→ Check `APPLY_FORM_URL` env var. It should be `/apply` or unset.
+→ The default in `generate-config.js` is `/apply`; do not point the main site back to the old external Apply Pages project.
 
 **Emails not sending**
 → Supabase → Edge Functions → click the function → Logs tab for the exact error

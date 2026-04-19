@@ -65,7 +65,7 @@ This rule exists because multiple AIs on multiple platforms share this codebase.
 | Component | URL | Tech | Status |
 |-----------|-----|------|--------|
 | Main site / admin panel | choice-properties-site.pages.dev | Static HTML/CSS/JS + Supabase + Node.js (port 5000) | Live |
-| External application form | apply-choice-properties.pages.dev | Static HTML/CSS/JS, posts to GAS | Live |
+| Internal application frontend | /apply/ on the main site | Static HTML/CSS/JS, posts to GAS | Live |
 | GAS backend | Google Apps Script | Google Sheets as DB, admin UI via GAS HTML | Live ÃÂ¢ÃÂÃÂ being replaced |
 
 **The migration goal:** Replace the GAS/Google Sheets pipeline with a native Supabase system embedded in the existing admin panel ÃÂ¢ÃÂÃÂ while keeping GAS fully operational until the new system is confirmed working.
@@ -379,6 +379,6 @@ The landlord portal (`/landlord/` directory) already exists. Phase 1 must add:
 - Address: 2265 Livernois, Suite 500, Troy, MI 48083
 - GitHub: choice121
 - Supabase Project URL: https://tlfmwetmhthpyrytrcfo.supabase.co
-- Apply form: https://apply-choice-properties.pages.dev
+- Apply form: `/apply/` on the main site
 - Main site: https://choice-properties-site.pages.dev
 - GAS backend URL: stored in `CP_CONFIG.BACKEND_URL` in apply form's config.js

@@ -21,9 +21,9 @@ const config = {
   // Example: https://choiceproperties.com  (no trailing slash)
   SITE_URL: (process.env.SITE_URL || '').replace(/\/$/, ''),
 
-  // APPLY_FORM_URL: Base URL of the application form.
-  // Apply Now buttons on all property listings redirect here.
-  // Override via APPLY_FORM_URL environment variable in Cloudflare Pages if needed.
+  // APPLY_FORM_URL: Internal application frontend route.
+  // Apply Now buttons on all property listings route here.
+  // Keep this as /apply unless the internal route changes.
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '/apply').replace(/\/$/, ''),
 
     // GAS_URL: Google Apps Script backend URL — handles dashboard routing and form submissions.
@@ -172,8 +172,8 @@ var CONFIG = {
   SUPABASE_URL:      '${config.SUPABASE_URL}',
   SUPABASE_ANON_KEY: '${config.SUPABASE_ANON_KEY}',
 
-  // External application form base URL (blank = use /apply.html on same origin).
-  // Set APPLY_FORM_URL env var in your hosting dashboard.
+  // Internal application frontend route.
+  // Keep APPLY_FORM_URL as /apply unless the route changes.
   APPLY_FORM_URL: '${config.APPLY_FORM_URL}',
 
   IMAGEKIT_URL:        '${config.IMAGEKIT_URL}',

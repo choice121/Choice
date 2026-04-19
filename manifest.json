@@ -41,7 +41,7 @@
       "name": "Track Application",
       "short_name": "Track",
       "description": "Check your application status",
-      "url": "https://apply-choice-properties.pages.dev/?path=dashboard",
+      "url": "/apply/?path=dashboard",
       "icons": [{ "src": "/assets/favicon.svg", "sizes": "any" }]
     }
   ],

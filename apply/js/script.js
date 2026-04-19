@@ -24,8 +24,8 @@
   INTEGRATION NOTE (Session 028):
   ─────────────────────────────────────────────────────────────────────
   This form is the SOLE application system for Choice Properties.
-  The main listing platform (choice-properties-site.pages.dev) redirects
-  users here when they click "Apply" on any property listing.
+  The main listing platform serves this application internally at /apply/
+  when users click "Apply" on any property listing.
 
   Property context is passed via URL query parameters for display only:
     ?id=<propertyId>   — internal property ID (display/logging only)
@@ -2101,7 +2101,7 @@ class RentalApplication {
                 creditApplied: 'Application Credit Applied',
                 creditAppliedText: 'You have application credits — your application fee is covered.',
                 trustLine: 'Your information is securely processed and will only be used for rental application review.',
-                feeAcknowledge: 'I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the landlord associated with this property solely for rental application evaluation. The application fee is <strong>non-refundable</strong> once submitted and payment is processed, except as described in the <a href="https://choice-properties.pages.dev/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.',
+                feeAcknowledge: 'I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the landlord associated with this property solely for rental application evaluation. The application fee is <strong>non-refundable</strong> once submitted and payment is processed, except as described in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.',
                 footerCopyright: '&copy; 2026 Choice Properties. All rights reserved.',
                 startOver: 'Start Over',
                 startOverTitle: 'Start Over?',
@@ -2406,7 +2406,7 @@ class RentalApplication {
                 creditApplied: 'Crédito de Solicitud Aplicado',
                 creditAppliedText: 'Tiene créditos de solicitud — su tarifa de solicitud está cubierta.',
                 trustLine: 'Su información es procesada de forma segura y solo se utilizará para la revisión de su solicitud de arrendamiento.',
-                feeAcknowledge: 'Reconozco la política de tarifas de solicitud y autorizo que mi información personal sea revisada por el personal de Choice Properties y el propietario asociado a esta propiedad únicamente para la evaluación de la solicitud de arrendamiento. La tarifa de solicitud es <strong>no reembolsable</strong> una vez enviada y procesado el pago, excepto según lo descrito en la <a href="https://choice-properties.pages.dev/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Crédito de Solicitud</a>.',
+                feeAcknowledge: 'Reconozco la política de tarifas de solicitud y autorizo que mi información personal sea revisada por el personal de Choice Properties y el propietario asociado a esta propiedad únicamente para la evaluación de la solicitud de arrendamiento. La tarifa de solicitud es <strong>no reembolsable</strong> una vez enviada y procesado el pago, excepto según lo descrito en la <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Crédito de Solicitud</a>.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',
                 startOver: 'Empezar de Nuevo',
                 startOverTitle: '¿Empezar de Nuevo?',

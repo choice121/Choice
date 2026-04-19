@@ -116,9 +116,9 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 | Date | Changes |
 |---|---|
-| April 2026 | **Local application frontend consolidation.** Copied the application frontend into `/apply/`, updated Apply/Track links to use the local route, preserved the original form design and behavior, and left the external application repository untouched. |
+| April 2026 | **Local application frontend consolidation.** Copied the application frontend into `/apply/`, updated Apply/Track links to use the local route, preserved the original form design and behavior, and left the external application repository untouched. Cloudflare Pages for the main site must use `APPLY_FORM_URL=/apply` or leave it unset. |
 | April 2026 | **Security hardening.** Removed exposure of Geoapify API key from the Apply repo source code. Added build system to Apply site (`generate-config.js` + `package.json`). Synced Cloudflare Pages preview environment variables (was missing 14 vars). Documented correct deployment process for both platforms. |
-  | April 2026 | **External application form integration.** All "Apply Now" buttons across `listings.html`, `property.html`, and `index.html` now redirect to `https://apply-choice-properties.pages.dev` with full property context via URL params. All "Track My Application" links in nav, footer, and `faq.html` updated to the external applicant dashboard. `js/cp-api.js` updated: `buildApplyURL()` fallback hardened, `sendRecoveryEmail()` dashboard URL updated. `generate-config.js` `APPLY_FORM_URL` default set. |
+| April 2026 | **Legacy external application integration superseded.** This project previously sent Apply/Track traffic to the separate Pages app. The active configuration now routes that traffic internally to `/apply/`; keep any historical external repo untouched unless explicitly requested. |
 | April 2026 | **Frontend audit & mobile optimisation.** Responsive layouts, 44px touch targets, local Font Awesome hosting, CSS preload strategy, image lazy loading, critical CSS inlining, shared nav component, portal links, route highlighting, inline style cleanup, semantic HTML improvements. |
 
 ---
@@ -127,4 +127,4 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 - Supabase Edge Functions have their own uptime dashboard at [app.supabase.com](https://app.supabase.com) → your project → Edge Functions.
 - GAS (Google Apps Script) email relay does **not** have a public health endpoint. Monitor email delivery by reviewing the Email Logs page in the admin panel regularly, or set up a daily cron alert via UptimeRobot pointed at your live site.
-- The internal `/apply/` directory, `apply.html`, and all apply-specific JS files (`apply.js`, `apply-submit.js`, etc.) have been **removed**. Old email links and bookmarks pointing to `/apply/*` are handled by `_redirects`, which sends them to the external form automatically.
+- The internal `/apply/` directory is active and is the tenant-facing application frontend. Do not restore redirects that send `/apply/*` to the old external Apply site.

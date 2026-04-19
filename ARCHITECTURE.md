@@ -58,8 +58,8 @@ Browser
   │
   ├── Geoapify              ← address autocomplete API
   │
-  └── apply-choice-properties.pages.dev  ← external application form
-        (separate system — receives one-way redirect with URL params)
+  └── /apply/                ← internal application frontend
+        (served from this repo; submits to the existing GAS backend)
 ```
 
 ---
@@ -180,7 +180,7 @@ Replace `photo_urls TEXT[]` on the `properties` table with a dedicated `property
 
 ### Application & Lease Storage — External GAS System
 
-All application intake, lease generation, e-signatures, and document storage are handled by the **external application system** at `apply-choice-properties.pages.dev` — not by this platform's Supabase instance.
+The tenant-facing application frontend is served internally from this repo at `/apply/`. Application intake, lease generation, e-signatures, and document storage still submit to the existing Google Apps Script application backend — not this platform's Supabase tables.
 
 | Data | Where stored | How accessed |
 |---|---|---|
@@ -337,8 +337,8 @@ This platform sends the following URL params when routing to the form. The form 
 - [ ] Admin account created via SQL insert into `admin_roles` (see SETUP.md Step 8)
 - [ ] `health.html` checks passing on the live site
 - [ ] At least 3–5 listings seeded via landlord dashboard so homepage shows live content
-- [ ] Verify "Apply Now" buttons redirect to `https://apply-choice-properties.pages.dev` with correct property params
-- [ ] Verify "Track My Application" links in nav, footer, and FAQ point to the external applicant dashboard
+- [ ] Verify "Apply Now" buttons route to `/apply/` with correct property params
+- [ ] Verify "Track My Application" links in nav, footer, and FAQ point to `/apply/?path=dashboard`
 
   ---
 
@@ -378,7 +378,7 @@ This platform sends the following URL params when routing to the form. The form 
 
 ## Application System Architecture Decision (2026-04-09)
 
-All rental application processing is handled exclusively by the external GAS system at **apply-choice-properties.pages.dev**. The Supabase applications table and related database objects are legacy and should be removed by running MIGRATION_drop_applications_tables.sql in the Supabase SQL Editor.
+Rental application UI is now internal at **/apply/** in this repository. Processing still submits to the existing GAS application backend. The Supabase applications table and related database objects are legacy and should be removed by running MIGRATION_drop_applications_tables.sql in the Supabase SQL Editor only after confirming no live data is needed.
 
 ### What moved to GAS
 

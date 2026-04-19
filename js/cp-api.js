@@ -580,8 +580,8 @@ function esc(str) {
 
 function buildApplyURL(property) {
   // -- Layer 1: sessionStorage (same-origin only) ----------------------------
-  // Stores full context for same-origin use. Cross-origin (external form)
-  // cannot read sessionStorage - it relies entirely on the URL params below.
+  // Stores full context for same-origin use. Legacy cross-origin forms
+  // cannot read sessionStorage - they rely entirely on the URL params below.
   // landlord_id is included here only - never in the URL.
   try {
     sessionStorage.setItem('cp_property_context', JSON.stringify({

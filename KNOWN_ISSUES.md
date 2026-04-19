@@ -205,12 +205,12 @@ REFERENCE DOCUMENT — All issues listed here are resolved as of April 8, 2026.
 
   ## Integration Architecture Reference
 
-  This platform connects to Apply_choice_properties via `buildApplyURL()` in `js/cp-api.js`.
+  This platform serves the application frontend internally at `/apply/` and builds that URL via `buildApplyURL()` in `js/cp-api.js`.
 
   **Data flow summary:**
   1. User clicks Apply on `property.html` or `listings.html`
   2. `CP.buildApplyURL(property)` builds a URL with 30+ query params
-  3. Browser navigates to `https://apply-choice-properties.pages.dev?...`
+  3. Browser navigates to `/apply/?...`
   4. Apply form reads params via `_prefillFromURL()`, populates hidden inputs
   5. User fills form and submits → multipart POST to GAS exec URL
   6. GAS writes to Google Sheet, sends confirmation email
