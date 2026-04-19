@@ -75,7 +75,7 @@ This platform serves the rental application frontend from:
 
 **`/apply/`**
 
-When a user clicks "Apply Now" on any property listing, they are routed to the local application frontend with all relevant property data passed as URL query parameters. The application frontend is copied from `choice121/Apply_choice_properties`; the external repository is left untouched and the Google Apps Script backend remains the processing system.
+When a user clicks "Apply Now" on any property listing, they are routed to the local application frontend with all relevant property data passed as URL query parameters. The application frontend is copied from `apply-choice-properties (separate project, no connection to this repo)`; the external repository is left untouched and the Google Apps Script backend remains the processing system.
 
 ### How it works
 

@@ -90,7 +90,7 @@
   </nav>
   <div class="sidebar-footer">
     <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading¢¦</div>
+    <div class="admin-name" id="admin-name">Loading…</div>
     <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
   </div>
 </aside>
@@ -98,7 +98,7 @@
 <div class="main">
   <div class="topbar">
     <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div><div class="page-title">Applications</div><div class="page-sub" id="page-sub">Loading¢¦</div></div>
+    <div><div class="page-title">Applications</div><div class="page-sub" id="page-sub">Loading…</div></div>
   </div>
   <div class="content">
 
@@ -111,10 +111,10 @@
     </div>
 
     <div class="search-row">
-      <input type="text" id="search-input" placeholder="Search by name, email, address or App ID¢¦">
+      <input type="text" id="search-input" placeholder="Search by name, email, address or App ID…">
     </div>
 
-    <div id="apps-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading applications¢¦</div></div>
+    <div id="apps-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading applications…</div></div>
 
   </div>
 </div>
@@ -130,7 +130,7 @@
 })();
 </script>
 <script>
-// ¢¢ Admin applications page ¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢
+// Admin applications page
 // Uses CP.Applications (added in Phase 1 migration)
 // Requires: SETUP.sql must be run against Supabase first (Phase 0)
 
@@ -147,14 +147,14 @@ function payBadge(s) {
   return `<span class="badge ${map[s]||'badge-unpaid'}">${s||'unpaid'}</span>`;
 }
 function fmtDate(d) {
-  if (!d) return '¢';
+  if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch { return d; }
 }
 function esc(s) { return CP_esc ? CP_esc(s) : String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
 function renderCard(app) {
   const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
-  const prop = esc(app.property_address || app.property_id || '¢');
+  const prop = esc(app.property_address || app.property_id || '—');
   const hasCoApp = app.has_co_applicant ? '<span class="badge" style="background:rgba(201,168,76,.15);color:#b45309">Co-Applicant</span>' : '';
   const hasPets  = app.has_pets ? '<span class="badge" style="background:rgba(16,185,129,.1);color:#059669">Pets</span>' : '';
 
@@ -172,8 +172,8 @@ function renderCard(app) {
       </div>
     </div>
     <div class="app-meta">
-      <span><i class="fas fa-envelope"></i> ${esc(app.email||'¢')}</span>
-      <span><i class="fas fa-phone"></i> ${esc(app.phone||'¢')}</span>
+      <span><i class="fas fa-envelope"></i> ${esc(app.email||'—')}</span>
+      <span><i class="fas fa-phone"></i> ${esc(app.phone||'—')}</span>
       ${app.requested_move_in_date ? `<span><i class="fas fa-calendar"></i> Move-in: ${esc(app.requested_move_in_date)}</span>` : ''}
       ${app.monthly_income ? `<span><i class="fas fa-dollar-sign"></i> Income: ${esc(app.monthly_income)}/mo</span>` : ''}
     </div>
@@ -181,12 +181,12 @@ function renderCard(app) {
       ${app.status !== 'approved'   ? `<button class="btn-sm btn-approve"   onclick="setStatus('${app.id}','approved')">Approve</button>` : ''}
       ${app.status !== 'denied'     ? `<button class="btn-sm btn-deny"      onclick="setStatus('${app.id}','denied')">Deny</button>` : ''}
       ${app.status !== 'waitlisted' ? `<button class="btn-sm btn-waitlist"  onclick="setStatus('${app.id}','waitlisted')">Waitlist</button>` : ''}
-      ${app.status !== 'pending'    ? `<button class="btn-sm btn-pending"   onclick="setStatus('${app.id}','pending')">Reset¢Pending</button>` : ''}
+      ${app.status !== 'pending'    ? `<button class="btn-sm btn-pending"   onclick="setStatus('${app.id}','pending')">Reset to Pending</button>` : ''}
       <button class="btn-ghost-sm" onclick="togglePayment('${app.id}','${app.payment_status}')">
-        ${app.payment_status === 'paid' ? '°³ Mark Unpaid' : '°³ Mark Paid'}
+        ${app.payment_status === 'paid' ? '✓ Mark Unpaid' : '✓ Mark Paid'}
       </button>
       ${app.payment_status === 'paid' ? `<button class="btn-ghost-sm" onclick="showRefundModal('${app.id}','${app.app_id||app.id}','${esc((app.first_name||'')+' '+(app.last_name||''))}')" style="color:#b45309;border-color:rgba(180,83,9,.3)"><i class="fas fa-undo" style="margin-right:4px"></i>Refund</button>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleDetail('${app.id}')">Details ¢¾</button>
+      <button class="btn-ghost-sm" onclick="toggleDetail('${app.id}')">Details ▾</button>
     </div>
     <div class="detail-panel" id="detail-${app.id}">
       ${renderDetail(app)}
@@ -196,7 +196,7 @@ function renderCard(app) {
 
 function renderDetail(app) {
   function row(label, val) {
-    return `<div class="detail-row"><span class="detail-key">${esc(label)}</span><span class="detail-val">${esc(String(val||'¢'))}</span></div>`;
+    return `<div class="detail-row"><span class="detail-key">${esc(label)}</span><span class="detail-val">${esc(String(val||'—'))}</span></div>`;
   }
   return `
     <strong style="font-size:.78rem;color:var(--text)">Personal</strong>
@@ -233,18 +233,18 @@ function renderDetail(app) {
     </div>
     <strong style="font-size:.78rem;color:var(--text)">Background</strong>
     <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Bankruptcy', app.has_bankruptcy ? 'Yes ¢ ' + (app.bankruptcy_explanation||'') : 'No')}
-      ${row('Criminal History', app.has_criminal_history ? 'Yes ¢ ' + (app.criminal_history_explanation||'') : 'No')}
+      ${row('Bankruptcy', app.has_bankruptcy ? 'Yes — ' + (app.bankruptcy_explanation||'') : 'No')}
+      ${row('Criminal History', app.has_criminal_history ? 'Yes — ' + (app.criminal_history_explanation||'') : 'No')}
     </div>
     <strong style="font-size:.78rem;color:var(--text)">References & Emergency Contact</strong>
     <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Ref 1', app.reference_1_name ? app.reference_1_name + ' ¢ ' + (app.reference_1_phone||'') : '¢')}
-      ${row('Ref 2', app.reference_2_name ? app.reference_2_name + ' ¢ ' + (app.reference_2_phone||'') : '¢')}
-      ${row('Emergency Contact', app.emergency_contact_name ? app.emergency_contact_name + ' (' + (app.emergency_contact_relationship||'') + ') ' + (app.emergency_contact_phone||'') : '¢')}
+      ${row('Ref 1', app.reference_1_name ? app.reference_1_name + ' — ' + (app.reference_1_phone||'') : '—')}
+      ${row('Ref 2', app.reference_2_name ? app.reference_2_name + ' — ' + (app.reference_2_phone||'') : '—')}
+      ${row('Emergency Contact', app.emergency_contact_name ? app.emergency_contact_name + ' (' + (app.emergency_contact_relationship||'') + ') ' + (app.emergency_contact_phone||'') : '—')}
     </div>
     <strong style="font-size:.78rem;color:var(--text)">Vehicle & Preferences</strong>
     <div class="detail-grid" style="margin-bottom:12px">
-      ${row('Vehicle', [app.vehicle_year, app.vehicle_make, app.vehicle_model].filter(Boolean).join(' ') || '¢')}
+      ${row('Vehicle', [app.vehicle_year, app.vehicle_make, app.vehicle_model].filter(Boolean).join(' ') || '—')}
       ${row('License Plate', app.vehicle_license_plate)}
       ${row('Primary Payment', app.primary_payment_method)}
       ${row('Alt Payment', app.alternative_payment_method)}
@@ -260,7 +260,7 @@ function renderDetail(app) {
     </div>
     <div style="margin-top:12px">
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
-      <textarea class="notes-area" id="notes-${app.id}" placeholder="Internal notes (not visible to applicant)¢¦">${esc(app.admin_notes||'')}</textarea>
+      <textarea class="notes-area" id="notes-${app.id}" placeholder="Internal notes (not visible to applicant)…">${esc(app.admin_notes||'')}</textarea>
       <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveNotes('${app.id}')">Save Notes</button>
     </div>`;
 }
@@ -348,7 +348,7 @@ async function loadApps() {
     return;
   }
   const rows = data || [];
-  sub.textContent = `${rows.length} application${rows.length !== 1 ? 's' : ''}${_currentStatus !== 'all' ? ' ¢ ' + _currentStatus : ''}`;
+  sub.textContent = `${rows.length} application${rows.length !== 1 ? 's' : ''}${_currentStatus !== 'all' ? ' — ' + _currentStatus : ''}`;
   if (!rows.length) {
     list.innerHTML = `<div class="empty-state"><h3>No applications found</h3><p>Try changing the filter or search term.</p></div>`;
     return;

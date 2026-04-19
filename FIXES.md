@@ -40,7 +40,7 @@ to replace it. A full audit comparing GAS against the Supabase system revealed t
 gaps documented below. Every fix in this file closes a gap between GAS and Supabase
 so that admins and applicants get an identical (or better) experience.
 
-**GAS reference source:** `Apply_choice_properties/backend/code.gs`
+**GAS reference source:** `apply-choice-properties (separate project)/backend/code.gs`
 (GAS `doPost` was renamed to `doPost_DISABLED` — GAS is no longer active in production)
 
 **Architecture rule:** All backend fixes go into Supabase Edge Functions.

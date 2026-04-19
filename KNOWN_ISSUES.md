@@ -1,22 +1,18 @@
 REFERENCE DOCUMENT — All issues listed here are resolved as of April 8, 2026.
-  For ongoing project status, read PROJECT_STATUS.md in choice121/Apply_choice_properties.
 
   ---
 
   # Known Issues — Choice Listing Platform
 
   **Deep scan completed:** April 8, 2026
-  **Companion fix document:** `PHASE9_BUG_FIXES.md` in choice121/Apply_choice_properties
   **Status:** All issues resolved — April 8, 2026
 
   ---
 
   ## Overview
 
-  A comprehensive deep scan of both the Choice listing platform (this repo) and the
-  Apply_choice_properties repo was completed April 8, 2026. The following issues were
-  found in this repo. They are listed in priority order and cross-referenced with the
-  Phase 9 fix plan in the Apply repo.
+  A comprehensive deep scan of the Choice listing platform was completed April 8, 2026.
+  The following issues were found and resolved in this repo.
 
   Fix these in order. Do not skip ahead to lower-priority items.
 
@@ -231,5 +227,5 @@ REFERENCE DOCUMENT — All issues listed here are resolved as of April 8, 2026.
   ---
 
   *Deep scan performed: April 8, 2026*
-  *Both repos scanned: choice121/Choice + choice121/Apply_choice_properties*
+  *Both repos scanned: choice121/Choice + apply-choice-properties (separate project, no connection to this repo)*
   

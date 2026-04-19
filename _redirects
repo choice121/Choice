@@ -18,3 +18,5 @@
 /landlord/listings          /landlord/dashboard.html                      302
 /landlord/messages.html     /landlord/inquiries.html                     302
 /landlord/messages          /landlord/inquiries.html                     302
+# Catch-all 404
+/*                          /404.html                                    404

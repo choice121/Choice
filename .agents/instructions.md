@@ -194,22 +194,22 @@ If either enforcement mechanism triggers, stop, identify what caused it, and und
 | `SETUP.sql` | Complete database schema — one file, one run in Supabase SQL Editor |
 | `GAS-EMAIL-RELAY.gs` | Google Apps Script email relay source — deployed manually to Google |
 | `_headers` | Cloudflare Pages security headers (CSP, HSTS, X-Frame-Options) |
-| `_redirects` | Cloudflare Pages routing rules — `/apply/*` redirects to external form |
+| `_redirects` | Cloudflare Pages routing rules — `/apply/*` routes to internal application frontend |
 | `supabase/functions/` | Deno Edge Functions source — deployed separately via Supabase CLI or dashboard |
 
 ---
 
-## External Application Form
+## Application Frontend
 
-Tenant applications are handled by a completely separate system at
-`https://apply-choice-properties.pages.dev` (GitHub: `choice121/Apply_choice_properties`).
+Tenant applications are handled **internally** by the `/apply/` directory in this repository.
+The `/apply/index.html` form submits directly to the `receive-application` Supabase Edge Function.
 
-This platform's only role is to redirect tenants to that system via `buildApplyURL(property)`
-in `js/cp-api.js`. The integration is **one-way, read-only** — URL parameters only.
+The `buildApplyURL(property)` function in `js/cp-api.js` builds the internal `/apply/` URL with
+property parameters pre-filled. The `_redirects` file routes all `/apply/*` paths to `/apply/index.html`.
 
-Do not reconnect any legacy internal `/apply/` pages. Do not create new application intake
-logic in this repository. The `_redirects` file handles old `/apply/*` bookmarks by sending
-them to the external form.
+The `apply-choice-properties.pages.dev` site (GitHub: `choice121/Apply_choice_properties`) is a
+**completely separate project** with no connection to this repository. Do not reference it, link to
+it, or modify it from here.
 
 ---
 
@@ -221,20 +221,17 @@ All of these are set in Cloudflare Pages → choice-properties-site → Settings
 |----------|--------|
 | `SUPABASE_URL` | Set |
 | `SUPABASE_ANON_KEY` | Set (secret) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Set (secret) — used by Edge Functions, not the frontend |
 | `IMAGEKIT_URL` | Set |
 | `IMAGEKIT_PUBLIC_KEY` | Set |
-| `IMAGEKIT_PRIVATE_KEY` | Set (secret) — used by Edge Functions only |
 | `GEOAPIFY_API_KEY` | Set |
 | `SITE_URL` | Set → `https://choice-properties-site.pages.dev` |
-| `APPLY_FORM_URL` | Set → `https://apply-choice-properties.pages.dev` |
-| `GAS_URL` | Set |
-| `GAS_RELAY_SECRET` | Set (secret) |
+| `APPLY_FORM_URL` | Set → `/apply` (internal route) |
 | `COMPANY_NAME` | Set → Choice Properties |
 | `COMPANY_EMAIL` | Set → choicepropertygroup@hotmail.com |
 | `COMPANY_PHONE` | Set → 7077063137 |
 | `COMPANY_ADDRESS` | Set → 2265 Livernois, Suite 500, Troy, MI 48083 |
 | `COMPANY_TAGLINE` | Set → Your trust is our standard. |
-| `ADMIN_EMAIL` | Set → Choiceproperties404@gmail.com |
 | Feature flags | All set to `true` |
 | Lease defaults | Set |
+
+**Note:** `IMAGEKIT_PRIVATE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GAS_URL`, `GAS_RELAY_SECRET`, and `ADMIN_EMAIL` have been removed from Cloudflare. Private keys live only in Supabase Edge Function secrets.

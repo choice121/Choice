@@ -50,7 +50,7 @@ Browser
   │     ├── Supabase Auth (landlord + admin login)
   │     ├── Realtime (application status updates)
   │     ├── Storage (lease PDFs, application docs — private)
-  │     └── Edge Functions (4 active Deno functions — 7 decommissioned, pending Supabase dashboard deletion)
+  │     └── Edge Functions (12 active Deno functions)
   │
   ├── Google Apps Script    ← email relay (deployed separately)
   │
@@ -59,7 +59,7 @@ Browser
   ├── Geoapify              ← address autocomplete API
   │
   └── /apply/                ← internal application frontend
-        (served from this repo; submits to the existing GAS backend)
+        (served from this repo; submits directly to Supabase Edge Functions)
 ```
 
 ---
@@ -85,7 +85,7 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
 
 ### Backend API — Supabase Edge Functions
 
-  4 Deno-based Edge Functions are active. 7 application-related functions were removed from this repository and must be deleted from the Supabase dashboard (they are still deployed).
+  All 12 Deno-based Edge Functions are active and deployed to Supabase.
 
   #### Active Functions
 
@@ -95,24 +95,16 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
   | `send-message` | Send message in thread | Admin only |
   | `imagekit-upload` | Authenticated photo upload to ImageKit | Authenticated user |
   | `imagekit-delete` | Delete photo from ImageKit CDN | Authenticated user |
+  | `send-email` | Transactional emails (approval, denial, lease, move-in) | Admin/system |
+  | `receive-application` | Application intake from internal `/apply/` form | Public |
+  | `generate-lease` | Lease PDF generation | Admin only |
+  | `sign-lease` | Tenant e-signature processing | Authenticated user |
+  | `countersign` | Landlord countersignature | Admin only |
+  | `get-lease` | Retrieve lease data | Authenticated user |
+  | `download-lease` | Signed lease PDF download | Authenticated user |
+  | `request-upload-url` | Pre-signed upload URL for application docs | Authenticated user |
 
-  #### Decommissioned Functions — Action Required
-
-  All application and lease processing moved to the external GAS system. The 7 functions below have been removed from this repository but are **still running on Supabase** and should be deleted to eliminate unnecessary live endpoints.
-
-  **Go to:** [Supabase Dashboard → Edge Functions](https://supabase.com/dashboard/project/tlfmwetmhthpyrytrcfo/functions) → delete each:
-
-  | Function | Was responsible for |
-  |---|---|
-  | `process-application` | Application intake (now handled by GAS `doPost()`) |
-  | `generate-lease` | Lease generation (now: GAS admin panel) |
-  | `sign-lease` | E-signature processing (now: GAS lease portal) |
-  | `update-status` | Status updates (now: GAS admin panel) |
-  | `mark-paid` | Payment marking (now: GAS admin panel) |
-  | `mark-movein` | Move-in confirmation (now: GAS admin panel) |
-  | `get-application-status` | Tenant status check (now: GAS `?path=dashboard`) |
-
-  **Deployment (active functions only):** `npx supabase functions deploy --project-ref tlfmwetmhthpyrytrcfo` (see SETUP.md → Step 7)
+  **Deployment:** `npx supabase functions deploy --project-ref tlfmwetmhthpyrytrcfo` (see SETUP.md → Step 7)
 
   These functions are NOT part of this repository's local runtime. They run on Deno in Supabase's cloud.
 ---

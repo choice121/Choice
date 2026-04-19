@@ -42,7 +42,7 @@
 └── landlord/              ← Landlord portal pages (static HTML)
 ```
 
-The apply form is a SEPARATE repo (`choice121/Apply_choice_properties`). Do not modify that repo unless explicitly told to (Phase 2 work only).
+The apply form is a SEPARATE repo (`apply-choice-properties (separate project, no connection to this repo)`). Do not modify that repo unless explicitly told to (Phase 2 work only).
 
 ---
 
@@ -830,7 +830,7 @@ await fetch(
 ### Files That Belong in GitHub
 
 All files you create or modify go to `choice121/Choice` repo EXCEPT:
-- The apply form repo (`choice121/Apply_choice_properties`) — only touched in Phase 2
+- The apply form repo (`apply-choice-properties (separate project, no connection to this repo)`) — only touched in Phase 2
 
 ### If a Push Fails
 

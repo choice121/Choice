@@ -53,7 +53,7 @@ export async function isDbRateLimited(
       return false; // fail open
     }
 
-    return (count ?? 0) > maxRequests;
+    return (count ?? 0) >= maxRequests;
   } catch (err) {
     console.error('[rate-limit] unexpected error:', err);
     return false; // fail open

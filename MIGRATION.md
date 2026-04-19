@@ -125,7 +125,7 @@ The GAS admin renders application cards with full detail expand, action buttons 
 
 ### 2d. Application Form Fields ÃÂ¢ÃÂÃÂ Complete List
 
-The apply form (`index.html` + `script.js` in Apply_choice_properties) collects:
+The apply form (`index.html` + `script.js` in apply-choice-properties (separate project)) collects:
 
 **Property Context (hidden, from URL params):**
 - Property ID, Property Name, Property Address, Property City, Property State, Property Zip

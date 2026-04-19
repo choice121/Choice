@@ -306,9 +306,7 @@
           <i class="fas fa-lock" style="color:var(--gold)"></i>
           Application fee is due at time of submission and is non-refundable.
         </p>
-        <a id="trackAppLink" href="https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec?path=dashboard"
-           target="_blank"
-           rel="noopener noreferrer"
+        <a id="trackAppLink" href="/apply/?path=dashboard"
            class="apply-track-link">
           <i class="fas fa-search"></i> Already applied? Track your application →
         </a>
@@ -914,13 +912,13 @@ function renderProperty(p) {
     };
     _wireApply('applyBtn');
 
-      // Fix: wire "Track your application" link to the correct GAS dashboard URL
+      // Wire "Track your application" link to internal application portal
       const _trackLink = document.getElementById('trackAppLink');
       if (_trackLink) {
-        const _gasBase = (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL)
-          ? CONFIG.GAS_URL
-          : 'https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec';
-        _trackLink.href = _gasBase + '?path=dashboard';
+        const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
+          ? CONFIG.APPLY_FORM_URL
+          : '/apply';
+        _trackLink.href = _applyBase + '/?path=dashboard';
       }
 
   // Guard apply button for non-active listings
