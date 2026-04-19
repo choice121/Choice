@@ -104,10 +104,10 @@ Deno.serve(async (req: Request) => {
     // Log to admin_actions
     try {
       await supabase.from('admin_actions').insert({
-        app_id: appSigned.app_id,
-        action: 'tenant_signed_lease',
-        actor:  appSigned.email,
-        created_at: new Date().toISOString(),
+        action:      'tenant_signed_lease',
+        target_type: 'application',
+        target_id:   appSigned.app_id,
+        metadata:    { app_id: appSigned.app_id, actor: appSigned.email },
       });
     } catch (_) {}
   }

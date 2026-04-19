@@ -60,6 +60,19 @@ import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
     return template.replace(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '');
   }
 
+  /** Replace non-WinAnsi characters with ASCII equivalents so pdf-lib doesn't choke */
+  function sanitizeForPDF(text: string): string {
+    return text
+      .replace(/[─━\u2500-\u257F]/g, '-')   // box-drawing → hyphen
+      .replace(/[—–]/g, '-')                 // em/en dash → hyphen
+      .replace(/[\u2018\u2019]/g, "'")       // curly single quotes → straight
+      .replace(/[\u201C\u201D]/g, '"')       // curly double quotes → straight
+      .replace(/\u2026/g, '...')             // ellipsis
+      .replace(/\u2022/g, '*')               // bullet
+      .replace(/[\u00A0]/g, ' ')             // non-breaking space
+      .replace(/[^\x00-\xFF]/g, '?');        // any remaining non-Latin-1 → ?
+  }
+
   export async function buildLeasePDF(app: Record<string, unknown>, templateText: string): Promise<Uint8Array> {
     const pdfDoc = await PDFDocument.create();
     const fontNormal = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -104,14 +117,14 @@ import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
     drawText('Choice Properties  ·  2265 Livernois Suite 500, Troy MI 48083', 9, fontNormal, 20);
 
     // Lease body
-    const rendered = substituteVars(templateText, app);
+    const rendered = sanitizeForPDF(substituteVars(templateText, app));
     drawWrapped(rendered, bodySize, fontNormal, 4);
 
     // Signature block (if signed)
     if (app.tenant_signature) {
       y -= 20;
       if (y - 120 < margin) ({ page, y } = addPage());
-      drawText('─'.repeat(80), 8, fontNormal, 8);
+      drawText('-'.repeat(80), 8, fontNormal, 8);
       drawText('ELECTRONIC SIGNATURE', 11, fontBold, 6);
       drawText(`Tenant: ${app.tenant_signature}`, 12, fontItalic, 4);
       drawText(`Date signed: ${fmtDate(app.signature_timestamp as string)}`, 9, fontNormal, 3);

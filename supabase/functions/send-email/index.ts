@@ -36,16 +36,14 @@ async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: str
   return { ok: !!role, userEmail: user.email };
 }
 
-async function logEmail(appId: string, appDbId: string, type: string, recipient: string, status: string) {
+async function logEmail(appId: string, _appDbId: string, type: string, recipient: string, status: string, provider = 'unknown') {
   try {
     await supabase.from('email_logs').insert({
-      app_id: appId,
-      related_id: appDbId,
-      email_type: type,
+      app_id:    appId,
       type,
-      recipient_email: recipient,
+      recipient,
       status,
-      sent_at: new Date().toISOString(),
+      provider,
     });
   } catch (_) {}
 }
@@ -53,10 +51,10 @@ async function logEmail(appId: string, appDbId: string, type: string, recipient:
 async function logAdminAction(appId: string, action: string, actor: string) {
   try {
     await supabase.from('admin_actions').insert({
-      app_id: appId,
       action,
-      actor,
-      created_at: new Date().toISOString(),
+      target_type: 'application',
+      target_id:   appId,
+      metadata:    { app_id: appId, actor },
     });
   } catch (_) {}
 }

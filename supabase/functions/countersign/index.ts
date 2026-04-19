@@ -47,8 +47,8 @@ Deno.serve(async (req: Request) => {
     .from('applications').select('*').eq('app_id', app_id).single();
   if (appErr || !app) return jsonErr(404, 'Application not found');
 
-  // 2. Verify tenant has already signed
-  if (!app.tenant_signed && !app.tenant_signature) {
+  // 2. Verify tenant has already signed (check tenant_signature string, as tenant_signed column may not exist)
+  if (!app.tenant_signature) {
     return jsonErr(400, 'Tenant has not yet signed this lease. Management can only countersign after the tenant has signed.');
   }
 
@@ -105,10 +105,10 @@ Deno.serve(async (req: Request) => {
   // 7. Log admin action
   try {
     await supabase.from('admin_actions').insert({
-      app_id,
-      action:     'management_countersign',
-      actor:      signer_name,
-      created_at: now,
+      action:      'management_countersign',
+      target_type: 'application',
+      target_id:   app_id,
+      metadata:    { app_id, actor: signer_name },
     });
   } catch (_) {}
 

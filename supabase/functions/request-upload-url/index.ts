@@ -79,10 +79,10 @@ Deno.serve(async (req: Request) => {
   // Log upload request to admin_actions
   try {
     await supabase.from('admin_actions').insert({
-      app_id,
-      action:     `doc_upload_requested_${doc_type}`,
-      actor:      user.email,
-      created_at: new Date().toISOString(),
+      action:      `doc_upload_requested_${doc_type}`,
+      target_type: 'application',
+      target_id:   app_id,
+      metadata:    { app_id, actor: user.email, doc_type },
     });
   } catch (_) {}
 

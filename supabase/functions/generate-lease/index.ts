@@ -84,10 +84,10 @@ Deno.serve(async (req: Request) => {
     // Log dry run to admin_actions (non-fatal)
     try {
       await supabase.from('admin_actions').insert({
-        app_id,
-        action:     'lease_preview_generated',
-        actor:      auth.userEmail || 'admin',
-        created_at: new Date().toISOString(),
+        action:      'lease_preview_generated',
+        target_type: 'application',
+        target_id:   app_id,
+        metadata:    { app_id, actor: auth.userEmail || 'admin' },
       });
     } catch (_) {}
 
@@ -134,10 +134,10 @@ Deno.serve(async (req: Request) => {
   // Log to admin_actions
   try {
     await supabase.from('admin_actions').insert({
-      app_id,
-      action:     'generate_lease',
-      actor:      auth.userEmail || 'admin',
-      created_at: new Date().toISOString(),
+      action:      'generate_lease',
+      target_type: 'application',
+      target_id:   app_id,
+      metadata:    { app_id, actor: auth.userEmail || 'admin' },
     });
   } catch (_) {}
 
