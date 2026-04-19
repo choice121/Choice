@@ -104,7 +104,7 @@ In Supabase → **Settings → Edge Functions → Environment Variables**, add t
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_ANON_KEY` | Your Supabase anon public key |
 | `SITE_URL` | Your production domain e.g. `https://choiceproperties.com` (no trailing slash) — rewrites `sitemap.xml` and `robots.txt` at build time |
-| `APPLY_FORM_URL` | External application form URL — `https://apply-choice-properties.pages.dev` (already the default; only set this if the form URL ever changes) |
+| `APPLY_FORM_URL` | Application form route — `/apply` by default; only set this if the form route changes |
 | `IMAGEKIT_URL` | `https://ik.imagekit.io/your-id` |
 | `IMAGEKIT_PUBLIC_KEY` | Your ImageKit public key |
 | `GEOAPIFY_API_KEY` | Your Geoapify API key (address autocomplete) |

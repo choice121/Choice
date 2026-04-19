@@ -715,7 +715,7 @@ function buildApplyURL(property) {
   // -- Resolve target base URL -----------------------------------------------
   const base = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
     ? CONFIG.APPLY_FORM_URL
-    : 'https://apply-choice-properties.pages.dev';
+    : '/apply';
 
   // 9C-2: pass current page URL so apply form can show 'Back to listing' link
   try { p.set('source', window.location.href.substring(0, 300)); } catch (_) {}

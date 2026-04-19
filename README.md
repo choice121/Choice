@@ -69,13 +69,13 @@ See [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) for the full step-by-step workf
 
 ---
 
-## External Application Form Integration
+## Local Application Form Integration
 
-This platform uses a **separate, standalone application form** hosted at:
+This platform serves the rental application frontend from:
 
-**`https://apply-choice-properties.pages.dev`**
+**`/apply/`**
 
-When a user clicks "Apply Now" on any property listing, they are redirected to this external form with all relevant property data passed as URL query parameters. The external form handles everything from that point — application submission, lease generation, e-signatures, and the applicant dashboard.
+When a user clicks "Apply Now" on any property listing, they are routed to the local application frontend with all relevant property data passed as URL query parameters. The application frontend is copied from `choice121/Apply_choice_properties`; the external repository is left untouched and the Google Apps Script backend remains the processing system.
 
 ### How it works
 
@@ -96,19 +96,19 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 ### What this platform does NOT do with applications
 
-- Does **not** receive or store application submissions — all data goes to the external form's Google Sheets backend
-- Does **not** generate leases — handled by the external form's GAS admin panel
-- Does **not** track application status — applicants use the external form's dashboard at `https://apply-choice-properties.pages.dev/?path=dashboard`
+- Does **not** receive or store application submissions — all data goes to the application form's Google Sheets backend
+- Does **not** generate leases — handled by the GAS admin panel
+- Does **not** track application status in Supabase — applicants use the local application dashboard at `/apply/?path=dashboard`
 
 ### Configuration
 
-`APPLY_FORM_URL` is set in `generate-config.js` and defaults to `https://apply-choice-properties.pages.dev`. It can be overridden via the `APPLY_FORM_URL` environment variable in Cloudflare Pages if the form URL ever changes.
+`APPLY_FORM_URL` is set in `generate-config.js` and defaults to `/apply`. It can be overridden via the `APPLY_FORM_URL` environment variable if the form route ever changes.
 
 ### Platform separation contract
 
-- This site passes data **one-way only** via URL parameters — no API calls to the external form
-- The external form does **not** call back to this site
-- The two systems share only the redirect link and display-only URL params
+- This site passes data **one-way only** via URL parameters — no API calls from the listing pages to the form backend
+- The form backend does **not** call back to this site
+- The listing pages and form share only the local route and display-only URL params
 
 ---
 
@@ -116,6 +116,7 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 | Date | Changes |
 |---|---|
+| April 2026 | **Local application frontend consolidation.** Copied the application frontend into `/apply/`, updated Apply/Track links to use the local route, preserved the original form design and behavior, and left the external application repository untouched. |
 | April 2026 | **Security hardening.** Removed exposure of Geoapify API key from the Apply repo source code. Added build system to Apply site (`generate-config.js` + `package.json`). Synced Cloudflare Pages preview environment variables (was missing 14 vars). Documented correct deployment process for both platforms. |
   | April 2026 | **External application form integration.** All "Apply Now" buttons across `listings.html`, `property.html`, and `index.html` now redirect to `https://apply-choice-properties.pages.dev` with full property context via URL params. All "Track My Application" links in nav, footer, and `faq.html` updated to the external applicant dashboard. `js/cp-api.js` updated: `buildApplyURL()` fallback hardened, `sendRecoveryEmail()` dashboard URL updated. `generate-config.js` `APPLY_FORM_URL` default set. |
 | April 2026 | **Frontend audit & mobile optimisation.** Responsive layouts, 44px touch targets, local Font Awesome hosting, CSS preload strategy, image lazy loading, critical CSS inlining, shared nav component, portal links, route highlighting, inline style cleanup, semantic HTML improvements. |

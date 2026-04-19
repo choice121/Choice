@@ -6,6 +6,7 @@
 # Never commit — it would leak credentials and break the deployment pipeline.
 config.js
 config.*.js
+apply/config.js
 
 # CRITICAL: Never commit .env files — secrets belong in Supabase and Cloudflare dashboards.
 .env

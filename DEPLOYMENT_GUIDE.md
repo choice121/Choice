@@ -131,7 +131,7 @@ Set these in **Cloudflare Pages → your project → Settings → Environment va
 | Variable | Default | Notes |
 |---|---|---|
 | `GEOAPIFY_API_KEY` | — | Address autocomplete. Disabled if not set |
-| `APPLY_FORM_URL` | `https://apply-choice-properties.pages.dev` | Only change if the Apply form URL ever changes |
+| `APPLY_FORM_URL` | `/apply` | Only change if the Apply form route changes |
 | `COMPANY_TAGLINE` | `Your trust is our standard.` | Footer tagline |
 | `LEASE_DEFAULT_LATE_FEE_FLAT` | `50` | Flat late fee in dollars |
 | `LEASE_DEFAULT_LATE_FEE_DAILY` | `10` | Daily late fee accrual in dollars |

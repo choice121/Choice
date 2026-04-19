@@ -250,7 +250,7 @@ push that contains `server.js`, `replit.md`, or similar forbidden files.
 
 ## Data Flow — Tenant Applies for a Property
 
-Applications are handled entirely by the **external application form** at `https://apply-choice-properties.pages.dev`. This platform's role is only to redirect the tenant with property context.
+Applications are handled by the **local application frontend** at `/apply/`. This platform's listing pages route the tenant there with property context.
 
 ```
 Tenant clicks "Apply Now" on listings.html or property.html
@@ -263,7 +263,7 @@ Tenant clicks "Apply Now" on listings.html or property.html
               &state=<state>&rent=<rent>&beds=<beds>&baths=<baths>
               &pets=<pet_policy>&term=<lease_term>
               │
-              └── window.location → https://apply-choice-properties.pages.dev
+              └── window.location → /apply/
                     │
                     ├── Form pre-fills from URL params
                     ├── Tenant completes 6-step application
@@ -272,7 +272,7 @@ Tenant clicks "Apply Now" on listings.html or property.html
                     └── Admin notified — manages lease via GAS admin panel
 ```
 
-This platform does **not** receive, store, or process application data. All application state lives in the external form's Google Sheets backend.
+This platform does **not** receive, store, or process application data in Supabase. All application state still lives in the Google Apps Script / Google Sheets backend.
 
 ---
 
@@ -288,13 +288,13 @@ Browser → POST /functions/v1/send-inquiry
 
 ---
 
-## External Application Form
+## Local Application Frontend
 
-Tenant applications are handled by a completely separate system:
+Tenant applications are handled by a local copy of the frontend from `choice121/Apply_choice_properties`, while the backend remains Google Apps Script:
 
 | Property | Value |
 |---|---|
-| URL | `https://apply-choice-properties.pages.dev` |
+| URL | `/apply/` |
 | Frontend | Vanilla HTML/CSS/JS — single `index.html` |
 | Backend | Google Apps Script (`code.gs`) |
 | Storage | Google Sheets (auto-managed by GAS) |
@@ -303,7 +303,7 @@ Tenant applications are handled by a completely separate system:
 
 ### Integration contract (one-way, read-only)
 
-This platform sends the following URL params when redirecting to the form. The external form treats them as **display-only** — they pre-fill fields and show context banners but are never used for backend validation.
+This platform sends the following URL params when routing to the form. The form treats them as **display-only** — they pre-fill fields and show context banners but are never used for backend validation.
 
 | Param | Value |
 |---|---|
@@ -318,11 +318,11 @@ This platform sends the following URL params when redirecting to the form. The e
 | `pets` | Derived pet policy string |
 | `term` | Lease term string |
 
-**This platform never calls the external form's API and the external form never calls this platform.**
+**The listing pages never call the application backend API directly and the application backend never calls this platform.**
 
 ### Configuration
 
-`APPLY_FORM_URL` in `generate-config.js` defaults to `https://apply-choice-properties.pages.dev`. Override with the `APPLY_FORM_URL` Cloudflare Pages environment variable if the URL changes.
+`APPLY_FORM_URL` in `generate-config.js` defaults to `/apply`. Override with the `APPLY_FORM_URL` environment variable if the route changes.
 
 ---
 
