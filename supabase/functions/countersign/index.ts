@@ -10,8 +10,9 @@ import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { leaseFullyExecutedHtml } from '../_shared/email.ts';
 import { buildLeasePDF } from '../_shared/pdf.ts';
+import { getTenantPortalUrl } from '../_shared/config.ts';
 
-const TENANT_PORTAL_URL = 'https://choice-properties-site.pages.dev/tenant/portal.html';
+const TENANT_PORTAL_URL = getTenantPortalUrl();
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,

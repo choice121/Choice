@@ -373,6 +373,7 @@ function dispatch(template, to, cc, data, cfg) {
     'new_message_landlord':     sendNewMessageLandlord,
     'new_message_tenant':       sendNewMessageTenant,
     'new_application':          sendNewApplication,
+    'raw_html':                 sendRawHtml,
   };
   var fn = senders[template];
   if (!fn) return { success: false, error: 'Unknown template: ' + template };
@@ -385,6 +386,10 @@ function send(to, cc, subject, htmlBody, cfg) {
   var opts = { to: Array.isArray(to) ? to.join(',') : to, subject: subject, htmlBody: htmlBody, name: cfg.companyName + ' Leasing', replyTo: cfg.companyEmail };
   if (cc && cc.length) opts.cc = Array.isArray(cc) ? cc.join(',') : cc;
   MailApp.sendEmail(opts);
+}
+
+function sendRawHtml(to, cc, d, cfg) {
+  send(to, cc, d.subject || 'Choice Properties', d.html || '', cfg);
 }
 
 // ============================================================

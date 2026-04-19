@@ -84,7 +84,7 @@ async function sendReply(appId){
   const ta=document.getElementById('reply-'+appId);
   const msg=ta.value.trim(); if(!msg)return;
   const res=await CP.Applications.sendMessage(appId,msg,'admin','Choice Properties');
-  if(res.success){ta.value='';CP.UI.toast('Message sent','success');}
+  if(res.ok){ta.value='';CP.UI.toast('Message sent','success');}
   else CP.UI.toast('Error: '+res.error,'error');
 }
 </script>

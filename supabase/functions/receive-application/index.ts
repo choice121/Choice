@@ -2,13 +2,14 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
   import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
   import { sendEmail } from '../_shared/send-email.ts';
   import { applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
+  import { getAdminEmails } from '../_shared/config.ts';
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  const ADMIN_EMAILS = ['choicepropertyofficial1@gmail.com', 'choicepropertygroup@hotmail.com'];
+  const ADMIN_EMAILS = getAdminEmails();
 
   function generateAppId(): string {
     const now = new Date();

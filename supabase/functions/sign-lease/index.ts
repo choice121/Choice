@@ -3,14 +3,9 @@ import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail }                   from '../_shared/send-email.ts';
 import { signedConfirmHtml }           from '../_shared/email.ts';
 import { buildLeasePDF }               from '../_shared/pdf.ts';
+import { getAdminEmails, getAdminUrl }  from '../_shared/config.ts';
 
-// Phase 2B — both admin emails notified on every lease signing
-const ADMIN_EMAILS = [
-  'choicepropertyofficial1@gmail.com',
-  'choicepropertygroup@hotmail.com',
-];
-
-const TENANT_PORTAL_URL = 'https://choice-properties-site.pages.dev/tenant/portal.html';
+const ADMIN_EMAILS = getAdminEmails();
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -93,7 +88,7 @@ Deno.serve(async (req: Request) => {
     const adminSubject = `[Lease Signed] ${appSigned.first_name || ''} ${appSigned.last_name || ''} — ${appSigned.app_id}`;
     const adminHtml = `<p><strong>Lease signed</strong> by ${appSigned.first_name || ''} ${appSigned.last_name || ''} (${appSigned.email})</p>
 <p>Application: ${appSigned.app_id}<br>Property: ${appSigned.property_address}<br>Signed: ${new Date().toLocaleString('en-US')}</p>
-<p><a href="https://choice-properties-site.pages.dev/admin/leases.html">View in Admin Panel &rarr;</a></p>`;
+<p><a href="${getAdminUrl('/admin/leases.html')}">View in Admin Panel &rarr;</a></p>`;
 
     for (const adminEmail of ADMIN_EMAILS) {
       try {

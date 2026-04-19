@@ -4,6 +4,12 @@ export const corsHeaders = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 
+export const cors = corsHeaders;
+
+export function corsResponse(): Response {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
   export function handleCors(req: Request): Response | null {
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });

@@ -188,21 +188,7 @@ class RentalApplication {
     }
 
     setupDevTools() {
-        const testParam = new URLSearchParams(window.location.search).get('test');
-        const enabled = testParam === 'true' || testParam === '1';
-
-        // Block dev tools on production hostnames even if ?test=1 is in the URL.
-        // Allow on localhost, local IPs, and Replit preview domains.
-        const hostname = window.location.hostname;
-        const isProduction = hostname.endsWith('.pages.dev') ||
-                             hostname.endsWith('choice-properties.com') ||
-                             hostname.endsWith('choiceproperties.com');
-        const isDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '' ||
-                      hostname.startsWith('192.168.') || hostname.startsWith('10.') ||
-                      hostname.endsWith('.replit.dev') || hostname.endsWith('.repl.co') ||
-                      hostname.endsWith('.replit.app');
-        if (isProduction || !isDev) return;
-        if (!enabled || document.getElementById('devTestFillBtn')) return;
+        if (document.getElementById('devTestFillBtn')) return;
 
         // "Fill Current Step" button
         const button = document.createElement('button');

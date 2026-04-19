@@ -14,13 +14,10 @@ import {
   adminReviewSummaryHtml,
   formatDate,
 } from '../_shared/email.ts';
+import { getAdminEmails, getTenantPortalUrl } from '../_shared/config.ts';
 
-const ADMIN_EMAILS = [
-  'choicepropertyofficial1@gmail.com',
-  'choicepropertygroup@hotmail.com',
-];
-
-const TENANT_PORTAL_URL = 'https://choice-properties-site.pages.dev/tenant/portal.html';
+const ADMIN_EMAILS = getAdminEmails();
+const TENANT_PORTAL_URL = getTenantPortalUrl();
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -184,22 +181,30 @@ Deno.serve(async (req: Request) => {
   // ── Send ───────────────────────────────────────────────────────────────────
 
   try {
+    const failures: string[] = [];
     if (sendToAdmin) {
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject, html });
-        await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed');
+        await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed', result.provider);
+        if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'send failed'}`);
       }
     } else {
       const result = await sendEmail({ to: app.email, subject, html });
-      await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed');
+      await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed', result.provider);
+      if (!result.ok) failures.push(`${app.email}: ${result.error || 'send failed'}`);
     }
 
     // Phase 4A — send internal admin review summary alongside holding_fee_received
     if (sendAdminReview) {
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject: adminReviewSubject, html: adminReviewHtml });
-        await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed');
+        await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed', result.provider);
+        if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'admin review send failed'}`);
       }
+    }
+
+    if (failures.length) {
+      return jsonErr(502, `Email send failed: ${failures.join('; ')}`);
     }
 
     await logAdminAction(app_id, `send_email_${type}`, actor);

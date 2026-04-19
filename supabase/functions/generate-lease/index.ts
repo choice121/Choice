@@ -3,6 +3,7 @@ import { corsHeaders, handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { signingEmailHtml } from '../_shared/email.ts';
 import { buildLeasePDF, substituteVars } from '../_shared/pdf.ts';
+import { getSiteUrl } from '../_shared/config.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -121,7 +122,7 @@ Deno.serve(async (req: Request) => {
 
   // 10. Send signing email
   if (updatedApp?.email && updatedApp?.tenant_sign_token) {
-    const signingUrl = `https://choice-properties-site.pages.dev/lease-sign.html?token=${updatedApp.tenant_sign_token}`;
+    const signingUrl = `${getSiteUrl()}/lease-sign.html?token=${updatedApp.tenant_sign_token}`;
     try {
       await sendEmail({
         to:      updatedApp.email,

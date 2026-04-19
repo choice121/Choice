@@ -861,6 +861,15 @@ async function updateNav() {
       return _ok(data, error);
     },
 
+    async sendMessage(appId, message, sender = 'admin', senderName = 'Choice Properties') {
+      return callEdgeFunction('send-message', {
+        app_id: appId,
+        message,
+        sender,
+        sender_name: senderName,
+      });
+    },
+
     async getCounts() {
       const { data, error } = await sb().from('applications').select('status,lease_status,move_in_status,payment_status,created_at');
       if (error) return _ok(null, error);

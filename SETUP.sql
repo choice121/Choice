@@ -417,6 +417,23 @@ CREATE TABLE IF NOT EXISTS co_applicants (
   CONSTRAINT co_applicants_app_id_unique UNIQUE (app_id)
 );
 
+CREATE TABLE IF NOT EXISTS application_documents (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  app_id              TEXT NOT NULL REFERENCES applications(app_id) ON DELETE CASCADE,
+  application_id      UUID REFERENCES applications(id) ON DELETE CASCADE,
+  user_id             UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  bucket              TEXT NOT NULL DEFAULT 'application-docs',
+  storage_path        TEXT NOT NULL UNIQUE,
+  original_file_name  TEXT,
+  mime_type           TEXT,
+  doc_type            TEXT NOT NULL,
+  status              TEXT NOT NULL DEFAULT 'pending_upload',
+  uploaded_by_email   TEXT,
+  metadata            JSONB DEFAULT '{}'::jsonb,
+  created_at          TIMESTAMPTZ DEFAULT now(),
+  updated_at          TIMESTAMPTZ DEFAULT now()
+);
+
 -- is_admin(): returns true if the current user is in the admin_roles table.
 -- Defined here early because it is referenced by RLS policies throughout this script.
 CREATE OR REPLACE FUNCTION is_admin()
@@ -711,6 +728,7 @@ ALTER TABLE landlords         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE properties        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inquiries         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applications      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE application_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_logs        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_properties  ENABLE ROW LEVEL SECURITY;
@@ -722,7 +740,7 @@ DO $$ DECLARE r RECORD; BEGIN
     WHERE schemaname = 'public'
       AND tablename IN (
         'admin_roles','landlords','properties','inquiries',
-        'applications','messages','email_logs','saved_properties'
+        'applications','application_documents','messages','email_logs','saved_properties'
       )
   ) LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I',
@@ -794,6 +812,22 @@ CREATE POLICY "applications_landlord_read" ON applications
 -- Authenticated applicants can read their own applications
 CREATE POLICY "applications_applicant_read" ON applications
   FOR SELECT USING (applicant_user_id = auth.uid());
+
+CREATE POLICY "application_documents_admin_all" ON application_documents
+  FOR ALL USING (is_admin());
+CREATE POLICY "application_documents_landlord_read" ON application_documents
+  FOR SELECT USING (
+    app_id IN (
+      SELECT app_id FROM applications
+      WHERE landlord_id = (SELECT id FROM landlords WHERE user_id = auth.uid())
+         OR property_id IN (
+              SELECT id FROM properties
+              WHERE landlord_id = (SELECT id FROM landlords WHERE user_id = auth.uid())
+            )
+    )
+  );
+CREATE POLICY "application_documents_applicant_read" ON application_documents
+  FOR SELECT USING (user_id = auth.uid());
 
 -- FIX #4: Removed applications_public_insert policy.
 -- All application inserts go through the process-application Edge Function which
@@ -1403,6 +1437,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON landlords       TO authenticated;
 
 GRANT SELECT, INSERT                ON applications     TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON applications    TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON application_documents TO authenticated;
 
 GRANT SELECT, INSERT                ON co_applicants    TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON co_applicants   TO authenticated;
@@ -1573,6 +1608,9 @@ CREATE INDEX IF NOT EXISTS idx_applications_property_id      ON applications(pro
 CREATE INDEX IF NOT EXISTS idx_applications_email            ON applications(email);
 CREATE INDEX IF NOT EXISTS idx_applications_created_at       ON applications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_applications_applicant_user   ON applications(applicant_user_id);
+CREATE INDEX IF NOT EXISTS idx_application_documents_app_id   ON application_documents(app_id);
+CREATE INDEX IF NOT EXISTS idx_application_documents_user_id  ON application_documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_application_documents_status   ON application_documents(status);
 CREATE INDEX IF NOT EXISTS idx_messages_app_id               ON messages(app_id);
 CREATE INDEX IF NOT EXISTS idx_properties_landlord_id        ON properties(landlord_id);
 CREATE INDEX IF NOT EXISTS idx_properties_status             ON properties(status);

@@ -1,4 +1,5 @@
 import nodemailer from 'npm:nodemailer@6.9.16';
+import { getAdminUrl, getContactEmail, getSiteUrl } from './config.ts';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -19,7 +20,7 @@ export async function sendEmail({
 
 function footer() {
   return `<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-    <p style="color:#a0aec0;font-size:12px">Choice Properties &middot; choicepropertygroup@hotmail.com &middot; 707-706-3137</p>`;
+    <p style="color:#a0aec0;font-size:12px">Choice Properties &middot; ${getContactEmail()} &middot; 707-706-3137</p>`;
 }
 
 function messageBlock(message?: string) {
@@ -85,7 +86,7 @@ export function denialEmailHtml(firstName: string, propertyAddress: string, mess
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
     <p style="color:#4a5568;font-size:14px">Thank you for applying to <strong>${propertyAddress}</strong>. After careful review, we are unable to move forward with your application at this time.</p>
     ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">You are welcome to apply for a different available property after 30 days. Please visit our listings at <a href="https://choice-properties-site.pages.dev" style="color:#2563eb">choice-properties-site.pages.dev</a> to see current availability.</p>
+    <p style="color:#4a5568;font-size:14px">You are welcome to apply for a different available property after 30 days. Please visit our listings at <a href="${getSiteUrl()}" style="color:#2563eb">${getSiteUrl().replace(/^https?:\/\//, '')}</a> to see current availability.</p>
     <p style="color:#4a5568;font-size:14px">We appreciate your interest and hope to work with you in the future. Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }
@@ -121,7 +122,7 @@ export function applicationConfirmationHtml(firstName: string, propertyAddress: 
       <p style="margin:6px 0 0;color:#006aff;font-size:20px;font-weight:700;letter-spacing:1px">${appId}</p>
     </div>
     <p style="color:#4a5568;font-size:14px">Save this reference number &mdash; you may need it if you contact us about your application.</p>
-    <p style="color:#4a5568;font-size:14px">Questions? Call or text <strong>707-706-3137</strong> or email <strong>choicepropertygroup@hotmail.com</strong></p>`
+    <p style="color:#4a5568;font-size:14px">Questions? Call or text <strong>707-706-3137</strong> or email <strong>${getContactEmail()}</strong></p>`
   );
 }
 
@@ -135,7 +136,7 @@ export function adminNotificationHtml(firstName: string, lastName: string, email
       <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
     </table>
     <div style="margin-top:20px">
-      <a href="https://choice-properties-site.pages.dev/admin/applications.html" style="display:inline-block;padding:12px 24px;background:#006aff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
+      <a href="${getAdminUrl('/admin/applications.html')}" style="display:inline-block;padding:12px 24px;background:#006aff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
     </div>`
   );
 }
@@ -153,7 +154,7 @@ export function holdingFeeRequestHtml(firstName: string, propertyAddress: string
     ${messageBlock(message)}
     <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
       <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Accepted Payment Methods:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Zelle</strong> &mdash; choicepropertygroup@hotmail.com</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Zelle</strong> &mdash; ${getContactEmail()}</p>
       <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Venmo</strong> &mdash; @ChoiceProperties</p>
       <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Cashier's Check</strong> &mdash; payable to Choice Properties, 2265 Livernois Suite 500, Troy MI 48083</p>
     </div>
@@ -240,7 +241,7 @@ export function leaseExpiryAlertHtml(firstName: string, propertyAddress: string,
       <tr><td style="padding:8px 0;color:#718096">Lease End Date</td><td style="padding:8px 0;font-weight:600;color:#dc2626">${formatDate(leaseEndDate)}</td></tr>
     </table>
     <div style="margin-top:20px">
-      <a href="https://choice-properties-site.pages.dev/admin/applications.html" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
+      <a href="${getAdminUrl('/admin/applications.html')}" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
     </div>`
   );
 }
@@ -262,7 +263,7 @@ export function adminReviewSummaryHtml(firstName: string, lastName: string, emai
     </table>
     <p style="color:#1a202c;font-size:14px;font-weight:600">Recommended next action: Generate the lease document for this applicant.</p>
     <div style="margin-top:20px">
-      <a href="https://choice-properties-site.pages.dev/admin/leases.html" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">Go to Lease Pipeline &rarr;</a>
+      <a href="${getAdminUrl('/admin/leases.html')}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">Go to Lease Pipeline &rarr;</a>
     </div>`
   );
 }

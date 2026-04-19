@@ -45,12 +45,22 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   }
 
   // ── 2. Try GAS relay ──────────────────────────────────────────────────────
-  if (gasUrl && gasSecret && payload.template) {
+  if (gasUrl && gasSecret && (payload.template || payload.html)) {
     try {
+      const gasTemplate = payload.template || 'raw_html';
+      const gasData = gasTemplate === 'raw_html'
+        ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
+        : (payload.data ?? {});
       const r = await fetch(gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: gasSecret, template: payload.template, to: payload.to, cc: payload.cc ?? null, data: payload.data ?? {} }),
+        body: JSON.stringify({
+          secret: gasSecret,
+          template: gasTemplate,
+          to: payload.to,
+          cc: payload.cc ?? null,
+          data: gasData,
+        }),
       });
       const json = await r.json().catch(() => ({}));
       if (r.ok && json.success !== false) return { ok: true, provider: 'gas' };

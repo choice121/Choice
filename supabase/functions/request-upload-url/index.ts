@@ -76,13 +76,34 @@ Deno.serve(async (req: Request) => {
     return jsonErr(500, 'Could not generate upload URL: ' + (signErr?.message || 'unknown error'));
   }
 
+  const { data: documentRow, error: documentErr } = await supabase
+    .from('application_documents')
+    .insert({
+      app_id,
+      application_id: app.id,
+      user_id: user.id,
+      bucket: BUCKET,
+      storage_path: storagePath,
+      original_file_name: safeFileName,
+      mime_type: file_type,
+      doc_type,
+      status: 'pending_upload',
+      uploaded_by_email: user.email,
+    })
+    .select('id')
+    .single();
+
+  if (documentErr) {
+    return jsonErr(500, 'Could not record document metadata: ' + documentErr.message);
+  }
+
   // Log upload request to admin_actions
   try {
     await supabase.from('admin_actions').insert({
       action:      `doc_upload_requested_${doc_type}`,
       target_type: 'application',
       target_id:   app_id,
-      metadata:    { app_id, actor: user.email, doc_type },
+      metadata:    { app_id, actor: user.email, doc_type, storage_path: storagePath, document_id: documentRow?.id },
     });
   } catch (_) {}
 
@@ -90,6 +111,7 @@ Deno.serve(async (req: Request) => {
     success:     true,
     signed_url:  signedData.signedUrl,
     storage_path: storagePath,
+    document_id: documentRow?.id,
     bucket:      BUCKET,
   });
 });
