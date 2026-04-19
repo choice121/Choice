@@ -9,7 +9,6 @@
 
 const fs = require('fs');
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwqctrCLYOPaz1nZeMS5SXuqK7FRXbN5Bf0dSx3-3leyp_B7Bfr4HPC8YZaZ9wZVxtn/exec';
 
 // Read from environment variables (set in your hosting platform's dashboard)
 const config = {
@@ -25,10 +24,6 @@ const config = {
   // Apply Now buttons on all property listings route here.
   // Keep this as /apply unless the internal route changes.
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '/apply').replace(/\/$/, ''),
-
-    // GAS_URL: Google Apps Script backend URL — handles dashboard routing and form submissions.
-    // Used by the "Already applied? Track your application" link on property listings.
-    GAS_URL: (process.env.GAS_URL || DEFAULT_GAS_URL).replace(/\/$/, ''),
 
   IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || '',
   IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
@@ -249,13 +244,14 @@ console.log('✅ config.js generated successfully from environment variables');
 
 if (fs.existsSync('apply')) {
   const applyConfig = {
-    BACKEND_URL: (process.env.BACKEND_URL || process.env.GAS_URL || DEFAULT_GAS_URL).replace(/\/$/, ''),
+    SUPABASE_URL: config.SUPABASE_URL,
+    SUPABASE_ANON_KEY: config.SUPABASE_ANON_KEY,
     GEOAPIFY_API_KEY: config.GEOAPIFY_API_KEY,
     LISTING_SITE_URL: (config.SITE_URL || process.env.LISTING_SITE_URL || 'https://choice-properties-site.pages.dev').replace(/\/$/, ''),
   };
   const applyOutput = `window.CP_CONFIG = ${JSON.stringify(applyConfig, null, 2)};\n`;
   fs.writeFileSync('apply/config.js', applyOutput);
-  console.log('✅ apply/config.js generated successfully from environment variables');
+  console.log('✅ apply/config.js generated successfully (SUPABASE_URL → receive-application Edge Function)');
 }
 
 // ── I-029 / I-051: Rewrite sitemap.xml and robots.txt with real domain ──────

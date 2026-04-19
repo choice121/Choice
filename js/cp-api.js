@@ -623,14 +623,14 @@ function buildApplyURL(property) {
   }
 
   // -- Layer 2: URL query params (cross-origin safe) -------------------------
-  // Structured, machine-readable values so the external GAS form can:
+  // Structured, machine-readable values so the apply form can:
   //   -¢ Pre-fill fields from the property data
   //   -¢ Restrict choices to only what this property allows (lease terms, pets, etc.)
   //   -¢ Enforce move-in date minimums from available_date
   //   -¢ Show/hide sections based on boolean flags (pets, smoking)
   //
   // landlord_id is NEVER included - resolved server-side from property_id.
-  // Arrays use pipe "|" as a separator so GAS can split on it easily.
+  // Arrays use pipe "|" as a separator for multi-value params.
   const p = new URLSearchParams();
 
   // -- Identity & location ---------------------------------------------------
@@ -651,8 +651,8 @@ function buildApplyURL(property) {
   if (property.bathrooms != null) p.set('baths', property.bathrooms);
 
   // -- Availability & lease terms --------------------------------------------
-  // avail: ISO date string - GAS uses this as the minimum allowed move-in date.
-  // terms: pipe-separated list of allowed lease term options - GAS builds a
+  // avail: ISO date string - the form uses as the minimum allowed move-in date.
+  // terms: pipe-separated list of allowed lease term options - the form builds a
   //        constrained dropdown/radio group from this, hiding disallowed options.
   // min_months: numeric minimum - fallback when lease_terms array is empty.
   if (property.available_date) p.set('avail', property.available_date);
@@ -669,10 +669,10 @@ function buildApplyURL(property) {
   if (property.minimum_lease_months) p.set('min_months', property.minimum_lease_months);
 
   // -- Pet policy ------------------------------------------------------------
-  // pets: boolean string "true"/"false" - GAS shows/hides the pet section.
-  // pet_types: pipe-separated allowed pet types - GAS uses for validation.
-  // pet_weight: numeric max weight in lbs - GAS validates weight input against it.
-  // pet_deposit: numeric - GAS displays as expected cost in the pet section.
+  // pets: boolean string "true"/"false" - shows/hides the pet section.
+  // pet_types: pipe-separated allowed pet types - used for form validation.
+  // pet_weight: numeric max weight in lbs - validated on the form.
+  // pet_deposit: numeric - displayed as expected cost in the pet section.
   p.set('pets', property.pets_allowed ? 'true' : 'false');
   if (property.pets_allowed) {
     if (property.pet_types_allowed && property.pet_types_allowed.length) {
@@ -687,12 +687,12 @@ function buildApplyURL(property) {
   }
 
   // -- Smoking policy --------------------------------------------------------
-  // smoking: boolean string "true"/"false" - GAS pre-sets and locks the field.
+  // smoking: boolean string "true"/"false" - pre-sets and locks the field.
   p.set('smoking', property.smoking_allowed ? 'true' : 'false');
 
   // -- Utilities & parking ---------------------------------------------------
-  // utilities: pipe-separated list - GAS displays as included utilities context.
-  // parking: text value - GAS displays as parking info context.
+  // utilities: pipe-separated list - displayed as included utilities context.
+  // parking: text value - displayed as parking info context.
   if (property.utilities_included && property.utilities_included.length) {
     const utils = Array.isArray(property.utilities_included)
       ? property.utilities_included.join('|')
@@ -781,8 +781,8 @@ async function updateNav() {
 // edit when adding or changing any function.
 
   // ── Applications API ─────────────────────────────────────────
-  // Phase 1 migration: reads/writes to the Supabase applications table.
-  // DO NOT call these from the apply form (it still posts to GAS in Phase 1).
+  // Reads/writes to the Supabase applications table.
+  // Used by admin pages: applications.html, leases.html, move-ins.html.
   // These are admin-only methods used by admin/applications.html, leases.html, move-ins.html.
   const Applications = {
     async getAll(filters = {}) {

@@ -71,11 +71,10 @@ class RentalApplication {
         this.retryTimeout = null;
         this._successHandled = false;
         
-           // [10B-12] BACKEND_URL is set from config.js (injected at Cloudflare build time).
-          // No hardcoded fallback — if blank, the submit handler will show a user-facing
-          // error instead of routing submissions to an exposed endpoint URL in source code.
-          this.BACKEND_URL = (window.CP_CONFIG && window.CP_CONFIG.BACKEND_URL)
-                ? window.CP_CONFIG.BACKEND_URL
+          // BACKEND_URL is constructed from SUPABASE_URL at runtime.
+          // All applications are submitted to the receive-application Supabase Edge Function.
+          this.BACKEND_URL = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
+                ? window.CP_CONFIG.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/receive-application'
                 : '';
 
         // [10B-2] CSRF nonce: a random token generated each session and sent with submission.
@@ -192,23 +191,38 @@ class RentalApplication {
         const testParam = new URLSearchParams(window.location.search).get('test');
         const enabled = testParam === 'true' || testParam === '1';
 
-        // Block dev tools on production hostnames even if ?test=1 is in the URL
+        // Block dev tools on production hostnames even if ?test=1 is in the URL.
+        // Allow on localhost, local IPs, and Replit preview domains.
         const hostname = window.location.hostname;
         const isProduction = hostname.endsWith('.pages.dev') ||
                              hostname.endsWith('choice-properties.com') ||
-                             hostname.endsWith('choiceproperties.com') ||
-                             (hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '' && !hostname.startsWith('192.168.') && !hostname.startsWith('10.'));
-        if (isProduction) return;
-
+                             hostname.endsWith('choiceproperties.com');
+        const isDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '' ||
+                      hostname.startsWith('192.168.') || hostname.startsWith('10.') ||
+                      hostname.endsWith('.replit.dev') || hostname.endsWith('.repl.co') ||
+                      hostname.endsWith('.replit.app');
+        if (isProduction || !isDev) return;
         if (!enabled || document.getElementById('devTestFillBtn')) return;
 
+        // "Fill Current Step" button
         const button = document.createElement('button');
         button.id = 'devTestFillBtn';
         button.type = 'button';
-        button.title = 'Fill form with test data';
-        button.innerHTML = '<span class="btn-icon">&#x1F9EA;</span> Test Fill';
+        button.title = 'Fill current step with test data';
+        button.innerHTML = '<span class="btn-icon">&#x1F9EA;</span> Fill Step';
+        button.style.cssText = 'position:fixed;bottom:70px;right:16px;z-index:99998;background:#f39c12;color:#fff;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.25)';
         button.addEventListener('click', () => this._devFillTestData());
         document.body.appendChild(button);
+
+        // "Fill All + Go to Review" button
+        const fillAllBtn = document.createElement('button');
+        fillAllBtn.id = 'devFillAllBtn';
+        fillAllBtn.type = 'button';
+        fillAllBtn.title = 'Fill all steps with random test data and jump to review';
+        fillAllBtn.innerHTML = '&#x26A1; Fill All';
+        fillAllBtn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99998;background:#8e44ad;color:#fff;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.25)';
+        fillAllBtn.addEventListener('click', () => this._devFillAll());
+        document.body.appendChild(fillAllBtn);
     }
 
 
@@ -1618,20 +1632,8 @@ class RentalApplication {
               currentParams.set('resume', token);
               const resumeUrl = window.location.origin + window.location.pathname + '?' + currentParams.toString();
 
-              // Save progress server-side (fire-and-forget)
-              const savePayload = new FormData();
-              savePayload.append('_action', 'saveResumeProgress');
-              savePayload.append('token', token);
-              savePayload.append('progressJson', progressJson);
-              fetch(this.BACKEND_URL, { method: 'POST', body: savePayload }).catch(() => {});
-
-              // Send resume email with token-based URL
-              const emailPayload = new FormData();
-              emailPayload.append('_action', 'sendResumeEmail');
-              emailPayload.append('email', email);
-              emailPayload.append('resumeUrl', resumeUrl);
-              emailPayload.append('step', this.getCurrentSection());
-              fetch(this.BACKEND_URL, { method: 'POST', body: emailPayload }).catch(() => {});
+              // Progress is saved locally via saveProgress() above.
+              // The resume link uses the token encoded in the URL — works on this device/browser.
 
               const successEl = document.getElementById('saveResumeSuccess');
               if (successEl) successEl.classList.add('show');
@@ -1666,21 +1668,9 @@ class RentalApplication {
         });
     }
 
-    // [L4 fix] Fetches saved progress from the server by token, falls back to localStorage
-      async _restoreFromServer(token) {
-          try {
-              const resp = await fetch(this.BACKEND_URL + '?path=loadProgress&token=' + encodeURIComponent(token));
-              const result = await resp.json();
-              if (result.success && result.data) {
-                  // Store in localStorage so restoreSavedProgress() can read it
-                  try { localStorage.setItem(this.config.LOCAL_STORAGE_KEY, result.data); } catch (e) {}
-                  this.restoreSavedProgress();
-                  return;
-              }
-          } catch (e) {
-              console.warn('[CP App] Server-side resume fetch failed, falling back to localStorage:', e);
-          }
-          // Fallback to whatever is in localStorage
+    // Restores saved progress from localStorage.
+      async _restoreFromServer(_token) {
+          // Progress is stored only in localStorage — restore from there directly.
           this.restoreSavedProgress();
       }
 
@@ -2685,8 +2675,7 @@ class RentalApplication {
         }
     }
     isSupabaseBackend() {
-        const backend = this.BACKEND_URL || '';
-        return backend.includes('supabase.co/functions/v1/receive-application');
+        return true;
     }
 
     // ---------- MODIFIED: handleFormSubmit with retry reset ----------
@@ -2792,9 +2781,8 @@ class RentalApplication {
             // and serialised automatically by FormData — no manual appending needed.
 
             // [10A-3] Encode attached documents as base64 and append to form data.
-            // Guard: if total raw size > 3 MB the base64-expanded payload risks
-            // exceeding the GAS 10 MB content limit and silently failing. In that
-            // case we skip file attachment so the application record is never lost.
+            // Guard: if total raw size > 3 MB skip file attachment so the application
+            // record is never lost due to payload size.
             if (this._uploadedFiles && this._uploadedFiles.length > 0) {
                 const MAX_TOTAL_BYTES = 3 * 1024 * 1024; // 3 MB raw → ~4 MB base64
                 const totalBytes = this._uploadedFiles.reduce((sum, f) => sum + f.size, 0);
@@ -2831,26 +2819,19 @@ class RentalApplication {
             // M4: Attach CSRF token to submission
             formData.append('_cp_csrf', this._csrfToken || sessionStorage.getItem('_cp_csrf') || '');
 
-            // ── Parallel verify: fire-and-forget alongside the POST ──────────────
-            // GAS processes the form and writes to Sheets even if the POST response
-            // is dropped on the way back (common on mobile/3G). Starting the verify
-            // NOW means it will be polling by the time GAS finishes writing, so it
-            // catches the success without waiting for the POST response to arrive.
-            // _successHandled prevents showing success twice if both paths succeed.
-            if (!this._verifyStarted) {
-                this._verifyStarted = true;
-                this._autoVerifySubmission(); // fire-and-forget (no await)
-            }
-
             let response;
             const _fetchController = new AbortController();
-            const _fetchTimer = setTimeout(() => _fetchController.abort(), this.isSupabaseBackend() ? 120000 : 55000);
+            const _fetchTimer = setTimeout(() => _fetchController.abort(), 120000);
+            const _anonKey = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_ANON_KEY) || '';
             try {
                 response = await fetch(this.BACKEND_URL, {
                     method: 'POST',
                     body: formData,
                     signal: _fetchController.signal,
-                    headers: { 'Accept': 'application/json' }
+                    headers: {
+                        'Accept': 'application/json',
+                        ..._anonKey ? { 'apikey': _anonKey, 'Authorization': 'Bearer ' + _anonKey } : {}
+                    }
                 });
             } catch (networkErr) {
                 const netErr = new Error(t.networkError);
@@ -2860,9 +2841,6 @@ class RentalApplication {
                 clearTimeout(_fetchTimer);
             }
 
-            // GAS can return HTML error pages (quota exceeded, script error, etc.)
-            // Try to parse JSON regardless of content-type — GAS sometimes returns
-            // valid JSON with text/plain content-type through its redirect chain.
             let result;
             const contentType = response.headers.get('content-type') || '';
             if (!response.ok) {
@@ -2915,10 +2893,9 @@ class RentalApplication {
             const isTransient = this.isTransientError(error);
             this.showSubmissionError(error, isTransient);
 
-            // After the FIRST network/transient error, immediately check in the background
-            // whether GAS already processed the form. GAS often completes successfully
-            // on slow connections even when the response never makes it back to the browser.
-            // _verifyStarted ensures we only launch one background check per submission attempt.
+            // After the FIRST network/transient error, check in the background
+            // whether the Edge Function already saved the application.
+            // _verifyStarted ensures we only launch one background check per attempt.
             if (isTransient && this.retryCount >= 1 && this.BACKEND_URL && !this._verifyStarted) {
                 this._verifyStarted = true;
                 this._autoVerifySubmission();
@@ -2928,11 +2905,8 @@ class RentalApplication {
 
     // ---------- _autoVerifySubmission ----------
     // Called in the background after the first network/transient error.
-    // Polls GAS every 5 s for up to 90 s to confirm whether the submission was
-    // received. Uses GET (no large FormData body) which is faster and more
-    // reliable than the original POST on slow/mobile connections.
-    // Parses JSON regardless of Content-Type to work around a GAS quirk where
-    // valid JSON is returned with text/plain instead of application/json.
+    // Polls the receive-application Edge Function every 3 s for up to 60 s
+    // to confirm whether the submission was already saved.
     async _autoVerifySubmission() {
         try {
             const emailEl = document.getElementById('email');
@@ -2964,8 +2938,12 @@ class RentalApplication {
                 // doesn't eat the whole poll slot
                 const ctrl = new AbortController();
                 const timer = setTimeout(() => ctrl.abort(), 12000);
+                const _vAnonKey = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_ANON_KEY) || '';
                 try {
-                    const resp = await fetch(verifyUrl, { signal: ctrl.signal });
+                    const resp = await fetch(verifyUrl, {
+                        signal: ctrl.signal,
+                        headers: _vAnonKey ? { 'apikey': _vAnonKey, 'Authorization': 'Bearer ' + _vAnonKey } : {}
+                    });
                     clearTimeout(timer);
                     if (!resp.ok) continue;
                     let data;
@@ -3344,10 +3322,146 @@ class RentalApplication {
     }
 
     // ================================================================
-    // DEV ONLY — Remove before final launch
-    // Fills only the fields on the current step so you can test
-    // each step individually and experience the form naturally.
+    // DEV / TEST — Fill helpers
+    // _devFillAll()  : fills ALL 6 steps with random data, jumps to review
+    // _devFillTestData(): fills only the current step (step-by-step mode)
     // ================================================================
+
+    _devFillAll() {
+        const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+        const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+        const firstNames = ['James', 'Alicia', 'Marcus', 'Priya', 'Derek', 'Fatima', 'Carlos', 'Mei', 'Jordan', 'Aisha'];
+        const lastNames  = ['Williams', 'Nguyen', 'Thompson', 'Patel', 'Robinson', 'Johnson', 'Garcia', 'Lee', 'Davis', 'Wilson'];
+        const streets    = ['Oak Street', 'Maple Avenue', 'Vine Court', 'Hillcrest Drive', 'Lakeview Blvd', 'Elm Way', 'Summit Road'];
+        const cities     = ['Detroit, MI', 'Troy, MI', 'Sterling Heights, MI', 'Warren, MI', 'Dearborn, MI'];
+        const employers  = ['Stellantis', 'Ford Motor Company', 'Trinity Health', 'DTE Energy', 'Ally Financial', 'Wayne County Govt', 'Amazon Fulfillment'];
+        const titles     = ['Project Manager', 'Software Engineer', 'Registered Nurse', 'Operations Analyst', 'Account Executive', 'Financial Advisor'];
+        const supNames   = ['Sandra Kim', 'Robert Owens', 'Lisa Tran', 'Kevin Morris', 'Angela Brown'];
+        const landlords  = ['Jim Harrington', 'Patricia Moss', 'David Chen', 'Sunrise Property Mgmt', 'Metro Rentals LLC'];
+        const payments   = ['Venmo', 'Zelle', 'Cash App', 'PayPal', 'Money Order'];
+        const makes      = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'Nissan'];
+        const models     = ['Camry', 'Accord', 'F-150', 'Malibu', 'Altima'];
+
+        const fn = pick(firstNames);
+        const ln = pick(lastNames);
+        const fn2 = pick(firstNames.filter(n => n !== fn));
+        const ln2 = pick(lastNames.filter(n => n !== ln));
+        const city = pick(cities);
+        const employer = pick(employers);
+        const income = rand(3200, 8500);
+        const rent = rand(1100, 2200);
+        const apt = rand(1, 4);
+        const unit = rand(100, 999);
+        const plate = String.fromCharCode(65 + rand(0,25)) + String.fromCharCode(65 + rand(0,25)) + rand(10, 99) + String.fromCharCode(65 + rand(0,25)) + String.fromCharCode(65 + rand(0,25));
+        const yrs = rand(1, 5);
+        const mos = rand(0, 11);
+        const empYrs = rand(1, 6);
+        const dob = `${rand(1975, 1999)}-${String(rand(1,12)).padStart(2,'0')}-${String(rand(1,28)).padStart(2,'0')}`;
+        const ssn = String(rand(1000, 9999));
+
+        const moveIn = new Date();
+        moveIn.setDate(moveIn.getDate() + rand(20, 60));
+        const pad = n => String(n).padStart(2, '0');
+        const moveInStr = `${moveIn.getFullYear()}-${pad(moveIn.getMonth()+1)}-${pad(moveIn.getDate())}`;
+
+        const d   = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        const chk = (id, c) => { const el = document.getElementById(id); if (el) el.checked = c; };
+        const sel = (id, v) => { const el = document.getElementById(id); if (el) { el.value = v; el.dispatchEvent(new Event('change')); } };
+        const fire = id => { const el = document.getElementById(id); if (el) { el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
+
+        // ── Step 1 ──
+        if (!document.getElementById('propertyAddress').value) {
+            d('propertyAddress', `${rand(100, 9999)} ${pick(streets)}, ${city} ${rand(48000, 48399)}`);
+        }
+        d('requestedMoveIn', moveInStr);
+        sel('desiredLeaseTerm', pick(['12 months', '12 months', '6 months', '24 months']));
+        d('firstName', fn);
+        d('lastName', ln);
+        d('email', `${fn.toLowerCase()}.${ln.toLowerCase()}${rand(10,99)}@testmail.example`);
+        d('phone', `(${rand(313,989)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        d('dob', dob);
+        d('ssn', ssn);
+
+        // ── Step 2 ──
+        d('currentAddress', `${rand(100,9999)} ${pick(streets)}, Apt ${apt}${unit}, ${city} ${rand(48000,48399)}`);
+        d('residencyStart', `${yrs} year${yrs !== 1 ? 's' : ''} ${mos > 0 ? mos + ' month' + (mos !== 1 ? 's' : '') : ''}`.trim());
+        d('rentAmount', String(rent));
+        d('landlordName', pick(landlords));
+        d('landlordPhone', `(${rand(248,586)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        const rl = document.getElementById('reasonLeaving');
+        if (rl) rl.value = pick([
+            'Relocating for a new job opportunity.',
+            'Looking for a larger space for my family.',
+            'Building a newer chapter closer to work.',
+            'Seeking a quieter neighborhood.',
+            'Landlord is selling the property.',
+        ]);
+        d('totalOccupants', String(rand(1, 3)));
+        chk('petsNo', true);
+        chk('evictedNo', true);
+        chk('smokeNo', true);
+        const vToggle = document.querySelector('input[name="Has Vehicle"][value="Yes"]');
+        if (vToggle) { vToggle.checked = true; vToggle.dispatchEvent(new Event('change')); }
+        setTimeout(() => {
+            d('vehicleMake', pick(makes));
+            d('vehicleModel', pick(models));
+            d('vehicleYear', String(rand(2015, 2024)));
+            d('vehiclePlate', plate);
+        }, 80);
+
+        // ── Step 3 ──
+        sel('employmentStatus', 'Full-time');
+        d('employer', employer);
+        d('jobTitle', pick(titles));
+        d('employmentDuration', `${empYrs} year${empYrs !== 1 ? 's' : ''}`);
+        d('supervisorName', pick(supNames));
+        d('supervisorPhone', `(${rand(248,586)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        d('monthlyIncome', String(income));
+        fire('monthlyIncome');
+
+        // ── Step 4 ──
+        d('ref1Name', pick(firstNames) + ' ' + pick(lastNames));
+        d('ref1Phone', `(${rand(313,586)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        d('ref1Relationship', pick(['Former Landlord', 'Employer', 'Coworker', 'Friend']));
+        d('ref2Name', pick(firstNames) + ' ' + pick(lastNames));
+        d('ref2Phone', `(${rand(313,586)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        d('ref2Relationship', pick(['Coworker', 'Family Friend', 'Neighbor', 'Employer']));
+        d('emergencyName', fn2 + ' ' + ln2);
+        d('emergencyPhone', `(${rand(313,734)}) ${rand(200,999)}-${rand(1000,9999)}`);
+        d('emergencyRelationship', pick(['Sibling', 'Parent', 'Spouse', 'Friend']));
+
+        // ── Step 5 ──
+        sel('primaryPayment', pick(payments));
+        chk('contactMethodEmail', true);
+        chk('timeMorning', true);
+        chk('timeAfternoon', true);
+
+        // ── Step 6 (review + declarations) ──
+        // Navigate through all steps first, then settle on step 6
+        const goTo = (n) => {
+            this.hideSection(this.getCurrentSection());
+            this.showSection(n);
+            this.updateProgressBar();
+        };
+
+        setTimeout(() => {
+            goTo(6);
+            setTimeout(() => {
+                chk('certifyCorrect', true);
+                chk('authorizeVerify', true);
+                chk('feeAcknowledge', true);
+                this.generateApplicationSummary();
+
+                const toast = document.createElement('div');
+                toast.textContent = '\u26A1 All steps filled with random test data';
+                toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#8e44ad;color:#fff;padding:10px 22px;border-radius:50px;font-size:14px;font-weight:700;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,0.3);pointer-events:none;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }, 120);
+        }, 200);
+    }
+
     _devFillTestData() {
         this._devFillStep(this.getCurrentSection());
     }
