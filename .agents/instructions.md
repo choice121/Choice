@@ -2,6 +2,29 @@
 
 ---
 
+## ══════════════════════════════════════════════════════════
+## ACTIVE FIXES — READ FIXES.md BEFORE DOING ANYTHING
+## ══════════════════════════════════════════════════════════
+##
+## There is an active multi-phase fix plan in progress.
+## Before writing any code, open FIXES.md and read it fully.
+##
+## RULES FOR ALL AI AGENTS ON THIS PROJECT:
+##
+## 1. Read FIXES.md completely before any action.
+## 2. Work ONLY ONE PHASE at a time.
+## 3. Mark your phase IN PROGRESS in FIXES.md before coding.
+## 4. Mark your phase DONE (with files changed listed) before pushing.
+## 5. Push to GitHub. Then STOP.
+## 6. Wait for the owner (choice121) to explicitly say "proceed to Phase X"
+##    before starting the next phase. No assumed consent. No self-authorization.
+## 7. Never combine phases without owner approval.
+## 8. The first TODO phase in FIXES.md is the one you work on.
+##
+## ══════════════════════════════════════════════════════════
+
+---
+
 ## Permanent Architecture
 
 This repository is a **pure static HTML/CSS/JavaScript website**. Production is served

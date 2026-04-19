@@ -12,6 +12,10 @@
 ## MANDATORY: Read `.agents/instructions.md` before any action.
 ## It contains the complete rule set that governs this project.
 ##
+## ACTIVE FIX PLAN: Read `FIXES.md` before writing any code.
+## It lists all pending phases. Work ONE phase at a time.
+## Stop after each phase and wait for owner approval to continue.
+##
 ## WORKFLOW SUMMARY:
 ## - Replit = code editor + local preview (_dev_preview.js, gitignored)
 ## - GitHub = source of truth (HTML/CSS/JS only — no Replit files)
