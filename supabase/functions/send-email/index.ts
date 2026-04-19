@@ -1,76 +1,204 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-  import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
-  import { sendEmail, approvalEmailHtml, denialEmailHtml, moveinEmailHtml } from '../_shared/email.ts';
+import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
+import { sendEmail } from '../_shared/send-email.ts';
+import {
+  approvalEmailHtml,
+  denialEmailHtml,
+  moveinEmailHtml,
+  holdingFeeRequestHtml,
+  holdingFeeReceivedHtml,
+  paymentConfirmedHtml,
+  moveInPrepHtml,
+  leaseSigningReminderHtml,
+  leaseExpiryAlertHtml,
+  formatDate,
+} from '../_shared/email.ts';
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+const ADMIN_EMAILS = [
+  'choicepropertyofficial1@gmail.com',
+  'choicepropertygroup@hotmail.com',
+];
 
-  async function verifyAdmin(req: Request) {
-    const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-    if (!token) return { ok: false };
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return { ok: false };
-    const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).single();
-    return { ok: !!role };
+const TENANT_PORTAL_URL = 'https://choice-properties-site.pages.dev/tenant/portal.html';
+const ADMIN_PANEL_URL   = 'https://choice-properties-site.pages.dev/admin/applications.html';
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
+
+async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: string }> {
+  const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+  if (!token) return { ok: false };
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return { ok: false };
+  const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).single();
+  return { ok: !!role, userEmail: user.email };
+}
+
+async function logEmail(appId: string, appDbId: string, type: string, recipient: string, status: string) {
+  try {
+    await supabase.from('email_logs').insert({
+      app_id: appId,
+      related_id: appDbId,
+      email_type: type,
+      type,
+      recipient_email: recipient,
+      status,
+      sent_at: new Date().toISOString(),
+    });
+  } catch (_) {}
+}
+
+async function logAdminAction(appId: string, action: string, actor: string) {
+  try {
+    await supabase.from('admin_actions').insert({
+      app_id: appId,
+      action,
+      actor,
+      created_at: new Date().toISOString(),
+    });
+  } catch (_) {}
+}
+
+Deno.serve(async (req: Request) => {
+  const cors = handleCors(req);
+  if (cors) return cors;
+
+  const auth = await verifyAdmin(req);
+  if (!auth.ok) return jsonErr(401, 'Unauthorized');
+
+  let body: {
+    app_id: string;
+    type: string;
+    message?: string;
+    fee_amount?: number;
+    due_date?: string;
+    payment_method?: string;
+    transaction_ref?: string;
+    amount_collected?: number;
+  };
+  try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
+
+  const { app_id, type, message } = body;
+  if (!app_id || !type) return jsonErr(400, 'Missing app_id or type');
+
+  const { data: app, error: appErr } = await supabase
+    .from('applications').select('*').eq('app_id', app_id).single();
+  if (appErr || !app) return jsonErr(404, 'Application not found');
+
+  const name  = app.first_name || 'Applicant';
+  const prop  = app.property_address || 'your property';
+  const actor = auth.userEmail || 'admin';
+  const now   = new Date().toISOString();
+
+  let subject = '';
+  let html    = '';
+  let sendToAdmin = false;
+
+  // ── Build subject + html per type ──────────────────────────────────────────
+
+  if (type === 'approved') {
+    subject = 'Your Application Has Been Approved — Choice Properties';
+    html    = approvalEmailHtml(name, prop, message);
+
+  } else if (type === 'denied') {
+    subject = 'Update on Your Application — Choice Properties';
+    html    = denialEmailHtml(name, prop, message);
+
+  } else if (type === 'movein_confirmed') {
+    const moveDate = app.move_in_date_actual
+      ? formatDate(app.move_in_date_actual)
+      : undefined;
+    subject = 'Move-In Confirmed — Choice Properties';
+    html    = moveinEmailHtml(name, prop, moveDate, message);
+
+  } else if (type === 'holding_fee_request') {
+    subject = 'Holding Fee Request — Choice Properties';
+    html    = holdingFeeRequestHtml(name, prop, body.fee_amount ?? app.holding_fee_amount, body.due_date ?? app.holding_fee_due_date, message);
+
+    // DB side-effect
+    const update: Record<string, unknown> = {
+      holding_fee_requested:    true,
+      holding_fee_requested_at: now,
+      updated_at:               now,
+    };
+    if (body.fee_amount  != null) update.holding_fee_amount   = body.fee_amount;
+    if (body.due_date)            update.holding_fee_due_date = body.due_date;
+    await supabase.from('applications').update(update).eq('app_id', app_id);
+
+  } else if (type === 'holding_fee_received') {
+    subject = 'Holding Fee Received — Unit Reserved';
+    html    = holdingFeeReceivedHtml(name, prop, TENANT_PORTAL_URL, message);
+
+    // DB side-effect
+    await supabase.from('applications').update({
+      holding_fee_paid:    true,
+      holding_fee_paid_at: now,
+      updated_at:          now,
+    }).eq('app_id', app_id);
+
+  } else if (type === 'payment_confirmed') {
+    subject = 'Payment Confirmed — Choice Properties';
+    html    = paymentConfirmedHtml(
+      name, prop,
+      body.amount_collected  ?? app.payment_amount_collected,
+      body.payment_method    ?? app.payment_method_confirmed,
+      body.transaction_ref   ?? app.payment_transaction_ref,
+      message,
+    );
+
+    // DB side-effect
+    const update: Record<string, unknown> = {
+      payment_confirmed_at: now,
+      updated_at:           now,
+    };
+    if (body.payment_method  != null) update.payment_method_confirmed  = body.payment_method;
+    if (body.transaction_ref != null) update.payment_transaction_ref   = body.transaction_ref;
+    if (body.amount_collected != null) update.payment_amount_collected = body.amount_collected;
+    await supabase.from('applications').update(update).eq('app_id', app_id);
+
+  } else if (type === 'move_in_prep') {
+    subject = 'Your Move-In Preparation Guide — Choice Properties';
+    html    = moveInPrepHtml(name, prop, message);
+
+  } else if (type === 'lease_signing_reminder') {
+    subject = 'Reminder: Please Sign Your Lease — Choice Properties';
+    html    = leaseSigningReminderHtml(name, prop, TENANT_PORTAL_URL, message);
+
+  } else if (type === 'lease_expiry_alert') {
+    const leaseEnd = app.lease_end_date || app.move_out_date;
+    if (!leaseEnd) return jsonErr(400, 'No lease_end_date on this application');
+    subject      = `Lease Expiry Alert — ${prop}`;
+    html         = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '');
+    sendToAdmin  = true;
+
+  } else {
+    return jsonErr(400, `Unsupported email type: "${type}". Supported types: approved, denied, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
   }
 
-  Deno.serve(async (req: Request) => {
-    const cors = handleCors(req);
-    if (cors) return cors;
+  // ── Send ───────────────────────────────────────────────────────────────────
 
-    const auth = await verifyAdmin(req);
-    if (!auth.ok) return jsonErr(401, 'Unauthorized');
-
-    let body: { app_id: string; type: string; message?: string };
-    try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
-
-    const { app_id, type, message } = body;
-    if (!app_id || !type) return jsonErr(400, 'Missing app_id or type');
-
-    const { data: app, error: appErr } = await supabase
-      .from('applications').select('*').eq('app_id', app_id).single();
-    if (appErr || !app) return jsonErr(404, 'Application not found');
-
-    const name = app.first_name || 'Applicant';
-    const prop = app.property_address || 'your property';
-
-    let subject = '';
-    let html = '';
-
-    if (type === 'approved') {
-      subject = 'Your Application Has Been Approved — Choice Properties';
-      html = approvalEmailHtml(name, prop, message);
-    } else if (type === 'denied') {
-      subject = 'Update on Your Application — Choice Properties';
-      html = denialEmailHtml(name, prop, message);
-    } else if (type === 'movein_confirmed') {
-      const moveDate = app.move_in_date_actual
-        ? new Date(app.move_in_date_actual).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-        : undefined;
-      subject = 'Move-In Confirmed — Choice Properties';
-      html = moveinEmailHtml(name, prop, moveDate, message);
+  try {
+    if (sendToAdmin) {
+      // lease_expiry_alert → both admin emails only (not the applicant)
+      for (const adminEmail of ADMIN_EMAILS) {
+        const result = await sendEmail({ to: adminEmail, subject, html });
+        await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed');
+      }
     } else {
-      subject = 'Message from Choice Properties';
-      html = `<p>Dear ${name},</p><p>${message || ''}</p><p>— Choice Properties</p>`;
+      // All other types → applicant email
+      const result = await sendEmail({ to: app.email, subject, html });
+      await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed');
     }
 
-    try {
-      await sendEmail({ to: app.email, subject, html });
-      // Log to email_logs — silent fail so logging never blocks email delivery
-      try {
-        await supabase.from('email_logs').insert({
-          recipient_email: app.email,
-          subject,
-          type,
-          related_id: app.id,
-          sent_at: new Date().toISOString(),
-        });
-      } catch (_) {}
-      return jsonOk({ success: true, to: app.email });
-    } catch (e) {
-      return jsonErr(500, 'Email send failed: ' + (e as Error).message);
-    }
-  });
-  
+    await logAdminAction(app_id, `send_email_${type}`, actor);
+
+    const recipient = sendToAdmin ? ADMIN_EMAILS.join(', ') : app.email;
+    return jsonOk({ success: true, to: recipient, type });
+
+  } catch (e) {
+    await logEmail(app_id, app.id, type, sendToAdmin ? 'admin' : app.email, 'failed');
+    return jsonErr(500, 'Email send failed: ' + (e as Error).message);
+  }
+});

@@ -53,7 +53,7 @@ See `.agents/instructions.md` for the full rule set.
 
 | Phase | Description | Status |
 |---|---|---|
-| Phase 1 | Expand `send-email` Edge Function to all 9 email types | `TODO` |
+| Phase 1 | Expand `send-email` Edge Function to all 9 email types | `DONE` |
 | Phase 2 | Fix email template content gaps (denial language + dual admin alert) | `TODO` |
 | Phase 3 | Add email identity verification to lease signing | `TODO` |
 | Phase 4 | Add Mark As Refunded admin action + auto admin review summary email | `TODO` |
@@ -820,6 +820,7 @@ Use this to verify nothing was missed.
 | Date | Phase | Who | What |
 |---|---|---|---|
 | 2026-04-19 | — | Initial audit | Full GAS vs Supabase comparison documented. All 8 phases defined. |
+| 2026-04-19 | Phase 1 | Replit Agent | Expanded `send-email` Edge Function to all 9 email types. Files changed: `supabase/functions/send-email/index.ts`, `supabase/functions/_shared/email.ts` |
 
 *Update this table after every phase completion. Include the GitHub commit hash.*
 
