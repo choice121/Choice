@@ -1593,8 +1593,9 @@ class RentalApplication {
         });
 
         // Send link
-        document.getElementById('sendResumeLinkBtn')?.addEventListener('click', () => {
+        document.getElementById('sendResumeLinkBtn')?.addEventListener('click', async () => {
               const emailInput = document.getElementById('resumeEmailInput');
+              const sendBtn = document.getElementById('sendResumeLinkBtn');
               const email = emailInput ? emailInput.value.trim() : '';
               if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                   emailInput.style.borderColor = '#e74c3c';
@@ -1603,30 +1604,65 @@ class RentalApplication {
               }
               emailInput.style.borderColor = '';
 
-              // [L4 fix] Generate a unique resume token for cross-device/browser support
+              // Generate a unique token for this draft
               const token = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-              // Save progress locally (fast path) and collect snapshot
+              // Collect progress snapshot (strip sensitive fields before sending to server)
               this.saveProgress();
               const rawData = this.getAllFormData();
               ['SSN', 'Application ID', 'Co-Applicant SSN', 'DOB', 'Co-Applicant DOB'].forEach(k => delete rawData[k]);
               rawData._last_updated = new Date().toISOString();
-              const progressJson = JSON.stringify(rawData);
+              rawData._currentStep = this.getCurrentSection();
+              rawData._language = this.state.language || 'en';
+              const _urlP = new URLSearchParams(window.location.search);
+              const propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || '';
+              rawData._propertyFingerprint = propertyFingerprint;
 
-              // Build resume URL with token — works on any device or browser
+              // Build resume URL — includes the token so any device can retrieve the draft
               const currentParams = new URLSearchParams(window.location.search);
               currentParams.set('resume', token);
               const resumeUrl = window.location.origin + window.location.pathname + '?' + currentParams.toString();
 
-              // Progress is saved locally via saveProgress() above.
-              // The resume link uses the token encoded in the URL — works on this device/browser.
+              // Show loading state
+              if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; }
+
+              // POST draft to backend — stores it in Supabase and sends the email
+              let emailSent = false;
+              try {
+                  const backendBase = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
+                      ? window.CP_CONFIG.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/save-draft'
+                      : '';
+                  if (backendBase) {
+                      const res = await fetch(backendBase, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              token,
+                              email,
+                              resume_url: resumeUrl,
+                              data: rawData,
+                              property_fingerprint: propertyFingerprint,
+                          }),
+                      });
+                      if (res.ok) emailSent = true;
+                  }
+              } catch (err) {
+                  console.warn('[CP App] save-draft request failed (non-fatal):', err);
+              }
+
+              if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link'; }
 
               const successEl = document.getElementById('saveResumeSuccess');
-              if (successEl) successEl.classList.add('show');
+              if (successEl) {
+                  successEl.innerHTML = emailSent
+                      ? '<i class="fas fa-check-circle"></i> Link sent! Check your inbox.'
+                      : '<i class="fas fa-check-circle"></i> Progress saved on this device.';
+                  successEl.classList.add('show');
+              }
               setTimeout(() => {
                   document.getElementById('saveResumeModal').classList.remove('open');
                   if (successEl) successEl.classList.remove('show');
-              }, 2500);
+              }, 2800);
           });
     }
 
@@ -1654,11 +1690,81 @@ class RentalApplication {
         });
     }
 
-    // Restores saved progress from localStorage.
-      async _restoreFromServer(_token) {
-          // Progress is stored only in localStorage — restore from there directly.
-          this.restoreSavedProgress();
-      }
+    // Restores saved progress using the resume token.
+    // Fetches from the Supabase save-draft backend (cross-device), then falls
+    // back to localStorage if the server is unreachable or the draft has expired.
+    async _restoreFromServer(token) {
+        let serverData = null;
+        try {
+            const backendBase = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
+                ? window.CP_CONFIG.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/save-draft'
+                : '';
+            if (backendBase && token) {
+                const res = await fetch(backendBase + '?token=' + encodeURIComponent(token));
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.found && json.data && typeof json.data === 'object') {
+                        serverData = json.data;
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[CP App] Draft restore from server failed (falling back to localStorage):', err);
+        }
+
+        if (serverData) {
+            // Server draft found — apply it to the form, then also mirror to
+            // localStorage so subsequent auto-saves work normally.
+            try {
+                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint']);
+                const form = document.getElementById('rentalApplication');
+                if (!form) return;
+                Object.keys(serverData).forEach(key => {
+                    if (SKIP.has(key)) return;
+                    const value = serverData[key];
+                    if (value === undefined || value === null) return;
+                    const escaped = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                    const els = form.querySelectorAll(`[name="${escaped}"]`);
+                    if (!els.length) return;
+                    const firstEl = els[0];
+                    if (firstEl.type === 'radio') {
+                        els.forEach(el => { if (el.value === value) el.checked = true; });
+                    } else if (firstEl.type === 'checkbox') {
+                        if (Array.isArray(value)) {
+                            els.forEach(el => { el.checked = value.includes(el.value); });
+                        } else {
+                            els.forEach(el => { el.checked = (el.value === value); });
+                        }
+                    } else {
+                        firstEl.value = value;
+                    }
+                });
+                if (serverData._language) this.state.language = serverData._language;
+                if (serverData._currentStep && serverData._currentStep > 1) {
+                    const stepNum = parseInt(serverData._currentStep, 10);
+                    if (stepNum >= 1 && stepNum <= 6) {
+                        setTimeout(() => {
+                            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+                            const targetSection = document.getElementById('section' + stepNum);
+                            if (targetSection) {
+                                targetSection.classList.add('active');
+                                this.updateProgressBar();
+                                this._updateStartOverBtn(stepNum);
+                            }
+                        }, 10);
+                    }
+                }
+                // Mirror to localStorage so auto-save picks up from here
+                try { localStorage.setItem(this.config.LOCAL_STORAGE_KEY, JSON.stringify(serverData)); } catch(e) {}
+            } catch (e) {
+                console.warn('[CP App] Error applying server draft data:', e);
+                this.restoreSavedProgress();
+            }
+        } else {
+            // No server draft — fall back to localStorage
+            this.restoreSavedProgress();
+        }
+    }
 
       restoreSavedProgress() {
           const saved = (() => { try { return localStorage.getItem(this.config.LOCAL_STORAGE_KEY); } catch(e) { return null; } })();

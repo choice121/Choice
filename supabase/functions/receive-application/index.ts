@@ -106,6 +106,42 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     if (!email || !email.includes('@')) return jsonErr(400, 'Valid email is required');
     if (!firstName) return jsonErr(400, 'First name is required');
 
+    // ── Property policy enforcement ──────────────────────────────────────────
+    // If a property_id was submitted, look up the property from the database
+    // and enforce its policies server-side. We never trust what the client sends
+    // for fee, pets policy, or smoking policy — those come from URL params that
+    // any user can modify before submitting.
+    const submittedPropertyId = fv(fields['Property ID']) || null;
+    let enforcedFee: number | null = fNum(fields['Application Fee']);
+
+    if (submittedPropertyId) {
+      const { data: prop, error: propErr } = await supabase
+        .from('properties')
+        .select('application_fee, pets_allowed, smoking_allowed')
+        .eq('id', submittedPropertyId)
+        .maybeSingle();
+
+      if (!propErr && prop) {
+        // Always use the fee from the database, ignoring what was submitted
+        enforcedFee = typeof prop.application_fee === 'number' ? prop.application_fee : null;
+
+        // Reject if applicant declared pets but property forbids them
+        const hasPetsSubmitted = fBool(fields['Has Pets']);
+        if (hasPetsSubmitted === true && prop.pets_allowed === false) {
+          return jsonErr(422, 'This property does not allow pets. Please contact us if you have questions.');
+        }
+
+        // Reject if applicant is a smoker but property forbids smoking
+        const smokerSubmitted = fBool(fields['Smoker']);
+        if (smokerSubmitted === true && prop.smoking_allowed === false) {
+          return jsonErr(422, 'This is a non-smoking property. Please contact us if you have questions.');
+        }
+      } else if (propErr) {
+        console.warn('Property lookup error (non-fatal):', JSON.stringify(propErr));
+        // Do not block the submission if the lookup fails — proceed with submitted values
+      }
+    }
+
     const appId = generateAppId();
 
     const application: Record<string, unknown> = {
@@ -119,7 +155,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       dob: fv(fields['DOB']) || null,
       ssn: (() => { const raw = fv(fields['SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
       property_address: fv(fields['Property Address']) || null,
-      property_id: fv(fields['Property ID']) || null,
+      property_id: submittedPropertyId,
       requested_move_in_date: fv(fields['Requested Move-in Date']) || null,
       desired_lease_term: fv(fields['Desired Lease Term']) || null,
       current_address: fv(fields['Current Address']) || null,
@@ -163,7 +199,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       vehicle_year: fv(fields['Vehicle Year']) || null,
       vehicle_license_plate: fv(fields['Vehicle License Plate']) || null,
       has_co_applicant: fBool(fields['Has Co-Applicant']),
-      application_fee: fNum(fields['Application Fee']),
+      application_fee: enforcedFee,
       monthly_rent: fNum(fields['Listed Rent']),
       security_deposit: fNum(fields['Security Deposit']),
       lease_status: 'none',
@@ -198,4 +234,3 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
     return jsonOk({ success: true, appId, message: 'Application received.' });
   });
-  
