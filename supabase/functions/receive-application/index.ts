@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
   import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
-  import { sendEmail, applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
+  import { sendEmail } from '../_shared/send-email.ts';
+  import { applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -97,7 +98,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       return jsonOk({ success: true, message: 'Application received.', appId: 'HP-' + Date.now() });
     }
 
-    const email = fv(fields['Email']);
+    const email = fv(fields['Email']).toLowerCase();
     const firstName = fv(fields['First Name']);
     const lastName = fv(fields['Last Name']);
 
@@ -115,7 +116,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       email,
       phone: fv(fields['Phone']) || null,
       dob: fv(fields['DOB']) || null,
-      ssn: fv(fields['SSN']) || null,
+      ssn: (() => { const raw = fv(fields['SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
       property_address: fv(fields['Property Address']) || null,
       property_id: fv(fields['Property ID']) || null,
       requested_move_in_date: fv(fields['Requested Move-in Date']) || null,

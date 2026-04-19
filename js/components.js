@@ -34,46 +34,10 @@
     });
   }
 
-  /* ── Customize nav for apply pages ── */
-  function applyPageCustomizations() {
-    if (!window.location.pathname.startsWith('/apply/')) return;
-    var navInner = document.querySelector('.nav-inner');
-    if (navInner) {
-      var backLink = document.createElement('a');
-      backLink.href = '/listings.html';
-      backLink.className = 'nav-back-link';
-      backLink.innerHTML = '← <span>Back to Listings</span>';
-      var navLogo = navInner.querySelector('.nav-logo');
-      if (navLogo) navInner.insertBefore(backLink, navLogo);
-
-      var navLinks = navInner.querySelector('.nav-links');
-      if (navLinks) {
-        var langBtn = document.createElement('button');
-        langBtn.type = 'button';
-        langBtn.id = 'langToggle';
-        langBtn.className = 'nav-lang-toggle';
-        langBtn.innerHTML = '<i class="fas fa-language"></i> <span id="langText">Español</span>';
-        navLinks.appendChild(langBtn);
-      }
-    }
-    var drawerBody = document.querySelector('.nav-drawer-body');
-    if (drawerBody) {
-      var langBtnDrawer = document.createElement('button');
-      langBtnDrawer.type = 'button';
-      langBtnDrawer.id = 'langToggleDrawer';
-      langBtnDrawer.className = 'nav-drawer-link';
-      langBtnDrawer.innerHTML = '<i class="fas fa-language"></i> <span id="langTextDrawer">Español</span>';
-      drawerBody.appendChild(langBtnDrawer);
-    }
-  }
-
   function initComponents() {
     /* ── I-030: Set og:url to the real current URL ── */
     var ogUrlMeta = document.querySelector('meta[property="og:url"]');
     if (ogUrlMeta) ogUrlMeta.setAttribute('content', location.href);
-
-    /* ── Apply-page customizations ── */
-    applyPageCustomizations();
 
     /* ── Set active nav link by pathname ── */
     var path = window.location.pathname;

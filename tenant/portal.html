@@ -154,7 +154,7 @@
 
   // ── Phase 8: Document upload section ────────────────────────────────────────
   function renderDocUpload(app) {
-    if (!['approved', 'co_signed', 'signed', 'move_in_scheduled'].includes(app.status) && app.status !== 'approved') return '';
+    if (!['approved', 'co_signed', 'signed', 'move_in_scheduled'].includes(app.status)) return '';
     return `<div class="section">
       <div class="section-label">Documents</div>
       <div class="card">
@@ -224,8 +224,8 @@
     };
 
     const leaseBadge = (s) => {
-      const map = {none:'badge-none',sent:'badge-sent',signed:'badge-signed'};
-      const labels = {none:'No Lease Yet',sent:'Lease Sent',signed:'Lease Signed'};
+      const map = {none:'badge-none',sent:'badge-sent',signed:'badge-signed',co_signed:'badge-signed',executed:'badge-signed'};
+      const labels = {none:'No Lease Yet',sent:'Lease Sent',signed:'Lease Signed',co_signed:'Lease Fully Executed',executed:'Lease Fully Executed'};
       return `<span class="badge ${map[s]||'badge-none'}">${labels[s]||s}</span>`;
     };
 
@@ -244,10 +244,10 @@
         sub: status === 'approved' ? 'Congratulations! You have been approved.' : status === 'denied' ? 'Unfortunately your application was not approved.' : status === 'waitlisted' ? 'You are on our waitlist.' : 'We are reviewing your application.',
       },
       {
-        done: ['signed'].includes(leaseStatus),
+        done: ['signed','co_signed','executed'].includes(leaseStatus),
         active: leaseStatus === 'sent',
-        label: leaseStatus === 'signed' ? 'Lease Signed' : leaseStatus === 'sent' ? 'Lease Ready to Sign' : 'Lease Agreement',
-        sub: leaseStatus === 'signed' ? 'Signed on ' + fmtDate(app.lease_signed_date) : leaseStatus === 'sent' ? 'Your lease has been sent for your signature.' : 'Will be prepared after approval.',
+        label: leaseStatus === 'co_signed' || leaseStatus === 'executed' ? 'Lease Fully Executed' : leaseStatus === 'signed' ? 'Lease Signed' : leaseStatus === 'sent' ? 'Lease Ready to Sign' : 'Lease Agreement',
+        sub: leaseStatus === 'co_signed' || leaseStatus === 'executed' ? 'Fully executed — both parties have signed.' : leaseStatus === 'signed' ? 'Signed on ' + fmtDate(app.lease_signed_date) : leaseStatus === 'sent' ? 'Your lease has been sent for your signature.' : 'Will be prepared after approval.',
       },
       {
         done: miStatus === 'confirmed' || miStatus === 'completed',
@@ -369,11 +369,37 @@
   async function withdrawApplication() {
     if (!confirm('Are you sure you want to withdraw your application?\n\nThis cannot be undone. Please contact us if you wish to reapply.')) return;
     const sb = getSB();
+    const { data: { session } } = await sb.auth.getSession();
     const { error } = await sb.from('applications').update({
       status: 'withdrawn',
       updated_at: new Date().toISOString(),
     }).eq('app_id', window._appId);
     if (error) { alert('Error: ' + error.message + '\nPlease contact us directly.'); return; }
+
+    // Log the withdraw action and notify admin (best-effort, non-blocking)
+    try {
+      await sb.from('admin_actions').insert({
+        action: 'tenant_withdraw',
+        target_type: 'application',
+        target_id: window._appId,
+        metadata: { app_id: window._appId, actor: session?.user?.email || 'tenant' },
+      });
+    } catch (_) {}
+    try {
+      if (session?.access_token) {
+        fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token },
+          body: JSON.stringify({
+            type: 'custom',
+            to: 'choicepropertygroup@hotmail.com',
+            subject: 'Application Withdrawn — ' + window._appId,
+            html: `<p>Application <strong>${window._appId}</strong> has been withdrawn by the tenant (${esc(session.user?.email || '')}).</p><p>Please log in to the admin panel to review.</p>`,
+          }),
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
     document.getElementById('portal-content').innerHTML = `
       <div class="card" style="text-align:center;padding:32px">
         <div style="font-size:2rem;margin-bottom:12px">✓</div>

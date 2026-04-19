@@ -593,7 +593,7 @@ The "Confirm & Send" button should only appear after a successful dry-run respon
 
 ## PHASE 7 — Tenant Portal Holding Fee & Payment Status
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟠 Important — tenants have no visibility into their financial status
 **Files to change:**
 - `tenant/portal.html`
