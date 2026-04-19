@@ -173,6 +173,7 @@ function renderCard(app) {
       <button class="btn-ghost-sm" onclick="togglePayment('${app.id}','${app.payment_status}')">
         ${app.payment_status === 'paid' ? '°³ Mark Unpaid' : '°³ Mark Paid'}
       </button>
+      ${app.payment_status === 'paid' ? `<button class="btn-ghost-sm" onclick="showRefundModal('${app.id}','${app.app_id||app.id}','${esc((app.first_name||'')+' '+(app.last_name||''))}')" style="color:#b45309;border-color:rgba(180,83,9,.3)"><i class="fas fa-undo" style="margin-right:4px"></i>Refund</button>` : ''}
       <button class="btn-ghost-sm" onclick="toggleDetail('${app.id}')">Details ¢¾</button>
     </div>
     <div class="detail-panel" id="detail-${app.id}">
@@ -239,6 +240,12 @@ function renderDetail(app) {
       ${row('Best Time', app.preferred_time)}
     </div>
     ${app.pet_details ? `<div class="detail-row"><span class="detail-key">Pet Details</span><span class="detail-val">${esc(app.pet_details)}</span></div>` : ''}
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#e2e8f0)">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Uploaded Documents</div>
+      <div id="docs-${app.id}">
+        <button class="btn-ghost-sm" onclick="loadDocs('${app.id}','${app.app_id||app.id}')"><i class="fas fa-folder-open" style="margin-right:4px"></i>View Documents</button>
+      </div>
+    </div>
     <div style="margin-top:12px">
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
       <textarea class="notes-area" id="notes-${app.id}" placeholder="Internal notes (not visible to applicant)¢¦">${esc(app.admin_notes||'')}</textarea>
@@ -362,6 +369,73 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadApps();
 });
+
+// ── Phase 4B — Mark as Refunded ────────────────────────────────────────────
+function showRefundModal(dbId, appId, name) {
+  document.getElementById('refund-app-db-id').value = dbId;
+  document.getElementById('refund-app-id').value    = appId;
+  document.getElementById('refund-name').textContent = name || appId;
+  const bd = document.getElementById('refund-modal-backdrop');
+  bd.style.display = 'flex';
+}
+function closeRefundModal() {
+  document.getElementById('refund-modal-backdrop').style.display = 'none';
+}
+async function markRefunded() {
+  const dbId = document.getElementById('refund-app-db-id').value;
+  const btn  = document.getElementById('refund-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  const { error } = await CP.sb().from('applications')
+    .update({ payment_status: 'refunded', updated_at: new Date().toISOString() })
+    .eq('id', dbId);
+  if (error) { alert('Error: ' + error.message); btn.disabled = false; btn.textContent = 'Confirm Refund'; return; }
+  closeRefundModal();
+  showToast('Payment marked as refunded.');
+  await loadApps();
+}
+
+// ── Phase 8 — View uploaded documents ──────────────────────────────────────
+async function loadDocs(dbId, appId) {
+  const container = document.getElementById('docs-' + dbId);
+  if (!container) return;
+  container.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
+  try {
+    const { data: files, error } = await CP.sb().storage.from('application-docs').list(appId, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+    if (error) { container.innerHTML = '<span style="font-size:.78rem;color:#dc2626">Error: ' + esc(error.message) + '</span>'; return; }
+    if (!files || !files.length) { container.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">No documents uploaded yet.</span>'; return; }
+    const rows = files.map(f => {
+      const name = esc(f.name || '—');
+      const path = appId + '/' + f.name;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border,#e2e8f0)">' +
+        '<i class="fas fa-file" style="color:var(--muted);font-size:.8rem"></i>' +
+        '<span style="font-size:.78rem;flex:1">' + name + '</span>' +
+        '<button class="btn-ghost-sm" style="font-size:.72rem;padding:3px 8px" onclick="downloadDoc(\'' + esc(path) + '\')">Download</button>' +
+        '</div>';
+    }).join('');
+    container.innerHTML = '<div style="margin-top:4px">' + rows + '</div>';
+  } catch(e) { container.innerHTML = '<span style="font-size:.78rem;color:#dc2626">Error loading docs.</span>'; }
+}
+async function downloadDoc(path) {
+  const { data, error } = await CP.sb().storage.from('application-docs').createSignedUrl(path, 300);
+  if (error || !data?.signedUrl) { alert('Could not get download link: ' + (error?.message || 'unknown')); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
 </script>
+
+<!-- Phase 4B — Refund Confirmation Modal -->
+<div id="refund-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center" onclick="if(event.target===this)closeRefundModal()">
+  <div style="background:#1e293b;border-radius:12px;padding:28px 32px;width:90%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+    <h3 style="color:#f1f5f9;font-size:.95rem;margin-bottom:8px">Mark as Refunded</h3>
+    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:20px">Mark the holding fee payment as <strong style="color:#f1f5f9">Refunded</strong> for <span id="refund-name" style="color:#f1f5f9"></span>? This cannot be undone without manual DB edit.</p>
+    <input type="hidden" id="refund-app-db-id">
+    <input type="hidden" id="refund-app-id">
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn-ghost-sm" onclick="closeRefundModal()">Cancel</button>
+      <button id="refund-confirm-btn" onclick="markRefunded()" style="padding:8px 18px;background:#b45309;color:#fff;border:none;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer">Confirm Refund</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

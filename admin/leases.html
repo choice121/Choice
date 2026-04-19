@@ -144,9 +144,32 @@
       </div>
       <div class="modal-footer">
         <button class="btn-ghost-sm" onclick="closeLeaseMod()" style="font-size:.82rem">Cancel</button>
+        <button class="btn-ghost-sm" id="modal-preview-btn" onclick="previewLease()" style="font-size:.82rem">&#128065; Preview PDF</button>
         <button class="btn-primary" id="modal-submit-btn" onclick="submitGenerateLease()">
           <span id="modal-submit-text">Generate &amp; Send Lease</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Countersign Modal (Phase 5) -->
+  <div class="modal-backdrop" id="countersign-modal-backdrop" onclick="if(event.target===this)closeCountersignModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Management Countersignature</h3>
+        <button class="modal-close" onclick="closeCountersignModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:16px">Enter the name of the management representative countersigning this lease. The tenant will receive a "Fully Executed" confirmation email.</p>
+        <input type="hidden" id="cs-app-db-id">
+        <input type="hidden" id="cs-app-id">
+        <div class="form-row"><label>Management Signer Name</label><input type="text" id="cs-signer-name" placeholder="e.g. John Smith, Property Manager"></div>
+        <div class="form-row"><label>Internal Notes (optional)</label><textarea id="cs-notes" rows="2" placeholder="Any notes about this countersignature…"></textarea></div>
+        <div id="cs-err" style="display:none;color:#dc2626;font-size:.78rem;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost-sm" onclick="closeCountersignModal()" style="font-size:.82rem">Cancel</button>
+        <button class="btn-primary" id="cs-submit-btn" onclick="submitCountersign()">Countersign Lease</button>
       </div>
     </div>
   </div>
@@ -324,11 +347,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('lease-modal-backdrop').classList.remove('open');
   }
 
-  async function submitGenerateLease() {
+  // Phase 6 — dry-run preview
+  async function previewLease() {
     const appId = document.getElementById('modal-app-id').value;
     if (!appId) return;
+    const leaseData = collectLeaseData();
+    const prevBtn = document.getElementById('modal-preview-btn');
+    prevBtn.disabled = true;
+    prevBtn.textContent = 'Generating…';
+    const token = await CP.Auth.getAccessToken();
+    if (!token) { prevBtn.disabled = false; prevBtn.textContent = '👁 Preview PDF'; showToast('Session expired.', 'error'); return; }
+    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
+    let resp, json;
+    try {
+      resp = await fetch(serverBase + '/generate-lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ app_id: appId, lease_data: leaseData, dry_run: true }),
+      });
+      json = await resp.json();
+    } catch(e) { prevBtn.disabled = false; prevBtn.textContent = '👁 Preview PDF'; showToast('Network error: ' + e.message, 'error'); return; }
+    prevBtn.disabled = false;
+    prevBtn.textContent = '👁 Preview PDF';
+    if (!resp.ok || !json.success) { showToast(json.error || 'Preview failed.', 'error'); return; }
+    window.open(json.preview_url, '_blank');
+  }
 
-    const leaseData = {
+  function collectLeaseData() {
+    return {
       lease_start_date:       document.getElementById('m-lease-start').value       || null,
       lease_end_date:         document.getElementById('m-lease-end').value         || null,
       monthly_rent:           parseFloat(document.getElementById('m-monthly-rent').value)     || null,
@@ -342,6 +388,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       lease_smoking_policy:   document.getElementById('m-smoking-policy').value   || null,
       lease_notes:            document.getElementById('m-lease-notes').value      || null,
     };
+  }
+
+  async function submitGenerateLease() {
+    const appId = document.getElementById('modal-app-id').value;
+    if (!appId) return;
+
+    const leaseData = collectLeaseData();
 
     const btn = document.getElementById('modal-submit-btn');
     btn.disabled = true;
@@ -403,18 +456,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { showToast('Error: ' + e.message, 'error'); }
   }
 
-  async function cosignLease(id, appId) {
-    const sig = prompt('Enter management countersignature name:');
-    if (!sig || !sig.trim()) return;
-    const { error } = await CP.sb().from('applications').update({
-      management_cosigned: true,
-      management_cosigned_by: sig.trim(),
-      management_cosigned_at: new Date().toISOString(),
-      lease_status: 'co_signed',
-      updated_at: new Date().toISOString(),
-    }).eq('id', id);
-    if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    showToast('Lease countersigned by ' + sig.trim(), 'success');
+  function cosignLease(id, appId) {
+    document.getElementById('cs-app-db-id').value = id;
+    document.getElementById('cs-app-id').value    = appId;
+    document.getElementById('cs-signer-name').value = '';
+    document.getElementById('cs-notes').value = '';
+    document.getElementById('cs-err').style.display = 'none';
+    document.getElementById('cs-submit-btn').disabled = false;
+    document.getElementById('cs-submit-btn').textContent = 'Countersign Lease';
+    document.getElementById('countersign-modal-backdrop').classList.add('open');
+  }
+
+  function closeCountersignModal() {
+    document.getElementById('countersign-modal-backdrop').classList.remove('open');
+  }
+
+  async function submitCountersign() {
+    const appId      = document.getElementById('cs-app-id').value;
+    const signerName = document.getElementById('cs-signer-name').value.trim();
+    const notes      = document.getElementById('cs-notes').value.trim();
+    const err        = document.getElementById('cs-err');
+    if (!signerName) { err.textContent = 'Please enter the management signer name.'; err.style.display = 'block'; return; }
+
+    const btn = document.getElementById('cs-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Signing…';
+    err.style.display = 'none';
+
+    const token = await CP.Auth.getAccessToken();
+    if (!token) { err.textContent = 'Session expired. Please sign in again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Countersign Lease'; return; }
+
+    let resp, json;
+    try {
+      resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/countersign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ app_id: appId, signer_name: signerName, notes }),
+      });
+      json = await resp.json();
+    } catch(e) { err.textContent = 'Network error: ' + e.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Countersign Lease'; return; }
+
+    if (!resp.ok || !json.success) {
+      err.textContent = json.error || 'Countersign failed.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Countersign Lease';
+      return;
+    }
+
+    closeCountersignModal();
+    showToast('Lease countersigned by ' + signerName + '. Fully executed email sent to tenant.', 'success');
     await loadLeases();
   }
 

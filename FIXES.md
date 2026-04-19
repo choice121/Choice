@@ -54,19 +54,19 @@ See `.agents/instructions.md` for the full rule set.
 | Phase | Description | Status |
 |---|---|---|
 | Phase 1 | Expand `send-email` Edge Function to all 9 email types | `DONE` |
-| Phase 2 | Fix email template content gaps (denial language + dual admin alert) | `TODO` |
-| Phase 3 | Add email identity verification to lease signing | `TODO` |
-| Phase 4 | Add Mark As Refunded admin action + auto admin review summary email | `TODO` |
-| Phase 5 | Add management countersign endpoint + admin UI | `TODO` |
-| Phase 6 | Add dry-run lease preview | `TODO` |
-| Phase 7 | Tenant portal — show holding fee & payment status | `TODO` |
-| Phase 8 | Document upload flow | `TODO` |
+| Phase 2 | Fix email template content gaps (denial language + dual admin alert) | `DONE` |
+| Phase 3 | Add email identity verification to lease signing | `DONE` |
+| Phase 4 | Add Mark As Refunded admin action + auto admin review summary email | `DONE` |
+| Phase 5 | Add management countersign endpoint + admin UI | `DONE` |
+| Phase 6 | Add dry-run lease preview | `DONE` |
+| Phase 7 | Tenant portal — show holding fee & payment status | `DONE` |
+| Phase 8 | Document upload flow | `DONE` |
 
 ---
 
 ## PHASE 1 — Expand `send-email` Edge Function to All 9 Email Types
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🔴 Critical — 6 of 9 email types currently fail silently in production
 **Files to change:**
 - `supabase/functions/send-email/index.ts`
@@ -193,7 +193,7 @@ The function already has the GAS email relay wired — just add the missing bran
 
 ## PHASE 2 — Fix Email Template Content Gaps
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟠 Important — applicants receive incomplete or incorrect information
 **Files to change:**
 - `supabase/functions/send-email/index.ts` (denial template + lease-signed alert)
@@ -267,7 +267,7 @@ and should remain hardcoded constants here for consistency.
 
 ## PHASE 3 — Add Email Identity Verification to Lease Signing
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🔴 Critical (security) — anyone with a signing link can sign without identity check
 **Files to change:**
 - `supabase/functions/sign-lease/index.ts`
@@ -346,7 +346,7 @@ Show a clear, user-friendly error if the email doesn't match:
 
 ## PHASE 4 — Mark As Refunded + Auto Admin Review Summary Email
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟠 Important — admin workflow gap
 **Files to change:**
 - `admin/applications.html`
@@ -438,7 +438,7 @@ No new API endpoint is needed — it runs inside the existing email handler.
 
 ## PHASE 5 — Management Countersign
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟠 Important — lease is not legally bilateral without management signature
 **Files to change:**
 - `supabase/functions/` — new `countersign` Edge Function
@@ -530,7 +530,7 @@ On behalf of: Choice Properties
 
 ## PHASE 6 — Dry-Run Lease Preview
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟡 Nice to have — prevents sending wrong lease documents
 **Files to change:**
 - `supabase/functions/generate-lease/index.ts`
@@ -668,7 +668,7 @@ If any column is missing, add it via a SQL migration note in the PR description.
 
 ## PHASE 8 — Document Upload Flow
 
-**Status:** `TODO`
+**Status:** `DONE`
 **Priority:** 🟡 Nice to have — GAS collected documents at application time
 **Files to change:**
 - `tenant/portal.html` (post-approval document upload UI)
@@ -829,3 +829,46 @@ Use this to verify nothing was missed.
 *Last updated: April 19, 2026*
 *Audited by: Replit Agent — full GAS source comparison*
 *Next action: Owner approves Phase 1 → AI implements Phase 1 → stops and waits*
+
+---
+
+## CHANGELOG
+
+### Session: 2026-04-19 — Phases 2–8
+
+**Phase 2 (DONE):**
+- `supabase/functions/_shared/email.ts`: Added explicit 30-day reapplication language to denial email template; added `adminReviewSummaryHtml` and `leaseFullyExecutedHtml` templates
+- `supabase/functions/sign-lease/index.ts`: Replaced single admin email with dual `ADMIN_EMAILS` array — both admins now notified on every lease signing; switched to dual-provider `sendEmail` from `_shared/send-email.ts`
+
+**Phase 3 (DONE):**
+- `lease-sign.html`: Added email input field for identity verification; updated `updateSignBtn` to require valid email + min-5-char signature; passes `applicant_email` to sign-lease function
+- `supabase/functions/sign-lease/index.ts`: Added `applicant_email` body field; pre-check application lookup by token; email cross-check (HTTP 403 on mismatch); min-length validation (HTTP 400)
+
+**Phase 4 (DONE):**
+- `admin/applications.html`: Added "Refund" button (visible when `payment_status = 'paid'`); added confirmation modal; added `showRefundModal`, `closeRefundModal`, `markRefunded` JS functions; added Phase 8 "View Documents" panel + `loadDocs`/`downloadDoc` functions
+- `supabase/functions/send-email/index.ts`: Inside `holding_fee_received` handler: auto-sends admin review summary to both admin emails after tenant confirmation
+
+**Phase 5 (DONE):**
+- `supabase/functions/countersign/index.ts`: NEW — verifies admin JWT, checks tenant signed, updates DB, regenerates PDF with management sig block, sends "Lease Fully Executed" email to applicant, logs to `admin_actions`
+- `admin/leases.html`: Replaced prompt-based `cosignLease` with proper modal; added `openCountersignModal`/`closeCountersignModal`/`submitCountersign` functions calling `/countersign` Edge Function
+- `supabase/migrations/20240419_phase5_management_signature.sql`: NEW migration
+
+**Phase 6 (DONE):**
+- `supabase/functions/generate-lease/index.ts`: Added `dry_run` parameter — when true, generates PDF to temp storage path, returns 60-min signed preview URL, skips DB updates and email
+- `admin/leases.html`: Added "Preview PDF" button to lease modal; added `previewLease()` function; factored out `collectLeaseData()` shared by both preview and generate flows
+
+**Phase 7 (DONE):**
+- `tenant/portal.html`: Expanded Supabase query to include all holding fee + payment tracking columns; added `renderFinancialStatus(app)` function; injected financial section into portal render output
+
+**Phase 8 (DONE):**
+- `supabase/functions/request-upload-url/index.ts`: NEW — verifies tenant session, validates app ownership and status, validates MIME type and doc type, generates signed Supabase Storage upload URL (10-min expiry)
+- `tenant/portal.html`: Added `renderDocUpload(app)` + `renderDocRow()` + `uploadDoc()` functions; document upload section visible for approved+ applications; uploads directly to Storage via signed URL
+- `admin/applications.html`: Added "View Documents" section in application detail panel; `loadDocs`/`downloadDoc` functions listing Storage files per application
+- `supabase/migrations/20240419_phase7_financial_columns.sql`: NEW migration
+- `supabase/migrations/20240419_phase8_storage_bucket.sql`: NEW — bucket creation SQL + RLS policy
+
+**Manual steps required by owner after deployment:**
+1. Run migrations in Supabase SQL Editor (files in `supabase/migrations/`)
+2. Create `application-docs` Storage bucket (or run bucket migration SQL)
+3. Deploy all Edge Functions via Supabase CLI: `supabase functions deploy send-email sign-lease generate-lease countersign request-upload-url`
+4. Ensure `RESEND_API_KEY` or `GAS_EMAIL_URL`+`GAS_RELAY_SECRET` are set in Supabase Edge Function secrets

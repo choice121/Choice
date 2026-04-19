@@ -11,6 +11,7 @@ import {
   moveInPrepHtml,
   leaseSigningReminderHtml,
   leaseExpiryAlertHtml,
+  adminReviewSummaryHtml,
   formatDate,
 } from '../_shared/email.ts';
 
@@ -20,7 +21,6 @@ const ADMIN_EMAILS = [
 ];
 
 const TENANT_PORTAL_URL = 'https://choice-properties-site.pages.dev/tenant/portal.html';
-const ADMIN_PANEL_URL   = 'https://choice-properties-site.pages.dev/admin/applications.html';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -92,9 +92,14 @@ Deno.serve(async (req: Request) => {
   const actor = auth.userEmail || 'admin';
   const now   = new Date().toISOString();
 
-  let subject = '';
-  let html    = '';
-  let sendToAdmin = false;
+  let subject        = '';
+  let html           = '';
+  let sendToAdmin    = false;
+
+  // Phase 4A — internal admin review summary (for holding_fee_received)
+  let sendAdminReview      = false;
+  let adminReviewSubject   = '';
+  let adminReviewHtml      = '';
 
   // ── Build subject + html per type ──────────────────────────────────────────
 
@@ -107,9 +112,7 @@ Deno.serve(async (req: Request) => {
     html    = denialEmailHtml(name, prop, message);
 
   } else if (type === 'movein_confirmed') {
-    const moveDate = app.move_in_date_actual
-      ? formatDate(app.move_in_date_actual)
-      : undefined;
+    const moveDate = app.move_in_date_actual ? formatDate(app.move_in_date_actual) : undefined;
     subject = 'Move-In Confirmed — Choice Properties';
     html    = moveinEmailHtml(name, prop, moveDate, message);
 
@@ -117,45 +120,48 @@ Deno.serve(async (req: Request) => {
     subject = 'Holding Fee Request — Choice Properties';
     html    = holdingFeeRequestHtml(name, prop, body.fee_amount ?? app.holding_fee_amount, body.due_date ?? app.holding_fee_due_date, message);
 
-    // DB side-effect
     const update: Record<string, unknown> = {
       holding_fee_requested:    true,
       holding_fee_requested_at: now,
       updated_at:               now,
     };
-    if (body.fee_amount  != null) update.holding_fee_amount   = body.fee_amount;
-    if (body.due_date)            update.holding_fee_due_date = body.due_date;
+    if (body.fee_amount != null) update.holding_fee_amount   = body.fee_amount;
+    if (body.due_date)           update.holding_fee_due_date = body.due_date;
     await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'holding_fee_received') {
     subject = 'Holding Fee Received — Unit Reserved';
     html    = holdingFeeReceivedHtml(name, prop, TENANT_PORTAL_URL, message);
 
-    // DB side-effect
     await supabase.from('applications').update({
       holding_fee_paid:    true,
       holding_fee_paid_at: now,
       updated_at:          now,
     }).eq('app_id', app_id);
 
+    // Phase 4A — queue admin review summary
+    sendAdminReview    = true;
+    adminReviewSubject = `Holding Fee Received — Action Required: Generate Lease for ${name} ${app.last_name || ''}`.trim();
+    adminReviewHtml    = adminReviewSummaryHtml(
+      app.first_name || '', app.last_name || '', app.email || '',
+      app.phone || '', prop, app_id,
+      body.fee_amount ?? app.holding_fee_amount,
+    );
+
   } else if (type === 'payment_confirmed') {
     subject = 'Payment Confirmed — Choice Properties';
     html    = paymentConfirmedHtml(
       name, prop,
-      body.amount_collected  ?? app.payment_amount_collected,
-      body.payment_method    ?? app.payment_method_confirmed,
-      body.transaction_ref   ?? app.payment_transaction_ref,
+      body.amount_collected ?? app.payment_amount_collected,
+      body.payment_method   ?? app.payment_method_confirmed,
+      body.transaction_ref  ?? app.payment_transaction_ref,
       message,
     );
 
-    // DB side-effect
-    const update: Record<string, unknown> = {
-      payment_confirmed_at: now,
-      updated_at:           now,
-    };
-    if (body.payment_method  != null) update.payment_method_confirmed  = body.payment_method;
-    if (body.transaction_ref != null) update.payment_transaction_ref   = body.transaction_ref;
-    if (body.amount_collected != null) update.payment_amount_collected = body.amount_collected;
+    const update: Record<string, unknown> = { payment_confirmed_at: now, updated_at: now };
+    if (body.payment_method   != null) update.payment_method_confirmed  = body.payment_method;
+    if (body.transaction_ref  != null) update.payment_transaction_ref   = body.transaction_ref;
+    if (body.amount_collected != null) update.payment_amount_collected  = body.amount_collected;
     await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'move_in_prep') {
@@ -169,9 +175,9 @@ Deno.serve(async (req: Request) => {
   } else if (type === 'lease_expiry_alert') {
     const leaseEnd = app.lease_end_date || app.move_out_date;
     if (!leaseEnd) return jsonErr(400, 'No lease_end_date on this application');
-    subject      = `Lease Expiry Alert — ${prop}`;
-    html         = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '');
-    sendToAdmin  = true;
+    subject     = `Lease Expiry Alert — ${prop}`;
+    html        = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '');
+    sendToAdmin = true;
 
   } else {
     return jsonErr(400, `Unsupported email type: "${type}". Supported types: approved, denied, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
@@ -181,15 +187,21 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (sendToAdmin) {
-      // lease_expiry_alert → both admin emails only (not the applicant)
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject, html });
         await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed');
       }
     } else {
-      // All other types → applicant email
       const result = await sendEmail({ to: app.email, subject, html });
       await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed');
+    }
+
+    // Phase 4A — send internal admin review summary alongside holding_fee_received
+    if (sendAdminReview) {
+      for (const adminEmail of ADMIN_EMAILS) {
+        const result = await sendEmail({ to: adminEmail, subject: adminReviewSubject, html: adminReviewHtml });
+        await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed');
+      }
     }
 
     await logAdminAction(app_id, `send_email_${type}`, actor);

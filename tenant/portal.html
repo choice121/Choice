@@ -122,6 +122,94 @@
     window.location.href = '/tenant/login.html';
   }
 
+  // ── Phase 7: Financial status section ──────────────────────────────────────
+  function renderFinancialStatus(app) {
+    const hfRequested = app.holding_fee_requested;
+    const hfPaid      = app.holding_fee_paid;
+    const hfAmount    = app.holding_fee_amount;
+    const hfDue       = app.holding_fee_due_date;
+    const hfPaidAt    = app.holding_fee_paid_at;
+    const pmtConfirmed = app.payment_confirmed_at;
+    const pmtAmount    = app.payment_amount_collected;
+    const pmtMethod    = app.payment_method_confirmed;
+
+    if (!hfRequested && !pmtConfirmed) return '';
+
+    const rows = [];
+    if (hfRequested) {
+      rows.push(`<div class="meta-item"><span class="meta-label">Holding Fee</span><span class="meta-val">${hfAmount != null ? fmtMoney(hfAmount) : '&mdash;'}</span></div>`);
+      rows.push(`<div class="meta-item"><span class="meta-label">Holding Fee Status</span><span class="meta-val">${hfPaid ? '<span style="color:#16a34a;font-weight:600">&#10003; Received' + (hfPaidAt ? ' ' + fmtDate(hfPaidAt) : '') + '</span>' : (hfDue ? 'Due ' + fmtDate(hfDue) : 'Pending')}</span></div>`);
+    }
+    if (pmtConfirmed) {
+      rows.push(`<div class="meta-item"><span class="meta-label">Payment Confirmed</span><span class="meta-val" style="color:#16a34a;font-weight:600">&#10003; ${fmtDate(pmtConfirmed)}</span></div>`);
+      if (pmtAmount != null) rows.push(`<div class="meta-item"><span class="meta-label">Amount</span><span class="meta-val">${fmtMoney(pmtAmount)}</span></div>`);
+      if (pmtMethod) rows.push(`<div class="meta-item"><span class="meta-label">Method</span><span class="meta-val">${esc(pmtMethod)}</span></div>`);
+    }
+
+    return `<div class="section">
+      <div class="section-label">Financial Status</div>
+      <div class="card"><div class="meta-grid">${rows.join('')}</div></div>
+    </div>`;
+  }
+
+  // ── Phase 8: Document upload section ────────────────────────────────────────
+  function renderDocUpload(app) {
+    if (!['approved', 'co_signed', 'signed', 'move_in_scheduled'].includes(app.status) && app.status !== 'approved') return '';
+    return `<div class="section">
+      <div class="section-label">Documents</div>
+      <div class="card">
+        <p style="color:#94a3b8;font-size:.82rem;margin-bottom:16px">Upload supporting documents required by your landlord (government ID, pay stubs, bank statements). Accepted formats: PDF, JPG, PNG.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${renderDocRow('Government ID', 'government_id', app.app_id)}
+          ${renderDocRow('Pay Stub (last 2 months)', 'pay_stub', app.app_id)}
+          ${renderDocRow('Bank Statement', 'bank_statement', app.app_id)}
+          ${renderDocRow('Other Document', 'other', app.app_id)}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderDocRow(label, docType, appId) {
+    const inputId = 'doc-input-' + docType;
+    const statusId = 'doc-status-' + docType;
+    return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="color:#f1f5f9;font-size:.82rem;min-width:180px">${label}</span>
+      <input type="file" id="${inputId}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="uploadDoc('${docType}','${appId}','${inputId}','${statusId}')">
+      <button onclick="document.getElementById('${inputId}').click()" style="padding:6px 14px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:#60a5fa;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer">Choose File</button>
+      <span id="${statusId}" style="font-size:.78rem;color:#94a3b8"></span>
+    </div>`;
+  }
+
+  async function uploadDoc(docType, appId, inputId, statusId) {
+    const input  = document.getElementById(inputId);
+    const status = document.getElementById(statusId);
+    const file   = input.files[0];
+    if (!file) return;
+    status.textContent = 'Uploading…';
+    status.style.color = '#60a5fa';
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      const token = session?.access_token;
+      if (!token) { status.textContent = 'Not signed in.'; status.style.color = '#f87171'; return; }
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/request-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ app_id: appId, file_name: file.name, file_type: file.type, doc_type: docType }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.signed_url) { status.textContent = 'Error: ' + (d.error || 'Could not get upload URL'); status.style.color = '#f87171'; return; }
+      const uploadRes = await fetch(d.signed_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
+        body: file,
+      });
+      if (!uploadRes.ok) { status.textContent = 'Upload failed. Please try again.'; status.style.color = '#f87171'; return; }
+      status.textContent = '✓ Uploaded: ' + file.name;
+      status.style.color = '#4ade80';
+      input.value = '';
+    } catch(e) { status.textContent = 'Error: ' + e.message; status.style.color = '#f87171'; }
+  }
+
   function renderPortal(app) {
     const name = esc((app.first_name||'') + ' ' + (app.last_name||'')).trim() || 'Applicant';
     const prop = esc(app.property_address || app.property_id || 'Property');
@@ -251,6 +339,8 @@
         </div>
       </div>
       ${moveInHtml}
+      ${renderFinancialStatus(app)}
+      ${renderDocUpload(app)}
       <div style="text-align:center;margin-top:32px;font-size:.78rem;color:#475569">
         Questions? Contact us at <a href="mailto:choicepropertygroup@hotmail.com" style="color:#60a5fa">choicepropertygroup@hotmail.com</a> &middot; <a href="tel:7077063137" style="color:#60a5fa">707-706-3137</a>
       </div>`;
@@ -321,7 +411,9 @@
       .select('id,app_id,created_at,status,payment_status,first_name,last_name,email,phone,' +
               'property_address,property_id,lease_status,lease_sent_date,lease_signed_date,' +
               'lease_start_date,lease_end_date,monthly_rent,security_deposit,move_in_costs,' +
-              'move_in_status,move_in_date_actual,move_in_notes,tenant_sign_token')
+              'move_in_status,move_in_date_actual,move_in_notes,tenant_sign_token,' +
+              'holding_fee_requested,holding_fee_amount,holding_fee_due_date,holding_fee_paid,holding_fee_paid_at,' +
+              'payment_confirmed_at,payment_amount_collected,payment_method_confirmed,payment_transaction_ref')
       .eq('email', userEmail.toLowerCase())
       .order('created_at', { ascending: false });
 

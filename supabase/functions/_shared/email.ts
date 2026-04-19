@@ -78,13 +78,15 @@ export function approvalEmailHtml(firstName: string, propertyAddress: string, me
   );
 }
 
+// Phase 2A — added explicit 30-day reapplication language
 export function denialEmailHtml(firstName: string, propertyAddress: string, message?: string) {
   return wrap(
     header('#374151', 'Application Status Update'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
     <p style="color:#4a5568;font-size:14px">Thank you for applying to <strong>${propertyAddress}</strong>. After careful review, we are unable to move forward with your application at this time.</p>
     ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">We appreciate your interest and wish you the best in your search.</p>`
+    <p style="color:#4a5568;font-size:14px">You are welcome to apply for a different available property after 30 days. Please visit our listings at <a href="https://choice-properties-site.pages.dev" style="color:#2563eb">choice-properties-site.pages.dev</a> to see current availability.</p>
+    <p style="color:#4a5568;font-size:14px">We appreciate your interest and hope to work with you in the future. Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }
 
@@ -140,44 +142,28 @@ export function adminNotificationHtml(firstName: string, lastName: string, email
 
 // ─── New templates (Phase 1) ──────────────────────────────────────────────────
 
-export function holdingFeeRequestHtml(
-  firstName: string,
-  propertyAddress: string,
-  feeAmount?: number | string,
-  dueDate?: string,
-  message?: string,
-) {
-  const amountLine = feeAmount != null
-    ? `<p style="color:#4a5568;font-size:14px">Holding Fee Amount: <strong>${formatMoney(feeAmount)}</strong></p>`
-    : '';
-  const dueLine = dueDate
-    ? `<p style="color:#4a5568;font-size:14px">Due By: <strong>${formatDate(dueDate)}</strong></p>`
-    : '';
+export function holdingFeeRequestHtml(firstName: string, propertyAddress: string, feeAmount?: number | string, dueDate?: string, message?: string) {
+  const amountLine = feeAmount != null ? `<p style="color:#4a5568;font-size:14px">Holding Fee Amount: <strong>${formatMoney(feeAmount)}</strong></p>` : '';
+  const dueLine    = dueDate          ? `<p style="color:#4a5568;font-size:14px">Due By: <strong>${formatDate(dueDate)}</strong></p>`              : '';
   return wrap(
     header('#7c3aed', 'Holding Fee Request'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
     <p style="color:#4a5568;font-size:14px">Your application for <strong>${propertyAddress}</strong> has been conditionally approved. To reserve this unit, please submit your holding fee.</p>
-    ${amountLine}
-    ${dueLine}
+    ${amountLine}${dueLine}
     ${messageBlock(message)}
     <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
       <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Accepted Payment Methods:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">• <strong>Zelle</strong> — choicepropertygroup@hotmail.com</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">• <strong>Venmo</strong> — @ChoiceProperties</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">• <strong>Cashier's Check</strong> — payable to Choice Properties, mailed to 2265 Livernois Suite 500, Troy MI 48083</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Zelle</strong> &mdash; choicepropertygroup@hotmail.com</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Venmo</strong> &mdash; @ChoiceProperties</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Cashier's Check</strong> &mdash; payable to Choice Properties, 2265 Livernois Suite 500, Troy MI 48083</p>
     </div>
     <p style="color:#4a5568;font-size:14px">Once received, we will confirm via email and reserve your unit. Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }
 
-export function holdingFeeReceivedHtml(
-  firstName: string,
-  propertyAddress: string,
-  portalUrl: string,
-  message?: string,
-) {
+export function holdingFeeReceivedHtml(firstName: string, propertyAddress: string, portalUrl: string, message?: string) {
   return wrap(
-    header('#16a34a', 'Holding Fee Received — Unit Reserved'),
+    header('#16a34a', 'Holding Fee Received &mdash; Unit Reserved'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
     <p style="color:#4a5568;font-size:14px">We have received your holding fee for <strong>${propertyAddress}</strong>. Your unit is now reserved.</p>
     ${messageBlock(message)}
@@ -189,14 +175,7 @@ export function holdingFeeReceivedHtml(
   );
 }
 
-export function paymentConfirmedHtml(
-  firstName: string,
-  propertyAddress: string,
-  amount?: number | string,
-  method?: string,
-  ref?: string,
-  message?: string,
-) {
+export function paymentConfirmedHtml(firstName: string, propertyAddress: string, amount?: number | string, method?: string, ref?: string, message?: string) {
   return wrap(
     header('#16a34a', 'Payment Confirmed'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
@@ -204,18 +183,14 @@ export function paymentConfirmedHtml(
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
       ${amount != null ? `<tr><td style="padding:8px 0;color:#718096;width:160px">Amount</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${formatMoney(amount)}</td></tr>` : ''}
       ${method ? `<tr><td style="padding:8px 0;color:#718096">Payment Method</td><td style="padding:8px 0;color:#4a5568">${method}</td></tr>` : ''}
-      ${ref ? `<tr><td style="padding:8px 0;color:#718096">Reference</td><td style="padding:8px 0;color:#4a5568">${ref}</td></tr>` : ''}
+      ${ref    ? `<tr><td style="padding:8px 0;color:#718096">Reference</td><td style="padding:8px 0;color:#4a5568">${ref}</td></tr>`    : ''}
     </table>
     ${messageBlock(message)}
     <p style="color:#4a5568;font-size:14px">Please keep this confirmation for your records. Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }
 
-export function moveInPrepHtml(
-  firstName: string,
-  propertyAddress: string,
-  message?: string,
-) {
+export function moveInPrepHtml(firstName: string, propertyAddress: string, message?: string) {
   return wrap(
     header('#2563eb', 'Your Move-In Preparation Guide'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
@@ -223,28 +198,23 @@ export function moveInPrepHtml(
     ${messageBlock(message)}
     <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
       <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Before Move-In Day:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Set up utilities (electric, gas, water, internet) in your name</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Purchase renter's insurance (required before key handover)</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Update your address with USPS at usps.com/move</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Confirm your move-in date and time with our office</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Set up utilities (electric, gas, water, internet) in your name</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Purchase renter's insurance (required before key handover)</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Update your address with USPS at usps.com/move</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Confirm your move-in date and time with our office</p>
     </div>
     <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
       <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Bring on Move-In Day:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Government-issued photo ID</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Proof of renter's insurance</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Completed move-in inspection checklist (will be provided)</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#x2713; Keys and parking pass will be provided at handover</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Government-issued photo ID</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Proof of renter's insurance</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Completed move-in inspection checklist (will be provided)</p>
+      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Keys and parking pass will be provided at handover</p>
     </div>
     <p style="color:#4a5568;font-size:14px">We look forward to welcoming you! Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }
 
-export function leaseSigningReminderHtml(
-  firstName: string,
-  propertyAddress: string,
-  portalUrl: string,
-  message?: string,
-) {
+export function leaseSigningReminderHtml(firstName: string, propertyAddress: string, portalUrl: string, message?: string) {
   return wrap(
     header('#d97706', 'Reminder: Please Sign Your Lease'),
     `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
@@ -254,20 +224,14 @@ export function leaseSigningReminderHtml(
     <div style="margin:24px 0;text-align:center">
       <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#d97706;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Go to Tenant Portal</a>
     </div>
-    <p style="color:#4a5568;font-size:14px">If you have any questions or concerns before signing, please call us at <strong>707-706-3137</strong> before taking action.</p>`
+    <p style="color:#4a5568;font-size:14px">If you have any questions before signing, please call <strong>707-706-3137</strong>.</p>`
   );
 }
 
-export function leaseExpiryAlertHtml(
-  firstName: string,
-  propertyAddress: string,
-  leaseEndDate: string,
-  appId: string,
-  tenantEmail: string,
-) {
+export function leaseExpiryAlertHtml(firstName: string, propertyAddress: string, leaseEndDate: string, appId: string, tenantEmail: string) {
   return wrap(
     header('#dc2626', 'Lease Expiry Alert'),
-    `<p style="color:#1a202c;font-size:15px">Lease Expiry Alert — Action Required</p>
+    `<p style="color:#1a202c;font-size:15px">Lease Expiry Alert &mdash; Action Required</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
       <tr><td style="padding:8px 0;color:#718096;width:160px">Tenant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName}</td></tr>
       <tr><td style="padding:8px 0;color:#718096">Tenant Email</td><td style="padding:8px 0;color:#4a5568">${tenantEmail}</td></tr>
@@ -278,5 +242,42 @@ export function leaseExpiryAlertHtml(
     <div style="margin-top:20px">
       <a href="https://choice-properties-site.pages.dev/admin/applications.html" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
     </div>`
+  );
+}
+
+// ─── Phase 4 — Admin review summary (sent internally when holding fee received) ─
+
+export function adminReviewSummaryHtml(firstName: string, lastName: string, email: string, phone: string, propertyAddress: string, appId: string, feeReceived?: number | string) {
+  return wrap(
+    header('#16a34a', 'Holding Fee Received &mdash; Action Required'),
+    `<p style="color:#1a202c;font-size:14px">A holding fee has been received. Please log in to the admin panel and generate the lease document for this applicant.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
+      <tr><td style="padding:8px 0;color:#718096;width:160px">Applicant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName} ${lastName}</td></tr>
+      <tr><td style="padding:8px 0;color:#718096">Email</td><td style="padding:8px 0;color:#4a5568">${email}</td></tr>
+      <tr><td style="padding:8px 0;color:#718096">Phone</td><td style="padding:8px 0;color:#4a5568">${phone || '&mdash;'}</td></tr>
+      <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
+      <tr><td style="padding:8px 0;color:#718096">App ID</td><td style="padding:8px 0;font-weight:700;color:#16a34a">${appId}</td></tr>
+      ${feeReceived != null ? `<tr><td style="padding:8px 0;color:#718096">Holding Fee</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${formatMoney(feeReceived)}</td></tr>` : ''}
+      <tr><td style="padding:8px 0;color:#718096">Received At</td><td style="padding:8px 0;color:#4a5568">${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
+    </table>
+    <p style="color:#1a202c;font-size:14px;font-weight:600">Recommended next action: Generate the lease document for this applicant.</p>
+    <div style="margin-top:20px">
+      <a href="https://choice-properties-site.pages.dev/admin/leases.html" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">Go to Lease Pipeline &rarr;</a>
+    </div>`
+  );
+}
+
+// ─── Phase 5 — Lease fully executed (management countersigned) ────────────────
+
+export function leaseFullyExecutedHtml(firstName: string, propertyAddress: string, portalUrl: string) {
+  return wrap(
+    header('#16a34a', 'Your Lease Has Been Fully Executed'),
+    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
+    <p style="color:#4a5568;font-size:14px">Great news! Your lease for <strong>${propertyAddress}</strong> has been fully executed &mdash; both you and management have signed.</p>
+    <p style="color:#4a5568;font-size:14px">You can download your fully executed lease from your tenant portal:</p>
+    <div style="margin:24px 0;text-align:center">
+      <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Go to Tenant Portal</a>
+    </div>
+    <p style="color:#4a5568;font-size:14px">Questions? Call <strong>707-706-3137</strong>.</p>`
   );
 }

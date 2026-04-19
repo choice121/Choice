@@ -1,0 +1,95 @@
+/**
+ * request-upload-url — Phase 8
+ * Generates a signed Supabase Storage upload URL for post-approval
+ * document submission by authenticated tenants.
+ * The browser then uploads directly to storage using the signed URL.
+ */
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
+
+const BUCKET = 'application-docs';
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
+
+const ALLOWED_DOC_TYPES = ['government_id', 'pay_stub', 'bank_statement', 'other'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+Deno.serve(async (req: Request) => {
+  const cors = handleCors(req);
+  if (cors) return cors;
+
+  // Verify authenticated session (tenant must be logged in)
+  const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+  if (!token) return jsonErr(401, 'You must be signed in to upload documents.');
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return jsonErr(401, 'Invalid or expired session. Please sign in again.');
+
+  let body: { app_id: string; file_name: string; file_type: string; doc_type: string };
+  try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
+
+  const { app_id, file_name, file_type, doc_type } = body;
+  if (!app_id)    return jsonErr(400, 'Missing app_id');
+  if (!file_name) return jsonErr(400, 'Missing file_name');
+  if (!file_type) return jsonErr(400, 'Missing file_type');
+  if (!doc_type)  return jsonErr(400, 'Missing doc_type');
+
+  if (!ALLOWED_DOC_TYPES.includes(doc_type)) {
+    return jsonErr(400, `Invalid doc_type. Allowed: ${ALLOWED_DOC_TYPES.join(', ')}`);
+  }
+  if (!ALLOWED_MIME_TYPES.includes(file_type)) {
+    return jsonErr(400, `Invalid file_type. Allowed: JPEG, PNG, WEBP, or PDF`);
+  }
+
+  // Verify the applicant owns this application (match by email)
+  const { data: app, error: appErr } = await supabase
+    .from('applications')
+    .select('id, app_id, email, status')
+    .eq('app_id', app_id)
+    .single();
+
+  if (appErr || !app) return jsonErr(404, 'Application not found');
+
+  if ((app.email || '').toLowerCase() !== (user.email || '').toLowerCase()) {
+    return jsonErr(403, 'You do not have permission to upload documents for this application.');
+  }
+
+  // Only allow uploads for approved (or further) applications
+  const uploadableStatuses = ['approved', 'lease_sent', 'lease_signed', 'move_in_scheduled'];
+  if (!uploadableStatuses.includes(app.status) && app.status !== 'approved') {
+    return jsonErr(403, 'Documents can only be uploaded after your application has been approved.');
+  }
+
+  // Sanitize filename (remove path traversal and special chars)
+  const safeFileName = file_name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+  const storagePath  = `${app_id}/${doc_type}/${Date.now()}_${safeFileName}`;
+
+  // Generate signed upload URL (valid for 10 minutes)
+  const { data: signedData, error: signErr } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (signErr || !signedData?.signedUrl) {
+    return jsonErr(500, 'Could not generate upload URL: ' + (signErr?.message || 'unknown error'));
+  }
+
+  // Log upload request to admin_actions
+  try {
+    await supabase.from('admin_actions').insert({
+      app_id,
+      action:     `doc_upload_requested_${doc_type}`,
+      actor:      user.email,
+      created_at: new Date().toISOString(),
+    });
+  } catch (_) {}
+
+  return jsonOk({
+    success:     true,
+    signed_url:  signedData.signedUrl,
+    storage_path: storagePath,
+    bucket:      BUCKET,
+  });
+});

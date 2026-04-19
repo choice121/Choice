@@ -126,6 +126,10 @@
             <h3>Sign Your Lease</h3>
             <p>Type your full legal name as your electronic signature. By signing, you agree to all terms of this lease.</p>
 
+            <!-- Phase 3 — email identity verification -->
+            <label for="signer-email" style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:6px">Your Email Address (the one you applied with)</label>
+            <input class="sig-input" id="signer-email" type="email" placeholder="e.g. jane@email.com" autocomplete="email" spellcheck="false" style="font-style:normal;font-size:.95rem;margin-bottom:16px">
+
             <label for="sig-input" style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:6px">Full Legal Name (as it appears on your ID)</label>
             <input class="sig-input" id="sig-input" type="text" placeholder="e.g. Jane Marie Doe" autocomplete="name" spellcheck="false">
 
@@ -269,15 +273,17 @@
     }
 
     // Signature preview + validation
-    const sigInput = document.getElementById('sig-input');
-    const sigPreview = document.getElementById('sig-preview');
-    const agreeCheck = document.getElementById('agree-check');
-    const btnSign = document.getElementById('btn-sign');
+    const sigInput    = document.getElementById('sig-input');
+    const emailInput  = document.getElementById('signer-email');
+    const sigPreview  = document.getElementById('sig-preview');
+    const agreeCheck  = document.getElementById('agree-check');
+    const btnSign     = document.getElementById('btn-sign');
 
     function updateSignBtn() {
-      const hasSig = sigInput.value.trim().length >= 3;
+      const hasSig   = sigInput.value.trim().length >= 5; // Phase 3 — min 5 chars
+      const hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim());
       const hasAgree = agreeCheck.checked;
-      btnSign.disabled = !(hasSig && hasAgree);
+      btnSign.disabled = !(hasSig && hasEmail && hasAgree);
     }
 
     sigInput.addEventListener('input', () => {
@@ -291,6 +297,7 @@
       }
       updateSignBtn();
     });
+    emailInput.addEventListener('input', updateSignBtn);
     agreeCheck.addEventListener('change', updateSignBtn);
 
     window.submitSignature = async function() {
@@ -308,9 +315,10 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
           body: JSON.stringify({
-            token: window._leaseToken,
+            token:           window._leaseToken,
             signature,
-            user_agent: navigator.userAgent,
+            applicant_email: emailInput.value.trim(), // Phase 3
+            user_agent:      navigator.userAgent,
           }),
         });
         json = await resp.json();
