@@ -214,7 +214,18 @@
     const { data: { session } } = await sb.auth.getSession();
 
     if (session) {
-      const signedInEmail = session.user.email.toLowerCase();
+      // Server-validate the session to catch stale/expired cached tokens.
+      // getSession() reads localStorage and may return an expired JWT.
+      // getUser() hits the server and confirms the token is still accepted.
+      const { data: userData, error: userErr } = await sb.auth.getUser();
+      if (userErr || !userData?.user) {
+        // Stale or invalid session — clear it silently and show fresh login form.
+        await sb.auth.signOut().catch(() => {});
+        sessionStorage.removeItem('pendingPortalAppId');
+        return; // Form is already visible by default
+      }
+
+      const signedInEmail = userData.user.email.toLowerCase();
       const requestedEmail = emailParam.toLowerCase();
 
       // If a specific email is required and it doesn't match — show wrong-account notice.
@@ -230,8 +241,7 @@
         return;
       }
 
-      // A session exists — always show the banner so the user knows who they're
-      // signed in as and can choose to continue or switch accounts.
+      // Valid session confirmed — show the banner.
       // Never auto-redirect silently: the user must consciously click "Continue".
       const banner = document.getElementById('signed-in-banner');
       document.getElementById('signed-in-email').textContent = signedInEmail;
