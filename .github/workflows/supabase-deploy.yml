@@ -25,38 +25,59 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Apply database migrations via Management API
-        run: |
-          FAILED_CRITICAL=0
-          for f in supabase/migrations/*.sql; do
-            echo "Applying migration: $f"
-            SQL=$(cat "$f")
-            STATUS=$(curl -s -o /tmp/sql_resp.json -w "%{http_code}" \
-              -X POST \
-              "https://api.supabase.com/v1/projects/${{ secrets.SUPABASE_PROJECT_REF }}/database/query" \
-              -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"query\": $(echo "$SQL" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}")
-            RESP=$(cat /tmp/sql_resp.json)
-            echo "HTTP $STATUS — $f"
-            echo "$RESP" | head -c 300
-
-            # Ignore errors for old/idempotent migrations (already-exists, syntax quirks)
-            # Only fail on our critical new migrations (2026*)
-            if [ "$STATUS" -ge 400 ]; then
-              BASENAME=$(basename "$f")
-              if [[ "$BASENAME" == 2026* ]]; then
-                echo "CRITICAL migration failed: $f"
-                FAILED_CRITICAL=1
-              else
-                echo "Warning: old migration returned $STATUS — likely already applied, continuing."
-              fi
-            fi
-          done
-          if [ "$FAILED_CRITICAL" -eq 1 ]; then
-            echo "One or more 2026 critical migrations failed."
-            exit 1
-          fi
-          echo "All critical migrations applied successfully."
+      - name: Apply new database migrations (skip already-applied)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
+          AUTH="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+
+          # Ensure the migration-tracking table exists (idempotent)
+          curl -sf -X POST "$API" \
+            -H "$AUTH" -H "Content-Type: application/json" \
+            -d '{"query":"CREATE TABLE IF NOT EXISTS _migration_history (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW());"}' \
+            > /dev/null && echo "Tracking table ready."
+
+          FAILED=0
+
+          for f in supabase/migrations/*.sql; do
+            BASENAME=$(basename "$f")
+            QUOTED=$(python3 -c "import sys; print(\"'\" + sys.argv[1].replace(\"'\", \"''\") + \"'\")" "$BASENAME")
+
+            # Skip if already successfully applied
+            ALREADY=$(curl -sf -X POST "$API" \
+              -H "$AUTH" -H "Content-Type: application/json" \
+              -d "{\"query\":\"SELECT 1 FROM _migration_history WHERE filename = ${QUOTED}\"}" || echo "[]")
+
+            if echo "$ALREADY" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if len(d)>0 else 1)" 2>/dev/null; then
+              echo "Skipping (already applied): $BASENAME"
+              continue
+            fi
+
+            echo "Applying: $BASENAME"
+            STATUS=$(curl -s -o /tmp/mig_resp.json -w "%{http_code}" \
+              -X POST "$API" \
+              -H "$AUTH" -H "Content-Type: application/json" \
+              -d "{\"query\": $(python3 -c 'import sys,json; print(json.dumps(open(sys.argv[1]).read()))' "$f")}")
+            RESP=$(cat /tmp/mig_resp.json)
+            echo "  HTTP $STATUS — $BASENAME"
+            echo "$RESP" | head -c 400
+
+            if [ "$STATUS" -lt 400 ]; then
+              curl -sf -X POST "$API" \
+                -H "$AUTH" -H "Content-Type: application/json" \
+                -d "{\"query\":\"INSERT INTO _migration_history (filename) VALUES (${QUOTED}) ON CONFLICT DO NOTHING\"}" \
+                > /dev/null
+              echo "  Recorded as applied: $BASENAME"
+            else
+              echo "  FAILED: $BASENAME"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more migrations failed."
+            exit 1
+          fi
+          echo "All migrations complete."
