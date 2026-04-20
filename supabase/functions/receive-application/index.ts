@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
-import { getAdminEmails, getTenantPortalUrl } from '../_shared/config.ts';
+import { getAdminEmails, getTenantLoginUrl } from '../_shared/config.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -135,7 +135,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const appId = generateAppId();
-  const portalUrl = `${getTenantPortalUrl()}?app_id=${appId}`;
+  // Link to login page (not portal directly) so the applicant is authenticated
+  // with the correct email before reaching the dashboard, preventing the
+  // "email does not match" error when another account is already signed in.
+  const portalUrl = getTenantLoginUrl(appId, email);
 
   const application: Record<string, unknown> = {
     app_id: appId,
