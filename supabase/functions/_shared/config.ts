@@ -1,5 +1,5 @@
 export function getAdminEmails(): string[] {
-  return (Deno.env.get('ADMIN_EMAILS') || 'choicepropertyofficial1@gmail.com,choicepropertygroup@hotmail.com')
+  return (Deno.env.get('ADMIN_EMAILS') || Deno.env.get('ADMIN_EMAIL') || 'support@choiceproperties.com')
     .split(',')
     .map((email) => email.trim())
     .filter(Boolean);
@@ -10,7 +10,7 @@ export function getSiteUrl(): string {
 }
 
 export function getTenantPortalUrl(): string {
-  return Deno.env.get('TENANT_PORTAL_URL') || `${getSiteUrl()}/tenant/portal.html`;
+  return (Deno.env.get('TENANT_PORTAL_URL') || `${getSiteUrl()}/tenant/portal.html`).replace(/\/$/, '');
 }
 
 export function getAdminUrl(path = '/admin/applications.html'): string {
@@ -18,5 +18,5 @@ export function getAdminUrl(path = '/admin/applications.html'): string {
 }
 
 export function getContactEmail(): string {
-  return Deno.env.get('COMPANY_EMAIL') || Deno.env.get('CONTACT_EMAIL') || 'choicepropertygroup@hotmail.com';
+  return Deno.env.get('COMPANY_EMAIL') || Deno.env.get('CONTACT_EMAIL') || 'support@choiceproperties.com';
 }

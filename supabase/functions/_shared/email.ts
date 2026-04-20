@@ -1,50 +1,6 @@
-import nodemailer from 'npm:nodemailer@6.9.16';
-import { getAdminUrl, getContactEmail, getSiteUrl } from './config.ts';
+import { getAdminUrl, getContactEmail, getSiteUrl, getTenantPortalUrl } from './config.ts';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: Deno.env.get('GMAIL_USER'),
-    pass: Deno.env.get('GMAIL_APP_PASSWORD'),
-  },
-});
-
-export async function sendEmail({
-  to, subject, html,
-}: { to: string; subject: string; html: string }) {
-  const from = `"Choice Properties" <${Deno.env.get('GMAIL_USER')}>`;
-  return transporter.sendMail({ from, to, subject, html });
-}
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-function footer() {
-  return `<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-    <p style="color:#a0aec0;font-size:12px">Choice Properties &middot; ${getContactEmail()} &middot; 707-706-3137</p>`;
-}
-
-function messageBlock(message?: string) {
-  if (!message) return '';
-  return `<div style="background:#fff;padding:14px;border-radius:6px;border:1px solid #e2e8f0;margin:16px 0">
-    <p style="margin:0;color:#4a5568;font-size:14px">${message}</p>
-  </div>`;
-}
-
-function header(color: string, title: string) {
-  return `<div style="background:${color};padding:24px 32px;border-radius:8px 8px 0 0">
-    <h1 style="color:#fff;margin:0;font-size:22px">${title}</h1>
-  </div>`;
-}
-
-function wrap(headerHtml: string, bodyHtml: string) {
-  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  ${headerHtml}
-  <div style="background:#f8f9fa;padding:28px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;border-top:none">
-    ${bodyHtml}
-    ${footer()}
-  </div>
-</div>`;
-}
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function formatMoney(amount: number | string): string {
   return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -54,248 +10,1215 @@ export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// ─── Existing templates ───────────────────────────────────────────────────────
+function safeFee(val: unknown): string {
+  const n = parseFloat(String(val ?? '').replace(/[^0-9.]/g, ''));
+  return (!isNaN(n) && n > 0) ? n.toFixed(0) : '—';
+}
 
-export function signingEmailHtml(firstName: string, propertyAddress: string, signingUrl: string, appId: string) {
-  return wrap(
-    header('#006aff', 'Your Lease is Ready to Sign'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Your lease for <strong>${propertyAddress}</strong> is ready for review and signature.</p>
-    <div style="margin:24px 0;text-align:center">
-      <a href="${signingUrl}" style="display:inline-block;padding:14px 32px;background:#006aff;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Review &amp; Sign Your Lease</a>
+function getESignText(state: string): string {
+  const map: Record<string, string> = {
+    AL: 'Alabama Uniform Electronic Transactions Act',
+    AK: 'Alaska Uniform Electronic Transactions Act',
+    AZ: 'Arizona Uniform Electronic Transactions Act',
+    CA: 'California Uniform Electronic Transactions Act',
+    CO: 'Colorado Uniform Electronic Transactions Act',
+    FL: 'Florida Electronic Signature Act',
+    GA: 'Georgia Electronic Records and Signatures Act',
+    IL: 'Illinois Electronic Commerce Security Act',
+    MI: 'Michigan Electronic Signature Act (MCL § 450.832 et seq.) and the federal Electronic Signatures in Global and National Commerce Act (E-SIGN)',
+    MN: 'Minnesota Uniform Electronic Transactions Act',
+    NV: 'Nevada Electronic Transactions Act',
+    NJ: 'New Jersey Uniform Electronic Transactions Act',
+    NY: 'New York Electronic Signatures and Records Act',
+    NC: 'North Carolina Uniform Electronic Transactions Act',
+    OH: 'Ohio Uniform Electronic Transactions Act',
+    PA: 'Pennsylvania Electronic Transactions Act',
+    TX: 'Texas Uniform Electronic Transactions Act',
+    WA: 'Washington Uniform Electronic Transactions Act',
+    WI: 'Wisconsin Uniform Electronic Transactions Act',
+  };
+  const law = map[state?.toUpperCase()] || 'applicable state Electronic Transactions Act and the federal E-SIGN Act';
+  return law.includes('federal') ? law : `${law} and the federal Electronic Signatures in Global and National Commerce Act (E-SIGN)`;
+}
+
+// ─── Shared Layout Constants ───────────────────────────────────────────────────
+
+const EMAIL_BASE_CSS = `
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { margin:0; padding:0; background:#f4f4f4; font-family:Arial,Helvetica,sans-serif; -webkit-font-smoothing:antialiased; color:#1a1a1a; }
+  .email-wrapper { max-width:600px; margin:24px auto; background:#ffffff; border:1px solid #e0e0e0; border-radius:4px; overflow:hidden; }
+  .email-header { background:#ffffff; padding:32px 40px 24px; border-bottom:3px solid #1a5276; }
+  .header-brand { font-size:20px; font-weight:700; color:#1a1a1a; letter-spacing:0.3px; margin-bottom:3px; }
+  .header-sub   { font-size:12px; color:#666666; margin-bottom:14px; }
+  .header-title { font-size:22px; font-weight:700; color:#1a1a1a; line-height:1.3; margin-bottom:8px; }
+  .header-ref   { font-size:12px; color:#888888; font-family:monospace; }
+  .status-line { padding:12px 40px; font-size:13px; font-weight:600; border-bottom:1px solid #e8e8e8; }
+  .status-pending  { color:#b45309; }
+  .status-paid     { color:#166534; }
+  .status-approved { color:#166534; }
+  .status-denied   { color:#991b1b; }
+  .status-lease    { color:#1e40af; }
+  .email-body { padding:36px 40px; }
+  .greeting   { font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:16px; }
+  .intro-text { font-size:14px; color:#444444; line-height:1.7; margin-bottom:28px; }
+  .section { margin-bottom:28px; }
+  .section-label { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#888888; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #e8e8e8; }
+  .info-table { width:100%; border-collapse:collapse; }
+  .info-table tr td { padding:10px 0; font-size:14px; vertical-align:top; border-bottom:1px solid #f0f0f0; }
+  .info-table tr:last-child td { border-bottom:none; }
+  .info-table td:first-child { width:42%; font-weight:600; color:#555555; padding-right:12px; }
+  .info-table td:last-child  { color:#1a1a1a; }
+  .callout { border-left:3px solid #1a5276; padding:14px 18px; margin:20px 0; background:#ffffff; }
+  .callout.green  { border-color:#166534; }
+  .callout.amber  { border-color:#b45309; }
+  .callout.red    { border-color:#991b1b; }
+  .callout h4 { font-size:13px; font-weight:700; color:#1a1a1a; margin-bottom:6px; }
+  .callout p  { font-size:13px; color:#444444; line-height:1.65; }
+  .steps-list { list-style:none; margin:0; padding:0; }
+  .steps-list li { display:flex; align-items:flex-start; gap:14px; padding:11px 0; border-bottom:1px solid #f0f0f0; font-size:14px; color:#333333; line-height:1.6; }
+  .steps-list li:last-child { border-bottom:none; }
+  .step-num { flex-shrink:0; width:24px; height:24px; background:#1a5276; color:#ffffff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+  .financial-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f0f0f0; font-size:14px; }
+  .financial-row:last-child { border-bottom:none; }
+  .financial-row .f-label { color:#555555; }
+  .financial-row .f-value { font-weight:700; color:#1a1a1a; }
+  .cta-wrap { text-align:center; margin:32px 0 24px; }
+  .cta-btn  { display:inline-block; background:#1a5276; color:#ffffff !important; text-decoration:none; padding:14px 36px; border-radius:4px; font-size:14px; font-weight:700; letter-spacing:0.5px; }
+  .cta-note { font-size:11px; color:#888888; text-align:center; margin-top:8px; word-break:break-all; }
+  .contact-row { padding:16px 0; border-top:1px solid #e8e8e8; border-bottom:1px solid #e8e8e8; margin:24px 0; font-size:13px; color:#444444; }
+  .email-closing { margin-top:28px; padding-top:20px; border-top:1px solid #e8e8e8; }
+  .closing-text { font-size:13px; color:#666666; line-height:1.65; margin-bottom:14px; }
+  .sign-off     { font-size:14px; font-weight:700; color:#1a1a1a; margin-bottom:2px; }
+  .sign-company { font-size:13px; color:#666666; }
+  .email-footer { background:#f8f8f8; border-top:1px solid #e0e0e0; padding:20px 40px; text-align:center; }
+  .footer-name    { font-size:13px; font-weight:700; color:#1a1a1a; margin-bottom:4px; }
+  .footer-details { font-size:12px; color:#888888; line-height:1.7; }
+  .pay-pill { display:inline-block; border:1px solid #cccccc; border-radius:3px; padding:5px 12px; font-size:13px; color:#333333; margin:3px 4px 3px 0; }
+  @media only screen and (max-width:600px) {
+    .email-body   { padding:24px 20px; }
+    .email-header { padding:24px 20px 18px; }
+    .email-footer { padding:16px 20px; }
+    .status-line  { padding:10px 20px; }
+    .cta-btn { padding:13px 24px; }
+  }
+`;
+
+const EMAIL_FOOTER = `
+  <div class="email-footer">
+    <div class="footer-name">Choice Properties</div>
+    <div class="footer-details">
+      2265 Livernois, Suite 500 &middot; Troy, MI 48083<br>
+      707-706-3137 (Text Only) &middot; support@choiceproperties.com<br>
+      Your trust is our standard.
     </div>
-    <p style="color:#718096;font-size:13px">This link is unique to you and expires in 7 days. Do not share it.</p>
-    <p style="color:#718096;font-size:13px">Application ID: <strong>${appId}</strong></p>`
-  );
+  </div>
+`;
+
+function buildEmailHeader(title: string, appId?: string): string {
+  return `
+  <div class="email-header">
+    <div class="header-brand">Choice Properties</div>
+    <div class="header-sub">Nationwide Rental Marketplace</div>
+    <div class="header-title">${title}</div>
+    ${appId ? `<div class="header-ref">Reference: ${appId}</div>` : ''}
+  </div>`;
 }
 
-export function approvalEmailHtml(firstName: string, propertyAddress: string, message?: string) {
-  return wrap(
-    header('#16a34a', 'Application Approved'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Congratulations! Your application for <strong>${propertyAddress}</strong> has been approved.</p>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">Our team will be in touch shortly regarding your lease agreement. Questions? Call 707-706-3137.</p>`
-  );
+const CONTACT_ROW = `<div class="contact-row"><strong>Questions?</strong> &nbsp; Text: 707-706-3137 &nbsp;&middot;&nbsp; support@choiceproperties.com</div>`;
+
+// ─── Template 1: Application Confirmation (Tenant) ────────────────────────────
+
+export interface ApplicationFields {
+  'First Name'?: string;
+  'Last Name'?: string;
+  'Email'?: string;
+  'Phone'?: string;
+  'Property Address'?: string;
+  'Property Name'?: string;
+  'Requested Move-in Date'?: string;
+  'Desired Lease Term'?: string;
+  'Application Fee'?: string | number;
+  'Employment Status'?: string;
+  'Employer'?: string;
+  'Job Title'?: string;
+  'Monthly Income'?: string | number;
+  'Employment Duration'?: string;
+  'Preferred Contact Method'?: string;
+  'Preferred Time'?: string;
+  'Preferred Time Specific'?: string;
+  [key: string]: unknown;
 }
 
-// Phase 2A — added explicit 30-day reapplication language
-export function denialEmailHtml(firstName: string, propertyAddress: string, message?: string) {
-  return wrap(
-    header('#374151', 'Application Status Update'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Thank you for applying to <strong>${propertyAddress}</strong>. After careful review, we are unable to move forward with your application at this time.</p>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">You are welcome to apply for a different available property after 30 days. Please visit our listings at <a href="${getSiteUrl()}" style="color:#2563eb">${getSiteUrl().replace(/^https?:\/\//, '')}</a> to see current availability.</p>
-    <p style="color:#4a5568;font-size:14px">We appreciate your interest and hope to work with you in the future. Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
-}
+export function applicationConfirmationHtml(
+  firstName: string,
+  propertyAddress: string,
+  appId: string,
+  fields?: ApplicationFields,
+  dashboardLink?: string,
+): string {
+  const portal = dashboardLink || `${getTenantPortalUrl()}?app_id=${appId}`;
+  const fee = fields?.['Application Fee'];
+  const feeDisplay = fee != null && Number(fee) > 0 ? `$${Number(fee).toFixed(0)}` : 'Per property terms';
+  const payMethods = [
+    fields?.['Primary Payment Method'],
+    fields?.['Alternative Payment Method'],
+    fields?.['Third Choice Payment Method'],
+  ].filter(Boolean) as string[];
 
-export function moveinEmailHtml(firstName: string, propertyAddress: string, moveInDate?: string, message?: string) {
-  return wrap(
-    header('#006aff', 'Move-In Confirmed'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Your move-in to <strong>${propertyAddress}</strong> has been confirmed.</p>
-    ${moveInDate ? `<p style="color:#4a5568;font-size:14px">Move-in Date: <strong>${moveInDate}</strong></p>` : ''}
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">Questions? Call 707-706-3137.</p>`
-  );
-}
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Application Received — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Application Successfully Received', appId)}
+  <div class="status-line status-pending">&#x23F3; &nbsp; Awaiting Application Fee &middot; Review Pending</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Thank you for choosing Choice Properties. We have successfully received your rental application and your file is now in our system. This confirmation serves as your official acknowledgment that your submission has been recorded.</p>
 
-export function signedConfirmHtml(firstName: string, propertyAddress: string, appId: string) {
-  return wrap(
-    header('#16a34a', 'Lease Signed Successfully'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Your lease for <strong>${propertyAddress}</strong> has been signed successfully.</p>
-    <p style="color:#718096;font-size:13px">Application ID: <strong>${appId}</strong></p>
-    <p style="color:#4a5568;font-size:14px">Our team will be in touch about your move-in. Questions? Call 707-706-3137.</p>`
-  );
-}
-
-export function applicationConfirmationHtml(firstName: string, propertyAddress: string, appId: string) {
-  return wrap(
-    header('#006aff', 'Application Received'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">We have received your rental application for <strong>${propertyAddress}</strong>. Our team will review it and be in touch within 1&ndash;2 business days.</p>
-    <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
-      <p style="margin:0;color:#4a5568;font-size:13px">Your Application Reference ID:</p>
-      <p style="margin:6px 0 0;color:#006aff;font-size:20px;font-weight:700;letter-spacing:1px">${appId}</p>
+    <div class="section">
+      <div class="section-label">Application Summary</div>
+      <table class="info-table">
+        <tr><td>Application ID</td><td><strong>${appId}</strong></td></tr>
+        <tr><td>Applicant Name</td><td>${firstName} ${fields?.['Last Name'] || ''}</td></tr>
+        <tr><td>Property of Interest</td><td>${propertyAddress || 'To be confirmed'}</td></tr>
+        <tr><td>Requested Move-In</td><td>${fields?.['Requested Move-in Date'] || 'Not specified'}</td></tr>
+        <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
+        <tr><td>Email on File</td><td>${fields?.['Email'] || ''}</td></tr>
+        <tr><td>Phone on File</td><td>${fields?.['Phone'] || ''}</td></tr>
+      </table>
     </div>
-    <p style="color:#4a5568;font-size:14px">Save this reference number &mdash; you may need it if you contact us about your application.</p>
-    <p style="color:#4a5568;font-size:14px">Questions? Call or text <strong>707-706-3137</strong> or email <strong>${getContactEmail()}</strong></p>`
-  );
-}
 
-export function adminNotificationHtml(firstName: string, lastName: string, email: string, propertyAddress: string, appId: string) {
-  return wrap(
-    header('#1a202c', 'New Application Received'),
-    `<table style="width:100%;border-collapse:collapse;font-size:14px">
-      <tr><td style="padding:8px 0;color:#718096;width:160px">Application ID</td><td style="padding:8px 0;font-weight:700;color:#006aff">${appId}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Applicant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName} ${lastName}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Email</td><td style="padding:8px 0;color:#4a5568">${email}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
-    </table>
-    <div style="margin-top:20px">
-      <a href="${getAdminUrl('/admin/applications.html')}" style="display:inline-block;padding:12px 24px;background:#006aff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
-    </div>`
-  );
-}
-
-// ─── New templates (Phase 1) ──────────────────────────────────────────────────
-
-export function holdingFeeRequestHtml(firstName: string, propertyAddress: string, feeAmount?: number | string, dueDate?: string, message?: string) {
-  const amountLine = feeAmount != null ? `<p style="color:#4a5568;font-size:14px">Holding Fee Amount: <strong>${formatMoney(feeAmount)}</strong></p>` : '';
-  const dueLine    = dueDate          ? `<p style="color:#4a5568;font-size:14px">Due By: <strong>${formatDate(dueDate)}</strong></p>`              : '';
-  return wrap(
-    header('#7c3aed', 'Holding Fee Request'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Your application for <strong>${propertyAddress}</strong> has been conditionally approved. To reserve this unit, please submit your holding fee.</p>
-    ${amountLine}${dueLine}
-    ${messageBlock(message)}
-    <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
-      <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Accepted Payment Methods:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Zelle</strong> &mdash; ${getContactEmail()}</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Venmo</strong> &mdash; @ChoiceProperties</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&bull; <strong>Cashier's Check</strong> &mdash; payable to Choice Properties, 2265 Livernois Suite 500, Troy MI 48083</p>
+    <div class="section">
+      <div class="section-label">Application Fee &amp; Payment</div>
+      <div class="callout amber">
+        <h4>Application Fee — ${feeDisplay}</h4>
+        <p style="margin-bottom:12px;">A member of our leasing team will contact you within 24 hours via text${fields?.['Phone'] ? ` at <strong>${fields['Phone']}</strong>` : ''} to coordinate your application fee. Your application will not be reviewed until payment is received and confirmed.</p>
+        ${payMethods.length ? `<div>${payMethods.map(m => `<span class="pay-pill">${m}</span>`).join('')}</div>` : ''}
+      </div>
     </div>
-    <p style="color:#4a5568;font-size:14px">Once received, we will confirm via email and reserve your unit. Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
-}
 
-export function holdingFeeReceivedHtml(firstName: string, propertyAddress: string, portalUrl: string, message?: string) {
-  return wrap(
-    header('#16a34a', 'Holding Fee Received &mdash; Unit Reserved'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">We have received your holding fee for <strong>${propertyAddress}</strong>. Your unit is now reserved.</p>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">Your next step is to sign your lease. You can track your application status and access your lease in your tenant portal:</p>
-    <div style="margin:24px 0;text-align:center">
-      <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Go to Tenant Portal</a>
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Payment Arrangement</strong> — Our leasing team will contact you within 24 hours to coordinate your application fee via your preferred payment method.</span></li>
+        <li><span class="step-num">2</span><span><strong>Payment Confirmation</strong> — Once your fee is received and confirmed, you will receive an email notification and your application will advance to the review stage.</span></li>
+        <li><span class="step-num">3</span><span><strong>Application Review</strong> — Our team will conduct a thorough review within 24–72 hours of payment confirmation. Applicants who complete steps promptly are often prioritized in the review queue.</span></li>
+        <li><span class="step-num">4</span><span><strong>Decision Notification</strong> — You will be notified of our decision via email. If approved, our leasing team will prepare your lease agreement for signature.</span></li>
+      </ul>
     </div>
-    <p style="color:#4a5568;font-size:14px">Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
-}
 
-export function paymentConfirmedHtml(firstName: string, propertyAddress: string, amount?: number | string, method?: string, ref?: string, message?: string) {
-  return wrap(
-    header('#16a34a', 'Payment Confirmed'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Your payment for <strong>${propertyAddress}</strong> has been confirmed. Here are your payment details:</p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
-      ${amount != null ? `<tr><td style="padding:8px 0;color:#718096;width:160px">Amount</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${formatMoney(amount)}</td></tr>` : ''}
-      ${method ? `<tr><td style="padding:8px 0;color:#718096">Payment Method</td><td style="padding:8px 0;color:#4a5568">${method}</td></tr>` : ''}
-      ${ref    ? `<tr><td style="padding:8px 0;color:#718096">Reference</td><td style="padding:8px 0;color:#4a5568">${ref}</td></tr>`    : ''}
-    </table>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">Please keep this confirmation for your records. Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
-}
-
-export function moveInPrepHtml(firstName: string, propertyAddress: string, message?: string) {
-  return wrap(
-    header('#2563eb', 'Your Move-In Preparation Guide'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Congratulations on your upcoming move to <strong>${propertyAddress}</strong>! Here's what you need to do before and on move-in day.</p>
-    ${messageBlock(message)}
-    <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
-      <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Before Move-In Day:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Set up utilities (electric, gas, water, internet) in your name</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Purchase renter's insurance (required before key handover)</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Update your address with USPS at usps.com/move</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Confirm your move-in date and time with our office</p>
+    <div class="callout">
+      <h4>Important — Save Your Application ID</h4>
+      <p>Your application ID is <strong>${appId}</strong>. Please save this reference number. You will use it to track your application status and access your tenant portal at any time.</p>
     </div>
-    <div style="background:#fff;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0">
-      <p style="margin:0 0 10px;color:#1a202c;font-size:14px;font-weight:600">Bring on Move-In Day:</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Government-issued photo ID</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Proof of renter's insurance</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Completed move-in inspection checklist (will be provided)</p>
-      <p style="margin:4px 0;color:#4a5568;font-size:14px">&#10003; Keys and parking pass will be provided at handover</p>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">Track My Application</a>
+      <div class="cta-note">Or visit: ${portal}</div>
     </div>
-    <p style="color:#4a5568;font-size:14px">We look forward to welcoming you! Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
-}
 
-export function leaseSigningReminderHtml(firstName: string, propertyAddress: string, portalUrl: string, message?: string) {
-  return wrap(
-    header('#d97706', 'Reminder: Please Sign Your Lease'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">This is a friendly reminder that your lease for <strong>${propertyAddress}</strong> is awaiting your signature.</p>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">Please sign as soon as possible to secure your unit. You can access your lease in your tenant portal:</p>
-    <div style="margin:24px 0;text-align:center">
-      <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#d97706;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Go to Tenant Portal</a>
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">Should you have any questions prior to hearing from our team, please do not hesitate to reach out. We are committed to making this process as clear and straightforward as possible.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
     </div>
-    <p style="color:#4a5568;font-size:14px">If you have any questions before signing, please call <strong>707-706-3137</strong>.</p>`
-  );
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
 }
 
-export function leaseExpiryAlertHtml(firstName: string, propertyAddress: string, leaseEndDate: string, appId: string, tenantEmail: string) {
-  return wrap(
-    header('#dc2626', 'Lease Expiry Alert'),
-    `<p style="color:#1a202c;font-size:15px">Lease Expiry Alert &mdash; Action Required</p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
-      <tr><td style="padding:8px 0;color:#718096;width:160px">Tenant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Tenant Email</td><td style="padding:8px 0;color:#4a5568">${tenantEmail}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Application ID</td><td style="padding:8px 0;font-weight:700;color:#dc2626">${appId}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Lease End Date</td><td style="padding:8px 0;font-weight:600;color:#dc2626">${formatDate(leaseEndDate)}</td></tr>
-    </table>
-    <div style="margin-top:20px">
-      <a href="${getAdminUrl('/admin/applications.html')}" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">View in Admin Panel &rarr;</a>
-    </div>`
-  );
-}
+// ─── Template 2: Admin Notification ───────────────────────────────────────────
 
-// ─── Phase 4 — Admin review summary (sent internally when holding fee received) ─
+export function adminNotificationHtml(
+  firstName: string,
+  lastName: string,
+  email: string,
+  propertyAddress: string,
+  appId: string,
+  fields?: ApplicationFields,
+): string {
+  const adminUrl = getAdminUrl('/admin/applications.html');
+  const fee = fields?.['Application Fee'];
+  const feeDisplay = fee != null && Number(fee) > 0 ? `$${Number(fee).toFixed(0)}.00` : 'Per property terms';
+  const payMethods = [
+    fields?.['Primary Payment Method'],
+    fields?.['Alternative Payment Method'],
+    fields?.['Third Choice Payment Method'],
+  ].filter(Boolean) as string[];
 
-export function adminReviewSummaryHtml(firstName: string, lastName: string, email: string, phone: string, propertyAddress: string, appId: string, feeReceived?: number | string) {
-  return wrap(
-    header('#16a34a', 'Holding Fee Received &mdash; Action Required'),
-    `<p style="color:#1a202c;font-size:14px">A holding fee has been received. Please log in to the admin panel and generate the lease document for this applicant.</p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
-      <tr><td style="padding:8px 0;color:#718096;width:160px">Applicant</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${firstName} ${lastName}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Email</td><td style="padding:8px 0;color:#4a5568">${email}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Phone</td><td style="padding:8px 0;color:#4a5568">${phone || '&mdash;'}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">Property</td><td style="padding:8px 0;color:#4a5568">${propertyAddress}</td></tr>
-      <tr><td style="padding:8px 0;color:#718096">App ID</td><td style="padding:8px 0;font-weight:700;color:#16a34a">${appId}</td></tr>
-      ${feeReceived != null ? `<tr><td style="padding:8px 0;color:#718096">Holding Fee</td><td style="padding:8px 0;font-weight:600;color:#1a202c">${formatMoney(feeReceived)}</td></tr>` : ''}
-      <tr><td style="padding:8px 0;color:#718096">Received At</td><td style="padding:8px 0;color:#4a5568">${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
-    </table>
-    <p style="color:#1a202c;font-size:14px;font-weight:600">Recommended next action: Generate the lease document for this applicant.</p>
-    <div style="margin-top:20px">
-      <a href="${getAdminUrl('/admin/leases.html')}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">Go to Lease Pipeline &rarr;</a>
-    </div>`
-  );
-}
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>New Application — ${appId}</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('New Application Received', appId)}
+  <div class="status-line status-pending">&#x26A1; &nbsp; Action Required — Contact Applicant Within 24 Hours</div>
+  <div class="email-body">
+    <p class="greeting">New Application Alert,</p>
+    <p class="intro-text">A new rental application has been submitted and requires your attention. The applicant is awaiting contact to arrange payment of the application fee. Please reach out within 24 hours.</p>
 
-// ─── Waitlisted notification ──────────────────────────────────────────────────
-
-export function waitlistedEmailHtml(firstName: string, propertyAddress: string, message?: string) {
-  return wrap(
-    header('#7c3aed', 'Application Status Update'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Thank you for your application for <strong>${propertyAddress}</strong>. We have added you to our waitlist for this property.</p>
-    ${messageBlock(message)}
-    <p style="color:#4a5568;font-size:14px">We will contact you as soon as the property becomes available or a comparable unit opens up. We appreciate your patience.</p>
-    <p style="color:#4a5568;font-size:14px">In the meantime, feel free to browse our other available listings:</p>
-    <div style="margin:20px 0;text-align:center">
-      <a href="${getSiteUrl()}" style="display:inline-block;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View Available Properties</a>
+    <div class="section">
+      <div class="section-label">Applicant Overview</div>
+      <table class="info-table">
+        <tr><td>Full Name</td><td><strong>${firstName} ${lastName}</strong></td></tr>
+        <tr><td>Email</td><td>${email}</td></tr>
+        <tr><td>Phone</td><td><strong>${fields?.['Phone'] || 'Not provided'}</strong> (Text preferred)</td></tr>
+        <tr><td>Property Requested</td><td>${propertyAddress || 'Not specified'}</td></tr>
+        <tr><td>Requested Move-In</td><td>${fields?.['Requested Move-in Date'] || 'Not specified'}</td></tr>
+        <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
+        <tr><td>Contact Preference</td><td>${fields?.['Preferred Contact Method'] || 'Not specified'}</td></tr>
+        <tr><td>Best Time to Reach</td><td>${[fields?.['Preferred Time'], fields?.['Preferred Time Specific']].filter(Boolean).join(' — ') || 'Any'}</td></tr>
+      </table>
     </div>
-    <p style="color:#4a5568;font-size:14px">Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
+
+    <div class="section">
+      <div class="section-label">Payment Preferences</div>
+      <div class="callout amber">
+        <h4>Contact Applicant to Collect ${feeDisplay} Application Fee</h4>
+        ${payMethods.length ? `<p style="margin-bottom:12px;">Applicant's preferred payment methods:</p><div>${payMethods.map(m => `<span class="pay-pill">${m}</span>`).join('')}</div>` : '<p>No payment method preference specified — contact applicant to arrange.</p>'}
+      </div>
+    </div>
+
+    ${fields?.['Employment Status'] ? `
+    <div class="section">
+      <div class="section-label">Employment &amp; Income</div>
+      <table class="info-table">
+        <tr><td>Employment Status</td><td>${fields?.['Employment Status'] || 'Not specified'}</td></tr>
+        <tr><td>Employer</td><td>${fields?.['Employer'] || 'N/A'}</td></tr>
+        <tr><td>Job Title</td><td>${fields?.['Job Title'] || 'N/A'}</td></tr>
+        <tr><td>Monthly Income</td><td>${fields?.['Monthly Income'] ? '$' + Number(fields['Monthly Income']).toLocaleString() : 'Not specified'}</td></tr>
+        <tr><td>Employment Duration</td><td>${fields?.['Employment Duration'] || 'N/A'}</td></tr>
+      </table>
+    </div>
+    ` : ''}
+
+    <div class="section">
+      <div class="section-label">Quick Actions</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
+        <a href="${adminUrl}" style="display:inline-block;background:#0a1628;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Admin Dashboard</a>
+        <a href="mailto:${email}?subject=Your%20Application%20${appId}%20-%20Choice%20Properties" style="display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Email Applicant</a>
+        ${fields?.['Phone'] ? `<a href="sms:${fields['Phone'].toString().replace(/\D/g,'')}?body=Hi%20${firstName}%2C%20this%20is%20Choice%20Properties%20regarding%20your%20application%20${appId}" style="display:inline-block;background:#059669;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Text Applicant</a>` : ''}
+      </div>
+    </div>
+
+    <div class="email-closing">
+      <div class="sign-off">Choice Properties System</div>
+      <div class="sign-company">Automated Admin Notification &mdash; ${appId}</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
 }
 
-// ─── Phase 5 — Lease fully executed (management countersigned) ────────────────
+// ─── Template 3: Status Update (Approved / Denied / Waitlisted) ───────────────
 
-export function leaseFullyExecutedHtml(firstName: string, propertyAddress: string, portalUrl: string) {
-  return wrap(
-    header('#16a34a', 'Your Lease Has Been Fully Executed'),
-    `<p style="color:#1a202c;font-size:15px">Dear ${firstName},</p>
-    <p style="color:#4a5568;font-size:14px">Great news! Your lease for <strong>${propertyAddress}</strong> has been fully executed &mdash; both you and management have signed.</p>
-    <p style="color:#4a5568;font-size:14px">You can download your fully executed lease from your tenant portal:</p>
-    <div style="margin:24px 0;text-align:center">
-      <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Go to Tenant Portal</a>
+export function statusUpdateHtml(
+  appId: string,
+  firstName: string,
+  status: 'approved' | 'denied' | 'waitlisted',
+  reason: string | undefined,
+  dashboardLink: string,
+  propertyAddress: string,
+  propertyName?: string,
+  propertyState?: string,
+): string {
+  const portal = dashboardLink || `${getTenantPortalUrl()}?app_id=${appId}`;
+  const isApproved = status === 'approved';
+  const isWaitlisted = status === 'waitlisted';
+  const propertyLabel = propertyName || propertyAddress;
+  const eSignText = getESignText(propertyState || 'MI');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${isApproved ? 'Application Approved' : isWaitlisted ? 'You\'ve Been Waitlisted' : 'Application Update'} — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader(isApproved ? 'Application Approved' : isWaitlisted ? 'Application Status Update' : 'Application Update', appId)}
+  <div class="status-line ${isApproved ? 'status-approved' : isWaitlisted ? 'status-lease' : 'status-denied'}">
+    ${isApproved ? '&#x2713; &nbsp; Congratulations — Your Application Has Been Approved' : isWaitlisted ? '&#x23F3; &nbsp; You Have Been Added to the Waitlist' : '&mdash; &nbsp; Your Application Has Been Reviewed'}
+  </div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    ${propertyLabel ? `<p style="font-size:13px;color:#64748b;margin:-4px 0 16px;">Property: <strong>${propertyLabel}</strong></p>` : ''}
+
+    ${isApproved ? `
+    <p class="intro-text">We are delighted to inform you that your rental application with Choice Properties has been <strong>approved</strong>. This decision reflects our confidence in your application, and we look forward to welcoming you as a resident.</p>
+    <div class="callout green">
+      <h4>&#x2713; Application Approved</h4>
+      <p>Your application has met all of our criteria. Our leasing team will be in contact with you shortly to prepare and deliver your lease agreement for electronic signature. Please ensure your phone and email remain accessible.</p>
     </div>
-    <p style="color:#4a5568;font-size:14px">Questions? Call <strong>707-706-3137</strong>.</p>`
-  );
+    <div class="section">
+      <div class="section-label">Your Next Steps</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Lease Agreement</strong> — Our team will prepare a formal lease agreement and send it to you shortly. Please review it carefully in its entirety before signing.</span></li>
+        <li><span class="step-num">2</span><span><strong>Electronic Signature</strong> — You will sign your lease electronically. Your signature is legally binding under the ${eSignText}.</span></li>
+        <li><span class="step-num">3</span><span><strong>Move-In Costs</strong> — Prior to receiving your keys, the move-in total (first month's rent plus security deposit) must be paid in full. This will be clearly outlined in your lease.</span></li>
+        <li><span class="step-num">4</span><span><strong>Key Handoff</strong> — Once all documents and payments are complete, our team will coordinate your move-in date.</span></li>
+      </ul>
+    </div>
+    <div class="callout amber">
+      <h4>Important — Please Respond Promptly</h4>
+      <p>Unit availability is time-sensitive. To secure your unit, please sign your lease agreement within 48 hours of receiving it. Delays may result in the unit being offered to other applicants.</p>
+    </div>
+    ` : isWaitlisted ? `
+    <p class="intro-text">Thank you for your application for <strong>${propertyLabel}</strong>. We have reviewed your application and have added you to our active waitlist for this property.</p>
+    <div class="callout" style="border-color:#1e40af;">
+      <h4>&#x23F3; You Are on the Active Waitlist</h4>
+      <p>${reason || 'Your application is complete and has been placed in our priority waitlist queue. We will contact you as soon as a unit becomes available or a comparable property opens up.'}</p>
+    </div>
+    <div class="section">
+      <div class="section-label">What This Means</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Active Monitoring</strong> — Your application remains active in our system. We review the waitlist regularly and contact applicants as availability changes.</span></li>
+        <li><span class="step-num">2</span><span><strong>Other Properties</strong> — You are encouraged to browse our current listings. If you see another property that interests you, contact us to discuss your application.</span></li>
+        <li><span class="step-num">3</span><span><strong>Stay Reachable</strong> — Please keep your phone and email accessible. When a unit becomes available, we will reach out promptly. A timely response is important.</span></li>
+      </ul>
+    </div>
+    <div class="cta-wrap">
+      <a href="${getSiteUrl()}/listings.html" class="cta-btn">View Available Properties</a>
+    </div>
+    ` : `
+    <p class="intro-text">Thank you for the time and effort you invested in your rental application. After careful and thorough consideration, we regret to inform you that we are unable to offer you a tenancy at this time.</p>
+    <div class="callout red">
+      <h4>Application Status — Not Approved</h4>
+      <p>${reason ? `After review, the primary consideration relates to: <strong>${reason}</strong>. ` : ''}Our decision is based on our standard application review criteria. We understand this is disappointing and we genuinely appreciate the trust you placed in us by applying.</p>
+    </div>
+    <div class="section">
+      <div class="section-label">Looking Ahead</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Reapplication Option</strong> — Your application and screening results remain on file for 60 days. If you wish to apply for another available Choice Properties unit within 30 days, <strong>no new application fee will be required</strong>. Please contact our team to discuss your options.</span></li>
+        <li><span class="step-num">2</span><span><strong>Other Properties</strong> — Choice Properties manages a portfolio of properties. Our team would be happy to discuss alternative options that may be a strong fit for your current profile.</span></li>
+        <li><span class="step-num">3</span><span><strong>Questions</strong> — If you would like to discuss this decision or explore your options, please reach out to our leasing team directly.</span></li>
+      </ul>
+    </div>
+    `}
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View My Application</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">${isApproved ? 'Congratulations once more. We look forward to having you as part of the Choice Properties community.' : isWaitlisted ? 'Thank you for your patience. We will be in touch as soon as an opportunity arises.' : 'Thank you again for your interest in Choice Properties. We wish you all the best.'}</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// Backward-compatible wrappers
+export function approvalEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
+  const portal = getTenantPortalUrl();
+  return statusUpdateHtml('', firstName, 'approved', message, portal, propertyAddress);
+}
+
+export function denialEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
+  const portal = getTenantPortalUrl();
+  return statusUpdateHtml('', firstName, 'denied', message, portal, propertyAddress);
+}
+
+export function waitlistedEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
+  const portal = getTenantPortalUrl();
+  return statusUpdateHtml('', firstName, 'waitlisted', message, portal, propertyAddress);
+}
+
+// ─── Template 4: Payment Confirmed ────────────────────────────────────────────
+
+export function paymentConfirmedHtml(
+  firstName: string,
+  propertyAddress: string,
+  amount?: number | string,
+  method?: string,
+  ref?: string,
+  message?: string,
+  phone?: string,
+  appId?: string,
+  propertyName?: string,
+): string {
+  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const feeDisplay = amount != null ? formatMoney(amount) : '—';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Confirmed — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Application Fee Confirmed', appId)}
+  <div class="status-line status-paid">&#x2713; &nbsp; Payment Received — Application Now Under Review</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">We are pleased to confirm that your application fee has been received and successfully recorded. Your application is now active and has been placed in our review queue. Thank you for completing this step promptly.</p>
+
+    <div class="section">
+      <div class="section-label">Payment Confirmation</div>
+      <div class="callout green">
+        <h4>&#x2713; Payment Successfully Received</h4>
+        ${appId ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${appId}-PMT</span></div>` : ''}
+        ${appId ? `<div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${appId}</span></div>` : ''}
+        <div class="financial-row"><span class="f-label">Applicant</span><span class="f-value">${firstName}</span></div>
+        ${propertyAddress || propertyName ? `<div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyName || propertyAddress}</span></div>` : ''}
+        <div class="financial-row"><span class="f-label">Amount Paid</span><span class="f-value">${feeDisplay}</span></div>
+        <div class="financial-row"><span class="f-label">Payment Date</span><span class="f-value">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+        ${method ? `<div class="financial-row"><span class="f-label">Payment Method</span><span class="f-value">${method}</span></div>` : ''}
+        ${ref ? `<div class="financial-row"><span class="f-label">Reference / Note</span><span class="f-value">${ref}</span></div>` : ''}
+        <div class="financial-row"><span class="f-label">Status</span><span class="f-value" style="color:#059669;">Under Review</span></div>
+      </div>
+    </div>
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Active Review</strong> — Your complete application is now being reviewed by our leasing team. Applications are typically processed within 24–72 hours of payment confirmation.</span></li>
+        <li><span class="step-num">2</span><span><strong>Background &amp; Income Verification</strong> — We will conduct standard verification procedures as part of our review process.</span></li>
+        <li><span class="step-num">3</span><span><strong>Decision Notification</strong> — You will receive an email once a decision has been made.${phone ? ` Our team may also reach out via text at <strong>${phone}</strong> if additional information is needed.` : ''}</span></li>
+      </ul>
+    </div>
+
+    <div class="callout">
+      <h4>A Note on Our Review Process</h4>
+      <p>We conduct every review with care and fairness. Applicants who remain responsive and provide complete information are often processed more quickly. There is nothing further required from you at this time.</p>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">Track My Application</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We appreciate your patience as we complete our review. Should you have any questions in the interim, please do not hesitate to contact our leasing team.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 5: Holding Fee Request ──────────────────────────────────────────
+
+export function holdingFeeRequestHtml(
+  firstName: string,
+  propertyAddress: string,
+  feeAmount?: number | string,
+  dueDate?: string,
+  message?: string,
+  appId?: string,
+): string {
+  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const contactEmail = getContactEmail();
+  const deadlineText = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '48 hours from this email';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Action Required — Holding Fee</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Holding Fee Request', appId)}
+  <div class="status-line status-lease">&#x1F3E0; &nbsp; Action Required — Reserve Your Unit</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Congratulations — your application for <strong>${propertyAddress}</strong> has been conditionally approved. To formally reserve this unit and remove it from active availability, a holding fee is required.</p>
+
+    <div class="callout amber">
+      <h4>&#x23F0; Time-Sensitive — Reserve Within ${deadlineText}</h4>
+      <p>Without a holding fee on file, this property remains available to other approved applicants. This fee fully secures your unit while your lease is being finalized. <strong>This fee is credited in full toward your move-in costs — it is not an additional charge.</strong></p>
+    </div>
+
+    ${feeAmount != null ? `
+    <div class="section">
+      <div class="section-label">Holding Fee Details</div>
+      <div class="callout">
+        <div class="financial-row"><span class="f-label">Holding Fee Amount</span><span class="f-value">${formatMoney(feeAmount)}</span></div>
+        <div class="financial-row"><span class="f-label">Due By</span><span class="f-value">${deadlineText}</span></div>
+        <div class="financial-row"><span class="f-label">Applied Toward</span><span class="f-value">Move-In Balance (credited in full)</span></div>
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="section">
+      <div class="section-label">Accepted Payment Methods</div>
+      <div class="callout">
+        <p style="margin-bottom:10px;"><strong>&bull; Zelle</strong> &mdash; ${contactEmail}</p>
+        <p style="margin-bottom:10px;"><strong>&bull; Venmo</strong> &mdash; @ChoiceProperties</p>
+        <p><strong>&bull; Cashier's Check</strong> &mdash; Payable to Choice Properties, 2265 Livernois Suite 500, Troy MI 48083</p>
+      </div>
+    </div>
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="section">
+      <div class="section-label">After You Pay</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span>Text your payment confirmation / screenshot to <strong>707-706-3137</strong> so we can verify and apply it immediately.</span></li>
+        <li><span class="step-num">2</span><span>You will receive an email confirmation once received, and your unit will be formally reserved.</span></li>
+        <li><span class="step-num">3</span><span>Our team will then prepare your lease agreement for electronic signature.</span></li>
+      </ul>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View My Application</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">Please act promptly to secure your unit. Our team is here to answer any questions you may have about this step.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 6: Holding Fee Received ─────────────────────────────────────────
+
+export function holdingFeeReceivedHtml(
+  firstName: string,
+  propertyAddress: string,
+  portalUrl: string,
+  message?: string,
+  feeAmount?: number | string,
+  remainingBalance?: number | string,
+  appId?: string,
+): string {
+  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Holding Fee Received — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Holding Fee Received — Unit Reserved', appId)}
+  <div class="status-line status-approved">&#x2713; &nbsp; Holding Fee Confirmed — Your Unit is Reserved</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">We have received your holding fee for <strong>${propertyAddress}</strong>. Your unit is now formally reserved and has been removed from active availability. Thank you for acting promptly.</p>
+
+    <div class="callout green">
+      <h4>&#x2713; Holding Fee Confirmed — Unit Secured</h4>
+      ${feeAmount != null ? `<div class="financial-row"><span class="f-label">Amount Received</span><span class="f-value">${formatMoney(feeAmount)}</span></div>` : ''}
+      <div class="financial-row"><span class="f-label">Applied Toward</span><span class="f-value">Move-In Balance (credited in full)</span></div>
+      ${remainingBalance != null ? `<div class="financial-row"><span class="f-label">Remaining Move-In Balance</span><span class="f-value">${formatMoney(remainingBalance)}</span></div>` : ''}
+      <div class="financial-row"><span class="f-label">Unit Status</span><span class="f-value" style="color:#059669;">Reserved</span></div>
+    </div>
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Lease Agreement</strong> — Your lease agreement will be prepared and sent to you shortly for electronic signature.</span></li>
+        <li><span class="step-num">2</span><span><strong>Remaining Move-In Payment</strong> — Once your lease is signed, the remaining move-in balance will be due before key handoff.</span></li>
+        <li><span class="step-num">3</span><span><strong>Move-In Coordination</strong> — Our team will contact you to confirm your move-in date and key pickup details.</span></li>
+      </ul>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View My Application</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We look forward to welcoming you as a Choice Properties resident.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 7: Lease Ready to Sign ──────────────────────────────────────────
+
+export function signingEmailHtml(
+  firstName: string,
+  propertyAddress: string,
+  signingUrl: string,
+  appId: string,
+  leaseData?: { term?: string; startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCosts?: string | number; propertyState?: string },
+): string {
+  const eSignText = getESignText(leaseData?.propertyState || 'MI');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Lease Agreement is Ready — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your Lease Agreement is Ready', appId)}
+  <div class="status-line status-lease">&#x1F4CB; &nbsp; Action Required — Please Review and Sign Within 48 Hours</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">We are pleased to inform you that your lease agreement for <strong>${propertyAddress}</strong> has been prepared and is now ready for your review and electronic signature. Please read the agreement carefully in its entirety before signing.</p>
+
+    ${leaseData ? `
+    <div class="section">
+      <div class="section-label">Lease Summary</div>
+      <table class="info-table">
+        <tr><td>Property</td><td><strong>${propertyAddress}</strong></td></tr>
+        ${leaseData.term ? `<tr><td>Lease Term</td><td>${leaseData.term}</td></tr>` : ''}
+        ${leaseData.startDate ? `<tr><td>Lease Start Date</td><td>${leaseData.startDate}</td></tr>` : ''}
+        ${leaseData.endDate ? `<tr><td>Lease End Date</td><td>${leaseData.endDate}</td></tr>` : ''}
+        ${leaseData.rent ? `<tr><td>Monthly Rent</td><td>${formatMoney(leaseData.rent)}</td></tr>` : ''}
+        ${leaseData.deposit ? `<tr><td>Security Deposit</td><td>${formatMoney(leaseData.deposit)}</td></tr>` : ''}
+        ${leaseData.moveInCosts ? `<tr><td>Total Due at Move-In</td><td><strong>${formatMoney(leaseData.moveInCosts)}</strong></td></tr>` : ''}
+      </table>
+    </div>
+    ` : ''}
+
+    <div class="callout amber">
+      <h4>&#x23F0; 48-Hour Signing Window</h4>
+      <p>To secure your unit, your lease must be signed within <strong>48 hours</strong> of receiving this email. Units are confirmed on a first-completed basis. If you require additional time, please contact our team immediately.</p>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${signingUrl}" class="cta-btn">Review &amp; Sign My Lease</a>
+      <div class="cta-note">Or copy this link: ${signingUrl}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">What to Expect When You Sign</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Review the Full Agreement</strong> — Read every section carefully. The lease outlines your rights, responsibilities, and all financial obligations.</span></li>
+        <li><span class="step-num">2</span><span><strong>Confirm Checkboxes</strong> — You will be asked to confirm your agreement to specific terms before signing.</span></li>
+        <li><span class="step-num">3</span><span><strong>Sign Electronically</strong> — Enter your full legal name as your electronic signature. This is legally binding under the ${eSignText}.</span></li>
+        <li><span class="step-num">4</span><span><strong>Receive Confirmation</strong> — You will receive an immediate email confirmation once your signature is recorded.</span></li>
+      </ul>
+    </div>
+
+    <p style="color:#718096;font-size:13px;margin:0 0 8px;">Application ID: <strong>${appId}</strong></p>
+    <p style="color:#718096;font-size:13px;">This signing link is unique to you. Do not share it.</p>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">If you have any questions about the lease terms prior to signing, please contact our leasing team. We are available to clarify any aspect of the agreement.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 8: Lease Signed (Tenant Confirmation) ───────────────────────────
+
+export function signedConfirmHtml(
+  firstName: string,
+  propertyAddress: string,
+  appId: string,
+  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; moveInCost?: string | number; signature?: string },
+): string {
+  const portal = `${getTenantPortalUrl()}?app_id=${appId}`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lease Signed — Welcome to Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Welcome to Choice Properties', appId)}
+  <div class="status-line status-approved">&#x2713; &nbsp; Lease Successfully Signed — Your Tenancy is Confirmed</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Congratulations and welcome to Choice Properties. Your lease agreement for <strong>${propertyAddress}</strong> has been successfully signed. This email serves as your official confirmation of tenancy.</p>
+
+    <div class="callout green">
+      <h4>&#x2713; Lease Executed — Tenancy Confirmed</h4>
+      <div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyAddress}</span></div>
+      ${leaseData?.startDate ? `<div class="financial-row"><span class="f-label">Move-In Date</span><span class="f-value">${leaseData.startDate}</span></div>` : ''}
+      ${leaseData?.endDate ? `<div class="financial-row"><span class="f-label">Lease End Date</span><span class="f-value">${leaseData.endDate}</span></div>` : ''}
+      ${leaseData?.rent ? `<div class="financial-row"><span class="f-label">Monthly Rent</span><span class="f-value">${formatMoney(leaseData.rent)}</span></div>` : ''}
+      ${leaseData?.moveInCost ? `<div class="financial-row"><span class="f-label">Move-In Total Due</span><span class="f-value">${formatMoney(leaseData.moveInCost)}</span></div>` : ''}
+      <div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${appId}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Move-In Payment</strong> — Our leasing team will contact you to coordinate collection of your move-in total${leaseData?.moveInCost ? ` of <strong>${formatMoney(leaseData.moveInCost)}</strong>` : ''}. This must be paid in full prior to key handoff.</span></li>
+        <li><span class="step-num">2</span><span><strong>Move-In Preparation Guide</strong> — We will send you a detailed guide with everything you need to know before your arrival.</span></li>
+        <li><span class="step-num">3</span><span><strong>Key Handoff</strong> — Once all payments are confirmed, your key handoff will be scheduled. Our team will reach out to coordinate timing.</span></li>
+      </ul>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View My Tenant Portal</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We are truly delighted to welcome you to Choice Properties. Our team is dedicated to ensuring your tenancy is a positive and comfortable experience from day one.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 9: Lease Fully Executed (Management Countersigned) ───────────────
+
+export function leaseFullyExecutedHtml(
+  firstName: string,
+  propertyAddress: string,
+  portalUrl: string,
+  appId?: string,
+): string {
+  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lease Fully Executed — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your Lease Has Been Fully Executed', appId)}
+  <div class="status-line status-approved">&#x2713; &nbsp; Both Parties Have Signed — Your Tenancy is Official</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Great news! Your lease for <strong>${propertyAddress}</strong> has been fully executed — both you and management have signed. You may now download your fully executed lease agreement from your tenant portal.</p>
+
+    <div class="callout green">
+      <h4>&#x2713; Lease Fully Executed</h4>
+      <p>Your lease agreement is now legally binding and complete. This is your official confirmation that all parties have signed. Please retain this email and your lease document for your records.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Move-In Coordination</strong> — Our team will be in touch to finalize your move-in date, time, and key handoff logistics.</span></li>
+        <li><span class="step-num">2</span><span><strong>Move-In Payment</strong> — If not already arranged, our team will contact you to finalize collection of your move-in balance prior to key handoff.</span></li>
+        <li><span class="step-num">3</span><span><strong>Download Your Lease</strong> — Your fully executed lease is available for download in your tenant portal. We recommend saving a copy for your records.</span></li>
+      </ul>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">Go to Tenant Portal</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We look forward to welcoming you to your new home. Our team is here to ensure a smooth and enjoyable move-in experience.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 10: Move-In Confirmed ───────────────────────────────────────────
+
+export function moveinEmailHtml(
+  firstName: string,
+  propertyAddress: string,
+  moveInDate?: string,
+  message?: string,
+  appId?: string,
+): string {
+  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Move-In Confirmed — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Move-In Confirmed', appId)}
+  <div class="status-line status-approved">&#x1F3E0; &nbsp; Your Move-In Date is Confirmed</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">We are excited to confirm your upcoming move-in to <strong>${propertyAddress}</strong>. Everything is in order and we look forward to handing you your keys.</p>
+
+    ${moveInDate ? `
+    <div class="callout green">
+      <h4>&#x2713; Move-In Confirmed</h4>
+      <div class="financial-row"><span class="f-label">Move-In Date</span><span class="f-value">${moveInDate}</span></div>
+      <div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyAddress}</span></div>
+    </div>
+    ` : ''}
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View Tenant Portal</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We are thrilled to welcome you to your new home. If you have any questions before your move-in, please don't hesitate to reach out.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 11: Move-In Preparation Guide ───────────────────────────────────
+
+export function moveInPrepHtml(
+  firstName: string,
+  propertyAddress: string,
+  message?: string,
+  appId?: string,
+  leaseData?: { rent?: string | number; deposit?: string | number; moveInCost?: string | number; startDate?: string },
+): string {
+  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const contactEmail = getContactEmail();
+  const moveInTotal = leaseData?.moveInCost || (leaseData?.rent && leaseData?.deposit ? Number(leaseData.rent) + Number(leaseData.deposit) : null);
+  const startDate = leaseData?.startDate ? new Date(leaseData.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'As agreed';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Move-In Preparation Guide — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your Move-In Preparation Guide', appId)}
+  <div class="status-line status-approved">&#x1F3E0; &nbsp; Your Lease is Signed — Here's How to Prepare</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Congratulations on signing your lease! This guide covers everything you need to do before your move-in date${leaseData?.startDate ? ` of <strong>${startDate}</strong>` : ''}.</p>
+
+    ${moveInTotal ? `
+    <div class="callout amber">
+      <h4>Move-In Payment Due Before Key Handoff</h4>
+      <p>
+        ${leaseData?.rent ? `<strong>First Month's Rent:</strong> ${formatMoney(leaseData.rent)}<br>` : ''}
+        ${leaseData?.deposit ? `<strong>Security Deposit:</strong> ${formatMoney(leaseData.deposit)}<br>` : ''}
+        <strong>Total Due:</strong> ${formatMoney(moveInTotal)}<br><br>
+        Our team will contact you to arrange payment. <strong>Do not send money before speaking with us directly.</strong>
+      </p>
+    </div>
+    ` : ''}
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="section">
+      <div class="section-label">What to Bring on Move-In Day</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Government-Issued Photo ID</strong> — Required for all adults 18+ who will reside in the unit.</span></li>
+        <li><span class="step-num">2</span><span><strong>Move-In Payment</strong> — Full move-in amount in the agreed payment form. Our team will confirm the method in advance.</span></li>
+        <li><span class="step-num">3</span><span><strong>Renter's Insurance Proof</strong> — A current binder or declaration page. Your policy must be in effect before key handoff.</span></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Before You Move In</div>
+      <ul class="steps-list">
+        <li><span class="step-num">A</span><span><strong>Set Up Utilities</strong> — Electric, gas, water, and internet accounts should be transferred or opened in your name on or before your lease start date.</span></li>
+        <li><span class="step-num">B</span><span><strong>Obtain Renter's Insurance</strong> — Your lease requires you to maintain renter's insurance for the full lease term. Most policies cost $10–$20/month.</span></li>
+        <li><span class="step-num">C</span><span><strong>Update Your Address</strong> — File a change of address with USPS at usps.com/move and notify your bank, employer, and other services.</span></li>
+        <li><span class="step-num">D</span><span><strong>Review Parking &amp; Rules</strong> — Parking assignments and community rules are outlined in your lease. Please review before your move-in day.</span></li>
+      </ul>
+    </div>
+
+    <div class="callout">
+      <h4>Maintenance &amp; Emergency Contact</h4>
+      <p>For maintenance requests or questions, contact us by text at <strong>707-706-3137</strong> or email <strong>${contactEmail}</strong>. For property emergencies (water, electrical, structural), text us immediately.</p>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">View My Tenant Portal</a>
+    </div>
+
+    <div class="email-closing">
+      <p class="closing-text">We're thrilled to welcome you to your new home. Our team is here to help make your move-in smooth and stress-free.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 12: Lease Signing Reminder ──────────────────────────────────────
+
+export function leaseSigningReminderHtml(
+  firstName: string,
+  propertyAddress: string,
+  portalUrl: string,
+  message?: string,
+  appId?: string,
+): string {
+  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reminder — Sign Your Lease</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Lease Signing Reminder', appId)}
+  <div class="status-line" style="color:#c2410c;">&#x23F3; &nbsp; Action Required — Your Lease Awaits Your Signature</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">This is a friendly reminder that your lease agreement for <strong>${propertyAddress}</strong> is still awaiting your electronic signature. Unit availability is time-sensitive — to protect your reservation, please sign at your earliest convenience.</p>
+
+    <div class="callout" style="border-color:#f97316;">
+      <h4 style="color:#c2410c;">Please Sign Within 48 Hours</h4>
+      <p>If your lease remains unsigned, the unit may be offered to other applicants on our waiting list. If you have questions or concerns about any clause, please reach out to our team before the deadline.</p>
+    </div>
+
+    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+
+    <div class="cta-wrap">
+      <a href="${portal}" class="cta-btn">Sign My Lease Now &#x2192;</a>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">We're excited to have you as a resident and look forward to getting your home ready. Please don't hesitate to reach out if you have any questions before signing.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 13: Lease Expiry Alert (Admin Internal) ─────────────────────────
+
+export function leaseExpiryAlertHtml(
+  firstName: string,
+  propertyAddress: string,
+  leaseEndDate: string,
+  appId: string,
+  tenantEmail: string,
+  tenantPhone?: string,
+): string {
+  const adminUrl = getAdminUrl('/admin/applications.html');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lease Unsigned — Admin Alert</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Lease Unsigned — 48h Alert', appId)}
+  <div class="status-line status-denied">&#x26A0; &nbsp; Tenant Has Not Signed — 48 Hours Elapsed</div>
+  <div class="email-body">
+    <p class="intro-text">The lease agreement for Application <strong>${appId}</strong> has not been signed within 48 hours of delivery. Immediate follow-up is recommended to protect unit availability.</p>
+
+    <div class="callout red">
+      <h4>Applicant Contact Information</h4>
+      <p>
+        <strong>Name:</strong> ${firstName}<br>
+        <strong>Email:</strong> ${tenantEmail}<br>
+        ${tenantPhone ? `<strong>Phone:</strong> ${tenantPhone}<br>` : ''}
+        <strong>Property:</strong> ${propertyAddress}<br>
+        <strong>Lease End Date:</strong> ${formatDate(leaseEndDate)}
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Suggested Actions</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span>Contact the applicant by text${tenantPhone ? ` at <strong>${tenantPhone}</strong>` : ''} to confirm they received the lease and address any questions.</span></li>
+        <li><span class="step-num">2</span><span>If no response within 24 hours, evaluate whether the unit should be re-listed.</span></li>
+        <li><span class="step-num">3</span><span>If cancelling, update the application status in the admin panel and notify the applicant.</span></li>
+      </ul>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${adminUrl}" class="cta-btn">View in Admin Panel &#x2192;</a>
+    </div>
+
+    <div class="contact-row">This alert was generated automatically by the Choice Properties rental system. Application ID: <strong>${appId}</strong></div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Template 14: Admin Review Summary (Holding Fee Received) ─────────────────
+
+export function adminReviewSummaryHtml(
+  firstName: string,
+  lastName: string,
+  email: string,
+  phone: string,
+  propertyAddress: string,
+  appId: string,
+  feeReceived?: number | string,
+  appData?: Record<string, unknown>,
+): string {
+  const adminUrl = getAdminUrl('/admin/leases.html');
+  const now = new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const row = (label: string, value: unknown) => value
+    ? `<tr><td style="padding:8px 10px;font-size:13px;color:#555555;width:42%;border-bottom:1px solid #f0f0f0;">${label}</td><td style="padding:8px 10px;font-size:13px;color:#1a1a1a;font-weight:500;border-bottom:1px solid #f0f0f0;">${value}</td></tr>`
+    : '';
+
+  const section = (title: string) =>
+    `<tr><td colspan="2" style="padding:10px 10px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888888;background:#f8f8f8;">${title}</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Review Summary — ${appId}</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Fee Confirmed — Action Required', appId)}
+  <div class="status-line status-approved">&#x2713; &nbsp; Fee Confirmed — Generate Lease Document</div>
+  <div class="email-body">
+    <p class="intro-text">The holding fee for Application <strong>${appId}</strong> has been confirmed. Please log in to the admin panel and generate the lease document for this applicant.</p>
+
+    <div class="callout green">
+      <h4>&#x2713; Holding Fee Received — Lease Generation Required</h4>
+      <div class="financial-row"><span class="f-label">Applicant</span><span class="f-value">${firstName} ${lastName}</span></div>
+      <div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyAddress}</span></div>
+      ${feeReceived != null ? `<div class="financial-row"><span class="f-label">Holding Fee Received</span><span class="f-value">${formatMoney(feeReceived)}</span></div>` : ''}
+      <div class="financial-row"><span class="f-label">Received At</span><span class="f-value">${now}</span></div>
+    </div>
+
+    ${appData ? `
+    <div class="section">
+      <div class="section-label">Applicant Summary</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;">
+        <tbody>
+          ${section('Contact')}
+          ${row('Full Name', `${firstName} ${lastName}`)}
+          ${row('Email', email)}
+          ${row('Phone', phone)}
+          ${section('Property')}
+          ${row('Property Address', propertyAddress)}
+          ${row('Monthly Rent', appData['monthly_rent'] ? formatMoney(String(appData['monthly_rent'])) : null)}
+          ${row('Requested Move-In', appData['requested_move_in_date'])}
+          ${section('Employment')}
+          ${row('Employment Status', appData['employment_status'])}
+          ${row('Employer', appData['employer'])}
+          ${row('Monthly Income', appData['monthly_income'] ? '$' + Number(appData['monthly_income']).toLocaleString() : null)}
+        </tbody>
+      </table>
+    </div>
+    ` : `
+    <div class="section">
+      <div class="section-label">Applicant Details</div>
+      <table class="info-table">
+        <tr><td>Name</td><td>${firstName} ${lastName}</td></tr>
+        <tr><td>Email</td><td>${email}</td></tr>
+        <tr><td>Phone</td><td>${phone || '—'}</td></tr>
+        <tr><td>Property</td><td>${propertyAddress}</td></tr>
+        <tr><td>App ID</td><td><strong>${appId}</strong></td></tr>
+      </table>
+    </div>
+    `}
+
+    <p style="color:#1a1a1a;font-size:14px;font-weight:600;margin:16px 0;">Recommended next action: Generate the lease document for this applicant in the Lease Pipeline.</p>
+
+    <div class="cta-wrap">
+      <a href="${adminUrl}" class="cta-btn">Go to Lease Pipeline &#x2192;</a>
+    </div>
+
+    <div class="contact-row">This summary was generated automatically when the holding fee was confirmed. Application ID: <strong>${appId}</strong></div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
 }
