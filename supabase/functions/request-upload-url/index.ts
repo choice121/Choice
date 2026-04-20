@@ -44,22 +44,31 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, `Invalid file_type. Allowed: JPEG, PNG, WEBP, or PDF`);
   }
 
-  // Verify the applicant owns this application (match by email)
   const { data: app, error: appErr } = await supabase
     .from('applications')
-    .select('id, app_id, email, status')
+    .select('id, app_id, applicant_user_id, email, co_applicant_email, status')
     .eq('app_id', app_id)
     .single();
 
   if (appErr || !app) return jsonErr(404, 'Application not found');
 
-  if ((app.email || '').toLowerCase() !== (user.email || '').toLowerCase()) {
+  const { data: coapp } = await supabase
+    .from('co_applicants')
+    .select('email')
+    .eq('app_id', app_id)
+    .maybeSingle();
+  const userEmail = (user.email || '').toLowerCase();
+  const allowed = app.applicant_user_id === user.id
+    || (app.email || '').toLowerCase() === userEmail
+    || (app.co_applicant_email || '').toLowerCase() === userEmail
+    || (coapp?.email || '').toLowerCase() === userEmail;
+
+  if (!allowed) {
     return jsonErr(403, 'You do not have permission to upload documents for this application.');
   }
 
-  // Only allow uploads for approved (or further) applications
-  const uploadableStatuses = ['approved', 'lease_sent', 'lease_signed', 'move_in_scheduled'];
-  if (!uploadableStatuses.includes(app.status) && app.status !== 'approved') {
+  const uploadableStatuses = ['approved', 'lease_sent', 'lease_signed', 'move_in_scheduled', 'move_in_confirmed'];
+  if (!uploadableStatuses.includes(app.status)) {
     return jsonErr(403, 'Documents can only be uploaded after your application has been approved.');
   }
 

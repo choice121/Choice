@@ -1,4 +1,4 @@
-import { getAdminUrl, getContactEmail, getSiteUrl, getTenantPortalUrl } from './config.ts';
+import { getAdminUrl, getContactEmail, getSiteUrl, getTenantLoginUrl } from './config.ts';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -156,7 +156,7 @@ export function applicationConfirmationHtml(
   fields?: ApplicationFields,
   dashboardLink?: string,
 ): string {
-  const portal = dashboardLink || `${getTenantPortalUrl()}?app_id=${appId}`;
+  const portal = dashboardLink || getTenantLoginUrl(appId, String(fields?.['Email'] || ''));
   const fee = fields?.['Application Fee'];
   const feeDisplay = fee != null && Number(fee) > 0 ? `$${Number(fee).toFixed(0)}` : 'Per property terms';
   const payMethods = [
@@ -355,7 +355,7 @@ export function statusUpdateHtml(
   propertyName?: string,
   propertyState?: string,
 ): string {
-  const portal = dashboardLink || `${getTenantPortalUrl()}?app_id=${appId}`;
+  const portal = dashboardLink || getTenantLoginUrl(appId);
   const isApproved = status === 'approved';
   const isWaitlisted = status === 'waitlisted';
   const propertyLabel = propertyName || propertyAddress;
@@ -454,17 +454,17 @@ export function statusUpdateHtml(
 
 // Backward-compatible wrappers
 export function approvalEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
-  const portal = getTenantPortalUrl();
+  const portal = getTenantLoginUrl();
   return statusUpdateHtml('', firstName, 'approved', message, portal, propertyAddress);
 }
 
 export function denialEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
-  const portal = getTenantPortalUrl();
+  const portal = getTenantLoginUrl();
   return statusUpdateHtml('', firstName, 'denied', message, portal, propertyAddress);
 }
 
 export function waitlistedEmailHtml(firstName: string, propertyAddress: string, message?: string): string {
-  const portal = getTenantPortalUrl();
+  const portal = getTenantLoginUrl();
   return statusUpdateHtml('', firstName, 'waitlisted', message, portal, propertyAddress);
 }
 
@@ -481,7 +481,7 @@ export function paymentConfirmedHtml(
   appId?: string,
   propertyName?: string,
 ): string {
-  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const portal = getTenantLoginUrl(appId);
   const feeDisplay = amount != null ? formatMoney(amount) : '—';
 
   return `<!DOCTYPE html>
@@ -561,7 +561,7 @@ export function holdingFeeRequestHtml(
   appId?: string,
   applicantPaymentMethods?: string[],
 ): string {
-  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const portal = getTenantLoginUrl(appId);
   const deadlineText = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '48 hours from this email';
 
   return `<!DOCTYPE html>
@@ -649,7 +649,7 @@ export function holdingFeeReceivedHtml(
   remainingBalance?: number | string,
   appId?: string,
 ): string {
-  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+  const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -791,7 +791,7 @@ export function signedConfirmHtml(
   appId: string,
   leaseData?: { startDate?: string; endDate?: string; rent?: string | number; moveInCost?: string | number; signature?: string },
 ): string {
-  const portal = `${getTenantPortalUrl()}?app_id=${appId}`;
+  const portal = getTenantLoginUrl(appId);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -860,7 +860,7 @@ export function leaseFullyExecutedHtml(
   appId?: string,
   leaseData?: { startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCost?: string | number },
 ): string {
-  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+  const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -926,7 +926,7 @@ export function moveinEmailHtml(
   message?: string,
   appId?: string,
 ): string {
-  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const portal = getTenantLoginUrl(appId);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -981,7 +981,7 @@ export function moveInPrepHtml(
   appId?: string,
   leaseData?: { rent?: string | number; deposit?: string | number; moveInCost?: string | number; startDate?: string },
 ): string {
-  const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
+  const portal = getTenantLoginUrl(appId);
   const contactEmail = getContactEmail();
   const moveInTotal = leaseData?.moveInCost || (leaseData?.rent && leaseData?.deposit ? Number(leaseData.rent) + Number(leaseData.deposit) : null);
   const startDate = leaseData?.startDate ? new Date(leaseData.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'As agreed';
@@ -1066,7 +1066,7 @@ export function leaseSigningReminderHtml(
   appId?: string,
   signingUrl?: string,
 ): string {
-  const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+  const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
   const actionUrl = signingUrl || portal;
 
   return `<!DOCTYPE html>

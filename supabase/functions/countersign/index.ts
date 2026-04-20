@@ -10,9 +10,9 @@ import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { leaseFullyExecutedHtml } from '../_shared/email.ts';
 import { buildLeasePDF } from '../_shared/pdf.ts';
-import { getTenantPortalUrl } from '../_shared/config.ts';
+import { getTenantLoginUrl } from '../_shared/config.ts';
 
-const TENANT_PORTAL_URL = getTenantPortalUrl();
+const TENANT_LOGIN_URL = getTenantLoginUrl();
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
     await sendEmail({
       to:      app.email,
       subject: 'Your Lease Has Been Fully Executed — Choice Properties',
-      html:    leaseFullyExecutedHtml(app.first_name || 'Applicant', app.property_address || '', TENANT_PORTAL_URL, app.app_id, leaseData),
+      html:    leaseFullyExecutedHtml(app.first_name || 'Applicant', app.property_address || '', TENANT_LOGIN_URL, app.app_id, leaseData),
     });
   } catch (e) { console.error('Fully executed email failed (non-fatal):', (e as Error).message); }
 

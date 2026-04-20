@@ -13,7 +13,7 @@ import {
   adminReviewSummaryHtml,
   formatDate,
 } from '../_shared/email.ts';
-import { getAdminEmails, getTenantPortalUrl, getSiteUrl } from '../_shared/config.ts';
+import { getAdminEmails, getTenantLoginUrl, getTenantPortalUrl, getSiteUrl } from '../_shared/config.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 const TENANT_PORTAL_URL = getTenantPortalUrl();
@@ -86,8 +86,7 @@ Deno.serve(async (req: Request) => {
   const actor = auth.userEmail || 'admin';
   const now   = new Date().toISOString();
 
-  // Portal URL with app_id baked in for tenant emails
-  const portalLink = `${TENANT_PORTAL_URL}?app_id=${app_id}`;
+  const portalLink = getTenantLoginUrl(app_id, app.email || undefined);
   // State code for e-sign legal text
   const stateCode = app.lease_state_code || 'MI';
 

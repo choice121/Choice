@@ -462,7 +462,8 @@ async function downloadLease(){
       body:JSON.stringify({app_id:window._portalAppId}),
     });
     const d=await res.json();
-    if(d.signedUrl)window.open(d.signedUrl,'_blank');
+    const signedUrl=d.signed_url||d.signedUrl;
+    if(signedUrl)window.open(signedUrl,'_blank');
     else alert(d.error||'Could not get download link.');
   }catch(e){alert(e.message);}
 }
@@ -544,7 +545,7 @@ function renderWrongAccount(userEmail, requestedAppId, message){
     <button class="btn-withdraw" type="button" onclick="signOutAndRetry()" style="margin-top:18px">&#8592; Sign in with a different email</button>
     ${requestedAppId?`<p style="margin-top:12px;font-size:.78rem;color:var(--muted2)">Application: <span style="font-family:monospace">${esc(requestedAppId)}</span></p>`:''}
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <p style="font-size:.78rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Use the email address of the <em>primary applicant</em> on the application, then contact us to add co-applicant access.</p>
+      <p style="font-size:.78rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
       <p style="font-size:.78rem;color:var(--muted2)">Need help? <a href="tel:7077063137" style="color:var(--blue)">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">support@choiceproperties.com</a></p>
     </div>
   </div>`;
@@ -607,15 +608,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const content=document.getElementById('portal-content');
   const errorEl=document.getElementById('portal-error');
 
-  // ── Step 1: Claim application if app_id given in URL ──────────────────────
-  // claim_application links applicant_user_id to this auth user so
-  // get_my_applications() can find it in future visits without app_id.
+  // ── Step 1: Confirm this email can access the requested application ───────
   if(requestedAppId){
     const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:requestedAppId,p_email:userEmail});
     if(claimErr||claimResult?.success===false){
       const errMsg=claimResult?.error||claimErr?.message||'';
-      // Email mismatch: user is signed in with the wrong account.
-      // Show clear instructions and sign-out option.
       loading.style.display='none';
       content.style.display='block';
       content.innerHTML=renderWrongAccount(userEmail,requestedAppId,errMsg);
@@ -647,7 +644,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
       Make sure you're signed in with the same email address you used when applying.</p>
       <button onclick="signOut()" style="background:none;border:1px solid #3b82f6;color:#3b82f6;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;margin-top:14px">&#8592; Sign in with a different email</button>
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:left">
-        <p style="font-size:.8rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in using the primary applicant's email to view the application.</p>
+        <p style="font-size:.8rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
         <p style="font-size:.8rem;color:var(--muted2)">Still need help? <a href="tel:7077063137" style="color:var(--blue);font-weight:600">Call 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">Email us</a></p>
       </div>
     </div>`;

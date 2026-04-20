@@ -317,8 +317,21 @@ CREATE TABLE IF NOT EXISTS applications (
   vehicle_year                     TEXT,
   vehicle_license_plate            TEXT,
 
-  -- Co-Applicant (detail columns live in co_applicants table — see section 7b)
+  -- Co-Applicant
   has_co_applicant                 BOOLEAN DEFAULT false,
+  additional_person_role           TEXT,
+  co_applicant_first_name          TEXT,
+  co_applicant_last_name           TEXT,
+  co_applicant_email               TEXT,
+  co_applicant_phone               TEXT,
+  co_applicant_dob                 TEXT,
+  co_applicant_ssn                 TEXT,
+  co_applicant_employer            TEXT,
+  co_applicant_job_title           TEXT,
+  co_applicant_monthly_income      TEXT,
+  co_applicant_employment_duration TEXT,
+  co_applicant_employment_status   TEXT,
+  co_applicant_consent             BOOLEAN DEFAULT false,
 
   -- Auth Link (Supabase Auth user_id of primary applicant)
   applicant_user_id                UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -463,8 +476,12 @@ CREATE POLICY "co_applicants_landlord_read" ON co_applicants
 
 CREATE POLICY "co_applicants_applicant_read" ON co_applicants
   FOR SELECT USING (
-    app_id IN (
-      SELECT app_id FROM applications WHERE applicant_user_id = auth.uid()
+    lower(email) = lower(auth.email())
+    OR app_id IN (
+      SELECT app_id FROM applications
+      WHERE applicant_user_id = auth.uid()
+         OR lower(email) = lower(auth.email())
+         OR lower(co_applicant_email) = lower(auth.email())
     )
   );
 
@@ -505,33 +522,6 @@ BEGIN
     ON CONFLICT (app_id) DO NOTHING;
   END IF;
 END $$;
-
--- ── Drop migrated columns from applications ────────────────────────
--- Only runs if the column still exists (safe for fresh installs where
--- the column was never created, and for re-runs after migration).
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'applications' AND column_name = 'co_applicant_first_name'
-  ) THEN
-    ALTER TABLE applications
-      DROP COLUMN IF EXISTS additional_person_role,
-      DROP COLUMN IF EXISTS co_applicant_first_name,
-      DROP COLUMN IF EXISTS co_applicant_last_name,
-      DROP COLUMN IF EXISTS co_applicant_email,
-      DROP COLUMN IF EXISTS co_applicant_phone,
-      DROP COLUMN IF EXISTS co_applicant_dob,
-      DROP COLUMN IF EXISTS co_applicant_ssn,
-      DROP COLUMN IF EXISTS co_applicant_employer,
-      DROP COLUMN IF EXISTS co_applicant_job_title,
-      DROP COLUMN IF EXISTS co_applicant_monthly_income,
-      DROP COLUMN IF EXISTS co_applicant_employment_duration,
-      DROP COLUMN IF EXISTS co_applicant_employment_status,
-      DROP COLUMN IF EXISTS co_applicant_consent;
-  END IF;
-END;
-$$;
 
 
 -- ============================================================
@@ -811,7 +801,16 @@ CREATE POLICY "applications_landlord_read" ON applications
   );
 -- Authenticated applicants can read their own applications
 CREATE POLICY "applications_applicant_read" ON applications
-  FOR SELECT USING (applicant_user_id = auth.uid());
+  FOR SELECT USING (
+    applicant_user_id = auth.uid()
+    OR lower(email) = lower(auth.email())
+    OR lower(co_applicant_email) = lower(auth.email())
+    OR EXISTS (
+      SELECT 1 FROM co_applicants c
+      WHERE c.app_id = applications.app_id
+        AND lower(c.email) = lower(auth.email())
+    )
+  );
 
 CREATE POLICY "application_documents_admin_all" ON application_documents
   FOR ALL USING (is_admin());
@@ -1120,6 +1119,7 @@ CREATE OR REPLACE FUNCTION get_my_applications()
 RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
 DECLARE
   v_uid UUID := auth.uid();
+  v_auth_email TEXT := auth.email();
 BEGIN
   IF v_uid IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'Not authenticated');
@@ -1146,7 +1146,15 @@ BEGIN
         ) ORDER BY created_at DESC),
         '[]'::json
       )
-      FROM applications WHERE applicant_user_id = v_uid
+      FROM applications a
+      WHERE a.applicant_user_id = v_uid
+         OR lower(a.email) = lower(v_auth_email)
+         OR lower(a.co_applicant_email) = lower(v_auth_email)
+         OR EXISTS (
+           SELECT 1 FROM co_applicants c
+           WHERE c.app_id = a.app_id
+             AND lower(c.email) = lower(v_auth_email)
+         )
     )
   );
 END;
@@ -1164,6 +1172,8 @@ DECLARE
   v_uid        UUID := auth.uid();
   v_auth_email TEXT := auth.email();
   v_app        applications%ROWTYPE;
+  v_is_primary BOOLEAN := false;
+  v_is_co_applicant BOOLEAN := false;
 BEGIN
   IF v_uid IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'Not authenticated');
@@ -1177,9 +1187,20 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'Application not found');
   END IF;
 
-  -- Auth.email() is the email the caller proved ownership of via OTP
-  IF lower(v_app.email) <> lower(v_auth_email) THEN
+  v_is_primary := lower(COALESCE(v_app.email, '')) = lower(v_auth_email);
+  v_is_co_applicant := lower(COALESCE(v_app.co_applicant_email, '')) = lower(v_auth_email)
+    OR EXISTS (
+      SELECT 1 FROM co_applicants c
+      WHERE c.app_id = p_app_id
+        AND lower(c.email) = lower(v_auth_email)
+    );
+
+  IF NOT v_is_primary AND NOT v_is_co_applicant THEN
     RETURN json_build_object('success', false, 'error', 'Email does not match application');
+  END IF;
+
+  IF v_is_co_applicant AND NOT v_is_primary THEN
+    RETURN json_build_object('success', true, 'co_applicant', true);
   END IF;
 
   IF v_app.applicant_user_id = v_uid THEN
@@ -1187,7 +1208,7 @@ BEGIN
   END IF;
 
   IF v_app.applicant_user_id IS NOT NULL AND v_app.applicant_user_id <> v_uid THEN
-    RETURN json_build_object('success', false, 'error', 'Application already linked to another account');
+    RETURN json_build_object('success', true, 'primary_email_match', true, 'already_linked', true);
   END IF;
 
   UPDATE applications SET applicant_user_id = v_uid WHERE app_id = p_app_id;
@@ -1224,6 +1245,12 @@ BEGIN
              created_at::date AS created_at
       FROM applications
       WHERE lower(email) = lower(v_auth_email)
+         OR lower(co_applicant_email) = lower(v_auth_email)
+         OR EXISTS (
+           SELECT 1 FROM co_applicants c
+           WHERE c.app_id = applications.app_id
+             AND lower(c.email) = lower(v_auth_email)
+         )
     ) r
   );
 END;
