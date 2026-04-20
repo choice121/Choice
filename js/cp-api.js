@@ -506,14 +506,24 @@ const UI = {
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
 
       const btnColor = danger ? '#dc2626' : 'var(--gold,#c9a84c)';
-      overlay.innerHTML = `
-        <div style="background:var(--surface,#1a2332);border:1px solid var(--border,#2a3a4a);border-radius:12px;max-width:440px;width:100%;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.5);">
-          <div style="font-size:.95rem;font-weight:600;color:var(--text,#e8eaf0);line-height:1.6;margin-bottom:24px;">${message}</div>
-          <div style="display:flex;justify-content:flex-end;gap:10px;">
-            <button id="_cpConfirmCancel" style="background:transparent;border:1px solid var(--border,#2a3a4a);color:var(--muted,#8892a2);border-radius:6px;padding:9px 18px;font-size:.82rem;font-weight:600;cursor:pointer;">${cancelLabel}</button>
-            <button id="_cpConfirmOk" style="background:${btnColor};border:none;color:${danger ? '#fff' : '#0e1825'};border-radius:6px;padding:9px 18px;font-size:.82rem;font-weight:600;cursor:pointer;">${confirmLabel}</button>
-          </div>
-        </div>`;
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background:var(--surface,#1a2332);border:1px solid var(--border,#2a3a4a);border-radius:12px;max-width:440px;width:100%;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.5);';
+      const body = document.createElement('div');
+      body.style.cssText = 'font-size:.95rem;font-weight:600;color:var(--text,#e8eaf0);line-height:1.6;margin-bottom:24px;';
+      body.textContent = message;
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.id = '_cpConfirmCancel';
+      cancelBtn.style.cssText = 'background:transparent;border:1px solid var(--border,#2a3a4a);color:var(--muted,#8892a2);border-radius:6px;padding:9px 18px;font-size:.82rem;font-weight:600;cursor:pointer;';
+      cancelBtn.textContent = cancelLabel;
+      const okBtn = document.createElement('button');
+      okBtn.id = '_cpConfirmOk';
+      okBtn.style.cssText = `background:${btnColor};border:none;color:${danger ? '#fff' : '#0e1825'};border-radius:6px;padding:9px 18px;font-size:.82rem;font-weight:600;cursor:pointer;`;
+      okBtn.textContent = confirmLabel;
+      actions.replaceChildren(cancelBtn, okBtn);
+      dialog.replaceChildren(body, actions);
+      overlay.replaceChildren(dialog);
 
       document.body.appendChild(overlay);
 

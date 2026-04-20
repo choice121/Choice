@@ -140,7 +140,6 @@ Deno.serve(async (req: Request) => {
   const application: Record<string, unknown> = {
     app_id: appId,
     status: 'pending',
-    payment_status: 'unpaid',
     first_name: firstName,
     last_name: lastName,
     email,

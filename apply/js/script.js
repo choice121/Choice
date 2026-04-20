@@ -97,20 +97,99 @@ class RentalApplication {
                 toggle.type = 'button';
                 toggle.className = 'ssn-toggle';
                 if (fieldId === 'ssn') toggle.id = 'ssnToggle';
-                toggle.innerHTML = '<i class="fas fa-eye"></i>';
+                this._setIconOnly(toggle, 'fas fa-eye');
                 container.appendChild(toggle);
             }
             ssnInput.type = 'password';
             toggle.addEventListener('click', () => {
                 if (ssnInput.type === 'password') {
                     ssnInput.type = 'text';
-                    toggle.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                    this._setIconOnly(toggle, 'fas fa-eye-slash');
                 } else {
                     ssnInput.type = 'password';
-                    toggle.innerHTML = '<i class="fas fa-eye"></i>';
+                    this._setIconOnly(toggle, 'fas fa-eye');
                 }
             });
         });
+    }
+
+    _icon(className) {
+        const icon = document.createElement('i');
+        icon.className = className;
+        return icon;
+    }
+
+    _setIconOnly(el, iconClass) {
+        el.replaceChildren(this._icon(iconClass));
+    }
+
+    _setIconText(el, iconClass, text) {
+        const icon = this._icon(iconClass);
+        el.replaceChildren(icon, document.createTextNode(' ' + String(text || '')));
+    }
+
+    _safeHtml(value) {
+        return { __safeHtml: true, value: String(value || '') };
+    }
+
+    _html(strings, ...values) {
+        return strings.reduce((out, str, i) => {
+            const value = values[i];
+            const safeValue = value && value.__safeHtml ? value.value : this._escHtml(value == null ? '' : value);
+            return out + str + (i < values.length ? safeValue : '');
+        }, '');
+    }
+
+    _setTrustedHtml(el, html) {
+        const template = document.createElement('template');
+        template['innerHTML'] = String(html || '');
+        el.replaceChildren(template.content.cloneNode(true));
+    }
+
+    _decodeHtmlText(text) {
+        return String(text || '')
+            .replace(/&nbsp;/g, '\u00a0')
+            .replace(/&copy;/g, '©')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+    }
+
+    _setSafeMarkup(el, html) {
+        el.replaceChildren();
+        const src = String(html || '');
+        const tokenRe = /<(strong|a)\b([^>]*)>(.*?)<\/\1>|&nbsp;|&copy;/gi;
+        let last = 0;
+        let match;
+        const appendText = (value) => {
+            if (value) el.appendChild(document.createTextNode(this._decodeHtmlText(value)));
+        };
+        while ((match = tokenRe.exec(src)) !== null) {
+            appendText(src.slice(last, match.index));
+            if (match[0] === '&nbsp;') {
+                el.appendChild(document.createTextNode('\u00a0'));
+            } else if (match[0] === '&copy;') {
+                el.appendChild(document.createTextNode('©'));
+            } else if (match[1].toLowerCase() === 'strong') {
+                const strong = document.createElement('strong');
+                strong.textContent = this._decodeHtmlText(match[3]);
+                el.appendChild(strong);
+            } else {
+                const hrefMatch = match[2].match(/\bhref=["']([^"']+)["']/i);
+                const href = hrefMatch ? hrefMatch[1] : '';
+                const a = document.createElement('a');
+                a.textContent = this._decodeHtmlText(match[3]);
+                a.href = href.startsWith('/') ? href : '/';
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.style.color = 'var(--primary)';
+                el.appendChild(a);
+            }
+            last = tokenRe.lastIndex;
+        }
+        appendText(src.slice(last));
     }
 
     // ---------- Event listeners ----------
@@ -195,7 +274,10 @@ class RentalApplication {
         button.id = 'devTestFillBtn';
         button.type = 'button';
         button.title = 'Fill current step with test data';
-        button.innerHTML = '<span class="btn-icon">&#x1F9EA;</span> Fill Step';
+        const icon = document.createElement('span');
+        icon.className = 'btn-icon';
+        icon.textContent = 'Test';
+        button.replaceChildren(icon, document.createTextNode(' Fill Step'));
         button.style.cssText = 'position:fixed;bottom:70px;right:16px;z-index:99998;background:#f39c12;color:#fff;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.25)';
         button.addEventListener('click', () => this._devFillTestData());
         document.body.appendChild(button);
@@ -351,7 +433,13 @@ class RentalApplication {
                                 _lh.className = 'lease-min-hint field-hint';
                                 _lh.style.color = '#e65100';
                                 const _tLease = this.getTranslations();
-                _lh.innerHTML = '<i class="fas fa-info-circle"></i> <span data-i18n="minLeaseHintPre">' + (_tLease.minLeaseHintPre || 'Minimum lease term:') + '</span> ' + minMonthsNum + ' <span data-i18n="minLeaseHintPost">' + (_tLease.minLeaseHintPost || 'months. Please select a qualifying term.') + '</span>';
+                                const pre = document.createElement('span');
+                                pre.setAttribute('data-i18n', 'minLeaseHintPre');
+                                pre.textContent = _tLease.minLeaseHintPre || 'Minimum lease term:';
+                                const post = document.createElement('span');
+                                post.setAttribute('data-i18n', 'minLeaseHintPost');
+                                post.textContent = _tLease.minLeaseHintPost || 'months. Please select a qualifying term.';
+                                _lh.replaceChildren(this._icon('fas fa-info-circle'), document.createTextNode(' '), pre, document.createTextNode(' ' + minMonthsNum + ' '), post);
                                 _leaseHint.appendChild(_lh);
                             }
                         }
@@ -411,7 +499,10 @@ class RentalApplication {
                       _notice.className = 'policy-lock-notice';
                       _notice.style.cssText = 'margin-top:8px;padding:8px 12px;background:#fff3e0;border:1px solid #ffb74d;border-radius:6px;font-size:13px;color:#e65100;display:flex;align-items:center;gap:8px;';
                       const _tPets = this.getTranslations();
-                      _notice.innerHTML = '<i class="fas fa-ban"></i> <span data-i18n="noPetsPolicy">' + (_tPets.noPetsPolicy || 'This property does not allow pets.') + '</span>';
+                      const noticeText = document.createElement('span');
+                      noticeText.setAttribute('data-i18n', 'noPetsPolicy');
+                      noticeText.textContent = _tPets.noPetsPolicy || 'This property does not allow pets.';
+                      _notice.replaceChildren(this._icon('fas fa-ban'), noticeText);
                       _petsFormGroup.appendChild(_notice);
                   }
               }
@@ -431,7 +522,10 @@ class RentalApplication {
                       _sNotice.className = 'policy-lock-notice';
                       _sNotice.style.cssText = 'margin-top:8px;padding:8px 12px;background:#fce4ec;border:1px solid #ef9a9a;border-radius:6px;font-size:13px;color:#b71c1c;display:flex;align-items:center;gap:8px;';
                       const _tSmoke = this.getTranslations();
-                      _sNotice.innerHTML = '<i class="fas fa-smoking-ban"></i> <span data-i18n="noSmokingPolicy">' + (_tSmoke.noSmokingPolicy || 'This is a non-smoking property. Smoking is not permitted on the premises.') + '</span>';
+                      const smokeText = document.createElement('span');
+                      smokeText.setAttribute('data-i18n', 'noSmokingPolicy');
+                      smokeText.textContent = _tSmoke.noSmokingPolicy || 'This is a non-smoking property. Smoking is not permitted on the premises.';
+                      _sNotice.replaceChildren(this._icon('fas fa-smoking-ban'), smokeText);
                       _smokeFormGroup.appendChild(_sNotice);
                   }
               }
@@ -519,7 +613,7 @@ class RentalApplication {
 
         // Back-to-listing link — only shown when a property ID was passed
         const backLinkHtml = id
-            ? '<a href="' + (window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev') + '/property.html?id=' + encodeURIComponent(id) + '" class="pcb-back-link" target="_blank" rel="noopener">' +
+            ? '<a href="' + this._escHtml((window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev') + '/property.html?id=' + encodeURIComponent(id)) + '" class="pcb-back-link" target="_blank" rel="noopener">' +
                   '<i class="fas fa-arrow-left"></i> <span data-i18n="viewListing">View listing</span>' +
               '</a>'
             : '';
@@ -529,25 +623,26 @@ class RentalApplication {
         banner.className = 'property-context-banner';
         banner.setAttribute('role', 'note');
         banner.setAttribute('aria-label', 'Property you are applying for');
-        banner.innerHTML =
-            '<div class="pcb-inner">' +
-                '<div class="pcb-left">' +
-                    '<div class="pcb-icon"><i class="fas fa-home"></i></div>' +
-                    '<div class="pcb-text">' +
-                        '<div class="pcb-label" data-i18n="applyingFor">Applying for</div>' +
-                        '<div class="pcb-name">' + this._escHtml(displayName) + '</div>' +
-                        (metaLine ? '<div class="pcb-meta">' + metaLine + '</div>' : '') +
-                        chipsHtml +
-                    '</div>' +
-                '</div>' +
-                '<div class="pcb-right">' +
-                    '<div class="pcb-managed">' +
-                        '<i class="fas fa-shield-alt"></i>' +
-                        '<span><span data-i18n="managedBy">Managed by</span> <strong>Choice Properties</strong></span>' +
-                    '</div>' +
-                    backLinkHtml +
-                '</div>' +
-            '</div>';
+        this._setTrustedHtml(banner, this._html`
+            <div class="pcb-inner">
+                <div class="pcb-left">
+                    <div class="pcb-icon"><i class="fas fa-home"></i></div>
+                    <div class="pcb-text">
+                        <div class="pcb-label" data-i18n="applyingFor">Applying for</div>
+                        <div class="pcb-name">${displayName}</div>
+                        ${this._safeHtml(metaLine ? '<div class="pcb-meta">' + metaLine + '</div>' : '')}
+                        ${this._safeHtml(chipsHtml)}
+                    </div>
+                </div>
+                <div class="pcb-right">
+                    <div class="pcb-managed">
+                        <i class="fas fa-shield-alt"></i>
+                        <span><span data-i18n="managedBy">Managed by</span> <strong>Choice Properties</strong></span>
+                    </div>
+                    ${this._safeHtml(backLinkHtml)}
+                </div>
+            </div>
+        `);
 
         // Insert before the progress bar
         const progressContainer = document.querySelector('.progress-container');
@@ -570,17 +665,19 @@ class RentalApplication {
         banner.setAttribute('role', 'note');
         banner.setAttribute('aria-label', 'Property address required');
         const tNc = this.getTranslations();
-        banner.innerHTML =
-            '<div class="ncb-inner">' +
-                '<div class="ncb-icon"><i class="fas fa-map-marker-alt"></i></div>' +
-                '<div class="ncb-text">' +
-                    '<div class="ncb-title" data-i18n="noContextTitle">' + tNc.noContextTitle + '</div>' +
-                    '<div class="ncb-sub" data-i18n="noContextSub">' + tNc.noContextSub + '</div>' +
-                    '<a href="' + (window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev') + '/listings.html" class="ncb-browse-link" data-i18n="browseListings">' +
-                        '<i class="fas fa-search"></i>Browse Available Listings' +
-                    '</a>' +
-                '</div>' +
-            '</div>';
+        const listingSiteUrl = (window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev') + '/listings.html';
+        this._setTrustedHtml(banner, this._html`
+            <div class="ncb-inner">
+                <div class="ncb-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="ncb-text">
+                    <div class="ncb-title" data-i18n="noContextTitle">${tNc.noContextTitle}</div>
+                    <div class="ncb-sub" data-i18n="noContextSub">${tNc.noContextSub}</div>
+                    <a href="${listingSiteUrl}" class="ncb-browse-link" data-i18n="browseListings">
+                        <i class="fas fa-search"></i>Browse Available Listings
+                    </a>
+                </div>
+            </div>
+        `);
 
         const progressContainer = document.querySelector('.progress-container');
         if (progressContainer && progressContainer.parentNode) {
@@ -629,11 +726,19 @@ class RentalApplication {
             if (!hintBox || !hintText) return;
 
             const parts = [];
-            if (petTypes)  parts.push('Allowed pet types: <strong>' + this._escHtml(petTypes) + '</strong>');
-            if (petWeight) parts.push('Max weight: <strong>' + this._escHtml(petWeight) + ' lbs</strong>');
+            if (petTypes)  parts.push({ label: 'Allowed pet types: ', value: petTypes });
+            if (petWeight) parts.push({ label: 'Max weight: ', value: petWeight + ' lbs' });
 
             if (parts.length) {
-                hintText.innerHTML = parts.join(' &nbsp;·&nbsp; ') + '. Please describe your pet(s) accordingly.';
+                hintText.replaceChildren();
+                parts.forEach((part, index) => {
+                    if (index > 0) hintText.appendChild(document.createTextNode(' \u00a0·\u00a0 '));
+                    hintText.appendChild(document.createTextNode(part.label));
+                    const strong = document.createElement('strong');
+                    strong.textContent = part.value;
+                    hintText.appendChild(strong);
+                });
+                hintText.appendChild(document.createTextNode('. Please describe your pet(s) accordingly.'));
                 hintBox.style.display = 'block';
                 // Update textarea placeholder to be more specific
                 if (petArea) {
@@ -752,7 +857,7 @@ class RentalApplication {
                     const response = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&apiKey=${apiKey}`);
                     const data = await response.json();
                     if (data.features && data.features.length > 0) {
-                        dropdown.innerHTML = '';
+                        dropdown.replaceChildren();
                         data.features.forEach(feature => {
                             const item = document.createElement('div');
                             item.textContent = feature.properties.formatted;
@@ -828,13 +933,20 @@ class RentalApplication {
             const widget = document.createElement('div');
             widget.id = 'incomeRatioWidget';
             widget.style.cssText = 'margin-top:10px;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.5;border:1px solid #e2e8f0;background:#f8fafc;display:none;';
-            widget.innerHTML =
-                '<div style="font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;">' +
-                    '<i class="fas fa-chart-bar" style="color:var(--secondary);"></i>' +
-                    '<span>Affordability Check</span>' +
-                    '<span id="incomeRatioBadge" style="margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;"></span>' +
-                '</div>' +
-                '<div id="incomeRatioDetail" style="color:#5f6b7a;"></div>';
+            const header = document.createElement('div');
+            header.style.cssText = 'font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;';
+            const chartIcon = this._icon('fas fa-chart-bar');
+            chartIcon.style.color = 'var(--secondary)';
+            const title = document.createElement('span');
+            title.textContent = 'Affordability Check';
+            const ratioBadge = document.createElement('span');
+            ratioBadge.id = 'incomeRatioBadge';
+            ratioBadge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;';
+            const detail = document.createElement('div');
+            detail.id = 'incomeRatioDetail';
+            detail.style.color = '#5f6b7a';
+            header.replaceChildren(chartIcon, title, ratioBadge);
+            widget.replaceChildren(header, detail);
             // Insert after the income group, before the next sibling
             incomeGroup.parentNode.insertBefore(widget, incomeGroup.nextSibling);
         }
@@ -860,15 +972,15 @@ class RentalApplication {
             let color, bg, label, msg;
             if (ratio >= 3) {
                 color = '#1b5e20'; bg = '#e8f5e9'; label = '✓ Qualifies';
-                msg = 'Your income is <strong>' + ratio.toFixed(1) + '×</strong> the monthly rent ($' +
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
                       rent.toLocaleString('en-US') + '), which meets the standard 3× requirement.';
             } else if (ratio >= 2.5) {
                 color = '#e65100'; bg = '#fff8e1'; label = '⚠ Borderline';
-                msg = 'Your income is <strong>' + ratio.toFixed(1) + '×</strong> the monthly rent ($' +
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
                       rent.toLocaleString('en-US') + '). Most landlords require 2.5–3×. This may be reviewed closely.';
             } else {
                 color = '#b71c1c'; bg = '#ffebee'; label = '✗ May Not Qualify';
-                msg = 'Your income is <strong>' + ratio.toFixed(1) + '×</strong> the monthly rent ($' +
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
                       rent.toLocaleString('en-US') + '). Most landlords require at least 2.5–3×. ' +
                       (other ? '' : 'Adding any additional income above may help.');
             }
@@ -877,7 +989,10 @@ class RentalApplication {
             widget.style.borderColor = color + '55';
             badge.textContent  = label;
             badge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;background:' + color + ';color:#fff;';
-            detail.innerHTML = msg + ' <span style="color:#94a3b8;">(' + pct + '% of income goes to rent)</span>';
+            const muted = document.createElement('span');
+            muted.style.color = '#94a3b8';
+            muted.textContent = '(' + pct + '% of income goes to rent)';
+            detail.replaceChildren(document.createTextNode(msg + ' '), muted);
         };
 
         if (incomeEl) { incomeEl.addEventListener('input', updateRatio); incomeEl.addEventListener('change', updateRatio); }
@@ -1473,13 +1588,27 @@ class RentalApplication {
         const MAX_FILES = 4;
 
         const renderList = () => {
-            list.innerHTML = this._uploadedFiles.map((f, i) => `
-                <div class="upload-file-item">
-                    <i class="fas fa-file-alt" style="color:var(--secondary);flex-shrink:0;"></i>
-                    <span class="upload-file-name">${f.name}</span>
-                    <span class="upload-file-size">(${(f.size / 1024).toFixed(0)} KB)</span>
-                    <button type="button" class="upload-remove-btn" data-remove-idx="${i}" aria-label="Remove ${f.name}"><i class="fas fa-xmark"></i></button>
-                </div>`).join('');
+            const items = this._uploadedFiles.map((f, i) => {
+                const item = document.createElement('div');
+                item.className = 'upload-file-item';
+                const icon = this._icon('fas fa-file-alt');
+                icon.style.cssText = 'color:var(--secondary);flex-shrink:0;';
+                const name = document.createElement('span');
+                name.className = 'upload-file-name';
+                name.textContent = f.name;
+                const size = document.createElement('span');
+                size.className = 'upload-file-size';
+                size.textContent = '(' + (f.size / 1024).toFixed(0) + ' KB)';
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'upload-remove-btn';
+                remove.dataset.removeIdx = String(i);
+                remove.setAttribute('aria-label', 'Remove ' + f.name);
+                remove.replaceChildren(this._icon('fas fa-xmark'));
+                item.replaceChildren(icon, name, size, remove);
+                return item;
+            });
+            list.replaceChildren(...items);
         };
         list.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-remove-idx]');
@@ -1529,7 +1658,7 @@ class RentalApplication {
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
             modal.setAttribute('aria-label', 'Save progress and resume later');
-            modal.innerHTML = `
+            this._setTrustedHtml(modal, `
                 <div class="save-resume-card">
                     <h3><i class="fas fa-bookmark" style="color:var(--secondary);margin-right:8px;"></i><span data-i18n="saveResumeLater">Save &amp; Resume Later</span></h3>
                     <p data-i18n="saveResumeDesc">Enter your email and we'll send you a link to resume your application exactly where you left off.</p>
@@ -1546,7 +1675,7 @@ class RentalApplication {
                     <div class="save-resume-success" id="saveResumeSuccess">
                         <i class="fas fa-check-circle"></i> <span data-i18n="linkSent">Link sent! Check your inbox.</span>
                     </div>
-                </div>`;
+                </div>`);
             document.body.appendChild(modal);
         }
 
@@ -1555,9 +1684,9 @@ class RentalApplication {
             if (section.querySelector('.save-resume-bar')) return;
             const bar = document.createElement('div');
             bar.className = 'save-resume-bar';
-            bar.innerHTML = `<button type="button" class="btn-save-resume save-resume-trigger">
+            this._setTrustedHtml(bar, `<button type="button" class="btn-save-resume save-resume-trigger">
                 <i class="fas fa-bookmark"></i> <span data-i18n="saveResumeLater">Save &amp; Resume Later</span>
-            </button>`;
+            </button>`);
             section.appendChild(bar);
         });
 
@@ -1615,7 +1744,7 @@ class RentalApplication {
               const resumeUrl = window.location.origin + window.location.pathname + '?' + currentParams.toString();
 
               // Show loading state
-              if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; }
+              if (sendBtn) { sendBtn.disabled = true; this._setIconText(sendBtn, 'fas fa-spinner fa-spin', 'Sending…'); }
 
               // POST draft to backend — stores it in Supabase and sends the email
               let emailSent = false;
@@ -1641,13 +1770,11 @@ class RentalApplication {
                   console.warn('[CP App] save-draft request failed (non-fatal):', err);
               }
 
-              if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link'; }
+              if (sendBtn) { sendBtn.disabled = false; this._setIconText(sendBtn, 'fas fa-paper-plane', 'Send Link'); }
 
               const successEl = document.getElementById('saveResumeSuccess');
               if (successEl) {
-                  successEl.innerHTML = emailSent
-                      ? '<i class="fas fa-check-circle"></i> Link sent! Check your inbox.'
-                      : '<i class="fas fa-check-circle"></i> Progress saved on this device.';
+                  this._setIconText(successEl, 'fas fa-check-circle', emailSent ? 'Link sent! Check your inbox.' : 'Progress saved on this device.');
                   successEl.classList.add('show');
               }
               setTimeout(() => {
@@ -2519,7 +2646,7 @@ class RentalApplication {
                         } else if (el.tagName === 'OPTION') {
                             el.textContent = t[key];
                         } else if (HTML_KEYS.has(key)) {
-                            el.innerHTML = t[key];
+                            this._setSafeMarkup(el, t[key]);
                         } else {
                             el.textContent = t[key];
                         }
@@ -2566,7 +2693,7 @@ class RentalApplication {
                     } else if (el.tagName === 'OPTION') {
                         el.textContent = t[key];
                     } else if (HTML_KEYS.has(key)) {
-                        el.innerHTML = t[key];
+                        this._setSafeMarkup(el, t[key]);
                     } else {
                         el.textContent = t[key];
                     }
@@ -2612,7 +2739,7 @@ class RentalApplication {
             const delay = Math.pow(2, this.retryCount) * 1000; // 2,4,8 seconds
             this.retryCount++;
             
-            msgEl.innerHTML = `${errorMessage} – ${t.retry} ${t.retryIn} ${delay/1000}s (${t.retryAttempt} ${this.retryCount}/${this.maxRetries})`;
+            msgEl.textContent = `${errorMessage} – ${t.retry} ${t.retryIn} ${delay/1000}s (${t.retryAttempt} ${this.retryCount}/${this.maxRetries})`;
             statusArea.classList.add('error');
             if (spinner) {
                 spinner.className = 'fas fa-spinner fa-pulse';
@@ -2639,7 +2766,7 @@ class RentalApplication {
         // handleSubmissionSuccess() if it finds the record, or will call
         // _showFinalNetworkError() after all attempts are exhausted.
         if (isTransient && this.retryCount >= this.maxRetries && this._verifyStarted) {
-            msgEl.innerHTML = t.verifyingSubmission || 'Checking your submission status\u2026 Please wait.';
+            msgEl.textContent = t.verifyingSubmission || 'Checking your submission status\u2026 Please wait.';
             statusArea.classList.remove('error');
             if (spinner) {
                 spinner.className = 'fas fa-spinner fa-pulse';
@@ -2651,7 +2778,7 @@ class RentalApplication {
         const finalMessage = (isTransient && this.retryCount >= this.maxRetries)
             ? (t.networkExhausted || t.serverError)
             : errorMessage;
-        msgEl.innerHTML = finalMessage;
+        msgEl.textContent = finalMessage;
         statusArea.classList.add('error');
         if (spinner) {
             spinner.className = 'fas fa-exclamation-circle';
@@ -2669,7 +2796,7 @@ class RentalApplication {
             retryBtn = document.createElement('button');
             retryBtn.id = 'submissionRetryBtn';
             retryBtn.className = 'btn-retry';
-            retryBtn.innerHTML = `<i class="fas fa-redo-alt"></i> ${t.retry}`;
+            this._setIconText(retryBtn, 'fas fa-redo-alt', t.retry);
             progressDiv.appendChild(retryBtn);
         }
         retryBtn.style.display = 'inline-flex';
@@ -2773,6 +2900,10 @@ class RentalApplication {
           // show a user-facing error rather than silently failing.
           if (!this.BACKEND_URL) {
               alert('The application system is temporarily unavailable. Please try again or call 707-706-3137.');
+              return;
+          }
+          if (!(window.CP_CONFIG && window.CP_CONFIG.SUPABASE_ANON_KEY)) {
+              this.showSubmissionError(new Error('The application system is missing a required security key. Please call 707-706-3137 so we can help you submit.'), false);
               return;
           }
         // Block if this session already produced a successful appId
@@ -2926,15 +3057,21 @@ class RentalApplication {
 
             let result;
             const contentType = response.headers.get('content-type') || '';
-            if (!response.ok) {
-                throw new Error(t.serverError);
-            }
             try {
                 const rawText = await response.text();
                 result = JSON.parse(rawText);
             } catch (parseErr) {
-                // If we can't parse JSON at all, it's a real server error (HTML page etc.)
-                throw new Error(t.serverError);
+                throw new Error(response.ok ? t.serverError : 'The application system returned an unexpected response. Please call 707-706-3137 if this continues.');
+            }
+            if (!response.ok) {
+                const serverMessage = result && result.error ? result.error : '';
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('The application system is not accepting submissions because of a configuration issue. Please call 707-706-3137 so we can help you submit.');
+                }
+                if (response.status === 422 && serverMessage) {
+                    throw new Error(serverMessage);
+                }
+                throw new Error(serverMessage || t.serverError);
             }
 
             if (result.success) {
@@ -3065,7 +3202,7 @@ class RentalApplication {
         const progressDiv = document.getElementById('submissionProgress');
         if (!msgEl || !progressDiv) return;
 
-        msgEl.innerHTML = t.networkExhausted || t.serverError;
+        msgEl.textContent = t.networkExhausted || t.serverError;
         if (statusArea) statusArea.classList.add('error');
         if (spinner) { spinner.className = 'fas fa-exclamation-circle'; spinner.style.color = '#e74c3c'; }
 
@@ -3076,7 +3213,7 @@ class RentalApplication {
             retryBtn.className = 'btn-retry';
             progressDiv.appendChild(retryBtn);
         }
-        retryBtn.innerHTML = `<i class="fas fa-redo-alt"></i> ${t.retry}`;
+        this._setIconText(retryBtn, 'fas fa-redo-alt', t.retry);
         retryBtn.style.display = 'inline-flex';
 
         const newBtn = retryBtn.cloneNode(true);
@@ -3179,14 +3316,14 @@ class RentalApplication {
             : '';
 
         successState.style.display = 'block';
-        successState.innerHTML = `
+        this._setTrustedHtml(successState, this._html`
             <div class="success-card">
                 <div class="success-header">
                     <i class="fas fa-check-circle"></i>
                     <h2>${t.successTitle}</h2>
                     <p class="success-subtitle">${t.successText}</p>
-                    ${propertyLine}
-                    ${backLink}
+                    ${this._safeHtml(propertyLine)}
+                    ${this._safeHtml(backLink)}
                 </div>
 
                 <div class="id-section">
@@ -3270,14 +3407,14 @@ class RentalApplication {
                 </div>
 
                 <div class="spam-warning-notice" style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:13.5px;color:#5d4037;line-height:1.5;">
-                    ${t.spamWarning}
+                    ${this._safeHtml(t.spamWarning)}
                 </div>
 
                 <div class="help-line">
                     ${t.questions} <strong>707-706-3137</strong> — ${t.helpText}
                 </div>
             </div>
-        `;
+        `);
 
         const copyButton = successState.querySelector('.copy-btn');
         const newButton = successState.querySelector('.btn-new');
@@ -3374,7 +3511,7 @@ class RentalApplication {
                   if (value && value !== '') {
                       const isSensitive = field === 'SSN' || field === 'Co-Applicant SSN'; // [10B-4/19]
                       const displayValue = isSensitive ? '••••' : value;
-                      groupFieldsHtml += `
+                      groupFieldsHtml += this._html`
                           <div class="summary-item">
                               <div class="summary-label">${displayLabel}</div>
                               <div class="summary-value">${displayValue}</div>
@@ -3383,7 +3520,7 @@ class RentalApplication {
             });
 
             if (groupFieldsHtml) {
-                summaryHtml += `
+                summaryHtml += this._html`
                     <div class="summary-group" data-section-id="${group.id}" role="button" tabindex="0" aria-label="Edit ${group.name}" title="Tap to edit this section">
                         <div class="summary-header">
                             <span>${group.name}</span>
@@ -3392,13 +3529,13 @@ class RentalApplication {
                             </span>
                         </div>
                         <div class="summary-content">
-                            ${groupFieldsHtml}
+                            ${this._safeHtml(groupFieldsHtml)}
                         </div>
                     </div>`;
             }
         });
 
-        summaryContainer.innerHTML = summaryHtml;
+        this._setTrustedHtml(summaryContainer, summaryHtml);
         summaryContainer.querySelectorAll('.summary-group[data-section-id]').forEach(groupEl => {
             const sectionId = parseInt(groupEl.dataset.sectionId, 10);
             if (!sectionId) return;
@@ -3673,10 +3810,12 @@ window.copyAppId = function() {
         navigator.clipboard.writeText(appId).then(() => {
             const btn = document.querySelector('.copy-btn');
             if (btn) {
-                const original = btn.innerHTML;
+                const original = Array.from(btn.childNodes).map(node => node.cloneNode(true));
                 const tCopy = (window.app && window.app.getTranslations) ? window.app.getTranslations() : {};
-                btn.innerHTML = `<i class="fas fa-check"></i> ${tCopy.copied || 'Copied!'}`;
-                setTimeout(() => { btn.innerHTML = original; }, 2000);
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-check';
+                btn.replaceChildren(icon, document.createTextNode(' ' + (tCopy.copied || 'Copied!')));
+                setTimeout(() => { btn.replaceChildren(...original.map(node => node.cloneNode(true))); }, 2000);
             }
         }).catch(() => {
             // Clipboard API blocked — fall back to prompt

@@ -614,6 +614,10 @@ function amenityIconColor(text) {
   return '';
 }
 
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function renderProperty(p) {
   document.title = `${p.title} — Choice Properties`;
 
@@ -716,7 +720,7 @@ function renderProperty(p) {
   // Header
   document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('detailTitle').textContent = p.title;
-  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`;
+  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
 
   // Listed-by attribution
   if (p.landlords) {
@@ -724,7 +728,7 @@ function renderProperty(p) {
     const name = ll.business_name || ll.contact_name;
     const attr = document.createElement('div');
     attr.className = 'detail-listed-by';
-    attr.innerHTML = `<i class="fas fa-user"></i> Listed by <span>${name}</span>`;
+    attr.innerHTML = `<i class="fas fa-user"></i> Listed by <span>${esc(name)}</span>`;
     document.getElementById('detailAddress').insertAdjacentElement('afterend', attr);
   }
 
@@ -743,7 +747,7 @@ function renderProperty(p) {
       <div class="detail-meta-icon"><i class="fas ${m.icon}"></i></div>
       <div class="detail-meta-text">
         <div class="detail-meta-label">${m.label}</div>
-        <div class="detail-meta-value">${m.value}</div>
+        <div class="detail-meta-value">${esc(m.value)}</div>
       </div>
     </div>`).join('');
 
@@ -764,7 +768,7 @@ function renderProperty(p) {
   }
   if (p.virtual_tour_url) {
     const vtBtn = document.createElement('a');
-    vtBtn.href = p.virtual_tour_url;
+    vtBtn.href = /^https?:\/\//i.test(p.virtual_tour_url) ? p.virtual_tour_url : '#';
     vtBtn.target = '_blank';
     vtBtn.rel = 'noopener noreferrer';
     vtBtn.className = 'btn btn-outline';
@@ -778,23 +782,23 @@ function renderProperty(p) {
   if (p.amenities?.length) {
     hasAmenities = true;
     document.getElementById('amenitiesGrid').innerHTML = p.amenities.map(a =>
-      `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${a}</div>`).join('');
+      `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(a)}</div>`).join('');
   }
   if (p.appliances?.length) {
     hasAmenities = true;
     document.getElementById('appliancesSection').style.display = '';
     document.getElementById('appliancesGrid').innerHTML = p.appliances.map(a =>
-      `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${a}</div>`).join('');
+      `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(a)}</div>`).join('');
   }
 
   const utilRows = [];
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included.map(u =>
-    `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${u} Included</div>`));
-  if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${p.parking}</div>`);
-    if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${p.laundry_type}</div>`);
-    if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${p.heating_type}</div>`);
-    if (p.cooling_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-snowflake"></i>Cooling: ${p.cooling_type}</div>`);
-    if (p.ev_charging && p.ev_charging !== 'none') utilRows.push(`<div class="amenity-item"><i class="fas fa-charging-station icon-green"></i>EV Charging: ${p.ev_charging}</div>`);
+    `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
+  if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
+    if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
+    if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${esc(p.heating_type)}</div>`);
+    if (p.cooling_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-snowflake"></i>Cooling: ${esc(p.cooling_type)}</div>`);
+    if (p.ev_charging && p.ev_charging !== 'none') utilRows.push(`<div class="amenity-item"><i class="fas fa-charging-station icon-green"></i>EV Charging: ${esc(p.ev_charging)}</div>`);
     if (p.garage_spaces) utilRows.push(`<div class="amenity-item"><i class="fas fa-car-side"></i>Parking Spaces: ${p.garage_spaces}</div>`);
     if (p.parking_fee) utilRows.push(`<div class="amenity-item"><i class="fas fa-dollar-sign icon-amber"></i>Parking Fee: ${Number(p.parking_fee).toLocaleString()}/mo</div>`);
   if (utilRows.length) {
@@ -803,15 +807,15 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  if (p.lease_terms?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${p.lease_terms.join(', ')}</div>`);
+  if (p.lease_terms?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${p.lease_terms.map(esc).join(', ')}</div>`);
   if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: ${p.security_deposit.toLocaleString()}</div>`);
     if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: ${Number(p.last_months_rent).toLocaleString()}</div>`);
     if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: ${Number(p.admin_fee).toLocaleString()}</div>`);
     if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
     if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: ${Number(p.pet_deposit).toLocaleString()}</div>`);
-    if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.join(', ')}</div>`);
-    if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${p.pet_weight_limit} lbs max</div>`);
-  if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${p.showing_instructions}</span></div>`);
+    if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
+    if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
+  if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -894,7 +898,7 @@ function renderProperty(p) {
     document.getElementById('landlordName').textContent = name;
     if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
     const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${CONFIG.img(ll.avatar_url,'avatar')}" alt="${name}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.svg';">`;
+    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${esc(CONFIG.img(ll.avatar_url,'avatar'))}" alt="${esc(name)}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.svg';">`;
     else avatarEl.textContent = name.charAt(0).toUpperCase();
     if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
   }

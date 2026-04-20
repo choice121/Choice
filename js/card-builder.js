@@ -17,6 +17,10 @@
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function escAttr(s) {
+    return esc(s).replace(/'/g, '&#39;');
+  }
+
   // ── Rent formatter ──────────────────────────────────────────
   // P2-D: Wrap $ in branded span so it renders in brand blue.
   function fmtRent(v) {
@@ -47,11 +51,11 @@
       const imgSrc    = (window.CONFIG && CONFIG.img)    ? CONFIG.img(url, 'card')               : url;
       const imgSrcset = (window.CONFIG && CONFIG.srcset) ? CONFIG.srcset(url, 'card', 'card_2x') : '';
       const lqip      = (window.CP && CP.UI && CP.UI.lqipUrl) ? CP.UI.lqipUrl(url) : '';
-      const lqipStyle = lqip ? ' style="background-image:url(\'' + lqip + '\');background-size:cover;background-position:center"' : '';
+      const lqipStyle = lqip ? ' style="background-image:url(\'' + escAttr(lqip) + '\');background-size:cover;background-position:center"' : '';
       return (
         '<div class="property-card-slide"' + lqipStyle + '>' +
-          '<img src="' + imgSrc + '"' +
-          (imgSrcset ? ' srcset="' + imgSrcset + '"' : '') +
+          '<img src="' + escAttr(imgSrc) + '"' +
+          (imgSrcset ? ' srcset="' + escAttr(imgSrcset) + '"' : '') +
           ' alt="' + title + ' photo ' + (i + 1) + '"' +
           ' sizes="' + imgSizes + '"' +
           ' loading="' + (i === 0 ? 'eager' : 'lazy') + '"' +
@@ -113,7 +117,7 @@
     }
 
     // ── Address ───────────────────────────────────────────────
-    var addrLine = [p.address, p.city, p.state].filter(Boolean).join(', ');
+    var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
     // P2-C: Property type label ────────────────────────────────
     var typeMap = { apartment: 'Apartment', house: 'House', condo: 'Condo', townhouse: 'Townhouse',

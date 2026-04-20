@@ -1089,14 +1089,23 @@ CREATE OR REPLACE FUNCTION submit_tenant_reply(
   p_app_id  TEXT,
   p_message TEXT,
   p_name    TEXT
-) RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+) RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
 BEGIN
+  IF p_app_id IS NULL OR btrim(p_app_id) = '' THEN
+    RETURN json_build_object('success', false, 'error', 'Application ID is required');
+  END IF;
+  IF p_message IS NULL OR btrim(p_message) = '' THEN
+    RETURN json_build_object('success', false, 'error', 'Message is required');
+  END IF;
+  IF length(p_message) > 5000 THEN
+    RETURN json_build_object('success', false, 'error', 'Message is too long');
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM applications WHERE app_id = p_app_id) THEN
     RETURN json_build_object('success', false, 'error', 'Application not found');
   END IF;
 
   INSERT INTO messages (app_id, sender, sender_name, message)
-  VALUES (p_app_id, 'tenant', p_name, p_message);
+  VALUES (p_app_id, 'tenant', NULLIF(btrim(COALESCE(p_name, 'Tenant')), ''), btrim(p_message));
 
   RETURN json_build_object('success', true);
 END;
@@ -1108,7 +1117,7 @@ GRANT EXECUTE ON FUNCTION submit_tenant_reply(TEXT, TEXT, TEXT) TO anon, authent
 -- Returns all applications linked to the authenticated applicant.
 -- Does NOT expose SSN, income, criminal history, or PII fields.
 CREATE OR REPLACE FUNCTION get_my_applications()
-RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
 DECLARE
   v_uid UUID := auth.uid();
 BEGIN
@@ -1150,7 +1159,7 @@ GRANT EXECUTE ON FUNCTION get_my_applications() TO authenticated;
 -- user. Verified against the server-side auth.email() — a caller
 -- cannot claim another person's application even if they know the app_id.
 CREATE OR REPLACE FUNCTION claim_application(p_app_id TEXT, p_email TEXT)
-RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
 DECLARE
   v_uid        UUID := auth.uid();
   v_auth_email TEXT := auth.email();
@@ -1158,6 +1167,9 @@ DECLARE
 BEGIN
   IF v_uid IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  IF v_auth_email IS NULL OR lower(v_auth_email) <> lower(COALESCE(p_email, '')) THEN
+    RETURN json_build_object('success', false, 'error', 'Email does not match signed-in account');
   END IF;
 
   SELECT * INTO v_app FROM applications WHERE app_id = p_app_id;
@@ -1192,8 +1204,18 @@ GRANT EXECUTE ON FUNCTION claim_application(TEXT, TEXT) TO authenticated;
 -- visitor to enumerate application IDs and property addresses for
 -- any email address, a PII disclosure risk.
 CREATE OR REPLACE FUNCTION get_apps_by_email(p_email TEXT)
-RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_auth_email TEXT := auth.email();
 BEGIN
+  IF v_uid IS NULL THEN
+    RETURN json_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  IF v_auth_email IS NULL OR lower(v_auth_email) <> lower(COALESCE(p_email, '')) THEN
+    RETURN json_build_object('success', false, 'error', 'Email does not match signed-in account');
+  END IF;
+
   RETURN (
     SELECT COALESCE(json_agg(row_to_json(r) ORDER BY r.created_at DESC), '[]'::json)
     FROM (
@@ -1201,7 +1223,7 @@ BEGIN
              property_address,
              created_at::date AS created_at
       FROM applications
-      WHERE lower(email) = lower(p_email)
+      WHERE lower(email) = lower(v_auth_email)
     ) r
   );
 END;

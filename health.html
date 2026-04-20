@@ -143,7 +143,16 @@
 function set(id, status, label, detail) {
   const bdg = document.getElementById('bdg-' + id);
   const det = document.getElementById('det-' + id);
-  if (bdg) { bdg.className = 'badge ' + status; bdg.innerHTML = status === 'running' ? '<span class="spinner"></span> Checking' : label; }
+  if (bdg) {
+    bdg.className = 'badge ' + status;
+    if (status === 'running') {
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner';
+      bdg.replaceChildren(spinner, document.createTextNode(' Checking'));
+    } else {
+      bdg.textContent = label;
+    }
+  }
   if (det && detail) det.textContent = detail;
 }
 

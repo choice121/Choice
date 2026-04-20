@@ -708,7 +708,148 @@ CREATE POLICY "app_docs_landlord_read" ON storage.objects
 
 
 -- ============================================================
--- SECTION M12 — REGISTER NEW TABLES IN SETUP.sql TRACKING
+-- SECTION M12 — TENANT PORTAL RPC FUNCTIONS
+-- Restores the authenticated tenant portal functions required by
+-- tenant/portal.html. These mirror SETUP.sql and are safe to re-run.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION submit_tenant_reply(
+  p_app_id  TEXT,
+  p_message TEXT,
+  p_name    TEXT
+) RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+BEGIN
+  IF p_app_id IS NULL OR btrim(p_app_id) = '' THEN
+    RETURN json_build_object('success', false, 'error', 'Application ID is required');
+  END IF;
+  IF p_message IS NULL OR btrim(p_message) = '' THEN
+    RETURN json_build_object('success', false, 'error', 'Message is required');
+  END IF;
+  IF length(p_message) > 5000 THEN
+    RETURN json_build_object('success', false, 'error', 'Message is too long');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM applications WHERE app_id = p_app_id) THEN
+    RETURN json_build_object('success', false, 'error', 'Application not found');
+  END IF;
+
+  INSERT INTO messages (app_id, sender, sender_name, message)
+  VALUES (p_app_id, 'tenant', NULLIF(btrim(COALESCE(p_name, 'Tenant')), ''), btrim(p_message));
+
+  RETURN json_build_object('success', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION get_my_applications()
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN json_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN json_build_object(
+    'success', true,
+    'applications', (
+      SELECT COALESCE(
+        json_agg(json_build_object(
+          'app_id',           app_id,
+          'status',           status,
+          'payment_status',   payment_status,
+          'lease_status',     lease_status,
+          'property_address', property_address,
+          'created_at',       created_at,
+          'first_name',       first_name,
+          'last_name',        last_name,
+          'monthly_rent',     monthly_rent,
+          'lease_start_date', lease_start_date,
+          'move_in_status',   move_in_status,
+          'application_fee',  application_fee,
+          'email',            email
+        ) ORDER BY created_at DESC),
+        '[]'::json
+      )
+      FROM applications WHERE applicant_user_id = v_uid
+    )
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION claim_application(p_app_id TEXT, p_email TEXT)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+DECLARE
+  v_uid        UUID := auth.uid();
+  v_auth_email TEXT := auth.email();
+  v_app        applications%ROWTYPE;
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN json_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  IF v_auth_email IS NULL OR lower(v_auth_email) <> lower(COALESCE(p_email, '')) THEN
+    RETURN json_build_object('success', false, 'error', 'Email does not match signed-in account');
+  END IF;
+
+  SELECT * INTO v_app FROM applications WHERE app_id = p_app_id;
+  IF NOT FOUND THEN
+    RETURN json_build_object('success', false, 'error', 'Application not found');
+  END IF;
+
+  IF lower(v_app.email) <> lower(v_auth_email) THEN
+    RETURN json_build_object('success', false, 'error', 'Email does not match application');
+  END IF;
+
+  IF v_app.applicant_user_id = v_uid THEN
+    RETURN json_build_object('success', true, 'already_claimed', true);
+  END IF;
+
+  IF v_app.applicant_user_id IS NOT NULL AND v_app.applicant_user_id <> v_uid THEN
+    RETURN json_build_object('success', false, 'error', 'Application already linked to another account');
+  END IF;
+
+  UPDATE applications SET applicant_user_id = v_uid WHERE app_id = p_app_id;
+  RETURN json_build_object('success', true, 'claimed', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION get_apps_by_email(p_email TEXT)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_auth_email TEXT := auth.email();
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN json_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  IF v_auth_email IS NULL OR lower(v_auth_email) <> lower(COALESCE(p_email, '')) THEN
+    RETURN json_build_object('success', false, 'error', 'Email does not match signed-in account');
+  END IF;
+
+  RETURN (
+    SELECT COALESCE(json_agg(row_to_json(r) ORDER BY r.created_at DESC), '[]'::json)
+    FROM (
+      SELECT app_id,
+             property_address,
+             created_at::date AS created_at
+      FROM applications
+      WHERE lower(email) = lower(v_auth_email)
+    ) r
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION submit_tenant_reply(TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_my_applications() FROM PUBLIC;
+REVOKE ALL ON FUNCTION claim_application(TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_apps_by_email(TEXT) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION submit_tenant_reply(TEXT, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_my_applications() TO authenticated;
+GRANT EXECUTE ON FUNCTION claim_application(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_apps_by_email(TEXT) TO authenticated;
+
+
+-- ============================================================
+-- SECTION M13 — REGISTER NEW TABLES IN SETUP.sql TRACKING
 --
 -- This comment block is informational — update SETUP.sql to
 -- include M1-level tables in its section numbering eventually.

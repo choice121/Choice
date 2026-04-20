@@ -1014,24 +1014,28 @@ function initMap(props) {
     if (!p.lat || !p.lng) return;
     const lat = parseFloat(p.lat), lng = parseFloat(p.lng);
     if (isNaN(lat) || isNaN(lng)) return;
+    const safeId = encodeURIComponent(p.id || '');
+    const safeTitle = esc(p.title || 'Rental property');
+    const safeImg = esc(CONFIG.img(p.photo_urls?.[0] || '','card'));
+    const safeRent = Number(p.monthly_rent || 0);
     bounds.push([lat, lng]);
     const icon = L.divIcon({
       className: '',
-      html: `<div class="map-marker-price">$${(p.monthly_rent/1000).toFixed(p.monthly_rent >= 1000 ? 1 : 0)}${p.monthly_rent >= 1000 ? 'k' : ''}</div>`,
+      html: `<div class="map-marker-price">$${(safeRent/1000).toFixed(safeRent >= 1000 ? 1 : 0)}${safeRent >= 1000 ? 'k' : ''}</div>`,
       iconAnchor: [30, 16], iconSize: [60, 32],
     });
     const marker = L.marker([lat, lng], { icon }).addTo(mapInstance);
     marker.bindPopup(`
-      <a href="/property.html?id=${p.id}" class="map-popup-card">
-        <img class="map-popup-img" src="${CONFIG.img(p.photo_urls?.[0] || '','card')}" alt="${p.title}" loading="lazy">
+      <a href="/property.html?id=${safeId}" class="map-popup-card">
+        <img class="map-popup-img" src="${safeImg}" alt="${safeTitle}" loading="lazy">
         <div class="map-popup-body">
-          <div class="map-popup-price">$${p.monthly_rent.toLocaleString()}<span>/mo</span></div>
-          <div class="map-popup-title">${p.title}</div>
+          <div class="map-popup-price">$${safeRent.toLocaleString()}<span>/mo</span></div>
+          <div class="map-popup-title">${safeTitle}</div>
           <div class="map-popup-meta">
             ${p.bedrooms != null ? `<span>${p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' bd'}</span>` : ''}
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
           </div>
-          <a href="/property.html?id=${p.id}" class="map-popup-apply">View Property →</a>
+          <a href="/property.html?id=${safeId}" class="map-popup-apply">View Property →</a>
         </div>
       </a>`, { maxWidth: 260 });
     mapMarkers.push(marker);
