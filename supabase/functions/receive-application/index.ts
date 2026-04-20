@@ -224,43 +224,37 @@ Deno.serve(async (req: Request) => {
 
   const prop = fv(fields['Property Address']) || 'your chosen property';
 
-  // Send confirmation email to applicant and log result
-  sendEmail({
-    to: email,
-    subject: `Application Received — ${prop.split(',')[0]} | Choice Properties (Ref: ${appId})`,
-    html: applicationConfirmationHtml(firstName, prop, appId, fields, portalUrl),
-  }).then(result => {
-    supabase.from('email_logs').insert({
-      app_id: appId, type: 'application_confirmation',
-      recipient: email, status: result.ok ? 'sent' : 'failed', provider: result.provider,
-    }).catch(() => {});
-  }).catch(err => {
-    console.error('Confirmation email error:', err);
-    supabase.from('email_logs').insert({
-      app_id: appId, type: 'application_confirmation',
-      recipient: email, status: 'failed', provider: 'none',
-    }).catch(() => {});
-  });
-
-  // Send admin notification and log result
-  for (const adminEmail of ADMIN_EMAILS) {
-    sendEmail({
-      to: adminEmail,
-      subject: `New Application: ${appId} — ${firstName} ${lastName} | ${prop}`,
-      html: adminNotificationHtml(firstName, lastName, email, prop, appId, fields),
-    }).then(result => {
-      supabase.from('email_logs').insert({
-        app_id: appId, type: 'admin_notification',
-        recipient: adminEmail, status: result.ok ? 'sent' : 'failed', provider: result.provider,
-      }).catch(() => {});
-    }).catch(err => {
-      console.error('Admin notification error:', err);
-      supabase.from('email_logs').insert({
-        app_id: appId, type: 'admin_notification',
-        recipient: adminEmail, status: 'failed', provider: 'none',
-      }).catch(() => {});
+  const logEmail = async (type: string, recipient: string, status: string, provider: string) => {
+    const { error } = await supabase.from('email_logs').insert({
+      app_id: appId, type, recipient, status, provider,
     });
-  }
+    if (error) console.error('Email log insert failed:', error.message);
+  };
+
+  const emailJobs = [
+    sendEmail({
+      to: email,
+      subject: `Application Received — ${prop.split(',')[0]} | Choice Properties (Ref: ${appId})`,
+      html: applicationConfirmationHtml(firstName, prop, appId, fields, portalUrl),
+    }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider))
+      .catch(async err => {
+        console.error('Confirmation email error:', err);
+        await logEmail('application_confirmation', email, 'failed', 'none');
+      }),
+    ...ADMIN_EMAILS.map(adminEmail =>
+      sendEmail({
+        to: adminEmail,
+        subject: `New Application: ${appId} — ${firstName} ${lastName} | ${prop}`,
+        html: adminNotificationHtml(firstName, lastName, email, prop, appId, fields),
+      }).then(result => logEmail('admin_notification', adminEmail, result.ok ? 'sent' : 'failed', result.provider))
+        .catch(async err => {
+          console.error('Admin notification error:', err);
+          await logEmail('admin_notification', adminEmail, 'failed', 'none');
+        })
+    ),
+  ];
+
+  await Promise.all(emailJobs);
 
   return jsonOk({ success: true, appId, message: 'Application received.' });
 });

@@ -204,6 +204,14 @@
 let _leaseFilter = 'all';
 
 function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function jsStr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
+async function waitForCP(){
+  for(let i=0;i<80;i++){
+    if(window.CP&&CP.Applications&&CP.Auth)return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
 function fmtDate(d) { if(!d)return '-'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
 function fmtMoney(v) { if(v==null)return '-'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
@@ -304,6 +312,11 @@ async function loadLeases() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const cpReady = await waitForCP();
+  if (!cpReady) {
+    document.body.insertAdjacentHTML('afterbegin','<div style="background:#fee2e2;color:#991b1b;padding:12px;text-align:center">Admin tools failed to load. Please refresh.</div>');
+    return;
+  }
   const ok = await CP.Auth.requireAdmin();
   if (!ok) return;
   const user = await CP.Auth.getUser();

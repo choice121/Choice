@@ -3154,6 +3154,8 @@ class RentalApplication {
         const primaryPayment = document.getElementById('primaryPayment')?.value;
         const secondaryPayment = document.getElementById('secondaryPayment')?.value;
         const thirdPayment = document.getElementById('thirdPayment')?.value;
+        const email = document.getElementById('email')?.value?.trim() || '';
+        const trackUrl = '/tenant/login.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : '');
 
         let paymentPrefs = primaryPayment ? primaryPayment : t.notSelected;
         if (secondaryPayment && secondaryPayment.trim()) {
@@ -3259,6 +3261,9 @@ class RentalApplication {
                 </div>
 
                 <div class="action-buttons">
+                    <a href="${trackUrl}" class="btn-track">
+                        <i class="fas fa-search"></i> ${t.trackStatus}
+                    </a>
                     <button type="button" class="btn-new">
                         <i class="fas fa-plus"></i> ${t.newApplication}
                     </button>
@@ -3276,10 +3281,13 @@ class RentalApplication {
 
         const copyButton = successState.querySelector('.copy-btn');
         const newButton = successState.querySelector('.btn-new');
+        sessionStorage.setItem('lastSuccessAppId', appId);
+        sessionStorage.setItem('pendingPortalAppId', appId);
         if (copyButton) copyButton.addEventListener('click', () => window.copyAppId());
         if (newButton) {
             newButton.addEventListener('click', () => {
                 sessionStorage.removeItem('lastSuccessAppId');
+                sessionStorage.removeItem('pendingPortalAppId');
                 location.reload();
             });
         }

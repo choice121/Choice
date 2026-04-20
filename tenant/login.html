@@ -78,6 +78,8 @@
     const btn = document.getElementById('send-btn');
     const msg = document.getElementById('status-msg');
     const email = emailEl.value.trim().toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
 
     msg.className = 'status-msg';
     msg.style.display = 'none';
@@ -102,12 +104,14 @@
 
     try {
       const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-      const redirectTo = window.location.origin + '/tenant/portal.html';
+      const redirectUrl = new URL('/tenant/portal.html', window.location.origin);
+      if (appId) redirectUrl.searchParams.set('app_id', appId);
       const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: { emailRedirectTo: redirectUrl.toString() },
       });
       if (error) throw error;
+      if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
       msg.textContent = 'Check your email! A secure sign-in link has been sent to ' + email + '.';
       msg.className = 'status-msg success';
       document.getElementById('login-form').style.opacity = '0.5';
@@ -119,6 +123,24 @@
       btn.textContent = 'Send Sign-In Link';
     }
   }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
+    const email = params.get('email') || '';
+    if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
+    if (email) document.getElementById('email').value = email;
+
+    const ready = await waitForSB(20);
+    if (!ready) return;
+    const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const portalUrl = new URL('/tenant/portal.html', window.location.origin);
+      if (appId) portalUrl.searchParams.set('app_id', appId);
+      window.location.href = portalUrl.pathname + portalUrl.search;
+    }
+  });
   </script>
   </body>
   </html>

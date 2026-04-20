@@ -376,6 +376,14 @@ let _allData = [];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function jsStr(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');}
+async function waitForCP(){
+  for(let i=0;i<80;i++){
+    if(window.CP&&CP.Applications&&CP.Auth)return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
 function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
 function fmtMoney(v){if(v==null||v==='')return '—';return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function avatar(app){
@@ -403,6 +411,9 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 // ── Render card ───────────────────────────────────────────────────────────────
 function renderCard(app){
   const name=esc(`${app.first_name||''} ${app.last_name||''}`.trim())||'(no name)';
+  const nameArg=jsStr(`${app.first_name||''} ${app.last_name||''}`.trim()||'(no name)');
+  const idArg=jsStr(app.id);
+  const appIdArg=jsStr(app.app_id||app.id);
   const prop=esc(app.property_address||app.property_id||'—');
   const isPaid=app.payment_status==='paid';
   const isWaived=app.payment_status==='waived';
@@ -418,8 +429,8 @@ function renderCard(app){
         ${app.payment_date?' on '+fmtDate(app.payment_date):''}
        </span>` : '';
 
-  return `<div class="app-card" id="card-${app.id}">
-    <div class="app-card-header" onclick="toggleDetail('${app.id}')">
+  return `<div class="app-card" id="card-${idArg}">
+    <div class="app-card-header" onclick="toggleDetail('${idArg}')">
       ${avatar(app)}
       <div class="app-info">
         <div class="app-id-row">
@@ -438,32 +449,32 @@ function renderCard(app){
         </div>
       </div>
       <div style="flex-shrink:0;align-self:center">
-        <i class="fas fa-chevron-down" style="color:var(--muted2);font-size:.8rem" id="chev-${app.id}"></i>
+          <i class="fas fa-chevron-down" style="color:var(--muted2);font-size:.8rem" id="chev-${idArg}"></i>
       </div>
     </div>
 
     <div class="card-actions">
       <!-- Status actions -->
-      ${!isApproved?`<button class="btn-act btn-approve" onclick="setStatus('${app.id}','${app.app_id}','approved',event)"><i class="fas fa-check"></i> Approve</button>`:''}
-      ${!isDenied?`<button class="btn-act btn-deny" onclick="setStatus('${app.id}','${app.app_id}','denied',event)"><i class="fas fa-times"></i> Deny</button>`:''}
-      ${!isWaitlisted?`<button class="btn-act btn-waitlist" onclick="setStatus('${app.id}','${app.app_id}','waitlisted',event)"><i class="fas fa-hourglass-half"></i> Waitlist</button>`:''}
-      ${app.status!=='pending'?`<button class="btn-act btn-pending" onclick="setStatus('${app.id}','${app.app_id}','pending',event)"><i class="fas fa-redo"></i> Reset</button>`:''}
+      ${!isApproved?`<button class="btn-act btn-approve" onclick="setStatus('${idArg}','${appIdArg}','approved',event)"><i class="fas fa-check"></i> Approve</button>`:''}
+      ${!isDenied?`<button class="btn-act btn-deny" onclick="setStatus('${idArg}','${appIdArg}','denied',event)"><i class="fas fa-times"></i> Deny</button>`:''}
+      ${!isWaitlisted?`<button class="btn-act btn-waitlist" onclick="setStatus('${idArg}','${appIdArg}','waitlisted',event)"><i class="fas fa-hourglass-half"></i> Waitlist</button>`:''}
+      ${app.status!=='pending'?`<button class="btn-act btn-pending" onclick="setStatus('${idArg}','${appIdArg}','pending',event)"><i class="fas fa-redo"></i> Reset</button>`:''}
 
       <!-- Payment actions -->
-      ${!isPaid&&!isWaived?`<button class="btn-act btn-pay" onclick="openPayModal('${app.id}','${app.app_id}','${esc(name)}',event)"><i class="fas fa-dollar-sign"></i> Mark Paid</button>`:''}
-      ${isPaid?`<button class="btn-act btn-unpay" onclick="markUnpaid('${app.id}',event)"><i class="fas fa-undo"></i> Mark Unpaid</button>`:''}
-      ${isPaid?`<button class="btn-act btn-refund" onclick="openRefundModal('${app.id}','${esc(name)}',event)"><i class="fas fa-undo-alt"></i> Refund</button>`:''}
-      ${!isWaived?`<button class="btn-act btn-ghost" onclick="markWaived('${app.id}',event)" title="Waive fee"><i class="fas fa-hand-holding-usd"></i> Waive</button>`:''}
+      ${!isPaid&&!isWaived?`<button class="btn-act btn-pay" onclick="openPayModal('${idArg}','${appIdArg}','${nameArg}',event)"><i class="fas fa-dollar-sign"></i> Mark Paid</button>`:''}
+      ${isPaid?`<button class="btn-act btn-unpay" onclick="markUnpaid('${idArg}',event)"><i class="fas fa-undo"></i> Mark Unpaid</button>`:''}
+      ${isPaid?`<button class="btn-act btn-refund" onclick="openRefundModal('${idArg}','${nameArg}',event)"><i class="fas fa-undo-alt"></i> Refund</button>`:''}
+      ${!isWaived?`<button class="btn-act btn-ghost" onclick="markWaived('${idArg}',event)" title="Waive fee"><i class="fas fa-hand-holding-usd"></i> Waive</button>`:''}
 
       <!-- Resend Notification -->
-      <button class="btn-act btn-email" onclick="openResendModal('${app.app_id}','${app.status}','${esc(name)}',event)" title="Resend any notification email without changing status"><i class="fas fa-paper-plane"></i> Resend</button>
+      <button class="btn-act btn-email" onclick="openResendModal('${appIdArg}','${jsStr(app.status)}','${nameArg}',event)" title="Resend any notification email without changing status"><i class="fas fa-paper-plane"></i> Resend</button>
 
       <!-- Detail toggle -->
-      <button class="btn-act btn-ghost" onclick="toggleDetail('${app.id}')"><i class="fas fa-info-circle"></i> Details</button>
+      <button class="btn-act btn-ghost" onclick="toggleDetail('${idArg}')"><i class="fas fa-info-circle"></i> Details</button>
     </div>
 
-    <div class="detail-panel" id="detail-${app.id}">
-      <div id="detail-inner-${app.id}">
+    <div class="detail-panel" id="detail-${idArg}">
+      <div id="detail-inner-${idArg}">
         <div style="color:var(--muted);font-size:.82rem;padding:12px 0">Loading details…</div>
       </div>
     </div>
@@ -877,6 +888,11 @@ async function downloadDoc(path){
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',async()=>{
+  const cpReady=await waitForCP();
+  if(!cpReady){
+    document.body.insertAdjacentHTML('afterbegin','<div style="background:#fee2e2;color:#991b1b;padding:12px;text-align:center">Admin tools failed to load. Please refresh.</div>');
+    return;
+  }
   const ok=await CP.Auth.requireAdmin();
   if(!ok)return;
   const user=await CP.Auth.getUser();

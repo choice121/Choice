@@ -483,6 +483,31 @@ async function autoClaimApplications(sb, userEmail){
   }catch(_){}
 }
 
+function getRequestedAppId(){
+  const params=new URLSearchParams(window.location.search);
+  const appId=(params.get('app_id')||sessionStorage.getItem('pendingPortalAppId')||'').trim();
+  if(appId)sessionStorage.setItem('pendingPortalAppId',appId);
+  return appId;
+}
+
+async function signOutAndRetry(){
+  const requestedAppId=getRequestedAppId();
+  try{await getSB().auth.signOut();}catch(_){}
+  const loginUrl=new URL('/tenant/login.html',window.location.origin);
+  if(requestedAppId)loginUrl.searchParams.set('app_id',requestedAppId);
+  location.href=loginUrl.pathname+loginUrl.search;
+}
+
+function renderWrongAccount(userEmail, requestedAppId, message){
+  return `<div class="no-app">
+    <h3>Sign in with the applicant email</h3>
+    <p>${esc(message||'This application link is tied to the email address used on the rental application.')}<br>
+    You are currently signed in as <strong>${esc(userEmail)}</strong>.</p>
+    <button class="btn-withdraw" type="button" onclick="signOutAndRetry()" style="margin-top:18px">Use a different email</button>
+    <p style="margin-top:16px;font-size:.82rem;color:var(--muted2);font-family:monospace">${esc(requestedAppId)}</p>
+  </div>`;
+}
+
 document.addEventListener('DOMContentLoaded',async()=>{
   const ready=await waitForSB(8000);
   if(!ready){
@@ -497,7 +522,13 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   const sb=getSB();
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){location.href='/tenant/login.html';return;}
+  const requestedAppId=getRequestedAppId();
+  if(!session){
+    const loginUrl=new URL('/tenant/login.html',window.location.origin);
+    if(requestedAppId)loginUrl.searchParams.set('app_id',requestedAppId);
+    location.href=loginUrl.pathname+loginUrl.search;
+    return;
+  }
 
   const userEmail=session.user.email||'';
   const emailEl=document.getElementById('user-email');
@@ -509,6 +540,16 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const errorEl=document.getElementById('portal-error');
 
   let app=null;
+
+  if(requestedAppId){
+    const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:requestedAppId,p_email:userEmail});
+    if(claimErr||claimResult?.success===false){
+      loading.style.display='none';
+      content.style.display='block';
+      content.innerHTML=renderWrongAccount(userEmail,requestedAppId,claimResult?.error||claimErr?.message||'We could not verify this application for the current signed-in email.');
+      return;
+    }
+  }
 
   const {data:rpcResult,error:rpcErr}=await sb.rpc('get_my_applications');
   let myApps=[];
@@ -540,8 +581,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }
 
   // Get the most recent application and fetch its full details
-  const summary=myApps[0];
+  const summary=requestedAppId
+    ? myApps.find(a=>(a.app_id||a.id)===requestedAppId)
+    : myApps[0];
+
+  if(!summary){
+    content.innerHTML=renderWrongAccount(userEmail,requestedAppId,'This application is not linked to the current signed-in email.');
+    return;
+  }
+
   window._portalAppId=summary.app_id||summary.id;
+  sessionStorage.setItem('pendingPortalAppId',window._portalAppId);
 
   // Fetch full row with all fields including payment tracking
   const {data:fullApp,error:fetchErr}=await sb.from('applications')
@@ -556,7 +606,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
       'move_in_status,move_in_date_actual,move_in_notes,'+
       'tenant_sign_token,has_co_applicant,admin_notes,desired_lease_term'
     )
-    .eq('app_id',summary.app_id)
+    .eq('app_id',window._portalAppId)
     .single();
 
   if(fetchErr||!fullApp){
