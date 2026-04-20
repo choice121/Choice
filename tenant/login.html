@@ -23,7 +23,7 @@
   .logo-text{font-size:1rem;font-weight:700;color:#0f172a;line-height:1.2}
   .logo-sub{font-size:.72rem;color:#64748b;font-weight:400}
   h1{font-size:1.45rem;font-weight:800;color:#0f172a;margin-bottom:6px}
-  .subtitle{font-size:.85rem;color:#64748b;margin-bottom:28px}
+  .subtitle{font-size:.85rem;color:#64748b;margin-bottom:28px;line-height:1.5}
   .form-group{margin-bottom:18px}
   .form-group label{display:block;font-size:.76rem;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
   .form-group input{width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:9px;font-size:.9rem;font-family:inherit;color:#0f172a;background:#f9fafb;transition:border-color .15s}
@@ -31,11 +31,16 @@
   .btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;margin-bottom:8px}
   .btn-primary:hover:not(:disabled){opacity:.9}
   .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+  .btn-secondary{width:100%;padding:10px;background:transparent;color:#dc2626;border:1.5px solid #fecaca;border-radius:9px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:8px}
+  .btn-secondary:hover{background:#fef2f2}
   .status-msg{text-align:center;font-size:.82rem;padding:10px 14px;border-radius:8px;margin-top:12px;display:none}
   .status-msg.success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;display:block}
   .status-msg.error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;display:block}
+  .status-msg.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;display:block}
   .back-link{display:block;text-align:center;margin-top:20px;font-size:.8rem;color:#64748b;text-decoration:none}
   .back-link:hover{color:#2563eb}
+  .wrong-account-notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:.83rem;color:#92400e;line-height:1.55}
+  .wrong-account-notice strong{color:#c2410c}
   </style>
   </head>
   <body>
@@ -48,13 +53,15 @@
       </div>
     </div>
     <h1>Sign In</h1>
-    <p class="subtitle">Enter your email to receive a secure sign-in link.</p>
+    <p class="subtitle" id="subtitle">Enter your email to receive a secure sign-in link.</p>
+    <div id="wrong-account-notice" class="wrong-account-notice" style="display:none"></div>
     <div id="login-form">
       <div class="form-group">
         <label for="email">Email Address</label>
         <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
       </div>
       <button class="btn-primary" id="send-btn" onclick="sendMagicLink()">Send Sign-In Link</button>
+      <button class="btn-secondary" id="signout-btn" style="display:none" onclick="signOutAndContinue()">Sign Out &amp; Use Different Email</button>
     </div>
     <div class="status-msg" id="status-msg"></div>
     <a href="/index.html" class="back-link">&larr; Back to Choice Properties</a>
@@ -66,11 +73,29 @@
   });
 
   async function waitForSB(attempts) {
-    for (let i = 0; i < (attempts || 40); i++) {
+    for (let i = 0; i < (attempts || 50); i++) {
       if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) return true;
       await new Promise(r => setTimeout(r, 100));
     }
     return false;
+  }
+
+  function getSB() {
+    return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+  }
+
+  async function signOutAndContinue() {
+    const sb = getSB();
+    await sb.auth.signOut().catch(() => {});
+    document.getElementById('signout-btn').style.display = 'none';
+    document.getElementById('wrong-account-notice').style.display = 'none';
+    document.getElementById('send-btn').textContent = 'Send Sign-In Link';
+    document.getElementById('send-btn').disabled = false;
+    const msg = document.getElementById('status-msg');
+    msg.textContent = 'Signed out. Enter your application email below and click Send Sign-In Link.';
+    msg.className = 'status-msg info';
   }
 
   async function sendMagicLink() {
@@ -103,16 +128,27 @@
     }
 
     try {
-      const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      const sb = getSB();
+
+      // If there is already a session for a DIFFERENT email, sign out first so the
+      // new magic link cleanly takes over without any session conflict.
+      const { data: { session: existingSession } } = await sb.auth.getSession();
+      if (existingSession && existingSession.user.email.toLowerCase() !== email) {
+        await sb.auth.signOut().catch(() => {});
+      }
+
       const redirectUrl = new URL('/tenant/portal.html', window.location.origin);
       if (appId) redirectUrl.searchParams.set('app_id', appId);
+
       const { error } = await sb.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: redirectUrl.toString() },
       });
       if (error) throw error;
       if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
-      msg.textContent = 'Check your email! A secure sign-in link has been sent to ' + email + '.';
+      document.getElementById('wrong-account-notice').style.display = 'none';
+      document.getElementById('signout-btn').style.display = 'none';
+      msg.innerHTML = '<strong>Check your email!</strong> A secure sign-in link has been sent to <strong>' + email + '</strong>. Click the link in the email to access your portal.';
       msg.className = 'status-msg success';
       document.getElementById('login-form').style.opacity = '0.5';
       document.getElementById('login-form').style.pointerEvents = 'none';
@@ -127,18 +163,39 @@
   document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
-    const email = params.get('email') || '';
+    const emailParam = params.get('email') || '';
     if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
-    if (email) document.getElementById('email').value = email;
+    if (emailParam) document.getElementById('email').value = emailParam;
 
     const ready = await waitForSB(20);
     if (!ready) return;
-    const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+    const sb = getSB();
     const { data: { session } } = await sb.auth.getSession();
+
     if (session) {
-      const portalUrl = new URL('/tenant/portal.html', window.location.origin);
-      if (appId) portalUrl.searchParams.set('app_id', appId);
-      window.location.href = portalUrl.pathname + portalUrl.search;
+      const signedInEmail = session.user.email.toLowerCase();
+      const requestedEmail = emailParam.toLowerCase();
+
+      // If the user is already signed in with the CORRECT email (or no specific
+      // email is required), go straight to the portal.
+      if (!requestedEmail || signedInEmail === requestedEmail) {
+        const portalUrl = new URL('/tenant/portal.html', window.location.origin);
+        if (appId) portalUrl.searchParams.set('app_id', appId);
+        window.location.href = portalUrl.pathname + portalUrl.search;
+        return;
+      }
+
+      // Wrong email is signed in — show a clear notice instead of silently
+      // redirecting to the portal where they would see "email does not match".
+      const notice = document.getElementById('wrong-account-notice');
+      notice.innerHTML =
+        'You are currently signed in as <strong>' + signedInEmail + '</strong>. ' +
+        'To view this application, please sign out and sign in with ' +
+        (requestedEmail ? '<strong>' + requestedEmail + '</strong>' : 'the email you used when applying') + '.';
+      notice.style.display = 'block';
+      document.getElementById('subtitle').textContent = 'Sign in with your application email to continue.';
+      document.getElementById('signout-btn').style.display = 'block';
     }
   });
   </script>
