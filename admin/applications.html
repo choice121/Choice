@@ -92,6 +92,12 @@ body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--te
 .btn-email{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
 .btn-email:hover{background:var(--blue);color:#fff}
 
+/* ── Resend modal ── */
+.resend-select{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:.84rem;font-family:inherit;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.resend-select:focus{border-color:var(--blue)}
+.resend-select option{background:var(--surface)}
+.resend-type-desc{margin-top:8px;font-size:.78rem;color:var(--muted);line-height:1.5;min-height:2.4em;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:2px solid var(--blue)}
+
 /* ── Detail panel ── */
 .detail-panel{display:none;border-top:1px solid var(--border);padding:18px}
 .detail-panel.open{display:block}
@@ -282,6 +288,52 @@ body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--te
   </div>
 </div>
 
+<!-- ── Resend Notification Modal ── -->
+<div class="modal-backdrop" id="resend-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head">
+      <div class="modal-title"><i class="fas fa-paper-plane" style="margin-right:7px;color:var(--blue)"></i>Resend Notification</div>
+      <div class="modal-sub" id="resend-modal-sub"></div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="resend-modal-appid">
+      <label class="field-label">Email Type</label>
+      <select class="resend-select" id="resend-type" onchange="updateResendDesc()">
+        <optgroup label="Status Notifications">
+          <option value="approved">&#10003; Approval Notification</option>
+          <option value="denied">&#10007; Denial Notification</option>
+          <option value="waitlisted">&#9719; Waitlist Notification</option>
+        </optgroup>
+        <optgroup label="Payments">
+          <option value="payment_confirmed">&#36; Application Fee Confirmed</option>
+          <option value="holding_fee_request">&#128179; Holding Fee Request</option>
+          <option value="holding_fee_received">&#10003; Holding Fee Received</option>
+        </optgroup>
+        <optgroup label="Lease">
+          <option value="lease_ready">&#128196; Lease Ready to Sign</option>
+          <option value="lease_signing_reminder">&#9203; Lease Signing Reminder</option>
+          <option value="lease_fully_executed">&#127881; Lease Fully Executed</option>
+        </optgroup>
+        <optgroup label="Move-In">
+          <option value="movein_confirmed">&#128336; Move-In Date Confirmed</option>
+          <option value="move_in_prep">&#127968; Move-In Preparation Guide</option>
+        </optgroup>
+        <optgroup label="Admin Alerts">
+          <option value="lease_expiry_alert">&#9888; Lease Expiry Alert (Admin)</option>
+          <option value="admin_review_summary">&#128203; Admin Review Summary</option>
+        </optgroup>
+      </select>
+      <div class="resend-type-desc" id="resend-type-desc"></div>
+      <label class="field-label" style="margin-top:14px">Custom Message <span style="color:var(--muted2);font-weight:400">(optional)</span></label>
+      <textarea class="notes-area" id="resend-modal-msg" placeholder="Add a personal note to include in the email…" style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal('resend-modal')">Cancel</button>
+      <button class="btn-primary" id="resend-confirm-btn" onclick="confirmResend()"><i class="fas fa-paper-plane" style="margin-right:5px"></i>Send Email</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Email Modal ── -->
 <div class="modal-backdrop" id="email-modal">
   <div class="modal">
@@ -403,8 +455,8 @@ function renderCard(app){
       ${isPaid?`<button class="btn-act btn-refund" onclick="openRefundModal('${app.id}','${esc(name)}',event)"><i class="fas fa-undo-alt"></i> Refund</button>`:''}
       ${!isWaived?`<button class="btn-act btn-ghost" onclick="markWaived('${app.id}',event)" title="Waive fee"><i class="fas fa-hand-holding-usd"></i> Waive</button>`:''}
 
-      <!-- Email -->
-      <button class="btn-act btn-email" onclick="openEmailModal('${app.app_id}','${isApproved?'approved':isDenied?'denied':isWaitlisted?'waitlisted':'approved'}','${esc(name)}',event)"><i class="fas fa-envelope"></i> Email</button>
+      <!-- Resend Notification -->
+      <button class="btn-act btn-email" onclick="openResendModal('${app.app_id}','${app.status}','${esc(name)}',event)" title="Resend any notification email without changing status"><i class="fas fa-paper-plane"></i> Resend</button>
 
       <!-- Detail toggle -->
       <button class="btn-act btn-ghost" onclick="toggleDetail('${app.id}')"><i class="fas fa-info-circle"></i> Details</button>
@@ -739,6 +791,55 @@ async function confirmEmail(){
   await autoSendEmail(appId, type, msg);
   btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:5px"></i>Send Email';
   closeModal('email-modal');
+}
+
+// ── Resend notification ────────────────────────────────────────────────────────
+const RESEND_TYPE_DESC = {
+  approved: 'Sends the full approval email with congratulations, next steps, and a link to the tenant portal.',
+  denied: 'Sends the denial email with thank-you message and reapplication encouragement.',
+  waitlisted: 'Notifies the applicant they are on the active waitlist and will be contacted if a unit becomes available.',
+  payment_confirmed: 'Confirms receipt of the application fee and lets the applicant know their file is under review.',
+  holding_fee_request: 'Asks the approved applicant to pay the holding fee to reserve their unit.',
+  holding_fee_received: 'Confirms holding fee received — the unit is now reserved for the applicant.',
+  lease_ready: 'Notifies the applicant their lease is ready and provides a link to e-sign.',
+  lease_signing_reminder: 'Friendly 48-hour reminder that the lease is awaiting their signature.',
+  lease_fully_executed: 'Congratulatory email confirming both parties have signed — lease is fully executed.',
+  movein_confirmed: 'Sends the official move-in date, key pickup details, and what to expect on move-in day.',
+  move_in_prep: 'Detailed move-in preparation guide: utilities, mail forwarding, what to bring, etc.',
+  lease_expiry_alert: 'Internal admin alert (sent to admin inbox) — lease has been unsigned for 48+ hours.',
+  admin_review_summary: 'Internal admin summary email with full applicant profile for lease generation.',
+};
+
+function openResendModal(appId, currentStatus, name, evt){
+  if(evt)evt.stopPropagation();
+  document.getElementById('resend-modal-appid').value=appId;
+  document.getElementById('resend-modal-sub').textContent='To: '+name;
+  document.getElementById('resend-modal-msg').value='';
+  // Pre-select email type based on current status
+  const sel=document.getElementById('resend-type');
+  const defaultType={approved:'approved',denied:'denied',waitlisted:'waitlisted'}[currentStatus]||'approved';
+  sel.value=defaultType;
+  updateResendDesc();
+  openModal('resend-modal');
+}
+
+function updateResendDesc(){
+  const val=document.getElementById('resend-type').value;
+  const desc=document.getElementById('resend-type-desc');
+  if(desc)desc.textContent=RESEND_TYPE_DESC[val]||'';
+}
+
+async function confirmResend(){
+  const appId=document.getElementById('resend-modal-appid').value;
+  const type=document.getElementById('resend-type').value;
+  const msg=document.getElementById('resend-modal-msg').value||undefined;
+  const btn=document.getElementById('resend-confirm-btn');
+  btn.disabled=true;
+  btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:5px"></i>Sending…';
+  await autoSendEmail(appId, type, msg);
+  btn.disabled=false;
+  btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:5px"></i>Send Email';
+  closeModal('resend-modal');
 }
 
 // ── Notes ─────────────────────────────────────────────────────────────────────
