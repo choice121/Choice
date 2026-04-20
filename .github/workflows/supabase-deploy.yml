@@ -23,9 +23,23 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Apply database migrations
+      - name: Apply database migrations via Management API
         run: |
-          supabase db push --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          for f in supabase/migrations/*.sql; do
+            echo "Applying migration: $f"
+            SQL=$(cat "$f")
+            STATUS=$(curl -s -o /tmp/sql_resp.json -w "%{http_code}" \
+              -X POST \
+              "https://api.supabase.com/v1/projects/${{ secrets.SUPABASE_PROJECT_REF }}/database/query" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(echo "$SQL" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}")
+            echo "HTTP $STATUS for $f"
+            cat /tmp/sql_resp.json
+            if [ "$STATUS" -lt 200 ] || [ "$STATUS" -gt 299 ]; then
+              echo "Migration failed for $f"
+              exit 1
+            fi
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
