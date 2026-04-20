@@ -100,7 +100,10 @@
           <div style="font-size:48px;margin-bottom:16px">✅</div>
           <h3>Lease Signed Successfully</h3>
           <p>Thank you! Your lease has been signed and a confirmation email is on its way to you.</p>
-          <p style="margin-top:12px;font-size:.78rem;color:#94a3b8">You can close this window.</p>
+          <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a id="portal-link-btn" href="/tenant/portal.html" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:10px;font-size:.86rem;font-weight:700;text-decoration:none">&#8595; View &amp; Download Lease</a>
+          </div>
+          <p style="margin-top:16px;font-size:.78rem;color:#94a3b8">Questions? <a href="tel:+17077063137" style="color:#006aff">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#006aff">support@choiceproperties.com</a></p>
         </div>
       </div>
     </div>
@@ -339,6 +342,12 @@
         return;
       }
 
+      // Update portal link with app_id so tenant lands directly on their application
+      const appForLink = window._leaseApp;
+      if(appForLink && appForLink.app_id){
+        const portalBtn = document.getElementById('portal-link-btn');
+        if(portalBtn) portalBtn.href = '/tenant/portal.html?app_id=' + encodeURIComponent(appForLink.app_id);
+      }
       showState('success');
     };
 
