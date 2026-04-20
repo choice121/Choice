@@ -182,7 +182,12 @@ function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString
 function fmtDateShort(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
 function fmtMoney(v){if(v==null)return '—';return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-async function signOut(){await getSB().auth.signOut();location.href='/tenant/login.html';}
+async function signOut(){
+  try { await getSB().auth.signOut(); } catch(_) {}
+  // Always clear any local session storage so the login page starts fresh
+  sessionStorage.removeItem('pendingPortalAppId');
+  location.href = '/tenant/login.html';
+}
 
 // ── Payment status rendering ─────────────────────────────────────────────────
 function renderPaymentStatus(app){
