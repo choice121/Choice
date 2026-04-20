@@ -100,12 +100,21 @@
   async function signOutAndContinue() {
     const sb = getSB();
     await sb.auth.signOut().catch(() => {});
+    sessionStorage.removeItem('pendingPortalAppId');
+    // Hide banner and wrong-account notice, restore the login form
+    document.getElementById('signed-in-banner').style.display = 'none';
     document.getElementById('signout-btn').style.display = 'none';
     document.getElementById('wrong-account-notice').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
     document.getElementById('send-btn').textContent = 'Send Sign-In Link';
     document.getElementById('send-btn').disabled = false;
+    // Re-fill the email field with the URL param if present, so the user
+    // doesn't have to remember which email to use.
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('email') || '';
+    if (emailParam) document.getElementById('email').value = emailParam;
     const msg = document.getElementById('status-msg');
-    msg.textContent = 'Signed out. Enter your application email below and click Send Sign-In Link.';
+    msg.textContent = 'Signed out. Enter the email you used on the rental application.';
     msg.className = 'status-msg info';
   }
 
@@ -183,9 +192,20 @@
     const params = new URLSearchParams(window.location.search);
     const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
     const emailParam = params.get('email') || '';
+    const needEmail = params.get('need_email') === '1';
     _pendingPortalAppId = appId;
     if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
     if (emailParam) document.getElementById('email').value = emailParam;
+
+    // Show a clear contextual message when redirected here after a wrong-account error
+    if (needEmail) {
+      const msg = document.getElementById('status-msg');
+      msg.innerHTML = emailParam
+        ? 'Please sign in with <strong>' + emailParam + '</strong> — the email you used on the rental application.'
+        : 'Please sign in with the email address you used when filling out the rental application for this property.';
+      msg.className = 'status-msg info';
+      document.getElementById('subtitle').textContent = 'Sign in with your application email.';
+    }
 
     const ready = await waitForSB(20);
     if (!ready) return;
