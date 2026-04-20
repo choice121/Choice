@@ -14,7 +14,10 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS: authenticated users can insert into their own app folder
 -- (path format: {app_id}/{doc_type}/{timestamp}_{filename})
-CREATE POLICY IF NOT EXISTS "Tenants can upload their own docs"
+-- CREATE POLICY IF NOT EXISTS is not valid PostgreSQL syntax.
+-- Use DROP + CREATE for idempotent policy application.
+DROP POLICY IF EXISTS "Tenants can upload their own docs" ON storage.objects;
+CREATE POLICY "Tenants can upload their own docs"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'application-docs');
