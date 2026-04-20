@@ -39,6 +39,11 @@ Deno.serve(async (req: Request) => {
     .from('applications').select('*').eq('app_id', app_id).single();
   if (appErr || !app) return jsonErr(404, 'Application not found: ' + (appErr?.message || ''));
 
+  // Guard: only generate lease for approved applications (skip for dry_run)
+  if (!dry_run && app.status !== 'approved') {
+    return jsonErr(400, `Cannot generate lease: application status is "${app.status}". Application must be approved first.`);
+  }
+
   // 2. Fetch active lease template
   const { data: tmpl, error: tmplErr } = await supabase
     .from('lease_templates').select('*').eq('is_active', true).single();

@@ -307,6 +307,22 @@ export function adminNotificationHtml(
     </div>
     ` : ''}
 
+    ${(String(fields?.['Ever Evicted']).toLowerCase() === 'true' || String(fields?.['Has Criminal History']).toLowerCase() === 'true' || String(fields?.['Has Bankruptcy']).toLowerCase() === 'true' || (String(fields?.['Has Pets']).toLowerCase() === 'true') || String(fields?.['Smoker']).toLowerCase() === 'true') ? `
+    <div class="section">
+      <div class="section-label">Application Flags — Review Required</div>
+      <div class="callout red">
+        <h4>&#x26A0; Disclosed Items</h4>
+        <p>
+          ${String(fields?.['Ever Evicted']).toLowerCase() === 'true' ? '<strong>Prior Eviction:</strong> Applicant disclosed a prior eviction record.<br>' : ''}
+          ${String(fields?.['Has Criminal History']).toLowerCase() === 'true' ? '<strong>Criminal History:</strong> Applicant disclosed criminal history.<br>' : ''}
+          ${String(fields?.['Has Bankruptcy']).toLowerCase() === 'true' ? '<strong>Bankruptcy:</strong> Applicant disclosed prior bankruptcy.<br>' : ''}
+          ${String(fields?.['Has Pets']).toLowerCase() === 'true' ? `<strong>Pets:</strong> ${fields?.['Pet Details'] || 'Has pets — verify property pet policy.'}<br>` : ''}
+          ${String(fields?.['Smoker']).toLowerCase() === 'true' ? '<strong>Smoker:</strong> Applicant disclosed smoking — verify property policy.<br>' : ''}
+        </p>
+      </div>
+    </div>
+    ` : ''}
+
     <div class="section">
       <div class="section-label">Quick Actions</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
@@ -412,6 +428,9 @@ export function statusUpdateHtml(
         <li><span class="step-num">2</span><span><strong>Other Properties</strong> — Choice Properties manages a portfolio of properties. Our team would be happy to discuss alternative options that may be a strong fit for your current profile.</span></li>
         <li><span class="step-num">3</span><span><strong>Questions</strong> — If you would like to discuss this decision or explore your options, please reach out to our leasing team directly.</span></li>
       </ul>
+    </div>
+    <div class="callout" style="border-color:#888888;">
+      <p style="font-size:12px;color:#666666;line-height:1.7;"><strong>Fair Housing Notice:</strong> Choice Properties is committed to complying with all applicable Fair Housing laws. We do not discriminate on the basis of race, color, national origin, religion, sex, familial status, disability, or any other class protected by federal, state, or local law. If you believe you have been treated unfairly, you may contact the U.S. Department of Housing and Urban Development (HUD) at hud.gov or call 1-800-669-9777.</p>
     </div>
     `}
 
@@ -540,9 +559,9 @@ export function holdingFeeRequestHtml(
   dueDate?: string,
   message?: string,
   appId?: string,
+  applicantPaymentMethods?: string[],
 ): string {
   const portal = appId ? `${getTenantPortalUrl()}?app_id=${appId}` : getTenantPortalUrl();
-  const contactEmail = getContactEmail();
   const deadlineText = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '48 hours from this email';
 
   return `<!DOCTYPE html>
@@ -578,22 +597,26 @@ export function holdingFeeRequestHtml(
     ` : ''}
 
     <div class="section">
-      <div class="section-label">Accepted Payment Methods</div>
+      <div class="section-label">How to Pay</div>
       <div class="callout">
-        <p style="margin-bottom:10px;"><strong>&bull; Zelle</strong> &mdash; ${contactEmail}</p>
-        <p style="margin-bottom:10px;"><strong>&bull; Venmo</strong> &mdash; @ChoiceProperties</p>
-        <p><strong>&bull; Cashier's Check</strong> &mdash; Payable to Choice Properties, 2265 Livernois Suite 500, Troy MI 48083</p>
+        <h4>A Leasing Team Member Will Contact You Directly</h4>
+        <p>Our leasing team will reach out to you shortly to coordinate collection of your holding fee. Do not send payment to any party or account without first speaking directly with our team — they will guide you through the process step by step.</p>
+        ${applicantPaymentMethods && applicantPaymentMethods.length > 0 ? `
+        <p style="margin-top:12px;font-size:13px;color:#555555;">Based on your application, you indicated a preference for:</p>
+        <div style="margin-top:8px;">${applicantPaymentMethods.map(m => `<span class="pay-pill">${m}</span>`).join('')}</div>
+        <p style="margin-top:10px;font-size:13px;color:#555555;">Our team will confirm the specific payment details at the time of contact.</p>
+        ` : '<p style="margin-top:10px;font-size:13px;color:#555555;">Our team will work with your preferred payment method at the time of contact.</p>'}
       </div>
     </div>
 
     ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
 
     <div class="section">
-      <div class="section-label">After You Pay</div>
+      <div class="section-label">After Payment is Confirmed</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span>Text your payment confirmation / screenshot to <strong>707-706-3137</strong> so we can verify and apply it immediately.</span></li>
-        <li><span class="step-num">2</span><span>You will receive an email confirmation once received, and your unit will be formally reserved.</span></li>
-        <li><span class="step-num">3</span><span>Our team will then prepare your lease agreement for electronic signature.</span></li>
+        <li><span class="step-num">1</span><span>Our team confirms receipt and records your payment — you will receive an email confirmation.</span></li>
+        <li><span class="step-num">2</span><span>Your unit is formally reserved and removed from active availability.</span></li>
+        <li><span class="step-num">3</span><span>Our team prepares your lease agreement for electronic signature.</span></li>
       </ul>
     </div>
 
@@ -781,13 +804,13 @@ export function signedConfirmHtml(
 <body>
 <div class="email-wrapper">
   ${buildEmailHeader('Welcome to Choice Properties', appId)}
-  <div class="status-line status-approved">&#x2713; &nbsp; Lease Successfully Signed — Your Tenancy is Confirmed</div>
+  <div class="status-line status-lease">&#x270D; &nbsp; Signature Received — Awaiting Management Countersignature</div>
   <div class="email-body">
     <p class="greeting">Dear ${firstName},</p>
-    <p class="intro-text">Congratulations and welcome to Choice Properties. Your lease agreement for <strong>${propertyAddress}</strong> has been successfully signed. This email serves as your official confirmation of tenancy.</p>
+    <p class="intro-text">Your electronic signature for the lease at <strong>${propertyAddress}</strong> has been successfully recorded. Your lease is now pending management countersignature. Once management signs, both parties will receive a fully executed copy and your tenancy will be officially confirmed.</p>
 
-    <div class="callout green">
-      <h4>&#x2713; Lease Executed — Tenancy Confirmed</h4>
+    <div class="callout" style="border-color:#1e40af;">
+      <h4>&#x270D; Signature Recorded — Next: Management Countersignature</h4>
       <div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyAddress}</span></div>
       ${leaseData?.startDate ? `<div class="financial-row"><span class="f-label">Move-In Date</span><span class="f-value">${leaseData.startDate}</span></div>` : ''}
       ${leaseData?.endDate ? `<div class="financial-row"><span class="f-label">Lease End Date</span><span class="f-value">${leaseData.endDate}</span></div>` : ''}
@@ -799,10 +822,15 @@ export function signedConfirmHtml(
     <div class="section">
       <div class="section-label">What Happens Next</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span><strong>Move-In Payment</strong> — Our leasing team will contact you to coordinate collection of your move-in total${leaseData?.moveInCost ? ` of <strong>${formatMoney(leaseData.moveInCost)}</strong>` : ''}. This must be paid in full prior to key handoff.</span></li>
-        <li><span class="step-num">2</span><span><strong>Move-In Preparation Guide</strong> — We will send you a detailed guide with everything you need to know before your arrival.</span></li>
-        <li><span class="step-num">3</span><span><strong>Key Handoff</strong> — Once all payments are confirmed, your key handoff will be scheduled. Our team will reach out to coordinate timing.</span></li>
+        <li><span class="step-num">1</span><span><strong>Management Countersignature</strong> — Our team will countersign your lease. This typically happens within 1–2 business days. You will receive a confirmation email once complete.</span></li>
+        <li><span class="step-num">2</span><span><strong>Fully Executed Copy</strong> — Once both parties have signed, you will receive a final copy of the fully executed lease agreement for your records.</span></li>
+        <li><span class="step-num">3</span><span><strong>Move-In Coordination</strong> — Our team will then contact you to finalize your move-in date, payment, and key handoff.</span></li>
       </ul>
+    </div>
+
+    <div class="callout amber">
+      <h4>Please Note</h4>
+      <p>Your lease is not legally binding until management has countersigned. Please do not make any moving arrangements until you receive the "Lease Fully Executed" confirmation email.</p>
     </div>
 
     <div class="cta-wrap">
@@ -812,7 +840,7 @@ export function signedConfirmHtml(
     ${CONTACT_ROW}
 
     <div class="email-closing">
-      <p class="closing-text">We are truly delighted to welcome you to Choice Properties. Our team is dedicated to ensuring your tenancy is a positive and comfortable experience from day one.</p>
+      <p class="closing-text">We appreciate your patience during this final step. Our team will process your countersignature promptly. If you have any questions in the meantime, please don't hesitate to reach out.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
       <div class="sign-company">support@choiceproperties.com</div>
     </div>
@@ -830,6 +858,7 @@ export function leaseFullyExecutedHtml(
   propertyAddress: string,
   portalUrl: string,
   appId?: string,
+  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCost?: string | number },
 ): string {
   const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
 
@@ -847,19 +876,26 @@ export function leaseFullyExecutedHtml(
   <div class="status-line status-approved">&#x2713; &nbsp; Both Parties Have Signed — Your Tenancy is Official</div>
   <div class="email-body">
     <p class="greeting">Dear ${firstName},</p>
-    <p class="intro-text">Great news! Your lease for <strong>${propertyAddress}</strong> has been fully executed — both you and management have signed. You may now download your fully executed lease agreement from your tenant portal.</p>
+    <p class="intro-text">Congratulations! Your lease for <strong>${propertyAddress}</strong> has been fully executed — both you and management have signed. Your tenancy is now officially confirmed. You may download your fully executed lease from your tenant portal.</p>
 
     <div class="callout green">
-      <h4>&#x2713; Lease Fully Executed</h4>
-      <p>Your lease agreement is now legally binding and complete. This is your official confirmation that all parties have signed. Please retain this email and your lease document for your records.</p>
+      <h4>&#x2713; Lease Fully Executed — Tenancy Confirmed</h4>
+      <div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyAddress}</span></div>
+      ${leaseData?.startDate ? `<div class="financial-row"><span class="f-label">Lease Start Date</span><span class="f-value">${leaseData.startDate}</span></div>` : ''}
+      ${leaseData?.endDate ? `<div class="financial-row"><span class="f-label">Lease End Date</span><span class="f-value">${leaseData.endDate}</span></div>` : ''}
+      ${leaseData?.rent ? `<div class="financial-row"><span class="f-label">Monthly Rent</span><span class="f-value">${formatMoney(leaseData.rent)}</span></div>` : ''}
+      ${leaseData?.deposit ? `<div class="financial-row"><span class="f-label">Security Deposit</span><span class="f-value">${formatMoney(leaseData.deposit)}</span></div>` : ''}
+      ${leaseData?.moveInCost ? `<div class="financial-row"><span class="f-label">Move-In Total Due</span><span class="f-value"><strong>${formatMoney(leaseData.moveInCost)}</strong></span></div>` : ''}
+      ${appId ? `<div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${appId}</span></div>` : ''}
+      <p style="margin-top:12px;font-size:13px;color:#444444;">Your lease is legally binding. Please retain this email and your lease document for your records.</p>
     </div>
 
     <div class="section">
       <div class="section-label">What Happens Next</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span><strong>Move-In Coordination</strong> — Our team will be in touch to finalize your move-in date, time, and key handoff logistics.</span></li>
-        <li><span class="step-num">2</span><span><strong>Move-In Payment</strong> — If not already arranged, our team will contact you to finalize collection of your move-in balance prior to key handoff.</span></li>
-        <li><span class="step-num">3</span><span><strong>Download Your Lease</strong> — Your fully executed lease is available for download in your tenant portal. We recommend saving a copy for your records.</span></li>
+        <li><span class="step-num">1</span><span><strong>Move-In Payment</strong> — Our team will contact you to coordinate your move-in payment${leaseData?.moveInCost ? ` of <strong>${formatMoney(leaseData.moveInCost)}</strong>` : ''}. This must be received in full before key handoff.</span></li>
+        <li><span class="step-num">2</span><span><strong>Move-In Coordination</strong> — Our team will finalize your move-in date, time, and key handoff logistics with you directly.</span></li>
+        <li><span class="step-num">3</span><span><strong>Download Your Lease</strong> — Your fully executed lease is available in your tenant portal. Save a copy for your records.</span></li>
       </ul>
     </div>
 
@@ -1028,8 +1064,10 @@ export function leaseSigningReminderHtml(
   portalUrl: string,
   message?: string,
   appId?: string,
+  signingUrl?: string,
 ): string {
   const portal = appId ? `${portalUrl}?app_id=${appId}` : portalUrl;
+  const actionUrl = signingUrl || portal;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1055,7 +1093,8 @@ export function leaseSigningReminderHtml(
     ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
 
     <div class="cta-wrap">
-      <a href="${portal}" class="cta-btn">Sign My Lease Now &#x2192;</a>
+      <a href="${actionUrl}" class="cta-btn">Sign My Lease Now &#x2192;</a>
+      ${signingUrl ? `<div class="cta-note">Or copy this link: ${signingUrl}</div>` : ''}
     </div>
 
     ${CONTACT_ROW}

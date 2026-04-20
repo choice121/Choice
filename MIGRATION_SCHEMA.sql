@@ -452,10 +452,11 @@ BEGIN
     new_lease_status := 'co_signed';  -- All required signatures collected
   END IF;
 
-  -- Update application
+  -- Update application (lease_signed_date added — was missing in original)
   UPDATE applications SET
     tenant_signature     = p_signature,
     signature_timestamp  = now(),
+    lease_signed_date    = now(),
     lease_ip_address     = p_ip_address,
     lease_status         = new_lease_status,
     tenant_sign_token    = NULL,           -- Consume token

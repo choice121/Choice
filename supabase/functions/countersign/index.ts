@@ -94,12 +94,19 @@ Deno.serve(async (req: Request) => {
     }
   } catch (e) { console.error('PDF re-gen failed (non-fatal):', (e as Error).message); }
 
-  // 6. Send "Lease Fully Executed" email to applicant
+  // 6. Send "Lease Fully Executed" email to applicant with full lease details
   try {
+    const leaseData = (app.lease_start_date || app.monthly_rent || app.move_in_costs) ? {
+      startDate:  app.lease_start_date || undefined,
+      endDate:    app.lease_end_date   || undefined,
+      rent:       app.monthly_rent     || undefined,
+      deposit:    app.security_deposit || undefined,
+      moveInCost: app.move_in_costs    || undefined,
+    } : undefined;
     await sendEmail({
       to:      app.email,
       subject: 'Your Lease Has Been Fully Executed — Choice Properties',
-      html:    leaseFullyExecutedHtml(app.first_name || 'Applicant', app.property_address || '', TENANT_PORTAL_URL),
+      html:    leaseFullyExecutedHtml(app.first_name || 'Applicant', app.property_address || '', TENANT_PORTAL_URL, app.app_id, leaseData),
     });
   } catch (e) { console.error('Fully executed email failed (non-fatal):', (e as Error).message); }
 

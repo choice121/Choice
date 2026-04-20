@@ -2,9 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import {
-  approvalEmailHtml,
-  denialEmailHtml,
-  waitlistedEmailHtml,
+  statusUpdateHtml,
   moveinEmailHtml,
   holdingFeeRequestHtml,
   holdingFeeReceivedHtml,
@@ -15,7 +13,7 @@ import {
   adminReviewSummaryHtml,
   formatDate,
 } from '../_shared/email.ts';
-import { getAdminEmails, getTenantPortalUrl } from '../_shared/config.ts';
+import { getAdminEmails, getTenantPortalUrl, getSiteUrl } from '../_shared/config.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 const TENANT_PORTAL_URL = getTenantPortalUrl();
@@ -37,7 +35,7 @@ async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: str
 async function logEmail(appId: string, _appDbId: string, type: string, recipient: string, status: string, provider = 'unknown') {
   try {
     await supabase.from('email_logs').insert({
-      app_id:    appId,
+      app_id: appId,
       type,
       recipient,
       status,
@@ -88,6 +86,11 @@ Deno.serve(async (req: Request) => {
   const actor = auth.userEmail || 'admin';
   const now   = new Date().toISOString();
 
+  // Portal URL with app_id baked in for tenant emails
+  const portalLink = `${TENANT_PORTAL_URL}?app_id=${app_id}`;
+  // State code for e-sign legal text
+  const stateCode = app.lease_state_code || 'MI';
+
   let subject        = '';
   let html           = '';
   let sendToAdmin    = false;
@@ -101,24 +104,73 @@ Deno.serve(async (req: Request) => {
 
   if (type === 'approved') {
     subject = 'Your Application Has Been Approved — Choice Properties';
-    html    = approvalEmailHtml(name, prop, message);
+    html    = statusUpdateHtml(
+      app_id,
+      name,
+      'approved',
+      message,
+      portalLink,
+      prop,
+      app.property_name || undefined,
+      stateCode,
+    );
 
   } else if (type === 'denied') {
-    subject = 'Update on Your Application — Choice Properties';
-    html    = denialEmailHtml(name, prop, message);
+    subject = 'An Update Regarding Your Rental Application — Choice Properties';
+    html    = statusUpdateHtml(
+      app_id,
+      name,
+      'denied',
+      message,
+      portalLink,
+      prop,
+      app.property_name || undefined,
+      stateCode,
+    );
 
   } else if (type === 'waitlisted') {
-    subject = 'Update on Your Application — Choice Properties';
-    html    = waitlistedEmailHtml(name, prop, message);
+    subject = 'Waitlist Update — Your Application Remains Active | Choice Properties';
+    html    = statusUpdateHtml(
+      app_id,
+      name,
+      'waitlisted',
+      message,
+      portalLink,
+      prop,
+      app.property_name || undefined,
+      stateCode,
+    );
 
   } else if (type === 'movein_confirmed') {
     const moveDate = app.move_in_date_actual ? formatDate(app.move_in_date_actual) : undefined;
     subject = 'Move-In Confirmed — Choice Properties';
-    html    = moveinEmailHtml(name, prop, moveDate, message);
+    html    = moveinEmailHtml(name, prop, moveDate, message, app_id);
+
+    // FIX: persist move_in_status = 'confirmed' to DB
+    await supabase.from('applications').update({
+      move_in_status: 'confirmed',
+      updated_at:     now,
+    }).eq('app_id', app_id);
 
   } else if (type === 'holding_fee_request') {
-    subject = 'Holding Fee Request — Choice Properties';
-    html    = holdingFeeRequestHtml(name, prop, body.fee_amount ?? app.holding_fee_amount, body.due_date ?? app.holding_fee_due_date, message);
+    subject = 'Action Required — Reserve Your Unit With a Holding Fee | Choice Properties';
+
+    // Pull applicant's payment method preferences from their application
+    const payMethods = [
+      app.primary_payment_method,
+      app.alternative_payment_method,
+      app.third_choice_payment_method,
+    ].filter(Boolean) as string[];
+
+    html = holdingFeeRequestHtml(
+      name,
+      prop,
+      body.fee_amount ?? app.holding_fee_amount,
+      body.due_date   ?? app.holding_fee_due_date,
+      message,
+      app_id,
+      payMethods.length ? payMethods : undefined,
+    );
 
     const update: Record<string, unknown> = {
       holding_fee_requested:    true,
@@ -130,8 +182,16 @@ Deno.serve(async (req: Request) => {
     await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'holding_fee_received') {
-    subject = 'Holding Fee Received — Unit Reserved';
-    html    = holdingFeeReceivedHtml(name, prop, TENANT_PORTAL_URL, message);
+    subject = 'Holding Fee Confirmed — Your Unit is Reserved | Choice Properties';
+    html    = holdingFeeReceivedHtml(
+      name,
+      prop,
+      TENANT_PORTAL_URL,
+      message,
+      body.fee_amount ?? app.holding_fee_amount,
+      undefined,
+      app_id,
+    );
 
     await supabase.from('applications').update({
       holding_fee_paid:    true,
@@ -139,26 +199,35 @@ Deno.serve(async (req: Request) => {
       updated_at:          now,
     }).eq('app_id', app_id);
 
-    // Phase 4A — queue admin review summary
+    // Phase 4A — admin review summary
     sendAdminReview    = true;
-    adminReviewSubject = `Holding Fee Received — Action Required: Generate Lease for ${name} ${app.last_name || ''}`.trim();
+    adminReviewSubject = `Holding Fee Received — Generate Lease for ${name} ${app.last_name || ''}`.trim();
     adminReviewHtml    = adminReviewSummaryHtml(
       app.first_name || '', app.last_name || '', app.email || '',
       app.phone || '', prop, app_id,
       body.fee_amount ?? app.holding_fee_amount,
+      app,
     );
 
   } else if (type === 'payment_confirmed') {
-    subject = 'Payment Confirmed — Choice Properties';
+    subject = 'Payment Confirmed — Your Application is Now Under Review | Choice Properties';
     html    = paymentConfirmedHtml(
-      name, prop,
+      name,
+      prop,
       body.amount_collected ?? app.payment_amount_collected,
       body.payment_method   ?? app.payment_method_confirmed,
       body.transaction_ref  ?? app.payment_transaction_ref,
       message,
+      app.phone || undefined,
+      app_id,
     );
 
-    const update: Record<string, unknown> = { payment_confirmed_at: now, updated_at: now };
+    // FIX: also update payment_status to 'paid' in DB
+    const update: Record<string, unknown> = {
+      payment_confirmed_at: now,
+      payment_status:       'paid',
+      updated_at:           now,
+    };
     if (body.payment_method   != null) update.payment_method_confirmed  = body.payment_method;
     if (body.transaction_ref  != null) update.payment_transaction_ref   = body.transaction_ref;
     if (body.amount_collected != null) update.payment_amount_collected  = body.amount_collected;
@@ -166,21 +235,33 @@ Deno.serve(async (req: Request) => {
 
   } else if (type === 'move_in_prep') {
     subject = 'Your Move-In Preparation Guide — Choice Properties';
-    html    = moveInPrepHtml(name, prop, message);
+    const leaseData = (app.monthly_rent || app.security_deposit || app.move_in_costs || app.lease_start_date) ? {
+      rent:       app.monthly_rent     || undefined,
+      deposit:    app.security_deposit || undefined,
+      moveInCost: app.move_in_costs    || undefined,
+      startDate:  app.lease_start_date || undefined,
+    } : undefined;
+    html = moveInPrepHtml(name, prop, message, app_id, leaseData);
 
   } else if (type === 'lease_signing_reminder') {
-    subject = 'Reminder: Please Sign Your Lease — Choice Properties';
-    html    = leaseSigningReminderHtml(name, prop, TENANT_PORTAL_URL, message);
+    subject = 'Reminder: Your Lease Agreement Awaits Your Signature — Choice Properties';
+    // FIX: build direct signing URL from stored token
+    const signingUrl = app.tenant_sign_token
+      ? `${getSiteUrl()}/lease-sign.html?token=${app.tenant_sign_token}`
+      : undefined;
+    html = leaseSigningReminderHtml(name, prop, TENANT_PORTAL_URL, message, app_id, signingUrl);
 
   } else if (type === 'lease_expiry_alert') {
-    const leaseEnd = app.lease_end_date || app.move_out_date;
-    if (!leaseEnd) return jsonErr(400, 'No lease_end_date on this application');
-    subject     = `Lease Expiry Alert — ${prop}`;
-    html        = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '');
+    // FIX: use lease_sent_date (unsigned lease alert), with fallbacks
+    const leaseEnd = app.lease_sent_date || app.lease_end_date || app.move_out_date;
+    if (!leaseEnd) return jsonErr(400, 'No lease date on this application');
+    subject     = `Unsigned Lease Alert — ${prop}`;
+    // FIX: pass tenant phone so admin can text directly
+    html        = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '', app.phone || undefined);
     sendToAdmin = true;
 
   } else {
-    return jsonErr(400, `Unsupported email type: "${type}". Supported types: approved, denied, waitlisted, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
+    return jsonErr(400, `Unsupported email type: "${type}". Supported: approved, denied, waitlisted, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
   }
 
   // ── Send ───────────────────────────────────────────────────────────────────
@@ -199,7 +280,7 @@ Deno.serve(async (req: Request) => {
       if (!result.ok) failures.push(`${app.email}: ${result.error || 'send failed'}`);
     }
 
-    // Phase 4A — send internal admin review summary alongside holding_fee_received
+    // Phase 4A — send admin review summary alongside holding_fee_received
     if (sendAdminReview) {
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject: adminReviewSubject, html: adminReviewHtml });

@@ -75,12 +75,18 @@ Deno.serve(async (req: Request) => {
       } catch (e) { console.error('PDF re-gen failed (non-fatal):', (e as Error).message); }
     }
 
-    // Confirmation email to tenant
+    // Confirmation email to tenant — include lease financial summary
     try {
+      const leaseData = (appSigned.lease_start_date || appSigned.monthly_rent || appSigned.move_in_costs) ? {
+        startDate:   appSigned.lease_start_date || undefined,
+        endDate:     appSigned.lease_end_date   || undefined,
+        rent:        appSigned.monthly_rent     || undefined,
+        moveInCost:  appSigned.move_in_costs    || undefined,
+      } : undefined;
       await sendEmail({
-        to: appSigned.email,
-        subject: 'Lease Signed — Choice Properties',
-        html: signedConfirmHtml(appSigned.first_name || 'Applicant', appSigned.property_address || '', appSigned.app_id),
+        to:      appSigned.email,
+        subject: 'Lease Signature Received — Choice Properties',
+        html:    signedConfirmHtml(appSigned.first_name || 'Applicant', appSigned.property_address || '', appSigned.app_id, leaseData),
       });
     } catch (e) { console.error('Tenant confirm email failed:', (e as Error).message); }
 
