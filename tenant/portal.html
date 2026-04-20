@@ -508,6 +508,26 @@ function renderWrongAccount(userEmail, requestedAppId, message){
   </div>`;
 }
 
+// ── Magic link session resolver ───────────────────────────────────────────────
+// When the user clicks a magic link, the URL contains #access_token=...
+// We must wait for Supabase to exchange that token for a real session before
+// calling getSession(). onAuthStateChange fires reliably once the exchange
+// completes — we use it with a 10-second timeout.
+function waitForMagicLinkSession(sb){
+  return new Promise(resolve=>{
+    // If no hash token present, resolve immediately.
+    if(!window.location.hash.includes('access_token')){resolve(null);return;}
+    const t=setTimeout(()=>resolve(null),10000);
+    const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{
+      if(event==='SIGNED_IN'&&session){
+        clearTimeout(t);
+        subscription.unsubscribe();
+        resolve(session);
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded',async()=>{
   const ready=await waitForSB(8000);
   if(!ready){
@@ -515,42 +535,53 @@ document.addEventListener('DOMContentLoaded',async()=>{
     return;
   }
 
-  // Handle magic link token in hash
-  if(window.location.hash.includes('access_token')){
-    await new Promise(r=>setTimeout(r,600));
+  const sb=getSB();
+  const requestedAppId=getRequestedAppId();
+
+  // If a magic link token is in the hash, wait for it to be exchanged before
+  // reading the session — avoids reading a stale/old session.
+  const magicSession=await waitForMagicLinkSession(sb);
+
+  // Clean the hash from the URL so refreshes don't re-process the token.
+  if(magicSession&&window.location.hash){
+    history.replaceState(null,'',window.location.pathname+window.location.search);
   }
 
-  const sb=getSB();
   const {data:{session}}=await sb.auth.getSession();
-  const requestedAppId=getRequestedAppId();
-  if(!session){
+  const activeSession=magicSession||session;
+
+  if(!activeSession){
     const loginUrl=new URL('/tenant/login.html',window.location.origin);
     if(requestedAppId)loginUrl.searchParams.set('app_id',requestedAppId);
     location.href=loginUrl.pathname+loginUrl.search;
     return;
   }
 
-  const userEmail=session.user.email||'';
+  const userEmail=(activeSession.user.email||'').toLowerCase();
   const emailEl=document.getElementById('user-email');
   if(emailEl)emailEl.textContent=userEmail;
 
-  // Step 1: Try get_my_applications() (requires applicant_user_id to be set)
   const loading=document.getElementById('portal-loading');
   const content=document.getElementById('portal-content');
   const errorEl=document.getElementById('portal-error');
 
-  let app=null;
-
+  // ── Step 1: Claim application if app_id given in URL ──────────────────────
+  // claim_application links applicant_user_id to this auth user so
+  // get_my_applications() can find it in future visits without app_id.
   if(requestedAppId){
     const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:requestedAppId,p_email:userEmail});
     if(claimErr||claimResult?.success===false){
+      const errMsg=claimResult?.error||claimErr?.message||'';
+      // Email mismatch: user is signed in with the wrong account.
+      // Show clear instructions and sign-out option.
       loading.style.display='none';
       content.style.display='block';
-      content.innerHTML=renderWrongAccount(userEmail,requestedAppId,claimResult?.error||claimErr?.message||'We could not verify this application for the current signed-in email.');
+      content.innerHTML=renderWrongAccount(userEmail,requestedAppId,errMsg);
       return;
     }
   }
 
+  // ── Step 2: Fetch list of this user's applications ─────────────────────────
   const {data:rpcResult,error:rpcErr}=await sb.rpc('get_my_applications');
   let myApps=[];
   if(!rpcErr&&rpcResult?.success&&Array.isArray(rpcResult.applications)){
@@ -558,13 +589,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }
 
   if(!myApps.length){
-    // Step 2: Auto-claim via email then retry
-    await autoClaimApplications(sb, userEmail);
-
-    const {data:rpcResult2,error:rpcErr2}=await sb.rpc('get_my_applications');
-    if(!rpcErr2&&rpcResult2?.success&&Array.isArray(rpcResult2.applications)){
-      myApps=rpcResult2.applications;
-    }
+    // Auto-claim any applications by email match then retry.
+    await autoClaimApplications(sb,userEmail);
+    const {data:r2}=await sb.rpc('get_my_applications');
+    if(r2?.success&&Array.isArray(r2.applications)) myApps=r2.applications;
   }
 
   loading.style.display='none';
@@ -573,16 +601,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
   if(!myApps.length){
     content.innerHTML=`<div class="no-app">
       <h3>No application found</h3>
-      <p>We could not find an application for <strong>${esc(userEmail)}</strong>.<br>
-      If you applied recently, it may take a moment to appear.<br>
+      <p>We couldn't find an application linked to <strong>${esc(userEmail)}</strong>.<br>
+      Make sure you're signed in with the same email you used when applying.<br><br>
+      <button onclick="signOut()" style="background:none;border:1px solid #3b82f6;color:#3b82f6;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.85rem">Sign in with a different email</button><br><br>
       Need help? <a href="tel:7077063137" style="color:var(--blue)">Call 707-706-3137</a></p>
     </div>`;
     return;
   }
 
-  // Get the most recent application and fetch its full details
+  // ── Step 3: Pick the right application from the list ──────────────────────
   const summary=requestedAppId
-    ? myApps.find(a=>(a.app_id||a.id)===requestedAppId)
+    ? (myApps.find(a=>(a.app_id||a.id)===requestedAppId)||myApps[0])
     : myApps[0];
 
   if(!summary){
@@ -593,7 +622,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
   window._portalAppId=summary.app_id||summary.id;
   sessionStorage.setItem('pendingPortalAppId',window._portalAppId);
 
-  // Fetch full row with all fields including payment tracking
+  // ── Step 4: Fetch full application details ─────────────────────────────────
+  // The new tenant SELECT RLS policy (applicant_user_id = auth.uid() OR
+  // lower(email) = lower(auth.email())) allows this query.
   const {data:fullApp,error:fetchErr}=await sb.from('applications')
     .select(
       'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,'+
@@ -607,16 +638,16 @@ document.addEventListener('DOMContentLoaded',async()=>{
       'tenant_sign_token,has_co_applicant,admin_notes,desired_lease_term'
     )
     .eq('app_id',window._portalAppId)
-    .single();
+    .maybeSingle();
 
   if(fetchErr||!fullApp){
     errorEl.style.display='block';
-    errorEl.innerHTML='<div class="error-card">Error loading application details. Please refresh or contact support.</div>';
+    errorEl.innerHTML='<div class="error-card">Could not load application details. Please refresh or <a href="tel:7077063137" style="color:#60a5fa">call us</a>.</div>';
+    if(fetchErr)console.error('Portal fetch error:',fetchErr.message);
     return;
   }
 
-  app=fullApp;
-  content.innerHTML=renderPortal(app);
+  content.innerHTML=renderPortal(fullApp);
 });
 </script>
 </body>
