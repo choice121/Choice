@@ -1,255 +1,450 @@
 <!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Tenant Login &mdash; Choice Properties</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script>
-  <script defer src="/js/supabase.min.js"></script>
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;font-family:'Inter',sans-serif}
-  body{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);width:100%;max-width:420px;padding:40px 36px}
-  .logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
-  .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;flex-shrink:0}
-  .logo-text{font-size:1rem;font-weight:700;color:#0f172a;line-height:1.2}
-  .logo-sub{font-size:.72rem;color:#64748b;font-weight:400}
-  h1{font-size:1.45rem;font-weight:800;color:#0f172a;margin-bottom:6px}
-  .subtitle{font-size:.85rem;color:#64748b;margin-bottom:28px;line-height:1.5}
-  .form-group{margin-bottom:18px}
-  .form-group label{display:block;font-size:.76rem;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-  .form-group input{width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:9px;font-size:.9rem;font-family:inherit;color:#0f172a;background:#f9fafb;transition:border-color .15s}
-  .form-group input:focus{outline:none;border-color:#2563eb;background:#fff}
-  .btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;margin-bottom:8px}
-  .btn-primary:hover:not(:disabled){opacity:.9}
-  .btn-primary:disabled{opacity:.6;cursor:not-allowed}
-  .btn-secondary{width:100%;padding:10px;background:transparent;color:#dc2626;border:1.5px solid #fecaca;border-radius:9px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:8px}
-  .btn-secondary:hover{background:#fef2f2}
-  .status-msg{text-align:center;font-size:.82rem;padding:10px 14px;border-radius:8px;margin-top:12px;display:none}
-  .status-msg.success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;display:block}
-  .status-msg.error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;display:block}
-  .status-msg.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;display:block}
-  .back-link{display:block;text-align:center;margin-top:20px;font-size:.8rem;color:#64748b;text-decoration:none}
-  .back-link:hover{color:#2563eb}
-  .wrong-account-notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:.83rem;color:#92400e;line-height:1.55}
-  .wrong-account-notice strong{color:#c2410c}
-  .signed-in-banner{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin-bottom:22px;display:none}
-  .signed-in-banner p{font-size:.83rem;color:#1e40af;line-height:1.55;margin-bottom:10px}
-  .signed-in-banner strong{color:#1d4ed8}
-  .btn-continue{width:100%;padding:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px}
-  .btn-switch{width:100%;padding:10px;background:transparent;color:#6b7280;border:1.5px solid #d1d5db;border-radius:9px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit}
-  .btn-switch:hover{background:#f9fafb;color:#374151}
-  </style>
-  </head>
-  <body>
-  <div class="card">
-    <div class="logo">
-      <div class="logo-icon">CP</div>
-      <div>
-        <div class="logo-text">Choice Properties</div>
-        <div class="logo-sub">Tenant Portal</div>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#006aff">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Tenant Login — Choice Properties</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif}
+body{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);width:100%;max-width:420px;padding:40px 36px}
+
+/* Logo */
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;flex-shrink:0}
+.logo-text{font-size:1rem;font-weight:700;color:#0f172a;line-height:1.2}
+.logo-sub{font-size:.72rem;color:#64748b;font-weight:400}
+h1{font-size:1.45rem;font-weight:800;color:#0f172a;margin-bottom:6px}
+.subtitle{font-size:.85rem;color:#64748b;margin-bottom:24px;line-height:1.5}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:.76rem;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.form-group input{width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:9px;font-size:.95rem;font-family:inherit;color:#0f172a;background:#f9fafb;transition:border-color .15s;-webkit-appearance:none}
+.form-group input:focus{outline:none;border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-group input.input-error{border-color:#dc2626;background:#fef2f2}
+
+/* Inline error (appears just above the button) */
+.field-error{font-size:.8rem;color:#dc2626;margin-bottom:10px;display:none;padding:8px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;line-height:1.5}
+.field-error.visible{display:block}
+
+/* Buttons */
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.15);display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px}
+.btn-primary:hover:not(:disabled){opacity:.9}
+.btn-primary:active:not(:disabled){opacity:.8;transform:scale(.99)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.btn-secondary{width:100%;padding:11px;background:transparent;color:#dc2626;border:1.5px solid #fecaca;border-radius:9px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:8px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(220,38,38,.1);min-height:44px}
+.btn-secondary:hover{background:#fef2f2}
+
+/* Spinner in button */
+.btn-spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;display:none;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Info/notice banners */
+.notice{border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:.83rem;line-height:1.55;display:none}
+.notice.visible{display:block}
+.notice.wrong{background:#fff7ed;border:1px solid #fed7aa;color:#92400e}
+.notice.wrong strong{color:#c2410c}
+.notice.info{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1e40af}
+.notice.info strong{color:#1d4ed8}
+.notice-action{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+
+/* Signed-in banner buttons */
+.btn-continue{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.15);min-height:48px}
+.btn-continue:hover{opacity:.9}
+.btn-continue:active{opacity:.8}
+.btn-switch{width:100%;padding:11px;background:transparent;color:#6b7280;border:1.5px solid #d1d5db;border-radius:9px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.05);min-height:44px}
+.btn-switch:hover{background:#f9fafb;color:#374151}
+
+/* Initializing overlay */
+.init-overlay{text-align:center;padding:18px 0}
+.init-spin{display:inline-block;width:22px;height:22px;border:2.5px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .65s linear infinite;vertical-align:middle;margin-right:8px}
+.init-text{font-size:.82rem;color:#9ca3af;vertical-align:middle}
+
+/* Back link */
+.back-link{display:block;text-align:center;margin-top:22px;font-size:.8rem;color:#64748b;text-decoration:none}
+.back-link:hover{color:#2563eb}
+
+/* ── Success screen ── */
+.success-screen{display:none;text-align:center}
+.success-screen.visible{display:block}
+.success-icon{width:64px;height:64px;background:linear-gradient(135deg,#16a34a,#15803d);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.8rem;color:#fff;box-shadow:0 8px 24px rgba(22,163,74,.3)}
+.success-title{font-size:1.3rem;font-weight:800;color:#0f172a;margin-bottom:8px}
+.success-sub{font-size:.88rem;color:#4b5563;line-height:1.65;margin-bottom:24px}
+.success-email-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:22px;font-size:.88rem;color:#166534;word-break:break-all}
+.success-email-box strong{font-size:.95rem;display:block;margin-top:2px;color:#15803d}
+.success-steps{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;text-align:left;margin-bottom:22px}
+.success-steps p{font-size:.8rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.success-steps ol{padding-left:18px;color:#374151;font-size:.85rem;line-height:1.8}
+.resend-row{margin-top:4px}
+.btn-resend{background:transparent;border:1.5px solid #d1d5db;border-radius:8px;color:#6b7280;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;padding:9px 16px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.05);min-height:40px}
+.btn-resend:hover:not(:disabled){background:#f9fafb;color:#374151;border-color:#9ca3af}
+.btn-resend:disabled{opacity:.55;cursor:not-allowed}
+.resend-note{font-size:.76rem;color:#9ca3af;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">CP</div>
+    <div>
+      <div class="logo-text">Choice Properties</div>
+      <div class="logo-sub">Tenant Portal</div>
+    </div>
+  </div>
+
+  <!-- Main form view -->
+  <div id="form-view">
+    <h1 id="heading">Sign In</h1>
+    <p class="subtitle" id="subtitle">Enter your email to receive a secure sign-in link.</p>
+
+    <!-- Signed-in banner (shown when a valid session already exists) -->
+    <div class="notice info" id="signed-in-banner">
+      <p>You are currently signed in as <strong id="signed-in-email"></strong>.</p>
+      <div class="notice-action">
+        <button class="btn-continue" id="btn-continue">Continue to My Portal</button>
+        <button class="btn-switch" id="btn-switch">Sign out &amp; use a different email</button>
       </div>
     </div>
-    <h1>Sign In</h1>
-    <p class="subtitle" id="subtitle">Enter your email to receive a secure sign-in link.</p>
-    <div id="signed-in-banner" class="signed-in-banner">
-      <p>You are currently signed in as <strong id="signed-in-email"></strong>.</p>
-      <button class="btn-continue" id="btn-continue" onclick="goToPortal()">Continue to My Portal</button>
-      <button class="btn-switch" onclick="signOutAndContinue()">Sign out &amp; use a different email</button>
+
+    <!-- Wrong-account notice -->
+    <div class="notice wrong" id="wrong-account-notice">
+      <span id="wrong-account-msg"></span>
+      <div class="notice-action">
+        <button class="btn-switch" id="btn-switch-wrong">Sign out &amp; sign in with the correct email</button>
+      </div>
     </div>
-    <div id="wrong-account-notice" class="wrong-account-notice" style="display:none"></div>
+
+    <!-- Email form (hidden when banner is visible) -->
     <div id="login-form">
       <div class="form-group">
         <label for="email">Email Address</label>
-        <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
       </div>
-      <button class="btn-primary" id="send-btn" onclick="sendMagicLink()">Send Sign-In Link</button>
-      <button class="btn-secondary" id="signout-btn" style="display:none" onclick="signOutAndContinue()">Sign Out &amp; Use Different Email</button>
+      <div class="field-error" id="field-error"></div>
+      <button class="btn-primary" id="send-btn">
+        <span id="btn-label">Send Sign-In Link</span>
+        <span class="btn-spin" id="btn-spin"></span>
+      </button>
+      <button class="btn-secondary" id="signout-btn" style="display:none">Sign Out &amp; Use Different Email</button>
     </div>
-    <div class="status-msg" id="status-msg"></div>
-    <a href="/index.html" class="back-link">&larr; Back to Choice Properties</a>
+
+    <!-- Initializing placeholder (shown while scripts load) -->
+    <div class="init-overlay" id="init-overlay" style="display:none">
+      <span class="init-spin"></span><span class="init-text">Preparing secure form…</span>
+    </div>
   </div>
 
-  <script>
-  document.getElementById('email').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') sendMagicLink();
+  <!-- Success view (replaces form-view after email sent) -->
+  <div class="success-screen" id="success-view">
+    <div class="success-icon">&#10003;</div>
+    <div class="success-title">Check Your Email</div>
+    <p class="success-sub">We've sent a secure sign-in link to:</p>
+    <div class="success-email-box">
+      Your sign-in link was sent to<br>
+      <strong id="success-email"></strong>
+    </div>
+    <div class="success-steps">
+      <p>What to do next</p>
+      <ol>
+        <li>Open your email inbox</li>
+        <li>Find the email from Choice Properties</li>
+        <li>Click the <strong>Sign In to Portal</strong> button in that email</li>
+      </ol>
+    </div>
+    <div class="resend-row">
+      <button class="btn-resend" id="resend-btn" disabled>Resend link (<span id="resend-countdown">60</span>s)</button>
+      <div class="resend-note" id="resend-note">Didn't receive it? Check your spam folder, then try resending.</div>
+    </div>
+    <button class="btn-switch" id="btn-wrong-email" style="margin-top:16px">Use a different email</button>
+  </div>
+
+  <a href="/index.html" class="back-link">&larr; Back to Choice Properties</a>
+</div>
+
+<script>
+'use strict';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+let _pendingPortalAppId = '';
+let _resendTimer = null;
+
+async function waitForSB(maxMs) {
+  const end = Date.now() + (maxMs || 8000);
+  while (Date.now() < end) {
+    if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) return true;
+    await new Promise(r => setTimeout(r, 80));
+  }
+  return false;
+}
+
+function getSB() {
+  return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
   });
+}
 
-  async function waitForSB(attempts) {
-    for (let i = 0; i < (attempts || 50); i++) {
-      if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) return true;
-      await new Promise(r => setTimeout(r, 100));
+function showError(msg) {
+  const el = document.getElementById('field-error');
+  const input = document.getElementById('email');
+  el.textContent = msg;
+  el.classList.add('visible');
+  input.classList.add('input-error');
+  input.focus();
+}
+
+function clearError() {
+  const el = document.getElementById('field-error');
+  const input = document.getElementById('email');
+  el.classList.remove('visible');
+  input.classList.remove('input-error');
+}
+
+function parseSBError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('email rate limit exceeded')) {
+    return 'Too many requests. Please wait a minute before trying again.';
+  }
+  if (msg.includes('invalid email') || msg.includes('unable to validate')) {
+    return 'That email address doesn\'t look valid. Please double-check it.';
+  }
+  if (msg.includes('network') || msg.includes('fetch')) {
+    return 'Network error. Please check your connection and try again.';
+  }
+  return err?.message || 'Something went wrong. Please try again.';
+}
+
+function startResendCountdown(seconds) {
+  const btn = document.getElementById('resend-btn');
+  const cd = document.getElementById('resend-countdown');
+  let remaining = seconds || 60;
+  btn.disabled = true;
+  cd.textContent = remaining;
+  clearInterval(_resendTimer);
+  _resendTimer = setInterval(() => {
+    remaining--;
+    cd.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(_resendTimer);
+      btn.disabled = false;
+      btn.textContent = 'Resend sign-in link';
+      document.getElementById('resend-note').textContent = '';
     }
-    return false;
+  }, 1000);
+}
+
+function showSuccessScreen(email) {
+  document.getElementById('form-view').style.display = 'none';
+  const sv = document.getElementById('success-view');
+  sv.classList.add('visible');
+  document.getElementById('success-email').textContent = email;
+  startResendCountdown(60);
+}
+
+function resetToForm(prefillEmail) {
+  clearInterval(_resendTimer);
+  document.getElementById('success-view').classList.remove('visible');
+  document.getElementById('form-view').style.display = '';
+  const sendBtn = document.getElementById('send-btn');
+  document.getElementById('btn-label').textContent = 'Send Sign-In Link';
+  document.getElementById('btn-spin').style.display = 'none';
+  sendBtn.disabled = false;
+  clearError();
+  if (prefillEmail) document.getElementById('email').value = prefillEmail;
+  document.getElementById('signed-in-banner').classList.remove('visible');
+  document.getElementById('login-form').style.display = 'block';
+}
+
+// ── Send magic link ───────────────────────────────────────────────────────────
+
+async function sendMagicLink(emailOverride) {
+  clearError();
+  const emailEl = document.getElementById('email');
+  const sendBtn = document.getElementById('send-btn');
+  const email = (emailOverride || emailEl.value).trim().toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  const appId = params.get('app_id') || _pendingPortalAppId || sessionStorage.getItem('pendingPortalAppId') || '';
+
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    showError('Please enter a valid email address.');
+    return;
   }
 
-  function getSB() {
-    return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true }
-    });
+  // Loading state
+  document.getElementById('btn-label').textContent = 'Sending…';
+  document.getElementById('btn-spin').style.display = 'inline-block';
+  sendBtn.disabled = true;
+
+  const ready = await waitForSB(6000);
+  if (!ready) {
+    document.getElementById('btn-label').textContent = 'Send Sign-In Link';
+    document.getElementById('btn-spin').style.display = 'none';
+    sendBtn.disabled = false;
+    showError('Page failed to initialize. Please refresh and try again.');
+    return;
   }
 
-  async function signOutAndContinue() {
+  try {
     const sb = getSB();
+
+    // If signed in as a different email, sign out first to avoid session conflicts.
+    const { data: { session: existing } } = await sb.auth.getSession();
+    if (existing && existing.user.email.toLowerCase() !== email) {
+      await sb.auth.signOut().catch(() => {});
+    }
+
+    const redirectUrl = new URL('/tenant/portal.html', window.location.origin);
+    if (appId) redirectUrl.searchParams.set('app_id', appId);
+
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectUrl.toString() },
+    });
+
+    if (error) throw error;
+
+    if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
+    showSuccessScreen(email);
+
+  } catch (err) {
+    document.getElementById('btn-label').textContent = 'Send Sign-In Link';
+    document.getElementById('btn-spin').style.display = 'none';
+    sendBtn.disabled = false;
+    showError(parseSBError(err));
+  }
+}
+
+async function signOutAndReset(prefillEmail) {
+  try {
+    const sb = getSB();
+    await sb.auth.signOut();
+  } catch (_) {}
+  sessionStorage.removeItem('pendingPortalAppId');
+  document.getElementById('signed-in-banner').classList.remove('visible');
+  document.getElementById('wrong-account-notice').classList.remove('visible');
+  document.getElementById('signout-btn').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('heading').textContent = 'Sign In';
+  document.getElementById('subtitle').textContent = 'Enter your email to receive a secure sign-in link.';
+  clearError();
+  const params = new URLSearchParams(window.location.search);
+  const emailParam = prefillEmail || params.get('email') || '';
+  if (emailParam) document.getElementById('email').value = emailParam;
+  document.getElementById('email').focus();
+}
+
+function goToPortal() {
+  const portalUrl = new URL('/tenant/portal.html', window.location.origin);
+  if (_pendingPortalAppId) portalUrl.searchParams.set('app_id', _pendingPortalAppId);
+  window.location.href = portalUrl.pathname + portalUrl.search;
+}
+
+// ── Wire up all buttons with event listeners (more reliable than onclick on mobile) ──
+
+document.getElementById('send-btn').addEventListener('click', () => sendMagicLink());
+document.getElementById('email').addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
+document.getElementById('btn-continue').addEventListener('click', goToPortal);
+document.getElementById('btn-switch').addEventListener('click', () => signOutAndReset());
+document.getElementById('btn-switch-wrong').addEventListener('click', () => {
+  const params = new URLSearchParams(window.location.search);
+  signOutAndReset(params.get('email') || '');
+});
+document.getElementById('signout-btn').addEventListener('click', () => signOutAndReset());
+document.getElementById('resend-btn').addEventListener('click', () => {
+  const email = document.getElementById('success-email').textContent.trim();
+  sendMagicLink(email);
+});
+document.getElementById('btn-wrong-email').addEventListener('click', () => {
+  resetToForm('');
+  document.getElementById('email').focus();
+});
+
+// ── Initialize — check existing session ──────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
+  const emailParam = params.get('email') || '';
+  const needEmail = params.get('need_email') === '1';
+  _pendingPortalAppId = appId;
+  if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
+  if (emailParam) document.getElementById('email').value = emailParam;
+
+  if (needEmail) {
+    const infoMsg = emailParam
+      ? `Sign in with <strong>${emailParam}</strong> — the email on your rental application.`
+      : 'Please sign in with the email address you used on your rental application.';
+    const fe = document.getElementById('field-error');
+    fe.innerHTML = infoMsg;
+    fe.style.background = '#eff6ff';
+    fe.style.color = '#1d4ed8';
+    fe.style.borderColor = '#bfdbfe';
+    fe.classList.add('visible');
+    document.getElementById('subtitle').textContent = 'Sign in with your application email to continue.';
+  }
+
+  // Show initializing state while scripts load
+  const initOverlay = document.getElementById('init-overlay');
+  initOverlay.style.display = 'block';
+  document.getElementById('send-btn').disabled = true;
+
+  const ready = await waitForSB(8000);
+
+  initOverlay.style.display = 'none';
+  document.getElementById('send-btn').disabled = false;
+
+  if (!ready) return; // Form still usable — error will show on submit
+
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (!session) return; // No cached session — show clean form
+
+  // Server-validate the cached session (getSession() only reads localStorage;
+  // getUser() pings the server and confirms the JWT is still accepted).
+  const { data: userData, error: userErr } = await sb.auth.getUser();
+  if (userErr || !userData?.user) {
+    // Stale/expired token — clear it silently and show the clean form.
     await sb.auth.signOut().catch(() => {});
     sessionStorage.removeItem('pendingPortalAppId');
-    // Hide banner and wrong-account notice, restore the login form
-    document.getElementById('signed-in-banner').style.display = 'none';
-    document.getElementById('signout-btn').style.display = 'none';
-    document.getElementById('wrong-account-notice').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('send-btn').textContent = 'Send Sign-In Link';
-    document.getElementById('send-btn').disabled = false;
-    // Re-fill the email field with the URL param if present, so the user
-    // doesn't have to remember which email to use.
-    const params = new URLSearchParams(window.location.search);
-    const emailParam = params.get('email') || '';
-    if (emailParam) document.getElementById('email').value = emailParam;
-    const msg = document.getElementById('status-msg');
-    msg.textContent = 'Signed out. Enter the email you used on the rental application.';
-    msg.className = 'status-msg info';
+    return;
   }
 
-  async function sendMagicLink() {
-    const emailEl = document.getElementById('email');
-    const btn = document.getElementById('send-btn');
-    const msg = document.getElementById('status-msg');
-    const email = emailEl.value.trim().toLowerCase();
-    const params = new URLSearchParams(window.location.search);
-    const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
+  const signedInEmail = userData.user.email.toLowerCase();
+  const requestedEmail = emailParam.toLowerCase();
 
-    msg.className = 'status-msg';
-    msg.style.display = 'none';
-
-    if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-      msg.textContent = 'Please enter a valid email address.';
-      msg.className = 'status-msg error';
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-
-    const ready = await waitForSB();
-    if (!ready) {
-      msg.textContent = 'Page not ready. Please refresh and try again.';
-      msg.className = 'status-msg error';
-      btn.disabled = false;
-      btn.textContent = 'Send Sign-In Link';
-      return;
-    }
-
-    try {
-      const sb = getSB();
-
-      // If there is already a session for a DIFFERENT email, sign out first so the
-      // new magic link cleanly takes over without any session conflict.
-      const { data: { session: existingSession } } = await sb.auth.getSession();
-      if (existingSession && existingSession.user.email.toLowerCase() !== email) {
-        await sb.auth.signOut().catch(() => {});
-      }
-
-      const redirectUrl = new URL('/tenant/portal.html', window.location.origin);
-      if (appId) redirectUrl.searchParams.set('app_id', appId);
-
-      const { error } = await sb.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectUrl.toString() },
-      });
-      if (error) throw error;
-      if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
-      document.getElementById('wrong-account-notice').style.display = 'none';
-      document.getElementById('signout-btn').style.display = 'none';
-      msg.innerHTML = '<strong>Check your email!</strong> A secure sign-in link has been sent to <strong>' + email + '</strong>. Click the link in the email to access your portal.';
-      msg.className = 'status-msg success';
-      document.getElementById('login-form').style.opacity = '0.5';
-      document.getElementById('login-form').style.pointerEvents = 'none';
-    } catch (err) {
-      msg.textContent = err.message || 'Failed to send link. Please try again.';
-      msg.className = 'status-msg error';
-      btn.disabled = false;
-      btn.textContent = 'Send Sign-In Link';
-    }
+  // If a specific email is required and it doesn't match — show wrong-account notice.
+  if (requestedEmail && signedInEmail !== requestedEmail) {
+    const notice = document.getElementById('wrong-account-notice');
+    document.getElementById('wrong-account-msg').innerHTML =
+      'You are currently signed in as <strong>' + signedInEmail + '</strong>. ' +
+      'This application requires sign-in with <strong>' + requestedEmail + '</strong>.';
+    notice.classList.add('visible');
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('heading').textContent = 'Wrong Account';
+    document.getElementById('subtitle').textContent = 'Sign out and sign in with the correct email to continue.';
+    return;
   }
 
-  let _pendingPortalAppId = '';
-
-  function goToPortal() {
-    const portalUrl = new URL('/tenant/portal.html', window.location.origin);
-    if (_pendingPortalAppId) portalUrl.searchParams.set('app_id', _pendingPortalAppId);
-    window.location.href = portalUrl.pathname + portalUrl.search;
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
-    const emailParam = params.get('email') || '';
-    const needEmail = params.get('need_email') === '1';
-    _pendingPortalAppId = appId;
-    if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
-    if (emailParam) document.getElementById('email').value = emailParam;
-
-    // Show a clear contextual message when redirected here after a wrong-account error
-    if (needEmail) {
-      const msg = document.getElementById('status-msg');
-      msg.innerHTML = emailParam
-        ? 'Please sign in with <strong>' + emailParam + '</strong> — the email you used on the rental application.'
-        : 'Please sign in with the email address you used when filling out the rental application for this property.';
-      msg.className = 'status-msg info';
-      document.getElementById('subtitle').textContent = 'Sign in with your application email.';
-    }
-
-    const ready = await waitForSB(20);
-    if (!ready) return;
-
-    const sb = getSB();
-    const { data: { session } } = await sb.auth.getSession();
-
-    if (session) {
-      // Server-validate the session to catch stale/expired cached tokens.
-      // getSession() reads localStorage and may return an expired JWT.
-      // getUser() hits the server and confirms the token is still accepted.
-      const { data: userData, error: userErr } = await sb.auth.getUser();
-      if (userErr || !userData?.user) {
-        // Stale or invalid session — clear it silently and show fresh login form.
-        await sb.auth.signOut().catch(() => {});
-        sessionStorage.removeItem('pendingPortalAppId');
-        return; // Form is already visible by default
-      }
-
-      const signedInEmail = userData.user.email.toLowerCase();
-      const requestedEmail = emailParam.toLowerCase();
-
-      // If a specific email is required and it doesn't match — show wrong-account notice.
-      if (requestedEmail && signedInEmail !== requestedEmail) {
-        const notice = document.getElementById('wrong-account-notice');
-        notice.innerHTML =
-          'You are currently signed in as <strong>' + signedInEmail + '</strong>. ' +
-          'To view this application, please sign out and sign in with ' +
-          '<strong>' + requestedEmail + '</strong>.';
-        notice.style.display = 'block';
-        document.getElementById('subtitle').textContent = 'Sign in with your application email to continue.';
-        document.getElementById('signout-btn').style.display = 'block';
-        return;
-      }
-
-      // Valid session confirmed — show the banner.
-      // Never auto-redirect silently: the user must consciously click "Continue".
-      const banner = document.getElementById('signed-in-banner');
-      document.getElementById('signed-in-email').textContent = signedInEmail;
-      banner.style.display = 'block';
-      document.getElementById('subtitle').textContent = 'You are already signed in.';
-      document.getElementById('login-form').style.display = 'none';
-    }
-  });
-  </script>
-  </body>
-  </html>
+  // Valid session — show the banner.
+  const banner = document.getElementById('signed-in-banner');
+  document.getElementById('signed-in-email').textContent = signedInEmail;
+  banner.classList.add('visible');
+  document.getElementById('heading').textContent = 'Already Signed In';
+  document.getElementById('subtitle').textContent = 'Choose what you\'d like to do.';
+  document.getElementById('login-form').style.display = 'none';
+});
+</script>
+</body>
+</html>

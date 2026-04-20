@@ -184,9 +184,35 @@ function fmtMoney(v){if(v==null)return '—';return '$'+Number(v).toLocaleString
 
 async function signOut(){
   try { await getSB().auth.signOut(); } catch(_) {}
-  // Always clear any local session storage so the login page starts fresh
   sessionStorage.removeItem('pendingPortalAppId');
   location.href = '/tenant/login.html';
+}
+
+async function lookupByAppId(){
+  const input=document.getElementById('manual-app-id');
+  const msg=document.getElementById('appid-msg');
+  if(!input||!msg)return;
+  const appId=(input.value||'').trim().toUpperCase();
+  if(!appId){msg.textContent='Please enter your Application ID.';msg.style.color='#f59e0b';msg.style.display='block';return;}
+  msg.textContent='Looking up…';msg.style.color='var(--muted)';msg.style.display='block';
+  try{
+    const sb=getSB();
+    const {data:{session}}=await sb.auth.getSession();
+    const userEmail=(session?.user?.email||'').toLowerCase();
+    // Attempt to claim the app with this user's email
+    const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:appId,p_email:userEmail});
+    if(claimErr||claimResult?.success===false){
+      msg.textContent='That Application ID was not found or does not match your email address. Please contact us for help.';
+      msg.style.color='#f87171';msg.style.display='block';
+      return;
+    }
+    // Claimed successfully — reload the portal with this app
+    sessionStorage.setItem('pendingPortalAppId',appId);
+    location.href='/tenant/portal.html?app_id='+encodeURIComponent(appId);
+  }catch(e){
+    msg.textContent='Error: '+(e.message||'Could not look up application.');
+    msg.style.color='#f87171';msg.style.display='block';
+  }
 }
 
 // ── Payment status rendering ─────────────────────────────────────────────────
@@ -573,17 +599,20 @@ function renderWrongAccount(userEmail, requestedAppId, message){
 }
 
 // ── Magic link session resolver ───────────────────────────────────────────────
-// When the user clicks a magic link, the URL contains #access_token=...
-// We must wait for Supabase to exchange that token for a real session before
-// calling getSession(). onAuthStateChange fires reliably once the exchange
-// completes — we use it with a 10-second timeout.
+// Supabase magic links come in two forms:
+//   Implicit flow:  URL hash contains #access_token=...
+//   PKCE flow:      URL query contains ?code=...
+// In both cases we rely on onAuthStateChange firing SIGNED_IN once the
+// exchange/verification completes. Timeout of 12s for slow connections.
 function waitForMagicLinkSession(sb){
   return new Promise(resolve=>{
-    // If no hash token present, resolve immediately.
-    if(!window.location.hash.includes('access_token')){resolve(null);return;}
-    const t=setTimeout(()=>resolve(null),10000);
+    const hash=window.location.hash||'';
+    const qs=window.location.search||'';
+    const hasMagicToken=hash.includes('access_token')||qs.includes('code=');
+    if(!hasMagicToken){resolve(null);return;}
+    const t=setTimeout(()=>resolve(null),12000);
     const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{
-      if(event==='SIGNED_IN'&&session){
+      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session){
         clearTimeout(t);
         subscription.unsubscribe();
         resolve(session);
@@ -606,9 +635,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   // reading the session — avoids reading a stale/old session.
   const magicSession=await waitForMagicLinkSession(sb);
 
-  // Clean the hash from the URL so refreshes don't re-process the token.
-  if(magicSession&&window.location.hash){
-    history.replaceState(null,'',window.location.pathname+window.location.search);
+  // Clean hash and PKCE code from the URL so refreshes don't re-process the token.
+  if(magicSession){
+    const cleanUrl=window.location.pathname+(requestedAppId?'?app_id='+encodeURIComponent(requestedAppId):'');
+    history.replaceState(null,'',cleanUrl);
   }
 
   const {data:{session}}=await sb.auth.getSession();
@@ -659,13 +689,31 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   if(!myApps.length){
     content.innerHTML=`<div class="no-app">
-      <h3>No application found</h3>
-      <p style="color:var(--muted);font-size:.88rem;line-height:1.65">We couldn't find an application linked to <strong style="color:var(--text)">${esc(userEmail)}</strong>.<br>
-      Make sure you're signed in with the same email address you used when applying.</p>
-      <button onclick="signOut()" style="background:none;border:1px solid #3b82f6;color:#3b82f6;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;margin-top:14px">&#8592; Sign in with a different email</button>
+      <div style="font-size:2.4rem;margin-bottom:14px">&#128269;</div>
+      <h3 style="margin-bottom:10px">No application found</h3>
+      <p style="color:var(--muted);font-size:.87rem;line-height:1.7;margin-bottom:6px">
+        We searched for an application linked to<br>
+        <strong style="color:var(--text);font-size:.92rem">${esc(userEmail)}</strong>
+      </p>
+      <p style="color:var(--muted2);font-size:.82rem;line-height:1.65;margin-bottom:18px">
+        Make sure you are signed in with the exact email address you used on your rental application — even a slight difference (like a period or extra letter) will prevent a match.
+      </p>
+
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;margin-bottom:18px;text-align:left">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Look up by Application ID</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="manual-app-id" placeholder="e.g. CP-20260420-ABC123" autocomplete="off" autocapitalize="characters"
+            style="flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface3);color:var(--text);font-size:.85rem;font-family:inherit;-webkit-appearance:none">
+          <button onclick="lookupByAppId()" style="padding:9px 16px;border-radius:8px;background:var(--blue);border:none;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">Look Up</button>
+        </div>
+        <div id="appid-msg" style="margin-top:8px;font-size:.78rem;color:var(--muted);display:none"></div>
+      </div>
+
+      <button onclick="signOut()" style="width:100%;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;padding:11px 18px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;touch-action:manipulation;min-height:44px">&#8592; Sign in with a different email</button>
+
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:left">
-        <p style="font-size:.8rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
-        <p style="font-size:.8rem;color:var(--muted2)">Still need help? <a href="tel:7077063137" style="color:var(--blue);font-weight:600">Call 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">Email us</a></p>
+        <p style="font-size:.79rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application, not the primary applicant's email.</p>
+        <p style="font-size:.79rem;color:var(--muted2)">Still need help? <a href="tel:7077063137" style="color:var(--blue);font-weight:600">Call or text 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">Email us</a></p>
       </div>
     </div>`;
     return;
