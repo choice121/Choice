@@ -421,7 +421,7 @@ function renderPortal(app){
     ${renderPaymentStatus(app)}
     ${renderDocUpload(app)}
     <div class="portal-footer">
-      Questions? <a href="mailto:choicepropertygroup@hotmail.com">choicepropertygroup@hotmail.com</a> &middot; <a href="tel:7077063137">707-706-3137</a>
+      Questions? <a href="mailto:support@choiceproperties.com">support@choiceproperties.com</a> &middot; <a href="tel:7077063137">707-706-3137</a>
     </div>`;
 }
 
@@ -455,7 +455,7 @@ async function withdrawApplication(){
       fetch(CONFIG.SUPABASE_URL+'/functions/v1/send-email',{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-        body:JSON.stringify({type:'custom',to:'choicepropertygroup@hotmail.com',subject:'Application Withdrawn — '+window._portalAppId,html:`<p>Application <strong>${window._portalAppId}</strong> has been withdrawn by the tenant (${esc(session.user?.email||'')}).</p>`}),
+        body:JSON.stringify({type:'custom',to:'support@choiceproperties.com',subject:'Application Withdrawn — '+window._portalAppId,html:`<p>Application <strong>${window._portalAppId}</strong> has been withdrawn by the tenant (${esc(session.user?.email||'')}).</p>`}),
       }).catch(()=>{});
     }
   }catch(_){}
