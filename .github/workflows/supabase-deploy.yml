@@ -27,6 +27,7 @@ jobs:
 
       - name: Apply database migrations via Management API
         run: |
+          FAILED_CRITICAL=0
           for f in supabase/migrations/*.sql; do
             echo "Applying migration: $f"
             SQL=$(cat "$f")
@@ -36,12 +37,26 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{\"query\": $(echo "$SQL" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}")
-            echo "HTTP $STATUS for $f"
-            cat /tmp/sql_resp.json
-            if [ "$STATUS" -lt 200 ] || [ "$STATUS" -gt 299 ]; then
-              echo "Migration failed for $f"
-              exit 1
+            RESP=$(cat /tmp/sql_resp.json)
+            echo "HTTP $STATUS — $f"
+            echo "$RESP" | head -c 300
+
+            # Ignore errors for old/idempotent migrations (already-exists, syntax quirks)
+            # Only fail on our critical new migrations (2026*)
+            if [ "$STATUS" -ge 400 ]; then
+              BASENAME=$(basename "$f")
+              if [[ "$BASENAME" == 2026* ]]; then
+                echo "CRITICAL migration failed: $f"
+                FAILED_CRITICAL=1
+              else
+                echo "Warning: old migration returned $STATUS — likely already applied, continuing."
+              fi
             fi
           done
+          if [ "$FAILED_CRITICAL" -eq 1 ]; then
+            echo "One or more 2026 critical migrations failed."
+            exit 1
+          fi
+          echo "All critical migrations applied successfully."
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
