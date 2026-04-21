@@ -131,7 +131,7 @@
 
 <script defer src="/js/cp-ui.js?v=20260421"></script>
 <script type="module" src="/js/cp-api.js"></script>
-<script>
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
 (function(){
   var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
   if(!btn)return;
@@ -139,7 +139,7 @@
   overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
 })();
 </script>
-<script>
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
 function fmtDate(d){if(!d)return '-';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
 function statusBadge(s){
