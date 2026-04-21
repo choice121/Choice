@@ -148,7 +148,7 @@ html,body{min-height:100%;font-family:'Inter',sans-serif;background:var(--bg);co
   </div>
   <div class="topbar-right">
     <span class="user-email" id="user-email"></span>
-    <button class="btn-signout" onclick="signOut()">Sign Out</button>
+    <button class="btn-signout" id="btn-topbar-signout" type="button">Sign Out</button>
   </div>
 </div>
 
@@ -180,11 +180,12 @@ function getSB(){
       persistSession:true,
       autoRefreshToken:true,
       detectSessionInUrl:true,
-      // Implicit flow puts tokens in the URL hash, which works even
-      // when the magic link opens in a different browser than the one
-      // that requested it (e.g. mobile Gmail in-app browser). PKCE
-      // would silently fail there because the code_verifier is missing.
-      flowType:'implicit'
+      // PKCE flow returns a refresh token so sessions survive past the 1-hour
+      // JWT expiry — autoRefreshToken silently re-issues new access tokens.
+      // Implicit flow does NOT return a refresh token, which caused users to
+      // be unexpectedly signed out after an hour. Magic links sent through
+      // our own Edge Function include a token_hash that works in any browser.
+      flowType:'pkce'
     }
   });
   return _sb;
@@ -307,8 +308,8 @@ function renderDocUpload(app){
   function docRow(label,type){
     return `<div class="doc-row">
       <span class="doc-label">${label}</span>
-      <input type="file" id="fi-${type}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="uploadDoc('${type}','${app.app_id}','fi-${type}','ds-${type}')">
-      <button class="btn-choose" onclick="document.getElementById('fi-${type}').click()">Choose File</button>
+      <input type="file" id="fi-${type}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" data-doc-type="${type}" data-app-id="${esc(app.app_id)}" data-status-id="ds-${type}">
+      <button class="btn-choose" type="button" data-action="choose-file" data-target="fi-${type}">Choose File</button>
       <span class="doc-status" id="ds-${type}"></span>
     </div>`;
   }
@@ -404,7 +405,7 @@ function renderPortal(app){
   if(leaseStatus==='sent'&&app.tenant_sign_token){
     leaseHtml=`<div class="lease-section"><a href="/lease-sign.html?token=${esc(app.tenant_sign_token)}" class="btn-sign">&#9998; Sign Your Lease</a></div>`;
   } else if(leaseStatus==='signed'||leaseStatus==='co_signed'){
-    leaseHtml=`<div class="lease-section"><button class="btn-download" onclick="downloadLease()">&#8595; Download Lease</button></div>`;
+    leaseHtml=`<div class="lease-section"><button class="btn-download" type="button" data-action="download-lease">&#8595; Download Lease</button></div>`;
   }
 
   // Denied card
@@ -444,7 +445,7 @@ function renderPortal(app){
   }
 
   const withdrawHtml=(status==='pending'&&leaseStatus==='none')
-    ?`<button class="btn-withdraw" onclick="withdrawApplication()">&#215; Withdraw Application</button>`:'';
+    ?`<button class="btn-withdraw" type="button" data-action="withdraw">&#215; Withdraw Application</button>`:'';
 
   // Admin notes — visible message from the team
   const adminNotesHtml=app.admin_notes
@@ -602,7 +603,7 @@ function renderWrongAccount(userEmail, requestedAppId, message){
       You are currently signed in as <strong style="color:var(--text)">${esc(userEmail)}</strong>.
       Please sign in with the email address you used when filling out the rental application.
     </p>
-    <button class="btn-withdraw" type="button" onclick="signOutAndRetry()" style="margin-top:18px">&#8592; Sign in with the correct email</button>
+    <button class="btn-withdraw" type="button" data-action="signout-retry" style="margin-top:18px">&#8592; Sign in with the correct email</button>
     ${requestedAppId?`<p style="margin-top:12px;font-size:.78rem;color:var(--muted2)">Application: <span style="font-family:monospace">${esc(requestedAppId)}</span></p>`:''}
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <p style="font-size:.78rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
@@ -645,6 +646,38 @@ function waitForMagicLinkSession(sb){
     sub=data.subscription;
   });
 }
+
+// ── CSP-safe delegated event handlers ────────────────────────────────────────
+// Cloudflare CSP forbids inline onclick/onchange. We delegate from document so
+// dynamically-rendered buttons inside #portal-content all work without nonces.
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  switch(action){
+    case 'sign-out':       return signOut();
+    case 'signout-retry':  return signOutAndRetry();
+    case 'withdraw':       return withdrawApplication();
+    case 'download-lease': return downloadLease();
+    case 'lookup-app-id':  return lookupByAppId();
+    case 'switch-app':     return window._switchApp && window._switchApp(btn.dataset.appId);
+    case 'choose-file': {
+      const target = document.getElementById(btn.dataset.target);
+      if(target) target.click();
+      return;
+    }
+  }
+});
+document.addEventListener('change', function(e){
+  const input = e.target.closest('input[type=file][data-doc-type]');
+  if(!input || !input.files || !input.files[0]) return;
+  uploadDoc(input.dataset.docType, input.dataset.appId, input.id, input.dataset.statusId);
+});
+// Topbar sign-out (lives outside #portal-content)
+document.addEventListener('DOMContentLoaded', function(){
+  const t = document.getElementById('btn-topbar-signout');
+  if(t) t.addEventListener('click', signOut);
+});
 
 document.addEventListener('DOMContentLoaded',async()=>{
   const ready=await waitForSB(8000);
@@ -729,12 +762,12 @@ document.addEventListener('DOMContentLoaded',async()=>{
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input type="text" id="manual-app-id" placeholder="e.g. CP-20260420-ABC123" autocomplete="off" autocapitalize="characters"
             style="flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface3);color:var(--text);font-size:.85rem;font-family:inherit;-webkit-appearance:none">
-          <button onclick="lookupByAppId()" style="padding:9px 16px;border-radius:8px;background:var(--blue);border:none;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">Look Up</button>
+          <button type="button" data-action="lookup-app-id" style="padding:9px 16px;border-radius:8px;background:var(--blue);border:none;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">Look Up</button>
         </div>
         <div id="appid-msg" style="margin-top:8px;font-size:.78rem;color:var(--muted);display:none"></div>
       </div>
 
-      <button onclick="signOut()" style="width:100%;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;padding:11px 18px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;touch-action:manipulation;min-height:44px">&#8592; Sign in with a different email</button>
+      <button type="button" data-action="sign-out" style="width:100%;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;padding:11px 18px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;touch-action:manipulation;min-height:44px">&#8592; Sign in with a different email</button>
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:left">
         <p style="font-size:.79rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application, not the primary applicant's email.</p>
@@ -793,7 +826,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
         const isActive=aId===appId;
         const col=statusColor[a.status]||'#64748b';
         const addr=esc((a.property_address||'Application').split(',')[0]);
-        return `<button onclick="window._switchApp('${esc(aId)}')"
+        return `<button type="button" data-action="switch-app" data-app-id="${esc(aId)}"
           style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?col:'rgba(255,255,255,.12)'};
           background:${isActive?'rgba(59,130,246,.15)':'transparent'};color:${isActive?'#f1f5f9':'#94a3b8'};
           font-size:.75rem;font-weight:${isActive?'700':'500'};cursor:pointer;font-family:inherit;

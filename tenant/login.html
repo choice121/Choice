@@ -195,11 +195,9 @@ function getSB() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      // Implicit flow keeps tokens in the URL hash so the magic link
-      // works even when opened in a different browser than the one that
-      // requested it (e.g. mobile Gmail in-app browser). Must match the
-      // flowType used by tenant/portal.html.
-      flowType: 'implicit'
+      // PKCE returns a refresh token so portal sessions don't drop after 1h.
+      // Must match flowType in tenant/portal.html.
+      flowType: 'pkce'
     }
   });
 }
@@ -316,12 +314,40 @@ async function sendMagicLink(emailOverride) {
     const redirectUrl = new URL('/tenant/portal.html', window.location.origin);
     if (appId) redirectUrl.searchParams.set('app_id', appId);
 
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectUrl.toString() },
-    });
+    // Try our branded magic-link sender first (sends through Choice Properties
+    // Gmail SMTP, not Supabase's default unbranded template). Falls back to
+    // the built-in Supabase magic link if the function is unavailable.
+    let sentViaCustom = false;
+    try {
+      const fnUrl = `${CONFIG.SUPABASE_URL}/functions/v1/send-magic-link`;
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, redirectTo: redirectUrl.toString() }),
+      });
+      if (resp.ok) {
+        sentViaCustom = true;
+      } else if (resp.status === 429) {
+        const j = await resp.json().catch(() => ({}));
+        throw new Error(j.message || 'Too many sign-in requests. Please wait a few minutes.');
+      }
+      // Any other error → silent fall-through to Supabase default below.
+    } catch (customErr) {
+      // If we already surfaced a 429 above, re-throw; otherwise fall through.
+      if (/Too many sign-in requests/.test(customErr.message || '')) throw customErr;
+    }
 
-    if (error) throw error;
+    if (!sentViaCustom) {
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectUrl.toString() },
+      });
+      if (error) throw error;
+    }
 
     if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
     showSuccessScreen(email);
