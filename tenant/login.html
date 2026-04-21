@@ -191,7 +191,16 @@ async function waitForSB(maxMs) {
 
 function getSB() {
   return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      // Implicit flow keeps tokens in the URL hash so the magic link
+      // works even when opened in a different browser than the one that
+      // requested it (e.g. mobile Gmail in-app browser). Must match the
+      // flowType used by tenant/portal.html.
+      flowType: 'implicit'
+    }
   });
 }
 

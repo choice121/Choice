@@ -630,8 +630,11 @@ async function loadApps(){
   list.innerHTML='<div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
   const filters={status:_status,search:_search};
   if(_payFilter)filters.payment_status=_payFilter;
-  const {ok,data,error}=await CP.Applications.getAll(filters);
-  if(!ok){list.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠</div><h3>Error loading</h3><p>${esc(error)}</p></div>`;return;}
+  let res;
+  try{res=await withTimeout(CP.Applications.getAll(filters),15000,'Applications query');}
+  catch(e){console.error('[applications] getAll:',e);list.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠</div><h3>Request timed out</h3><p>${esc(e.message)}</p><p style="margin-top:12px"><button class="btn btn-primary" onclick="loadApps()">Retry</button></p></div>`;return;}
+  const {ok,data,error}=res;
+  if(!ok){list.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠</div><h3>Error loading</h3><p>${esc(error)}</p><p style="margin-top:12px"><button class="btn btn-primary" onclick="loadApps()">Retry</button></p></div>`;return;}
   _allData=data||[];
   sub.textContent=`${_allData.length} application${_allData.length!==1?'s':''}${_status!=='all'?' — '+_status:''}`;
   updateStats(_allData);
@@ -889,15 +892,34 @@ async function downloadDoc(path){
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+// Helper: race a promise against a timeout so we never hang the UI forever
+// when Supabase auth refresh or a network request silently stalls.
+function withTimeout(promise,ms,label){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error((label||'Operation')+' timed out after '+ms+'ms')),ms))
+  ]);
+}
+function showFatal(msg){
+  const list=document.getElementById('apps-list');
+  if(list){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠</div><h3>Could not load</h3><p style="margin:8px 0 16px">${esc(msg)}</p><button class="btn btn-primary" onclick="location.reload()">Retry</button> <a class="btn" href="/admin/login.html?force=1" style="margin-left:8px">Sign in again</a></div>`;
+  }
+  const sub=document.getElementById('page-sub');
+  if(sub)sub.textContent='Error';
+}
 document.addEventListener('DOMContentLoaded',async()=>{
   const cpReady=await waitForCP();
   if(!cpReady){
     document.body.insertAdjacentHTML('afterbegin','<div style="background:#fee2e2;color:#991b1b;padding:12px;text-align:center">Admin tools failed to load. Please refresh.</div>');
     return;
   }
-  const ok=await CP.Auth.requireAdmin();
+  let ok=false;
+  try{ok=await withTimeout(CP.Auth.requireAdmin(),12000,'Admin auth check');}
+  catch(e){console.error('[applications] requireAdmin:',e);showFatal(e.message+'. Your session may have expired — sign in again.');return;}
   if(!ok)return;
-  const user=await CP.Auth.getUser();
+  let user=null;
+  try{user=await withTimeout(CP.Auth.getUser(),8000,'getUser');}catch(e){console.error('[applications] getUser:',e);}
   document.getElementById('admin-name').textContent=user?.email||'Admin';
 
   // Filter pills

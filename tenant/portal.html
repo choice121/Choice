@@ -175,7 +175,18 @@ async function waitForSB(ms){
 
 let _sb=null;
 function getSB(){
-  if(!_sb)_sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  if(!_sb)_sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY,{
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:true,
+      // Implicit flow puts tokens in the URL hash, which works even
+      // when the magic link opens in a different browser than the one
+      // that requested it (e.g. mobile Gmail in-app browser). PKCE
+      // would silently fail there because the code_verifier is missing.
+      flowType:'implicit'
+    }
+  });
   return _sb;
 }
 
@@ -607,19 +618,31 @@ function renderWrongAccount(userEmail, requestedAppId, message){
 // In both cases we rely on onAuthStateChange firing SIGNED_IN once the
 // exchange/verification completes. Timeout of 12s for slow connections.
 function waitForMagicLinkSession(sb){
-  return new Promise(resolve=>{
+  return new Promise(async resolve=>{
     const hash=window.location.hash||'';
     const qs=window.location.search||'';
     const hasMagicToken=hash.includes('access_token')||qs.includes('code=');
     if(!hasMagicToken){resolve(null);return;}
-    const t=setTimeout(()=>resolve(null),12000);
-    const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{
-      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session){
+
+    // Race fix: if SDK already exchanged the token before our listener
+    // attached, getSession() will return the new session immediately.
+    try{
+      const {data:{session:existing}}=await sb.auth.getSession();
+      if(existing){resolve(existing);return;}
+    }catch(_){}
+
+    let sub=null;
+    const t=setTimeout(()=>{try{sub&&sub.unsubscribe();}catch(_){}resolve(null);},15000);
+    const {data}=sb.auth.onAuthStateChange((event,session)=>{
+      // Accept INITIAL_SESSION too — fires once on listener attach if a
+      // session was already established by detectSessionInUrl.
+      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')&&session){
         clearTimeout(t);
-        subscription.unsubscribe();
+        try{data.subscription.unsubscribe();}catch(_){}
         resolve(session);
       }
     });
+    sub=data.subscription;
   });
 }
 
