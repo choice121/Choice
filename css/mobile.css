@@ -1112,3 +1112,110 @@ html {
     border-top-color: var(--color-border);
   }
 }
+
+
+/* ============================================================
+   DASHBOARD-SYSTEM responsive layer (Phase 2)
+   Adds mobile patterns that work with .ds-* primitives in
+   css/dashboard-system.css. Existing .table / .card markup
+   gains card-mode automatically when wrapped in .ds-table or
+   .ds-responsive-table.
+   ============================================================ */
+
+/* ── Responsive tables → card view on phones ─────────────── */
+@media (max-width: 767px) {
+
+  /* Opt-in: wrap any table in <table class="ds-table"> OR
+     parent with class="ds-responsive-table" */
+  .ds-table,
+  .ds-responsive-table table {
+    display: block;
+    width: 100%;
+  }
+  .ds-table thead,
+  .ds-responsive-table table thead {
+    /* Visually hide but keep accessible */
+    position: absolute; left: -9999px; width: 1px; height: 1px;
+    overflow: hidden;
+  }
+  .ds-table tbody,
+  .ds-responsive-table table tbody { display: block; }
+
+  .ds-table tbody tr,
+  .ds-responsive-table table tbody tr {
+    display: block;
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--ds-border, #e3e7ee);
+    border-radius: var(--ds-r-md, 10px);
+    box-shadow: var(--ds-shadow-1, 0 1px 2px rgba(15,23,42,.06));
+    margin-bottom: 12px;
+    padding: 12px 14px;
+  }
+
+  .ds-table tbody td,
+  .ds-responsive-table table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border: 0;
+    text-align: right;
+  }
+  /* Field label from data-label="" attribute */
+  .ds-table tbody td::before,
+  .ds-responsive-table table tbody td::before {
+    content: attr(data-label);
+    font: 700 .68rem/1 'Inter', sans-serif;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--ds-text-muted, #64748b);
+    text-align: left;
+    flex: 0 0 40%;
+  }
+  .ds-table tbody td:first-child,
+  .ds-responsive-table table tbody td:first-child {
+    border-bottom: 1px solid var(--ds-border, #e3e7ee);
+    padding-bottom: 10px; margin-bottom: 4px;
+  }
+}
+
+/* ── Bottom-sheet modals on phones (opt-in via .ds-sheet) ─ */
+@media (max-width: 767px) {
+  .ds-sheet {
+    position: fixed; inset: auto 0 0 0;
+    max-height: 90vh; overflow-y: auto;
+    background: var(--ds-surface, #fff);
+    border-radius: 18px 18px 0 0;
+    padding: 18px 18px calc(18px + var(--safe-bottom));
+    box-shadow: 0 -8px 32px rgba(0,0,0,.18);
+    transform: translateY(100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    z-index: 9000;
+  }
+  .ds-sheet.is-open { transform: translateY(0); }
+  .ds-sheet::before {
+    content: ''; display: block; width: 40px; height: 4px;
+    border-radius: 2px; background: var(--ds-border-strong, #cdd4df);
+    margin: 0 auto 14px;
+  }
+}
+
+/* ── Stats grid on small screens ─────────────────────────── */
+@media (max-width: 540px) {
+  .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .stats-grid .stat-card { padding: 12px !important; }
+  .stats-grid .stat-value { font-size: 1.3rem !important; }
+}
+
+/* ── Sidebar admin/landlord — kill horizontal scroll ─────── */
+@media (max-width: 767px) {
+  .main, .content, .ds-card { min-width: 0; }
+  .topbar .page-title { font-size: 1.05rem !important; }
+}
+
+/* ── Tap targets for inline action links ─────────────────── */
+@media (max-width: 767px) {
+  .ds-table a, .ds-responsive-table a, .nav-item {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
+}
