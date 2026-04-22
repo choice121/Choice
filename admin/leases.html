@@ -2,567 +2,321 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="robots" content="noindex, nofollow">
-<title>Leases - Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script>
-<link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-<link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-<script defer src="/js/supabase.min.js"></script>
-<style>
-.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--color-border);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
-.filter-tab.active{background:var(--color-primary,#2563eb);color:#fff;border-color:transparent}
-.lease-card{background:var(--surface2);border:1px solid var(--color-border);border-radius:10px;padding:18px 20px;margin-bottom:12px;transition:border-color .15s}
-.lease-card:hover{border-color:rgba(37,99,235,.3)}
-.app-id{font-family:monospace;font-size:.68rem;color:var(--muted);margin-bottom:3px}
-.lease-name{font-size:.97rem;font-weight:700;color:var(--text)}
-.lease-prop{font-size:.76rem;color:var(--muted2);margin-top:2px}
-.badge{padding:3px 9px;border-radius:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.badge-none{background:rgba(107,114,128,.12);color:#6b7280}
-.badge-pending{background:rgba(234,179,8,.15);color:#ca8a04}
-.badge-sent{background:rgba(59,130,246,.15);color:#2563eb}
-.badge-signed{background:rgba(34,197,94,.15);color:#16a34a}
-.badge-voided{background:rgba(239,68,68,.12);color:#dc2626}
-.lease-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0;padding:12px 0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);font-size:.74rem}
-.meta-item{display:flex;flex-direction:column;gap:2px}
-.meta-label{color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.06em}
-.meta-val{color:var(--text);font-weight:600}
-.lease-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.btn-sm{padding:5px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
-.btn-ghost-sm{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:.72rem;cursor:pointer}
-.btn-ghost-sm:hover{border-color:var(--color-primary);color:var(--color-primary)}
-.notes-area{width:100%;margin-top:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.78rem;resize:vertical;min-height:60px;font-family:inherit}
-.detail-panel{display:none;margin-top:14px;padding:14px;background:var(--bg);border:1px solid var(--color-border);border-radius:8px;font-size:.76rem}
-.detail-panel.open{display:block}
-.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-state h3{color:var(--text);margin-bottom:8px}
-.loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
-
-  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:16px}
-  .modal-backdrop.open{display:flex}
-  .modal{background:var(--surface1,#fff);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.22);width:100%;max-width:580px;max-height:90vh;overflow-y:auto}
-  .modal-header{padding:18px 22px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between}
-  .modal-header h3{font-size:.97rem;font-weight:700;color:var(--text)}
-  .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:4px;line-height:1}
-  .modal-close:hover{color:var(--text);background:var(--surface2)}
-  .modal-body{padding:18px 22px}
-  .modal-footer{padding:14px 22px;border-top:1px solid var(--color-border);display:flex;gap:8px;justify-content:flex-end}
-  .form-row{margin-bottom:14px}
-  .form-row label{display:block;font-size:.73rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
-  .form-row input,.form-row textarea,.form-row select{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.82rem;font-family:inherit}
-  .form-row input:focus,.form-row textarea:focus,.form-row select:focus{outline:none;border-color:var(--color-primary,#2563eb)}
-  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .btn-primary{background:var(--color-primary,#2563eb);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s}
-  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
-  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
-  .btn-danger{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.25);padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
-  .btn-danger:hover{background:rgba(239,68,68,.2)}
-  .btn-download{background:rgba(34,197,94,.1);color:#16a34a;border:1px solid rgba(34,197,94,.2);padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
-  .btn-download:hover{background:rgba(34,197,94,.2)}
-  .btn-generate{background:var(--color-primary,#2563eb);color:#fff;padding:5px 13px;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
-  .btn-generate:hover{filter:brightness(1.1)}
-  .toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:9px;font-size:.82rem;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none}
-  .toast.show{opacity:1}
-  .toast.success{background:#16a34a;color:#fff}
-  .toast.error{background:#dc2626;color:#fff}
-  </style>
+<title>Leases · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/admin-chrome.js?v=20260422"></script>
+<script defer src="/js/admin-shell.js?v=20260422"></script>
 </head>
-<body>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar">
-  <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-  <nav>
-    <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon"><i class="fas fa-file-signature"></i></span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon"><i class="fas fa-door-open"></i></span> Move-ins</a>
-    <div class="nav-section">Properties</div>
-    <a class="nav-item" href="properties.html"><span class="icon"><i class="fas fa-building"></i></span> Properties</a>
-    <a class="nav-item" href="listings.html"><span class="icon"><i class="fas fa-list"></i></span> Listings</a>
-    <a class="nav-item" href="landlords.html"><span class="icon"><i class="fas fa-user-tie"></i></span> Landlords</a>
-    <div class="nav-section">Communications</div>
-    <a class="nav-item" href="messages.html"><span class="icon"><i class="fas fa-comments"></i></span> Messages</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon"><i class="fas fa-envelope"></i></span> Email Logs</a>
-    <div class="nav-section">Admin</div>
-    <a class="nav-item" href="audit-log.html"><span class="icon"><i class="fas fa-history"></i></span> Audit Log</a>
-    <a class="nav-item" href="watermark-review.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a>
-  </nav>
-  <div class="sidebar-footer">
-    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading-¦</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
-  </div>
-</aside>
+<body data-page-title="Leases" data-page-sub="Loading…">
+<div class="app">
+  <main class="app-content">
 
-<div class="main">
-  <div class="topbar">
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div><div class="page-title">Lease Pipeline</div><div class="page-sub" id="page-sub">Loading-¦</div></div>
-  </div>
-  <div class="content">
-
-    <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab active" data-lease="all">All</button>
-      <button class="filter-tab" data-lease="pending">Pending Lease</button>
-      <button class="filter-tab" data-lease="sent">Sent for Signing</button>
-      <button class="filter-tab" data-lease="signed">Signed</button>
+    <div class="chip-row" id="filter-tabs" role="tablist" aria-label="Lease filter">
+      <button class="chip active" data-lease="all">All approved</button>
+      <button class="chip" data-lease="none">Pending lease</button>
+      <button class="chip" data-lease="sent">Sent for signing</button>
+      <button class="chip" data-lease="signed">Signed</button>
+      <button class="chip" data-lease="co_signed">Fully executed</button>
+      <button class="chip" data-lease="voided">Voided</button>
     </div>
 
-    <div id="leases-list"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading lease pipeline-¦</div></div>
-
-  </div>
-
-  <!-- Generate & Send Lease Modal -->
-  <div class="modal-backdrop" id="lease-modal-backdrop" onclick="if(event.target===this)closeLeaseMod()">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Generate &amp; Send Lease</h3>
-        <button class="modal-close" onclick="closeLeaseMod()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="modal-app-info" style="font-size:.8rem;color:var(--muted);margin-bottom:16px;padding:10px 12px;background:var(--surface2);border-radius:7px"></div>
-        <input type="hidden" id="modal-app-id">
-        <div class="form-2col">
-          <div class="form-row"><label>Lease Start Date</label><input type="date" id="m-lease-start"></div>
-          <div class="form-row"><label>Lease End Date</label><input type="date" id="m-lease-end"></div>
-        </div>
-        <div class="form-2col">
-          <div class="form-row"><label>Monthly Rent ($)</label><input type="number" id="m-monthly-rent" min="0" step="0.01" placeholder="e.g. 1200.00"></div>
-          <div class="form-row"><label>Security Deposit ($)</label><input type="number" id="m-security-deposit" min="0" step="0.01" placeholder="e.g. 1200.00"></div>
-        </div>
-        <div class="form-2col">
-          <div class="form-row"><label>Move-In Costs ($)</label><input type="number" id="m-move-in-costs" min="0" step="0.01" placeholder="e.g. 2400.00"></div>
-          <div class="form-row"><label>Late Fee (flat, $)</label><input type="number" id="m-late-fee-flat" min="0" placeholder="e.g. 50"></div>
-        </div>
-        <div class="form-2col">
-          <div class="form-row"><label>Landlord Name</label><input type="text" id="m-landlord-name" placeholder="Choice Properties"></div>
-          <div class="form-row"><label>State Code</label><input type="text" id="m-state-code" maxlength="2" placeholder="MI"></div>
-        </div>
-        <div class="form-row"><label>Landlord Address</label><input type="text" id="m-landlord-address" placeholder="2265 Livernois Suite 500, Troy MI 48083"></div>
-        <div class="form-row"><label>Pets Policy</label><input type="text" id="m-pets-policy" placeholder="No pets allowed."></div>
-        <div class="form-row"><label>Smoking Policy</label><input type="text" id="m-smoking-policy" placeholder="No smoking permitted on premises."></div>
-        <div class="form-row"><label>Lease Notes (internal)</label><textarea id="m-lease-notes" rows="2" placeholder="Internal notes for this lease-¦"></textarea></div>
-        <div id="modal-err" style="display:none;color:#dc2626;font-size:.78rem;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-ghost-sm" onclick="closeLeaseMod()" style="font-size:.82rem">Cancel</button>
-        <button class="btn-ghost-sm" id="modal-preview-btn" onclick="previewLease()" style="font-size:.82rem">&#128065; Preview PDF</button>
-        <button class="btn-primary" id="modal-submit-btn" onclick="submitGenerateLease()">
-          <span id="modal-submit-text">Generate &amp; Send Lease</span>
-        </button>
-      </div>
+    <div class="row-flex between" style="margin:8px 0 4px">
+      <div class="text-strong">Lease pipeline</div>
+      <span class="text-xs muted" id="count-label"></span>
     </div>
-  </div>
 
-  <!-- Countersign Modal (Phase 5) -->
-  <div class="modal-backdrop" id="countersign-modal-backdrop" onclick="if(event.target===this)closeCountersignModal()">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Management Countersignature</h3>
-        <button class="modal-close" onclick="closeCountersignModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:.8rem;color:var(--muted);margin-bottom:16px">Enter the name of the management representative countersigning this lease. The tenant will receive a "Fully Executed" confirmation email.</p>
-        <input type="hidden" id="cs-app-db-id">
-        <input type="hidden" id="cs-app-id">
-        <div class="form-row"><label>Management Signer Name</label><input type="text" id="cs-signer-name" placeholder="e.g. John Smith, Property Manager"></div>
-        <div class="form-row"><label>Internal Notes (optional)</label><textarea id="cs-notes" rows="2" placeholder="Any notes about this countersignature…"></textarea></div>
-        <div id="cs-err" style="display:none;color:#dc2626;font-size:.78rem;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-ghost-sm" onclick="closeCountersignModal()" style="font-size:.82rem">Cancel</button>
-        <button class="btn-primary" id="cs-submit-btn" onclick="submitCountersign()">Countersign Lease</button>
-      </div>
-    </div>
-  </div>
+    <div id="leases-list"></div>
 
-  <!-- Toast notification -->
-  <div class="toast" id="toast"></div>
+  </main>
+</div>
 
-  </div>
-
-  <script defer src="/js/cp-ui.js?v=20260421"></script>
-<script type="module" src="/js/cp-api.js"></script>
-<script>
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
 (function(){
-  var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
-  if(!btn)return;
-  btn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open');});
-  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
-})();
-</script>
-<script>
-let _leaseFilter = 'all';
+  'use strict';
+  const S = window.AdminShell;
+  if(!S){ console.error('AdminShell missing'); return; }
 
-function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-function jsStr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
-async function waitForCP(){
-  for(let i=0;i<80;i++){
-    if(window.CP&&CP.Applications&&CP.Auth)return true;
-    await new Promise(r=>setTimeout(r,100));
+  let _filter = 'all';
+  let _rows = [];
+
+  // ───────── Helpers ─────────
+  function fmtDate(d){ if(!d) return '—'; try{ return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{ return d; } }
+  function fmtMoney(v){ if(v==null||v==='') return '—'; return '$' + Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  function leaseBadgeTone(s){
+    return ({
+      sent:'warn', awaiting_co_sign:'warn',
+      signed:'success', co_signed:'success',
+      voided:'danger', expired:'danger'
+    })[s] || '';
   }
-  return false;
-}
-function fmtDate(d) { if(!d)return '-'; try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;} }
-function fmtMoney(v) { if(v==null)return '-'; return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function leaseBadgeLabel(s){
+    return ({
+      none:'No lease', sent:'Lease sent', awaiting_co_sign:'Awaiting co-sign',
+      signed:'Signed', co_signed:'Fully executed',
+      voided:'Voided', expired:'Expired'
+    })[s] || (s || 'No lease');
+  }
 
-function leaseBadge(s) {
-  const map = {none:'badge-none',sent:'badge-sent',signed:'badge-signed',awaiting_co_sign:'badge-pending',co_signed:'badge-signed',voided:'badge-voided',expired:'badge-voided'};
-  return `<span class="badge ${map[s]||'badge-none'}">${s||'none'}</span>`;
-}
+  // ───────── Card render ─────────
+  function renderCard(app){
+    const name = ((app.first_name||'') + ' ' + (app.last_name||'')).trim() || '(no name)';
+    const prop = app.property_address || app.property_id || '—';
+    const tone = leaseBadgeTone(app.lease_status);
+    const labelText = leaseBadgeLabel(app.lease_status);
+    const isCounter = !!app.management_cosigned;
+    const sentLine   = app.lease_sent_date   ? `Sent ${S.esc(fmtDate(app.lease_sent_date))}` : '';
+    const signedLine = app.lease_signed_date ? `Signed ${S.esc(fmtDate(app.lease_signed_date))}` : '';
+    const generateLabel = ['sent','signed','co_signed'].includes(app.lease_status) ? 'Regenerate & Send' : 'Generate & Send';
+    return `<div class="card" style="margin-bottom:12px" id="lcard-${S.esc(app.id)}">
+      <div class="card-body">
+        <div class="row-flex between" style="align-items:flex-start;gap:12px">
+          <div style="min-width:0;flex:1">
+            <div class="text-xs muted" style="font-family:ui-monospace,monospace;letter-spacing:.04em">${S.esc(app.app_id||app.id)}</div>
+            <div class="text-strong" style="font-size:1rem;margin-top:2px">${S.esc(name)}</div>
+            <div class="text-sm muted" style="margin-top:2px">${S.esc(prop)}</div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge ${tone}">${S.esc(labelText)}</span>
+              ${isCounter ? '<span class="badge success">Countersigned</span>' : ''}
+              ${app.has_co_applicant ? '<span class="badge">Co-applicant</span>' : ''}
+            </div>
+          </div>
+          <div class="text-xs muted" style="text-align:right;flex-shrink:0;line-height:1.5">
+            ${sentLine ? `<div>${sentLine}</div>` : ''}
+            ${signedLine ? `<div style="color:var(--success);font-weight:600">${signedLine}</div>` : ''}
+          </div>
+        </div>
 
-function renderLease(app) {
-  const name = esc(`${app.first_name||''} ${app.last_name||''}`.trim()) || '(no name)';
-  const prop = esc(app.property_address || app.property_id || '-');
-  return `<div class="lease-card" id="lcard-${app.id}">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div class="app-id">${esc(app.app_id||app.id)}</div>
-        <div class="lease-name">${name}</div>
-        <div class="lease-prop"><i class="fas fa-map-marker-alt" style="margin-right:4px;font-size:.65rem"></i>${prop}</div>
-        <div style="margin-top:8px">${leaseBadge(app.lease_status)}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+          <div><div class="text-xs muted">Lease start</div><div class="text-sm text-strong">${fmtDate(app.lease_start_date)}</div></div>
+          <div><div class="text-xs muted">Lease end</div><div class="text-sm text-strong">${fmtDate(app.lease_end_date)}</div></div>
+          <div><div class="text-xs muted">Monthly rent</div><div class="text-sm text-strong">${fmtMoney(app.monthly_rent)}</div></div>
+          <div><div class="text-xs muted">Security deposit</div><div class="text-sm text-strong">${fmtMoney(app.security_deposit)}</div></div>
+          <div><div class="text-xs muted">Move-in costs</div><div class="text-sm text-strong">${fmtMoney(app.move_in_costs)}</div></div>
+          <div><div class="text-xs muted">Tenant signed</div><div class="text-sm text-strong">${app.signature_timestamp ? fmtDate(app.signature_timestamp) : 'Not yet'}</div></div>
+        </div>
+
+        <div class="row-flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-action="generate" data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||'')}">${generateLabel}</button>
+          ${app.lease_pdf_url ? `<button class="btn btn-ghost btn-sm" data-action="download" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-out"/></svg> Download PDF</button>` : ''}
+          ${app.lease_status === 'sent' ? `<button class="btn btn-ghost btn-sm" data-action="remind" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-bell"/></svg> Send reminder</button>` : ''}
+          ${app.lease_status === 'signed' && !isCounter ? `<button class="btn btn-ghost btn-sm" data-action="cosign" data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-check"/></svg> Countersign</button>` : ''}
+          ${app.lease_status === 'sent' ? `<button class="btn btn-danger btn-sm" data-action="void" data-id="${S.esc(app.id)}">Void</button>` : ''}
+          <button class="btn btn-ghost btn-sm" data-action="toggle-detail" data-id="${S.esc(app.id)}">Notes / Details</button>
+        </div>
+
+        <div id="ldetail-${S.esc(app.id)}" style="display:none;margin-top:12px;padding:12px;background:var(--surface-2);border-radius:var(--r-md);font-size:.82rem">
+          ${app.lease_notes ? `<div style="margin-bottom:6px"><strong>Lease notes:</strong> ${S.esc(app.lease_notes)}</div>` : ''}
+          <div class="text-sm muted"><strong>Email:</strong> ${S.esc(app.email||'—')} &nbsp;·&nbsp; <strong>Landlord email:</strong> ${S.esc(app.landlord_email||'—')}</div>
+          ${app.tenant_signature ? `<div class="text-xs" style="color:var(--success);margin-top:6px">Tenant signed: ${fmtDate(app.signature_timestamp)}</div>` : ''}
+          <div class="text-xs muted" style="margin-top:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Admin notes</div>
+          <textarea class="form-input" id="lnotes-${S.esc(app.id)}" rows="3" placeholder="Internal lease notes…">${S.esc(app.admin_notes||'')}</textarea>
+          <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" data-action="save-notes" data-id="${S.esc(app.id)}">Save notes</button></div>
+        </div>
       </div>
-      <div style="text-align:right;flex-shrink:0;font-size:.76rem;color:var(--muted)">
-        ${app.lease_sent_date   ? `<div>Sent: <strong>${fmtDate(app.lease_sent_date)}</strong></div>` : ''}
-        ${app.lease_signed_date ? `<div>Signed: <strong style="color:#16a34a">${fmtDate(app.lease_signed_date)}</strong></div>` : ''}
-      </div>
-    </div>
-    <div class="lease-meta">
-      <div class="meta-item"><span class="meta-label">Lease Start</span><span class="meta-val">${fmtDate(app.lease_start_date)}</span></div>
-      <div class="meta-item"><span class="meta-label">Lease End</span><span class="meta-val">${fmtDate(app.lease_end_date)}</span></div>
-      <div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>
-      <div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>
-      <div class="meta-item"><span class="meta-label">Move-In Costs</span><span class="meta-val">${fmtMoney(app.move_in_costs)}</span></div>
-      <div class="meta-item"><span class="meta-label">Tenant Signed</span><span class="meta-val">${app.signature_timestamp ? 'Yes - ' + fmtDate(app.signature_timestamp) : 'No'}</span></div>
-    </div>
-    <div class="lease-actions">
-      <button class="btn-generate" onclick="openLeaseMod('${esc(app.app_id||'')}', window._leaseRows && window._leaseRows['${esc(app.id||app.app_id||'')}'])">${app.lease_status === 'sent' || app.lease_status === 'signed' || app.lease_status === 'co_signed' ? 'Regenerate & Send Lease' : 'Generate & Send Lease'}</button>
-      ${app.lease_pdf_url ? `<button class="btn-download" onclick="downloadLease('${esc(app.app_id||'')}')">Download PDF</button>` : ''}
-      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm" onclick="sendSigningReminder('${esc(app.app_id||'')}','${esc(app.id||'')}')"><i class="fas fa-bell" style="margin-right:4px"></i>Send Reminder</button>` : ''}
-      ${app.lease_status === 'signed' && !app.management_cosigned ? `<button class="btn-ghost-sm" onclick="cosignLease('${esc(app.id||'')}','${esc(app.app_id||'')}')"><i class="fas fa-pen" style="margin-right:4px"></i>Countersign</button>` : ''}
-      ${app.management_cosigned ? `<span style="font-size:.72rem;color:#16a34a;font-weight:600"><i class="fas fa-check-circle" style="margin-right:3px"></i>Countersigned</span>` : ''}
-      ${app.lease_status === 'sent' ? `<button class="btn-ghost-sm btn-danger" onclick="voidLease('${esc(app.id||'')}')">Void</button>` : ''}
-      <button class="btn-ghost-sm" onclick="toggleLeaseDetail('${esc(app.id||'')}')">Notes / Details</button>
-    </div>
-    <div class="detail-panel" id="ldetail-${app.id}">
-      <div style="margin-bottom:8px;font-size:.76rem;color:var(--text)">
-        ${app.lease_notes ? `<div><strong>Lease Notes:</strong> ${esc(app.lease_notes)}</div>` : ''}
-        <div style="margin-top:4px"><strong>Email:</strong> ${esc(app.email||'-')} &nbsp;|&nbsp; <strong>Landlord Email:</strong> ${esc(app.landlord_email||'-')}</div>
-        ${app.tenant_signature ? `<div style="margin-top:4px;font-size:.72rem;color:#16a34a"><i class="fas fa-check-circle"></i> Tenant signed: ${fmtDate(app.signature_timestamp)}</div>` : ''}
-      </div>
-      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Admin Notes</div>
-      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Internal lease notes...">${esc(app.admin_notes||'')}</textarea>
-      <button class="btn-ghost-sm" style="margin-top:6px" onclick="saveLNotes('${app.id}')">Save Notes</button>
-    </div>
-  </div>`;
-}
-
-function toggleLeaseDetail(id) {
-  const p = document.getElementById('ldetail-' + id);
-  if (p) p.classList.toggle('open');
-}
-
-async function saveLNotes(id) {
-  const ta = document.getElementById('lnotes-' + id);
-  if (!ta) return;
-  const { ok, error } = await CP.Applications.saveNotes(id, ta.value);
-  if (!ok) { alert('Error: ' + error); return; }
-  ta.style.borderColor = '#16a34a';
-  setTimeout(() => { ta.style.borderColor = ''; }, 1500);
-}
-
-async function loadLeases() {
-  const list = document.getElementById('leases-list');
-  const sub  = document.getElementById('page-sub');
-
-  // Show all approved apps + any with lease activity
-  const filters = { status: 'approved' };
-  if (_leaseFilter !== 'all') filters.lease_status = _leaseFilter;
-
-  // For "all" tab: get approved status OR any lease_status != none
-  // Supabase doesn't support OR across different columns easily in getAll,
-  // so we fetch approved apps and let the filter tab handle lease_status separately.
-  const { ok, data, error } = await CP.Applications.getAll(
-    _leaseFilter === 'all'
-      ? { status: 'approved' }
-      : { lease_status: _leaseFilter }
-  );
-
-  if (!ok) {
-    list.innerHTML = `<div class="empty-state"><h3>Error loading leases</h3><p>${esc(error)}</p></div>`;
-    return;
-  }
-  const rows = data || [];
-  sub.textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}${_leaseFilter !== 'all' ? ' - lease ' + _leaseFilter : ' - approved applications'}`;
-  if (!rows.length) {
-    list.innerHTML = `<div class="empty-state"><h3>No records found</h3><p>No applications match this filter.</p></div>`;
-    return;
-  }
-  window._leaseRows = Object.fromEntries(rows.map(app => [app.id || app.app_id, app]));
-  list.innerHTML = rows.map(renderLease).join('');
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const cpReady = await waitForCP();
-  if (!cpReady) {
-    document.body.insertAdjacentHTML('afterbegin','<div style="background:#fee2e2;color:#991b1b;padding:12px;text-align:center">Admin tools failed to load. Please refresh.</div>');
-    return;
-  }
-  const ok = await CP.Auth.requireAdmin();
-  if (!ok) return;
-  const user = await CP.Auth.getUser();
-  document.getElementById('admin-name').textContent = user?.email || 'Admin';
-
-  document.getElementById('filter-tabs').addEventListener('click', async e => {
-    const btn = e.target.closest('.filter-tab');
-    if (!btn) return;
-    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    _leaseFilter = btn.dataset.lease;
-    await loadLeases();
-  });
-
-  await loadLeases();
-});
-
-
-  function showToast(msg, type) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + (type || 'success') + ' show';
-    setTimeout(() => t.classList.remove('show'), 3200);
+    </div>`;
   }
 
-  function openLeaseMod(appId, appData) {
-    const app = typeof appData === 'string' ? JSON.parse(appData) : appData;
-    document.getElementById('modal-app-id').value = appId;
-    document.getElementById('modal-app-info').textContent =
-      (app.first_name||'') + ' ' + (app.last_name||'') + ' - ' + (app.property_address||appId);
-
-    // Prefill fields from existing app data
-    if (app.lease_start_date) document.getElementById('m-lease-start').value = app.lease_start_date.slice(0,10);
-    if (app.lease_end_date)   document.getElementById('m-lease-end').value   = app.lease_end_date.slice(0,10);
-    if (app.monthly_rent)     document.getElementById('m-monthly-rent').value = app.monthly_rent;
-    if (app.security_deposit) document.getElementById('m-security-deposit').value = app.security_deposit;
-    if (app.move_in_costs)    document.getElementById('m-move-in-costs').value = app.move_in_costs;
-    if (app.lease_late_fee_flat) document.getElementById('m-late-fee-flat').value = app.lease_late_fee_flat;
-    document.getElementById('m-landlord-name').value    = app.lease_landlord_name    || 'Choice Properties';
-    document.getElementById('m-landlord-address').value = app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083';
-    document.getElementById('m-state-code').value       = app.lease_state_code       || 'MI';
-    document.getElementById('m-pets-policy').value      = app.lease_pets_policy      || '';
-    document.getElementById('m-smoking-policy').value   = app.lease_smoking_policy   || '';
-    document.getElementById('m-lease-notes').value      = app.lease_notes            || '';
-    document.getElementById('modal-err').style.display  = 'none';
-    document.getElementById('modal-submit-btn').disabled = false;
-    document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
-
-    document.getElementById('lease-modal-backdrop').classList.add('open');
+  // ───────── Load ─────────
+  async function load(){
+    S.renderList('#leases-list', 'loading', { skeleton:5 });
+    const filters = (_filter === 'all') ? { status:'approved' } : { lease_status:_filter };
+    const res = await CP.Applications.getAll(filters).catch(e => ({ ok:false, error: e.message }));
+    if(!res.ok){
+      S.renderList('#leases-list', { error: res.error || 'Failed to load' });
+      document.getElementById('count-label').textContent = '';
+      return;
+    }
+    _rows = res.data || [];
+    document.getElementById('count-label').textContent =
+      _rows.length + ' record' + (_rows.length!==1?'s':'');
+    document.querySelector('.appbar-sub').textContent =
+      _filter === 'all' ? 'Approved applications' : ('Filter: ' + leaseBadgeLabel(_filter));
+    if(!_rows.length){
+      document.getElementById('leases-list').innerHTML =
+        '<div class="empty"><svg class="i"><use href="#i-leases"/></svg>'+
+        '<h3>No records</h3><p>No applications match this filter.</p></div>';
+      return;
+    }
+    document.getElementById('leases-list').innerHTML = _rows.map(renderCard).join('');
   }
 
-  function closeLeaseMod() {
-    document.getElementById('lease-modal-backdrop').classList.remove('open');
-  }
+  function findApp(id){ return _rows.find(r => String(r.id) === String(id)); }
 
-  // Phase 6 — dry-run preview
-  async function previewLease() {
-    const appId = document.getElementById('modal-app-id').value;
-    if (!appId) return;
-    const leaseData = collectLeaseData();
-    const prevBtn = document.getElementById('modal-preview-btn');
-    prevBtn.disabled = true;
-    prevBtn.textContent = 'Generating…';
+  // ───────── Generate / preview ─────────
+  async function callFn(path, body){
     const token = await CP.Auth.getAccessToken();
-    if (!token) { prevBtn.disabled = false; prevBtn.textContent = '👁 Preview PDF'; showToast('Session expired.', 'error'); return; }
-    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
-    let resp, json;
+    if(!token){ S.toast('Session expired — sign in again.','error'); return null; }
+    const base = (window.CONFIG && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
     try {
-      resp = await fetch(serverBase + '/generate-lease', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ app_id: appId, lease_data: leaseData, dry_run: true }),
+      const resp = await fetch(base + path, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify(body)
       });
-      json = await resp.json();
-    } catch(e) { prevBtn.disabled = false; prevBtn.textContent = '👁 Preview PDF'; showToast('Network error: ' + e.message, 'error'); return; }
-    prevBtn.disabled = false;
-    prevBtn.textContent = '👁 Preview PDF';
-    if (!resp.ok || !json.success) { showToast(json.error || 'Preview failed.', 'error'); return; }
-    window.open(json.preview_url, '_blank');
+      const json = await resp.json().catch(() => ({}));
+      return { ok: resp.ok && json.success !== false, json };
+    } catch(e){
+      return { ok:false, json:{ error:'Network error: ' + e.message } };
+    }
   }
 
-  function collectLeaseData() {
-    return {
-      lease_start_date:       document.getElementById('m-lease-start').value       || null,
-      lease_end_date:         document.getElementById('m-lease-end').value         || null,
-      monthly_rent:           parseFloat(document.getElementById('m-monthly-rent').value)     || null,
-      security_deposit:       parseFloat(document.getElementById('m-security-deposit').value) || null,
-      move_in_costs:          parseFloat(document.getElementById('m-move-in-costs').value)    || null,
-      lease_late_fee_flat:    parseFloat(document.getElementById('m-late-fee-flat').value)    || null,
-      lease_landlord_name:    document.getElementById('m-landlord-name').value    || 'Choice Properties',
-      lease_landlord_address: document.getElementById('m-landlord-address').value || '2265 Livernois Suite 500, Troy MI 48083',
-      lease_state_code:       document.getElementById('m-state-code').value       || 'MI',
-      lease_pets_policy:      document.getElementById('m-pets-policy').value      || null,
-      lease_smoking_policy:   document.getElementById('m-smoking-policy').value   || null,
-      lease_notes:            document.getElementById('m-lease-notes').value      || null,
+  async function openGenerateSheet(id, appId){
+    const app = findApp(id) || {};
+    const data = await S.formSheet({
+      title: 'Generate & send lease',
+      submit: 'Generate & send',
+      fields: [
+        { name:'lease_start_date',  label:'Lease start date', type:'date', value: app.lease_start_date ? String(app.lease_start_date).slice(0,10) : '' },
+        { name:'lease_end_date',    label:'Lease end date',   type:'date', value: app.lease_end_date   ? String(app.lease_end_date).slice(0,10)   : '' },
+        { name:'monthly_rent',      label:'Monthly rent ($)', type:'number', value: app.monthly_rent || '', placeholder:'1200.00' },
+        { name:'security_deposit',  label:'Security deposit ($)', type:'number', value: app.security_deposit || '', placeholder:'1200.00' },
+        { name:'move_in_costs',     label:'Move-in costs ($)', type:'number', value: app.move_in_costs || '', placeholder:'2400.00' },
+        { name:'lease_late_fee_flat', label:'Late fee (flat $)', type:'number', value: app.lease_late_fee_flat || '', placeholder:'50' },
+        { name:'lease_landlord_name', label:'Landlord name', value: app.lease_landlord_name || 'Choice Properties' },
+        { name:'lease_state_code',  label:'State code', value: app.lease_state_code || 'MI' },
+        { name:'lease_landlord_address', label:'Landlord address', value: app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083' },
+        { name:'lease_pets_policy', label:'Pets policy', value: app.lease_pets_policy || '', placeholder:'No pets allowed.' },
+        { name:'lease_smoking_policy', label:'Smoking policy', value: app.lease_smoking_policy || '', placeholder:'No smoking permitted on premises.' },
+        { name:'lease_notes', label:'Lease notes (internal)', type:'textarea', rows:2, value: app.lease_notes || '' },
+        { name:'preview_only', type:'checkbox', label:'Preview only', checkLabel:'Preview PDF without sending email', value:false }
+      ]
+    });
+    if(!data) return;
+    const leaseData = {
+      lease_start_date:       data.lease_start_date || null,
+      lease_end_date:         data.lease_end_date   || null,
+      monthly_rent:           data.monthly_rent     ? parseFloat(data.monthly_rent) : null,
+      security_deposit:       data.security_deposit ? parseFloat(data.security_deposit) : null,
+      move_in_costs:          data.move_in_costs    ? parseFloat(data.move_in_costs) : null,
+      lease_late_fee_flat:    data.lease_late_fee_flat ? parseFloat(data.lease_late_fee_flat) : null,
+      lease_landlord_name:    data.lease_landlord_name    || 'Choice Properties',
+      lease_landlord_address: data.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083',
+      lease_state_code:       data.lease_state_code       || 'MI',
+      lease_pets_policy:      data.lease_pets_policy      || null,
+      lease_smoking_policy:   data.lease_smoking_policy   || null,
+      lease_notes:            data.lease_notes            || null
     };
+    const dryRun = !!data.preview_only;
+    S.toast(dryRun ? 'Generating preview…' : 'Generating lease…');
+    const res = await callFn('/generate-lease', { app_id: appId, lease_data: leaseData, dry_run: dryRun });
+    if(!res){ return; }
+    if(!res.ok){ S.toast(res.json.error || 'Generation failed', 'error'); return; }
+    if(dryRun && res.json.preview_url){ window.open(res.json.preview_url, '_blank'); S.toast('Preview ready.'); return; }
+    S.toast('Lease generated and signing email sent!', 'success');
+    await load();
   }
 
-  async function submitGenerateLease() {
-    const appId = document.getElementById('modal-app-id').value;
-    if (!appId) return;
-
-    const leaseData = collectLeaseData();
-
-    const btn = document.getElementById('modal-submit-btn');
-    btn.disabled = true;
-    document.getElementById('modal-submit-text').textContent = 'Generating-¦';
-    document.getElementById('modal-err').style.display = 'none';
-
-    const token = await CP.Auth.getAccessToken();
-    if (!token) {
-      document.getElementById('modal-err').textContent = 'Session expired. Please sign in again.';
-      document.getElementById('modal-err').style.display = 'block';
-      btn.disabled = false;
-      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
-      return;
-    }
-
-    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
-    let resp, json;
-    try {
-      resp = await fetch(serverBase + '/generate-lease', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ app_id: appId, lease_data: leaseData }),
-      });
-      json = await resp.json();
-    } catch(e) {
-      document.getElementById('modal-err').textContent = 'Network error: ' + e.message;
-      document.getElementById('modal-err').style.display = 'block';
-      btn.disabled = false;
-      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
-      return;
-    }
-
-    if (!resp.ok || !json.success) {
-      document.getElementById('modal-err').textContent = json.error || 'Generation failed.';
-      document.getElementById('modal-err').style.display = 'block';
-      btn.disabled = false;
-      document.getElementById('modal-submit-text').textContent = 'Generate & Send Lease';
-      return;
-    }
-
-    closeLeaseMod();
-    showToast('Lease generated and signing email sent!', 'success');
-    await loadLeases();
+  async function openCosignSheet(id, appId){
+    const data = await S.formSheet({
+      title: 'Management countersignature',
+      submit: 'Countersign lease',
+      fields: [
+        { name:'signer_name', label:'Management signer name', required:true, placeholder:'e.g. John Smith, Property Manager' },
+        { name:'notes', label:'Internal notes (optional)', type:'textarea', rows:2 }
+      ]
+    });
+    if(!data) return;
+    if(!data.signer_name || !data.signer_name.trim()){ S.toast('Signer name is required','error'); return; }
+    S.toast('Counter-signing…');
+    const res = await callFn('/countersign', { app_id: appId, signer_name: data.signer_name.trim(), notes: (data.notes||'').trim() });
+    if(!res) return;
+    if(!res.ok){ S.toast(res.json.error || 'Countersign failed','error'); return; }
+    S.toast('Lease countersigned. Fully-executed email sent.','success');
+    await load();
   }
 
-  async function sendSigningReminder(appId, id) {
-    if (!confirm('Send a lease signing reminder email to this tenant?')) return;
+  async function sendReminder(appId){
+    const ok = await S.confirm({ title:'Send signing reminder?', message:'A reminder email will be sent to the tenant.', ok:'Send reminder' });
+    if(!ok) return;
     const session = await CP.Auth.getSession();
     const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
     try {
       const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ app_id: appId, type: 'lease_signing_reminder' }),
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ app_id: appId, type:'lease_signing_reminder' })
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.success === false) { showToast('Email failed: ' + (json.error || res.statusText), 'error'); return; }
-      showToast('Signing reminder sent to tenant.', 'success');
-    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+      if(!res.ok || json.success === false){ S.toast('Email failed: ' + (json.error || res.statusText),'error'); return; }
+      S.toast('Reminder sent to tenant.','success');
+    } catch(e){ S.toast('Error: ' + e.message,'error'); }
   }
 
-  function cosignLease(id, appId) {
-    document.getElementById('cs-app-db-id').value = id;
-    document.getElementById('cs-app-id').value    = appId;
-    document.getElementById('cs-signer-name').value = '';
-    document.getElementById('cs-notes').value = '';
-    document.getElementById('cs-err').style.display = 'none';
-    document.getElementById('cs-submit-btn').disabled = false;
-    document.getElementById('cs-submit-btn').textContent = 'Countersign Lease';
-    document.getElementById('countersign-modal-backdrop').classList.add('open');
-  }
-
-  function closeCountersignModal() {
-    document.getElementById('countersign-modal-backdrop').classList.remove('open');
-  }
-
-  async function submitCountersign() {
-    const appId      = document.getElementById('cs-app-id').value;
-    const signerName = document.getElementById('cs-signer-name').value.trim();
-    const notes      = document.getElementById('cs-notes').value.trim();
-    const err        = document.getElementById('cs-err');
-    if (!signerName) { err.textContent = 'Please enter the management signer name.'; err.style.display = 'block'; return; }
-
-    const btn = document.getElementById('cs-submit-btn');
-    btn.disabled = true;
-    btn.textContent = 'Signing…';
-    err.style.display = 'none';
-
-    const token = await CP.Auth.getAccessToken();
-    if (!token) { err.textContent = 'Session expired. Please sign in again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Countersign Lease'; return; }
-
-    let resp, json;
-    try {
-      resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/countersign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ app_id: appId, signer_name: signerName, notes }),
-      });
-      json = await resp.json();
-    } catch(e) { err.textContent = 'Network error: ' + e.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Countersign Lease'; return; }
-
-    if (!resp.ok || !json.success) {
-      err.textContent = json.error || 'Countersign failed.';
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Countersign Lease';
-      return;
-    }
-
-    closeCountersignModal();
-    showToast('Lease countersigned by ' + signerName + '. Fully executed email sent to tenant.', 'success');
-    await loadLeases();
-  }
-
-  async function voidLease(id) {
-    if (!confirm('Void this lease? The tenant will no longer be able to sign.')) return;
-    const { ok, error } = await CP.Applications.saveNotes(id, undefined);
-    const { error: voidErr } = await CP.sb().from('applications')
-      .update({ lease_status: 'voided', updated_at: new Date().toISOString() })
+  async function voidLease(id){
+    const ok = await S.confirm({ title:'Void this lease?', message:'The tenant will no longer be able to sign. This cannot be undone.', ok:'Void lease', danger:true });
+    if(!ok) return;
+    const { error } = await CP.sb().from('applications')
+      .update({ lease_status:'voided', updated_at: new Date().toISOString() })
       .eq('id', id);
-    if (voidErr) { showToast('Error: ' + voidErr.message, 'error'); return; }
-    showToast('Lease voided.', 'success');
-    await loadLeases();
+    if(error){ S.toast('Error: ' + error.message,'error'); return; }
+    S.toast('Lease voided.','success');
+    await load();
   }
 
-  async function downloadLease(appId) {
-    const token = await CP.Auth.getAccessToken();
-    if (!token) { showToast('Session expired', 'error'); return; }
-    const serverBase = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
-    let resp, json;
-    try {
-      resp = await fetch(serverBase + '/download-lease', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ app_id: appId }),
-      });
-      json = await resp.json();
-    } catch(e) { showToast('Error: ' + e.message, 'error'); return; }
-    if (!resp.ok || !json.signed_url) { showToast(json.error || 'Could not get download link', 'error'); return; }
-    window.open(json.signed_url, '_blank');
+  async function downloadLease(appId){
+    S.toast('Generating download link…');
+    const res = await callFn('/download-lease', { app_id: appId });
+    if(!res) return;
+    if(!res.ok || !res.json.signed_url){ S.toast(res.json.error || 'Could not get download link','error'); return; }
+    window.open(res.json.signed_url, '_blank');
   }
-  </script>
+
+  async function saveNotes(id){
+    const ta = document.getElementById('lnotes-' + id);
+    if(!ta) return;
+    const { ok, error } = await CP.Applications.saveNotes(id, ta.value);
+    if(!ok){ S.toast('Error: ' + error,'error'); return; }
+    S.toast('Notes saved.');
+  }
+
+  function toggleDetail(id){
+    const el = document.getElementById('ldetail-' + id);
+    if(!el) return;
+    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+  }
+
+  // ───────── Wiring ─────────
+  S.on('generate',      (t) => openGenerateSheet(t.dataset.id, t.dataset.appId));
+  S.on('cosign',        (t) => openCosignSheet(t.dataset.id, t.dataset.appId));
+  S.on('remind',        (t) => sendReminder(t.dataset.appId));
+  S.on('void',          (t) => voidLease(t.dataset.id));
+  S.on('download',      (t) => downloadLease(t.dataset.appId));
+  S.on('save-notes',    (t) => saveNotes(t.dataset.id));
+  S.on('toggle-detail', (t) => toggleDetail(t.dataset.id));
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('filter-tabs').addEventListener('click', async e => {
+      const btn = e.target.closest('.chip');
+      if(!btn) return;
+      document.querySelectorAll('#filter-tabs .chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _filter = btn.dataset.lease;
+      await load();
+    });
+
+    const okAuth = await S.requireAdmin();
+    if(!okAuth) return;
+    await load().catch(err => {
+      console.error('[leases] load failed', err);
+      S.toast('Failed to load leases','error');
+    });
+  });
+})();
+</script>
+
 </body>
 </html>

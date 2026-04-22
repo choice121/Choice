@@ -249,6 +249,122 @@
     return html;
   };
 
+  // ───────────────────────── Confirm dialog (sheet-based) ─────────────────────────
+  Shell.confirm = function(opts){
+    opts = opts || {};
+    return new Promise(resolve => {
+      const id = 'cf_' + Math.random().toString(36).slice(2);
+      const danger = opts.danger ? 'btn-danger' : 'btn-primary';
+      Shell.openSheet({
+        title: opts.title || 'Confirm',
+        body:
+          '<p style="margin:0 0 16px;color:var(--muted);font-size:.88rem;line-height:1.5">' +
+            Shell.esc(opts.message || 'Are you sure?') +
+          '</p>' +
+          '<div class="row-flex gap-2" style="justify-content:flex-end">' +
+            '<button class="btn btn-ghost" id="'+id+'_cancel">'+Shell.esc(opts.cancel||'Cancel')+'</button>' +
+            '<button class="btn '+danger+'" id="'+id+'_ok">'+Shell.esc(opts.ok||'Confirm')+'</button>' +
+          '</div>'
+      });
+      const finish = (val) => { Shell.closeSheet(); resolve(val); };
+      setTimeout(() => {
+        const ok = document.getElementById(id+'_ok');
+        const cancel = document.getElementById(id+'_cancel');
+        if(ok) ok.onclick = () => finish(true);
+        if(cancel) cancel.onclick = () => finish(false);
+        const bd = $('.sheet-backdrop');
+        if(bd) bd.onclick = () => finish(false);
+      }, 0);
+    });
+  };
+
+  // ───────────────────────── Form sheet ─────────────────────────
+  // Opens a sheet with arbitrary form HTML and returns the submitted FormData
+  // (or null if cancelled). Caller passes an array of {name,label,type,value,
+  // required,options,placeholder,help,rows} field descriptors.
+  Shell.formSheet = function(opts){
+    opts = opts || {};
+    return new Promise(resolve => {
+      const id = 'fs_' + Math.random().toString(36).slice(2);
+      const fields = (opts.fields||[]).map(f => {
+        const lbl = '<label class="form-label">'+Shell.esc(f.label||f.name)+(f.required?' *':'')+'</label>';
+        const help = f.help ? '<div class="form-help">'+Shell.esc(f.help)+'</div>' : '';
+        let input;
+        const common = 'name="'+Shell.esc(f.name)+'" '+(f.required?'required':'')+
+          ' placeholder="'+Shell.esc(f.placeholder||'')+'"';
+        if(f.type === 'textarea'){
+          input = '<textarea class="form-input" rows="'+(f.rows||3)+'" '+common+'>'+Shell.esc(f.value||'')+'</textarea>';
+        } else if(f.type === 'select'){
+          const opts2 = (f.options||[]).map(o =>
+            '<option value="'+Shell.esc(o.value)+'"'+(String(o.value)===String(f.value||'')?' selected':'')+'>'+Shell.esc(o.label||o.value)+'</option>'
+          ).join('');
+          input = '<select class="form-input" '+common+'>'+opts2+'</select>';
+        } else if(f.type === 'checkbox'){
+          input = '<label class="form-check"><input type="checkbox" name="'+Shell.esc(f.name)+'"'+(f.value?' checked':'')+'> '+Shell.esc(f.checkLabel||f.label||'')+'</label>';
+          return '<div class="form-row">'+input+(help)+'</div>';
+        } else {
+          input = '<input class="form-input" type="'+(f.type||'text')+'" value="'+Shell.esc(f.value==null?'':f.value)+'" '+common+'>';
+        }
+        return '<div class="form-row">'+lbl+input+help+'</div>';
+      }).join('');
+      const danger = opts.danger ? 'btn-danger' : 'btn-primary';
+      Shell.openSheet({
+        title: opts.title || 'Edit',
+        body:
+          '<form id="'+id+'_form" class="form-stack">'+fields+
+          '<div class="row-flex gap-2" style="justify-content:flex-end;margin-top:8px">'+
+            '<button type="button" class="btn btn-ghost" id="'+id+'_cancel">'+Shell.esc(opts.cancel||'Cancel')+'</button>'+
+            '<button type="submit" class="btn '+danger+'">'+Shell.esc(opts.submit||'Save')+'</button>'+
+          '</div></form>'
+      });
+      const finish = (val) => { Shell.closeSheet(); resolve(val); };
+      setTimeout(() => {
+        const form = document.getElementById(id+'_form');
+        const cancel = document.getElementById(id+'_cancel');
+        if(cancel) cancel.onclick = () => finish(null);
+        if(form) form.onsubmit = (e) => {
+          e.preventDefault();
+          const data = {};
+          new FormData(form).forEach((v,k) => { data[k] = v; });
+          // Include unchecked checkboxes as false
+          (opts.fields||[]).forEach(f => { if(f.type==='checkbox' && !(f.name in data)) data[f.name] = ''; });
+          finish(data);
+        };
+        const bd = $('.sheet-backdrop');
+        if(bd) bd.onclick = () => finish(null);
+      }, 0);
+    });
+  };
+
+  // ───────────────────────── List rendering helper ─────────────────────────
+  // renderList(target, items, {render, empty, error, loading})
+  // Mounts skeletons / empty / error / list rows into a container.
+  Shell.renderList = function(target, state, opts){
+    const el = (typeof target === 'string') ? $(target) : target;
+    if(!el) return;
+    opts = opts || {};
+    if(state === 'loading'){
+      el.innerHTML = Shell.skeletonRows(opts.skeleton || 5);
+      return;
+    }
+    if(state && state.error){
+      el.innerHTML = '<div class="empty"><svg class="i"><use href="#i-alert"/></svg>'+
+        '<h3>'+Shell.esc(opts.errorTitle||'Could not load')+'</h3>'+
+        '<p>'+Shell.esc(state.error)+'</p></div>';
+      return;
+    }
+    const items = Array.isArray(state) ? state : (state && state.items) || [];
+    if(!items.length){
+      el.innerHTML = '<div class="empty">'+
+        (opts.emptyIcon ? '<svg class="i"><use href="#'+opts.emptyIcon+'"/></svg>' : '')+
+        '<h3>'+Shell.esc(opts.emptyTitle||'Nothing here yet')+'</h3>'+
+        (opts.emptySub ? '<p>'+Shell.esc(opts.emptySub)+'</p>' : '')+
+        '</div>';
+      return;
+    }
+    el.innerHTML = '<div class="list">'+items.map(opts.render).join('')+'</div>';
+  };
+
   // ───────────────────────── Auth boot helper ─────────────────────────
   Shell.requireAdmin = async function(){
     if(!window.CP || !CP.Auth) return false;

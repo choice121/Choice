@@ -2,312 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="robots" content="noindex, nofollow">
-<title>Audit Log - Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script>
-<link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-<link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-<script defer src="/js/supabase.min.js"></script>
+<title>Audit Log · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/admin-chrome.js?v=20260422"></script>
+<script defer src="/js/admin-shell.js?v=20260422"></script>
 <style>
-  .filter-bar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
-  .filter-bar select, .filter-bar input { padding:8px 12px; border:1px solid var(--border,#e2e8f0); border-radius:8px; font-size:.85rem; background:var(--card,#fff); color:var(--text,#1a202c); min-width:160px; }
-  .filter-bar button { padding:8px 16px; border-radius:8px; font-size:.85rem; font-weight:600; cursor:pointer; border:none; }
-  .btn-reset { background:var(--surface,#f7f8fa); color:var(--muted,#8892a2); }
-  .btn-reset:hover { background:var(--border,#e2e8f0); }
-
-  .audit-table { width:100%; border-collapse:collapse; font-size:.83rem; }
-  .audit-table th { text-align:left; padding:10px 14px; font-weight:600; color:var(--muted,#8892a2); border-bottom:2px solid var(--border,#e2e8f0); white-space:nowrap; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
-  .audit-table td { padding:11px 14px; border-bottom:1px solid var(--border,#e2e8f0); vertical-align:top; }
-  .audit-table tr:last-child td { border-bottom:none; }
-  .audit-table tr:hover td { background:var(--surface,#f7f8fa); }
-
-  .action-badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:.75rem; font-weight:600; white-space:nowrap; }
-  .action-update_status    { background:#eff6ff; color:#1d4ed8; }
-  .action-mark_paid        { background:#f0fdf4; color:#15803d; }
-  .action-mark_movein      { background:#fdf4ff; color:#7e22ce; }
-  .action-generate_lease   { background:#fff7ed; color:#c2410c; }
-  .action-resend_lease     { background:#fff7ed; color:#c2410c; }
-  .action-void_lease       { background:#fef2f2; color:#b91c1c; }
-  .action-tenant_signed_lease    { background:#f0fdf4; color:#15803d; }
-  .action-co_applicant_signed_lease { background:#f0fdf4; color:#15803d; }
-
-  .target-link { color:var(--primary,#006aff); text-decoration:none; font-family:monospace; font-size:.8rem; }
-  .target-link:hover { text-decoration:underline; }
-
-  .meta-cell { max-width:240px; }
-  .meta-pill { display:inline-block; background:var(--surface,#f7f8fa); border:1px solid var(--border,#e2e8f0); border-radius:4px; padding:1px 6px; font-size:.72rem; font-family:monospace; margin:1px 2px 1px 0; white-space:nowrap; }
-
-  .actor-cell { font-size:.78rem; color:var(--muted,#8892a2); }
-  .actor-system { font-style:italic; }
-
-  .time-cell { white-space:nowrap; color:var(--muted,#8892a2); font-size:.78rem; }
-
-  .empty-state { text-align:center; padding:60px 20px; color:var(--muted,#8892a2); }
-  .empty-state i { font-size:2.5rem; margin-bottom:12px; display:block; }
-
-  .pagination { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:20px; font-size:.83rem; }
-  .pagination button { padding:6px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card,#fff); cursor:pointer; font-size:.83rem; }
-  .pagination button:disabled { opacity:.4; cursor:not-allowed; }
-  .pagination button:not(:disabled):hover { background:var(--surface,#f7f8fa); }
-  .pagination .page-info { color:var(--muted,#8892a2); padding:0 4px; }
-
-  .loading-row td { text-align:center; color:var(--muted,#8892a2); padding:40px; }
+  .audit-row{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md)}
+  .audit-row + .audit-row{margin-top:var(--sp-2)}
+  .audit-row .arow-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .audit-row .arow-meta{display:flex;flex-wrap:wrap;gap:4px}
+  .meta-pill{font-size:.7rem;font-family:ui-monospace,Menlo,monospace;background:var(--surface-2);border:1px solid var(--border);padding:2px 7px;border-radius:6px;color:var(--muted)}
 </style>
 </head>
-<body>
+<body data-page-title="Audit Log" data-page-sub="History of admin & system actions" data-live="0">
+<div class="app">
+  <main class="app-content">
 
-<!-- Sidebar -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar">
-  <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-  <nav>
-    <div class="nav-section">Overview</div>
-    <a class="nav-item" href="dashboard.html"><span class="icon"><i class="fas fa-clipboard-list"></i></span> Audit Log</a>
-  </nav>
-  <div class="sidebar-footer">
-    <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:var(--muted,#8892a2);text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading-¦</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
-  </div>
-</aside>
-
-<!-- Main -->
-<div class="main">
-  <div class="topbar">
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-    <div>
-      <div class="page-title">Audit Log</div>
-      <div class="page-sub">Full history of all admin and system actions</div>
+    <div class="form-grid-2">
+      <select id="f-action" class="form-input">
+        <option value="">All actions</option>
+        <option value="update_status">Update status</option>
+        <option value="mark_paid">Mark paid</option>
+        <option value="mark_movein">Mark move-in</option>
+        <option value="generate_lease">Generate lease</option>
+        <option value="resend_lease">Resend lease</option>
+        <option value="void_lease">Void lease</option>
+        <option value="tenant_signed_lease">Tenant signed</option>
+        <option value="co_applicant_signed_lease">Co-applicant signed</option>
+      </select>
+      <input id="f-app" class="form-input" type="text" placeholder="Filter by App ID…" maxlength="12" style="text-transform:uppercase">
     </div>
-    <div class="topbar-right">
-      <button class="btn btn-sm" onclick="loadPage(currentPage)" style="font-size:.78rem;padding:6px 12px"><i class="fas fa-sync-alt"></i> Refresh</button>
+
+    <div class="row-flex between">
+      <div class="text-strong">Actions</div>
+      <span class="text-xs muted" id="result-count"></span>
     </div>
-  </div>
 
-  <div class="content">
-    <div class="card" style="padding:24px">
+    <div id="audit-list"></div>
 
-      <!-- Filters -->
-      <div class="filter-bar">
-        <select id="filter-action" onchange="applyFilters()">
-          <option value="">All Actions</option>
-          <option value="update_status">Update Status</option>
-          <option value="mark_paid">Mark Paid</option>
-          <option value="mark_movein">Mark Move-In</option>
-          <option value="generate_lease">Generate Lease</option>
-          <option value="resend_lease">Resend Lease</option>
-          <option value="void_lease">Void Lease</option>
-          <option value="tenant_signed_lease">Tenant Signed</option>
-          <option value="co_applicant_signed_lease">Co-Applicant Signed</option>
-        </select>
-        <input id="filter-app-id" type="text" placeholder="Filter by App ID-¦" oninput="applyFilters()" style="text-transform:uppercase" maxlength="12">
-        <button class="btn-reset" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
-        <span id="result-count" style="font-size:.8rem;color:var(--muted,#8892a2);margin-left:auto"></span>
-      </div>
-
-      <!-- Table -->
-      <div style="overflow-x:auto">
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Action</th>
-              <th>Target</th>
-              <th>Details</th>
-              <th>Actor</th>
-            </tr>
-          </thead>
-          <tbody id="audit-tbody">
-            <tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loading audit log-¦</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination">
-        <button id="btn-prev" onclick="loadPage(currentPage - 1)" disabled><i class="fas fa-chevron-left"></i> Prev</button>
-        <span class="page-info" id="page-info"></span>
-        <button id="btn-next" onclick="loadPage(currentPage + 1)" disabled>Next <i class="fas fa-chevron-right"></i></button>
-      </div>
+    <div class="pager">
+      <button class="btn btn-ghost btn-sm" id="btn-prev" disabled>‹ Prev</button>
+      <span id="page-info">—</span>
+      <button class="btn btn-ghost btn-sm" id="btn-next" disabled>Next ›</button>
     </div>
-  </div>
+
+  </main>
 </div>
 
-<script src="/js/cp-api.js?v=1775137055043"></script>
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-const PAGE_SIZE = 50;
-let currentPage = 1;
-let totalCount  = 0;
-let activeAction = '';
-let activeAppId  = '';
+(function(){
+  'use strict';
+  const PAGE_SIZE = 50;
+  let currentPage = 1, totalCount = 0;
+  let activeAction = '', activeAppId = '';
 
-// Cache of user_id - email for display
-const userCache = {};
-
-async function init() {
-  await CP.Auth.requireAdmin();
-  const user = await CP.Auth.getUser();
-  document.getElementById('admin-name').textContent = user?.email || 'Admin';
-
-  // Mobile sidebar
-  document.getElementById('menuBtn').addEventListener('click', () => {
-    document.getElementById('adminSidebar').classList.toggle('open');
-    document.getElementById('sidebarOverlay').classList.toggle('active');
-  });
-  document.getElementById('sidebarOverlay').addEventListener('click', () => {
-    document.getElementById('adminSidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.remove('active');
-  });
-
-  loadPage(1);
-}
-
-async function loadPage(page) {
-  currentPage = page;
-  const tbody = document.getElementById('audit-tbody');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><i class="fas fa-spinner fa-spin"></i> Loading-¦</td></tr>';
-
-  const from = (page - 1) * PAGE_SIZE;
-  const to   = from + PAGE_SIZE - 1;
-
-  let query = CP.sb()
-    .from('admin_actions')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to);
-
-  if (activeAction) query = query.eq('action', activeAction);
-  if (activeAppId)  query = query.eq('target_id', activeAppId.toUpperCase());
-
-  const { data: rows, count, error } = await query;
-
-  if (error) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="5" style="color:#e53e3e"><i class="fas fa-exclamation-circle"></i> Failed to load: ${CP_esc(error.message)}</td></tr>`;
-    return;
-  }
-
-  totalCount = count || 0;
-  renderTable(rows || []);
-  renderPagination();
-  document.getElementById('result-count').textContent =
-    totalCount === 0 ? 'No results' : `${totalCount.toLocaleString()} total entries`;
-}
-
-function renderTable(rows) {
-  const tbody = document.getElementById('audit-tbody');
-  if (rows.length === 0) {
-    tbody.innerHTML = `
-      <tr><td colspan="5">
-        <div class="empty-state">
-          <i class="fas fa-clipboard-list"></i>
-          <div>No audit log entries found</div>
-          <div style="font-size:.8rem;margin-top:6px">Admin actions will appear here once they occur</div>
-        </div>
-      </td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = rows.map(row => {
-    const time     = formatTime(row.created_at);
-    const badge    = actionBadge(row.action);
-    const target   = row.target_id
-      ? `<a class="target-link" href="applications.html?id=${CP_esc(row.target_id)}" title="View application">${CP_esc(row.target_id)}</a>`
-      : `<span style="color:var(--muted)">${CP_esc(row.target_type || '-')}</span>`;
-    const meta     = formatMeta(row.metadata);
-    const actor    = row.user_id
-      ? `<span class="actor-cell">${CP_esc(row.user_id.slice(0, 8))}-¦</span>`
-      : `<span class="actor-cell actor-system">System / Tenant</span>`;
-
-    return `<tr>
-      <td class="time-cell" title="${CP_esc(row.created_at)}">${time}</td>
-      <td>${badge}</td>
-      <td>${target}</td>
-      <td class="meta-cell">${meta}</td>
-      <td>${actor}</td>
-    </tr>`;
-  }).join('');
-}
-
-function actionBadge(action) {
-  const labels = {
-    update_status:              'Update Status',
-    mark_paid:                  'Mark Paid',
-    mark_movein:                'Mark Move-In',
-    generate_lease:             'Generate Lease',
-    resend_lease:               'Resend Lease',
-    void_lease:                 'Void Lease',
-    tenant_signed_lease:        'Tenant Signed',
-    co_applicant_signed_lease:  'Co-Applicant Signed',
+  const ACTION_LABELS = {
+    update_status:'Update status', mark_paid:'Mark paid', mark_movein:'Mark move-in',
+    generate_lease:'Generate lease', resend_lease:'Resend lease', void_lease:'Void lease',
+    tenant_signed_lease:'Tenant signed', co_applicant_signed_lease:'Co-applicant signed'
   };
-  const label = labels[action] || action;
-  return `<span class="action-badge action-${CP_esc(action)}">${CP_esc(label)}</span>`;
-}
+  const ACTION_PILL = {
+    update_status:'pill-info', mark_paid:'pill-success', mark_movein:'pill-purple',
+    generate_lease:'pill-warning', resend_lease:'pill-warning', void_lease:'pill-danger',
+    tenant_signed_lease:'pill-success', co_applicant_signed_lease:'pill-success'
+  };
 
-function formatMeta(meta) {
-  if (!meta || typeof meta !== 'object') return '<span style="color:var(--muted)">-</span>';
-  const pills = Object.entries(meta)
-    .filter(([, v]) => v !== null && v !== undefined && v !== '')
-    .map(([k, v]) => `<span class="meta-pill">${CP_esc(k)}: ${CP_esc(String(v).slice(0, 40))}</span>`);
-  return pills.length ? pills.join('') : '<span style="color:var(--muted)">-</span>';
-}
+  function row(r){
+    const S = AdminShell;
+    const label = ACTION_LABELS[r.action] || r.action;
+    const cls = ACTION_PILL[r.action] || 'pill-muted';
+    const target = r.target_id
+      ? '<a href="applications.html?id='+S.esc(r.target_id)+'" style="font-family:monospace">'+S.esc(r.target_id)+'</a>'
+      : '<span class="muted">'+S.esc(r.target_type||'—')+'</span>';
+    const meta = (r.metadata && typeof r.metadata === 'object')
+      ? Object.entries(r.metadata).filter(([,v]) => v!=null && v!=='')
+          .map(([k,v]) => '<span class="meta-pill">'+S.esc(k)+': '+S.esc(String(v).slice(0,40))+'</span>').join('')
+      : '';
+    const actor = r.user_id
+      ? '<span class="muted text-xs">'+S.esc(r.user_id.slice(0,8))+'…</span>'
+      : '<span class="muted text-xs" style="font-style:italic">System / Tenant</span>';
+    return ''
+      + '<div class="audit-row">'
+      +   '<div class="arow-head">'
+      +     '<span class="pill '+cls+'">'+S.esc(label)+'</span>'
+      +     '<span class="row-meta" title="'+S.esc(r.created_at)+'">'+S.fmtRelative(r.created_at)+'</span>'
+      +   '</div>'
+      +   '<div class="row-sub">'+target+' · '+actor+'</div>'
+      +   (meta ? '<div class="arow-meta">'+meta+'</div>' : '')
+      + '</div>';
+  }
 
-function formatTime(iso) {
-  if (!iso) return '-';
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now - d;
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr  = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
+  async function loadPage(page){
+    currentPage = Math.max(1, page);
+    document.getElementById('audit-list').innerHTML = AdminShell.skeletonRows(5, { avatar:false });
+    const from = (currentPage-1)*PAGE_SIZE, to = from+PAGE_SIZE-1;
+    let q = CP.sb().from('admin_actions').select('*',{count:'exact'}).order('created_at',{ascending:false}).range(from,to);
+    if(activeAction) q = q.eq('action', activeAction);
+    if(activeAppId)  q = q.eq('target_id', activeAppId.toUpperCase());
+    const { data, count, error } = await q;
+    if(error){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><svg class="i"><use href="#i-alert"/></svg><h3>Failed to load</h3><p>'+AdminShell.esc(error.message)+'</p></div>';
+      return;
+    }
+    totalCount = count || 0;
+    const rows = data || [];
+    if(!rows.length){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><svg class="i"><use href="#i-history"/></svg><h3>No entries</h3><p>Admin actions will appear here.</p></div>';
+    } else {
+      document.getElementById('audit-list').innerHTML = rows.map(row).join('');
+    }
+    const totalPages = Math.max(1, Math.ceil(totalCount/PAGE_SIZE));
+    document.getElementById('page-info').textContent = totalCount ? ('Page '+currentPage+' of '+totalPages) : '—';
+    document.getElementById('btn-prev').disabled = currentPage <= 1;
+    document.getElementById('btn-next').disabled = currentPage >= totalPages;
+    document.getElementById('result-count').textContent = totalCount.toLocaleString()+' entr'+(totalCount===1?'y':'ies');
+    document.getElementById('page-sub').textContent = totalCount.toLocaleString()+' total';
+  }
 
-  if (diffMin < 1)  return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr  < 24) return `${diffHr}h ago`;
-  if (diffDay < 7)  return `${diffDay}d ago`;
+  function applyFilters(){
+    activeAction = document.getElementById('f-action').value;
+    activeAppId  = document.getElementById('f-app').value.trim();
+    loadPage(1);
+  }
 
-  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
-}
+  function readyDeps(){ return window.AdminShell && window.CP && CP.sb && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
 
-function renderPagination() {
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  document.getElementById('page-info').textContent =
-    totalPages > 1 ? `Page ${currentPage} of ${totalPages}` : '';
-  document.getElementById('btn-prev').disabled = currentPage <= 1;
-  document.getElementById('btn-next').disabled = currentPage >= totalPages;
-}
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    const ok = await AdminShell.requireAdmin();
+    if(!ok) return;
 
-function applyFilters() {
-  activeAction = document.getElementById('filter-action').value;
-  activeAppId  = document.getElementById('filter-app-id').value.trim();
-  loadPage(1);
-}
+    let deb = null;
+    document.getElementById('f-action').addEventListener('change', applyFilters);
+    document.getElementById('f-app').addEventListener('input', () => {
+      clearTimeout(deb); deb = setTimeout(applyFilters, 250);
+    });
+    document.getElementById('btn-prev').addEventListener('click', () => loadPage(currentPage-1));
+    document.getElementById('btn-next').addEventListener('click', () => loadPage(currentPage+1));
 
-function resetFilters() {
-  document.getElementById('filter-action').value = '';
-  document.getElementById('filter-app-id').value = '';
-  activeAction = '';
-  activeAppId  = '';
-  loadPage(1);
-}
-
-function CP_esc(s) {
-  return String(s ?? '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-document.addEventListener('DOMContentLoaded', init);
+    AdminShell.on('refresh', () => loadPage(currentPage));
+    loadPage(1);
+  });
+})();
 </script>
 </body>
 </html>

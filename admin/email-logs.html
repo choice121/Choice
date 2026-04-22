@@ -1,107 +1,170 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="robots" content="noindex, nofollow">
-<title>Email Logs — Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script><link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-<link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-<script defer src="/js/supabase.min.js"></script>
+<title>Email Logs · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-</head><body>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar"><div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-<nav><div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon"><i class="fas fa-file-signature"></i></span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon"><i class="fas fa-door-open"></i></span> Move-ins</a>
-    <div class="nav-section">Properties</div>
-    <a class="nav-item" href="properties.html"><span class="icon"><i class="fas fa-building"></i></span> Properties</a>
-    <a class="nav-item" href="listings.html"><span class="icon"><i class="fas fa-list"></i></span> Listings</a>
-    <a class="nav-item" href="landlords.html"><span class="icon"><i class="fas fa-user-tie"></i></span> Landlords</a>
-    <div class="nav-section">Communications</div>
-    <a class="nav-item" href="messages.html"><span class="icon"><i class="fas fa-comments"></i></span> Messages</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon"><i class="fas fa-envelope"></i></span> Email Logs</a>
-    <div class="nav-section">Admin</div>
-    <a class="nav-item" href="audit-log.html"><span class="icon"><i class="fas fa-history"></i></span> Audit Log</a>
-    <a class="nav-item" href="watermark-review.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a></nav>
-<div class="sidebar-footer"><a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading…</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button></div></aside>
-<div class="main"><div class="topbar">
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button><div><div class="page-title">Email Logs</div><div class="page-sub">Full audit trail of all system emails</div></div></div>
-<div class="content">
-<div class="filter-bar">
-<input type="text" id="f-app" placeholder="Filter by App ID…" oninput="applyFilter()">
-<select id="f-type" onchange="applyFilter()"><option value="">All Types</option>
-<option value="application_confirmation">Application Confirmation</option><option value="admin_notification">Admin Notification</option>
-<option value="payment_confirmation">Payment Confirmation</option><option value="status_update">Status Update</option>
-<option value="lease_sent">Lease Sent</option><option value="lease_signed_tenant">Lease Signed (Tenant)</option>
-<option value="lease_signed_admin">Lease Signed (Admin)</option><option value="move_in_confirmation">Move-In Confirmation</option>
-<option value="admin_message">Admin Message</option></select>
-<select id="f-status" onchange="applyFilter()"><option value="">All Statuses</option><option value="success">Success</option><option value="sent">Sent</option><option value="failed">Failed</option></select>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/admin-chrome.js?v=20260422"></script>
+<script defer src="/js/admin-shell.js?v=20260422"></script>
+</head>
+<body data-page-title="Email Logs" data-page-sub="System email audit trail" data-live="0">
+<div class="app">
+  <main class="app-content">
+
+    <div class="search">
+      <svg class="i"><use href="#i-search"/></svg>
+      <input id="f-app" type="text" placeholder="Filter by App ID…">
+    </div>
+
+    <div class="form-grid-2">
+      <select id="f-type" class="form-input">
+        <option value="">All types</option>
+        <option value="application_confirmation">Application confirmation</option>
+        <option value="admin_notification">Admin notification</option>
+        <option value="payment_confirmation">Payment confirmation</option>
+        <option value="status_update">Status update</option>
+        <option value="lease_sent">Lease sent</option>
+        <option value="lease_signed_tenant">Lease signed (tenant)</option>
+        <option value="lease_signed_admin">Lease signed (admin)</option>
+        <option value="move_in_confirmation">Move-in confirmation</option>
+        <option value="admin_message">Admin message</option>
+      </select>
+      <select id="f-status" class="form-input">
+        <option value="">All statuses</option>
+        <option value="success">Success</option>
+        <option value="sent">Sent</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+
+    <div class="row-flex between">
+      <div class="text-strong">Recent emails</div>
+      <span class="text-xs muted" id="count-label"></span>
+    </div>
+
+    <div id="log-list"></div>
+
+  </main>
 </div>
-<div class="card"><div class="table-wrap"><table>
-<thead><tr><th>Date/Time</th><th>Type</th><th>Recipient</th><th>App ID</th><th>Status</th><th>Error</th></tr></thead>
-<tbody id="tbody"></tbody></table></div></div></div></div>
-<script defer src="/js/cp-ui.js?v=20260421"></script>
-<script type="module" src="/js/cp-api.js"></script>
+
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-let all=[];
-document.addEventListener('DOMContentLoaded', async()=>{
-  const ok = await CP.Auth.requireAdmin();
-  if (!ok) return;
-  const user=await CP.Auth.getUser(); document.getElementById('admin-name').textContent=user?.email||'Admin';
-  const params=new URLSearchParams(location.search);
-  if(params.get('app')) document.getElementById('f-app').value=params.get('app');
-  if(params.get('status')) document.getElementById('f-status').value=params.get('status');
-  document.getElementById('tbody').innerHTML = CP.UI.skeletonRows(6, 6);
-  const result = await CP.EmailLogs.getAll({ perPage: 500 });
-  if(!result.ok){ document.getElementById('tbody').innerHTML = CP.UI.errorState('Failed to load email logs.', 6); return; }
-  all=result.data||[]; applyFilter();
-});
-function applyFilter(){
-  const app=document.getElementById('f-app').value.toLowerCase();
-  const type=document.getElementById('f-type').value;
-  const status=document.getElementById('f-status').value;
-  let f=all.filter(l=>{
-    if(type&&l.type!==type)return false;
-    if(status&&l.status!==status)return false;
-    if(app&&!(l.app_id||'').toLowerCase().includes(app))return false;
-    return true;
-  });
-  const tb=document.getElementById('tbody');
-  if(!f.length){tb.innerHTML=CP.UI.emptyState('No logs found','📧',6);return;}
-  tb.innerHTML=f.map(l=>`<tr>
-    <td class="text-muted" style="white-space:nowrap">${CP.UI.fmt.dateTime(l.created_at)}</td>
-    <td><span class="mono" style="font-size:.72rem">${l.type}</span></td>
-    <td>${l.recipient}</td>
-    <td class="mono">${l.app_id||'—'}</td>
-    <td>${l.status==='success'||l.status==='sent'?'<span class="badge badge-success">'+l.status+'</span>':'<span class="badge badge-danger">'+l.status+'</span>'}</td>
-    <td class="text-danger" style="font-size:.72rem">${l.error_msg||''}</td>
-  </tr>`).join('');
-}
-</script>
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
-// Mobile sidebar toggle
 (function(){
-  var btn = document.getElementById('menuBtn');
-  var sidebar = document.getElementById('adminSidebar');
-  var overlay = document.getElementById('sidebarOverlay');
-  if(!btn) return;
-  function open(){ sidebar.classList.add('open'); overlay.classList.add('open'); }
-  function close(){ sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-  btn.addEventListener('click', open);
-  overlay.addEventListener('click', close);
-  // sidebarToggle marker
+  'use strict';
+  let _all = [];
+  let _debounce = null;
+
+  function pillFor(status){
+    const s = (status||'').toLowerCase();
+    if(s === 'success' || s === 'sent') return '<span class="pill pill-success">'+s+'</span>';
+    if(s === 'failed') return '<span class="pill pill-danger">failed</span>';
+    return '<span class="pill pill-muted">'+(s||'—')+'</span>';
+  }
+
+  function row(l){
+    const S = AdminShell;
+    const errBlock = l.error_msg
+      ? '<div class="row-sub" style="color:var(--danger);margin-top:4px">'+S.esc(l.error_msg)+'</div>'
+      : '';
+    const appLink = l.app_id
+      ? '<a href="applications.html?id='+S.esc(l.app_id)+'" style="font-family:monospace">'+S.esc(l.app_id)+'</a>'
+      : '<span class="muted">—</span>';
+    return ''
+      + '<div class="list-row">'
+      +   '<div class="list-row-inner" style="align-items:flex-start">'
+      +     '<div class="row-body">'
+      +       '<div class="row-title">'+S.esc(l.recipient||'—')+' '+pillFor(l.status)+'</div>'
+      +       '<div class="row-sub">'+S.esc(l.type||'—')+' · '+appLink+'</div>'
+      +       errBlock
+      +     '</div>'
+      +     '<div class="row-meta">'+S.fmtRelative(l.created_at)+'</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function applyFilter(){
+    const app = document.getElementById('f-app').value.trim().toLowerCase();
+    const type = document.getElementById('f-type').value;
+    const status = document.getElementById('f-status').value;
+    const f = _all.filter(l => {
+      if(type && l.type !== type) return false;
+      if(status && l.status !== status) return false;
+      if(app && !(l.app_id||'').toLowerCase().includes(app)) return false;
+      return true;
+    });
+    document.getElementById('count-label').textContent = f.length + ' / ' + _all.length;
+    AdminShell.renderList('#log-list', f, {
+      render: row,
+      emptyIcon: 'i-mail',
+      emptyTitle: 'No matching emails',
+      emptySub: 'Try a different filter.'
+    });
+  }
+
+  async function load(){
+    AdminShell.renderList('#log-list', 'loading', { skeleton: 6 });
+    document.getElementById('page-sub').textContent = 'Loading…';
+    const res = await CP.EmailLogs.getAll({ perPage: 500 });
+    if(!res.ok){
+      AdminShell.renderList('#log-list', { error: res.error || 'Failed to load email logs.' });
+      document.getElementById('page-sub').textContent = 'Error';
+      return;
+    }
+    _all = res.data || [];
+    document.getElementById('page-sub').textContent = _all.length + ' total';
+    applyFilter();
+  }
+
+  function readyDeps(){ return window.AdminShell && window.CP && CP.Auth && CP.EmailLogs; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      document.getElementById('log-list').innerHTML =
+        '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    const ok = await AdminShell.requireAdmin();
+    if(!ok) return;
+
+    // Pre-fill filters from query string
+    const params = new URLSearchParams(location.search);
+    if(params.get('app'))    document.getElementById('f-app').value = params.get('app');
+    if(params.get('status')) document.getElementById('f-status').value = params.get('status');
+    if(params.get('type'))   document.getElementById('f-type').value = params.get('type');
+
+    document.getElementById('f-app').addEventListener('input', () => {
+      clearTimeout(_debounce); _debounce = setTimeout(applyFilter, 250);
+    });
+    document.getElementById('f-type').addEventListener('change', applyFilter);
+    document.getElementById('f-status').addEventListener('change', applyFilter);
+
+    AdminShell.on('refresh', () => load());
+    load().catch(err => { console.error(err); AdminShell.toast('Failed to load logs','error'); });
+  });
 })();
 </script>
-</body></html>
+</body>
+</html>

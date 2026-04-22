@@ -1,117 +1,185 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="robots" content="noindex, nofollow">
-<title>Listings — Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script><link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-<link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-<script defer src="/js/supabase.min.js"></script>
+<title>Listings · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-</head><body>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="adminSidebar"><div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-<nav><div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon"><i class="fas fa-file-signature"></i></span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon"><i class="fas fa-door-open"></i></span> Move-ins</a>
-    <div class="nav-section">Properties</div>
-    <a class="nav-item" href="properties.html"><span class="icon"><i class="fas fa-building"></i></span> Properties</a>
-    <a class="nav-item" href="listings.html"><span class="icon"><i class="fas fa-list"></i></span> Listings</a>
-    <a class="nav-item" href="landlords.html"><span class="icon"><i class="fas fa-user-tie"></i></span> Landlords</a>
-    <div class="nav-section">Communications</div>
-    <a class="nav-item" href="messages.html"><span class="icon"><i class="fas fa-comments"></i></span> Messages</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon"><i class="fas fa-envelope"></i></span> Email Logs</a>
-    <div class="nav-section">Admin</div>
-    <a class="nav-item" href="audit-log.html"><span class="icon"><i class="fas fa-history"></i></span> Audit Log</a>
-    <a class="nav-item" href="watermark-review.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a></nav>
-<div class="sidebar-footer"><a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-    <div class="admin-name" id="admin-name">Loading…</div>
-    <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button></div></aside>
-<div class="main"><div class="topbar">
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button><div><div class="page-title">All Listings</div><div class="page-sub" id="count-label">Loading…</div></div></div>
-<div class="content">
-<div class="filter-bar">
-<select id="f-status" onchange="load()"><option value="">All Statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="paused">Paused</option><option value="rented">Rented</option><option value="archived">Archived</option></select>
-<input type="text" id="search" placeholder="Search title or address…" oninput="applyFilter()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/admin-chrome.js?v=20260422"></script>
+<script defer src="/js/admin-shell.js?v=20260422"></script>
+</head>
+<body data-page-title="Listings" data-page-sub="Loading…">
+<div class="app">
+  <main class="app-content">
+
+    <div class="chip-row" id="chips">
+      <button class="chip active" data-status="">All</button>
+      <button class="chip" data-status="active">Active</button>
+      <button class="chip" data-status="draft">Draft</button>
+      <button class="chip" data-status="paused">Paused</button>
+      <button class="chip" data-status="rented">Rented</button>
+      <button class="chip" data-status="archived">Archived</button>
+    </div>
+
+    <div class="search">
+      <svg class="i"><use href="#i-search"/></svg>
+      <input id="search" type="text" placeholder="Search title or address…">
+    </div>
+
+    <div id="list-list"></div>
+
+  </main>
 </div>
-<div class="card"><div class="table-wrap"><table>
-<thead><tr><th>Title</th><th>Address</th><th>Status</th><th>Rent/mo</th><th>Beds/Bath</th><th>Views</th><th>Applications</th><th>Landlord</th><th>Listed</th><th>Actions</th></tr></thead>
-<tbody id="tbody"></tbody></table></div></div></div></div>
-<script defer src="/js/cp-ui.js?v=20260421"></script>
-<script type="module" src="/js/cp-api.js"></script>
+
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
-let all=[];
-document.addEventListener('DOMContentLoaded', async()=>{
-  const ok = await CP.Auth.requireAdmin();
-  if (!ok) return;
-  const user=await CP.Auth.getUser(); document.getElementById('admin-name').textContent=user?.email||'Admin';
-  await load();
-});
-async function load(){
-  document.getElementById('tbody').innerHTML = CP.UI.skeletonRows(6, 10);
-  const status=document.getElementById('f-status').value;
-  let q=CP.sb().from('properties').select('*,landlords(contact_name,business_name)').order('created_at',{ascending:false});
-  if(status) q=q.eq('status',status);
-  const {data,error}=await q;
-  if(error){ document.getElementById('tbody').innerHTML = CP.UI.errorState('Failed to load listings.', 10); return; }
-  all=data||[]; applyFilter();
-}
-async function changeStatus(id, newStatus) {
-  if (!newStatus) return;
-  const {error} = await CP.sb().from('properties').update({status: newStatus}).eq('id', id);
-  if (error) { CP.UI.toast('Failed: ' + error.message, 'error'); return; }
-  CP.UI.toast('Status updated to ' + newStatus, 'success');
-  await load();
-}
-function applyFilter(){
-  const s=document.getElementById('search').value.toLowerCase();
-  const f=all.filter(p=>!s||`${p.title} ${p.address}`.toLowerCase().includes(s));
-  document.getElementById('count-label').textContent=`${f.length} listings`;
-  const tb=document.getElementById('tbody');
-  if(!f.length){tb.innerHTML=CP.UI.emptyState('No listings found','🏢',10);return;}
-  const statusBadge=s=>{const m={active:'badge-success',draft:'badge-secondary',paused:'badge-warning',rented:'badge-info',archived:'badge-secondary'};return`<span class="badge ${m[s]||'badge-secondary'}">${s}</span>`;};
-  tb.innerHTML=f.map(p=>`<tr>
-    <td><a href="/landlord/edit-listing.html?id=${p.id}&admin=1" target="_blank" style="font-weight:600;color:var(--gold);text-decoration:none">${p.title}</a></td>
-    <td class="truncate">${p.address}, ${p.city}, ${p.state}</td>
-    <td>${statusBadge(p.status)}</td>
-    <td class="text-success">${CP.UI.fmt.currency(p.monthly_rent)}</td>
-    <td>${p.bedrooms||0}bd / ${p.bathrooms||0}ba</td>
-    <td class="text-muted">${p.views_count||0}</td>
-    <td class="text-muted">${p.applications_count||0}</td>
-    <td class="text-muted">${p.landlords?.business_name||p.landlords?.contact_name||'—'}</td>
-    <td class="text-muted">${CP.UI.fmt.date(p.created_at)}</td>
-    <td><select onchange="changeStatus('${p.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;cursor:pointer">
-      <option value="">— Action —</option>
-      <option value="active">✅ Publish</option>
-      <option value="draft">📝 Draft</option>
-      <option value="paused">⏸ Pause</option>
-      <option value="rented">🏠 Rented</option>
-      <option value="archived">🗄 Archive</option>
-    </select></td>
-  </tr>`).join('');
-}
-</script>
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
-// Mobile sidebar toggle
 (function(){
-  var btn = document.getElementById('menuBtn');
-  var sidebar = document.getElementById('adminSidebar');
-  var overlay = document.getElementById('sidebarOverlay');
-  if(!btn) return;
-  function open(){ sidebar.classList.add('open'); overlay.classList.add('open'); }
-  function close(){ sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-  btn.addEventListener('click', open);
-  overlay.addEventListener('click', close);
-  // sidebarToggle marker
+  'use strict';
+  let _all = [];
+  let _status = '';
+  let _q = '';
+  let _debounce = null;
+
+  function pill(s){
+    const m = { active:'pill-success', draft:'pill-muted', paused:'pill-warning', rented:'pill-info', archived:'pill-muted' };
+    return '<span class="pill '+(m[s]||'pill-muted')+'">'+AdminShell.esc(s||'—')+'</span>';
+  }
+  function fmtMoney(n){
+    if(n==null||n===''||isNaN(Number(n))) return '—';
+    try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n)); }
+    catch{ return '$'+n; }
+  }
+
+  function row(p){
+    const S = AdminShell;
+    const landlord = p.landlords && (p.landlords.business_name || p.landlords.contact_name);
+    const sub = [
+      p.address ? (p.address+(p.city?', '+p.city:'')+(p.state?', '+p.state:'')) : null,
+      (p.bedrooms||0)+'bd / '+(p.bathrooms||0)+'ba',
+      fmtMoney(p.monthly_rent)+'/mo',
+      landlord ? 'Landlord: '+landlord : null
+    ].filter(Boolean).map(S.esc).join(' · ');
+    return ''
+      + '<div class="list-row" data-id="'+S.esc(p.id)+'" data-status="'+S.esc(p.status||'')+'">'
+      +   '<div class="list-row-inner">'
+      +     '<div class="row-body">'
+      +       '<div class="row-title">'+S.esc(p.title||'Untitled')+' '+pill(p.status)+'</div>'
+      +       '<div class="row-sub">'+sub+'</div>'
+      +       '<div class="row-sub" style="color:var(--muted-2)">'+(p.views_count||0)+' views · '+(p.applications_count||0)+' apps · listed '+S.fmtRelative(p.created_at)+'</div>'
+      +     '</div>'
+      +     '<button class="btn btn-ghost btn-sm" data-action="status">Status</button>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function applyFilter(){
+    const f = _all.filter(p => {
+      if(_status && p.status !== _status) return false;
+      if(_q && !((p.title||'')+' '+(p.address||'')).toLowerCase().includes(_q)) return false;
+      return true;
+    });
+    document.getElementById('page-sub').textContent = f.length+' listing'+(f.length===1?'':'s');
+    AdminShell.renderList('#list-list', f, {
+      render: row,
+      emptyIcon: 'i-list',
+      emptyTitle: 'No listings found',
+      emptySub: 'Try a different filter.'
+    });
+  }
+
+  async function load(){
+    AdminShell.renderList('#list-list', 'loading', { skeleton: 5 });
+    document.getElementById('page-sub').textContent = 'Loading…';
+    const { data, error } = await CP.sb()
+      .from('properties')
+      .select('*,landlords(contact_name,business_name)')
+      .order('created_at',{ascending:false});
+    if(error){
+      AdminShell.renderList('#list-list', { error: error.message });
+      document.getElementById('page-sub').textContent = 'Error';
+      return;
+    }
+    _all = data || [];
+    applyFilter();
+  }
+
+  function readyDeps(){ return window.AdminShell && window.CP && CP.sb && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
+
+  AdminShell && AdminShell.on && AdminShell.on('status', async (target) => {
+    const rowEl = target.closest('.list-row');
+    if(!rowEl) return;
+    const id = rowEl.dataset.id;
+    const current = rowEl.dataset.status;
+    const data = await AdminShell.formSheet({
+      title: 'Change status',
+      submit: 'Save',
+      fields: [{
+        name: 'status', label: 'New status', type: 'select', value: current,
+        options: [
+          {value:'active',label:'Active'},
+          {value:'draft',label:'Draft'},
+          {value:'paused',label:'Paused'},
+          {value:'rented',label:'Rented'},
+          {value:'archived',label:'Archived'}
+        ]
+      }]
+    });
+    if(!data) return;
+    const { error } = await CP.sb().from('properties').update({ status: data.status }).eq('id', id);
+    if(error){ AdminShell.toast('Failed: '+error.message,'error'); return; }
+    AdminShell.toast('Status updated to '+data.status,'success');
+    await load();
+  });
+
+  document.addEventListener('cp:realtime', () => load().catch(()=>{}));
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      document.getElementById('list-list').innerHTML =
+        '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    const ok = await AdminShell.requireAdmin();
+    if(!ok) return;
+
+    document.getElementById('chips').addEventListener('click', e => {
+      const c = e.target.closest('.chip');
+      if(!c) return;
+      document.querySelectorAll('#chips .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      _status = c.dataset.status || '';
+      applyFilter();
+    });
+    document.getElementById('search').addEventListener('input', e => {
+      _q = e.target.value.toLowerCase();
+      clearTimeout(_debounce); _debounce = setTimeout(applyFilter, 200);
+    });
+
+    AdminShell.on('refresh', () => load());
+    load();
+  });
 })();
 </script>
-</body></html>
+</body>
+</html>

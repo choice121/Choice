@@ -1,389 +1,245 @@
 <!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Properties &mdash; Choice Properties Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <script defer src="/config.js"></script>
-  <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-  <noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-  <link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/admin.css?v=1775137055043">
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <link rel="stylesheet" href="/css/mobile.css?v=1775137055043">
-  <noscript><link rel="stylesheet" href="/css/mobile.css?v=1775137055043"></noscript>
-  <script defer src="/js/supabase.min.js"></script>
-  <style>
-  .filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-  .filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--color-border);background:transparent;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
-  .filter-tab.active{background:var(--color-primary,#2563eb);color:#fff;border-color:transparent}
-  .search-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
-  .search-row input{flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--surface2);color:var(--text);font-size:.82rem}
-  .prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-  .prop-card{background:var(--surface2);border:1px solid var(--color-border);border-radius:10px;overflow:hidden;transition:border-color .15s;display:flex;flex-direction:column}
-  .prop-card:hover{border-color:rgba(37,99,235,.3)}
-  .prop-img{width:100%;height:140px;object-fit:cover;background:var(--surface3,rgba(30,58,95,.4))}
-  .prop-img-placeholder{width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--surface3,rgba(30,58,95,.4));color:var(--muted);font-size:1.8rem}
-  .prop-body{padding:14px 16px;flex:1;display:flex;flex-direction:column}
-  .prop-title{font-size:.93rem;font-weight:700;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .prop-addr{font-size:.75rem;color:var(--muted2);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .badge{padding:3px 9px;border-radius:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-  .badge-active{background:rgba(34,197,94,.15);color:#16a34a}
-  .badge-inactive{background:rgba(107,114,128,.12);color:#6b7280}
-  .badge-rented{background:rgba(59,130,246,.15);color:#2563eb}
-  .badge-maintenance{background:rgba(234,179,8,.15);color:#ca8a04}
-  .prop-meta{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font-size:.74rem;color:var(--muted)}
-  .prop-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:10px}
-  .btn-sm{padding:5px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
-  .btn-ghost-sm{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:.72rem;cursor:pointer}
-  .btn-ghost-sm:hover{border-color:var(--color-primary);color:var(--color-primary)}
-  .btn-add{background:var(--color-primary,#2563eb);color:#fff;padding:7px 16px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
-  .btn-add:hover{opacity:.9}
-  .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
-  .empty-state h3{color:var(--text);margin-bottom:8px}
-  .loading-row{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
-  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
-  .modal-backdrop.open{display:flex}
-  .modal{background:var(--surface1,#fff);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.25);width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
-  .modal-header{padding:18px 22px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between}
-  .modal-header h3{font-size:.97rem;font-weight:700;color:var(--text)}
-  .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:4px}
-  .modal-close:hover{color:var(--text);background:var(--surface2)}
-  .modal-body{padding:18px 22px}
-  .modal-footer{padding:14px 22px;border-top:1px solid var(--color-border);display:flex;gap:8px;justify-content:flex-end}
-  .form-row{margin-bottom:14px}
-  .form-row label{display:block;font-size:.73rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
-  .form-row input,.form-row textarea,.form-row select{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--color-border);border-radius:7px;color:var(--text);font-size:.85rem;font-family:inherit}
-  .form-row input:focus,.form-row textarea:focus,.form-row select:focus{outline:none;border-color:var(--color-primary)}
-  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .btn-save{background:var(--color-primary,#2563eb);color:#fff;padding:9px 20px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:inherit}
-  .btn-save:hover{opacity:.9}
-  .btn-cancel{background:transparent;border:1px solid var(--color-border);color:var(--muted);padding:9px 16px;border-radius:8px;font-size:.82rem;cursor:pointer;font-family:inherit}
-  .btn-delete{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#dc2626;padding:9px 16px;border-radius:8px;font-size:.82rem;cursor:pointer;font-family:inherit}
-  </style>
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  </head>
-  <body>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <aside class="sidebar" id="adminSidebar">
-    <div class="sidebar-logo"><div class="name">Choice Properties</div><div class="sub">Admin Portal</div></div>
-    <nav>
-      <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html"><span class="icon"><i class="fas fa-file-alt"></i></span> Applications</a>
-    <a class="nav-item" href="leases.html"><span class="icon"><i class="fas fa-file-signature"></i></span> Leases</a>
-    <a class="nav-item" href="move-ins.html"><span class="icon"><i class="fas fa-door-open"></i></span> Move-ins</a>
-    <div class="nav-section">Properties</div>
-    <a class="nav-item" href="properties.html"><span class="icon"><i class="fas fa-building"></i></span> Properties</a>
-    <a class="nav-item" href="listings.html"><span class="icon"><i class="fas fa-list"></i></span> Listings</a>
-    <a class="nav-item" href="landlords.html"><span class="icon"><i class="fas fa-user-tie"></i></span> Landlords</a>
-    <div class="nav-section">Communications</div>
-    <a class="nav-item" href="messages.html"><span class="icon"><i class="fas fa-comments"></i></span> Messages</a>
-    <a class="nav-item" href="email-logs.html"><span class="icon"><i class="fas fa-envelope"></i></span> Email Logs</a>
-    <div class="nav-section">Admin</div>
-    <a class="nav-item" href="audit-log.html"><span class="icon"><i class="fas fa-history"></i></span> Audit Log</a>
-    <a class="nav-item" href="watermark-review.html"><span class="icon"><i class="fas fa-image"></i></span> Watermark Review</a>
-    </nav>
-    <div class="sidebar-footer">
-      <a href="/index.html" target="_blank" style="display:block;font-size:12px;color:#8892a2;text-decoration:none;margin-bottom:8px;text-align:center"><i class="fas fa-external-link-alt" style="margin-right:4px"></i> View Live Site</a>
-      <div class="admin-name" id="admin-name">Loading&hellip;</div>
-      <button class="sign-out" onclick="CP.sb().auth.signOut().then(()=>location.href='login.html')">Sign Out</button>
-    </div>
-  </aside>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<title>Properties · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/admin-chrome.js?v=20260422"></script>
+<script defer src="/js/admin-shell.js?v=20260422"></script>
+<style>
+  .prop-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-3)}
+  @media (min-width:560px){.prop-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}}
+  .prop-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column}
+  .prop-img{width:100%;height:140px;object-fit:cover;background:var(--surface-2)}
+  .prop-img-ph{width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--muted-2)}
+  .prop-img-ph .i{width:36px;height:36px}
+  .prop-body{padding:var(--sp-4);display:flex;flex-direction:column;gap:6px;flex:1}
+  .prop-actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}
+</style>
+</head>
+<body data-page-title="Properties" data-page-sub="Loading…">
+<div class="app">
+  <main class="app-content">
 
-  <div class="main">
-    <div class="topbar">
-      <button class="mobile-menu-btn" id="menuBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
-      <div><div class="page-title">Properties</div><div class="page-sub" id="page-sub">Loading&hellip;</div></div>
+    <div class="chip-row" id="chips">
+      <button class="chip active" data-status="all">All</button>
+      <button class="chip" data-status="active">Active</button>
+      <button class="chip" data-status="rented">Rented</button>
+      <button class="chip" data-status="inactive">Inactive</button>
+      <button class="chip" data-status="maintenance">Maintenance</button>
     </div>
-    <div class="content">
-      <div class="filter-tabs" id="filter-tabs">
-        <button class="filter-tab active" data-status="all">All</button>
-        <button class="filter-tab" data-status="active">Active</button>
-        <button class="filter-tab" data-status="rented">Rented</button>
-        <button class="filter-tab" data-status="inactive">Inactive</button>
-        <button class="filter-tab" data-status="maintenance">Maintenance</button>
-      </div>
-      <div class="search-row">
-        <input type="text" id="search-input" placeholder="Search by title or address&hellip;">
-        <button class="btn-add" onclick="openAddModal()"><i class="fas fa-plus"></i> Add Property</button>
-      </div>
-      <div id="props-grid" class="prop-grid"><div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading properties&hellip;</div></div>
-    </div>
-  </div>
 
-  <!-- Add/Edit Modal -->
-  <div class="modal-backdrop" id="prop-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="modal-title">Add Property</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="edit-id">
-        <div class="form-2col">
-          <div class="form-row">
-            <label>Title *</label>
-            <input type="text" id="f-title" placeholder="e.g. 2BR/1BA Apartment">
-          </div>
-          <div class="form-row">
-            <label>Status</label>
-            <select id="f-status">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="rented">Rented</option>
-              <option value="maintenance">Maintenance</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <label>Address *</label>
-          <input type="text" id="f-address" placeholder="123 Main St, City, State 12345">
-        </div>
-        <div class="form-2col">
-          <div class="form-row">
-            <label>Bedrooms</label>
-            <input type="number" id="f-beds" placeholder="2" min="0">
-          </div>
-          <div class="form-row">
-            <label>Bathrooms</label>
-            <input type="number" id="f-baths" placeholder="1" min="0" step="0.5">
-          </div>
-        </div>
-        <div class="form-2col">
-          <div class="form-row">
-            <label>Monthly Rent</label>
-            <input type="number" id="f-rent" placeholder="1500" min="0">
-          </div>
-          <div class="form-row">
-            <label>Property Type</label>
-            <select id="f-type">
-              <option value="">Select&hellip;</option>
-              <option value="apartment">Apartment</option>
-              <option value="house">House</option>
-              <option value="condo">Condo</option>
-              <option value="townhouse">Townhouse</option>
-              <option value="studio">Studio</option>
-              <option value="duplex">Duplex</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-2col">
-          <div class="form-row">
-            <label>Sq Ft</label>
-            <input type="number" id="f-sqft" placeholder="850" min="0">
-          </div>
-          <div class="form-row">
-            <label>Available Date</label>
-            <input type="date" id="f-available">
-          </div>
-        </div>
-        <div class="form-row">
-          <label>Description</label>
-          <textarea id="f-desc" rows="3" placeholder="Property description&hellip;"></textarea>
-        </div>
-        <div class="form-row">
-          <label>Amenities (comma-separated)</label>
-          <input type="text" id="f-amenities" placeholder="Parking, Laundry, AC, Pets OK">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-delete" id="btn-delete" onclick="deleteProperty()" style="display:none;margin-right:auto">Delete</button>
-        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-save" onclick="saveProperty()">Save Property</button>
-      </div>
+    <div class="search">
+      <svg class="i"><use href="#i-search"/></svg>
+      <input id="search" type="text" placeholder="Search title or address…">
     </div>
-  </div>
 
-  <script defer src="/js/cp-ui.js?v=20260421"></script>
-<script type="module" src="/js/cp-api.js"></script>
-  <script>
-  (function(){
-    var btn=document.getElementById('menuBtn'),sidebar=document.getElementById('adminSidebar'),overlay=document.getElementById('sidebarOverlay');
-    if(!btn)return;
-    btn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open');});
-    overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
-  })();
-  </script>
-  <script>
+    <div id="prop-grid" class="prop-grid"></div>
+
+  </main>
+</div>
+
+<a href="#" class="fab" data-action="add-prop" aria-label="Add property"><svg class="i i-lg"><use href="#i-plus"/></svg></a>
+
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
+(function(){
+  'use strict';
   let _statusFilter = 'all';
-  let _searchStr = '';
+  let _q = '';
   let _debounce = null;
+  let _allCache = [];
 
-  function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
-  function fmtMoney(v){if(v==null)return '&mdash;';return '$'+Number(v).toLocaleString('en-US');}
-
-  function statusBadge(s) {
-    const map={active:'badge-active',inactive:'badge-inactive',rented:'badge-rented',maintenance:'badge-maintenance'};
-    return `<span class="badge ${map[s]||'badge-inactive'}">${s||'unknown'}</span>`;
+  function pill(s){
+    const m = { active:'pill-success', rented:'pill-info', inactive:'pill-muted', maintenance:'pill-warning' };
+    return '<span class="pill '+(m[s]||'pill-muted')+'">'+(s||'unknown')+'</span>';
   }
+  function fmtMoney(v){ if(v==null) return '—'; return '$'+Number(v).toLocaleString('en-US'); }
 
-  function renderCard(p) {
+  function card(p){
+    const S = AdminShell;
     const img = (p.photo_urls && p.photo_urls[0])
-      ? `<img class="prop-img" src="${esc(p.photo_urls[0])}" alt="${esc(p.title)}" loading="lazy">`
-      : `<div class="prop-img-placeholder"><i class="fas fa-home"></i></div>`;
-    return `<div class="prop-card" id="pcard-${p.id}">
-      ${img}
-      <div class="prop-body">
-        <div class="prop-title">${esc(p.title||'Untitled')}</div>
-        <div class="prop-addr"><i class="fas fa-map-marker-alt" style="margin-right:3px;font-size:.63rem"></i>${esc(p.address||p.location||'No address')}</div>
-        <div style="margin-bottom:6px">${statusBadge(p.status)}</div>
-        <div class="prop-meta">
-          ${p.bedrooms != null ? `<span><i class="fas fa-bed"></i> ${p.bedrooms}bd</span>` : ''}
-          ${p.bathrooms != null ? `<span><i class="fas fa-bath"></i> ${p.bathrooms}ba</span>` : ''}
-          ${p.monthly_rent ? `<span>${fmtMoney(p.monthly_rent)}/mo</span>` : ''}
-          ${p.square_footage ? `<span>${p.square_footage} sqft</span>` : ''}
-        </div>
-        <div class="prop-actions">
-          <button class="btn-ghost-sm" onclick='openEditModal(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Edit</button>
-          <a class="btn-ghost-sm" href="/property.html?id=${esc(p.id)}" target="_blank" style="text-decoration:none">View</a>
-        </div>
-      </div>
-    </div>`;
+      ? '<img class="prop-img" src="'+S.esc(p.photo_urls[0])+'" alt="" loading="lazy">'
+      : '<div class="prop-img-ph"><svg class="i"><use href="#i-property"/></svg></div>';
+    const meta = [
+      p.bedrooms!=null ? p.bedrooms+'bd' : null,
+      p.bathrooms!=null ? p.bathrooms+'ba' : null,
+      p.monthly_rent ? fmtMoney(p.monthly_rent)+'/mo' : null,
+      p.square_footage ? p.square_footage+' sqft' : null
+    ].filter(Boolean).join(' · ');
+    return ''
+      + '<div class="prop-card">'
+      +   img
+      +   '<div class="prop-body">'
+      +     '<div class="row-title">'+S.esc(p.title||'Untitled')+'</div>'
+      +     '<div class="row-sub">'+S.esc(p.address||p.location||'No address')+'</div>'
+      +     '<div>'+pill(p.status)+'</div>'
+      +     '<div class="row-sub" style="color:var(--muted-2)">'+S.esc(meta)+'</div>'
+      +     '<div class="prop-actions">'
+      +       '<button class="btn btn-ghost btn-sm" data-action="edit-prop" data-id="'+S.esc(p.id)+'">Edit</button>'
+      +       '<a class="btn btn-ghost btn-sm" href="/property.html?id='+S.esc(p.id)+'" target="_blank">View</a>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
   }
 
-  async function loadProps() {
-    const grid = document.getElementById('props-grid');
-    const sub  = document.getElementById('page-sub');
-    
-    let q = CP.sb().from('properties').select('*').order('created_at', { ascending: false });
-    if (_statusFilter !== 'all') q = q.eq('status', _statusFilter);
-    if (_searchStr.trim()) {
-      const s = _searchStr.trim().replace(/'/g,"''");
-      q = q.or(`title.ilike.%${s}%,address.ilike.%${s}%`);
+  async function load(){
+    const grid = document.getElementById('prop-grid');
+    grid.innerHTML = '<div class="skeleton sk-line lg" style="height:220px;border-radius:12px"></div>'.repeat(3);
+    document.getElementById('page-sub').textContent = 'Loading…';
+    let q = CP.sb().from('properties').select('*').order('created_at',{ascending:false});
+    if(_statusFilter !== 'all') q = q.eq('status', _statusFilter);
+    if(_q.trim()){
+      const s = _q.trim().replace(/'/g,"''");
+      q = q.or('title.ilike.%'+s+'%,address.ilike.%'+s+'%');
     }
-    
     const { data, error } = await q;
-    if (error) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><h3>Error loading properties</h3><p>${esc(error.message)}</p></div>`;
+    if(error){
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg class="i"><use href="#i-alert"/></svg><h3>Error</h3><p>'+AdminShell.esc(error.message)+'</p></div>';
+      document.getElementById('page-sub').textContent = 'Error';
       return;
     }
-    const rows = data || [];
-    sub.textContent = rows.length + ' propert' + (rows.length !== 1 ? 'ies' : 'y');
-    if (!rows.length) {
-      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><h3>No properties found</h3><p>Add your first property or change the filter.</p></div>';
+    _allCache = data || [];
+    document.getElementById('page-sub').textContent = _allCache.length+' propert'+(_allCache.length===1?'y':'ies');
+    if(!_allCache.length){
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg class="i"><use href="#i-property"/></svg><h3>No properties</h3><p>Tap + to add one.</p></div>';
       return;
     }
-    grid.innerHTML = rows.map(renderCard).join('');
+    grid.innerHTML = _allCache.map(card).join('');
   }
 
-  function openAddModal() {
-    document.getElementById('modal-title').textContent = 'Add Property';
-    document.getElementById('edit-id').value = '';
-    document.getElementById('btn-delete').style.display = 'none';
-    ['title','address','desc','amenities'].forEach(id => document.getElementById('f-' + id).value = '');
-    ['beds','baths','rent','sqft'].forEach(id => document.getElementById('f-' + id).value = '');
-    document.getElementById('f-status').value = 'active';
-    document.getElementById('f-type').value = '';
-    document.getElementById('f-available').value = '';
-    document.getElementById('prop-modal').classList.add('open');
+  function fields(p){
+    p = p || {};
+    return [
+      { name:'title',          label:'Title',         type:'text',     value:p.title||'',          required:true,  placeholder:'2BR/1BA Apartment' },
+      { name:'status',         label:'Status',        type:'select',   value:p.status||'active', options:[
+          {value:'active',label:'Active'},{value:'inactive',label:'Inactive'},{value:'rented',label:'Rented'},{value:'maintenance',label:'Maintenance'}
+        ]},
+      { name:'address',        label:'Address',       type:'text',     value:p.address||p.location||'', required:true, placeholder:'123 Main St, City, State 12345' },
+      { name:'bedrooms',       label:'Bedrooms',      type:'number',   value:p.bedrooms!=null?p.bedrooms:'', placeholder:'2' },
+      { name:'bathrooms',      label:'Bathrooms',     type:'number',   value:p.bathrooms!=null?p.bathrooms:'', placeholder:'1' },
+      { name:'monthly_rent',   label:'Monthly rent',  type:'number',   value:p.monthly_rent||'', placeholder:'1500' },
+      { name:'property_type',  label:'Type',          type:'select',   value:p.property_type||'', options:[
+          {value:'',label:'Select…'},{value:'apartment',label:'Apartment'},{value:'house',label:'House'},
+          {value:'condo',label:'Condo'},{value:'townhouse',label:'Townhouse'},{value:'studio',label:'Studio'},{value:'duplex',label:'Duplex'}
+        ]},
+      { name:'square_footage', label:'Sq ft',         type:'number',   value:p.square_footage||'', placeholder:'850' },
+      { name:'available_date', label:'Available',     type:'date',     value:p.available_date||'' },
+      { name:'description',    label:'Description',   type:'textarea', value:p.description||'', rows:3 },
+      { name:'amenities',      label:'Amenities',     type:'text',     value:(p.amenities||[]).join(', '), placeholder:'Parking, Laundry, AC, Pets OK', help:'Comma-separated' }
+    ];
   }
 
-  function openEditModal(p) {
-    document.getElementById('modal-title').textContent = 'Edit Property';
-    document.getElementById('edit-id').value = p.id;
-    document.getElementById('btn-delete').style.display = 'block';
-    document.getElementById('f-title').value = p.title || '';
-    document.getElementById('f-address').value = p.address || p.location || '';
-    document.getElementById('f-status').value = p.status || 'active';
-    document.getElementById('f-type').value = p.property_type || '';
-    document.getElementById('f-beds').value = p.bedrooms != null ? p.bedrooms : '';
-    document.getElementById('f-baths').value = p.bathrooms != null ? p.bathrooms : '';
-    document.getElementById('f-rent').value = p.monthly_rent || '';
-    document.getElementById('f-sqft').value = p.square_footage || '';
-    document.getElementById('f-available').value = p.available_date || '';
-    document.getElementById('f-desc').value = p.description || '';
-    document.getElementById('f-amenities').value = (p.amenities||[]).join(', ');
-    document.getElementById('prop-modal').classList.add('open');
-  }
-
-  function closeModal() {
-    document.getElementById('prop-modal').classList.remove('open');
-  }
-
-  async function saveProperty() {
-    const id = document.getElementById('edit-id').value;
-    const title = document.getElementById('f-title').value.trim();
-    const address = document.getElementById('f-address').value.trim();
-    if (!title) { alert('Title is required.'); return; }
-    if (!address) { alert('Address is required.'); return; }
-
-    const amenitiesRaw = document.getElementById('f-amenities').value;
-    const amenities = amenitiesRaw ? amenitiesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
-
+  async function openForm(p){
+    const isEdit = !!(p && p.id);
+    const data = await AdminShell.formSheet({
+      title: isEdit ? 'Edit property' : 'Add property',
+      submit: isEdit ? 'Save changes' : 'Create property',
+      fields: fields(p)
+    });
+    if(!data) return;
+    if(!data.title || !data.address){
+      AdminShell.toast('Title and address are required','error'); return;
+    }
     const patch = {
-      title,
-      address,
-      status: document.getElementById('f-status').value,
-      property_type: document.getElementById('f-type').value || null,
-      bedrooms: document.getElementById('f-beds').value !== '' ? Number(document.getElementById('f-beds').value) : null,
-      bathrooms: document.getElementById('f-baths').value !== '' ? Number(document.getElementById('f-baths').value) : null,
-      monthly_rent: document.getElementById('f-rent').value !== '' ? Number(document.getElementById('f-rent').value) : null,
-      square_footage: document.getElementById('f-sqft').value !== '' ? Number(document.getElementById('f-sqft').value) : null,
-      available_date: document.getElementById('f-available').value || null,
-      description: document.getElementById('f-desc').value.trim() || null,
-      amenities,
-      updated_at: new Date().toISOString(),
+      title: data.title.trim(),
+      address: data.address.trim(),
+      status: data.status || 'active',
+      property_type: data.property_type || null,
+      bedrooms: data.bedrooms !== '' ? Number(data.bedrooms) : null,
+      bathrooms: data.bathrooms !== '' ? Number(data.bathrooms) : null,
+      monthly_rent: data.monthly_rent !== '' ? Number(data.monthly_rent) : null,
+      square_footage: data.square_footage !== '' ? Number(data.square_footage) : null,
+      available_date: data.available_date || null,
+      description: (data.description||'').trim() || null,
+      amenities: data.amenities ? data.amenities.split(',').map(s => s.trim()).filter(Boolean) : [],
+      updated_at: new Date().toISOString()
     };
-
     let error;
-    if (id) {
-      const r = await CP.sb().from('properties').update(patch).eq('id', id);
-      error = r.error;
+    if(isEdit){
+      const r = await CP.sb().from('properties').update(patch).eq('id', p.id); error = r.error;
     } else {
       patch.created_at = new Date().toISOString();
-      const r = await CP.sb().from('properties').insert([patch]);
-      error = r.error;
+      const r = await CP.sb().from('properties').insert([patch]); error = r.error;
     }
+    if(error){ AdminShell.toast('Save failed: '+error.message,'error'); return; }
+    AdminShell.toast(isEdit ? 'Updated' : 'Property added','success');
+    load();
 
-    if (error) { alert('Error saving: ' + error.message); return; }
-    closeModal();
-    await loadProps();
+    if(isEdit){
+      // Offer delete from same flow via separate confirm
+      const del = await AdminShell.confirm({
+        title:'Delete this property?', message:'This cannot be undone. Continue only if you really want to remove it.',
+        ok:'Delete', cancel:'Keep', danger:true
+      });
+      if(del){
+        const { error:err2 } = await CP.sb().from('properties').delete().eq('id', p.id);
+        if(err2){ AdminShell.toast('Delete failed: '+err2.message,'error'); return; }
+        AdminShell.toast('Deleted','success');
+        load();
+      }
+    }
   }
 
-  async function deleteProperty() {
-    const id = document.getElementById('edit-id').value;
-    if (!id) return;
-    if (!confirm('Delete this property? This cannot be undone.')) return;
-    const { error } = await CP.sb().from('properties').delete().eq('id', id);
-    if (error) { alert('Error deleting: ' + error.message); return; }
-    closeModal();
-    await loadProps();
+  function readyDeps(){ return window.AdminShell && window.CP && CP.sb && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
   }
 
+  document.addEventListener('cp:realtime', () => load().catch(()=>{}));
   document.addEventListener('DOMContentLoaded', async () => {
-    const ok = await CP.Auth.requireAdmin();
-    if (!ok) return;
-    const user = await CP.Auth.getUser();
-    document.getElementById('admin-name').textContent = user?.email || 'Admin';
+    try { await waitReady(8000); }
+    catch(e){
+      document.getElementById('prop-grid').innerHTML =
+        '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    const ok = await AdminShell.requireAdmin();
+    if(!ok) return;
 
-    document.getElementById('filter-tabs').addEventListener('click', async e => {
-      const btn = e.target.closest('.filter-tab');
-      if (!btn) return;
-      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _statusFilter = btn.dataset.status;
-      await loadProps();
+    AdminShell.on('refresh', () => load());
+    AdminShell.on('add-prop', (target, e) => { e.preventDefault(); openForm(null); });
+    AdminShell.on('edit-prop', (target) => {
+      const id = target.getAttribute('data-id');
+      const p = _allCache.find(x => x.id === id);
+      if(p) openForm(p);
     });
 
-    document.getElementById('search-input').addEventListener('input', e => {
-      _searchStr = e.target.value;
-      clearTimeout(_debounce);
-      _debounce = setTimeout(loadProps, 350);
+    document.getElementById('chips').addEventListener('click', e => {
+      const c = e.target.closest('.chip');
+      if(!c) return;
+      document.querySelectorAll('#chips .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      _statusFilter = c.dataset.status;
+      load();
+    });
+    document.getElementById('search').addEventListener('input', e => {
+      _q = e.target.value;
+      clearTimeout(_debounce); _debounce = setTimeout(load, 300);
     });
 
-    // Close modal on backdrop click
-    document.getElementById('prop-modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('prop-modal')) closeModal();
-    });
-
-    await loadProps();
+    load();
   });
-  </script>
-  </body>
-  </html>
+})();
+</script>
+</body>
+</html>
