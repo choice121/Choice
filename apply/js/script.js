@@ -2302,6 +2302,8 @@ class RentalApplication {
                 creditAppliedText: 'You have application credits — your application fee is covered.',
                 trustLine: 'Your information is securely processed and will only be used for rental application review.',
                 feeAcknowledge: 'I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the landlord associated with this property solely for rental application evaluation. The application fee is <strong>non-refundable</strong> once submitted and payment is processed, except as described in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.',
+                agreeTermsPrivacy: 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Terms of Service</a> (including the <strong>binding arbitration</strong> and <strong>class action waiver</strong> in Sections 18–19), the <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Privacy Policy</a>, and the <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Complete Policy &amp; Legal Framework</a>. I confirm I am at least 18 years old and have legal capacity to enter into this agreement.',
+                smsConsent: 'I expressly consent to receive transactional SMS messages from Choice Properties at the mobile number I provided, regarding my application, payment coordination, lease, and move-in. Message frequency varies. <strong>Message and data rates may apply.</strong> Reply HELP for help, STOP to opt out. Consent to SMS is not required to apply — leave this unchecked to receive updates by email only.',
                 footerCopyright: '&copy; 2026 Choice Properties. All rights reserved.',
                 startOver: 'Start Over',
                 startOverTitle: 'Start Over?',
@@ -2607,6 +2609,8 @@ class RentalApplication {
                 creditAppliedText: 'Tiene créditos de solicitud — su tarifa de solicitud está cubierta.',
                 trustLine: 'Su información es procesada de forma segura y solo se utilizará para la revisión de su solicitud de arrendamiento.',
                 feeAcknowledge: 'Reconozco la política de tarifas de solicitud y autorizo que mi información personal sea revisada por el personal de Choice Properties y el propietario asociado a esta propiedad únicamente para la evaluación de la solicitud de arrendamiento. La tarifa de solicitud es <strong>no reembolsable</strong> una vez enviada y procesado el pago, excepto según lo descrito en la <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Crédito de Solicitud</a>.',
+                agreeTermsPrivacy: 'He leído y acepto los <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Términos del Servicio</a> (incluyendo el <strong>arbitraje vinculante</strong> y la <strong>renuncia a demanda colectiva</strong> en las Secciones 18–19), la <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Privacidad</a> y el <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Marco Completo de Políticas y Legal</a>. Confirmo que tengo al menos 18 años y la capacidad legal para celebrar este acuerdo.',
+                smsConsent: 'Doy mi consentimiento expreso para recibir mensajes SMS transaccionales de Choice Properties al número móvil que proporcioné, relacionados con mi solicitud, coordinación de pagos, contrato de arrendamiento y mudanza. La frecuencia de los mensajes varía. <strong>Pueden aplicar tarifas de mensajes y datos.</strong> Responda HELP para obtener ayuda, STOP para cancelar. El consentimiento de SMS no es necesario para postular — deje esto sin marcar para recibir actualizaciones únicamente por correo electrónico.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',
                 startOver: 'Empezar de Nuevo',
                 startOverTitle: '¿Empezar de Nuevo?',
@@ -2637,7 +2641,7 @@ class RentalApplication {
                 const t = translations[this.state.language];
                 text.textContent = t.langText;
                 
-                const HTML_KEYS = new Set(['spamWarning', 'uploadDesc', 'uploadHint', 'feeAcknowledge', 'footerCopyright']);
+                const HTML_KEYS = new Set(['spamWarning', 'uploadDesc', 'uploadHint', 'feeAcknowledge', 'agreeTermsPrivacy', 'smsConsent', 'footerCopyright']);
                 document.querySelectorAll('[data-i18n]').forEach(el => {
                     const key = el.getAttribute('data-i18n');
                     if (t[key] !== undefined) {
@@ -2684,7 +2688,7 @@ class RentalApplication {
         if (_savedLang === 'es' && btn && text) {
             const t = translations['es'];
             text.textContent = t.langText;
-            const HTML_KEYS = new Set(['spamWarning', 'uploadDesc', 'uploadHint', 'feeAcknowledge', 'footerCopyright']);
+            const HTML_KEYS = new Set(['spamWarning', 'uploadDesc', 'uploadHint', 'feeAcknowledge', 'agreeTermsPrivacy', 'smsConsent', 'footerCopyright']);
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (t[key] !== undefined) {
