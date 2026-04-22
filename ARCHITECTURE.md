@@ -50,7 +50,7 @@ Browser
   │     ├── Supabase Auth (landlord + admin login)
   │     ├── Realtime (application status updates)
   │     ├── Storage (lease PDFs, application docs — private)
-  │     └── Edge Functions (12 active Deno functions)
+  │     └── Edge Functions (14 active Deno functions)
   │
   ├── Google Apps Script    ← email relay (deployed separately)
   │
@@ -72,6 +72,7 @@ Browser
 |---|---|
 | Language | Vanilla JavaScript (ES6+), HTML5, CSS3 |
 | Framework | None |
+| Design system | Single unified system: `css/cp-design.css` (tokens + components, both themes) + `css/cp-marketing.css` (public-page layer, light-only). Loaded by `data-portal="admin\|landlord\|tenant\|public"` on `<body>`. Chrome injection via `js/cp-chrome.js`, runtime via `js/cp-shell.js`, public-page nav/footer via `js/components.js`. See "Stylesheet & component map" below. |
 | Build step | `node generate-config.js` — injects env vars into `config.js`, rewrites `sitemap.xml` + `robots.txt` with `SITE_URL`, and cache-busts `?v=__BUILD_VERSION__` tokens in HTML files |
 | Structured data | JSON-LD on `index.html` (WebSite+SearchAction), `listings.html` (CollectionPage), `property.html` (RealEstateListing+BreadcrumbList) |
 | Deployment | Cloudflare Pages (auto-deploy on push to `main`) |
@@ -85,7 +86,7 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
 
 ### Backend API — Supabase Edge Functions
 
-  All 12 Deno-based Edge Functions are active and deployed to Supabase.
+  All 14 Deno-based Edge Functions are active and deployed to Supabase.
 
   #### Active Functions
 
@@ -93,13 +94,15 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
   |---|---|---|
   | `send-inquiry` | Send property inquiry to landlord | Public (rate-limited) |
   | `send-message` | Send message in thread | Admin only |
+  | `send-magic-link` | Branded magic-link email for tenant/landlord login | Public |
   | `imagekit-upload` | Authenticated photo upload to ImageKit | Authenticated user |
   | `imagekit-delete` | Delete photo from ImageKit CDN | Authenticated user |
-  | `send-email` | Transactional emails (approval, denial, lease, move-in) | Admin/system |
+  | `send-email` | Transactional emails — handles all 10 types: `approved`, `denied`, `waitlisted`, `movein_confirmed`, `holding_fee_request`, `holding_fee_received`, `payment_confirmed`, `move_in_prep`, `lease_signing_reminder`, `lease_expiry_alert` | Admin/system |
   | `receive-application` | Application intake from internal `/apply/` form | Public |
-  | `generate-lease` | Lease PDF generation | Admin only |
-  | `sign-lease` | Tenant e-signature processing | Authenticated user |
-  | `countersign` | Landlord countersignature | Admin only |
+  | `save-draft` | Save in-progress application draft | Public |
+  | `generate-lease` | Lease PDF generation (with dry-run preview support) | Admin only |
+  | `sign-lease` | Tenant e-signature processing (with email identity verification) | Authenticated user |
+  | `countersign` | Landlord/management countersignature | Admin only |
   | `get-lease` | Retrieve lease data | Authenticated user |
   | `download-lease` | Signed lease PDF download | Authenticated user |
   | `request-upload-url` | Pre-signed upload URL for application docs | Authenticated user |
@@ -107,6 +110,42 @@ The build step uses only Node.js built-in modules (`fs`, `process.env`). No npm 
   **Deployment:** `npx supabase functions deploy --project-ref tlfmwetmhthpyrytrcfo` (see SETUP.md → Step 7)
 
   These functions are NOT part of this repository's local runtime. They run on Deno in Supabase's cloud.
+---
+
+### Stylesheet & component map (post-Phase-7-batch-2)
+
+The site uses a single design system. Every page falls into one of four portals selected by `<body data-portal="…">`:
+
+| Portal value | Pages | Stylesheets loaded | Chrome injected by |
+|---|---|---|---|
+| `admin` | every page in `/admin/*` | `cp-design.css` (dark theme via `data-theme="dark"`) | `cp-chrome.js` + `cp-shell.js` |
+| `landlord` | every page in `/landlord/*` (auth pages omit chrome) | `cp-design.css` (light theme) | `cp-chrome.js` + `cp-shell.js` |
+| `tenant` | `tenant/portal.html` (auth omits chrome) | `cp-design.css` (light theme) | `cp-ui.js` + page-local topbar (intentionally bespoke for tenant — see Phase 5.2 note in `DESIGN_EXTENSION_PLAN.md`) |
+| `public` | `index.html`, `listings.html`, `property.html`, `about.html`, `faq.html`, `how-it-works.html`, `how-to-apply.html`, all legal/policy pages, `404.html` | `cp-design.css` + `cp-marketing.css` (light only) | `components.js` (loads `components/nav.html` + `components/footer.html`) |
+
+**Auth pages** (`admin/login.html`, `landlord/login.html`, `landlord/register.html`, `tenant/login.html`, `lease-sign.html`) intentionally omit `data-portal` and the chrome scripts — they use only `cp-design.css` with `.auth-shell` markup.
+
+**Diagnostic pages** (`count.html`, `health.html`) are exempt from the design system per locked decision §7.4 in `DESIGN_EXTENSION_PLAN.md`. `count.html` loads no CSS; `health.html` loads only `cp-design.css`.
+
+**The full active CSS surface is just three files:**
+
+| File | Purpose |
+|---|---|
+| `css/cp-design.css` | Tokens (colors, spacing, radii, shadows), components (`.btn-*`, `.card`, `.field-*`, `.list-row`, `.kpi-strip`, `.auth-shell`, `.stepper`, `.dropzone`, etc.), both light and dark themes. Single source of truth for all portals. |
+| `css/cp-marketing.css` | Public-page layer on top of `cp-design.css`. Adds hero, info-section, contact-card, info-cta, legal-doc layout, FAQ accordion, marketing footer. Scoped to `body[data-portal="public"]`. |
+| `css/apply.css` | Internal application form `/apply/index.html` only. Untouched by the design extension — the apply form is treated as a separate sub-app (`apply-choice-properties` external project lineage). |
+
+**Legacy stylesheets remaining in the repo (kept ONLY because three high-traffic public pages still load them):**
+
+| File | Still used by | Removal blocked by |
+|---|---|---|
+| `css/main.css` | `index.html`, `listings.html`, `property.html` | Phase 7 batch 3 (heavy public pages) |
+| `css/mobile.css` | same three pages | same |
+| `css/listings.css` | `listings.html` | same |
+| `css/property.css` | `property.html` | same |
+
+After Phase 7 batch 3 ships, all four legacy files can be deleted in Phase 8 cleanup. `css/admin.css`, `css/admin-v2.css`, `css/landlord.css`, `css/dashboard-system.css` and the JS shims `js/admin-chrome.js`, `js/admin-shell.js` are already deleted from this repo.
+
 ---
 
 ### Database — Supabase PostgreSQL

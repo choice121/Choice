@@ -112,10 +112,30 @@ The `buildApplyURL(property)` function in `js/cp-api.js` constructs the redirect
 
 ---
 
+## Where things live
+
+For new contributors and AI agents, the documentation map:
+
+| File | Read it when… |
+|---|---|
+| `PROJECT_STATUS.md` | You're picking up the project — single source of truth for what's done and what's left. |
+| `ARCHITECTURE.md` | You need to understand how a piece of the system works. |
+| `DESIGN_EXTENSION_PLAN.md` | You're touching CSS, page layouts, or migrating a page to the unified design system. |
+| `FIXES.md` | You're touching backend Edge Functions or email templates (historical — all phases shipped). |
+| `KNOWN_ISSUES.md` | You hit a bug — check whether it's already documented (all entries currently resolved). |
+| `SETUP.md` | You're standing up a fresh Supabase project, Cloudflare Pages project, or GAS deployment. |
+| `MIGRATION.md` + `MIGRATION_*.sql` | You're applying or rolling back a database schema change. |
+| `DEPLOYMENT_GUIDE.md` | You're configuring the Cloudflare Pages project itself. |
+| `.agents/instructions.md` | You are an AI agent — read this BEFORE writing any code. |
+
+---
+
 ## Change History
 
 | Date | Changes |
 |---|---|
+| April 22 2026 | **Phase 7 batch 2 — legal/policy pages migrated.** All 7 legal/policy pages (`terms`, `privacy`, `fair-housing`, `application-credit-policy`, `holding-deposit-policy`, `rental-application-policy`, `landlord-platform-agreement`) migrated from legacy `main.css`/`mobile.css` + page-specific `<style>` blocks to the unified `cp-design.css` + `cp-marketing.css` system. Inline nav/footer replaced with `components.js` slots. Migration is idempotent via `scripts/migrate-legal-pages.js`. cp-marketing.css extended with `.info-body`, `.info-doc`, `.info-section h3`/`h4`/`ol`, `.policy-nav`, `.effective-date`. |
+| April 22 2026 | **Documentation reconciliation.** Updated ARCHITECTURE.md (Edge Function count corrected to 14, added stylesheet/component map, send-email type list). Created PROJECT_STATUS.md as a single source of truth for project state. DESIGN_EXTENSION_PLAN.md change log updated to credit work that had already shipped (Phase 4 landlord pages, Phase 6.1 lease-sign, Phase 6.2 404, partial Phase 8 legacy file removals). |
 | April 2026 | **Local application frontend consolidation.** Copied the application frontend into `/apply/`, updated Apply/Track links to use the local route, preserved the original form design and behavior, and left the external application repository untouched. Cloudflare Pages for the main site must use `APPLY_FORM_URL=/apply` or leave it unset. |
 | April 2026 | **Security hardening.** Removed exposure of Geoapify API key from the Apply repo source code. Added build system to Apply site (`generate-config.js` + `package.json`). Synced Cloudflare Pages preview environment variables (was missing 14 vars). Documented correct deployment process for both platforms. |
 | April 2026 | **Legacy external application integration superseded.** This project previously sent Apply/Track traffic to the separate Pages app. The active configuration now routes that traffic internally to `/apply/`; keep any historical external repo untouched unless explicitly requested. |

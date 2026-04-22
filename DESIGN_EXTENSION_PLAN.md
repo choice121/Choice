@@ -440,8 +440,17 @@ This plan is safe to execute provided every rule in §0 is followed and every ph
   - `tenant/login.html` rewritten on `.auth-shell-card`. All 24 `id`s preserved. Magic-link flow keeps the branded edge-function sender with Supabase fallback, PKCE flow type, signed-in banner, wrong-account notice, success view with 60-s resend countdown, and link-error surfacing — all byte-identical.
   - All three: light theme via `<html data-theme="light">`, `theme-color="#ffffff"`, `viewport-fit=cover`, dropped legacy `main.css` / `landlord.css` / `dashboard-system.css` / `admin.css` / `mobile.css` references in favour of `cp-design.css?v=20260423`.
 
+- **Phase 4 — landlord CRUD pages** (committed): All seven landlord portal pages migrated to `cp-design.css` (light theme) + `cp-chrome.js` + `cp-shell.js`. `dashboard.html`, `applications.html`, `inquiries.html`, `edit-listing.html`, `new-listing.html`, `profile.html`, `settings.html`. All form `id`s and Supabase RPC calls preserved. Legacy `landlord.css` and `dashboard-system.css` deleted. Inline `<style>` blocks reduced to page-specific layout overrides only.
+- **Phase 5.1 — tenant/login.html** (committed in Batch B above).
+- **Phase 5.2 — tenant/portal.html** (committed): Migrated to `cp-design.css` light theme with `data-portal="tenant"`. Topbar intentionally kept bespoke (single-purpose page; full chrome injection deferred — see open question §3 of locked decisions). Saved-properties grid, inquiry threads, and message composer use `.list-row` and `.field-*` from cp-design.
+- **Phase 6.1 — lease-sign.html** (committed): Multi-step lease-signing flow rewritten on `cp-design.css` `.auth-shell` + `.stepper`. Signature canvas preserved. Email-identity verification (added in backend FIXES Phase 3) wired in. All `id`s preserved.
+- **Phase 6.2 — 404.html** (committed): Migrated to `cp-design.css` + `cp-marketing.css` with `data-portal="public"`. Friendly error layout with link back to listings.
+- **Phase 7 batch 1 — informational public pages** (committed earlier): `about.html`, `faq.html`, `how-it-works.html`, `how-to-apply.html` migrated to `cp-design.css` + `cp-marketing.css`. Inline nav/footer replaced with `components.js` slots.
+- **Phase 7 batch 2 — legal/policy pages** (committed April 22 2026): All seven legal/policy pages (`terms.html`, `privacy.html`, `fair-housing.html`, `application-credit-policy.html`, `holding-deposit-policy.html`, `rental-application-policy.html`, `landlord-platform-agreement.html`) migrated. cp-marketing.css extended with legal-doc helpers (`.info-body`, `.info-doc`, `.info-section h3`/`h4`/`ol`, `.policy-nav`, `.effective-date`). Migration script `scripts/migrate-legal-pages.js` is idempotent and re-runnable. Average page size reduction: ~45% (e.g. `terms.html` 21k → 12k bytes; `fair-housing.html` 15k → 6k).
+- **Phase 8 partial — JS shim cleanup** (committed): `js/admin-chrome.js` and `js/admin-shell.js` shims (placeholder loaders from Phase 2) deleted. All admin pages reference the renamed files directly. `css/admin.css`, `css/admin-v2.css`, `css/landlord.css`, `css/dashboard-system.css` deleted.
+
 ### Deferred to later phases
 
-- `lease-sign.html` — bespoke (signature canvas, multi-step). Will be done in Phase 6.
-- Landlord CRUD pages (`dashboard`, `applications`, `inquiries`, `edit-listing`, `new-listing`, `profile`, `settings`) — Phase 4, one sub-PR at a time.
-- `tenant/portal.html` — Phase 5.
+- **Phase 7 batch 3 — heavy public pages**: `index.html`, `listings.html`, `property.html` still load legacy `main.css`, `mobile.css`, `listings.css`, `property.css`. Highest-traffic and highest-risk pages — full visual diff required. Once shipped, all four legacy CSS files can be deleted in Phase 8 final cleanup.
+- **Phase 8 final cleanup**: delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` after Phase 7 batch 3 ships and is verified.
+- **Tenant chrome unification (open §3)**: decide whether `tenant/portal.html` should adopt `cp-chrome.js`/`cp-shell.js` or remain with its bespoke topbar. No-op until product owner decides.

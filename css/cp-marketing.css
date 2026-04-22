@@ -441,6 +441,75 @@ body[data-portal="public"] .info-section ul li {
   line-height: 1.7;
 }
 
+/* ── Legal / policy doc layout (terms, privacy, fair-housing, policy pages) ── */
+body[data-portal="public"] .info-body {
+  padding: var(--m-s-4) 0 var(--m-s-20);
+}
+body[data-portal="public"] .info-doc {
+  max-width: 780px;
+  margin: 0 auto;
+}
+body[data-portal="public"] .info-section h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--m-ink);
+  margin: var(--m-s-6) 0 var(--m-s-3);
+  letter-spacing: -0.005em;
+}
+body[data-portal="public"] .info-section h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--m-ink);
+  margin: var(--m-s-5) 0 var(--m-s-2);
+}
+body[data-portal="public"] .info-section ol {
+  padding-left: var(--m-s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-s-2);
+  margin: 0 0 var(--m-s-4);
+}
+body[data-portal="public"] .info-section ol li {
+  font-size: 15.5px;
+  color: var(--m-text);
+  line-height: 1.7;
+}
+body[data-portal="public"] .info-section a {
+  color: var(--m-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+body[data-portal="public"] .info-section a:hover { color: var(--m-brand-strong, var(--m-brand)); }
+body[data-portal="public"] .effective-date {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  margin: var(--m-s-3) 0 0;
+}
+body[data-portal="public"] .policy-nav {
+  background: var(--m-white);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-r-2xl);
+  padding: var(--m-s-6);
+  margin-bottom: var(--m-s-8);
+  box-shadow: var(--m-shadow-sm);
+}
+body[data-portal="public"] .policy-nav h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--m-ink);
+  margin: 0 0 var(--m-s-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+body[data-portal="public"] .policy-nav a {
+  display: block;
+  color: var(--m-brand);
+  font-size: 14.5px;
+  padding: 4px 0;
+  text-decoration: none;
+}
+body[data-portal="public"] .policy-nav a:hover { text-decoration: underline; }
+
 /* ── Contact card ───────────────────────────────────────────── */
 body[data-portal="public"] .contact-card {
   background: var(--m-white);
