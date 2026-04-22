@@ -34,7 +34,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=20260414">
+    <link rel="stylesheet" href="css/style.css?v=20260426">
 </head>
 <body>
 
@@ -43,10 +43,15 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <div class="logo">
-                    <div class="logo-mark">CP</div>
-                    <div class="logo-text" data-i18n="logoText">Choice Properties</div>
-                </div>
+                <a href="/index.html" style="text-decoration:none;display:flex;align-items:center;gap:10px;">
+                  <div style="width:32px;height:32px;background:var(--cp-primary,#006aff);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;">
+                      <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+                      <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+                    </svg>
+                  </div>
+                  <span style="font-weight:700;font-size:16px;color:#0a1628;">Choice Properties</span>
+                </a>
             </div>
             <div class="header-right">
                 <div class="confidential-stamp" data-i18n="confidentialStamp">
@@ -1153,7 +1158,7 @@
     </div>
 
     <script src="config.js"></script>
-      <script src="js/script.js?v=20260422"></script>
+      <script src="js/script.js?v=20260426"></script>
 
     <style>
         #devTestFillBtn {
