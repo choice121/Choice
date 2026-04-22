@@ -11,7 +11,7 @@
  *   CP.UI.esc(s)                  – HTML-escape, null-safe
  *
  * Self-contained, no module imports — load via classic <script>.
- * Pairs with css/dashboard-system.css for visuals.
+ * Pairs with css/cp-design.css for visuals (was dashboard-system.css pre-Phase 2).
  * ========================================================== */
 (function () {
   'use strict';

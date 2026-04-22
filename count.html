@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<!--
+  count.html — internal embed-only stat widget.
+  EXEMPT from the cp-design.css migration (Phase 6.3, option B).
+  Self-contained: tiny dark card showing active listing count, no nav/footer.
+  Reason for exemption: zero shared chrome, no portal context, used only as an
+  iframe/embed source. Keeping it dependency-free avoids a needless CSS load.
+-->
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0B1D38">
+  <meta name="robots" content="noindex,nofollow">
   <title>Listings Count</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
