@@ -868,3 +868,58 @@ textarea.form-input{min-height:80px;resize:vertical}
 }
 .dropzone .i { width: 32px; height: 32px; }
 .dropzone-hint { font-size: .76rem; color: var(--muted-2); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Bottom tab bar (Wave B) — landlord mobile primary nav
+   Injected by cp-shell.js initBottomTabs(). Hidden on >=900px.
+   ───────────────────────────────────────────────────────────────── */
+.cp-bottom-tabs{
+  position:fixed; left:0; right:0; bottom:0;
+  z-index: var(--z-tabs, 50);
+  display:none;
+  height: calc(var(--tabbar-h, 64px) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(17,24,39,0.92);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--border, rgba(255,255,255,.07));
+  box-shadow: 0 -6px 18px rgba(0,0,0,.30);
+}
+html[data-theme="light"] .cp-bottom-tabs,
+body:not([data-theme="dark"]) .cp-bottom-tabs{
+  background: rgba(255,255,255,0.96);
+  border-top: 1px solid #e4e8ef;
+  box-shadow: 0 -6px 18px rgba(15,23,42,.06);
+}
+.cp-bottom-tabs .cp-bt-item{
+  flex:1 1 0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px;
+  text-decoration:none;
+  color: var(--muted-2, #64748b);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  padding: 8px 4px 6px;
+  min-height: var(--tap, 44px);
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s ease;
+}
+.cp-bottom-tabs .cp-bt-item:hover{ color: var(--text, #1f2937); }
+.cp-bottom-tabs .cp-bt-item.active{ color: var(--brand, #006aff); }
+html[data-theme="light"] .cp-bottom-tabs .cp-bt-item,
+body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item{ color:#6b7280; }
+html[data-theme="light"] .cp-bottom-tabs .cp-bt-item.active,
+body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item.active{ color:#006aff; }
+.cp-bottom-tabs .cp-bt-icon{
+  width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
+}
+.cp-bottom-tabs .cp-bt-icon svg{ width:22px; height:22px; }
+.cp-bottom-tabs .cp-bt-label{ line-height:1; }
+
+/* Reserve space so content isn't hidden behind the bar */
+@media (max-width: 899px){
+  .cp-bottom-tabs{ display:flex; }
+  body.has-cp-bottom-tabs .app-content{ padding-bottom: calc(var(--tabbar-h, 64px) + env(safe-area-inset-bottom, 0px) + 12px) !important; }
+  body.has-cp-bottom-tabs{ padding-bottom: 0; }
+}

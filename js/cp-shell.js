@@ -441,11 +441,45 @@
     }
   };
 
+  // ───────────────────────── Bottom tab bar (Wave B) ─────────────────────────
+  // Mobile bottom nav for landlord portal. Auto-injected on all landlord pages.
+  function initBottomTabs(){
+    if (document.querySelector('.cp-bottom-tabs')) return;
+    const portal = document.body.getAttribute('data-portal');
+    if (portal !== 'landlord') return;
+    const path = location.pathname;
+    const ICONS = {
+      home:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
+      inbox:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+      msg:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+      user:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    };
+    const tabs = [
+      { href:'/landlord/dashboard.html',    label:'Dashboard', icon:ICONS.home,  match:['/landlord/dashboard.html','/landlord/edit-listing.html','/landlord/new-listing.html'] },
+      { href:'/landlord/applications.html', label:'Apps',      icon:ICONS.inbox, match:['/landlord/applications.html'] },
+      { href:'/landlord/inquiries.html',    label:'Messages',  icon:ICONS.msg,   match:['/landlord/inquiries.html'] },
+      { href:'/landlord/profile.html',      label:'Account',   icon:ICONS.user,  match:['/landlord/profile.html','/landlord/settings.html'] }
+    ];
+    const bar = document.createElement('nav');
+    bar.className = 'cp-bottom-tabs';
+    bar.setAttribute('aria-label','Primary navigation');
+    bar.innerHTML = tabs.map(t => {
+      const active = t.match.some(m => path === m || (m.endsWith('/') && path.startsWith(m)));
+      return '<a href="'+t.href+'" class="cp-bt-item'+(active?' active':'')+'" aria-current="'+(active?'page':'false')+'">' +
+             '<span class="cp-bt-icon">'+t.icon+'</span>' +
+             '<span class="cp-bt-label">'+t.label+'</span>' +
+             '</a>';
+    }).join('');
+    document.body.appendChild(bar);
+    document.body.classList.add('has-cp-bottom-tabs');
+  }
+
   // ───────────────────────── Boot ─────────────────────────
   function boot(){
     initActions();
     initActiveNav();
     initSwipeRows();
+    initBottomTabs();
     if('ontouchstart' in window) initPullToRefresh();
     // Cross-tab session sync: if user signs out in another tab, follow.
     window.addEventListener('storage', (e) => {
