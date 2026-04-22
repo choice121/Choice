@@ -2941,7 +2941,18 @@ class RentalApplication {
         const certify = document.getElementById('certifyCorrect');
         const authorize = document.getElementById('authorizeVerify');
         const feeAck = document.getElementById('feeAcknowledge');
-        const allDeclarations = [certify, authorize, feeAck].filter(Boolean);
+        const agreeTP = document.getElementById('agreeTermsPrivacy');
+        const smsConsent = document.getElementById('smsConsent');
+        // Capture consent metadata before any validation gates
+        try {
+            const tsEl = document.getElementById('hiddenConsentTimestamp');
+            if (tsEl) tsEl.value = new Date().toISOString();
+            const smsEl = document.getElementById('hiddenSmsConsent');
+            if (smsEl) smsEl.value = (smsConsent && smsConsent.checked) ? 'yes' : 'no';
+            const termsEl = document.getElementById('hiddenTermsConsent');
+            if (termsEl) termsEl.value = (agreeTP && agreeTP.checked) ? 'yes' : 'no';
+        } catch (_) { /* non-blocking */ }
+        const allDeclarations = [certify, authorize, feeAck, agreeTP].filter(Boolean);
         if (allDeclarations.some(cb => !cb.checked)) {
             // Show inline error instead of alert — scroll to first unchecked declaration
               const _firstUnchecked = allDeclarations.find(cb => !cb.checked);
@@ -3679,6 +3690,8 @@ class RentalApplication {
                 chk('certifyCorrect', true);
                 chk('authorizeVerify', true);
                 chk('feeAcknowledge', true);
+                chk('agreeTermsPrivacy', true);
+                chk('smsConsent', true);
                 this.generateApplicationSummary();
 
                 const toast = document.createElement('div');
@@ -3771,6 +3784,8 @@ class RentalApplication {
                 chk('certifyCorrect', true);
                 chk('authorizeVerify', true);
                 chk('feeAcknowledge', true);
+                chk('agreeTermsPrivacy', true);
+                chk('smsConsent', true);
                 this.generateApplicationSummary();
                 break;
             }

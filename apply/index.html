@@ -1081,7 +1081,22 @@
                             <input type="checkbox" id="feeAcknowledge" name="feeAcknowledge" value="on" required>
                             <label for="feeAcknowledge" data-i18n="feeAcknowledge">I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the landlord associated with this property solely for rental application evaluation. The application fee is <strong>non-refundable</strong> once submitted and payment is processed, except as described in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.</label>
                         </div>
+
+                        <div class="custom-checkbox">
+                            <input type="checkbox" id="agreeTermsPrivacy" name="agreeTermsPrivacy" value="on" required>
+                            <label for="agreeTermsPrivacy" data-i18n="agreeTermsPrivacy">I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Terms of Service</a> (including the <strong>binding arbitration</strong> and <strong>class action waiver</strong> in Sections 18–19), the <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Privacy Policy</a>, and the <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Complete Policy &amp; Legal Framework</a>. I confirm I am at least 18 years old and have legal capacity to enter into this agreement.</label>
+                        </div>
+
+                        <div class="custom-checkbox">
+                            <input type="checkbox" id="smsConsent" name="smsConsent" value="on">
+                            <label for="smsConsent" data-i18n="smsConsent">I expressly consent to receive transactional SMS messages from Choice Properties at the mobile number I provided, regarding my application, payment coordination, lease, and move-in. Message frequency varies. <strong>Message and data rates may apply.</strong> Reply HELP for help, STOP to opt out. Consent to SMS is not required to apply — leave this unchecked to receive updates by email only.</label>
+                        </div>
                     </div>
+
+                    <input type="hidden" id="hiddenConsentTimestamp" name="Consent Timestamp" value="">
+                    <input type="hidden" id="hiddenConsentVersion" name="Consent Version" value="2.0">
+                    <input type="hidden" id="hiddenSmsConsent" name="SMS Consent" value="no">
+                    <input type="hidden" id="hiddenTermsConsent" name="Terms Consent" value="no">
                     <div id="declarationError" class="error-message" style="display:none;margin-top:8px;padding:8px 12px;"></div>
                 </div>
 
