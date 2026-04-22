@@ -73,7 +73,7 @@ CREATE POLICY "property_photos_public_read" ON property_photos
     EXISTS (
       SELECT 1 FROM properties p
       WHERE p.id = property_photos.property_id
-        AND p.status = 'published'
+        AND p.status = 'active'
     )
   );
 
