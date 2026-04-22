@@ -197,8 +197,12 @@ Browser (imagekit.js)
 | Photos removed from a listing are never deleted from CDN | I-015 | ✅ RESOLVED |
 | Uploads are sequential (one at a time) — slow on mobile | I-016 | ✅ RESOLVED |
 
-**Post-launch improvement (Phase 3 backlog):**
-Replace `photo_urls TEXT[]` on the `properties` table with a dedicated `property_photos` table for per-photo metadata, sort order, and clean CDN deletion. See `.agents/instructions.md` Phase 3 backlog for details.
+**Post-launch improvement (Phase 3 — in progress):**
+Replace `photo_urls TEXT[]` and `photo_file_ids TEXT[]` on the `properties` table with a dedicated `property_photos` table for per-photo metadata (display order, alt text, caption, watermark status, dimensions) and clean CDN deletion. Rollout is split into three sub-phases:
+
+- **3a (shipped — `MIGRATION_property_photos.sql`)** — Creates the table, backfills from existing arrays, and installs bidirectional sync triggers so the legacy arrays and the new table stay in lockstep. **No application code change is required at this stage.**
+- **3b (pending)** — Migrate the imagekit-upload + imagekit-delete edge functions and all UI surfaces (`landlord/new-listing.html`, `landlord/edit-listing.html`, `landlord/dashboard.html`, `landlord/profile.html`, `admin/properties.html`, `listings.html`, `property.html`, `js/card-builder.js`) to read/write `property_photos` directly.
+- **3c (pending)** — Drop the sync triggers and the legacy `photo_urls` / `photo_file_ids` columns once 3b has been verified on production for at least one full upload+delete cycle.
 
 ---
 

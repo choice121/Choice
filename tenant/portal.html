@@ -11,43 +11,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=20260424">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260425">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
-<script defer src="/js/cp-ui.js?v=20260424"></script>
+<script defer src="/js/cp-ui.js?v=20260425"></script>
+<script defer src="/js/cp-chrome.js?v=20260425"></script>
+<script defer src="/js/cp-shell.js?v=20260425"></script>
 <style>
-/* ── Topbar (page-specific, no sidebar) ── */
-.topbar{
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  padding:14px 20px;
-  display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0; z-index:100;
-}
-.topbar-logo{display:flex;align-items:center;gap:12px}
-.logo-icon{
-  width:36px;height:36px;
-  background:linear-gradient(135deg,#1d4ed8,#3b82f6);
-  border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0;
-}
-.topbar-title{font-size:.97rem;font-weight:700;color:var(--text)}
-.topbar-sub{font-size:.68rem;color:var(--muted)}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.user-email{font-size:.75rem;color:var(--muted)}
-@media(max-width:500px){.user-email{display:none}}
-.btn-signout{
-  padding:7px 14px;border-radius:8px;
-  background:var(--surface-2);
-  border:1px solid var(--border);
-  color:var(--muted);
-  font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;
-  transition:all .15s;
-}
-.btn-signout:hover{background:var(--surface);color:var(--text)}
-
-/* ── Main ── */
+/* ── Main (tenant portal narrow column) ── */
 .main{max-width:680px;margin:0 auto;padding:28px 16px 80px}
 
 /* ── States ── */
@@ -204,20 +175,9 @@
 .portal-footer a:hover{text-decoration:underline}
 </style>
 </head>
-<body data-portal="tenant" data-page-title="My Portal">
-<div class="topbar">
-  <div class="topbar-logo">
-    <div class="logo-icon">CP</div>
-    <div>
-      <div class="topbar-title">Choice Properties</div>
-      <div class="topbar-sub">Tenant Portal</div>
-    </div>
-  </div>
-  <div class="topbar-right">
-    <span class="user-email" id="user-email"></span>
-    <button class="btn-signout" id="btn-topbar-signout" type="button">Sign Out</button>
-  </div>
-</div>
+<body data-portal="tenant" data-page-title="My Portal" data-page-sub="Tenant Portal" data-refresh="0" data-live="0">
+<div class="app">
+<main class="app-content">
 
 <div class="main">
   <div id="portal-loading" class="loading-state">
@@ -764,10 +724,6 @@ document.addEventListener('change', function(e){
   if(!input || !input.files || !input.files[0]) return;
   uploadDoc(input.dataset.docType, input.dataset.appId, input.id, input.dataset.statusId);
 });
-document.addEventListener('DOMContentLoaded', function(){
-  const t = document.getElementById('btn-topbar-signout');
-  if(t) t.addEventListener('click', signOut);
-});
 
 document.addEventListener('DOMContentLoaded',async()=>{
   const ready=await waitForSB(8000);
@@ -939,5 +895,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
   await loadAndRenderApp(window._portalAppId);
 });
 </script>
+
+</main>
+</div>
 </body>
 </html>

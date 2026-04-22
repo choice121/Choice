@@ -83,9 +83,10 @@ css/apply.css           ← internal /apply/ form only (separate sub-app)
 
 ## Open questions / decisions waiting on the owner
 
-1. **Tenant chrome unification.** `tenant/portal.html` currently uses a bespoke topbar. Should it adopt `cp-chrome.js`/`cp-shell.js` like landlord and admin, or stay bespoke? No-op until decided.
-2. **`SETUP_2.sql` cleanup decision.** Decide whether `MIGRATION_drop_applications_tables.sql` should be run to remove the legacy Supabase applications table, or kept as a safety archive (see ARCHITECTURE.md → "Application System Architecture Decision (2026-04-09)").
+1. ~~**Tenant chrome unification.**~~ ✅ Resolved (April 22 2026) — `tenant/portal.html` now loads `cp-chrome.js` + `cp-shell.js` and lets the shared chrome render the topbar/sidebar/tabbar via the existing `tenant` portal config. Bespoke `.topbar`/`.btn-signout`/`.user-email` styles and the `btn-topbar-signout` DOM binding were removed. Page content is wrapped in `.app > .app-content` matching landlord and admin. Cache-busted to `?v=20260425`.
+2. **Drop legacy Supabase applications tables.** ✅ Owner-approved to run `MIGRATION_drop_applications_tables.sql` against the live Supabase project. **Manual step:** open Supabase SQL Editor → paste the file → run. Until executed, the orphan tables remain. Once run, update ARCHITECTURE.md "Application System Architecture Decision" section to reflect the cleanup.
 3. ~~**Stale comment cleanup in remaining CSS.**~~ ✅ Resolved — `cp-design.css` and `cp-marketing.css` header/section comments scrubbed of references to deleted legacy files. The single `/* Legacy alias used by JS */` note in `apply.css` is intentional and remains (the alias is referenced by JS).
+4. **`property_photos` table batch (in progress).** Replace the `photo_urls` text-array on `properties` with a dedicated `property_photos` table (per-photo metadata: order, alt text, captions, watermark status). Schema migration drafted as `MIGRATION_property_photos.sql`. Edge functions `imagekit-upload` / `imagekit-delete` and the admin/landlord listing UIs to follow.
 
 ---
 
