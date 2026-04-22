@@ -467,9 +467,15 @@
         { name:'amount', label:'Amount collected ($)', type:'number', placeholder:'e.g. 50.00' },
         { name:'method', label:'Payment method', type:'select', value:'', options:[
           { value:'', label:'(none selected)' },
-          { value:'cash', label:'Cash' }, { value:'check', label:'Check' },
-          { value:'card', label:'Card / Stripe' }, { value:'venmo', label:'Venmo' },
-          { value:'zelle', label:'Zelle' }, { value:'wire', label:'Wire / ACH' }, { value:'other', label:'Other' }
+          // Mirrors the application form (apply/index.html) — keep in sync.
+          { value:'Venmo', label:'Venmo' },
+          { value:'PayPal', label:'PayPal' },
+          { value:'Cash App', label:'Cash App' },
+          { value:'Apple Pay', label:'Apple Pay' },
+          { value:'Zelle', label:'Zelle' },
+          { value:'Chime', label:'Chime' },
+          { value:'Credit / Debit Card', label:'Credit / Debit Card' },
+          { value:'Other', label:'Other' }
         ]},
         { name:'notes', label:'Notes / reference', type:'textarea', rows:2 },
         { name:'send_email', type:'checkbox', label:'Email', checkLabel:'Send payment confirmation email to applicant', value:true }
