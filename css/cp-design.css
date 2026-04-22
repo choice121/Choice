@@ -2,8 +2,8 @@
    Choice Properties — admin-v2.css
    Operations Console design system. Mobile-first, dark theme.
    Single self-contained stylesheet for all admin pages.
-   Replaces: admin.css, dashboard-system.css, mobile.css and large parts
-   of main.css for /admin pages. Inline SVG icon sprite is in markup.
+   Replaced (and superseded): admin.css, dashboard-system.css, mobile.css,
+   and main.css — all deleted by Phase 8. Inline SVG icon sprite is in markup.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------

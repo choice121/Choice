@@ -2,8 +2,8 @@
    CHOICE PROPERTIES — apply.css v16
    Phase 4: Unified design system migration
    
-   TOKEN SOURCE: /css/main.css (loaded first on apply.html)
-   FONT: Inter via --font-base (main.css)
+   TOKEN SOURCE: self-contained — defines its own tokens below.
+   FONT: Inter (loaded by apply/index.html via Google Fonts)
    COLORS: --color-* semantic tokens
    SPACING: --space-* tokens
    RADIUS: --radius-* tokens
