@@ -1,238 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="theme-color" content="#006aff">
-<link rel="manifest" href="/manifest.json">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Choice Admin">
 <meta name="robots" content="noindex, nofollow">
-<title>Admin Login — Choice Properties</title>
+<title>Admin Login · Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260423">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  -webkit-text-size-adjust: 100%;
-}
-body {
-  font-family: 'Inter', 'Georgia', serif;
-  background: #060d1a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-}
-
-.card {
-  background: #0d1b2e;
-  border: 1px solid #1e3a5f;
-  border-radius: 16px;
-  padding: 44px 36px 36px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.5);
-}
-@media (max-width: 480px) {
-  .card { padding: 36px 24px 28px; border-radius: 14px; }
-}
-
-.logo { text-align: center; margin-bottom: 32px; }
-.logo-name {
-  font-size: 1.4rem; color: #c9a84c;
-  letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
-}
-.logo-sub {
-  font-size: .68rem; color: #4a6a8a;
-  letter-spacing: .2em; text-transform: uppercase; margin-top: 4px;
-}
-.divider { width: 40px; height: 2px; background: linear-gradient(90deg,#c9a84c,#a8863c); margin: 14px auto 0; }
-
-.subtitle {
-  font-size: .9rem; color: #7a9ab5; text-align: center;
-  margin-bottom: 28px; font-weight: 400; letter-spacing: .02em;
-}
-
-/* Loading overlay while scripts initialise */
-.init-overlay {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 12px; padding: 20px 0; color: #4a6a8a; font-size: .8rem;
-}
-.spinner {
-  width: 28px; height: 28px; border: 3px solid #1e3a5f;
-  border-top-color: #c9a84c; border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Alert boxes */
-.alert {
-  border-radius: 8px; padding: 13px 16px;
-  font-size: .82rem; line-height: 1.5; margin-bottom: 20px; display: none;
-}
-.alert-error   { background: #1a0808; border: 1px solid #5c1a1a; color: #f87171; }
-.alert-success { background: #0a1f0a; border: 1px solid #14532d; color: #86efac; }
-.alert.visible { display: block; }
-
-/* Fields */
-.field { margin-bottom: 20px; }
-.field label {
-  display: block; font-size: .68rem; color: #4a6a8a;
-  text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px;
-  font-weight: 600;
-}
-.input-wrap { position: relative; }
-.field input {
-  width: 100%; background: #060d1a; border: 1px solid #1e3a5f;
-  border-radius: 8px; color: #e8e0d0; padding: 13px 16px;
-  font-size: 1rem; /* ≥16px prevents iOS zoom */
-  outline: none; transition: border-color .2s; font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
-}
-.field input:focus { border-color: #c9a84c; }
-.field input.has-toggle { padding-right: 48px; }
-
-/* Password toggle button */
-.pw-toggle {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  width: 48px; background: none; border: none; cursor: pointer;
-  color: #4a6a8a; display: flex; align-items: center; justify-content: center;
-  font-size: .95rem; transition: color .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.pw-toggle:hover { color: #c9a84c; }
-
-/* Submit button */
-.btn-submit {
-  width: 100%; background: linear-gradient(135deg, #c9a84c, #a8863c);
-  color: #060d1a; border: none; border-radius: 8px;
-  padding: 15px; font-weight: 700; font-size: .9rem;
-  cursor: pointer; letter-spacing: .06em; text-transform: uppercase;
-  transition: opacity .2s, transform .1s; margin-top: 4px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 52px; font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
-}
-.btn-submit:hover:not(:disabled) { opacity: .88; }
-.btn-submit:active:not(:disabled) { transform: scale(.98); }
-.btn-submit:disabled { opacity: .45; cursor: not-allowed; }
-.btn-submit .btn-spinner {
-  width: 18px; height: 18px; border: 2px solid rgba(6,13,26,.3);
-  border-top-color: #060d1a; border-radius: 50%;
-  animation: spin .7s linear infinite; display: none;
-}
-.btn-submit.loading .btn-text { display: none; }
-.btn-submit.loading .btn-spinner { display: block; }
-
-/* Links row */
-.links-row {
-  display: flex; justify-content: center; margin-top: 18px;
-}
-.link-btn {
-  background: none; border: none; color: #4a6a8a; font-size: .78rem;
-  cursor: pointer; text-decoration: underline; padding: 4px;
-  font-family: inherit; transition: color .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.link-btn:hover { color: #7a9ab5; }
-
-.footer-note {
-  text-align: center; font-size: .68rem; color: #1e3a5f; margin-top: 24px;
-}
-
-/* Session notice */
-.session-notice {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(201,168,76,.06); border: 1px solid rgba(201,168,76,.18);
-  border-radius: 8px; padding: 10px 14px;
-  font-size: .74rem; color: #8a9ab0; margin-bottom: 20px; display: none;
-}
-.session-notice.visible { display: flex; }
-.session-notice .dot { width: 7px; height: 7px; border-radius: 50%; background: #c9a84c; flex-shrink: 0; }
-</style>
 </head>
-<body>
+<body data-portal="auth">
 
-<div class="card">
-  <div class="logo">
-    <div class="logo-name">Choice Properties</div>
-    <div class="logo-sub">Administration Portal</div>
-    <div class="divider"></div>
-  </div>
-
-  <!-- Shown while scripts load -->
-  <div class="init-overlay" id="initOverlay">
-    <div class="spinner"></div>
-    <span>Initialising…</span>
-  </div>
-
-  <!-- Main form (hidden until scripts ready) -->
-  <div id="formWrap" style="display:none">
-    <p class="subtitle">Sign in to continue</p>
-
-    <!-- Session restore notice -->
-    <div class="session-notice" id="sessionNotice">
-      <div class="dot"></div>
-      <span>Checking existing session…</span>
+<div class="auth-shell">
+  <div class="auth-shell-card">
+    <div class="auth-shell-brand">
+      <div class="name">Choice Properties</div>
+      <div class="sub">Administration Portal</div>
+      <div class="divider"></div>
     </div>
 
-    <!-- Alerts -->
-    <div class="alert alert-error"   id="alertError"></div>
-    <div class="alert alert-success" id="alertSuccess"></div>
+    <!-- Shown while scripts load -->
+    <div class="auth-init" id="initOverlay">
+      <div class="spinner"></div>
+      <span>Initialising…</span>
+    </div>
 
-    <form id="loginForm" autocomplete="on" novalidate>
-      <div class="field">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email"
-               placeholder="admin@example.com"
-               autocomplete="username email"
-               inputmode="email" required>
-      </div>
+    <!-- Main form (hidden until scripts ready) -->
+    <div id="formWrap" style="display:none">
+      <p class="auth-shell-subtitle">Sign in to continue</p>
 
-      <div class="field">
-        <label for="password">Password</label>
-        <div class="input-wrap">
-          <input type="password" id="password" name="password"
-                 placeholder="••••••••"
-                 autocomplete="current-password"
-                 class="has-toggle" required>
-          <button type="button" class="pw-toggle" id="pwToggle"
-                  aria-label="Show password" title="Show/hide password">
-            <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
+      <div class="auth-alert info" id="sessionNotice">Checking existing session…</div>
+      <div class="auth-alert error"   id="alertError"></div>
+      <div class="auth-alert success" id="alertSuccess"></div>
+
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label class="field-label" for="email">Email Address</label>
+          <input class="field-input" type="email" id="email" name="email"
+                 placeholder="admin@example.com"
+                 autocomplete="username email"
+                 inputmode="email" required>
         </div>
+
+        <div class="field">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-input-wrap">
+            <input class="field-input has-suffix" type="password" id="password" name="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password" required>
+            <button type="button" class="field-suffix-btn" id="pwToggle"
+                    aria-label="Show password" title="Show/hide password">
+              <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnSubmit">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-spinner"></div>
+        </button>
+      </form>
+
+      <div class="auth-shell-links">
+        <button type="button" id="forgotBtn">Forgot password?</button>
       </div>
 
-      <button type="submit" class="btn-submit" id="btnSubmit">
-        <span class="btn-text">Sign In</span>
-        <div class="btn-spinner"></div>
-      </button>
-    </form>
-
-    <div class="links-row">
-      <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+      <div class="auth-shell-foot">Admin access only. Unauthorised access is prohibited.</div>
     </div>
-
-    <div class="footer-note">Admin access only. Unauthorised access is prohibited.</div>
   </div>
 </div>
 
 <script>
 // ─── Wait for Supabase SDK + CONFIG to be available ───────────────────────
-// Both are loaded via `defer` so they run before DOMContentLoaded,
-// but we poll to be safe across all browsers and network speeds.
 function waitForDeps() {
   return new Promise((resolve, reject) => {
     let attempts = 0;
-    const max    = 100; // 5 seconds max
+    const max    = 100;
     const id = setInterval(() => {
       attempts++;
       const ready =
@@ -248,11 +101,9 @@ function waitForDeps() {
   });
 }
 
-// ─── Supabase client (created once deps are ready) ────────────────────────
 let _sb = null;
 function sb() { return _sb; }
 
-// ─── DOM refs ─────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const initOverlay  = $('initOverlay');
 const formWrap     = $('formWrap');
@@ -268,7 +119,6 @@ const eyeOpen      = $('eyeOpen');
 const eyeClosed    = $('eyeClosed');
 const forgotBtn    = $('forgotBtn');
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
 function showError(msg) {
   alertError.textContent = msg;
   alertError.classList.add('visible');
@@ -288,17 +138,15 @@ function setLoading(on) {
   btnSubmit.classList.toggle('loading', on);
 }
 
-// ─── Password toggle ──────────────────────────────────────────────────────
 pwToggle.addEventListener('click', () => {
   const show = passInput.type === 'password';
   passInput.type = show ? 'text' : 'password';
-  eyeOpen  .style.display = show ? 'none'  : '';
-  eyeClosed.style.display = show ? ''      : 'none';
+  eyeOpen  .style.display = show ? 'none' : '';
+  eyeClosed.style.display = show ? ''     : 'none';
   pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
   passInput.focus();
 });
 
-// ─── Forgot password ──────────────────────────────────────────────────────
 forgotBtn.addEventListener('click', async () => {
   const email = emailInput.value.trim();
   if (!email) {
@@ -323,7 +171,6 @@ forgotBtn.addEventListener('click', async () => {
   }
 });
 
-// ─── Login ────────────────────────────────────────────────────────────────
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAlerts();
@@ -339,7 +186,6 @@ loginForm.addEventListener('submit', async (e) => {
   setLoading(true);
 
   try {
-    // Sign in — Supabase persists the session in localStorage automatically
     const { error: signInErr } = await sb().auth.signInWithPassword({
       email,
       password: pass,
@@ -347,7 +193,6 @@ loginForm.addEventListener('submit', async (e) => {
 
     if (signInErr) {
       let msg = signInErr.message;
-      // Make common Supabase error messages more human-readable
       if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
         msg = 'Incorrect email or password. Please check and try again.';
       } else if (msg.toLowerCase().includes('email not confirmed')) {
@@ -360,7 +205,6 @@ loginForm.addEventListener('submit', async (e) => {
       return;
     }
 
-    // Check admin role
     const { data: { user } } = await sb().auth.getUser();
     if (!user) {
       showError('Authentication error. Please refresh and try again.');
@@ -381,7 +225,6 @@ loginForm.addEventListener('submit', async (e) => {
       return;
     }
 
-    // Success — redirect to dashboard
     location.href = 'dashboard.html';
 
   } catch (err) {
@@ -391,24 +234,21 @@ loginForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ─── Init ─────────────────────────────────────────────────────────────────
 (async function init() {
   try {
     await waitForDeps();
 
-    // Create Supabase client with persistent session
     _sb = window.supabase.createClient(
       window.CONFIG.SUPABASE_URL,
       window.CONFIG.SUPABASE_ANON_KEY,
       {
         auth: {
-          persistSession:   true,   // session survives page refreshes & stays logged in
-          autoRefreshToken: true,   // silently renews tokens in the background
+          persistSession:   true,
+          autoRefreshToken: true,
         }
       }
     );
 
-    // Check for existing session — if valid admin, skip login entirely
     sessionNotice.classList.add('visible');
     formWrap.style.display = 'block';
     initOverlay.style.display = 'none';
@@ -422,14 +262,12 @@ loginForm.addEventListener('submit', async (e) => {
         .maybeSingle();
 
       if (adminRow) {
-        // Already logged in as admin — go straight to dashboard
-        sessionNotice.querySelector('span').textContent = 'Restoring session…';
+        sessionNotice.textContent = 'Restoring session…';
         location.href = 'dashboard.html';
         return;
       }
     }
 
-    // No valid admin session — show the form
     sessionNotice.classList.remove('visible');
     emailInput.focus();
 

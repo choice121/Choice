@@ -421,4 +421,16 @@ For every page touched in the phase, verify in **Chrome, Safari (iOS preferred),
 
 This plan is safe to execute provided every rule in §0 is followed and every phase is merged independently.
 
-**Status:** APPROVED — Phase 1 in progress.
+**Status:** APPROVED — Phases 1, 2, 3 complete. Awaiting Cloudflare branch-preview verification before Phase 4.
+
+### Change log
+
+- **Phase 1** (committed): admin/dashboard.html migrated to chrome injector; reduced-motion guard added; cache-bust bumped to `?v=20260423`.
+- **Phase 2** (committed):
+  - Created `css/cp-design.css` (admin-v2.css + light-theme tokens + `.auth-shell` + `.field-*` + `.fieldset` + `.form-grid` + `.btn-auth` + `.stepper` + `.dropzone` + `.auth-alert` + `.auth-init`).
+  - Created `js/cp-chrome.js` parameterised by `<body data-portal="admin|landlord|tenant">` with full nav config for all three portals.
+  - Created `js/cp-shell.js` exposing both `window.CPShell` and `window.AdminShell` aliases.
+  - Replaced `css/admin-v2.css` with a single `@import url("/css/cp-design.css?v=20260423")` shim.
+  - Replaced `js/admin-chrome.js` and `js/admin-shell.js` with dynamic-script-tag shims that load the renamed files. Both shims will be deleted in Phase 8.
+  - Updated all 12 admin pages with v2 assets to load the new paths directly.
+- **Phase 3** (committed): `admin/login.html` rewritten on top of `.auth-shell` + `.field-*` + `.btn-auth`. All `id`s and form-field `name`s preserved; Supabase magic-link / password / forgot-password flows unchanged. Added `viewport-fit=cover`, set `theme-color` to `#0a0f1e`.
