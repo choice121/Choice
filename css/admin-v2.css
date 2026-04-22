@@ -1,7 +1,0 @@
-/* =====================================================================
-   admin-v2.css — Phase 2 transitional shim.
-   Real source moved to /css/cp-design.css. This file is kept as an
-   @import alias so any HTML that still references admin-v2.css keeps
-   working byte-for-byte. Removed in Phase 8.
-   ===================================================================== */
-@import url("/css/cp-design.css?v=20260423");
