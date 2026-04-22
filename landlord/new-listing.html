@@ -1218,86 +1218,6 @@
       if (!proceed) { btn.disabled = false; btn.textContent = 'Submit Listing'; return; }
     }
 
-    // Upload photos
-    const photoUrls = [];
-    const photoFileIds = [];
-
-    if (pendingFiles.length) {
-      if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
-        CP.UI.toast('Photo uploads are not configured yet.', 'error');
-        btn.disabled = false; btn.textContent = 'Submit Listing';
-        return;
-      }
-
-      btn.textContent = 'Verifying session…';
-      const accessToken = await window.CP?.Auth?.getAccessToken?.();
-      if (!accessToken) {
-        CP.UI.toast('Session invalid — your draft is saved. Taking you to login now…', 'error');
-        btn.disabled = false; btn.textContent = 'Submit Listing';
-        setTimeout(() => { window.location.href = '/landlord/login.html'; }, 1500);
-        return;
-      }
-
-      btn.textContent = 'Uploading photos…';
-      const bar = document.getElementById('uploadBar');
-      const txt = document.getElementById('uploadStatusText');
-      const pctLbl = document.getElementById('uploadPct');
-      document.getElementById('uploadProgress').style.display = '';
-
-      try {
-        let doneCount = 0;
-        const results = await uploadMultipleToImageKit(pendingFiles, {
-          folder:      `/properties/${propId}`,
-          supabaseUrl: CONFIG.SUPABASE_URL,
-          anonKey:     CONFIG.SUPABASE_ANON_KEY,
-          userToken:   accessToken,
-          onFileProgress: (i, pct) => {
-            if (pct === 100) doneCount++;
-            txt.textContent = `Uploading photos… (${doneCount} of ${pendingFiles.length} done)`;
-          },
-          onTotalProgress: (overall) => {
-            bar.style.width = overall + '%';
-            pctLbl.textContent = overall + '%';
-          },
-        });
-
-        const failed = results.filter(r => r?.error);
-        for (const r of results) {
-          if (r?.url) {
-            photoUrls.push(r.url);
-            photoFileIds.push(r.fileId ?? null);
-          }
-        }
-
-        if (failed.length > 0 && photoUrls.length === 0) {
-          const firstError = failed[0]?.error || 'Unknown error';
-          const isSessionError  = /\b401\b|unauthorized|session expired|jwt/i.test(firstError);
-          const isConfigError   = /not configured/i.test(firstError);
-          const isImageKitError = /imagekit|502|credentials/i.test(firstError);
-          let reason;
-          if (isSessionError)       reason = 'Your session expired — please refresh the page, log back in, and try again.';
-          else if (isConfigError)   reason = 'The photo upload service is not fully configured.';
-          else if (isImageKitError) reason = 'Photo storage service error — please try again in a moment.';
-          else                      reason = `Upload error: ${firstError}`;
-          CP.UI.toast(`Photos could not be uploaded. ${reason}`, 'error');
-          btn.disabled = false; btn.textContent = 'Submit Listing';
-          document.getElementById('uploadProgress').style.display = 'none';
-          return;
-        }
-
-        if (failed.length > 0) {
-          const names = failed.map(f => `"${f.fileName}"`).join(', ');
-          CP.UI.toast(`${failed.length} photo(s) skipped: ${names}. You can add them later from Edit Listing.`, 'info');
-        }
-      } catch (uploadErr) {
-        CP.UI.toast('Photo upload failed: ' + uploadErr.message, 'error');
-        btn.disabled = false; btn.textContent = 'Submit Listing';
-        document.getElementById('uploadProgress').style.display = 'none';
-        return;
-      }
-      document.getElementById('uploadProgress').style.display = 'none';
-    }
-
     btn.textContent = 'Saving listing…';
 
     const getChecked = (groupId) =>
@@ -1343,18 +1263,10 @@
       laundry_type     : v('laundryType') || null,
       heating_type     : v('heatingType') || null,
       cooling_type     : v('coolingType') || null,
-      photo_urls       : photoUrls,
-      photo_file_ids   : photoFileIds,
       description      : v('description'),
       showing_instructions: v('showingInstructions') || null,
     };
 
-    if (photoUrls.length !== photoFileIds.length) {
-      CP.UI.toast('Internal error: photo data is corrupted. Please refresh and try again.', 'error');
-      console.error('INVARIANT VIOLATION: photo arrays out of sync', { photoUrls, photoFileIds });
-      btn.disabled = false; btn.textContent = 'Submit Listing';
-      return;
-    }
 
     const { error } = await CP.sb().from('properties').insert(listingData);
 
@@ -1368,6 +1280,55 @@
       }
       btn.disabled = false; btn.textContent = 'Submit Listing';
       return;
+    }
+
+    // Phase 3c: photos are now stored exclusively in the property_photos table.
+    // The imagekit-upload edge function inserts each row directly when we pass
+    // propertyId, so the listing must already exist (ownership check). We do
+    // the upload AFTER the property insert. Failures here leave the listing
+    // live with whatever photos succeeded — the landlord can add the rest from
+    // Edit Listing.
+    if (pendingFiles.length) {
+      if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
+        CP.UI.toast('Listing saved, but photo uploads are not configured. You can add photos from Edit Listing.', 'info');
+      } else {
+        const accessToken = await window.CP?.Auth?.getAccessToken?.();
+        if (!accessToken) {
+          CP.UI.toast('Listing saved, but your session expired before photos uploaded. Please log back in and add them from Edit Listing.', 'info');
+        } else {
+          btn.textContent = 'Uploading photos…';
+          const bar = document.getElementById('uploadBar');
+          const txt = document.getElementById('uploadStatusText');
+          const pctLbl = document.getElementById('uploadPct');
+          document.getElementById('uploadProgress').style.display = '';
+          try {
+            let doneCount = 0;
+            const results = await uploadMultipleToImageKit(pendingFiles, {
+              folder:      `/properties/${propId}`,
+              propertyId:  propId,
+              supabaseUrl: CONFIG.SUPABASE_URL,
+              anonKey:     CONFIG.SUPABASE_ANON_KEY,
+              userToken:   accessToken,
+              onFileProgress: (i, pct) => {
+                if (pct === 100) doneCount++;
+                txt.textContent = `Uploading photos… (${doneCount} of ${pendingFiles.length} done)`;
+              },
+              onTotalProgress: (overall) => {
+                bar.style.width = overall + '%';
+                pctLbl.textContent = overall + '%';
+              },
+            });
+            const failed = results.filter(r => r?.error);
+            if (failed.length > 0) {
+              const names = failed.map(f => `"${f.fileName}"`).join(', ');
+              CP.UI.toast(`Listing saved. ${failed.length} photo(s) skipped: ${names}. You can retry from Edit Listing.`, 'info');
+            }
+          } catch (uploadErr) {
+            CP.UI.toast('Listing saved, but photo upload failed: ' + uploadErr.message + '. You can add photos from Edit Listing.', 'info');
+          }
+          document.getElementById('uploadProgress').style.display = 'none';
+        }
+      }
     }
 
     // Success screen

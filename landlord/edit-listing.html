@@ -312,7 +312,15 @@
   if (!propertyId) { window.location.href = backURL; throw new Error(); }
 
   const { data: prop, error } = await supabase
-    .from('properties').select('*').eq('id', propertyId).single();
+    .from('properties').select('*, property_photos(url, file_id, display_order)').eq('id', propertyId).single();
+
+  // Phase 3c: derive legacy photo_urls / photo_file_ids from the embedded property_photos.
+  if (prop) {
+    const _photos = Array.isArray(prop.property_photos) ? prop.property_photos.slice() : [];
+    _photos.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    prop.photo_urls     = _photos.map(x => x.url).filter(Boolean);
+    prop.photo_file_ids = _photos.map(x => x.file_id ?? null);
+  }
 
   if (error || !prop) {
     CP.UI.toast('Property not found or access denied.', 'error');

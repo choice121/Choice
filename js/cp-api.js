@@ -202,6 +202,28 @@ async function callEdgeFunction(name, payload) {
   }
 }
 // -- Properties API ----------------------------------------
+// Phase 3c cutover (2026-04-22): the legacy `properties.photo_urls` and
+// `properties.photo_file_ids` columns were dropped. The `property_photos`
+// table is now the source of truth. To keep every existing UI render site
+// (card-builder.js, property.html, listings.html map, admin/landlord pages)
+// working unchanged, every Properties fetch embeds `property_photos` and
+// then derives the two legacy array shapes on the row before returning.
+//
+// PostgREST embeds the rows as `row.property_photos` (an array of objects).
+// We sort by display_order client-side so the gallery order is stable.
+function _attachPhotoArrays(row) {
+  if (!row || typeof row !== 'object') return row;
+  const photos = Array.isArray(row.property_photos) ? row.property_photos.slice() : [];
+  photos.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+  row.photo_urls     = photos.map(p => p.url).filter(Boolean);
+  row.photo_file_ids = photos.map(p => p.file_id ?? null);
+  return row;
+}
+
+// Standard select fragment used by every property fetch below.
+const PROPERTIES_SELECT_FULL =
+  '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(url, file_id, display_order)';
+
 const Properties = {
   // getListings - server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
@@ -214,7 +236,7 @@ const Properties = {
 
     let q = sb()
       .from('properties')
-      .select('*, landlords(contact_name, business_name, avatar_url, verified)', { count: 'exact' })
+      .select(PROPERTIES_SELECT_FULL, { count: 'exact' })
       .eq('status', 'active');
 
     // Text search - uses the GIN-indexed search_tsv generated column.
@@ -290,7 +312,7 @@ const Properties = {
       ok: true,
       error: null,
       data: {
-        rows:        data || [],
+        rows:        (data || []).map(_attachPhotoArrays),
         total,
         page,
         per_page:    PAGE_SIZE,
@@ -300,20 +322,21 @@ const Properties = {
   },
 
   async getAll(filters = {}) {
-    let q = sb().from('properties').select('*, landlords(contact_name, business_name, avatar_url, verified)').order('created_at', { ascending: false });
+    let q = sb().from('properties').select(PROPERTIES_SELECT_FULL).order('created_at', { ascending: false });
     if (filters.status)    q = q.eq('status', filters.status);
     if (filters.landlord)  q = q.eq('landlord_id', filters.landlord);
     if (filters.bedrooms !== undefined && filters.bedrooms !== '') q = q.gte('bedrooms', filters.bedrooms);
     if (filters.max_rent)  q = q.lte('monthly_rent', filters.max_rent);
     if (filters.state)     q = q.eq('state', filters.state);
     const { data, error } = await q;
-    return _ok(data || [], error);
+    return _ok((data || []).map(_attachPhotoArrays), error);
   },
   async getOne(id) {
-    const { data, error } = await sb().from('properties').select('*, landlords(*)').eq('id', id).single();
+    const { data, error } = await sb().from('properties').select('*, landlords(*), property_photos(url, file_id, display_order)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }
+    if (data) _attachPhotoArrays(data);
     return _ok(data, error);
   },
   // I-026: NOTE - this method is not currently used by new-listing.html.

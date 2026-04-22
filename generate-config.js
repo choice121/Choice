@@ -399,7 +399,7 @@ await (async function injectInitialListings() {
   const PER_PAGE = 24;
   const supabaseUrl = config.SUPABASE_URL.replace(/\/$/, '');
   const apiPath = '/rest/v1/properties'
-    + '?select=*,landlords(contact_name,business_name,avatar_url,verified)'
+    + '?select=*,landlords(contact_name,business_name,avatar_url,verified),property_photos(url,file_id,display_order)'
     + '&status=eq.active'
     + '&order=created_at.desc'
     + '&limit=' + PER_PAGE
@@ -429,6 +429,13 @@ await (async function injectInitialListings() {
         try {
           const rows = JSON.parse(body);
           if (!Array.isArray(rows)) { console.warn('⚠  Property pre-load: unexpected response shape'); resolve(null); return; }
+          // Phase 3c: derive legacy photo_urls / photo_file_ids from embedded property_photos.
+          rows.forEach(function(p) {
+            var photos = Array.isArray(p.property_photos) ? p.property_photos.slice() : [];
+            photos.sort(function(a, b) { return (a.display_order || 0) - (b.display_order || 0); });
+            p.photo_urls     = photos.map(function(x) { return x.url; }).filter(Boolean);
+            p.photo_file_ids = photos.map(function(x) { return x.file_id || null; });
+          });
           let total = rows.length;
           const rangeHeader = res.headers['content-range'];
           if (rangeHeader) { const m = rangeHeader.match(/\/(\d+)/); if (m) total = parseInt(m[1], 10); }

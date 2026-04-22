@@ -450,7 +450,7 @@ async function loadFeaturedListings() {
   try {
     const { data: props, error } = await supabase
       .from('properties')
-      .select('*, landlords(contact_name, business_name, avatar_url, verified)')
+      .select('*, landlords(contact_name, business_name, avatar_url, verified), property_photos(url, file_id, display_order)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(6);
@@ -458,6 +458,17 @@ async function loadFeaturedListings() {
     clearTimeout(loadingTimeout);
     const indicator = document.getElementById('loadingIndicator');
     if (indicator) indicator.remove();
+
+    // Phase 3c: derive legacy photo_urls / photo_file_ids from the embedded
+    // property_photos rows so card-builder.js keeps working unchanged.
+    if (props) {
+      props.forEach(p => {
+        const photos = Array.isArray(p.property_photos) ? p.property_photos.slice() : [];
+        photos.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+        p.photo_urls     = photos.map(x => x.url).filter(Boolean);
+        p.photo_file_ids = photos.map(x => x.file_id ?? null);
+      });
+    }
 
     if (error || !props || !props.length) {
       // I-033: Show a warm empty state instead of hiding the section entirely.
