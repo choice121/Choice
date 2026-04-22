@@ -85,7 +85,7 @@ css/apply.css           ← internal /apply/ form only (separate sub-app)
 
 1. **Tenant chrome unification.** `tenant/portal.html` currently uses a bespoke topbar. Should it adopt `cp-chrome.js`/`cp-shell.js` like landlord and admin, or stay bespoke? No-op until decided.
 2. **`SETUP_2.sql` cleanup decision.** Decide whether `MIGRATION_drop_applications_tables.sql` should be run to remove the legacy Supabase applications table, or kept as a safety archive (see ARCHITECTURE.md → "Application System Architecture Decision (2026-04-09)").
-3. **Stale comment cleanup in remaining CSS.** `css/cp-marketing.css`, `css/cp-design.css`, and `css/apply.css` still reference the deleted legacy files in header comments / "TOKEN SOURCE" notes. Cosmetic only — safe to clean up opportunistically.
+3. ~~**Stale comment cleanup in remaining CSS.**~~ ✅ Resolved — `cp-design.css` and `cp-marketing.css` header/section comments scrubbed of references to deleted legacy files. The single `/* Legacy alias used by JS */` note in `apply.css` is intentional and remains (the alias is referenced by JS).
 
 ---
 

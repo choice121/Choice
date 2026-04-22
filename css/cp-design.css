@@ -1,9 +1,8 @@
 /* =====================================================================
-   Choice Properties — admin-v2.css
-   Operations Console design system. Mobile-first, dark theme.
-   Single self-contained stylesheet for all admin pages.
-   Replaced (and superseded): admin.css, dashboard-system.css, mobile.css,
-   and main.css — all deleted by Phase 8. Inline SVG icon sprite is in markup.
+   Choice Properties — cp-design.css
+   Unified design system. Tokens + components, both themes.
+   Loaded by every portal (admin, landlord, tenant) and every public page
+   (paired with cp-marketing.css). Inline SVG icon sprite is in markup.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -723,9 +722,9 @@ textarea.form-input{min-height:80px;resize:vertical}
 }
 
 /* ---------------------------------------------------------------------
-   Modern form-field components (used by Phases 3–6).
-   The legacy .form-row / .form-input / .form-label classes above are
-   kept untouched for any v2 admin code that already uses them.
+   Modern form-field components (.field / .field-label / .input).
+   The .form-row / .form-input / .form-label classes above remain in
+   place for older admin pages that still bind to them.
    --------------------------------------------------------------------- */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--sp-4); }
 .field:last-child { margin-bottom: 0; }

@@ -10,7 +10,6 @@
    working without any v2 partial.
 
    Sole stylesheet for all public pages (paired with cp-design.css).
-   Legacy main.css / mobile.css were removed in sub-phase 7.3.4.
    ===================================================================== */
 
 /* ── Tokens (light marketing palette) ─────────────────────────────── */
@@ -811,11 +810,9 @@ body[data-portal="public"] .footer-bottom-links a:hover { color: var(--m-white);
 
 
 /* =====================================================================
-   HOMEPAGE COMPONENTS — added in sub-phase 7.3.1 (April 22 2026).
-   Source: ported faithfully from the now-deleted css/listings.css and
-   css/main.css, with legacy tokens translated to --m-* namespace.
-   See BATCH_3_MIGRATION.md for the full mapping table.
+   HOMEPAGE COMPONENTS — sub-phase 7.3.1 (April 22 2026).
    All selectors scoped under body[data-portal="public"].
+   See BATCH_3_MIGRATION.md for migration history.
    ===================================================================== */
 
 /* ── Hero ──────────────────────────────────────────────────── */
@@ -1931,8 +1928,8 @@ body[data-portal="public"] .pg-next { font-size: 12px; }
 
 /* ============================================================
    PROPERTY DETAIL PAGE COMPONENTS — sub-phase 7.3.3
-   Scoped to body[data-portal="public"][data-page="property"]
-   Replaced legacy css/property.css (deleted in sub-phase 7.3.4). Token sources: --m-* above.
+   Scoped to body[data-portal="public"][data-page="property"].
+   Token sources: --m-* defined above.
    ============================================================ */
 
 /* ── GALLERY MOSAIC ───────────────────────────────────────── */
