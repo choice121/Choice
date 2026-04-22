@@ -105,7 +105,20 @@
         </select>
       </div>
       
-      <button class="listings-search-btn" id="searchBtn" aria-label="Search">
+      <div class="search-field sf-select">
+          <i class="fas fa-dollar-sign"></i>
+          <select id="maxRentFilter" aria-label="Max Rent">
+            <option value="">Any price</option>
+            <option value="800">Under $800</option>
+            <option value="1000">Under $1,000</option>
+            <option value="1500">Under $1,500</option>
+            <option value="2000">Under $2,000</option>
+            <option value="2500">Under $2,500</option>
+            <option value="3000">Under $3,000</option>
+            <option value="4000">Under $4,000</option>
+          </select>
+        </div>
+        <button class="listings-search-btn" id="searchBtn" aria-label="Search">
         <i class="fas fa-search"></i> Search
       </button>
     </div>
@@ -425,6 +438,8 @@ function syncControls() {
   const ss = document.getElementById('sortSelect');
   if (si) si.value = activeSearch;
   if (bf) bf.value = activeBeds;
+  const mrf = document.getElementById('maxRentFilter');
+  if (mrf) mrf.value = activeMaxRent;
   if (ss) ss.value = sortBy;
   document.querySelectorAll('.filter-pill[data-filter]').forEach(pill => {
     pill.classList.toggle('active', pill.dataset.filter === activeType);
@@ -895,6 +910,7 @@ function setupFilters() {
   document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   document.getElementById('searchInput').addEventListener('input', debouncedSearch);
   document.getElementById('bedroomsFilter').addEventListener('change', e => { activeBeds = e.target.value; refreshResults(); });
+  document.getElementById('maxRentFilter').addEventListener('change', e => { activeMaxRent = e.target.value; refreshResults(); });
   document.getElementById('sortSelect').addEventListener('change', e => { sortBy = e.target.value; refreshResults(); });
 
   document.getElementById('moreFiltersBtn').addEventListener('click', e => {
