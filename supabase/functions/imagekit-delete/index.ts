@@ -5,16 +5,16 @@
 // Required secrets (same as imagekit-upload):
 //   IMAGEKIT_PRIVATE_KEY  →  your ImageKit private key
 //
-// This function:
-//   1. Verifies the caller has an authenticated Supabase session
-//   2. Verifies the fileId belongs to a property owned by the caller
-//      (or the caller is an admin) — prevents cross-landlord deletion
-//   3. Calls the ImageKit Delete API server-side (private key never
-//      exposed to the browser)
-//   4. Returns { success: true } or { success: false, error }
+// Phase 3b update (2026-04-22):
+//   • Ownership check now consults the new `property_photos` table
+//     first via the SECURITY INVOKER RPC `delete_property_photo_by_file_id`.
+//     Falls back to the legacy `properties.photo_file_ids` array
+//     check during the transition window.
+//   • The DB row is removed inside the RPC before the CDN call so
+//     the property_photos table stays consistent even if the CDN
+//     delete is retried.
 //
-// Deletion is best-effort: a CDN failure does NOT block the UI.
-// Callers should fire-and-forget and not surface errors to landlords.
+// Deletion remains best-effort: a CDN failure does NOT block the UI.
 // ============================================================
 
 import { corsResponse } from '../_shared/cors.ts';
@@ -41,42 +41,71 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: 'fileId is required' }, 400);
     }
 
-    // ── Ownership check ───────────────────────────────────────
-    // Verify that this fileId lives in a property owned by the caller.
-    // Admins bypass the ownership filter.
-    const { data: adminRow } = await supabase
-      .from('admin_roles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // ── Ownership + DB row removal via RPC (Phase 3b) ─────────
+    // The RPC raises if the caller doesn't own the parent property.
+    // It returns true if a row was deleted, false if it didn't exist.
+    const { data: rpcDeleted, error: rpcErr } = await supabase.rpc(
+      'delete_property_photo_by_file_id',
+      { p_file_id: fileId }
+    );
 
-    const isAdmin = !!adminRow;
+    let isOwner = rpcDeleted === true;
 
-    if (!isAdmin) {
-      // cs = "contains" operator — checks if the TEXT[] column contains the value.
-      const { data: owned, error: ownerErr } = await supabase
-        .from('properties')
+    if (rpcErr) {
+      // RPC raised "Forbidden" or doesn't exist yet — fall back to the
+      // legacy ownership check against the array column.
+      const { data: adminRow } = await supabase
+        .from('admin_roles')
         .select('id')
-        .eq('landlord_id', user.id)
-        .filter('photo_file_ids', 'cs', JSON.stringify([fileId]))
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const isAdmin = !!adminRow;
+
+      if (!isAdmin) {
+        const { data: owned, error: ownerErr } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('landlord_id', user.id)
+          .filter('photo_file_ids', 'cs', JSON.stringify([fileId]))
+          .maybeSingle();
+
+        if (ownerErr || !owned) {
+          return jsonResponse({ success: false, error: 'Forbidden' }, 403);
+        }
+      }
+      isOwner = true;
+    }
+
+    // If the RPC returned false (no row found) AND the legacy check
+    // also returned no match, treat as forbidden to prevent enumeration.
+    if (!isOwner) {
+      const { data: adminRow } = await supabase
+        .from('admin_roles')
+        .select('id')
+        .eq('user_id', user.id)
         .maybeSingle();
 
-      if (ownerErr || !owned) {
-        // fileId not found on any property owned by this landlord.
-        // Return 403 to prevent enumeration of other landlords' files.
-        return jsonResponse({ success: false, error: 'Forbidden' }, 403);
+      if (!adminRow) {
+        const { data: legacyOwned } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('landlord_id', user.id)
+          .filter('photo_file_ids', 'cs', JSON.stringify([fileId]))
+          .maybeSingle();
+        if (!legacyOwned) {
+          return jsonResponse({ success: false, error: 'Forbidden' }, 403);
+        }
       }
     }
     // ── End ownership check ───────────────────────────────────
 
     const credentials = btoa(`${IMAGEKIT_PRIVATE_KEY}:`);
-    const ikRes = await fetch(`https://api.imagekit.io/v1/files/${encodeURIComponent(fileId)}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Basic ${credentials}` },
-    });
+    const ikRes = await fetch(
+      `https://api.imagekit.io/v1/files/${encodeURIComponent(fileId)}`,
+      { method: 'DELETE', headers: { Authorization: `Basic ${credentials}` } }
+    );
 
-    // ImageKit returns 204 No Content on success, 404 if already gone.
-    // Both are acceptable outcomes — treat 404 as success (idempotent).
+    // 204 = success, 404 = already gone — both are acceptable (idempotent).
     if (!ikRes.ok && ikRes.status !== 404) {
       const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
       return jsonResponse({ success: false, error: `ImageKit error: ${errText}` }, 502);

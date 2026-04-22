@@ -86,7 +86,13 @@ function fileToBase64(blob) {
  * @param {function} options.onProgress   - callback(percent: 0–100)
  * @param {string}   options.supabaseUrl
  * @param {string}   options.anonKey
- * @returns {Promise<{url: string, fileId: string|null}>}
+ * @param {string}   [options.propertyId] - When provided, the edge function
+ *                                          will insert a row into the new
+ *                                          property_photos table and return
+ *                                          its id as `photoId` (Phase 3b).
+ * @param {string}   [options.altText]    - Optional alt-text stored on the row
+ * @param {string}   [options.caption]    - Optional caption stored on the row
+ * @returns {Promise<{url: string, fileId: string|null, photoId: string|null}>}
  */
 export async function uploadToImageKit(file, options = {}) {
   const {
@@ -95,6 +101,9 @@ export async function uploadToImageKit(file, options = {}) {
     supabaseUrl = CONFIG.SUPABASE_URL,
     anonKey     = CONFIG.SUPABASE_ANON_KEY,
     userToken:  preToken = null,   // Pre-fetched access token — skips getSession() call
+    propertyId  = null,
+    altText     = null,
+    caption     = null,
   } = options;
 
   // Resolve the authenticated user's JWT so the Edge Function can verify

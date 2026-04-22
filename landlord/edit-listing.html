@@ -835,8 +835,15 @@
 
       try {
         let doneCount = 0;
+        // Phase 3b: pass propertyId so the edge function inserts each
+        // upload directly into the property_photos table. The Direction A
+        // trigger then mirrors the change back into the legacy
+        // photo_urls / photo_file_ids arrays for any reader still on the
+        // old contract. We therefore stop writing the arrays from this
+        // page (see the .update() below).
         const newResults = await uploadMultipleToImageKit(pendingNewFiles, {
           folder:      `/properties/${propertyId}`,
+          propertyId,
           supabaseUrl: CONFIG.SUPABASE_URL,
           anonKey:     CONFIG.SUPABASE_ANON_KEY,
           userToken:   accessToken,
@@ -896,6 +903,14 @@
       return;
     }
 
+    // Phase 3b: photo_urls / photo_file_ids are now derived columns,
+    // synced by the property_photos triggers from the new table. We
+    // intentionally omit them from this UPDATE so that:
+    //   • Newly uploaded photos (already inserted into property_photos
+    //     by the imagekit-upload edge function) are not clobbered.
+    //   • Removed photos (deleted via the imagekit-delete edge
+    //     function, which calls delete_property_photo_by_file_id) are
+    //     reflected by the Direction A trigger automatically.
     let updateQuery = supabase
       .from('properties')
       .update({
@@ -936,8 +951,7 @@
           cooling_type        : v('coolingType') || null,
           description         : v('description'),
           showing_instructions: v('showingInstructions') || null,
-          photo_urls          : finalPhotoUrls,
-          photo_file_ids      : finalPhotoFileIds,
+          // photo_urls / photo_file_ids intentionally omitted — see Phase 3b note above.
           updated_at          : new Date().toISOString()
       })
       .eq('id', propertyId);
