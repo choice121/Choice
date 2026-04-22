@@ -613,38 +613,79 @@ function renderWrongAccount(userEmail, requestedAppId, message){
 }
 
 // ── Magic link session resolver ───────────────────────────────────────────────
-// Supabase magic links come in two forms:
-//   Implicit flow:  URL hash contains #access_token=...
-//   PKCE flow:      URL query contains ?code=...
-// In both cases we rely on onAuthStateChange firing SIGNED_IN once the
-// exchange/verification completes. Timeout of 12s for slow connections.
-function waitForMagicLinkSession(sb){
-  return new Promise(async resolve=>{
-    const hash=window.location.hash||'';
-    const qs=window.location.search||'';
-    const hasMagicToken=hash.includes('access_token')||qs.includes('code=');
-    if(!hasMagicToken){resolve(null);return;}
+// Magic links land here in THREE possible forms; the client must handle all
+// three explicitly because supabase-js with flowType:'pkce' will ONLY
+// auto-process `?code=` and ignores hash-fragment tokens.
+//
+//   1. Hash tokens   #access_token=...&refresh_token=...   (admin.generateLink — our send-magic-link)
+//   2. token_hash    ?token_hash=...&type=magiclink         (alt admin format / manual links)
+//   3. PKCE code     ?code=...                              (signInWithOtp fallback in login.html)
+//
+// The session must be established BEFORE we read getSession(), otherwise the
+// portal sees no session and bounces the user back to the login page.
+async function waitForMagicLinkSession(sb){
+  const hashStr = (window.location.hash || '').replace(/^#/, '');
+  const hashParams = new URLSearchParams(hashStr);
+  const qsParams   = new URLSearchParams(window.location.search || '');
 
-    // Race fix: if SDK already exchanged the token before our listener
-    // attached, getSession() will return the new session immediately.
+  const accessToken  = hashParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token');
+  const tokenHash    = qsParams.get('token_hash');
+  const tokenType    = qsParams.get('type');
+  const codeParam    = qsParams.get('code');
+  const errParam     = hashParams.get('error') || qsParams.get('error');
+
+  // Surface Supabase error redirects (expired link, etc.) instead of silently
+  // bouncing to login with no explanation.
+  if(errParam){
+    const desc = hashParams.get('error_description') || qsParams.get('error_description') || errParam;
+    console.warn('Magic link error:', desc);
+    return {error: decodeURIComponent(desc.replace(/\+/g,' '))};
+  }
+
+  // CASE 1: Hash-fragment tokens from admin.generateLink (our Edge Function).
+  // PKCE-mode supabase-js does NOT auto-process these; set them manually.
+  if(accessToken && refreshToken){
     try{
-      const {data:{session:existing}}=await sb.auth.getSession();
-      if(existing){resolve(existing);return;}
+      const {data, error} = await sb.auth.setSession({access_token: accessToken, refresh_token: refreshToken});
+      if(!error && data && data.session) return data.session;
+      if(error) console.warn('setSession from hash failed:', error.message);
+    }catch(e){ console.warn('setSession threw:', e); }
+  }
+
+  // CASE 2: token_hash style (alt admin link format).
+  if(tokenHash && tokenType){
+    try{
+      const {data, error} = await sb.auth.verifyOtp({token_hash: tokenHash, type: tokenType});
+      if(!error && data && data.session) return data.session;
+      if(error) console.warn('verifyOtp failed:', error.message);
+    }catch(e){ console.warn('verifyOtp threw:', e); }
+  }
+
+  // CASE 3: PKCE ?code= from signInWithOtp fallback. supabase-js
+  // detectSessionInUrl handles this asynchronously on init — wait for it.
+  if(codeParam){
+    // Maybe already exchanged before our listener attaches:
+    try{
+      const {data:{session:existing}} = await sb.auth.getSession();
+      if(existing) return existing;
     }catch(_){}
 
-    let sub=null;
-    const t=setTimeout(()=>{try{sub&&sub.unsubscribe();}catch(_){}resolve(null);},15000);
-    const {data}=sb.auth.onAuthStateChange((event,session)=>{
-      // Accept INITIAL_SESSION too — fires once on listener attach if a
-      // session was already established by detectSessionInUrl.
-      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')&&session){
-        clearTimeout(t);
-        try{data.subscription.unsubscribe();}catch(_){}
-        resolve(session);
-      }
+    return new Promise(resolve => {
+      let sub=null;
+      const t=setTimeout(()=>{ try{sub&&sub.unsubscribe();}catch(_){} resolve(null); }, 15000);
+      const {data} = sb.auth.onAuthStateChange((event, session) => {
+        if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION') && session){
+          clearTimeout(t);
+          try{ data.subscription.unsubscribe(); }catch(_){}
+          resolve(session);
+        }
+      });
+      sub = data.subscription;
     });
-    sub=data.subscription;
-  });
+  }
+
+  return null;
 }
 
 // ── CSP-safe delegated event handlers ────────────────────────────────────────
@@ -689,23 +730,35 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const sb=getSB();
   const requestedAppId=getRequestedAppId();
 
-  // If a magic link token is in the hash, wait for it to be exchanged before
-  // reading the session — avoids reading a stale/old session.
-  const magicSession=await waitForMagicLinkSession(sb);
+  // If a magic link token is in the hash/query, exchange it before reading
+  // the session — otherwise we read an empty session and bounce to login.
+  const magicResult = await waitForMagicLinkSession(sb);
 
-  // Clean hash and PKCE code from the URL so refreshes don't re-process the token.
-  if(magicSession){
-    const cleanUrl=window.location.pathname+(requestedAppId?'?app_id='+encodeURIComponent(requestedAppId):'');
-    history.replaceState(null,'',cleanUrl);
+  // Always strip auth params from the URL so a refresh doesn't re-replay them.
+  const hadAuthInUrl = !!(window.location.hash || /[\?&](code|token_hash|error)=/.test(window.location.search));
+  if(hadAuthInUrl){
+    const cleanUrl = window.location.pathname + (requestedAppId ? '?app_id='+encodeURIComponent(requestedAppId) : '');
+    history.replaceState(null, '', cleanUrl);
   }
 
-  const {data:{session}}=await sb.auth.getSession();
-  const activeSession=magicSession||session;
+  // Magic link returned an error (expired / already used / etc.) — show it
+  // on the login page instead of looping silently.
+  if(magicResult && magicResult.error){
+    const loginUrl = new URL('/tenant/login.html', window.location.origin);
+    if(requestedAppId) loginUrl.searchParams.set('app_id', requestedAppId);
+    loginUrl.searchParams.set('link_error', magicResult.error);
+    location.href = loginUrl.pathname + loginUrl.search;
+    return;
+  }
+
+  const magicSession = (magicResult && !magicResult.error) ? magicResult : null;
+  const {data:{session}} = await sb.auth.getSession();
+  const activeSession = magicSession || session;
 
   if(!activeSession){
-    const loginUrl=new URL('/tenant/login.html',window.location.origin);
-    if(requestedAppId)loginUrl.searchParams.set('app_id',requestedAppId);
-    location.href=loginUrl.pathname+loginUrl.search;
+    const loginUrl = new URL('/tenant/login.html', window.location.origin);
+    if(requestedAppId) loginUrl.searchParams.set('app_id', requestedAppId);
+    location.href = loginUrl.pathname + loginUrl.search;
     return;
   }
 

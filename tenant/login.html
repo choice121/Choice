@@ -412,6 +412,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const appId = params.get('app_id') || sessionStorage.getItem('pendingPortalAppId') || '';
   const emailParam = params.get('email') || '';
   const needEmail = params.get('need_email') === '1';
+  const linkError = params.get('link_error') || '';
+
+  // Surface magic-link errors (expired/used links) bounced back from the portal.
+  if (linkError) {
+    const fe = document.getElementById('field-error');
+    if (fe) {
+      fe.textContent = 'Your sign-in link is no longer valid: ' + linkError + ' Please request a new one below.';
+      fe.classList.add('visible');
+    }
+  }
   _pendingPortalAppId = appId;
   if (appId) sessionStorage.setItem('pendingPortalAppId', appId);
   if (emailParam) document.getElementById('email').value = emailParam;
