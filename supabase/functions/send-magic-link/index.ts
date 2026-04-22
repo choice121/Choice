@@ -99,7 +99,8 @@ serve(async (req) => {
     });
   }
 
-  const redirectTo = body.redirectTo || "https://choice-properties-site.pages.dev/tenant/portal.html";
+  const SITE_URL = (Deno.env.get("SITE_URL") || "https://choice-properties-site.pages.dev").replace(/\/$/, "");
+  const redirectTo = body.redirectTo || `${SITE_URL}/tenant/portal.html`;
 
   try {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -110,7 +111,21 @@ serve(async (req) => {
       options: { redirectTo },
     });
     if (error) throw error;
-    const actionLink = data?.properties?.action_link;
+
+    // Build a cross-browser-safe link that points at our own callback page
+    // and uses the token_hash flow (no PKCE verifier required, so the link
+    // works when opened in a different browser than the one that requested it).
+    const tokenHash = data?.properties?.hashed_token;
+    let actionLink: string;
+    if (tokenHash) {
+      const cb = new URL(`${SITE_URL}/auth/callback.html`);
+      cb.searchParams.set("token_hash", tokenHash);
+      cb.searchParams.set("type", "magiclink");
+      cb.searchParams.set("next", redirectTo);
+      actionLink = cb.toString();
+    } else {
+      actionLink = data?.properties?.action_link;
+    }
     if (!actionLink) throw new Error("no_action_link");
 
     await sendEmail({

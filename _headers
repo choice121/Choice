@@ -25,6 +25,9 @@
 /tenant/*.html
   Cache-Control: no-cache, no-store, must-revalidate
 
+/auth/*
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /admin/*.html
   Cache-Control: no-cache, no-store, must-revalidate
 

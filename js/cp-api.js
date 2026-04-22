@@ -27,7 +27,20 @@ function sb() {
       );
     }
     _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true }
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        // PKCE returns a refresh token. Without flowType, the SDK falls back to
+        // implicit on hash-callback paths (notably password recovery), and
+        // implicit tokens have no refresh — that's what was causing landlord
+        // sessions to silently expire after 1 hour.
+        flowType: 'pkce',
+        // detectSessionInUrl is intentionally OFF here. The shared landlord
+        // client should not auto-consume URL fragments, because the landlord
+        // login page handles the recovery hash explicitly with setSession().
+        // (Default storageKey kept so existing logged-in users aren't kicked.)
+        detectSessionInUrl: false,
+      }
     });
     // I-406: autoRefreshToken fires on every page load. When a stored refresh token
     // has expired or is invalid (e.g. after a long absence), the Supabase client

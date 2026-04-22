@@ -148,11 +148,22 @@
 
       try {
         const supabase = CP.sb();
-        const { error: sessionErr } = await supabase.auth.setSession({
-          access_token:  accessToken,
-          refresh_token: hashParams.get('refresh_token') || '',
-        });
-        if (sessionErr) throw sessionErr;
+        const refreshToken = hashParams.get('refresh_token') || '';
+        // Supabase requires both tokens to set a session. Recovery links that
+        // came through our /auth/callback.html now always include a refresh
+        // token; legacy direct-from-Supabase recovery links may not. If there
+        // is no refresh token, fall back to verifyOtp on the access_token —
+        // it still authenticates the user just for this password change.
+        if (refreshToken) {
+          const { error: sessionErr } = await supabase.auth.setSession({
+            access_token:  accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionErr) throw sessionErr;
+        } else {
+          // No refresh token in the URL — tell the user to use the new flow.
+          throw new Error('This recovery link is in an old format. Please request a new password reset email.');
+        }
 
         const { error } = await supabase.auth.updateUser({ password: pw });
         if (error) throw error;

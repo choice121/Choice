@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="noindex, nofollow">
+<title>Signing you in… — Choice Properties</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260428">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<style>
+  body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f7;color:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06);padding:40px 32px;max-width:420px;width:100%;text-align:center}
+  .brand{font-size:14px;font-weight:700;color:#1e3a8a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:18px}
+  .spin{display:inline-block;width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#1e3a8a;border-radius:50%;animation:spin .7s linear infinite;margin:8px auto 18px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h1{font-size:18px;margin:0 0 8px;color:#1a1a2e}
+  p{font-size:14px;color:#6b7280;line-height:1.55;margin:0 0 16px}
+  .err{display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:14px;font-size:13px;text-align:left;margin-top:8px}
+  .err.visible{display:block}
+  .btn{display:inline-block;margin-top:18px;padding:10px 20px;background:#1e3a8a;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600}
+  .btn:hover{opacity:.9}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Choice Properties</div>
+  <div id="working">
+    <div class="spin"></div>
+    <h1>Signing you in…</h1>
+    <p>Verifying your secure link. This takes just a moment.</p>
+  </div>
+  <div id="failed" style="display:none">
+    <h1>This sign-in link can't be used</h1>
+    <p id="errMsg">Your link may have expired, already been used, or been opened by an automated email scanner.</p>
+    <div class="err" id="errDetail"></div>
+    <a class="btn" id="retryLink" href="/tenant/login.html">Request a new link</a>
+  </div>
+</div>
+
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
+'use strict';
+
+// Wait for the deferred scripts (config.js + supabase.min.js) to attach to window.
+async function waitForReady(maxMs) {
+  const end = Date.now() + (maxMs || 8000);
+  while (Date.now() < end) {
+    if (window.supabase && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) return true;
+    await new Promise(r => setTimeout(r, 60));
+  }
+  return false;
+}
+
+function getQuery() {
+  // Supabase may return params either in the query string OR in the URL hash
+  // depending on the verification path. Read both and merge.
+  const q = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+  const get = (k) => q.get(k) || h.get(k);
+  return {
+    token_hash: get('token_hash'),
+    token: get('token'),
+    type: get('type') || 'magiclink',
+    code: get('code'),
+    access_token: get('access_token'),
+    refresh_token: get('refresh_token'),
+    next: get('next') || '',
+    error: get('error') || get('error_code'),
+    error_description: get('error_description'),
+  };
+}
+
+// Only allow same-origin relative paths for `next`. Reject anything that
+// could be an open-redirect vector (absolute URLs, scheme-relative, etc).
+function safeNext(next, fallback) {
+  if (!next) return fallback;
+  try {
+    if (!next.startsWith('/') || next.startsWith('//')) return fallback;
+    // Quick smell test: must look like a real path on this origin.
+    const u = new URL(next, window.location.origin);
+    if (u.origin !== window.location.origin) return fallback;
+    return u.pathname + u.search + u.hash;
+  } catch { return fallback; }
+}
+
+function showError(message, detail) {
+  document.getElementById('working').style.display = 'none';
+  document.getElementById('failed').style.display = '';
+  if (message) document.getElementById('errMsg').textContent = message;
+  if (detail) {
+    const d = document.getElementById('errDetail');
+    d.textContent = detail;
+    d.classList.add('visible');
+  }
+}
+
+(async () => {
+  const params = getQuery();
+
+  // Surface explicit Supabase errors immediately (e.g. ?error=access_denied&error_description=otp_expired)
+  if (params.error) {
+    const human =
+      /expired/i.test(params.error_description || params.error) ? 'Your sign-in link has expired. Please request a new one.' :
+      /already.?used|used/i.test(params.error_description || '') ? 'This link has already been used. For security, each link works only once.' :
+      'Your sign-in link could not be verified.';
+    const fallback = '/tenant/login.html?link_error=' + encodeURIComponent(params.error_description || params.error);
+    document.getElementById('retryLink').href = fallback;
+    return showError(human, params.error_description || params.error);
+  }
+
+  const ready = await waitForReady(8000);
+  if (!ready) {
+    return showError('We could not load the sign-in page. Please refresh and try again.', 'Supabase SDK failed to initialize.');
+  }
+
+  const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false, // we handle the URL manually below
+      // Default storageKey on purpose: must match the key used by every other
+      // page (tenant login/portal, landlord, admin) so the session we just
+      // created is visible everywhere without forcing existing users to
+      // sign in again.
+    }
+  });
+
+  let session = null;
+  try {
+    if (params.token_hash) {
+      // Preferred: cross-browser-safe token_hash flow.
+      const { data, error } = await sb.auth.verifyOtp({
+        token_hash: params.token_hash,
+        type: params.type || 'magiclink',
+      });
+      if (error) throw error;
+      session = data.session;
+    } else if (params.code) {
+      // PKCE fallback (only works in the same browser that requested the link).
+      const { data, error } = await sb.auth.exchangeCodeForSession(params.code);
+      if (error) throw error;
+      session = data.session;
+    } else if (params.access_token && params.refresh_token) {
+      // Implicit-flow fallback (legacy magic links / recovery hash).
+      const { data, error } = await sb.auth.setSession({
+        access_token: params.access_token,
+        refresh_token: params.refresh_token,
+      });
+      if (error) throw error;
+      session = data.session;
+    } else {
+      throw new Error('No verification token found in the link.');
+    }
+  } catch (err) {
+    const msg = (err?.message || '').toLowerCase();
+    const human =
+      msg.includes('expired') ? 'Your sign-in link has expired. Please request a new one.' :
+      msg.includes('used')    ? 'This link has already been used. For security, each link works only once.' :
+      msg.includes('invalid') ? 'This link is no longer valid. Please request a new one.' :
+                                'Your sign-in link could not be verified.';
+    return showError(human, err?.message || String(err));
+  }
+
+  if (!session) {
+    return showError('Sign-in completed but no session was returned. Please try again.');
+  }
+
+  // Recovery links (password reset) shouldn't drop the user on the portal.
+  // Send them to the landlord login page in recovery mode.
+  if (params.type === 'recovery') {
+    const url = '/landlord/login.html#access_token=' +
+      encodeURIComponent(session.access_token) +
+      '&refresh_token=' + encodeURIComponent(session.refresh_token || '') +
+      '&type=recovery';
+    location.replace(url);
+    return;
+  }
+
+  // Default redirect = tenant portal. Honor `?next=` if it's a same-origin path.
+  const fallback = '/tenant/portal.html';
+  const dest = safeNext(params.next, fallback);
+  location.replace(dest);
+})();
+</script>
+</body>
+</html>
