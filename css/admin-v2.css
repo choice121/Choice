@@ -6,6 +6,24 @@
    of main.css for /admin pages. Inline SVG icon sprite is in markup.
    ===================================================================== */
 
+/* ---------------------------------------------------------------------
+   Accessibility — honor user motion preferences (Phase 1)
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot,
+  .skeleton,
+  .toast,
+  .ptr { animation: none !important; }
+  .action-card,
+  .btn,
+  .fab,
+  .tab,
+  .nav-item,
+  .sheet,
+  .sheet-backdrop,
+  .segment button { transition: none !important; }
+}
+
 :root {
   /* Surfaces */
   --bg:        #0a0f1e;

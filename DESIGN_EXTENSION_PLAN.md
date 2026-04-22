@@ -408,19 +408,17 @@ For every page touched in the phase, verify in **Chrome, Safari (iOS preferred),
 
 ---
 
-## 7. Open decisions for user
+## 7. Locked decisions (approved by project owner, April 22 2026)
 
-Before starting Phase 1, please confirm:
-
-1. **Theme split:** confirm dark for admin, light for landlord/tenant, light for auth pages. (Default: yes.)
-2. **Phase 7 (public marketing):** in scope of this plan or explicitly out of scope? (Default: out of scope, separate approval required.)
-3. **Cache-bust scheme:** date-based `?v=YYYYMMDD` (default) or git-sha-based?
-4. **`count.html` and `health.html`:** internal monitoring or user-facing? (Determines whether they get the design system in Phase 6.)
+1. **Theme split:** dark for admin; light for landlord, tenant, and all auth pages.
+2. **Phase 7 (public marketing):** OUT OF SCOPE of this plan. Requires a separate, explicit approval before any public-page work begins.
+3. **Cache-bust scheme:** date-based `?v=YYYYMMDD` using the date the file is modified.
+4. **`count.html` and `health.html`:** internal/diagnostic, EXEMPT from the design system. Document as exempt in `ARCHITECTURE.md`.
 
 ---
 
 ## 8. Sign-off
 
-This plan is safe to execute provided every rule in §0 is followed and every phase is merged independently. The first executable step is **Phase 1**, awaiting user approval.
+This plan is safe to execute provided every rule in §0 is followed and every phase is merged independently.
 
-**Awaiting:** explicit "approved, start Phase 1" from project owner.
+**Status:** APPROVED — Phase 1 in progress.

@@ -14,87 +14,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/admin-v2.css?v=20260422">
+<link rel="stylesheet" href="/css/admin-v2.css?v=20260423">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/admin-shell.js?v=20260422"></script>
+<script defer src="/js/admin-chrome.js?v=20260423"></script>
+<script defer src="/js/admin-shell.js?v=20260423"></script>
 </head>
-<body>
-
-<!-- ───── Inline SVG icon sprite (loaded once) ───── -->
-<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
-  <defs>
-    <symbol id="i-home"     viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></symbol>
-    <symbol id="i-apps"     viewBox="0 0 24 24"><path d="M14 3h7v7h-7zM3 3h7v7H3zM14 14h7v7h-7zM3 14h7v7H3z"/></symbol>
-    <symbol id="i-leases"   viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></symbol>
-    <symbol id="i-property" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-3v-7H8v7H5a2 2 0 0 1-2-2z"/></symbol>
-    <symbol id="i-more"     viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></symbol>
-    <symbol id="i-bell"     viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
-    <symbol id="i-arrow"    viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></symbol>
-    <symbol id="i-back"     viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
-    <symbol id="i-search"   viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
-    <symbol id="i-clock"    viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
-    <symbol id="i-check"    viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
-    <symbol id="i-alert"    viewBox="0 0 24 24"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0M12 9v4M12 17h.01"/></symbol>
-    <symbol id="i-mail"     viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2"/><path d="M22 6l-10 7L2 6"/></symbol>
-    <symbol id="i-door"     viewBox="0 0 24 24"><path d="M3 21V3h12v18M15 21h6M15 12h.01M9 21V3"/></symbol>
-    <symbol id="i-list"     viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
-    <symbol id="i-user"     viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></symbol>
-    <symbol id="i-image"    viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol>
-    <symbol id="i-history"  viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2"/></symbol>
-    <symbol id="i-message"  viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
-    <symbol id="i-out"      viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
-    <symbol id="i-refresh"  viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
-  </defs>
-</svg>
+<body data-page-title="Dashboard" data-page-sub="Live overview">
 
 <div class="app">
-
-  <!-- ───── Sidebar (tablet+) ───── -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <div class="logo">CP</div>
-      <div>
-        <div class="name">Choice Properties</div>
-        <div class="sub">Admin</div>
-      </div>
-    </div>
-    <div class="nav-section">Overview</div>
-    <a class="nav-item" href="dashboard.html" data-nav="dashboard.html"><svg class="i"><use href="#i-home"/></svg> Dashboard</a>
-    <div class="nav-section">Applications</div>
-    <a class="nav-item" href="applications.html" data-nav="applications.html"><svg class="i"><use href="#i-apps"/></svg> Applications</a>
-    <a class="nav-item" href="leases.html" data-nav="leases.html"><svg class="i"><use href="#i-leases"/></svg> Leases</a>
-    <a class="nav-item" href="move-ins.html" data-nav="move-ins.html"><svg class="i"><use href="#i-door"/></svg> Move-ins</a>
-    <div class="nav-section">Properties</div>
-    <a class="nav-item" href="properties.html" data-nav="properties.html"><svg class="i"><use href="#i-property"/></svg> Properties</a>
-    <a class="nav-item" href="listings.html"   data-nav="listings.html"><svg class="i"><use href="#i-list"/></svg> Listings</a>
-    <a class="nav-item" href="landlords.html"  data-nav="landlords.html"><svg class="i"><use href="#i-user"/></svg> Landlords</a>
-    <div class="nav-section">Communications</div>
-    <a class="nav-item" href="messages.html"   data-nav="messages.html"><svg class="i"><use href="#i-message"/></svg> Messages</a>
-    <a class="nav-item" href="email-logs.html" data-nav="email-logs.html"><svg class="i"><use href="#i-mail"/></svg> Email Logs</a>
-    <div class="nav-section">Admin</div>
-    <a class="nav-item" href="audit-log.html"        data-nav="audit-log.html"><svg class="i"><use href="#i-history"/></svg> Audit Log</a>
-    <a class="nav-item" href="watermark-review.html" data-nav="watermark-review.html"><svg class="i"><use href="#i-image"/></svg> Watermark Review</a>
-    <div class="sidebar-footer">
-      <div class="muted text-xs" id="admin-name" style="margin-bottom:8px">Loading…</div>
-      <button class="btn btn-ghost btn-block btn-sm" data-action="sign-out"><svg class="i i-sm"><use href="#i-out"/></svg> Sign Out</button>
-    </div>
-  </aside>
-
-  <!-- ───── App bar ───── -->
-  <header class="appbar">
-    <div style="flex:1;min-width:0">
-      <div class="appbar-title">Dashboard</div>
-      <div class="appbar-sub" id="greeting-sub">Live overview</div>
-    </div>
-    <div class="row-flex gap-2">
-      <span class="live-dot" title="Live updates"></span>
-      <button class="btn-icon" aria-label="Refresh" data-action="refresh"><svg class="i"><use href="#i-refresh"/></svg></button>
-    </div>
-  </header>
-
-  <!-- ───── Main content ───── -->
   <main class="app-content">
 
     <!-- Greeting -->
@@ -147,44 +76,18 @@
     </section>
 
   </main>
-
-  <!-- ───── Bottom tab bar (mobile) ───── -->
-  <nav class="tabbar">
-    <a class="tab" href="dashboard.html"   data-nav="dashboard.html"><svg class="i"><use href="#i-home"/></svg>Home</a>
-    <a class="tab" href="applications.html" data-nav="applications.html"><svg class="i"><use href="#i-apps"/></svg>Apps</a>
-    <a class="tab" href="leases.html"      data-nav="leases.html"><svg class="i"><use href="#i-leases"/></svg>Leases</a>
-    <a class="tab" href="properties.html"  data-nav="properties.html"><svg class="i"><use href="#i-property"/></svg>Property</a>
-    <a class="tab" href="#"                data-action="open-more"><svg class="i"><use href="#i-more"/></svg>More</a>
-  </nav>
-
 </div>
 
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
 (function(){
   'use strict';
-  const S = window.AdminShell;
-  if(!S){ console.error('AdminShell missing'); return; }
+  // NOTE: refresh + open-more actions are registered by admin-chrome.js.
+  // This page only handles its own data loading.
 
-  // Register data-action handlers
-  S.on('refresh', () => location.reload());
-  S.on('open-more', (target, e) => {
-    e.preventDefault();
-    S.openSheet({
-      title: 'More',
-      body: `
-        <div class="list">
-          <a class="list-row" href="move-ins.html"><div class="list-row-inner"><svg class="i"><use href="#i-door"/></svg><div class="row-body"><div class="row-title">Move-ins</div></div></div></a>
-          <a class="list-row" href="listings.html"><div class="list-row-inner"><svg class="i"><use href="#i-list"/></svg><div class="row-body"><div class="row-title">Listings</div></div></div></a>
-          <a class="list-row" href="landlords.html"><div class="list-row-inner"><svg class="i"><use href="#i-user"/></svg><div class="row-body"><div class="row-title">Landlords</div></div></div></a>
-          <a class="list-row" href="messages.html"><div class="list-row-inner"><svg class="i"><use href="#i-message"/></svg><div class="row-body"><div class="row-title">Messages</div></div></div></a>
-          <a class="list-row" href="email-logs.html"><div class="list-row-inner"><svg class="i"><use href="#i-mail"/></svg><div class="row-body"><div class="row-title">Email logs</div></div></div></a>
-          <a class="list-row" href="audit-log.html"><div class="list-row-inner"><svg class="i"><use href="#i-history"/></svg><div class="row-body"><div class="row-title">Audit log</div></div></div></a>
-          <a class="list-row" href="watermark-review.html"><div class="list-row-inner"><svg class="i"><use href="#i-image"/></svg><div class="row-body"><div class="row-title">Watermark review</div></div></div></a>
-          <div style="height:12px"></div>
-          <button class="btn btn-ghost btn-block" data-action="sign-out"><svg class="i i-sm"><use href="#i-out"/></svg> Sign out</button>
-        </div>`
-    });
-  });
+  function whenShellReady(cb){
+    if(window.AdminShell) return cb(window.AdminShell);
+    setTimeout(() => whenShellReady(cb), 20);
+  }
 
   function greetingFor(d){
     const h = d.getHours();
@@ -222,6 +125,8 @@
       </div>
     </a>`;
   }
+
+  let S; // populated when AdminShell is ready
 
   async function load(){
     const stamp = document.getElementById('greeting-stamp');
@@ -282,11 +187,21 @@
     stamp.textContent = 'Live — last refreshed at ' + S.fmtTime(new Date());
   }
 
-  document.addEventListener('cp:realtime', () => load().catch(()=>{}));
-  document.addEventListener('DOMContentLoaded', () => load().catch(err => {
-    console.error('[dashboard] load failed', err);
-    S.toast('Failed to load dashboard', 'error');
-  }));
+  whenShellReady(function(shell){
+    S = shell;
+    document.addEventListener('cp:realtime', () => load().catch(()=>{}));
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', () => load().catch(err => {
+        console.error('[dashboard] load failed', err);
+        S.toast('Failed to load dashboard', 'error');
+      }));
+    } else {
+      load().catch(err => {
+        console.error('[dashboard] load failed', err);
+        S.toast('Failed to load dashboard', 'error');
+      });
+    }
+  });
 })();
 </script>
 
