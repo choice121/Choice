@@ -1,17 +1,22 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  STATIC SITE — AI AGENTS AND TOOLS: READ BEFORE ANY ACTION  ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  DO NOT: run npm install, start a server, create config.js  ║
+  ║  DO NOT: connect to any local database or run migrations     ║
+  ║  DO NOT: configure workflows, runtimes, or environments      ║
+  ║                                                              ║
+  ║  DEPLOY PATH ONLY: edit → push to GitHub → Cloudflare Pages ║
+  ║  FULL RULES: .agents/instructions.md                        ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
-
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="theme-color" content="#006aff">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-  <link rel="preconnect" href="https://ik.imagekit.io" crossorigin>
-  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Property — Choice Properties</title>
   <meta name="description" content="View property details and apply online.">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
@@ -25,103 +30,50 @@
   <meta name="twitter:title"       id="twTitle"       content="Rental Property">
   <meta name="twitter:description" id="twDescription" content="View property details and apply online.">
   <meta name="twitter:image"       id="twImage"       content="">
-  <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://ik.imagekit.io" crossorigin>
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/assets/fontawesome.css">
-<noscript><link rel="stylesheet" href="/assets/fontawesome.css"></noscript>
-    <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-  <link rel="stylesheet" href="/css/property.css?v=1775137055043">
-  <!-- Styles in property.css -->
-<style>
-/* Mobile sticky Apply CTA — hidden on desktop */
-#mobile-apply-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#0a1628;border-top:1px solid rgba(255,255,255,.12);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,.35)}
-#mobile-apply-bar .mob-price{color:rgba(255,255,255,.65);font-size:.75rem;line-height:1.2}
-#mobile-apply-bar .mob-price strong{display:block;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em}
-#mobile-apply-bar .mob-btn{background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 22px;font-size:.875rem;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;cursor:pointer;flex-shrink:0;box-shadow:0 4px 16px rgba(0,106,255,.35);transition:background 160ms ease,box-shadow 160ms ease}
-#mobile-apply-bar .mob-btn:hover{background:var(--color-brand-hover);box-shadow:0 6px 22px rgba(0,106,255,.45)}
-@media(max-width:767px){#mobile-apply-bar.active{display:flex}body.mob-bar-active{padding-bottom:80px}}
-</style>
-<script defer src="/config.js"></script>
+  <noscript><link rel="stylesheet" href="/assets/fontawesome.css"></noscript>
+  <link rel="stylesheet" href="/css/cp-design.css?v=20260424">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260424">
+  <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
+  <style>
+    /* ── CRITICAL CSS — above-fold paint for property.html ───────────────────
+       Mobile sticky Apply CTA + minimum nav-slot reservation. The full
+       component sheet lives in cp-marketing.css under the
+       body[data-portal="public"][data-page="property"] scope.
+    ─────────────────────────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body[data-portal="public"]{
+      margin:0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:#f7f9fc;color:#1f2937;line-height:1.6;font-size:15.5px;
+    }
+    #site-nav{min-height:64px;display:block}
+    /* Mobile sticky Apply CTA — hidden on desktop, activated by JS at runtime */
+    #mobile-apply-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#0a1628;border-top:1px solid rgba(255,255,255,.12);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,.35)}
+    #mobile-apply-bar .mob-price{color:rgba(255,255,255,.65);font-size:.75rem;line-height:1.2}
+    #mobile-apply-bar .mob-price strong{display:block;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em}
+    #mobile-apply-bar .mob-btn{background:#006aff;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-size:.875rem;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;cursor:pointer;flex-shrink:0;box-shadow:0 4px 16px rgba(0,106,255,.35);transition:background 160ms ease,box-shadow 160ms ease}
+    #mobile-apply-bar .mob-btn:hover{background:#0054cc;box-shadow:0 6px 22px rgba(0,106,255,.45)}
+    @media(max-width:767px){#mobile-apply-bar.active{display:flex}body.mob-bar-active{padding-bottom:80px}}
+  </style>
+<script defer src="/config.js?v=20260424"></script>
 <script defer src="/js/supabase.min.js"></script>
-<script type="module" src="/js/cp-api.js"></script>
-<script defer src="/js/components.js"></script>
+<script type="module" src="/js/cp-api.js?v=20260424"></script>
+<script defer src="/js/components.js?v=20260424"></script>
 </head>
-<body>
+<body data-portal="public" data-page="property">
 
-<!-- ── Mobile Drawer Overlay ── -->
-
-<div id="site-nav" data-server-injected="1"><div class="nav-drawer-overlay" id="drawerOverlay"></div>
-
-<!-- ── Mobile Drawer ── -->
-<nav class="nav-drawer" id="navDrawer">
-  <div class="nav-drawer-header">
-    <a href="/index.html" class="nav-logo">
-      <div class="nav-logo-emblem">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
-          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
-        </svg>
-      </div>
-      <div class="nav-logo-text-wrap">
-        <div class="nav-logo-name">Choice Properties</div>
-        <div class="nav-logo-tagline">Rental Marketplace</div>
-      </div>
-    </a>
-    <button class="nav-drawer-close" id="drawerClose" aria-label="Close menu">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-  <div class="nav-drawer-body">
-    <a href="/listings.html" class="nav-drawer-link" data-nav-path="/listings.html"><i class="fas fa-home"></i> Browse Listings</a>
-    <a href="/how-to-apply.html" class="nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
-    <a href="/faq.html" class="nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
-    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track My Application</a>    <a href="/landlord/register.html" class="nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
-    <a href="/admin/login.html" class="nav-drawer-link" data-nav-path="/admin/login.html"><i class="fas fa-user-shield"></i> Admin Portal</a>    <div class="nav-drawer-divider"></div>
-    <a href="/how-it-works.html" class="nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
-    <a href="/about.html" class="nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
-  </div>
-  <div class="nav-drawer-cta">
-    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
-  </div>
-  <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="mailto:support@choiceproperties.com">support@choiceproperties.com</a></div>
-</nav>
-
-<!-- ── Main Navigation ── -->
-<nav class="nav" id="mainNav">
-  <div class="nav-inner">
-    <a href="/index.html" class="nav-logo">
-      <div class="nav-logo-emblem">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
-          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
-        </svg>
-      </div>
-      <div class="nav-logo-text-wrap">
-        <div class="nav-logo-name">Choice Properties</div>
-        <div class="nav-logo-tagline">Rental Marketplace</div>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="/listings.html" class="nav-link" data-nav-path="/listings.html">Browse Listings</a>
-      <a href="/how-to-apply.html" class="nav-link" data-nav-path="/how-to-apply.html">How to Apply</a>
-      <a href="/faq.html" class="nav-link" data-nav-path="/faq.html">FAQ</a>
-      <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
-        <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
-      </a>
-      <a href="/landlord/register.html" class="nav-link nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
-      <a href="/admin/login.html" class="nav-link nav-link--admin" data-nav-path="/admin/login.html">Admin Portal</a>
-    </div>
-
-    <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navDrawer">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-</nav>
-</div>
+<!-- ── Site Navigation (hydrated from /components/nav.html by components.js) ── -->
+<div id="site-nav"></div>
 
 <!-- ── Gallery Mosaic ── -->
-
 <div class="gallery-mosaic skeleton-loading" id="gallery">
   <!-- Main large panel -->
   <div class="mosaic-main" id="mosaicMain">
@@ -148,7 +100,6 @@
 <div class="gallery-strip" id="galleryStrip" role="list" aria-label="Property photos"></div>
 
 <!-- ── Lightbox ── -->
-
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Property photo gallery">
   <!-- Header: counter + close -->
   <div class="lightbox-header">
@@ -170,7 +121,6 @@
 </div>
 
 <!-- ── Detail Content ── -->
-
 <div class="property-detail">
   <div class="container">
     <div class="detail-layout">
@@ -226,7 +176,7 @@
       <div class="detail-tab-panel active" id="panelAmenities" role="tabpanel" aria-labelledby="tabAmenities">
         <div class="amenities-grid" id="amenitiesGrid"></div>
         <div id="appliancesSection" style="display:none;margin-top:20px">
-          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Appliances</div>
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Appliances</div>
           <div class="amenities-grid" id="appliancesGrid"></div>
         </div>
       </div>
@@ -245,13 +195,13 @@
     <div class="detail-section">
       <div class="detail-section-title">Location</div>
       <div class="map-container" id="mapContainer">
-        <div id="mapFallback" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:var(--s-2);color:#8892a2">
+        <div id="mapFallback" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#8892a2">
           <i class="fas fa-map-marker-alt" style="font-size:32px;color:#2563eb"></i>
           <span id="mapAddressLabel" style="font-size:14px"></span>
         </div>
       </div>
       <p id="mapNeighborhood" style="font-size:13px;color:#8892a2;margin-top:8px;display:none">
-        <i class="fas fa-info-circle" style="color:var(--gold)"></i>
+        <i class="fas fa-info-circle" style="color:#c9a55c"></i>
         <span id="mapNeighborhoodText"></span>
       </p>
       <a href="#" class="map-open-btn" id="mapOpenBtn" target="_blank" rel="noopener noreferrer" style="display:none">
@@ -297,13 +247,13 @@
         </div>
         <div class="apply-cost-row" id="sidebarMoveInSpecialRow" style="display:none">
           <span class="apply-cost-label">Move-in Special</span>
-          <span class="apply-cost-value" id="sidebarMoveInSpecial" style="color:var(--color-success)">—</span>
+          <span class="apply-cost-value" id="sidebarMoveInSpecial" style="color:#10b981">—</span>
         </div>
         <a href="#" class="apply-btn" id="applyBtn">
           Apply Now <i class="fas fa-paper-plane" style="font-size:14px"></i>
         </a>
         <p class="apply-disclaimer">
-          <i class="fas fa-lock" style="color:var(--gold)"></i>
+          <i class="fas fa-lock" style="color:#c9a55c"></i>
           Application fee is due at time of submission and is non-refundable.
         </p>
         <a id="trackAppLink" href="/apply/?path=dashboard"
@@ -370,65 +320,8 @@
   </div><!-- /.container -->
 </div><!-- /.property-detail -->
 
-<!-- ── Footer ── -->
-
-<div id="site-footer" data-server-injected="1"><footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <div class="footer-logo">
-            <div class="footer-logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.92"/>
-                <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.9)"/>
-              </svg>
-            </div>
-            <div class="footer-logo-text">Choice Properties</div>
-          </div>
-          <p class="footer-desc">America's trusted rental marketplace. Connecting quality tenants with verified landlords across all 50 states.</p>
-          <a href="mailto:support@choiceproperties.com" class="footer-link" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:6px" data-cfg-email><i class="fas fa-envelope"></i> support@choiceproperties.com</a>
-          <div class="footer-link" style="display:inline-flex;align-items:center;gap:6px"><i class="fas fa-globe-americas"></i> Nationwide Rental Marketplace</div>
-        </div>
-        <div>
-          <div class="footer-col-title">Renters</div>
-          <a href="/listings.html" class="footer-link">Browse Listings</a>
-          <a href="/how-to-apply.html" class="footer-link">How to Apply</a>
-          <a href="/faq.html" class="footer-link">FAQ</a>
-          <a href="/tenant/portal.html" class="footer-link" target="_blank" rel="noopener noreferrer">Track My Application</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Landlords</div>
-          <a href="/landlord/register.html" class="footer-link">List a Property</a>
-          <a href="/landlord/login.html" class="footer-link">Landlord Login</a>
-          <a href="/how-it-works.html" class="footer-link">How It Works</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Company</div>
-          <a href="/about.html" class="footer-link">About Us</a>
-          <a href="/privacy.html" class="footer-link">Privacy Policy</a>
-          <a href="/terms.html" class="footer-link">Terms of Service</a>
-          <a href="mailto:support@choiceproperties.com" class="footer-link" data-cfg-email>Contact</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Legal &amp; Policies</div>
-          <a href="/rental-application-policy.html" class="footer-link">Rental Application Policy</a>
-          <a href="/application-credit-policy.html" class="footer-link">Application Credit Policy</a>
-          <a href="/holding-deposit-policy.html" class="footer-link">Holding Deposit Policy</a>
-          <a href="/fair-housing.html" class="footer-link">Fair Housing Policy</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span class="footer-legal">&copy; 2026 Choice Properties. All rights reserved.</span>
-        <span class="footer-eq"><i class="fas fa-home" aria-hidden="true"></i> Equal Housing Opportunity</span>
-        <div class="footer-bottom-links">
-          <a href="/privacy.html">Privacy</a>
-          <a href="/terms.html">Terms</a>
-          <a href="/fair-housing.html">Fair Housing</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-  </div>
+<!-- ── Site Footer (hydrated from /components/footer.html by components.js) ── -->
+<div id="site-footer"></div>
 
 <div class="toast-container" id="toastContainer"></div>
 
@@ -486,7 +379,7 @@ if (isPreview) {
     // Inject preview banner
     const banner = document.createElement('div');
     banner.id = 'previewBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#0a1628;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.2);font-family:var(--font-body,sans-serif);font-size:14px;font-weight:600';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#0a1628;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.2);font-family:"Inter",sans-serif;font-size:14px;font-weight:600';
     banner.innerHTML = `
       <span><i class="fas fa-eye" style="margin-right:6px"></i>Preview Mode — This listing has not been published yet.</span>
       <button onclick="history.back()" style="background:#0a1628;color:#f59e0b;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">← Back to Editor</button>`;
@@ -542,7 +435,7 @@ async function loadProperty(id) {
       const saveBtn = document.getElementById('savePropBtn');
       if (saveBtn) {
         if (savedIds.has(prop.id)) {
-          saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+          saveBtn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
         } else {
           saveBtn.innerHTML = '<i class="far fa-heart"></i> Save';
         }
@@ -559,11 +452,11 @@ function renderUnavailable(status) {
   document.getElementById('gallery').style.display = 'none';
   document.querySelector('.property-detail').innerHTML = `
     <div class="container" style="padding:80px 16px;text-align:center;max-width:540px;margin:0 auto">
-      <div style="font-size:48px;margin-bottom:16px;color:var(--color-brand)"><i class="fas fa-house-circle-exclamation"></i></div>
-      <h1 style="font-size:1.5rem;font-weight:700;color:var(--ink);margin-bottom:12px">
+      <div style="font-size:48px;margin-bottom:16px;color:var(--m-brand)"><i class="fas fa-house-circle-exclamation"></i></div>
+      <h1 style="font-size:1.5rem;font-weight:700;color:var(--m-ink);margin-bottom:12px">
         This listing is not currently available.
       </h1>
-      <p style="color:var(--muted);font-size:15px;margin-bottom:32px">
+      <p style="color:var(--m-muted);font-size:15px;margin-bottom:32px">
         ${status === 'rented'
           ? 'This property has already been rented.'
           : 'This listing has been paused or removed by the landlord.'}
@@ -675,25 +568,35 @@ function renderProperty(p) {
         "@type": "UnitPriceSpecification",
         "price": p.monthly_rent,
         "priceCurrency": "USD",
-        "unitText": "MONTH"
+        "unitCode": "MON",
+        "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
       }
     },
-    "numberOfRooms": p.bedrooms || undefined,
-    "numberOfBathroomsTotal": p.bathrooms || undefined,
-    "floorSize": p.sqft ? {
+    "numberOfRooms": p.bedrooms,
+    "numberOfBathroomsTotal": p.bathrooms,
+    "floorSize": p.square_footage ? {
       "@type": "QuantitativeValue",
-      "value": p.sqft,
+      "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
+    "leaseLength": p.lease_terms?.length ? p.lease_terms.join(", ") : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
-      "target": applyURL
+      "name": "Apply for Lease",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": applyURL,
+        "actionPlatform": [
+          "https://schema.org/DesktopWebPlatform",
+          "https://schema.org/MobileWebPlatform"
+        ]
+      }
     }
   });
   document.head.appendChild(sd);
 
-  // BreadcrumbList structured data
+  // BreadcrumbList — separate JSON-LD block, also recommended by Google
   const bcSd = document.createElement('script');
   bcSd.type = 'application/ld+json';
   bcSd.textContent = JSON.stringify({
@@ -868,7 +771,7 @@ function renderProperty(p) {
 
   // Sidebar
   document.getElementById('sidebarPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
-  document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:${availNow?'var(--color-success)':'var(--gold)'}"></i> ${availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date)}`;
+  document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:${availNow?'#10b981':'#c9a55c'}"></i> ${availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date)}`;
   document.getElementById('sidebarRent').textContent    = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}`;
   document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${p.security_deposit.toLocaleString()}` : 'Contact landlord';
   document.getElementById('sidebarFee').textContent     = (p.application_fee != null && p.application_fee > 0) ? `$${p.application_fee}` : 'Free';
@@ -946,7 +849,7 @@ function renderProperty(p) {
 
   // Save button state
   const saveBtn = document.getElementById('savePropBtn');
-  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 }
 
@@ -1466,7 +1369,7 @@ async function toggleSave(id, btn) {
     const { saved } = await SavedProperties.toggle(id);
     if (saved) {
       savedIds.add(id);
-      btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+      btn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
       showToast('Property saved!', 'success');
     } else {
       savedIds.delete(id);
@@ -1477,7 +1380,7 @@ async function toggleSave(id, btn) {
     if (savedIds.has(id)) {
       savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
     } else {
-      savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--crimson)"></i> Saved';
+      savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
       showToast('Property saved!', 'success');
     }
     localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
@@ -1486,7 +1389,6 @@ async function toggleSave(id, btn) {
   }
 }
 
-/* ── Mobile Drawer ── */
 /* ── Helpers ── */
 function setMeta(id, val) { document.getElementById(id)?.setAttribute('content', val); }
 function formatDate(str) {

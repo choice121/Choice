@@ -1,6 +1,6 @@
 # Phase 7 Batch 3 — Heavy Public Pages Migration
 
-**Status:** sub-phase 7.3.1 IN PROGRESS (April 22 2026)
+**Status:** sub-phases 7.3.1 + 7.3.2 + 7.3.3 CODE-COMPLETE (April 22–24 2026); 7.3.4 (legacy CSS deletion) blocked on Cloudflare branch-preview verification.
 **Scope:** migrate the three highest-traffic public pages off legacy CSS onto the unified `cp-design.css` + `cp-marketing.css` system.
 **Audience:** any developer (human or AI) picking up this work mid-stream. Read this first; you do not need to re-read the rest of the design history.
 
@@ -24,8 +24,8 @@ Doing all three in one PR is unsafe. This document splits batch 3 into **four su
 |---|---|---|---|---|
 | **7.3.1** | `index.html` (homepage) — hero, search, trust strip, featured listings, how-it-works, why-us | Medium | 1 day | ✅ DONE (April 22 2026) |
 | **7.3.2** | `listings.html` (browse) — filter bar, property grid, map panel, pagination | High | 1–2 days | ✅ DONE (April 22 2026) — pending owner verification on a Cloudflare branch preview |
-| **7.3.3** | `property.html` (detail) — gallery, info panels, contact form, structured data | High | 1–2 days | ⏳ Not started |
-| **7.3.4** | Phase 8 final cleanup — delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` | Low (deletes only) | 1 hour | ⏳ Blocked on 7.3.1–3 |
+| **7.3.3** | `property.html` (detail) — gallery + lightbox, info panels, contact form + mobile drawer, structured data | High | 1–2 days | ✅ DONE (April 24 2026) — pending owner verification on a Cloudflare branch preview |
+| **7.3.4** | Phase 8 final cleanup — delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` | Low (deletes only) | 1 hour | ⏳ Blocked on Cloudflare branch-preview verification of 7.3.2 + 7.3.3 |
 
 After 7.3.4, the project's "active CSS surface" comment in `PROJECT_STATUS.md` becomes the entire CSS surface. ~5,634 lines of legacy CSS will be deleted.
 
