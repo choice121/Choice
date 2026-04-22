@@ -434,3 +434,14 @@ This plan is safe to execute provided every rule in §0 is followed and every ph
   - Replaced `js/admin-chrome.js` and `js/admin-shell.js` with dynamic-script-tag shims that load the renamed files. Both shims will be deleted in Phase 8.
   - Updated all 12 admin pages with v2 assets to load the new paths directly.
 - **Phase 3** (committed): `admin/login.html` rewritten on top of `.auth-shell` + `.field-*` + `.btn-auth`. All `id`s and form-field `name`s preserved; Supabase magic-link / password / forgot-password flows unchanged. Added `viewport-fit=cover`, set `theme-color` to `#0a0f1e`.
+- **Batch B — auth pages on light .auth-shell** (committed):
+  - `landlord/login.html` rewritten on `.auth-shell-card`. All 16 `id`s preserved (`emailInput`, `passwordInput`, `togglePw`, `loginBtn`, `loginForm`, `forgotLink`, `errorBox`, `errorMsg`, plus recovery-mode IDs `newPwInput`, `confirmPwInput`, `toggleNewPw`, `toggleConfirmPw`, `setPasswordBtn`, `resetErrorBox`, `resetErrorMsg`). `cp-api.js` `signIn` / `resetPassword` / `getSession` flow + the `#type=recovery` hash handler are byte-identical to the prior version.
+  - `landlord/register.html` rewritten on `.auth-shell-card.wide` (520 px). All 30 `id`s preserved including the seven `at_*` account-type radios. Avatar upload (`profile-photos` bucket), password-strength meter, password-match check, terms checkbox, post-signup confirmation screen, and `auth.resend` button all unchanged. FontAwesome kept (account-type icons depend on it).
+  - `tenant/login.html` rewritten on `.auth-shell-card`. All 24 `id`s preserved. Magic-link flow keeps the branded edge-function sender with Supabase fallback, PKCE flow type, signed-in banner, wrong-account notice, success view with 60-s resend countdown, and link-error surfacing — all byte-identical.
+  - All three: light theme via `<html data-theme="light">`, `theme-color="#ffffff"`, `viewport-fit=cover`, dropped legacy `main.css` / `landlord.css` / `dashboard-system.css` / `admin.css` / `mobile.css` references in favour of `cp-design.css?v=20260423`.
+
+### Deferred to later phases
+
+- `lease-sign.html` — bespoke (signature canvas, multi-step). Will be done in Phase 6.
+- Landlord CRUD pages (`dashboard`, `applications`, `inquiries`, `edit-listing`, `new-listing`, `profile`, `settings`) — Phase 4, one sub-PR at a time.
+- `tenant/portal.html` — Phase 5.
