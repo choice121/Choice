@@ -10,7 +10,7 @@ This file replaces the need to read FIXES.md, DESIGN_EXTENSION_PLAN.md, KNOWN_IS
 ## TL;DR
 
 - **Backend (Edge Functions, DB, email, storage):** all 8 phases of `FIXES.md` shipped. Stable.
-- **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026). The remaining migration is the two heaviest public pages: `listings.html`, `property.html` (sub-phases 7.3.2 + 7.3.3 — see `BATCH_3_MIGRATION.md`).
+- **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026), browse page `listings.html` (100% — sub-phase 7.3.2, April 22 2026). The only remaining migration is `property.html` (sub-phase 7.3.3 — see `BATCH_3_MIGRATION.md`).
 - **Documentation:** reconciled with code. ARCHITECTURE.md, README.md, DESIGN_EXTENSION_PLAN.md, this file, and KNOWN_ISSUES.md are all current.
 - **Production deployment:** Cloudflare Pages auto-deploys from `main`. Supabase project is live. No outstanding bugs in `KNOWN_ISSUES.md`.
 
@@ -62,7 +62,7 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 | 7 batch 1 | Informational public pages: about, faq, how-it-works, how-to-apply | ✅ DONE |
 | 7 batch 2 | Legal/policy pages: terms, privacy, fair-housing, application-credit-policy, holding-deposit-policy, rental-application-policy, landlord-platform-agreement | ✅ DONE (April 22 2026) |
 | 7 batch 3.1 | Homepage `index.html` migrated to `cp-design.css` + `cp-marketing.css`; nav/footer use slot pattern; hero, search, trust strip, featured, hiw, why all live in `cp-marketing.css` under `body[data-portal="public"]` scope | ✅ DONE (April 22 2026) |
-| 7 batch 3.2 | `listings.html` — see `BATCH_3_MIGRATION.md` §7.3.2 | ⏳ NOT STARTED |
+| 7 batch 3.2 | `listings.html` migrated to `cp-design.css` + `cp-marketing.css`; nav/footer use slot pattern; listings page header, sticky filter bar, advanced filter dropdown, mobile filters drawer, view toggle, pagination, empty state, map panel, and full property-card extensions (badges, type-chip, photo-count, dots, slides) all live in `cp-marketing.css` under `body[data-portal="public"]` scope | ✅ DONE (April 22 2026) — pending owner verification on a Cloudflare branch preview |
 | 7 batch 3.3 | `property.html` — see `BATCH_3_MIGRATION.md` §7.3.3 | ⏳ NOT STARTED |
 | 8 partial | Delete admin/landlord legacy CSS + JS shims (`admin.css`, `admin-v2.css`, `landlord.css`, `dashboard-system.css`, `js/admin-chrome.js`, `js/admin-shell.js`) | ✅ DONE |
 | 8 final | Delete `main.css`, `mobile.css`, `listings.css`, `property.css` | ⏳ BLOCKED on 7 batch 3.2 + 3.3 |
@@ -78,19 +78,19 @@ css/apply.css           ← internal /apply/ form only (separate sub-app)
 ### Legacy CSS still in repo (kept only because batches 3.2 + 3.3 haven't shipped)
 
 ```
-css/main.css            ← used by listings.html, property.html (no longer by index.html)
-css/mobile.css          ← same two pages
-css/listings.css        ← listings.html only
+css/main.css            ← used by property.html only (no longer by index.html, listings.html)
+css/mobile.css          ← used by property.html only
+css/listings.css        ← ORPHAN as of sub-phase 7.3.2 — safe to delete in sub-phase 7.3.4
 css/property.css        ← property.html only
 ```
 
-The homepage now loads only `cp-design.css` + `cp-marketing.css` (April 22 2026, sub-phase 7.3.1).
+The homepage and listings page now load only `cp-design.css` + `cp-marketing.css` (April 22 2026, sub-phases 7.3.1 + 7.3.2).
 
 ---
 
 ## Open questions / decisions waiting on the owner
 
-1. **Phase 7 batch 3.2 + 3.3 timing.** When to attempt `listings.html` and `property.html` migration. Highest visual-regression risk in the project (per-page Lighthouse + visual diff required) — owner approval required before each sub-phase. See `BATCH_3_MIGRATION.md` for the prescriptive playbook.
+1. **Phase 7 batch 3.3 timing.** When to attempt `property.html` migration — the last and most complex public page (gallery, info panels, contact form, structured data). Highest visual-regression risk remaining in the project. Owner approval required. See `BATCH_3_MIGRATION.md` §7.3.3 for the prescriptive playbook.
 2. **Tenant chrome unification.** `tenant/portal.html` currently uses a bespoke topbar. Should it adopt `cp-chrome.js`/`cp-shell.js` like landlord and admin, or stay bespoke? No-op until decided.
 3. **`SETUP_2.sql` cleanup decision.** Decide whether `MIGRATION_drop_applications_tables.sql` should be run to remove the legacy Supabase applications table, or kept as a safety archive (see ARCHITECTURE.md → "Application System Architecture Decision (2026-04-09)").
 

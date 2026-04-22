@@ -23,7 +23,7 @@ Doing all three in one PR is unsafe. This document splits batch 3 into **four su
 | # | Page / scope | Risk | Effort | Status |
 |---|---|---|---|---|
 | **7.3.1** | `index.html` (homepage) — hero, search, trust strip, featured listings, how-it-works, why-us | Medium | 1 day | ✅ DONE (April 22 2026) |
-| **7.3.2** | `listings.html` (browse) — filter bar, property grid, map panel, pagination | High | 1–2 days | ⏳ Not started |
+| **7.3.2** | `listings.html` (browse) — filter bar, property grid, map panel, pagination | High | 1–2 days | ✅ DONE (April 22 2026) — pending owner verification on a Cloudflare branch preview |
 | **7.3.3** | `property.html` (detail) — gallery, info panels, contact form, structured data | High | 1–2 days | ⏳ Not started |
 | **7.3.4** | Phase 8 final cleanup — delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` | Low (deletes only) | 1 hour | ⏳ Blocked on 7.3.1–3 |
 
