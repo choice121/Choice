@@ -202,19 +202,26 @@ async function waitForSB(ms){
 
 let _sb=null;
 function getSB(){
-  if(!_sb)_sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY,{
-    auth:{
-      persistSession:true,
-      autoRefreshToken:true,
-      detectSessionInUrl:true,
-      // PKCE flow returns a refresh token so sessions survive past the 1-hour
-      // JWT expiry — autoRefreshToken silently re-issues new access tokens.
-      // Implicit flow does NOT return a refresh token, which caused users to
-      // be unexpectedly signed out after an hour. Magic links sent through
-      // our own Edge Function include a token_hash that works in any browser.
-      flowType:'pkce'
-    }
-  });
+  if(!_sb){
+    _sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY,{
+      auth:{
+        persistSession:true,
+        autoRefreshToken:true,
+        // I-411: Was `true`. We manually parse all 3 magic-link URL shapes in
+        // waitForMagicLinkSession() (hash tokens, token_hash, PKCE code). With
+        // detectSessionInUrl ALSO on, the SDK silently consumed the hash on
+        // load — then our manual setSession() raced it and one path always
+        // failed, occasionally clearing the freshly-created session and
+        // bouncing the user straight back to /tenant/login.html.
+        detectSessionInUrl:false,
+        // PKCE flow returns a refresh token so sessions survive past the 1-hour
+        // JWT expiry — autoRefreshToken silently re-issues new access tokens.
+        flowType:'pkce'
+      }
+    });
+    // Quiets the SDK's internal background refresh failure logging.
+    _sb.auth.onAuthStateChange(()=>{});
+  }
   return _sb;
 }
 

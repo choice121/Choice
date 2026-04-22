@@ -141,8 +141,14 @@ async function waitForSB(maxMs) {
   return false;
 }
 
+// I-411: Singleton — multiple createClient() calls in the same page each spin
+// up their own auth listener and refresh-token timer, causing one client to
+// race the other on POST /auth/v1/token and silently invalidating the session
+// (refresh token gets marked "already used"). Always reuse one instance.
+let _sb = null;
 function getSB() {
-  return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+  if (_sb) return _sb;
+  _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -152,6 +158,10 @@ function getSB() {
       flowType: 'pkce'
     }
   });
+  // Keep the SDK's internal refresh-failure paths quiet by attaching at least
+  // one listener (matches the pattern in js/cp-api.js).
+  _sb.auth.onAuthStateChange(() => {});
+  return _sb;
 }
 
 function showError(msg) {
