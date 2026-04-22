@@ -1,143 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="theme-color" content="#006aff">
-<link rel="manifest" href="/manifest.json">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
 <meta name="robots" content="noindex, nofollow">
 <title>My Portal — Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260423">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<script defer src="/js/cp-ui.js?v=20260423"></script>
 <style>
-:root{
-  --bg:#0b1120;--surface:#111827;--surface2:#1a2235;--surface3:#1e2d45;
-  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.13);
-  --text:#f1f5f9;--muted:#94a3b8;--muted2:#64748b;
-  --blue:#3b82f6;--blue-dark:#1d4ed8;
-  --green:#22c55e;--green-dark:#15803d;
-  --red:#ef4444;--purple:#a855f7;--amber:#f59e0b;
+/* ── Topbar (page-specific, no sidebar) ── */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
-
-/* ── Topbar ── */
-.topbar{background:rgba(11,17,32,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .topbar-logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--blue-dark),var(--blue));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0}
+.logo-icon{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0;
+}
 .topbar-title{font-size:.97rem;font-weight:700;color:var(--text)}
 .topbar-sub{font-size:.68rem;color:var(--muted)}
 .topbar-right{display:flex;align-items:center;gap:12px}
 .user-email{font-size:.75rem;color:var(--muted)}
 @media(max-width:500px){.user-email{display:none}}
-.btn-signout{padding:7px 14px;border-radius:8px;background:rgba(255,255,255,.07);border:1px solid var(--border2);color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-signout:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.btn-signout{
+  padding:7px 14px;border-radius:8px;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.btn-signout:hover{background:var(--surface);color:var(--text)}
 
 /* ── Main ── */
 .main{max-width:680px;margin:0 auto;padding:28px 16px 80px}
 
 /* ── States ── */
 .loading-state{text-align:center;padding:80px 20px}
-.spin{display:inline-block;width:36px;height:36px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:14px}
+.spin{
+  display:inline-block;width:36px;height:36px;
+  border:3px solid var(--border);
+  border-top-color:#3b82f6;
+  border-radius:50%;animation:spin .7s linear infinite;margin-bottom:14px;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{color:var(--muted);font-size:.88rem}
-.error-card{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:20px;text-align:center;color:#fca5a5;margin-bottom:20px;font-size:.88rem}
-.no-app{text-align:center;padding:48px 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px}
+
+.error-card{
+  background:#fef2f2;border:1px solid #fecaca;border-radius:12px;
+  padding:20px;text-align:center;color:#b91c1c;margin-bottom:20px;font-size:.88rem;
+}
+.no-app{
+  text-align:center;padding:48px 20px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+}
 .no-app h3{color:var(--text);font-size:1rem;margin-bottom:8px}
 .no-app p{color:var(--muted);font-size:.85rem;line-height:1.6}
 
 /* ── Section ── */
 .section{margin-bottom:22px}
-.section-label{font-size:.66rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px}
+.section-label{
+  font-size:.66rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px;
+}
 
 /* ── Card ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px 22px;
+}
 
 /* ── Status header ── */
-.status-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.status-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin-bottom:18px;
+}
 .status-name{font-size:1.2rem;font-weight:800;color:var(--text)}
 .status-prop{font-size:.8rem;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
 .badges-group{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.badge{padding:4px 12px;border-radius:12px;font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.b-pending{background:rgba(245,158,11,.15);color:#f59e0b}
-.b-approved{background:rgba(34,197,94,.15);color:#22c55e}
-.b-denied{background:rgba(239,68,68,.15);color:#ef4444}
-.b-waitlisted{background:rgba(168,85,247,.15);color:#a855f7}
-.b-withdrawn{background:rgba(100,116,139,.12);color:#94a3b8}
-.b-none{background:rgba(100,116,139,.12);color:#64748b}
-.b-sent{background:rgba(59,130,246,.15);color:#60a5fa}
-.b-signed{background:rgba(34,197,94,.15);color:#22c55e}
+.badge{
+  padding:4px 12px;border-radius:12px;
+  font-size:.69rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.b-pending   {background:#fef3c7;color:#a16207}
+.b-approved  {background:#dcfce7;color:#15803d}
+.b-denied    {background:#fee2e2;color:#b91c1c}
+.b-waitlisted{background:#f3e8ff;color:#7e22ce}
+.b-withdrawn {background:#f1f5f9;color:#64748b}
+.b-none      {background:#f1f5f9;color:#94a3b8}
+.b-sent      {background:#dbeafe;color:#1d4ed8}
+.b-signed    {background:#dcfce7;color:#15803d}
 
 /* ── Meta grid ── */
-.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:16px 0}
+.meta-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:12px;margin:16px 0;
+}
 .meta-item{display:flex;flex-direction:column;gap:3px}
-.meta-label{font-size:.62rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em}
-.meta-val{font-size:.88rem;color:var(--text);font-weight:600}
+.meta-label{font-size:.62rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.meta-val  {font-size:.88rem;color:var(--text);font-weight:600}
 
 /* ── Divider ── */
 .divider{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 /* ── Pipeline ── */
-.pipeline-label{font-size:.66rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.09em;margin-bottom:14px}
-.step-list{list-style:none;display:flex;flex-direction:column;gap:12px}
+.pipeline-label{
+  font-size:.66rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:14px;
+}
+.step-list{list-style:none;display:flex;flex-direction:column;gap:12px;padding:0;margin:0}
 .step-item{display:flex;align-items:flex-start;gap:12px}
-.step-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:1px}
-.step-done{background:rgba(34,197,94,.2);color:#22c55e}
-.step-active{background:rgba(59,130,246,.2);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
-.step-wait{background:rgba(100,116,139,.1);color:var(--muted2)}
+.step-icon{
+  width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:1px;
+}
+.step-done   {background:#dcfce7;color:#15803d}
+.step-active {background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.step-wait   {background:#f1f5f9;color:#94a3b8}
 .step-text{font-size:.88rem;font-weight:600;color:var(--text)}
-.step-sub{font-size:.76rem;color:var(--muted);margin-top:2px;line-height:1.5}
+.step-sub {font-size:.76rem;color:var(--muted);margin-top:2px;line-height:1.5}
 
-/* ── Payment section ── */
-.payment-card{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px}
-.payment-title{font-size:.84rem;font-weight:700;color:#22c55e;margin-bottom:12px;display:flex;align-items:center;gap:7px}
-.pay-unpaid-card{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:14px;padding:18px 20px}
-.pay-unpaid-title{font-size:.84rem;font-weight:700;color:#f59e0b;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+/* ── Payment cards ── */
+.payment-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:18px 20px}
+.payment-title{font-size:.84rem;font-weight:700;color:#15803d;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.pay-unpaid-card{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:18px 20px}
+.pay-unpaid-title{font-size:.84rem;font-weight:700;color:#a16207;margin-bottom:8px;display:flex;align-items:center;gap:7px}
 
 /* ── Lease actions ── */
 .lease-section{margin-top:18px}
-.btn-sign{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,var(--green-dark),var(--green));color:#fff;border:none;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;transition:opacity .15s;box-shadow:0 4px 14px rgba(34,197,94,.3)}
+.btn-sign{
+  display:inline-flex;align-items:center;gap:8px;padding:12px 22px;
+  background:linear-gradient(135deg,#15803d,#22c55e);
+  color:#fff;border:none;border-radius:10px;
+  font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;
+  text-decoration:none;transition:opacity .15s;
+  box-shadow:0 4px 14px rgba(34,197,94,.30);
+}
 .btn-sign:hover{opacity:.88}
-.btn-download{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;border:none;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;transition:opacity .15s}
+.btn-download{
+  display:inline-flex;align-items:center;gap:8px;padding:12px 22px;
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+  color:#fff;border:none;border-radius:10px;
+  font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;
+  text-decoration:none;transition:opacity .15s;
+}
 .btn-download:hover{opacity:.88}
 
 /* ── Move-in card ── */
-.movein-card{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);border-radius:14px;padding:18px 20px}
-.movein-title{font-size:.92rem;font-weight:700;color:#22c55e;margin-bottom:12px}
+.movein-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:18px 20px}
+.movein-title{font-size:.92rem;font-weight:700;color:#15803d;margin-bottom:12px}
 
-/* ── Denied card ── */
-.denied-card{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);border-radius:14px;padding:20px 22px;margin-top:16px}
-.denied-title{font-size:.92rem;font-weight:700;color:#ef4444;margin-bottom:10px}
-
-/* ── Waitlisted card ── */
-.waitlist-card{background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.18);border-radius:14px;padding:20px 22px;margin-top:16px}
-.waitlist-title{font-size:.92rem;font-weight:700;color:#a855f7;margin-bottom:10px}
+/* ── Denied / Waitlisted ── */
+.denied-card  {background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:20px 22px;margin-top:16px}
+.denied-title {font-size:.92rem;font-weight:700;color:#b91c1c;margin-bottom:10px}
+.waitlist-card{background:#faf5ff;border:1px solid #e9d5ff;border-radius:14px;padding:20px 22px;margin-top:16px}
+.waitlist-title{font-size:.92rem;font-weight:700;color:#7e22ce;margin-bottom:10px}
 
 /* ── Withdraw ── */
-.btn-withdraw{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:16px}
-.btn-withdraw:hover{background:rgba(239,68,68,.18)}
+.btn-withdraw{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 18px;
+  background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+  border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:all .15s;margin-top:16px;
+}
+.btn-withdraw:hover{background:#fee2e2}
 
 /* ── Doc upload ── */
 .doc-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--border)}
 .doc-row:last-child{border-bottom:none}
 .doc-label{color:var(--text);font-size:.83rem;min-width:180px;font-weight:500}
-.btn-choose{padding:7px 16px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);color:#60a5fa;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit}
-.btn-choose:hover{background:rgba(96,165,250,.2)}
+.btn-choose{
+  padding:7px 16px;background:#dbeafe;border:1px solid #bfdbfe;
+  color:#1d4ed8;border-radius:8px;font-size:.78rem;font-weight:600;
+  cursor:pointer;font-family:inherit;
+}
+.btn-choose:hover{background:#bfdbfe}
 .doc-status{font-size:.78rem;color:var(--muted)}
 
 /* ── Footer ── */
-.portal-footer{text-align:center;margin-top:32px;font-size:.76rem;color:var(--muted2);line-height:2}
-.portal-footer a{color:var(--blue);text-decoration:none}
+.portal-footer{text-align:center;margin-top:32px;font-size:.76rem;color:var(--muted);line-height:2}
+.portal-footer a{color:#1d4ed8;text-decoration:none}
 .portal-footer a:hover{text-decoration:underline}
 </style>
-  <link rel="stylesheet" href="/css/dashboard-system.css?v=20260421">
-  <script defer src="/js/cp-ui.js?v=20260421"></script>
 </head>
-<body>
+<body data-portal="tenant" data-page-title="My Portal">
 <div class="topbar">
   <div class="topbar-logo">
     <div class="logo-icon">CP</div>
@@ -207,25 +274,23 @@ async function lookupByAppId(){
   const msg=document.getElementById('appid-msg');
   if(!input||!msg)return;
   const appId=(input.value||'').trim().toUpperCase();
-  if(!appId){msg.textContent='Please enter your Application ID.';msg.style.color='#f59e0b';msg.style.display='block';return;}
+  if(!appId){msg.textContent='Please enter your Application ID.';msg.style.color='#a16207';msg.style.display='block';return;}
   msg.textContent='Looking up…';msg.style.color='var(--muted)';msg.style.display='block';
   try{
     const sb=getSB();
     const {data:{session}}=await sb.auth.getSession();
     const userEmail=(session?.user?.email||'').toLowerCase();
-    // Attempt to claim the app with this user's email
     const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:appId,p_email:userEmail});
     if(claimErr||claimResult?.success===false){
       msg.textContent='That Application ID was not found or does not match your email address. Please contact us for help.';
-      msg.style.color='#f87171';msg.style.display='block';
+      msg.style.color='#b91c1c';msg.style.display='block';
       return;
     }
-    // Claimed successfully — reload the portal with this app
     sessionStorage.setItem('pendingPortalAppId',appId);
     location.href='/tenant/portal.html?app_id='+encodeURIComponent(appId);
   }catch(e){
     msg.textContent='Error: '+(e.message||'Could not look up application.');
-    msg.style.color='#f87171';msg.style.display='block';
+    msg.style.color='#b91c1c';msg.style.display='block';
   }
 }
 
@@ -240,7 +305,7 @@ function renderPaymentStatus(app){
   if(paid||waived){
     const lines=[];
     if(fee!=null)lines.push(`<div class="meta-item"><span class="meta-label">Application Fee</span><span class="meta-val">${fmtMoney(fee)}</span></div>`);
-    lines.push(`<div class="meta-item"><span class="meta-label">Payment Status</span><span class="meta-val" style="color:#22c55e">&#10003; ${paid?'Paid':waived?'Waived':''}</span></div>`);
+    lines.push(`<div class="meta-item"><span class="meta-label">Payment Status</span><span class="meta-val" style="color:#15803d">&#10003; ${paid?'Paid':waived?'Waived':''}</span></div>`);
     if(app.payment_date)lines.push(`<div class="meta-item"><span class="meta-label">Received</span><span class="meta-val">${fmtDateShort(app.payment_date)}</span></div>`);
     if(app.payment_amount_recorded)lines.push(`<div class="meta-item"><span class="meta-label">Amount</span><span class="meta-val">${fmtMoney(app.payment_amount_recorded)}</span></div>`);
     if(app.payment_method_recorded)lines.push(`<div class="meta-item"><span class="meta-label">Method</span><span class="meta-val">${esc(app.payment_method_recorded)}</span></div>`);
@@ -261,19 +326,19 @@ function renderPaymentStatus(app){
         <div class="pay-unpaid-title">&#128176; Application Fee Due — ${fmtMoney(fee)}</div>
         <p style="color:var(--muted);font-size:.83rem;margin-bottom:14px">Your application fee is pending. Our team will reach out shortly to arrange payment — no action needed from you right now.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:.76rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Accepted payment methods</div>
+          <div style="font-size:.76rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Accepted payment methods</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Venmo</span>
-            <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Zelle</span>
-            <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Cash App</span>
-            <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Money Order</span>
+            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Venmo</span>
+            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Zelle</span>
+            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Cash App</span>
+            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Money Order</span>
           </div>
-          <p style="color:var(--muted2);font-size:.76rem;margin-top:6px">Have questions or want to arrange payment now? <a href="tel:7077063137" style="color:var(--blue);font-weight:600">Call or text 707-706-3137</a></p>
+          <p style="color:var(--muted);font-size:.76rem;margin-top:6px">Have questions or want to arrange payment now? <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">Call or text 707-706-3137</a></p>
         </div>
       </div></div>`;
   }
 
-  // Holding fee flow (extended payment columns)
+  // Holding fee flow
   if(app.holding_fee_requested){
     const hfPaid=app.holding_fee_paid;
     const hfAmt=app.holding_fee_amount;
@@ -292,11 +357,11 @@ function renderPaymentStatus(app){
         A holding fee has been requested to secure your place.${hfDue?' Please pay by <strong style="color:var(--text)">'+fmtDate(hfDue)+'</strong>.':''}
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Venmo</span>
-        <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Zelle</span>
-        <span style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,.12);color:#60a5fa;font-size:.76rem;font-weight:600">Cashier's Check</span>
+        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Venmo</span>
+        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Zelle</span>
+        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Cashier's Check</span>
       </div>
-      <p style="color:var(--muted2);font-size:.76rem">After payment, please call or text us to confirm: <a href="tel:7077063137" style="color:var(--blue);font-weight:600">707-706-3137</a></p></div></div>`;
+      <p style="color:var(--muted);font-size:.76rem">After payment, please call or text us to confirm: <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">707-706-3137</a></p></div></div>`;
   }
 
   return '';
@@ -328,22 +393,22 @@ async function uploadDoc(docType,appId,inputId,statusId){
   const status=document.getElementById(statusId);
   const file=input.files[0];
   if(!file)return;
-  status.textContent='Uploading…';status.style.color='#60a5fa';
+  status.textContent='Uploading…';status.style.color='#1d4ed8';
   try{
     const {data:{session}}=await getSB().auth.getSession();
     const token=session?.access_token;
-    if(!token){status.textContent='Not signed in.';status.style.color='#ef4444';return;}
+    if(!token){status.textContent='Not signed in.';status.style.color='#b91c1c';return;}
     const res=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/request-upload-url',{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+token},
       body:JSON.stringify({app_id:appId,file_name:file.name,file_type:file.type,doc_type:docType}),
     });
     const d=await res.json();
-    if(!res.ok||!d.signed_url){status.textContent='Error: '+(d.error||'Upload failed');status.style.color='#ef4444';return;}
+    if(!res.ok||!d.signed_url){status.textContent='Error: '+(d.error||'Upload failed');status.style.color='#b91c1c';return;}
     const up=await fetch(d.signed_url,{method:'PUT',headers:{'Content-Type':file.type,'x-upsert':'true'},body:file});
-    if(!up.ok){status.textContent='Upload failed. Try again.';status.style.color='#ef4444';return;}
-    status.textContent='&#10003; '+file.name;status.style.color='#22c55e';input.value='';
-  }catch(e){status.textContent='Error: '+e.message;status.style.color='#ef4444';}
+    if(!up.ok){status.textContent='Upload failed. Try again.';status.style.color='#b91c1c';return;}
+    status.innerHTML='&#10003; '+esc(file.name);status.style.color='#15803d';input.value='';
+  }catch(e){status.textContent='Error: '+e.message;status.style.color='#b91c1c';}
 }
 
 // ── Portal render ─────────────────────────────────────────────────────────────
@@ -413,9 +478,9 @@ function renderPortal(app){
   if(status==='denied'){
     deniedHtml=`<div class="denied-card">
       <div class="denied-title">Application Not Approved</div>
-      <p style="color:#fca5a5;font-size:.85rem;line-height:1.65;margin-bottom:10px">We were unable to move forward with your application at this time based on our standard screening criteria.</p>
-      <p style="color:var(--muted);font-size:.82rem;line-height:1.65">You are welcome to apply for other available properties. Browse our listings or call us at <strong style="color:var(--muted)">707-706-3137</strong> to discuss your options.</p>
-      <a href="/" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);color:#60a5fa;border-radius:8px;font-size:.8rem;font-weight:600;text-decoration:none">View Available Properties &rarr;</a>
+      <p style="color:#7f1d1d;font-size:.85rem;line-height:1.65;margin-bottom:10px">We were unable to move forward with your application at this time based on our standard screening criteria.</p>
+      <p style="color:var(--muted);font-size:.82rem;line-height:1.65">You are welcome to apply for other available properties. Browse our listings or call us at <strong style="color:var(--text)">707-706-3137</strong> to discuss your options.</p>
+      <a href="/" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#dbeafe;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:8px;font-size:.8rem;font-weight:600;text-decoration:none">View Available Properties &rarr;</a>
     </div>`;
   }
 
@@ -424,8 +489,8 @@ function renderPortal(app){
   if(status==='waitlisted'){
     waitlistHtml=`<div class="waitlist-card">
       <div class="waitlist-title">You're on the Waitlist</div>
-      <p style="color:#c4b5fd;font-size:.85rem;line-height:1.65">You have been added to the waitlist for this property. We will contact you as soon as it becomes available or a comparable unit opens up.</p>
-      <p style="color:var(--muted);font-size:.82rem;margin-top:8px">In the meantime, feel free to browse our other available listings. Questions? Call <strong style="color:var(--muted)">707-706-3137</strong>.</p>
+      <p style="color:#581c87;font-size:.85rem;line-height:1.65">You have been added to the waitlist for this property. We will contact you as soon as it becomes available or a comparable unit opens up.</p>
+      <p style="color:var(--muted);font-size:.82rem;margin-top:8px">In the meantime, feel free to browse our other available listings. Questions? Call <strong style="color:var(--text)">707-706-3137</strong>.</p>
     </div>`;
   }
 
@@ -450,10 +515,10 @@ function renderPortal(app){
   // Admin notes — visible message from the team
   const adminNotesHtml=app.admin_notes
     ?`<div class="section"><div class="section-label">Message from our team</div>
-      <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);padding:16px 20px">
+      <div class="card" style="background:#eff6ff;border:1px solid #bfdbfe;padding:16px 20px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <span style="font-size:1rem">&#128172;</span>
-          <span style="font-size:.75rem;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em">Note from Choice Properties</span>
+          <span style="font-size:.75rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em">Note from Choice Properties</span>
         </div>
         <p style="color:var(--text);font-size:.88rem;line-height:1.7;white-space:pre-wrap">${esc(app.admin_notes)}</p>
       </div></div>`
@@ -466,7 +531,7 @@ function renderPortal(app){
         <div class="status-header">
           <div>
             <div class="status-name">${name}</div>
-            <div class="status-prop"><i class="fas fa-map-marker-alt" style="font-size:.65rem;color:var(--muted2)"></i>${prop}</div>
+            <div class="status-prop"><span style="font-size:.7rem;color:var(--muted)">&#128205;</span>${prop}</div>
           </div>
           <div class="badges-group">${statusBadge(status)}${leaseBadge(leaseStatus)}</div>
         </div>
@@ -518,7 +583,6 @@ async function withdrawApplication(){
   const sb=getSB();
   const {data:{session}}=await sb.auth.getSession();
   const userEmail=(session?.user?.email||'').toLowerCase();
-  // Ensure application is claimed to this user before attempting the RLS-guarded update
   if(window._portalAppId&&userEmail){
     await sb.rpc('claim_application',{p_app_id:window._portalAppId,p_email:userEmail}).catch(()=>{});
   }
@@ -526,8 +590,8 @@ async function withdrawApplication(){
   if(error){
     const ct=document.getElementById('portal-content');
     if(ct)ct.innerHTML=`<div class="error-card">We couldn't process your withdrawal automatically. Please contact us directly:<br><br>
-      <a href="tel:7077063137" style="color:#60a5fa;font-weight:700">&#128222; 707-706-3137</a> &nbsp;&middot;&nbsp;
-      <a href="mailto:support@choiceproperties.com" style="color:#60a5fa">support@choiceproperties.com</a><br><br>
+      <a href="tel:7077063137" style="color:#1d4ed8;font-weight:700">&#128222; 707-706-3137</a> &nbsp;&middot;&nbsp;
+      <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">support@choiceproperties.com</a><br><br>
       Reference: <span style="font-family:monospace">${esc(window._portalAppId||'')}</span></div>`;
     return;
   }
@@ -544,21 +608,19 @@ async function withdrawApplication(){
     }
   }catch(_){}
   document.getElementById('portal-content').innerHTML=`<div class="card" style="text-align:center;padding:36px">
-    <div style="font-size:2.2rem;margin-bottom:14px">&#10003;</div>
+    <div style="font-size:2.2rem;margin-bottom:14px;color:#15803d">&#10003;</div>
     <h3 style="color:var(--text);margin-bottom:8px">Application Withdrawn</h3>
-    <p style="color:var(--muted);font-size:.88rem;line-height:1.65">Your application has been withdrawn. If you'd like to reapply in the future, please contact us at <a href="tel:7077063137" style="color:var(--blue)">707-706-3137</a>.</p>
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.65">Your application has been withdrawn. If you'd like to reapply in the future, please contact us at <a href="tel:7077063137" style="color:#1d4ed8">707-706-3137</a>.</p>
   </div>`;
 }
 
 // ── Auto-claim applications linked by email ──────────────────────────────────
 async function autoClaimApplications(sb, userEmail){
   try{
-    // get_apps_by_email returns apps found by email so we can claim them
     const {data:lookupResult,error}=await sb.rpc('get_apps_by_email',{p_email:userEmail});
     if(error||!lookupResult)return;
     const apps=typeof lookupResult==='string'?JSON.parse(lookupResult):lookupResult;
     if(!Array.isArray(apps)||!apps.length)return;
-    // Claim each app — links applicant_user_id to this auth user
     for(const a of apps){
       if(a.app_id){
         await sb.rpc('claim_application',{p_app_id:a.app_id,p_email:userEmail}).catch(()=>{});
@@ -584,8 +646,6 @@ async function signOutAndRetry(){
   location.href=loginUrl.pathname+loginUrl.search;
 }
 
-// Auto-redirect wrong-account cases to the login page immediately.
-// We show a brief message while the redirect happens rather than a dead-end screen.
 async function redirectWrongAccount(requestedAppId){
   const loginUrl=new URL('/tenant/login.html',window.location.origin);
   if(requestedAppId)loginUrl.searchParams.set('app_id',requestedAppId);
@@ -604,10 +664,10 @@ function renderWrongAccount(userEmail, requestedAppId, message){
       Please sign in with the email address you used when filling out the rental application.
     </p>
     <button class="btn-withdraw" type="button" data-action="signout-retry" style="margin-top:18px">&#8592; Sign in with the correct email</button>
-    ${requestedAppId?`<p style="margin-top:12px;font-size:.78rem;color:var(--muted2)">Application: <span style="font-family:monospace">${esc(requestedAppId)}</span></p>`:''}
+    ${requestedAppId?`<p style="margin-top:12px;font-size:.78rem;color:var(--muted)">Application: <span style="font-family:monospace">${esc(requestedAppId)}</span></p>`:''}
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <p style="font-size:.78rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
-      <p style="font-size:.78rem;color:var(--muted2)">Need help? <a href="tel:7077063137" style="color:var(--blue)">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">support@choiceproperties.com</a></p>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px"><strong style="color:var(--text)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
+      <p style="font-size:.78rem;color:var(--muted)">Need help? <a href="tel:7077063137" style="color:#1d4ed8">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">support@choiceproperties.com</a></p>
     </div>
   </div>`;
 }
@@ -617,12 +677,9 @@ function renderWrongAccount(userEmail, requestedAppId, message){
 // three explicitly because supabase-js with flowType:'pkce' will ONLY
 // auto-process `?code=` and ignores hash-fragment tokens.
 //
-//   1. Hash tokens   #access_token=...&refresh_token=...   (admin.generateLink — our send-magic-link)
-//   2. token_hash    ?token_hash=...&type=magiclink         (alt admin format / manual links)
-//   3. PKCE code     ?code=...                              (signInWithOtp fallback in login.html)
-//
-// The session must be established BEFORE we read getSession(), otherwise the
-// portal sees no session and bounces the user back to the login page.
+//   1. Hash tokens   #access_token=...&refresh_token=...
+//   2. token_hash    ?token_hash=...&type=magiclink
+//   3. PKCE code     ?code=...
 async function waitForMagicLinkSession(sb){
   const hashStr = (window.location.hash || '').replace(/^#/, '');
   const hashParams = new URLSearchParams(hashStr);
@@ -635,16 +692,12 @@ async function waitForMagicLinkSession(sb){
   const codeParam    = qsParams.get('code');
   const errParam     = hashParams.get('error') || qsParams.get('error');
 
-  // Surface Supabase error redirects (expired link, etc.) instead of silently
-  // bouncing to login with no explanation.
   if(errParam){
     const desc = hashParams.get('error_description') || qsParams.get('error_description') || errParam;
     console.warn('Magic link error:', desc);
     return {error: decodeURIComponent(desc.replace(/\+/g,' '))};
   }
 
-  // CASE 1: Hash-fragment tokens from admin.generateLink (our Edge Function).
-  // PKCE-mode supabase-js does NOT auto-process these; set them manually.
   if(accessToken && refreshToken){
     try{
       const {data, error} = await sb.auth.setSession({access_token: accessToken, refresh_token: refreshToken});
@@ -653,7 +706,6 @@ async function waitForMagicLinkSession(sb){
     }catch(e){ console.warn('setSession threw:', e); }
   }
 
-  // CASE 2: token_hash style (alt admin link format).
   if(tokenHash && tokenType){
     try{
       const {data, error} = await sb.auth.verifyOtp({token_hash: tokenHash, type: tokenType});
@@ -662,10 +714,7 @@ async function waitForMagicLinkSession(sb){
     }catch(e){ console.warn('verifyOtp threw:', e); }
   }
 
-  // CASE 3: PKCE ?code= from signInWithOtp fallback. supabase-js
-  // detectSessionInUrl handles this asynchronously on init — wait for it.
   if(codeParam){
-    // Maybe already exchanged before our listener attaches:
     try{
       const {data:{session:existing}} = await sb.auth.getSession();
       if(existing) return existing;
@@ -689,8 +738,6 @@ async function waitForMagicLinkSession(sb){
 }
 
 // ── CSP-safe delegated event handlers ────────────────────────────────────────
-// Cloudflare CSP forbids inline onclick/onchange. We delegate from document so
-// dynamically-rendered buttons inside #portal-content all work without nonces.
 document.addEventListener('click', function(e){
   const btn = e.target.closest('[data-action]');
   if(!btn) return;
@@ -714,7 +761,6 @@ document.addEventListener('change', function(e){
   if(!input || !input.files || !input.files[0]) return;
   uploadDoc(input.dataset.docType, input.dataset.appId, input.id, input.dataset.statusId);
 });
-// Topbar sign-out (lives outside #portal-content)
 document.addEventListener('DOMContentLoaded', function(){
   const t = document.getElementById('btn-topbar-signout');
   if(t) t.addEventListener('click', signOut);
@@ -730,19 +776,14 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const sb=getSB();
   const requestedAppId=getRequestedAppId();
 
-  // If a magic link token is in the hash/query, exchange it before reading
-  // the session — otherwise we read an empty session and bounce to login.
   const magicResult = await waitForMagicLinkSession(sb);
 
-  // Always strip auth params from the URL so a refresh doesn't re-replay them.
   const hadAuthInUrl = !!(window.location.hash || /[\?&](code|token_hash|error)=/.test(window.location.search));
   if(hadAuthInUrl){
     const cleanUrl = window.location.pathname + (requestedAppId ? '?app_id='+encodeURIComponent(requestedAppId) : '');
     history.replaceState(null, '', cleanUrl);
   }
 
-  // Magic link returned an error (expired / already used / etc.) — show it
-  // on the login page instead of looping silently.
   if(magicResult && magicResult.error){
     const loginUrl = new URL('/tenant/login.html', window.location.origin);
     if(requestedAppId) loginUrl.searchParams.set('app_id', requestedAppId);
@@ -770,18 +811,14 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const content=document.getElementById('portal-content');
   const errorEl=document.getElementById('portal-error');
 
-  // ── Step 1: Confirm this email can access the requested application ───────
   if(requestedAppId){
     const {data:claimResult,error:claimErr}=await sb.rpc('claim_application',{p_app_id:requestedAppId,p_email:userEmail});
     if(claimErr||claimResult?.success===false){
-      // Auto-redirect to login with a helpful message instead of showing
-      // a dead-end screen inside the portal.
       await redirectWrongAccount(requestedAppId);
       return;
     }
   }
 
-  // ── Step 2: Fetch list of this user's applications ─────────────────────────
   const {data:rpcResult,error:rpcErr}=await sb.rpc('get_my_applications');
   let myApps=[];
   if(!rpcErr&&rpcResult?.success&&Array.isArray(rpcResult.applications)){
@@ -789,7 +826,6 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }
 
   if(!myApps.length){
-    // Auto-claim any applications by email match then retry.
     await autoClaimApplications(sb,userEmail);
     const {data:r2}=await sb.rpc('get_my_applications');
     if(r2?.success&&Array.isArray(r2.applications)) myApps=r2.applications;
@@ -806,31 +842,30 @@ document.addEventListener('DOMContentLoaded',async()=>{
         We searched for an application linked to<br>
         <strong style="color:var(--text);font-size:.92rem">${esc(userEmail)}</strong>
       </p>
-      <p style="color:var(--muted2);font-size:.82rem;line-height:1.65;margin-bottom:18px">
+      <p style="color:var(--muted);font-size:.82rem;line-height:1.65;margin-bottom:18px">
         Make sure you are signed in with the exact email address you used on your rental application — even a slight difference (like a period or extra letter) will prevent a match.
       </p>
 
-      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;margin-bottom:18px;text-align:left">
-        <div style="font-size:.7rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Look up by Application ID</div>
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:18px;text-align:left">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Look up by Application ID</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input type="text" id="manual-app-id" placeholder="e.g. CP-20260420-ABC123" autocomplete="off" autocapitalize="characters"
-            style="flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface3);color:var(--text);font-size:.85rem;font-family:inherit;-webkit-appearance:none">
-          <button type="button" data-action="lookup-app-id" style="padding:9px 16px;border-radius:8px;background:var(--blue);border:none;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">Look Up</button>
+            style="flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.85rem;font-family:inherit;-webkit-appearance:none">
+          <button type="button" data-action="lookup-app-id" style="padding:9px 16px;border-radius:8px;background:#1d4ed8;border:none;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">Look Up</button>
         </div>
         <div id="appid-msg" style="margin-top:8px;font-size:.78rem;color:var(--muted);display:none"></div>
       </div>
 
-      <button type="button" data-action="sign-out" style="width:100%;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;padding:11px 18px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;touch-action:manipulation;min-height:44px">&#8592; Sign in with a different email</button>
+      <button type="button" data-action="sign-out" style="width:100%;background:#dbeafe;border:1px solid #bfdbfe;color:#1d4ed8;padding:11px 18px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;touch-action:manipulation;min-height:44px">&#8592; Sign in with a different email</button>
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:left">
-        <p style="font-size:.79rem;color:var(--muted2);margin-bottom:6px"><strong style="color:var(--muted)">Co-applicant?</strong> Sign in with the email address listed for you on the application, not the primary applicant's email.</p>
-        <p style="font-size:.79rem;color:var(--muted2)">Still need help? <a href="tel:7077063137" style="color:var(--blue);font-weight:600">Call or text 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:var(--blue)">Email us</a></p>
+        <p style="font-size:.79rem;color:var(--muted);margin-bottom:6px"><strong style="color:var(--text)">Co-applicant?</strong> Sign in with the email address listed for you on the application, not the primary applicant's email.</p>
+        <p style="font-size:.79rem;color:var(--muted)">Still need help? <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">Call or text 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">Email us</a></p>
       </div>
     </div>`;
     return;
   }
 
-  // ── Step 3: Pick the right application from the list ──────────────────────
   const summary=requestedAppId
     ? (myApps.find(a=>(a.app_id||a.id)===requestedAppId)||myApps[0])
     : myApps[0];
@@ -843,7 +878,6 @@ document.addEventListener('DOMContentLoaded',async()=>{
   window._portalAppId=summary.app_id||summary.id;
   sessionStorage.setItem('pendingPortalAppId',window._portalAppId);
 
-  // ── Step 4: Render app (with multi-app switcher if needed) ────────────────
   async function loadAndRenderApp(appId){
     window._portalAppId=appId;
     sessionStorage.setItem('pendingPortalAppId',appId);
@@ -865,23 +899,22 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
     if(fetchErr||!fullApp){
       errorEl.style.display='block';
-      errorEl.innerHTML='<div class="error-card">Could not load application details. Please refresh or <a href="tel:7077063137" style="color:#60a5fa">call us</a>.</div>';
+      errorEl.innerHTML='<div class="error-card">Could not load application details. Please refresh or <a href="tel:7077063137" style="color:#1d4ed8">call us</a>.</div>';
       if(fetchErr)console.error('Portal fetch error:',fetchErr.message);
       return;
     }
 
-    // Build multi-app switcher if user has more than one application
     let switcherHtml='';
     if(myApps.length>1){
-      const statusColor={pending:'#f59e0b',approved:'#22c55e',denied:'#ef4444',waitlisted:'#a855f7',withdrawn:'#64748b'};
+      const statusColor={pending:'#a16207',approved:'#15803d',denied:'#b91c1c',waitlisted:'#7e22ce',withdrawn:'#64748b'};
       const pills=myApps.map(a=>{
         const aId=a.app_id||a.id;
         const isActive=aId===appId;
         const col=statusColor[a.status]||'#64748b';
         const addr=esc((a.property_address||'Application').split(',')[0]);
         return `<button type="button" data-action="switch-app" data-app-id="${esc(aId)}"
-          style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?col:'rgba(255,255,255,.12)'};
-          background:${isActive?'rgba(59,130,246,.15)':'transparent'};color:${isActive?'#f1f5f9':'#94a3b8'};
+          style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?col:'var(--border)'};
+          background:${isActive?'#eff6ff':'var(--surface)'};color:${isActive?'var(--text)':'var(--muted)'};
           font-size:.75rem;font-weight:${isActive?'700':'500'};cursor:pointer;font-family:inherit;
           white-space:nowrap;transition:all .15s">
           <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin-right:5px;vertical-align:middle"></span>
@@ -895,7 +928,6 @@ document.addEventListener('DOMContentLoaded',async()=>{
     content.innerHTML=switcherHtml+renderPortal(fullApp);
   }
 
-  // Global switch function for pill buttons
   window._switchApp=async function(appId){
     content.innerHTML='<div class="loading-state"><div class="spin"></div><div class="loading-text">Loading…</div></div>';
     await loadAndRenderApp(appId);

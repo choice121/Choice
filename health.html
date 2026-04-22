@@ -1,53 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
-  <link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Choice Properties — Deployment Health Check</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260423">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 40px 20px; }
-  .wrap { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .sub { font-size: 13px; color: #64748b; margin-bottom: 32px; }
-  .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
-  .card-header { padding: 14px 20px; border-bottom: 1px solid #2d3748; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #64748b; }
-  .check { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #1e2535; font-size: 14px; }
+  body { padding: 32px 16px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .sub { font-size: .82rem; color: var(--muted); margin-bottom: 28px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .card-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .check {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+    gap: 12px;
+  }
   .check:last-child { border-bottom: none; }
-  .check-label { color: #cbd5e1; }
-  .check-detail { font-size: 11px; color: #475569; margin-top: 3px; font-family: monospace; }
-  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .badge.pending  { background: #1e2535; color: #64748b; }
-  .badge.ok       { background: #052e16; color: #4ade80; border: 1px solid #166534; }
-  .badge.warn     { background: #2d1f00; color: #fbbf24; border: 1px solid #92400e; }
-  .badge.fail     { background: #2d0a0a; color: #f87171; border: 1px solid #991b1b; }
-  .badge.running  { background: #0f1f3d; color: #60a5fa; border: 1px solid #1d4ed8; }
-  .spinner { width: 10px; height: 10px; border: 2px solid #475569; border-top-color: #60a5fa; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+  .check-label { color: var(--text); font-weight: 500; }
+  .check-detail { font-size: .72rem; color: var(--muted); margin-top: 3px; font-family: monospace; word-break: break-all; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 11px; border-radius: 20px;
+    font-size: .72rem; font-weight: 700; white-space: nowrap;
+  }
+  .badge.pending  { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  .badge.ok       { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .badge.warn     { background: #fef3c7; color: #a16207; border: 1px solid #fcd34d; }
+  .badge.fail     { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+  .badge.running  { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+
+  .spinner {
+    width: 10px; height: 10px;
+    border: 2px solid #cbd5e1; border-top-color: #1d4ed8;
+    border-radius: 50%; animation: spin .7s linear infinite;
+    display: inline-block;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .run-btn { display: block; width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 16px; transition: background .15s; }
-  .run-btn:hover { background: #1d4ed8; }
-  .run-btn:disabled { background: #1e2535; color: #475569; cursor: not-allowed; }
-  .summary { padding: 16px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 16px; display: none; }
-  .summary.all-ok  { background: #052e16; color: #4ade80; border: 1px solid #166534; }
-  .summary.has-fail{ background: #2d0a0a; color: #f87171; border: 1px solid #991b1b; }
-  .summary.has-warn{ background: #2d1f00; color: #fbbf24; border: 1px solid #92400e; }
-  .note { font-size: 12px; color: #475569; text-align: center; margin-top: 20px; line-height: 1.6; }
+
+  .run-btn {
+    display: block; width: 100%; padding: 13px;
+    background: linear-gradient(135deg,#1d4ed8,#3b82f6);
+    color: #fff; border: none; border-radius: 9px;
+    font-size: .94rem; font-weight: 700; cursor: pointer;
+    margin-bottom: 16px; transition: opacity .15s;
+    font-family: inherit;
+  }
+  .run-btn:hover:not(:disabled) { opacity: .9; }
+  .run-btn:disabled {
+    background: var(--surface-2); color: var(--muted);
+    border: 1px solid var(--border); cursor: not-allowed;
+  }
+
+  .summary {
+    padding: 14px 18px; border-radius: 10px;
+    font-size: .88rem; font-weight: 600;
+    text-align: center; margin-bottom: 16px; display: none;
+  }
+  .summary.all-ok  { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .summary.has-fail{ background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+  .summary.has-warn{ background: #fef3c7; color: #a16207; border: 1px solid #fcd34d; }
+
+  .note { font-size: .75rem; color: var(--muted); text-align: center; margin-top: 22px; line-height: 1.65; }
 </style>
 </head>
-<body>
+<body data-portal="diagnostics" data-page-title="Health Check">
 <div class="wrap">
-  <h1>⚡ Deployment Health Check</h1>
+  <h1>Deployment Health Check</h1>
   <p class="sub">Verifies every service is connected and reachable. Run this after every deploy.</p>
 
   <div id="summary" class="summary"></div>
 
-  <button class="run-btn" id="runBtn" onclick="runAll()">Run All Checks</button>
+  <button class="run-btn" id="runBtn" type="button">Run All Checks</button>
 
   <!-- CONFIG -->
   <div class="card">
@@ -157,9 +209,9 @@ function set(id, status, label, detail) {
 }
 
 function running(id) { set(id, 'running', '', ''); }
-function ok(id, label, detail)   { set(id, 'ok',   '✓ ' + label, detail); }
-function warn(id, label, detail) { set(id, 'warn', '⚠ ' + label, detail); }
-function fail(id, label, detail) { set(id, 'fail', '✕ ' + label, detail); }
+function ok(id, label, detail)   { set(id, 'ok',   '\u2713 ' + label, detail); }
+function warn(id, label, detail) { set(id, 'warn', '\u26A0 ' + label, detail); }
+function fail(id, label, detail) { set(id, 'fail', '\u2715 ' + label, detail); }
 
 async function checkConfig() {
   running('config');
@@ -181,7 +233,7 @@ async function checkConfig() {
   running('company');
   const missing = ['COMPANY_NAME','COMPANY_EMAIL','COMPANY_PHONE'].filter(k => !CONFIG[k]);
   if (missing.length) warn('company', 'Partial', 'Missing: ' + missing.join(', '));
-  else ok('company', 'Set', CONFIG.COMPANY_NAME + ' · ' + CONFIG.COMPANY_EMAIL);
+  else ok('company', 'Set', CONFIG.COMPANY_NAME + ' \u00b7 ' + CONFIG.COMPANY_EMAIL);
 
   return true;
 }
@@ -229,8 +281,6 @@ async function checkFunction(id, name) {
   if (typeof CONFIG === 'undefined' || !CONFIG.SUPABASE_URL) { fail('fn-' + id, 'Skipped', 'Fix config first'); return; }
   running('fn-' + id);
   try {
-    // Send empty/invalid payload — we expect a 400/422/500 with JSON body, NOT a 404 or network error
-    // A proper JSON error response means the function is deployed and running
     const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/${name}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
@@ -242,7 +292,6 @@ async function checkFunction(id, name) {
     if (res.status === 404 || text.includes('Function not found')) {
       fail('fn-' + id, 'Not deployed', 'Push a change to supabase/functions/ to trigger auto-deploy');
     } else if (json !== null) {
-      // Got valid JSON back — function is running (error responses are expected for invalid payload)
       ok('fn-' + id, 'Deployed', `HTTP ${res.status} — function running`);
     } else {
       warn('fn-' + id, 'Unclear', `HTTP ${res.status} — unexpected response`);
@@ -258,7 +307,6 @@ async function runAll() {
   btn.textContent = 'Running checks...';
   document.getElementById('summary').style.display = 'none';
 
-  // Reset all to pending
   const ids = ['config','supabase-url','anon-key','imagekit','company',
     'db-connect','schema','security','properties',
     'fn-process','fn-inquiry','fn-lease','fn-sign','fn-status','fn-paid','fn-movein','fn-message','fn-imagekit'];
@@ -278,7 +326,6 @@ async function runAll() {
     checkFunction('imagekit', 'imagekit-upload'),
   ]);
 
-  // Summary
   const badges = document.querySelectorAll('.badge');
   const fails  = [...badges].filter(b => b.classList.contains('fail')).length;
   const warns  = [...badges].filter(b => b.classList.contains('warn')).length;
@@ -289,15 +336,21 @@ async function runAll() {
     sum.textContent = `${fails} critical issue${fails>1?'s':''} found — fix before going live`;
   } else if (warns > 0) {
     sum.className = 'summary has-warn';
-    sum.textContent = `All critical checks passed · ${warns} warning${warns>1?'s':''} — review above`;
+    sum.textContent = `All critical checks passed \u00b7 ${warns} warning${warns>1?'s':''} — review above`;
   } else {
     sum.className = 'summary all-ok';
-    sum.textContent = '✓ All checks passed — site is ready';
+    sum.textContent = '\u2713 All checks passed — site is ready';
   }
 
   btn.disabled = false;
   btn.textContent = 'Run Again';
 }
+
+// CSP-safe: bind the click handler instead of inline onclick
+document.addEventListener('DOMContentLoaded', function(){
+  const b = document.getElementById('runBtn');
+  if (b) b.addEventListener('click', runAll);
+});
 </script>
 </body>
 </html>
