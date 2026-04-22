@@ -1811,6 +1811,27 @@ button {
     background: var(--primary);
     transform: translateY(-1px);
 }
+.btn-close-error {
+    margin-top: 10px;
+    margin-left: 8px;
+    padding: 10px 18px;
+    background: #fff;
+    color: #555;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+.btn-close-error:hover {
+    background: #f5f5f5;
+    color: #222;
+    border-color: #999;
+}
 
 /* ── Save & Resume Later ── */
 .save-resume-bar {

@@ -2253,6 +2253,7 @@ class RentalApplication {
                 notSpecified: 'Not specified',
                 notSelected: 'Not selected',
                 retry: 'Retry',
+                close: 'Close',
                 offlineError: 'You are offline. Please check your internet connection and try again.',
                 submissionFailed: 'Submission failed. Please try again.',
                 backgroundQuestions: 'Background Questions',
@@ -2560,6 +2561,7 @@ class RentalApplication {
                 notSpecified: 'No especificado',
                 notSelected: 'No seleccionado',
                 retry: 'Reintentar',
+                close: 'Cerrar',
                 offlineError: 'Estás sin conexión. Por favor verifica tu conexión a internet e intenta de nuevo.',
                 submissionFailed: 'Error al enviar. Por favor intenta de nuevo.',
                 backgroundQuestions: 'Preguntas de Antecedentes',
@@ -2810,6 +2812,8 @@ class RentalApplication {
         retryBtn.parentNode.replaceChild(newBtn, retryBtn);
         newBtn.addEventListener('click', () => {
             newBtn.style.display = 'none';
+            const closeBtnEl = document.getElementById('submissionCloseBtn');
+            if (closeBtnEl) closeBtnEl.style.display = 'none';
             statusArea.classList.remove('error');
             if (spinner) {
                 spinner.className = 'fas fa-spinner fa-pulse';
@@ -2824,6 +2828,48 @@ class RentalApplication {
             this._successHandled = false;
             this.updateSubmissionProgress(1, t.processing);
             this.handleFormSubmit(new Event('submit'));
+        });
+
+        this._ensureSubmissionCloseBtn(progressDiv, t);
+    }
+
+    // ---------- _ensureSubmissionCloseBtn ----------
+    // Adds (or shows) a Close button next to the Retry button so the user is
+    // never stuck inside the submission overlay when an error appears.
+    _ensureSubmissionCloseBtn(progressDiv, t) {
+        if (!progressDiv) return;
+        let closeBtn = document.getElementById('submissionCloseBtn');
+        if (!closeBtn) {
+            closeBtn = document.createElement('button');
+            closeBtn.id = 'submissionCloseBtn';
+            closeBtn.className = 'btn-close-error';
+            closeBtn.type = 'button';
+            closeBtn.setAttribute('aria-label', (t && t.close) || 'Close');
+            progressDiv.appendChild(closeBtn);
+        }
+        this._setIconText(closeBtn, 'fas fa-times', (t && t.close) || 'Close');
+        closeBtn.style.display = 'inline-flex';
+
+        const fresh = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(fresh, closeBtn);
+        fresh.addEventListener('click', () => {
+            if (this.retryTimeout) {
+                clearTimeout(this.retryTimeout);
+                this.retryTimeout = null;
+            }
+            const statusArea = document.getElementById('statusArea');
+            const spinner = document.getElementById('submissionSpinner');
+            const retryBtn = document.getElementById('submissionRetryBtn');
+            if (statusArea) statusArea.classList.remove('error');
+            if (spinner) { spinner.className = 'fas fa-spinner fa-pulse'; spinner.style.color = ''; }
+            if (retryBtn) retryBtn.style.display = 'none';
+            for (let i = 1; i <= 4; i++) {
+                const stepItem = document.getElementById(`stepItem${i}`);
+                if (stepItem) stepItem.classList.remove('error');
+            }
+            fresh.style.display = 'none';
+            this.hideSubmissionProgress();
+            this.isSubmitting = false;
         });
     }
 
@@ -3249,6 +3295,8 @@ class RentalApplication {
         retryBtn.parentNode.replaceChild(newBtn, retryBtn);
         newBtn.addEventListener('click', () => {
             newBtn.style.display = 'none';
+            const closeBtnEl = document.getElementById('submissionCloseBtn');
+            if (closeBtnEl) closeBtnEl.style.display = 'none';
             if (statusArea) statusArea.classList.remove('error');
             if (spinner) { spinner.className = 'fas fa-spinner fa-pulse'; spinner.style.color = ''; }
             this.retryCount = 0;
@@ -3258,6 +3306,8 @@ class RentalApplication {
             this.updateSubmissionProgress(1, translations.processing);
             this.handleFormSubmit(new Event('submit'));
         });
+
+        this._ensureSubmissionCloseBtn(progressDiv, t);
     }
 
     // ---------- MODIFIED: show/hide progress with backdrop ----------
