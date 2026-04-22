@@ -50,7 +50,7 @@ These rules apply to **every phase** and **every contributor**. Violating them w
 | `css/landlord.css` | 567 | All `/landlord/*` | Deprecated after Phase 4 |
 | `css/admin.css` | 387 | Landlord pages (legacy import) | Deprecated after Phase 4 |
 | `css/dashboard-system.css` | 243 | Landlord + tenant portal | Deprecated after Phase 4/5 |
-| `css/listings.css` | 1,052 | `index.html`, `listings.html`, `landlord/profile.html` | Frozen — used by public listings UI |
+| `css/listings.css` | 1,052 | `listings.html`, `landlord/profile.html` (was index.html until sub-phase 7.3.1) | Frozen — used by public listings UI |
 | `css/property.css` | 1,202 | `property.html` | Frozen — used by public detail page |
 | `css/apply.css` | 1,560 | `/apply/*` only | **Do not touch (R3)** |
 
@@ -451,6 +451,9 @@ This plan is safe to execute provided every rule in §0 is followed and every ph
 
 ### Deferred to later phases
 
-- **Phase 7 batch 3 — heavy public pages**: `index.html`, `listings.html`, `property.html` still load legacy `main.css`, `mobile.css`, `listings.css`, `property.css`. Highest-traffic and highest-risk pages — full visual diff required. Once shipped, all four legacy CSS files can be deleted in Phase 8 final cleanup.
-- **Phase 8 final cleanup**: delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` after Phase 7 batch 3 ships and is verified.
+- **Phase 7 batch 3 — heavy public pages**: split into three sub-phases (one PR each) — see the prescriptive playbook in `BATCH_3_MIGRATION.md`.
+  - **7.3.1 — `index.html` ✅ DONE (April 22 2026).** Homepage now loads only `cp-design.css` + `cp-marketing.css`. Hero, search bar, trust strip, featured listings, how-it-works (dark strip), why-us (dark strip), property card, scroll-top, toast, and skeleton components added to `cp-marketing.css` (~700 lines) under `body[data-portal="public"]` scope. Nav/footer switched to the slot pattern (`<div id="site-nav"></div>` + `<div id="site-footer"></div>`). All SEO tags, JSON-LD blocks, form ids, and the inline `<script type="module" nonce="…">` block preserved exactly. Cache-bust `?v=20260424`.
+  - **7.3.2 — `listings.html`** ⏳ NOT STARTED. Filter bar, advanced filter panel, sort/results, pagination, map panel + popup styles must be ported into `cp-marketing.css`. Key risks: sticky header behavior, Leaflet map markers, list/map toggle.
+  - **7.3.3 — `property.html`** ⏳ NOT STARTED. Photo gallery, info panels, sidebar pricing card, contact form, amenities grid, structured data must be ported. Key risks: photo gallery layout, sticky sidebar, dynamic OG meta in `renderProperty`.
+- **Phase 8 final cleanup**: delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` after sub-phases 7.3.2 and 7.3.3 ship and are verified live for ≥ 2 weeks.
 - **Tenant chrome unification (open §3)**: decide whether `tenant/portal.html` should adopt `cp-chrome.js`/`cp-shell.js` or remain with its bespoke topbar. No-op until product owner decides.

@@ -11,15 +11,15 @@
   ╚══════════════════════════════════════════════════════════════╝
 -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
   <link rel="manifest" href="/manifest.json">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Choice Properties — Find Your Next Home Nationwide</title>
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <meta name="description" content="Browse verified rental listings across the United States. Apartments, houses, and condos — apply online in minutes.">
+  <link rel="canonical" href="https://choice-properties-site.pages.dev/">
   <meta property="og:title" content="Choice Properties — Find Your Next Home Nationwide">
   <meta property="og:description" content="Browse verified rental listings across the United States. Apartments, houses, and condos — apply online in minutes.">
   <meta property="og:image" content="/assets/og-cover.jpg">
@@ -29,35 +29,26 @@
   <meta name="twitter:title" content="Choice Properties — Find Your Next Home Nationwide">
   <meta name="twitter:description" content="Browse verified rental listings across the United States. Apply online in minutes.">
   <meta name="twitter:image" content="/assets/og-cover.jpg">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="/css/main.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/main.css?v=1775137055043"></noscript>
-  <link rel="stylesheet" href="/css/listings.css?v=1775137055043">
-<noscript><link rel="stylesheet" href="/css/listings.css?v=1775137055043"></noscript>
   <link rel="stylesheet" href="/assets/fontawesome.css">
+  <link rel="stylesheet" href="/css/cp-design.css?v=20260424">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260424">
   <style>
     /* ── CRITICAL CSS — above-fold paint for index.html ──────────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
-       Mirrors the minimal subset of main.css + listings.css needed for:
-       nav bar, hero section, body font, and card grid skeleton.
+       Mirrors the minimal subset of cp-marketing.css needed for: nav slot,
+       hero section background, body font, and skeleton card placeholders.
     ─────────────────────────────────────────────────────────────────────── */
     *,*::before,*::after{box-sizing:border-box}
     html{-webkit-text-size-adjust:100%}
-    body{
-      margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-      background:#fff;color:#1a1a1a;line-height:1.6;font-size:15px;
+    body[data-portal="public"]{
+      margin:0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:#fff;color:#1f2937;line-height:1.6;font-size:15.5px;
     }
-    .nav{
-      position:fixed;top:0;left:0;right:0;height:64px;z-index:900;
-      background:rgba(255,255,255,0.97);
-      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-      border-bottom:1px solid #e0e0e0;
-    }
-    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 16px;max-width:1280px;margin:0 auto}
-    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-    .nav-logo-emblem{width:34px;height:34px;border-radius:8px;background:#006aff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .hero{
       position:relative;
       background:linear-gradient(150deg,#04111F 0%,#0B1D38 45%,#0E2347 75%,#071627 100%);
@@ -65,16 +56,16 @@
       padding:clamp(60px,10vw,110px) 0 clamp(60px,8vw,90px);
       display:flex;align-items:center;overflow:hidden;
     }
-    .property-grid{display:grid;grid-template-columns:1fr}
-    .property-card{overflow:hidden;background:#fff}
+    .property-grid{display:grid;grid-template-columns:1fr;gap:16px}
+    .property-card{overflow:hidden;background:#fff;border-radius:22px}
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
-    #site-nav{height:64px}
+    #site-nav{min-height:64px}
   </style>
-<script defer src="/config.js"></script>
+<script defer src="/config.js?v=20260424"></script>
 <script defer src="/js/supabase.min.js"></script>
-<script type="module" src="/js/cp-api.js"></script>
-<script defer src="/js/components.js"></script>
-<script defer src="/js/card-builder.js"></script>
+<script type="module" src="/js/cp-api.js?v=20260424"></script>
+<script defer src="/js/components.js?v=20260424"></script>
+<script defer src="/js/card-builder.js?v=20260424"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -110,78 +101,10 @@
   }
   </script>
 </head>
-<body>
+<body data-portal="public" data-page="home">
 
-<!-- ── Mobile Drawer Overlay ── -->
-<div id="site-nav" data-server-injected="1"><div class="nav-drawer-overlay" id="drawerOverlay"></div>
-
-<!-- ── Mobile Drawer ── -->
-<nav class="nav-drawer" id="navDrawer">
-  <div class="nav-drawer-header">
-    <a href="/index.html" class="nav-logo">
-      <div class="nav-logo-emblem">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
-          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
-        </svg>
-      </div>
-      <div class="nav-logo-text-wrap">
-        <div class="nav-logo-name">Choice Properties</div>
-        <div class="nav-logo-tagline">Rental Marketplace</div>
-      </div>
-    </a>
-    <button class="nav-drawer-close" id="drawerClose" aria-label="Close menu">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-  <div class="nav-drawer-body">
-    <a href="/listings.html" class="nav-drawer-link" data-nav-path="/listings.html"><i class="fas fa-home"></i> Browse Listings</a>
-    <a href="/how-to-apply.html" class="nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
-    <a href="/faq.html" class="nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
-    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track My Application</a>    <a href="/landlord/register.html" class="nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
-    <a href="/admin/login.html" class="nav-drawer-link" data-nav-path="/admin/login.html"><i class="fas fa-user-shield"></i> Admin Portal</a>    <div class="nav-drawer-divider"></div>
-    <a href="/how-it-works.html" class="nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
-    <a href="/about.html" class="nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
-  </div>
-  <div class="nav-drawer-cta">
-    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
-  </div>
-  <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="mailto:support@choiceproperties.com">support@choiceproperties.com</a></div>
-</nav>
-
-<!-- ── Main Navigation ── -->
-<nav class="nav" id="mainNav">
-  <div class="nav-inner">
-    <a href="/index.html" class="nav-logo">
-      <div class="nav-logo-emblem">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
-          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
-        </svg>
-      </div>
-      <div class="nav-logo-text-wrap">
-        <div class="nav-logo-name">Choice Properties</div>
-        <div class="nav-logo-tagline">Rental Marketplace</div>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="/listings.html" class="nav-link" data-nav-path="/listings.html">Browse Listings</a>
-      <a href="/how-to-apply.html" class="nav-link" data-nav-path="/how-to-apply.html">How to Apply</a>
-      <a href="/faq.html" class="nav-link" data-nav-path="/faq.html">FAQ</a>
-      <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
-        <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
-      </a>
-      <a href="/landlord/register.html" class="nav-link nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
-      <a href="/admin/login.html" class="nav-link nav-link--admin" data-nav-path="/admin/login.html">Admin Portal</a>
-    </div>
-
-    <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navDrawer">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-</nav>
-</div>
+<!-- Shared site nav — injected by /js/components.js from /components/nav.html -->
+<div id="site-nav"></div>
 
 <!-- ── Hero ── -->
 <section class="hero">
@@ -405,64 +328,8 @@
   </div>
 </section>
 
-<!-- ── Footer ── -->
-<div id="site-footer" data-server-injected="1"><footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <div class="footer-logo">
-            <div class="footer-logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.92"/>
-                <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.9)"/>
-              </svg>
-            </div>
-            <div class="footer-logo-text">Choice Properties</div>
-          </div>
-          <p class="footer-desc">America's trusted rental marketplace. Connecting quality tenants with verified landlords across all 50 states.</p>
-          <a href="mailto:support@choiceproperties.com" class="footer-link" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:6px" data-cfg-email><i class="fas fa-envelope"></i> support@choiceproperties.com</a>
-          <div class="footer-link" style="display:inline-flex;align-items:center;gap:6px"><i class="fas fa-globe-americas"></i> Nationwide Rental Marketplace</div>
-        </div>
-        <div>
-          <div class="footer-col-title">Renters</div>
-          <a href="/listings.html" class="footer-link">Browse Listings</a>
-          <a href="/how-to-apply.html" class="footer-link">How to Apply</a>
-          <a href="/faq.html" class="footer-link">FAQ</a>
-          <a href="/tenant/portal.html" class="footer-link" target="_blank" rel="noopener noreferrer">Track My Application</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Landlords</div>
-          <a href="/landlord/register.html" class="footer-link">List a Property</a>
-          <a href="/landlord/login.html" class="footer-link">Landlord Login</a>
-          <a href="/how-it-works.html" class="footer-link">How It Works</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Company</div>
-          <a href="/about.html" class="footer-link">About Us</a>
-          <a href="/privacy.html" class="footer-link">Privacy Policy</a>
-          <a href="/terms.html" class="footer-link">Terms of Service</a>
-          <a href="mailto:support@choiceproperties.com" class="footer-link" data-cfg-email>Contact</a>
-        </div>
-        <div>
-          <div class="footer-col-title">Legal &amp; Policies</div>
-          <a href="/rental-application-policy.html" class="footer-link">Rental Application Policy</a>
-          <a href="/application-credit-policy.html" class="footer-link">Application Credit Policy</a>
-          <a href="/holding-deposit-policy.html" class="footer-link">Holding Deposit Policy</a>
-          <a href="/fair-housing.html" class="footer-link">Fair Housing Policy</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span class="footer-legal">&copy; 2026 Choice Properties. All rights reserved.</span>
-        <span class="footer-eq"><i class="fas fa-home" aria-hidden="true"></i> Equal Housing Opportunity</span>
-        <div class="footer-bottom-links">
-          <a href="/privacy.html">Privacy</a>
-          <a href="/terms.html">Terms</a>
-          <a href="/fair-housing.html">Fair Housing</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-  </div>
+<!-- Shared site footer — injected by /js/components.js from /components/footer.html -->
+<div id="site-footer"></div>
 
 <div class="toast-container" id="toastContainer"></div>
 <button class="scroll-top" id="scrollTopBtn" aria-label="Back to top"><i class="fas fa-chevron-up"></i></button>
@@ -504,7 +371,7 @@ async function loadFeaturedListings() {
     const skeleton = grid.querySelector('.property-card-skeleton');
     if (skeleton) {
       const loadingMsg = document.createElement('div');
-      loadingMsg.style.cssText = 'grid-column:1/-1;text-align:center;padding:32px 24px;color:var(--color-text-secondary);font-size:0.9rem;';
+      loadingMsg.style.cssText = 'grid-column:1/-1;text-align:center;padding:32px 24px;color:#6b7280;font-size:0.9rem;';
       loadingMsg.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px;"></i>Loading featured listings...';
       grid.insertAdjacentElement('afterend', loadingMsg);
       loadingMsg.id = 'loadingIndicator';
@@ -527,13 +394,13 @@ async function loadFeaturedListings() {
       // I-033: Show a warm empty state instead of hiding the section entirely.
       // An empty marketplace on launch day would look broken with no explanation.
       grid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:56px 24px 48px;color:var(--color-text-secondary);">
+        <div style="grid-column:1/-1;text-align:center;padding:56px 24px 48px;color:#6b7280;">
           <div style="font-size:40px;margin-bottom:16px;opacity:0.5;">🏡</div>
-          <h3 style="font-size:1.15rem;font-weight:600;color:var(--color-text-primary);margin:0 0 8px;">Listings Coming Soon</h3>
+          <h3 style="font-size:1.15rem;font-weight:600;color:#1f2937;margin:0 0 8px;">Listings Coming Soon</h3>
           <p style="font-size:0.95rem;margin:0 0 24px;max-width:340px;margin-left:auto;margin-right:auto;line-height:1.5;">
             We're just getting started — check back shortly for available properties in your area.
           </p>
-          <a href="/listings.html" style="display:inline-block;padding:10px 22px;background:var(--color-brand);color:#fff;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:500;">
+          <a href="/listings.html" style="display:inline-block;padding:10px 22px;background:#006aff;color:#fff;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:500;">
             Browse All Listings
           </a>
         </div>`;
@@ -663,9 +530,9 @@ function setupScrollTop() {
 function setupSmoothScrollSections() {
   const sections = document.querySelectorAll('[id$="-section"], [id="how-it-works"]');
   const navLinks = document.querySelectorAll('[data-scroll-to]');
-  
+
   if (!sections.length) return;
-  
+
   // Handle click events on scroll links
   navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
@@ -677,20 +544,20 @@ function setupSmoothScrollSections() {
       }
     });
   });
-  
+
   // Use Intersection Observer to highlight active section
   const observerOptions = {
     root: null,
     rootMargin: '-30% 0px -70% 0px', // Trigger when section is 30% from top
     threshold: 0
   };
-  
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         // Remove active class from all nav links
         navLinks.forEach(link => link.classList.remove('active'));
-        
+
         // Add active class to matching link
         const sectionId = entry.target.id;
         const activeLink = document.querySelector(`[data-scroll-to="${sectionId}"]`);
@@ -698,7 +565,7 @@ function setupSmoothScrollSections() {
       }
     });
   }, observerOptions);
-  
+
   // Observe all sections
   sections.forEach(section => observer.observe(section));
 }
