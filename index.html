@@ -32,10 +32,10 @@
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
   <link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=20260426">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260426">
+  <link rel="stylesheet" href="/css/cp-design.css?v=20260427">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260427">
   <style>
     /* ── CRITICAL CSS — above-fold paint for index.html ──────────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
@@ -61,11 +61,11 @@
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
     #site-nav{min-height:64px}
   </style>
-<script defer src="/config.js?v=20260426"></script>
+<script defer src="/config.js?v=20260427"></script>
 <script defer src="/js/supabase.min.js"></script>
-<script type="module" src="/js/cp-api.js?v=20260426"></script>
-<script defer src="/js/components.js?v=20260426"></script>
-<script defer src="/js/card-builder.js?v=20260426"></script>
+<script type="module" src="/js/cp-api.js?v=20260427"></script>
+<script defer src="/js/components.js?v=20260427"></script>
+<script defer src="/js/card-builder.js?v=20260427"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -100,6 +100,7 @@
     }
   }
   </script>
+  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80" fetchpriority="high">
 </head>
 <body data-portal="public" data-page="home">
 
@@ -638,5 +639,12 @@ function setupSmoothScrollSections() {
   sections.forEach(section => observer.observe(section));
 }
 </script>
+
+<!-- ── Mobile sticky CTA bar (Phase 1) ─────────────────────── -->
+<div class="mobile-cta-bar" role="navigation" aria-label="Quick actions">
+  <a href="/listings.html" class="mcta-ghost"><i class="fas fa-search"></i> Browse</a>
+  <a href="/how-to-apply.html" class="mcta-primary"><i class="fas fa-bolt"></i> Start Application</a>
+</div>
+
 </body>
 </html>
