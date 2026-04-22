@@ -384,12 +384,82 @@
     } catch(e){ console.error('[admin-shell] requireAdmin', e); return false; }
   };
 
+  // ───────────────────────── Edge-function caller ─────────────────────────
+  // Single, hardened wrapper for Edge Function calls from any portal page.
+  // Replaces the per-page `callFn` copies that swallowed CONFIG-missing and
+  // auth-expired failures silently. Returns { ok, json } — never throws.
+  //
+  // Failure modes that used to silently no-op now produce a visible toast +
+  // (where appropriate) a redirect to the correct login page:
+  //   • CONFIG missing or SUPABASE_URL blank  → toast + STAY (caller decides)
+  //   • Access token missing/expired           → toast + redirect to login
+  //   • Network error                          → toast, returns { ok:false }
+  //   • Non-2xx response                       → toast with server error text
+  Shell.callFn = async function(path, body, opts){
+    opts = opts || {};
+    const loginPath = opts.loginPath || (location.pathname.includes('/admin/')
+      ? '/admin/login.html'
+      : (location.pathname.includes('/landlord/') ? '/landlord/login.html' : '/tenant/login.html'));
+
+    if(!window.CONFIG || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){
+      Shell.toast('Configuration not loaded — try a hard refresh (Ctrl/Cmd+Shift+R).', 'error', 6000);
+      return { ok:false, json:{ error:'CONFIG missing' } };
+    }
+    if(!window.CP || !CP.Auth || typeof CP.Auth.getAccessToken !== 'function'){
+      Shell.toast('Auth library not loaded — refresh the page.', 'error', 6000);
+      return { ok:false, json:{ error:'CP.Auth missing' } };
+    }
+
+    const token = await CP.Auth.getAccessToken();
+    if(!token){
+      Shell.toast('Your session has expired — sending you to the login page.', 'error', 4000);
+      setTimeout(() => { location.href = loginPath; }, 1200);
+      return { ok:false, json:{ error:'Session expired' } };
+    }
+
+    const url = CONFIG.SUPABASE_URL + '/functions/v1' + (path.startsWith('/') ? path : '/' + path);
+    try {
+      const resp = await fetch(url, {
+        method: opts.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+          'apikey': CONFIG.SUPABASE_ANON_KEY
+        },
+        body: body == null ? undefined : JSON.stringify(body)
+      });
+      let json = {};
+      try { json = await resp.json(); } catch(_) {}
+      const ok = resp.ok && json.success !== false;
+      if(!ok && opts.toastErrors !== false){
+        Shell.toast(json.error || ('Request failed (' + resp.status + ')'), 'error');
+      }
+      return { ok, json, status: resp.status };
+    } catch(e){
+      Shell.toast('Network error: ' + (e.message || e), 'error');
+      return { ok:false, json:{ error: e.message || String(e) } };
+    }
+  };
+
   // ───────────────────────── Boot ─────────────────────────
   function boot(){
     initActions();
     initActiveNav();
     initSwipeRows();
     if('ontouchstart' in window) initPullToRefresh();
+    // Cross-tab session sync: if user signs out in another tab, follow.
+    window.addEventListener('storage', (e) => {
+      if(!e.key) return;
+      if(e.key.startsWith('sb-') && e.key.endsWith('-auth-token') && e.newValue === null){
+        Shell.toast('Signed out in another tab.', null, 2500);
+        const path = location.pathname;
+        const target = path.includes('/admin/') ? '/admin/login.html'
+                     : path.includes('/landlord/') ? '/landlord/login.html'
+                     : path.includes('/tenant/') ? '/tenant/login.html'
+                     : '/';
+        setTimeout(() => { location.href = target; }, 600);
+      }
+    });
     // Defer realtime to after CP is ready
     setTimeout(initLiveIndicator, 800);
   }

@@ -13,12 +13,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=20260423">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260424">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=20260423"></script>
-<script defer src="/js/cp-shell.js?v=20260423"></script>
+<script defer src="/js/cp-chrome.js?v=20260424"></script>
+<script defer src="/js/cp-shell.js?v=20260424"></script>
 </head>
 <body data-page-title="Leases" data-page-sub="Loading…">
 <div class="app">
@@ -157,22 +157,12 @@
   function findApp(id){ return _rows.find(r => String(r.id) === String(id)); }
 
   // ───────── Generate / preview ─────────
-  async function callFn(path, body){
-    const token = await CP.Auth.getAccessToken();
-    if(!token){ S.toast('Session expired — sign in again.','error'); return null; }
-    const base = (window.CONFIG && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
-    try {
-      const resp = await fetch(base + path, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, 'apikey': CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify(body)
-      });
-      const json = await resp.json().catch(() => ({}));
-      return { ok: resp.ok && json.success !== false, json };
-    } catch(e){
-      return { ok:false, json:{ error:'Network error: ' + e.message } };
-    }
-  }
+  // I-407: All Edge Function calls go through S.callFn (cp-shell.js).
+  // Local copy removed — was silently no-op'ing on missing CONFIG and
+  // showing a single-line "Session expired" toast that users missed.
+  // S.callFn now hard-redirects to login on missing token + visible toasts
+  // for CONFIG / network / non-2xx failures.
+  const callFn = (path, body) => S.callFn(path, body);
 
   async function openGenerateSheet(id, appId){
     const app = findApp(id) || {};

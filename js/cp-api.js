@@ -71,7 +71,15 @@ const Auth = {
   //   2. Confirm the token actually works by calling getUser() (same check the edge function runs).
   //   3. If either step fails, sign out locally to clear the broken session, then return null.
   //      The caller should then redirect to the login page.
+  // I-407: Refresh-in-flight lock. Two simultaneous fetches both calling
+  // getAccessToken() used to each kick off their own refreshSession(); the
+  // second one's refresh-token use would race the first and one would fail
+  // with "refresh token already used". Coalesce into a single in-flight
+  // promise so concurrent callers share the result.
+  _refreshLock: null,
   async getAccessToken() {
+    if (Auth._refreshLock) return Auth._refreshLock;
+    Auth._refreshLock = (async () => {
     // Always force-refresh to avoid returning an expired cached access_token.
     // getSession() can return a stale token on slow connections when auto-refresh timed out.
     let token = null;
@@ -117,6 +125,9 @@ const Auth = {
     }
 
     return token;
+    })();
+    try { return await Auth._refreshLock; }
+    finally { Auth._refreshLock = null; }
   },
   async signOut() {
     await sb().auth.signOut();
