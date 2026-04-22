@@ -1,11 +1,21 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
+import { getSiteUrl } from '../_shared/config.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
+
+// Token must look like a high-entropy random hex/base64 string (≥32 chars, no spaces).
+const TOKEN_RE = /^[A-Za-z0-9_\-]{32,128}$/;
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for') || '';
+  return (fwd.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
+}
 
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
@@ -15,7 +25,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'GET') {
     const url = new URL(req.url);
     const token = (url.searchParams.get('token') || '').trim();
-    if (!token) return jsonErr(400, 'token is required');
+    if (!TOKEN_RE.test(token)) return jsonErr(400, 'Invalid token');
 
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
@@ -34,8 +44,17 @@ Deno.serve(async (req: Request) => {
     return jsonOk({ found: true, data: data.data });
   }
 
-  // POST { token, email, resume_url, data, property_fingerprint }
+  // POST { token, email, send_email, data, property_fingerprint }
+  // NOTE: resume_url is NEVER trusted from the client — built server-side from token.
   if (req.method === 'POST') {
+    const ip = getClientIp(req);
+
+    // Rate-limit per IP: 20 saves / 60s. Drafts auto-save aggressively, so this
+    // is generous, but it caps abuse / loops.
+    if (await isDbRateLimited(ip, 'save-draft', 20, 60_000)) {
+      return jsonErr(429, 'Too many save requests. Please wait a moment.');
+    }
+
     let body: Record<string, unknown> = {};
     try {
       body = await req.json();
@@ -45,12 +64,15 @@ Deno.serve(async (req: Request) => {
 
     const token = String(body.token || '').trim();
     const email = String(body.email || '').trim().toLowerCase();
-    const resumeUrl = String(body.resume_url || '').trim();
+    const sendResumeEmail = body.send_email === true;
     const progressData = body.data;
     const propertyFingerprint = String(body.property_fingerprint || '').trim();
 
-    if (!token || token.length < 8) return jsonErr(400, 'Invalid token');
-    if (!email || !email.includes('@')) return jsonErr(400, 'Valid email is required');
+    if (!TOKEN_RE.test(token)) return jsonErr(400, 'Invalid token');
+    if (!email || !email.includes('@') || email.length > 254) return jsonErr(400, 'Valid email is required');
+
+    // Server-built resume URL — client value is ignored entirely.
+    const resumeUrl = `${getSiteUrl()}/apply/?resume=${encodeURIComponent(token)}`;
 
     const { error: upsertErr } = await supabase
       .from('draft_applications')
@@ -67,7 +89,7 @@ Deno.serve(async (req: Request) => {
       return jsonErr(500, 'Failed to save draft');
     }
 
-    if (resumeUrl) {
+    if (sendResumeEmail) {
       const html = `
         <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
           <h2 style="color:#1a5276;">Your application progress is saved</h2>

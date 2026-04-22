@@ -856,20 +856,64 @@ async function updateNav() {
       return _ok(data, error);
     },
 
-    async updateStatus(id, status, adminNotes) {
+    // Internal: fire a status/payment notification email via the send-email
+    // edge function. Failures are logged but never block the underlying DB
+    // update — the admin will see the new state immediately and can use the
+    // "Resend" button if email delivery failed.
+    async _sendNotification(appRowOrId, type, extra) {
+      try {
+        // Resolve to app_id (the public ref) if caller passed the row's UUID.
+        let appId = null;
+        if (appRowOrId && typeof appRowOrId === 'object') {
+          appId = appRowOrId.app_id;
+        } else {
+          const { data } = await sb().from('applications').select('app_id').eq('id', appRowOrId).maybeSingle();
+          appId = data?.app_id || null;
+        }
+        if (!appId) return { ok: false, error: 'No app_id resolvable for notification' };
+        return await callEdgeFunction('send-email', { app_id: appId, type, ...(extra || {}) });
+      } catch (err) {
+        return { ok: false, error: err?.message || String(err) };
+      }
+    },
+
+    // STATUS_EMAIL_TYPES: which statuses trigger an automated tenant email.
+    // Keep this in sync with supported types in supabase/functions/send-email/index.ts.
+    _STATUS_EMAIL_TYPES: { approved: 'approved', denied: 'denied', waitlisted: 'waitlisted' },
+
+    async updateStatus(id, status, adminNotes, options) {
+      const opts = options || {};
       const patch = { status, updated_at: new Date().toISOString() };
       if (adminNotes !== undefined) patch.admin_notes = adminNotes;
-      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,status,admin_notes,updated_at').single();
-      return _ok(data, error);
+      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,app_id,status,admin_notes,updated_at').single();
+      const result = _ok(data, error);
+      // Fire automated status email (approved/denied/waitlisted) unless caller opts out.
+      if (result.ok && opts.sendEmail !== false) {
+        const type = Applications._STATUS_EMAIL_TYPES[status];
+        if (type) {
+          const email = await Applications._sendNotification(data, type, adminNotes ? { message: adminNotes } : undefined);
+          result.emailSent = !!email.ok;
+          if (!email.ok) result.emailError = email.error;
+        }
+      }
+      return result;
     },
 
-    async updatePayment(id, paymentStatus) {
+    async updatePayment(id, paymentStatus, options) {
+      const opts = options || {};
       const patch = { payment_status: paymentStatus, payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null, updated_at: new Date().toISOString() };
-      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,payment_status,payment_date').single();
-      return _ok(data, error);
+      const { data, error } = await sb().from('applications').update(patch).eq('id', id).select('id,app_id,payment_status,payment_date').single();
+      const result = _ok(data, error);
+      if (result.ok && paymentStatus === 'paid' && opts.sendEmail !== false) {
+        const email = await Applications._sendNotification(data, 'payment_confirmed');
+        result.emailSent = !!email.ok;
+        if (!email.ok) result.emailError = email.error;
+      }
+      return result;
     },
 
-    async updatePaymentWithDetails(id, paymentStatus, amount, method, notes) {
+    async updatePaymentWithDetails(id, paymentStatus, amount, method, notes, options) {
+      const opts = options || {};
       const now = new Date().toISOString();
       const patch = {
         payment_status: paymentStatus,
@@ -881,8 +925,17 @@ async function updateNav() {
       if (notes)           patch.payment_notes            = notes;
       const { data, error } = await sb().from('applications')
         .update(patch).eq('id', id)
-        .select('id,payment_status,payment_date,payment_amount_recorded,payment_method_recorded,payment_notes').single();
-      return _ok(data, error);
+        .select('id,app_id,payment_status,payment_date,payment_amount_recorded,payment_method_recorded,payment_notes').single();
+      const result = _ok(data, error);
+      if (result.ok && paymentStatus === 'paid' && opts.sendEmail !== false) {
+        const email = await Applications._sendNotification(data, 'payment_confirmed', {
+          amount_collected: amount,
+          payment_method:  method,
+        });
+        result.emailSent = !!email.ok;
+        if (!email.ok) result.emailError = email.error;
+      }
+      return result;
     },
 
     async getLandlordApplications(landlordId) {

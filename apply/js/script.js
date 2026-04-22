@@ -1759,7 +1759,8 @@ class RentalApplication {
                           body: JSON.stringify({
                               token,
                               email,
-                              resume_url: resumeUrl,
+                              // resume_url is built server-side from the token (never trusted from client)
+                              send_email: true,
                               data: rawData,
                               property_fingerprint: propertyFingerprint,
                           }),
@@ -3005,6 +3006,19 @@ class RentalApplication {
 
             const form = document.getElementById('rentalApplication');
             const formData = new FormData(form);
+
+            // Idempotency key — server uses this to dedupe accidental double-submits
+            // (network retries, double-clicks, etc.). Generate once per attempt; if the
+            // user clicks Submit a second time after a flaky network, we'll regenerate
+            // a new UUID so it really does send a fresh attempt.
+            try {
+                const submissionUuid = (window.crypto && typeof crypto.randomUUID === 'function')
+                    ? crypto.randomUUID()
+                    : ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                        const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8); return v.toString(16);
+                      }));
+                formData.set('submission_uuid', submissionUuid);
+            } catch (_) { /* non-fatal */ }
 
             // Property context fields are carried by hidden inputs in index.html
             // and serialised automatically by FormData — no manual appending needed.
