@@ -936,6 +936,18 @@ function wrap(title, appId, lang, content, cfg) {
     '<div class="email-header"><div class="header-brand">' + cfg.companyName + '</div><div class="header-sub">' + t('headerSub', lang) + '</div><div class="header-title">' + title + '</div>' + refLine + '</div>' +
     content +
     '<div class="email-footer"><div class="footer-name">' + cfg.companyName + '</div><div class="footer-details">' + cfg.companyName + ' ' + t('footerMarketplace', lang) + '<br>' + cfg.companyPhone + ' (' + (lang === 'es' ? 'Solo Texto' : 'Text Only') + ') &middot; ' + cfg.companyEmail + '<br>' + t('tagline', lang) + '</div>' +
+    '<div style="font-size:11px;color:#888;margin-top:12px;line-height:1.6;">' +
+      '<a href="https://choice-properties-site.pages.dev/policies.html" style="color:#888;text-decoration:underline;">' + (lang === 'es' ? 'Marco de Pol\u00edticas' : 'Policy Framework') + '</a> &middot; ' +
+      '<a href="https://choice-properties-site.pages.dev/terms.html" style="color:#888;text-decoration:underline;">' + (lang === 'es' ? 'T\u00e9rminos' : 'Terms') + '</a> &middot; ' +
+      '<a href="https://choice-properties-site.pages.dev/privacy.html" style="color:#888;text-decoration:underline;">' + (lang === 'es' ? 'Privacidad' : 'Privacy') + '</a> &middot; ' +
+      '<a href="https://choice-properties-site.pages.dev/fair-housing.html" style="color:#888;text-decoration:underline;">' + (lang === 'es' ? 'Vivienda Justa' : 'Fair Housing') + '</a> &middot; ' +
+      '<a href="https://choice-properties-site.pages.dev/policy-changelog.html" style="color:#888;text-decoration:underline;">' + (lang === 'es' ? 'Historial' : 'Changelog') + '</a>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#9aa3af;margin-top:10px;line-height:1.5;">' +
+      (lang === 'es'
+        ? 'Recibe este correo transaccional porque envi\u00f3 una solicitud o firm\u00f3 un contrato a trav\u00e9s de Choice Properties. No es un mensaje de marketing.<br><strong>SMS:</strong> Responda HELP para ayuda, STOP para cancelar. Pueden aplicar tarifas de mensajes y datos. Cancelar SMS no afecta los correos de la solicitud.<br>Marco de Pol\u00edticas v2.0 &middot; Vigente 22 de abril de 2026.'
+        : 'You are receiving this transactional email because you submitted an application or signed a lease through Choice Properties. This is not a marketing message.<br><strong>SMS:</strong> Reply HELP for help, STOP to opt out. Msg &amp; data rates may apply. SMS opt-out does not affect application emails.<br>Policy Framework v2.0 &middot; Effective April 22, 2026.') +
+    '</div>' +
     '<div style="font-size:10px;color:#aaaaaa;margin-top:8px;line-height:1.6;">' + t('confidential', lang) + ' &copy; ' + new Date().getFullYear() + ' ' + cfg.companyName + '. ' + t('footerRights', lang) + '</div>' +
     '</div></div></body></html>';
 }

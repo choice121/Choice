@@ -212,6 +212,10 @@ Deno.serve(async (req: Request) => {
     lease_status: 'none',
     move_in_status: 'pending',
     payment_status: fPaymentStatus(null),
+    terms_consent: fv(fields['Terms Consent']) === 'yes' || fBool(fields['Terms Consent']) || fBool(fields['agreeTermsPrivacy']),
+    sms_consent: fv(fields['SMS Consent']) === 'yes' || fBool(fields['SMS Consent']) || fBool(fields['smsConsent']),
+    consent_timestamp: fv(fields['Consent Timestamp']) || new Date().toISOString(),
+    consent_version: fv(fields['Consent Version']) || '2.0',
   };
 
   const cleanApp = Object.fromEntries(

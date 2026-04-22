@@ -103,6 +103,8 @@ const EMAIL_BASE_CSS = `
   }
 `;
 
+const POLICY_BASE_URL = 'https://choice-properties-site.pages.dev';
+
 const EMAIL_FOOTER = `
   <div class="email-footer">
     <div class="footer-name">Choice Properties</div>
@@ -110,6 +112,18 @@ const EMAIL_FOOTER = `
       2265 Livernois, Suite 500 &middot; Troy, MI 48083<br>
       707-706-3137 (Text Only) &middot; support@choiceproperties.com<br>
       Your trust is our standard.
+    </div>
+    <div class="footer-details" style="margin-top:12px;font-size:11px;line-height:1.6;">
+      <a href="${POLICY_BASE_URL}/policies.html" style="color:#666;text-decoration:underline;">Policy Framework</a> &middot;
+      <a href="${POLICY_BASE_URL}/terms.html" style="color:#666;text-decoration:underline;">Terms</a> &middot;
+      <a href="${POLICY_BASE_URL}/privacy.html" style="color:#666;text-decoration:underline;">Privacy</a> &middot;
+      <a href="${POLICY_BASE_URL}/fair-housing.html" style="color:#666;text-decoration:underline;">Fair Housing</a> &middot;
+      <a href="${POLICY_BASE_URL}/policy-changelog.html" style="color:#666;text-decoration:underline;">Changelog</a>
+    </div>
+    <div class="footer-details" style="margin-top:10px;font-size:10px;color:#9aa3af;line-height:1.5;">
+      You are receiving this transactional email because you submitted an application or signed a lease through Choice Properties. This is not a marketing message.<br>
+      <strong>SMS:</strong> Reply HELP for help, STOP to opt out. Msg &amp; data rates may apply. SMS opt-out does not affect application emails.<br>
+      Policy Framework v2.0 &middot; Effective April 22, 2026.
     </div>
   </div>
 `;
@@ -146,6 +160,10 @@ export interface ApplicationFields {
   'Preferred Contact Method'?: string;
   'Preferred Time'?: string;
   'Preferred Time Specific'?: string;
+  'SMS Consent'?: 'yes' | 'no' | string;
+  'Terms Consent'?: 'yes' | 'no' | string;
+  'Consent Timestamp'?: string;
+  'Consent Version'?: string;
   [key: string]: unknown;
 }
 
@@ -221,6 +239,20 @@ export function applicationConfirmationHtml(
     <div class="cta-wrap">
       <a href="${portal}" class="cta-btn">Track My Application</a>
       <div class="cta-note">Or visit: ${portal}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Your Agreement on Record</div>
+      <p style="font-size:13px;color:#555;line-height:1.65;">When you submitted this application you agreed to the
+        <a href="${POLICY_BASE_URL}/terms.html" style="color:#1a5276;">Terms of Service</a> (including binding arbitration and class-action waiver in Sections 18–19),
+        the <a href="${POLICY_BASE_URL}/privacy.html" style="color:#1a5276;">Privacy Policy</a>, and the
+        <a href="${POLICY_BASE_URL}/policies.html" style="color:#1a5276;">Complete Policy &amp; Legal Framework</a> (v2.0).
+        The <strong>$50 application fee is non-refundable</strong> once payment is confirmed, except as described in the
+        <a href="${POLICY_BASE_URL}/application-credit-policy.html" style="color:#1a5276;">Application Credit Policy</a>.
+        ${fields?.['SMS Consent'] === 'yes'
+          ? `You opted in to transactional SMS at <strong>${fields?.['Phone'] || 'the number on file'}</strong>. Reply STOP to opt out at any time.`
+          : `You did not opt in to SMS — we will reach you by email and phone only.`}
+      </p>
     </div>
 
     ${CONTACT_ROW}
@@ -618,6 +650,13 @@ export function holdingFeeRequestHtml(
         <li><span class="step-num">2</span><span>Your unit is formally reserved and removed from active availability.</span></li>
         <li><span class="step-num">3</span><span>Our team prepares your lease agreement for electronic signature.</span></li>
       </ul>
+    </div>
+
+    <div class="callout amber">
+      <h4>Refund &amp; Forfeiture Summary</h4>
+      <p style="margin-bottom:8px;"><strong>Fully credited:</strong> the holding deposit is applied 100% toward your move-in costs once the lease is executed.</p>
+      <p style="margin-bottom:8px;"><strong>May be refunded:</strong> if the property becomes unavailable through no fault of yours, or materially differs from how it was advertised — see Section 9 of the <a href="${POLICY_BASE_URL}/policies.html" style="color:#1a5276;">Policy Framework</a>.</p>
+      <p style="margin-bottom:0;"><strong>May be forfeited:</strong> if you withdraw, fail to sign the lease in time, or change your mind — see the <a href="${POLICY_BASE_URL}/holding-deposit-policy.html" style="color:#1a5276;">Holding Deposit Policy</a>.</p>
     </div>
 
     <div class="cta-wrap">
