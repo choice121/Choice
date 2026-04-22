@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 24, 2026
+**Last reconciled:** April 22, 2026 (sub-phase 7.3.4 — legacy CSS deletion)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file replaces the need to read FIXES.md, DESIGN_EXTENSION_PLAN.md, KNOWN_ISSUES.md, and the README change history just to figure out "what's done and what isn't."
@@ -10,7 +10,7 @@ This file replaces the need to read FIXES.md, DESIGN_EXTENSION_PLAN.md, KNOWN_IS
 ## TL;DR
 
 - **Backend (Edge Functions, DB, email, storage):** all 8 phases of `FIXES.md` shipped. Stable.
-- **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026), browse page `listings.html` (100% — sub-phase 7.3.2, April 22 2026), and property detail `property.html` (100% — sub-phase 7.3.3, April 24 2026). All public pages now load only `cp-design.css` + `cp-marketing.css`. Only outstanding work is the legacy-CSS deletion sweep (sub-phase 7.3.4) — see `BATCH_3_MIGRATION.md`.
+- **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026), browse page `listings.html` (100% — sub-phase 7.3.2, April 22 2026), and property detail `property.html` (100% — sub-phase 7.3.3, April 24 2026). All public pages now load only `cp-design.css` + `cp-marketing.css`. Sub-phase 7.3.4 (legacy CSS deletion sweep) complete — `main.css`, `mobile.css`, `listings.css`, `property.css` removed from repo (~5,634 lines).
 - **Documentation:** reconciled with code. ARCHITECTURE.md, README.md, DESIGN_EXTENSION_PLAN.md, this file, and KNOWN_ISSUES.md are all current.
 - **Production deployment:** Cloudflare Pages auto-deploys from `main`. Supabase project is live. No outstanding bugs in `KNOWN_ISSUES.md`.
 
@@ -65,7 +65,7 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 | 7 batch 3.2 | `listings.html` migrated to `cp-design.css` + `cp-marketing.css`; nav/footer use slot pattern; listings page header, sticky filter bar, advanced filter dropdown, mobile filters drawer, view toggle, pagination, empty state, map panel, and full property-card extensions (badges, type-chip, photo-count, dots, slides) all live in `cp-marketing.css` under `body[data-portal="public"]` scope | ✅ DONE (April 22 2026) — pending owner verification on a Cloudflare branch preview |
 | 7 batch 3.3 | `property.html` migrated to `cp-design.css` + `cp-marketing.css`; nav/footer use slot pattern; gallery mosaic + skeleton shimmer, gallery thumbnail strip, lightbox (header/stage/nav/thumbs/LQIP/spinner/slide animations), detail layout grid, breadcrumb, header/meta-row, share row, sections + amenities grid (with colored category icons), detail tabs, map container + open-in-maps button, sticky sidebar, apply card (dark gradient header), landlord card, contact card + mobile drawer, contact-drawer overlay, and mobile message button all live in `cp-marketing.css` under `body[data-portal="public"][data-page="property"]` scope. ~865 lines added to cp-marketing.css (1,930 → 2,795). property.html: 1,559 → 1,462 lines | ✅ DONE (April 24 2026) — pending owner verification on a Cloudflare branch preview |
 | 8 partial | Delete admin/landlord legacy CSS + JS shims (`admin.css`, `admin-v2.css`, `landlord.css`, `dashboard-system.css`, `js/admin-chrome.js`, `js/admin-shell.js`) | ✅ DONE |
-| 8 final | Delete `main.css`, `mobile.css`, `listings.css`, `property.css` (sub-phase 7.3.4) | ⏳ BLOCKED on Cloudflare branch-preview verification of 7.3.2 + 7.3.3 |
+| 8 final | Delete `main.css`, `mobile.css`, `listings.css`, `property.css` (sub-phase 7.3.4) | ✅ DONE (April 22 2026) |
 
 ### Active CSS surface
 
@@ -75,24 +75,17 @@ css/cp-marketing.css    ← public-page layer on top of cp-design (light only)
 css/apply.css           ← internal /apply/ form only (separate sub-app)
 ```
 
-### Legacy CSS still in repo (all four are now orphaned — pending verification, then delete in sub-phase 7.3.4)
+### Legacy CSS removed (sub-phase 7.3.4, April 22 2026)
 
-```
-css/main.css            ← ORPHAN as of sub-phase 7.3.3 — no public page references it
-css/mobile.css          ← ORPHAN as of sub-phase 7.3.3
-css/listings.css        ← ORPHAN as of sub-phase 7.3.2
-css/property.css        ← ORPHAN as of sub-phase 7.3.3
-```
-
-All three migrated public pages (`index.html`, `listings.html`, `property.html`) now load only `cp-design.css` + `cp-marketing.css` (April 22–24 2026, sub-phases 7.3.1 + 7.3.2 + 7.3.3). Legacy file deletion is gated on Cloudflare branch-preview verification at 375/768/1280 px in Chrome, Safari, Firefox.
+`css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` were deleted in sub-phase 7.3.4 after the three migrated public pages (`index.html`, `listings.html`, `property.html`) shipped on `cp-design.css` + `cp-marketing.css` (sub-phases 7.3.1 + 7.3.2 + 7.3.3). Total reduction: ~5,634 lines. Verify on the next Cloudflare branch preview at 375/768/1280 px in Chrome, Safari, Firefox; any rendering regression should be a missed selector port to `cp-marketing.css`.
 
 ---
 
 ## Open questions / decisions waiting on the owner
 
-1. **Sub-phase 7.3.4 timing — legacy CSS deletion.** Sub-phases 7.3.1 / 7.3.2 / 7.3.3 are all code-complete. Once verified live on a Cloudflare branch preview at 375/768/1280 px in Chrome, Safari, Firefox (and ideally a few days of clean production analytics), `git rm css/main.css css/mobile.css css/listings.css css/property.css` and remove the "Legacy CSS still in repo" block above. Total reduction: ~5,634 lines. Playbook: `BATCH_3_MIGRATION.md` §7.3.4.
-2. **Tenant chrome unification.** `tenant/portal.html` currently uses a bespoke topbar. Should it adopt `cp-chrome.js`/`cp-shell.js` like landlord and admin, or stay bespoke? No-op until decided.
-3. **`SETUP_2.sql` cleanup decision.** Decide whether `MIGRATION_drop_applications_tables.sql` should be run to remove the legacy Supabase applications table, or kept as a safety archive (see ARCHITECTURE.md → "Application System Architecture Decision (2026-04-09)").
+1. **Tenant chrome unification.** `tenant/portal.html` currently uses a bespoke topbar. Should it adopt `cp-chrome.js`/`cp-shell.js` like landlord and admin, or stay bespoke? No-op until decided.
+2. **`SETUP_2.sql` cleanup decision.** Decide whether `MIGRATION_drop_applications_tables.sql` should be run to remove the legacy Supabase applications table, or kept as a safety archive (see ARCHITECTURE.md → "Application System Architecture Decision (2026-04-09)").
+3. **Stale comment cleanup in remaining CSS.** `css/cp-marketing.css`, `css/cp-design.css`, and `css/apply.css` still reference the deleted legacy files in header comments / "TOKEN SOURCE" notes. Cosmetic only — safe to clean up opportunistically.
 
 ---
 

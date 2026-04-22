@@ -135,16 +135,9 @@ The site uses a single design system. Every page falls into one of four portals 
 | `css/cp-marketing.css` | Public-page layer on top of `cp-design.css`. Adds hero, info-section, contact-card, info-cta, legal-doc layout, FAQ accordion, marketing footer. Scoped to `body[data-portal="public"]`. |
 | `css/apply.css` | Internal application form `/apply/index.html` only. Untouched by the design extension — the apply form is treated as a separate sub-app (`apply-choice-properties` external project lineage). |
 
-**Legacy stylesheets remaining in the repo (kept ONLY because three high-traffic public pages still load them):**
+**Legacy stylesheets — REMOVED in sub-phase 7.3.4:**
 
-| File | Still used by | Removal blocked by |
-|---|---|---|
-| `css/main.css` | `index.html`, `listings.html`, `property.html` | Phase 7 batch 3 (heavy public pages) |
-| `css/mobile.css` | same three pages | same |
-| `css/listings.css` | `listings.html` | same |
-| `css/property.css` | `property.html` | same |
-
-After Phase 7 batch 3 ships, all four legacy files can be deleted in Phase 8 cleanup. `css/admin.css`, `css/admin-v2.css`, `css/landlord.css`, `css/dashboard-system.css` and the JS shims `js/admin-chrome.js`, `js/admin-shell.js` are already deleted from this repo.
+All four legacy public stylesheets (`css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css`) were deleted in sub-phase 7.3.4 (April 22 2026) after Phase 7 batch 3 migrated `index.html`, `listings.html`, and `property.html` onto `cp-design.css` + `cp-marketing.css`. `css/admin.css`, `css/admin-v2.css`, `css/landlord.css`, `css/dashboard-system.css` and the JS shims `js/admin-chrome.js`, `js/admin-shell.js` were removed earlier in Phase 8 partial. The active CSS surface is now exactly three files: `cp-design.css`, `cp-marketing.css`, `apply.css`.
 
 ---
 

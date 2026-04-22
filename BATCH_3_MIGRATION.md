@@ -25,9 +25,9 @@ Doing all three in one PR is unsafe. This document splits batch 3 into **four su
 | **7.3.1** | `index.html` (homepage) — hero, search, trust strip, featured listings, how-it-works, why-us | Medium | 1 day | ✅ DONE (April 22 2026) |
 | **7.3.2** | `listings.html` (browse) — filter bar, property grid, map panel, pagination | High | 1–2 days | ✅ DONE (April 22 2026) — pending owner verification on a Cloudflare branch preview |
 | **7.3.3** | `property.html` (detail) — gallery + lightbox, info panels, contact form + mobile drawer, structured data | High | 1–2 days | ✅ DONE (April 24 2026) — pending owner verification on a Cloudflare branch preview |
-| **7.3.4** | Phase 8 final cleanup — delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` | Low (deletes only) | 1 hour | ⏳ Blocked on Cloudflare branch-preview verification of 7.3.2 + 7.3.3 |
+| **7.3.4** | Phase 8 final cleanup — delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` | Low (deletes only) | 1 hour | ✅ DONE (April 22 2026) |
 
-After 7.3.4, the project's "active CSS surface" comment in `PROJECT_STATUS.md` becomes the entire CSS surface. ~5,634 lines of legacy CSS will be deleted.
+Sub-phase 7.3.4 complete: all four legacy stylesheets removed (~5,634 lines). The active CSS surface in `PROJECT_STATUS.md` (`cp-design.css`, `cp-marketing.css`, `apply.css`) is now the entire CSS surface. Verify on the next Cloudflare branch preview at 375 / 768 / 1280 px (Chrome, Safari, Firefox); any rendering regression should be a missed selector port to `cp-marketing.css`.
 
 ---
 
