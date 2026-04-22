@@ -34,8 +34,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/assets/fontawesome.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=20260424">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260424">
+  <link rel="stylesheet" href="/css/cp-design.css?v=20260425">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=20260425">
   <style>
     /* ── CRITICAL CSS — above-fold paint for index.html ──────────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
@@ -61,11 +61,11 @@
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
     #site-nav{min-height:64px}
   </style>
-<script defer src="/config.js?v=20260424"></script>
+<script defer src="/config.js?v=20260425"></script>
 <script defer src="/js/supabase.min.js"></script>
-<script type="module" src="/js/cp-api.js?v=20260424"></script>
-<script defer src="/js/components.js?v=20260424"></script>
-<script defer src="/js/card-builder.js?v=20260424"></script>
+<script type="module" src="/js/cp-api.js?v=20260425"></script>
+<script defer src="/js/components.js?v=20260425"></script>
+<script defer src="/js/card-builder.js?v=20260425"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -297,6 +297,43 @@
   </div>
 </section>
 
+<!-- ── Testimonials ── -->
+<section class="testimonials-section" id="testimonials">
+  <div class="container">
+    <div style="text-align:center">
+      <div class="section-eyebrow">Testimonials</div>
+      <h2 class="section-title testimonials-title">What Renters Are Saying</h2>
+      <p class="testimonials-subtitle">Real experiences from people who found their home through Choice Properties.</p>
+    </div>
+    <div class="testimonials-grid">
+      <figure class="testimonial-card">
+        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
+        <blockquote class="testimonial-text">I applied on a Tuesday and had an approval by Thursday. The process was so much easier than anything I'd tried before — no confusing paperwork, just a clean online form.</blockquote>
+        <figcaption class="testimonial-meta">
+          <div class="testimonial-name">Marcus T.</div>
+          <div class="testimonial-detail">Atlanta, GA &middot; 2-Bedroom Apartment</div>
+        </figcaption>
+      </figure>
+      <figure class="testimonial-card">
+        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
+        <blockquote class="testimonial-text">I'd been burned by scam listings on other sites. Choice Properties felt different from the start — the landlord was verified, the listing photos matched the actual unit, and someone answered my email the same day.</blockquote>
+        <figcaption class="testimonial-meta">
+          <div class="testimonial-name">Priya S.</div>
+          <div class="testimonial-detail">Phoenix, AZ &middot; 1-Bedroom Condo</div>
+        </figcaption>
+      </figure>
+      <figure class="testimonial-card">
+        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
+        <blockquote class="testimonial-text">As someone relocating from out of state, I needed a platform I could trust without being able to visit properties first. The team was responsive and walked me through everything.</blockquote>
+        <figcaption class="testimonial-meta">
+          <div class="testimonial-name">James &amp; Keisha R.</div>
+          <div class="testimonial-detail">Dallas, TX &middot; 3-Bedroom House</div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <!-- ── Why Choose Us ── -->
 <section class="why-section" id="why-section">
   <div class="why-bg"></div>
@@ -324,6 +361,37 @@
     </div>
     <div style="text-align:center">
       <a href="/listings.html" class="btn btn-primary why-cta-btn">Browse Available Listings</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Trust / Stats Bar ── -->
+<section class="stats-bar" id="stats-bar" aria-label="Trusted by renters and landlords nationwide">
+  <div class="container">
+    <div class="stats-bar-header">
+      <h2 class="stats-bar-title">Trusted by Renters &amp; Landlords Nationwide</h2>
+    </div>
+    <div class="stats-bar-grid">
+      <div class="stats-bar-item">
+        <i class="fas fa-home stats-bar-icon" aria-hidden="true"></i>
+        <div class="stats-bar-num">500+</div>
+        <div class="stats-bar-label">Placements Made</div>
+      </div>
+      <div class="stats-bar-item">
+        <i class="fas fa-clipboard-check stats-bar-icon" aria-hidden="true"></i>
+        <div class="stats-bar-num">100%</div>
+        <div class="stats-bar-label">Verified Listings</div>
+      </div>
+      <div class="stats-bar-item">
+        <i class="fas fa-star stats-bar-icon" aria-hidden="true"></i>
+        <div class="stats-bar-num">4.8<span class="stats-bar-num-sub">/5</span></div>
+        <div class="stats-bar-label">Avg. Landlord Rating</div>
+      </div>
+      <div class="stats-bar-item">
+        <i class="fas fa-handshake stats-bar-icon" aria-hidden="true"></i>
+        <div class="stats-bar-num">Free</div>
+        <div class="stats-bar-label">To Browse, Always</div>
+      </div>
     </div>
   </div>
 </section>

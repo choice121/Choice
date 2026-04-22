@@ -2793,3 +2793,178 @@ body[data-portal="public"][data-page="property"] .lqip-bg.faded { opacity: 0; }
   body[data-portal="public"][data-page="property"] .gallery-strip-thumb { width: 152px; height: 102px; }
   body[data-portal="public"][data-page="property"] .lb-thumb { width: 120px; height: 88px; }
 }
+
+
+/* =====================================================================
+   TESTIMONIALS + STATS BAR — added April 2026 (homepage social proof)
+   Scoped to body[data-portal="public"][data-page="home"] when possible,
+   but generic enough to work site-wide via .testimonials-section / .stats-bar.
+   ===================================================================== */
+
+/* ── Testimonials section ────────────────────────────────────────── */
+body[data-portal="public"] .testimonials-section {
+  padding: clamp(56px, 9vw, 96px) 0 clamp(40px, 6vw, 72px);
+  background: var(--m-bg, #fafbfc);
+  position: relative;
+}
+
+body[data-portal="public"] .testimonials-title {
+  margin-top: 6px;
+}
+
+body[data-portal="public"] .testimonials-subtitle {
+  max-width: 620px;
+  margin: 14px auto 0;
+  color: var(--m-text-soft, #5b6473);
+  font-size: clamp(15px, 1.6vw, 17px);
+  line-height: 1.55;
+  text-align: center;
+}
+
+body[data-portal="public"] .testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 22px;
+  margin-top: clamp(32px, 5vw, 56px);
+  align-items: stretch;
+}
+
+body[data-portal="public"] .testimonial-card {
+  position: relative;
+  margin: 0;
+  padding: 32px 26px 26px;
+  background: #ffffff;
+  border: 1px solid var(--m-border, #e6e9ee);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+body[data-portal="public"] .testimonial-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 14px 32px rgba(15, 23, 42, 0.08);
+  border-color: #d6dbe3;
+}
+
+body[data-portal="public"] .testimonial-quote-icon {
+  font-size: 22px;
+  color: var(--m-accent, #1f6feb);
+  opacity: 0.85;
+  margin-bottom: 14px;
+}
+
+body[data-portal="public"] .testimonial-text {
+  margin: 0 0 22px;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--m-text, #1f2937);
+  font-style: normal;
+  flex: 1;
+}
+
+body[data-portal="public"] .testimonial-meta {
+  border-top: 1px solid var(--m-border, #eceff3);
+  padding-top: 14px;
+}
+
+body[data-portal="public"] .testimonial-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--m-text, #1f2937);
+  letter-spacing: -0.01em;
+}
+
+body[data-portal="public"] .testimonial-detail {
+  margin-top: 3px;
+  font-size: 13.5px;
+  color: var(--m-text-soft, #6b7280);
+}
+
+@media (max-width: 600px) {
+  body[data-portal="public"] .testimonials-grid { gap: 16px; }
+  body[data-portal="public"] .testimonial-card { padding: 26px 22px 22px; }
+  body[data-portal="public"] .testimonial-text { font-size: 15px; }
+}
+
+/* ── Stats / trust bar ───────────────────────────────────────────── */
+body[data-portal="public"] .stats-bar {
+  padding: clamp(40px, 6vw, 64px) 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f6fa 100%);
+  border-top: 1px solid var(--m-border, #e6e9ee);
+}
+
+body[data-portal="public"] .stats-bar-header {
+  text-align: center;
+  margin-bottom: clamp(24px, 4vw, 36px);
+}
+
+body[data-portal="public"] .stats-bar-title {
+  margin: 0;
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 700;
+  color: var(--m-text, #1f2937);
+  letter-spacing: -0.01em;
+}
+
+body[data-portal="public"] .stats-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+body[data-portal="public"] .stats-bar-item {
+  text-align: center;
+  padding: 18px 12px;
+  background: #ffffff;
+  border: 1px solid var(--m-border, #e6e9ee);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+body[data-portal="public"] .stats-bar-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+body[data-portal="public"] .stats-bar-icon {
+  font-size: 22px;
+  color: var(--m-accent, #1f6feb);
+  margin-bottom: 4px;
+}
+
+body[data-portal="public"] .stats-bar-num {
+  font-size: clamp(22px, 2.6vw, 28px);
+  font-weight: 800;
+  color: var(--m-text, #0f172a);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+body[data-portal="public"] .stats-bar-num-sub {
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--m-text-soft, #6b7280);
+  margin-left: 2px;
+}
+
+body[data-portal="public"] .stats-bar-label {
+  font-size: 13px;
+  color: var(--m-text-soft, #5b6473);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 900px) {
+  body[data-portal="public"] .stats-bar-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+}
+@media (max-width: 420px) {
+  body[data-portal="public"] .stats-bar-grid { grid-template-columns: 1fr; }
+  body[data-portal="public"] .stats-bar-item { flex-direction: row; justify-content: center; padding: 16px 14px; gap: 12px; }
+  body[data-portal="public"] .stats-bar-icon { margin-bottom: 0; font-size: 20px; }
+}
