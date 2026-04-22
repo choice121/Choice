@@ -2029,27 +2029,27 @@ class RentalApplication {
                 complete: 'Complete',
                 submittingTitle: 'Submitting Your Application',
                 submissionMessage: "Please don't close this window. This may take a few moments...",
-                successTitle: 'Application Received',
-                successText: 'Thank you for choosing Choice Properties',
+                successTitle: 'Application Received — Being Evaluated for Qualification',
+                successText: 'Thank you for choosing Choice Properties. Your file is now in our system and the next step is payment to activate review.',
                 appId: 'Your Application ID',
                 clickToCopy: 'Copy ID',
                 immediateNextSteps: 'Immediate Next Steps',
                 paymentRequiredTitle: freeApp ? 'No Application Fee' : 'Payment Required Before Review',
                 paymentRequiredDesc: freeApp
-                    ? 'Great news — there is no application fee for this property. Your application will go straight to review.'
-                    : `Our team will contact you shortly at the phone number provided to arrange the $${fee} application fee.`,
-                completePaymentTitle: freeApp ? 'Application Complete' : 'Complete Payment',
+                    ? 'Great news — there is no application fee for this property. Your application will proceed directly to review.'
+                    : `A $${fee} application fee is required after submission. Our team will contact you to securely complete payment before your application is reviewed.`,
+                completePaymentTitle: freeApp ? 'Application Activated' : 'Complete Payment to Activate Review',
                 completePaymentDesc: freeApp
-                    ? 'No payment is needed. Your application will be reviewed as submitted.'
-                    : `Your application is not complete until the $${fee} fee has been paid. We'll discuss payment options you're familiar with.`,
-                reviewBeginsTitle: 'Review Begins',
+                    ? 'No payment is needed — your application is active and will be reviewed as submitted.'
+                    : `Applications are only activated after payment is completed. Applicants who complete payment quickly are placed earlier in the review queue.`,
+                reviewBeginsTitle: freeApp ? 'Active Review Begins' : 'Active Review Begins',
                 reviewBeginsDesc: freeApp
-                    ? 'Your application has been received and will enter the formal review process right away. You can track status online with your ID.'
-                    : 'Once payment is confirmed, your application enters the formal review process. You can track status online with your ID.',
+                    ? 'Your application is now in active review. Decisions are typically made within 24 to 72 hours, and applicants who respond promptly to any follow-up are often prioritized.'
+                    : 'Applications are typically processed within 24 to 72 hours after payment is completed. You can track your status online with your ID at any time.',
                 importantNote: 'Important:',
                 paymentUrgentText: freeApp
-                    ? 'There is no application fee for this property — your application goes straight to review.'
-                    : `Your application is not complete until the $${fee} fee has been paid. Please keep your phone nearby.`,
+                    ? 'Your application is active and will be evaluated for selection — no payment is required for this property.'
+                    : `Your application is now being evaluated for qualification. Payment of the $${fee} fee is the next step to activate review — please keep your phone nearby so our team can reach you.`,
                 yourPreferences: 'Your Preferences',
                 contactMethod: 'Contact Method:',
                 bestTimes: 'Best Times:',
@@ -2065,9 +2065,9 @@ class RentalApplication {
                 step1YouSubmit: '1. You Submit',
                 step1Desc: 'Fill out your application completely',
                 step2PaymentArranged: freeApp ? '2. Application Received' : '2. Payment Arranged',
-                step2Desc: freeApp ? 'No fee required — review starts right away' : `We contact you for the $${fee} fee`,
-                step3ReviewBegins: '3. Review Begins',
-                step3Desc: freeApp ? 'We review your application promptly' : 'After payment, we review your application',
+                step2Desc: freeApp ? 'No fee required — review starts right away' : `We contact you to complete the $${fee} fee`,
+                step3ReviewBegins: freeApp ? '3. Active Review (24–72h)' : '3. Active Review (24–72h)',
+                step3Desc: freeApp ? 'Decision typically within 24–72 hours' : 'Decision typically within 24–72 hours of payment',
                 propertyHeader: 'Property & Applicant Details',
                 propertyInfo: 'Property Information',
                 propertyAddressLabel: 'Property Address Applying For',

@@ -1,6 +1,47 @@
 // ============================================================
 // CHOICE PROPERTIES — GAS EMAIL RELAY — Bilingual EN/ES
 // =============================================================
+//
+// CANONICAL UX COPY (mirror of js/cp-copy.js + supabase/functions/_shared/copy.ts)
+// Edits to wording MUST be made in all three locations to stay consistent.
+//   Flow: Apply -> Payment -> Review -> Approval -> Reservation -> Lease -> Move-In
+var COPY = {
+  en: {
+    feeStatement: 'A $50 application fee is required after submission. Our team will contact you to securely complete payment before your application is reviewed.',
+    feeReinforcement: 'Applications are only activated after payment is completed.',
+    reviewTime: 'Applications are typically processed within 24 to 72 hours after payment is completed.',
+    reviewBehavior: 'Faster decisions are often made for applicants who complete all steps promptly, provide accurate information, and remain responsive.',
+    reviewPriority: 'Applicants who act quickly are often prioritized in the review process.',
+    statusActiveReview: 'In Active Review',
+    submissionConfirm: 'Your application is now being evaluated for qualification. Payment is the next step to activate review.',
+    holdingDefinition: 'The holding fee temporarily reserves the property and removes it from active availability while your lease is being finalized.',
+    holdingNoHoldRisk: 'Without a holding fee, the property remains available to other approved applicants.',
+    holdingUrgency: 'Holding requests are time-sensitive and typically must be completed within 24 to 48 hours.',
+    holdingTrust: 'This fee is fully credited toward your move-in costs and is not an additional charge.',
+    selectedHeadline: 'You have been selected based on your application.',
+    selectionTimeSensitive: 'This selection is time-sensitive — units are offered on a first-completion basis among approved applicants.',
+    leaseFinalStage: 'You are now entering the final stage of securing your approved unit.',
+    leaseWindow: 'Please complete your lease within 48 hours to maintain your reservation.'
+  },
+  es: {
+    feeStatement: 'Se requiere un cargo de solicitud de $50 después de enviar su solicitud. Nuestro equipo lo contactará para completar el pago de forma segura antes de revisar su solicitud.',
+    feeReinforcement: 'Las solicitudes solo se activan después de completar el pago.',
+    reviewTime: 'Las solicitudes generalmente se procesan dentro de 24 a 72 horas después de completar el pago.',
+    reviewBehavior: 'Las decisiones más rápidas suelen tomarse para quienes completan todos los pasos con prontitud, brindan información precisa y responden a tiempo.',
+    reviewPriority: 'Los solicitantes que actúan rápidamente suelen tener prioridad en el proceso de revisión.',
+    statusActiveReview: 'En Revisión Activa',
+    submissionConfirm: 'Su solicitud ahora está siendo evaluada para calificación. El siguiente paso es el pago para activar la revisión.',
+    holdingDefinition: 'El cargo de reserva retiene temporalmente la propiedad y la retira de la disponibilidad activa mientras se finaliza su contrato.',
+    holdingNoHoldRisk: 'Sin un cargo de reserva, la propiedad permanece disponible para otros solicitantes aprobados.',
+    holdingUrgency: 'Las solicitudes de reserva son sensibles al tiempo y normalmente deben completarse dentro de 24 a 48 horas.',
+    holdingTrust: 'Este cargo se acredita en su totalidad a sus costos de entrada y no es un cargo adicional.',
+    selectedHeadline: 'Ha sido seleccionado/a según su solicitud.',
+    selectionTimeSensitive: 'Esta selección es sensible al tiempo — las unidades se ofrecen por orden de finalización entre los solicitantes aprobados.',
+    leaseFinalStage: 'Ahora está entrando en la etapa final para asegurar su unidad aprobada.',
+    leaseWindow: 'Por favor complete su contrato dentro de 48 horas para mantener su reserva.'
+  }
+};
+//
 // Full EN/ES bilingual support for all applicant-facing emails.
 // Admin/landlord emails remain English (internal use).
 //
@@ -67,11 +108,11 @@ var EMAIL_STRINGS = {
     nextFee2Title: 'Payment Confirmation',
     nextFee2Body: 'Once your fee is received, you will receive an email notification and your application will advance to review.',
     nextFee3Title: 'Application Review',
-    nextFee3Body: 'Our team will conduct a thorough review within 2\u20133 business days of payment confirmation.',
+    nextFee3Body: 'Applications are typically processed within 24 to 72 hours after payment is completed. Applicants who complete steps promptly are often prioritized in the review queue.',
     nextFee4Title: 'Decision Notification',
     nextFee4Body: 'You will be notified of our decision via email. If approved, our leasing team will prepare your lease agreement for signature.',
     nextFree1Title: 'Application Review',
-    nextFree1Body: 'Our team will conduct a thorough review of your application within 2\u20133 business days.',
+    nextFree1Body: 'Applications are typically processed within 24 to 72 hours of receipt. Applicants who respond promptly to any follow-up requests are often prioritized.',
     nextFree2Title: 'Decision Notification',
     nextFree2Body: 'You will be notified of our decision via email once a determination has been made.',
     nextFree3Title: 'If Approved',
@@ -86,8 +127,8 @@ var EMAIL_STRINGS = {
     payConfirmIntro: 'We are pleased to confirm that your application processing fee has been received and officially recorded. Your application is now active and has been placed in our formal review queue.',
     payConfirmSectionLabel: 'Payment Confirmation', payConfirmSuccess: '\u2713 Payment Successfully Received',
     payConfirmAppId: 'Application ID', payConfirmApplicant: 'Applicant',
-    payConfirmDate: 'Payment Date', payConfirmStatus2: 'Status', underReview: 'Under Review',
-    payNext1Title: 'Active Review', payNext1Body: 'Your complete application is now being reviewed by our leasing team within 2\u20133 business days.',
+    payConfirmDate: 'Payment Date', payConfirmStatus2: 'Status', underReview: 'In Active Review',
+    payNext1Title: 'Active Review', payNext1Body: 'Your application is now in active review. Decisions are typically made within 24 to 72 hours, and applicants who respond promptly to any follow-up are often prioritized.',
     payNext2Title: 'Background & Income Verification', payNext2Body: 'We will conduct standard verification procedures as part of our review.',
     payNext3Title: 'Decision Notification', payNext3Body: 'You will receive an email once a decision has been made.',
     approvedSubject: '[Choice Properties] Application Approved \u2014 ',
@@ -97,9 +138,9 @@ var EMAIL_STRINGS = {
     deniedStatus: '\u2014  Your Application Has Been Reviewed',
     approvedIntro: 'We are delighted to inform you that your rental application with Choice Properties has been <strong>approved</strong>. Our leasing team will be in contact shortly to prepare and deliver your lease agreement for electronic signature.',
     approvedCalloutTitle: '\u2713 Application Approved',
-    approvedCalloutBody: 'Your application has met all of our criteria. Our team will contact you within 1\u20132 business days with your lease agreement.',
+    approvedCalloutBody: 'You have been selected based on your application. This selection is time-sensitive \u2014 units are offered on a first-completion basis among approved applicants. Please complete the next steps promptly to secure your unit.',
     approvedNextLabel: 'Your Next Steps',
-    approvedNext1Title: 'Lease Agreement', approvedNext1Body: 'Our team will send your lease agreement via email within 1\u20132 business days.',
+    approvedNext1Title: 'Lease Agreement', approvedNext1Body: 'Your lease agreement will be prepared and sent to you shortly. Please review and sign promptly to maintain your reservation.',
     approvedNext2Title: 'Electronic Signature', approvedNext2Body: 'You will sign your lease electronically. Your signature is legally binding under applicable state and federal e-signature law.',
     approvedNext3Title: 'Move-In Costs', approvedNext3Body: 'Prior to receiving your keys, the move-in total must be paid in full as outlined in your lease.',
     approvedNext4Title: 'Key Handoff', approvedNext4Body: 'Once all documents and payments are complete, we will coordinate your move-in date.',
@@ -199,11 +240,11 @@ var EMAIL_STRINGS = {
     nextFee2Title: 'Confirmaci\u00f3n de Pago',
     nextFee2Body: 'Una vez recibido su pago, recibir\u00e1 una notificaci\u00f3n por correo y su solicitud avanzar\u00e1 a revisi\u00f3n.',
     nextFee3Title: 'Revisi\u00f3n de Solicitud',
-    nextFee3Body: 'Nuestro equipo realizar\u00e1 una revisi\u00f3n exhaustiva dentro de 2 a 3 d\u00edas h\u00e1biles tras la confirmaci\u00f3n del pago.',
+    nextFee3Body: 'Las solicitudes generalmente se procesan dentro de 24 a 72 horas despu\u00e9s de completar el pago. Los solicitantes que completan los pasos con prontitud suelen tener prioridad en la cola de revisi\u00f3n.',
     nextFee4Title: 'Notificaci\u00f3n de Decisi\u00f3n',
     nextFee4Body: 'Se le notificar\u00e1 nuestra decisi\u00f3n por correo. Si es aprobado/a, nuestro equipo preparar\u00e1 su contrato de arrendamiento para firma.',
     nextFree1Title: 'Revisi\u00f3n de Solicitud',
-    nextFree1Body: 'Nuestro equipo realizar\u00e1 una revisi\u00f3n exhaustiva de su solicitud dentro de 2 a 3 d\u00edas h\u00e1biles.',
+    nextFree1Body: 'Las solicitudes generalmente se procesan dentro de 24 a 72 horas de recibidas. Los solicitantes que responden con prontitud a cualquier seguimiento suelen tener prioridad.',
     nextFree2Title: 'Notificaci\u00f3n de Decisi\u00f3n',
     nextFree2Body: 'Se le notificar\u00e1 nuestra decisi\u00f3n por correo una vez tomada la determinaci\u00f3n.',
     nextFree3Title: 'Si es Aprobado/a',
@@ -218,8 +259,8 @@ var EMAIL_STRINGS = {
     payConfirmIntro: 'Nos complace confirmar que su cargo de procesamiento de solicitud ha sido recibido y registrado oficialmente. Su solicitud est\u00e1 activa y ha sido colocada en nuestra cola de revisi\u00f3n formal.',
     payConfirmSectionLabel: 'Confirmaci\u00f3n de Pago', payConfirmSuccess: '\u2713 Pago Recibido Exitosamente',
     payConfirmAppId: 'ID de Solicitud', payConfirmApplicant: 'Solicitante',
-    payConfirmDate: 'Fecha de Pago', payConfirmStatus2: 'Estado', underReview: 'En Revisi\u00f3n',
-    payNext1Title: 'Revisi\u00f3n Activa', payNext1Body: 'Su solicitud completa est\u00e1 siendo revisada por nuestro equipo de arrendamiento dentro de 2 a 3 d\u00edas h\u00e1biles.',
+    payConfirmDate: 'Fecha de Pago', payConfirmStatus2: 'Estado', underReview: 'En Revisi\u00f3n Activa',
+    payNext1Title: 'Revisi\u00f3n Activa', payNext1Body: 'Su solicitud est\u00e1 ahora en revisi\u00f3n activa. Las decisiones generalmente se toman dentro de 24 a 72 horas, y los solicitantes que responden con prontitud a cualquier seguimiento suelen tener prioridad.',
     payNext2Title: 'Verificaci\u00f3n de Antecedentes e Ingresos', payNext2Body: 'Realizaremos los procedimientos est\u00e1ndar de verificaci\u00f3n como parte de nuestra revisi\u00f3n.',
     payNext3Title: 'Notificaci\u00f3n de Decisi\u00f3n', payNext3Body: 'Recibir\u00e1 un correo electr\u00f3nico una vez que se haya tomado una decisi\u00f3n.',
     approvedSubject: '[Choice Properties] Solicitud Aprobada \u2014 ',
@@ -229,9 +270,9 @@ var EMAIL_STRINGS = {
     deniedStatus: '\u2014  Su Solicitud Ha Sido Revisada',
     approvedIntro: 'Nos complace informarle que su solicitud de arrendamiento con Choice Properties ha sido <strong>aprobada</strong>. Nuestro equipo se comunicar\u00e1 con usted en breve para preparar y enviarle su contrato de arrendamiento para firma electr\u00f3nica.',
     approvedCalloutTitle: '\u2713 Solicitud Aprobada',
-    approvedCalloutBody: 'Su solicitud ha cumplido todos nuestros criterios. Nuestro equipo se comunicar\u00e1 con usted dentro de 1 a 2 d\u00edas h\u00e1biles con su contrato.',
+    approvedCalloutBody: 'Ha sido seleccionado/a seg\u00fan su solicitud. Esta selecci\u00f3n es sensible al tiempo \u2014 las unidades se ofrecen por orden de finalizaci\u00f3n entre los solicitantes aprobados. Por favor complete los siguientes pasos con prontitud para asegurar su unidad.',
     approvedNextLabel: 'Sus Pr\u00f3ximos Pasos',
-    approvedNext1Title: 'Contrato de Arrendamiento', approvedNext1Body: 'Nuestro equipo le enviar\u00e1 el contrato de arrendamiento por correo electr\u00f3nico dentro de 1 a 2 d\u00edas h\u00e1biles.',
+    approvedNext1Title: 'Contrato de Arrendamiento', approvedNext1Body: 'Su contrato de arrendamiento se preparar\u00e1 y enviar\u00e1 en breve. Por favor rev\u00edselo y f\u00edrmelo con prontitud para mantener su reserva.',
     approvedNext2Title: 'Firma Electr\u00f3nica', approvedNext2Body: 'Firmar\u00e1 su contrato electr\u00f3nicamente. Su firma es legalmente vinculante bajo las leyes estatales y federales aplicables.',
     approvedNext3Title: 'Costos de Entrada', approvedNext3Body: 'Antes de recibir sus llaves, el total de entrada debe pagarse en su totalidad seg\u00fan lo estipulado en su contrato.',
     approvedNext4Title: 'Entrega de Llaves', approvedNext4Body: 'Una vez completados todos los documentos y pagos, coordinaremos su fecha de entrada.',
