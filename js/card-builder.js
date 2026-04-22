@@ -97,6 +97,13 @@
       badge = '<div class="property-card-badge badge-avail-date"><i class="fas fa-calendar-days"></i> Avail. ' + availLabel + '</div>';
     }
 
+
+    // P2-C: Property type label — defined here so typeChipHtml below can use it ──────
+    var typeMap = { apartment: 'Apartment', house: 'House', condo: 'Condo', townhouse: 'Townhouse',
+                    townhome: 'Townhome', studio: 'Studio', loft: 'Loft', room: 'Room', duplex: 'Duplex' };
+    var typeLabel = p.property_type ? (typeMap[String(p.property_type).toLowerCase()] || esc(p.property_type)) : '';
+    var typeHtml  = typeLabel ? '<div class="property-card-type">' + typeLabel + '</div>' : '';
+
     // ── Property type chip (bottom-left of image) ─────────────
     var typeChipHtml = typeLabel
       ? '<div class="property-card-type-chip">' + typeLabel + '</div>'
@@ -118,12 +125,6 @@
 
     // ── Address ───────────────────────────────────────────────
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
-
-    // P2-C: Property type label ────────────────────────────────
-    var typeMap = { apartment: 'Apartment', house: 'House', condo: 'Condo', townhouse: 'Townhouse',
-                    townhome: 'Townhome', studio: 'Studio', loft: 'Loft', room: 'Room', duplex: 'Duplex' };
-    var typeLabel = p.property_type ? (typeMap[String(p.property_type).toLowerCase()] || esc(p.property_type)) : '';
-    var typeHtml  = typeLabel ? '<div class="property-card-type">' + typeLabel + '</div>' : '';
 
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
