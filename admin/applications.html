@@ -128,8 +128,21 @@
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
 (function(){
   'use strict';
-  const S = window.AdminShell;
-  if(!S){ console.error('AdminShell missing'); return; }
+  // I-410: Inline scripts run before deferred scripts. window.AdminShell is
+  // undefined at this point, so the previous early-return left the page
+  // spinning forever. Use the same waitReady pattern as the working pages.
+  function readyDeps(){ return window.AdminShell && window.CP && CP.Applications && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
+  let S; // assigned after waitReady resolves
 
   let _allData=[], _status='all', _search='', _payFilter='', _debounce;
 
@@ -587,21 +600,29 @@
     window.open(data.signedUrl, '_blank');
   }
 
-  // ───── Wiring ─────
-  S.on('toggle',       (t) => toggleDetail(t.dataset.id));
-  S.on('status',       (t) => setStatus(t.dataset.id, t.dataset.appId, t.dataset.set));
-  S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name));
-  S.on('unpay',        (t) => markUnpaid(t.dataset.id));
-  S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
-  S.on('waive',        (t) => markWaived(t.dataset.id));
-  S.on('resend',       (t) => openResendSheet(t.dataset.appId, t.dataset.status, t.dataset.name));
-  S.on('docs',         (t) => loadDocs(t.dataset.id, t.dataset.appId));
-  S.on('save-notes',   (t) => saveNotes(t.dataset.id));
-  S.on('download-doc', (t) => downloadDoc(t.dataset.path));
-  S.on('reload-apps',  () => loadApps());
-
   // ───── Init ─────
   document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      const el = document.getElementById('apps-list');
+      if(el) el.innerHTML = '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    S = window.AdminShell;
+
+    // ───── Wiring (after S is available) ─────
+    S.on('toggle',       (t) => toggleDetail(t.dataset.id));
+    S.on('status',       (t) => setStatus(t.dataset.id, t.dataset.appId, t.dataset.set));
+    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name));
+    S.on('unpay',        (t) => markUnpaid(t.dataset.id));
+    S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
+    S.on('waive',        (t) => markWaived(t.dataset.id));
+    S.on('resend',       (t) => openResendSheet(t.dataset.appId, t.dataset.status, t.dataset.name));
+    S.on('docs',         (t) => loadDocs(t.dataset.id, t.dataset.appId));
+    S.on('save-notes',   (t) => saveNotes(t.dataset.id));
+    S.on('download-doc', (t) => downloadDoc(t.dataset.path));
+    S.on('reload-apps',  () => loadApps());
+
     // Pre-select chip from URL
     document.querySelectorAll('#filter-tabs .chip').forEach(b => {
       b.classList.toggle('active', b.dataset.status === _status);

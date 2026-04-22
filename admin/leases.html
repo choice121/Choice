@@ -46,8 +46,22 @@
 <script nonce="VZEkWatH2Jtta2vFy8dRhA">
 (function(){
   'use strict';
-  const S = window.AdminShell;
-  if(!S){ console.error('AdminShell missing'); return; }
+  // I-410: Inline <script> at end of body runs DURING parsing — BEFORE deferred
+  // scripts like cp-shell.js execute. So window.AdminShell is undefined here and
+  // the previous early-return left the page spinning forever. Use the same
+  // waitReady polling pattern used by properties.html / landlords.html instead.
+  function readyDeps(){ return window.AdminShell && window.CP && CP.Applications && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
+  let S; // assigned after waitReady resolves
 
   let _filter = 'all';
   let _rows = [];
@@ -279,16 +293,24 @@
     el.style.display = (el.style.display === 'block') ? 'none' : 'block';
   }
 
-  // ───────── Wiring ─────────
-  S.on('generate',      (t) => openGenerateSheet(t.dataset.id, t.dataset.appId));
-  S.on('cosign',        (t) => openCosignSheet(t.dataset.id, t.dataset.appId));
-  S.on('remind',        (t) => sendReminder(t.dataset.appId));
-  S.on('void',          (t) => voidLease(t.dataset.id));
-  S.on('download',      (t) => downloadLease(t.dataset.appId));
-  S.on('save-notes',    (t) => saveNotes(t.dataset.id));
-  S.on('toggle-detail', (t) => toggleDetail(t.dataset.id));
-
   document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      const el = document.getElementById('leases-list');
+      if(el) el.innerHTML = '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    S = window.AdminShell;
+
+    // ───────── Wiring (after S is available) ─────────
+    S.on('generate',      (t) => openGenerateSheet(t.dataset.id, t.dataset.appId));
+    S.on('cosign',        (t) => openCosignSheet(t.dataset.id, t.dataset.appId));
+    S.on('remind',        (t) => sendReminder(t.dataset.appId));
+    S.on('void',          (t) => voidLease(t.dataset.id));
+    S.on('download',      (t) => downloadLease(t.dataset.appId));
+    S.on('save-notes',    (t) => saveNotes(t.dataset.id));
+    S.on('toggle-detail', (t) => toggleDetail(t.dataset.id));
+
     document.getElementById('filter-tabs').addEventListener('click', async e => {
       const btn = e.target.closest('.chip');
       if(!btn) return;
