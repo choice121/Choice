@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     } : undefined;
     await sendEmail({
       to:      app.email,
-      subject: 'Your Lease Has Been Fully Executed — Choice Properties',
+      subject: `\u{2713} Your Lease Has Been Fully Executed — Choice Properties (Ref: ${app.app_id})`,
       html:    leaseFullyExecutedHtml(app.first_name || 'Applicant', app.property_address || '', TENANT_LOGIN_URL, app.app_id, leaseData),
     });
   } catch (e) { console.error('Fully executed email failed (non-fatal):', (e as Error).message); }

@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
       } : undefined;
       await sendEmail({
         to:      appSigned.email,
-        subject: 'Lease Signature Received — Choice Properties',
+        subject: `\u{1F389} Lease Signed — Welcome to Choice Properties (Ref: ${appSigned.app_id})`,
         html:    signedConfirmHtml(appSigned.first_name || 'Applicant', appSigned.property_address || '', appSigned.app_id, leaseData),
       });
     } catch (e) { console.error('Tenant confirm email failed:', (e as Error).message); }

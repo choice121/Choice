@@ -428,7 +428,12 @@ export function statusUpdateHtml(
     </div>
     <div class="callout amber">
       <h4>Important — Please Respond Promptly</h4>
-      <p>Unit availability is time-sensitive. To secure your unit, please sign your lease agreement within 48 hours of receiving it. Delays may result in the unit being offered to other applicants.</p>
+      <p>Approval qualifies you to move forward, but the unit is not yet held in your name. Units are secured on a <strong>first-completion basis</strong> among approved applicants — the next steps (holding fee, then lease signing within 48 hours) are what formally remove this property from the market. Delays may result in the unit being awarded to another approved applicant.</p>
+    </div>
+
+    <div class="callout">
+      <h4>Why We Move Quickly at This Stage</h4>
+      <p style="font-size:13px;color:#555;line-height:1.65;">Approved listings often have multiple qualified applicants. Moving promptly through the holding-fee and signing steps is how we make sure the right unit is secured for the right resident — without leaving anyone in limbo. Our team is available throughout to answer questions before you commit.</p>
     </div>
     ` : isWaitlisted ? `
     <p class="intro-text">Thank you for your application for <strong>${propertyLabel}</strong>. We have reviewed your application and have added you to our active waitlist for this property.</p>
@@ -614,7 +619,12 @@ export function holdingFeeRequestHtml(
 
     <div class="callout amber">
       <h4>&#x23F0; Time-Sensitive — Reserve Within ${deadlineText}</h4>
-      <p>Without a holding fee on file, this property remains available to other approved applicants. This fee fully secures your unit while your lease is being finalized. <strong>This fee is credited in full toward your move-in costs — it is not an additional charge.</strong></p>
+      <p>Without a holding fee on file, this property remains available to other approved applicants on a <strong>first-completion basis</strong>. This fee fully secures your unit while your lease is being finalized. <strong>This fee is credited in full toward your move-in costs — it is not an additional charge.</strong></p>
+    </div>
+
+    <div class="callout">
+      <h4>Why We Require a Holding Fee</h4>
+      <p style="font-size:13px;color:#555;line-height:1.65;">Approval qualifies you to move forward, but it does not by itself remove the unit from the market. A holding fee is the formal step that takes the property off availability so no other approved applicant can claim it ahead of you. It protects the time we both invest in preparing your lease, and it is the cleanest way to confirm mutual commitment before signing.</p>
     </div>
 
     ${feeAmount != null ? `

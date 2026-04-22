@@ -250,7 +250,7 @@ Deno.serve(async (req: Request) => {
     ...ADMIN_EMAILS.map(adminEmail =>
       sendEmail({
         to: adminEmail,
-        subject: `New Application: ${appId} — ${firstName} ${lastName} | ${prop}`,
+        subject: `New Application — ${appId} | ${firstName} ${lastName}`,
         html: adminNotificationHtml(firstName, lastName, email, prop, appId, fields),
       }).then(result => logEmail('admin_notification', adminEmail, result.ok ? 'sent' : 'failed', result.provider))
         .catch(async err => {

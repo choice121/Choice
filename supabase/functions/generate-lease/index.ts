@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
     try {
       await sendEmail({
         to:      updatedApp.email,
-        subject: 'Your Lease Agreement is Ready — Choice Properties',
+        subject: `\u{1F4DC} Your Lease is Ready to Sign — Choice Properties (Ref: ${app_id})`,
         html:    signingEmailHtml(updatedApp.first_name || 'Applicant', updatedApp.property_address || '', signingUrl, app_id),
       });
     } catch (e) { console.error('Signing email failed (non-fatal):', (e as Error).message); }

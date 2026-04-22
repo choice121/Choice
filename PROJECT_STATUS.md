@@ -134,3 +134,24 @@ Per DESIGN_EXTENSION_PLAN.md §6, every CSS/page change must pass on Cloudflare 
 4. Mobile (≤390 px) and desktop (≥1280 px) both lay out correctly.
 5. Cache-bust `?v=YYYYMMDD` updated on any modified CSS/JS asset.
 6. `health.html` on the preview reports all services green.
+
+---
+
+## April 22, 2026 — Email Communication Refresh
+
+Surgical refresh against the unified email-template spec. Decision was **content-tune, not template-replace** — current `email.ts` already exceeded the spec on structure (financial tables, fair-housing notice, refund/forfeiture compliance, agreement-on-record), so a wholesale rewrite would have regressed rather than improved.
+
+**Shipped:**
+1. **Subject-line standardization (6 lines, 4 files).** Format normalized to `[icon] [Action] — [Property/Context] | Choice Properties (Ref: [AppID])`. Files: `receive-application/index.ts` (admin), `generate-lease/index.ts` (lease ready), `sign-lease/index.ts` (tenant confirm), `countersign/index.ts` (fully executed), `send-email/index.ts` (movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, waitlisted).
+2. **Two new trust callouts in `email.ts`:**
+   - `holdingFeeRequestHtml` — added "Why We Require a Holding Fee" callout explaining that approval ≠ unit removed from market, and the fee is the formal step that takes the property off availability.
+   - `statusUpdateHtml` (approved branch) — added "Why We Move Quickly at This Stage" callout, plus enhanced the existing 48-hour amber callout to explicitly invoke the "first-completion basis" language from the spec.
+3. **First-completion basis emphasis** added to the holding-fee request amber callout text.
+
+**Deliberately not changed (and why):**
+- **No prose rewrite of the 10 templates the spec covers.** Current copy already aligns with spec intent and is structurally richer. A line-by-line swap would be churn.
+- **No removal of the v2.0 Refund & Forfeiture compliance disclosures** in `holdingFeeRequestHtml`, `holdingFeeReceivedHtml`, `signingEmailHtml`, `moveinEmailHtml`. The spec omitted these; they are legally load-bearing and must stay.
+- **No changes to GAS-EMAIL-RELAY.gs per-template senders.** All edge functions pass `html:` (built by `email.ts`), so GAS is hit only as a Resend-fallback `raw_html` pass-through. Editing GAS would have no user-visible effect on the modern flow.
+- **No additions to the 9 templates the spec doesn't cover** (`co_applicant_notification`, `lease_sent_co_applicant`, `inquiry_reply`, `new_inquiry`, `app_id_recovery`, `new_message_landlord`, `new_message_tenant`, `landlord_notification`, `admin_message`). These remain functional and untouched.
+
+**Known gap surfaced (not addressed in this pass):** The bilingual EN/ES layer in `EMAIL_STRINGS` (GAS) is dead code for the modern flow because edge functions always pass `html:` (built by English-only `email.ts`), so Spanish applicants currently receive English emails for transactional templates. Fixing this requires either (a) parameterizing `email.ts` exports with `lang`, or (b) routing edge functions through GAS by `template:` instead of `html:`. Out of scope for this pass — flagged for future planning.

@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } else if (type === 'waitlisted') {
-    subject = 'Waitlist Update — Your Application Remains Active | Choice Properties';
+    subject = `Application Update — Waitlisted for ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
     html    = statusUpdateHtml(
       app_id,
       name,
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
 
   } else if (type === 'movein_confirmed') {
     const moveDate = app.move_in_date_actual ? formatDate(app.move_in_date_actual) : undefined;
-    subject = 'Move-In Confirmed — Choice Properties';
+    subject = `\u{2713} Move-In Confirmed — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
     html    = moveinEmailHtml(name, prop, moveDate, message, app_id);
 
     // FIX: persist move_in_status = 'confirmed' to DB
@@ -152,7 +152,7 @@ Deno.serve(async (req: Request) => {
     }).eq('app_id', app_id);
 
   } else if (type === 'holding_fee_request') {
-    subject = 'Action Required — Reserve Your Unit With a Holding Fee | Choice Properties';
+    subject = `Action Required — Reserve Your Unit | ${prop.split(',')[0]} (Ref: ${app_id})`;
 
     // Pull applicant's payment method preferences from their application
     const payMethods = [
@@ -181,7 +181,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'holding_fee_received') {
-    subject = 'Holding Fee Confirmed — Your Unit is Reserved | Choice Properties';
+    subject = `\u{2713} Holding Fee Confirmed — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
     html    = holdingFeeReceivedHtml(
       name,
       prop,
@@ -209,7 +209,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } else if (type === 'payment_confirmed') {
-    subject = 'Payment Confirmed — Your Application is Now Under Review | Choice Properties';
+    subject = `\u{2705} Payment Confirmed — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
     html    = paymentConfirmedHtml(
       name,
       prop,
@@ -233,7 +233,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'move_in_prep') {
-    subject = 'Your Move-In Preparation Guide — Choice Properties';
+    subject = `Your Move-In Guide — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
     const leaseData = (app.monthly_rent || app.security_deposit || app.move_in_costs || app.lease_start_date) ? {
       rent:       app.monthly_rent     || undefined,
       deposit:    app.security_deposit || undefined,
@@ -243,7 +243,7 @@ Deno.serve(async (req: Request) => {
     html = moveInPrepHtml(name, prop, message, app_id, leaseData);
 
   } else if (type === 'lease_signing_reminder') {
-    subject = 'Reminder: Your Lease Agreement Awaits Your Signature — Choice Properties';
+    subject = `Reminder — Lease Pending Signature | ${prop.split(',')[0]} (Ref: ${app_id})`;
     // FIX: build direct signing URL from stored token
     const signingUrl = app.tenant_sign_token
       ? `${getSiteUrl()}/lease-sign.html?token=${app.tenant_sign_token}`
