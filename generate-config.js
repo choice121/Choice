@@ -31,8 +31,8 @@ const config = {
   GEOAPIFY_API_KEY: process.env.GEOAPIFY_API_KEY || '',
 
   COMPANY_NAME:     process.env.COMPANY_NAME     || 'Choice Properties',
-  COMPANY_EMAIL:    process.env.COMPANY_EMAIL    || 'hello@choiceproperties.com',
-  COMPANY_PHONE:    process.env.COMPANY_PHONE    || '',
+  COMPANY_EMAIL:    process.env.COMPANY_EMAIL    || 'support@choiceproperties.com',
+  COMPANY_PHONE:    process.env.COMPANY_PHONE    || '707-706-3137',
   COMPANY_TAGLINE:  process.env.COMPANY_TAGLINE  || 'Your trust is our standard.',
   COMPANY_ADDRESS:  process.env.COMPANY_ADDRESS  || '',
 
