@@ -185,6 +185,8 @@
     const isApproved = app.status === 'approved';
     const isDenied = app.status === 'denied';
     const isWaitlisted = app.status === 'waitlisted';
+    const hfRequested = !!app.holding_fee_requested;
+    const hfPaid = !!app.holding_fee_paid;
 
     const paymentInfo = (app.payment_amount_recorded||app.payment_method_recorded)
       ? `<span class="text-xs muted">${app.payment_amount_recorded?fmtMoney(app.payment_amount_recorded):''} ${app.payment_method_recorded?'via '+S.esc(app.payment_method_recorded):''} ${app.payment_date?'· '+fmtDate(app.payment_date):''}</span>` : '';
@@ -223,6 +225,10 @@
         ${isPaid                ? `<button class="btn-act btn-unpay" data-action="unpay" ${ds}>↺ Mark unpaid</button>` : ''}
         ${isPaid                ? `<button class="btn-act btn-refund" data-action="refund" ${ds}>↶ Refund</button>` : ''}
         ${!isWaived             ? `<button class="btn-act"           data-action="waive"  ${ds}>Waive</button>` : ''}
+
+        ${isApproved && !hfRequested ? `<button class="btn-act btn-hf-send"  data-action="hf-send" ${ds} title="Send holding fee request email and reserve the unit">⏳ Send holding</button>` : ''}
+        ${hfRequested && !hfPaid     ? `<button class="btn-act btn-hf-paid"  data-action="hf-paid" ${ds} title="Mark holding fee as received and notify applicant">$ Mark holding paid</button>` : ''}
+        ${hfPaid                     ? `<button class="btn-act btn-hf-undo"  data-action="hf-undo" ${ds} title="Undo: mark holding fee unpaid">↺ Undo holding paid</button>` : ''}
 
         <button class="btn-act btn-email" data-action="resend" ${ds} title="Resend any notification email">✉ Resend</button>
         <button class="btn-act"           data-action="toggle" ${ds}>Details</button>
@@ -542,6 +548,74 @@
     await loadApps();
   }
 
+  // ───── Holding fee ─────
+  async function openHoldingSendSheet(dbId, appId, name){
+    const due = new Date(); due.setDate(due.getDate() + 2);
+    const dueStr = due.toISOString().slice(0,10);
+    const data = await S.formSheet({
+      title: 'Send holding fee request · ' + name,
+      submit: 'Send request',
+      fields: [
+        { name:'fee_amount', label:'Holding fee amount ($)', type:'number', placeholder:'e.g. 500.00' },
+        { name:'due_date',   label:'Due by', type:'date', value: dueStr, help:'Typically 24–48 hours from now.' }
+      ]
+    });
+    if(!data) return;
+    const fee_amount = data.fee_amount ? parseFloat(data.fee_amount) : null;
+    const due_date   = data.due_date || null;
+    if(!fee_amount || fee_amount <= 0){ S.toast('Enter a holding fee amount.', 'error'); return; }
+    try {
+      const session = await CP.Auth.getSession();
+      const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+      const body = { app_id: appId, type:'holding_fee_request', fee_amount, due_date };
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => ({}));
+      if(!res.ok || json.success === false){
+        S.toast('Holding fee request failed: ' + (json.error||res.statusText), 'error');
+        return;
+      }
+      S.toast('Holding fee request sent.', 'success');
+      await loadApps();
+    } catch(e){ S.toast('Error: ' + e.message, 'error'); }
+  }
+
+  async function markHoldingPaid(dbId, appId, name){
+    const ok2 = await S.confirm({ title:'Mark holding fee as paid?', message:'This confirms the holding fee for ' + name + ' and emails the applicant.', ok:'Mark paid' });
+    if(!ok2) return;
+    try {
+      const session = await CP.Auth.getSession();
+      const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+      const body = { app_id: appId, type:'holding_fee_received' };
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-email', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => ({}));
+      if(!res.ok || json.success === false){
+        S.toast('Could not mark holding paid: ' + (json.error||res.statusText), 'error');
+        return;
+      }
+      S.toast('Holding fee marked paid.', 'success');
+      await loadApps();
+    } catch(e){ S.toast('Error: ' + e.message, 'error'); }
+  }
+
+  async function undoHoldingPaid(dbId){
+    const ok2 = await S.confirm({ title:'Undo holding fee paid?', message:'Reverts the holding fee to "requested but unpaid". No email is sent.', ok:'Undo' });
+    if(!ok2) return;
+    const { error } = await CP.sb().from('applications')
+      .update({ holding_fee_paid:false, holding_fee_paid_at:null, updated_at: new Date().toISOString() })
+      .eq('id', dbId);
+    if(error){ S.toast('Error: ' + error.message, 'error'); return; }
+    S.toast('Holding fee marked unpaid.');
+    await loadApps();
+  }
+
   // ───── Resend notification ─────
   const RESEND_TYPE_DESC = {
     approved: 'Sends the full approval email with congratulations, next steps, and a link to the tenant portal.',
@@ -624,6 +698,9 @@
     S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
     S.on('waive',        (t) => markWaived(t.dataset.id));
     S.on('resend',       (t) => openResendSheet(t.dataset.appId, t.dataset.status, t.dataset.name));
+    S.on('hf-send',      (t) => openHoldingSendSheet(t.dataset.id, t.dataset.appId, t.dataset.name));
+    S.on('hf-paid',      (t) => markHoldingPaid(t.dataset.id, t.dataset.appId, t.dataset.name));
+    S.on('hf-undo',      (t) => undoHoldingPaid(t.dataset.id));
     S.on('docs',         (t) => loadDocs(t.dataset.id, t.dataset.appId));
     S.on('save-notes',   (t) => saveNotes(t.dataset.id));
     S.on('download-doc', (t) => downloadDoc(t.dataset.path));

@@ -867,7 +867,10 @@ async function updateNav() {
           'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,' +
           'monthly_rent,security_deposit,move_in_costs,lease_notes,lease_pdf_url,' +
           'tenant_signature,signature_timestamp,' +
-          'move_in_status,move_in_date_actual,move_in_notes,move_in_confirmed_by'
+          'move_in_status,move_in_date_actual,move_in_notes,move_in_confirmed_by,' +
+          'payment_amount_recorded,payment_method_recorded,payment_notes,' +
+          'holding_fee_requested,holding_fee_requested_at,holding_fee_amount,' +
+          'holding_fee_due_date,holding_fee_paid,holding_fee_paid_at'
         )
         .order('created_at', { ascending: false });
 
