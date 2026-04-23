@@ -473,8 +473,25 @@ class RentalApplication {
                     }
                 }
               // 9C-2: store source URL so success screen can link back to the original listing
+              // SECURITY: only accept same-origin absolute URLs or root-relative paths.
+              // Rejects javascript:, data:, vbscript:, protocol-relative (//evil.com), and cross-origin.
               const source = p.get('source') || '';
-              if (source) this.state.sourceUrl = source;
+              if (source) {
+                  let safeSource = '';
+                  try {
+                      const trimmed = String(source).trim();
+                      if (trimmed && !trimmed.startsWith('//') && !/^[a-z]+:/i.test(trimmed.split('?')[0])) {
+                          // Root-relative path like /listings.html or /property?id=...
+                          if (trimmed.startsWith('/')) safeSource = trimmed;
+                      } else if (trimmed) {
+                          const u = new URL(trimmed, window.location.origin);
+                          if ((u.protocol === 'http:' || u.protocol === 'https:') && u.origin === window.location.origin) {
+                              safeSource = u.pathname + u.search + u.hash;
+                          }
+                      }
+                  } catch (_) { /* invalid URL — drop it */ }
+                  if (safeSource) this.state.sourceUrl = safeSource;
+              }
 
               setHidden('hiddenPetsAllowed',     pets);
               setHidden('hiddenPetTypes',        petTypes);

@@ -37,8 +37,14 @@ function fBool(val: FormDataEntryValue | string | null | undefined): boolean | n
 }
 
 function fNum(val: FormDataEntryValue | string | null | undefined): number | null {
-  const n = parseFloat(fv(val).replace(/[^0-9.-]/g, ''));
-  return isNaN(n) ? null : n;
+  // Strip everything except digits, one optional leading '-', and one decimal point.
+  // Rejects malformed inputs like "1.2.3", "--5", "5-3" rather than silently coercing.
+  const raw = fv(val);
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^0-9.\-]/g, '');
+  if (!/^-?\d+(\.\d+)?$/.test(cleaned)) return null;
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : null;
 }
 
 const VALID_PAYMENT_STATUSES = new Set(['unpaid', 'paid', 'waived', 'refunded']);
