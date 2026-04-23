@@ -1603,6 +1603,25 @@ class RentalApplication {
 
         const MAX_SIZE  = 1 * 1024 * 1024; // [10A-3] 1 MB per file — keeps total base64 payload safe
         const MAX_FILES = 4;
+        const MAX_TOTAL = 3 * 1024 * 1024; // 3 MB combined — must match server payload guard
+
+        const updateMeter = () => {
+            const meter = document.getElementById('uploadMeter');
+            const countEl = document.getElementById('uploadMeterCount');
+            const usedEl  = document.getElementById('uploadMeterUsed');
+            const barEl   = document.getElementById('uploadMeterBar');
+            if (!meter) return;
+            const count = this._uploadedFiles.length;
+            const total = this._uploadedFiles.reduce((s, f) => s + f.size, 0);
+            const pct = Math.min(100, Math.round((total / MAX_TOTAL) * 100));
+            if (countEl) countEl.textContent = String(count);
+            if (usedEl)  usedEl.textContent  = (total / 1024).toFixed(0);
+            if (barEl) {
+                barEl.style.width = pct + '%';
+                barEl.style.background = pct >= 100 ? 'var(--danger, #dc2626)' : (pct >= 80 ? '#f59e0b' : 'var(--secondary)');
+            }
+            meter.style.display = count > 0 ? 'block' : 'none';
+        };
 
         const renderList = () => {
             const items = this._uploadedFiles.map((f, i) => {
@@ -1626,6 +1645,7 @@ class RentalApplication {
                 return item;
             });
             list.replaceChildren(...items);
+            updateMeter();
         };
         list.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-remove-idx]');
@@ -1647,7 +1667,11 @@ class RentalApplication {
                     _showUploadErr(`Maximum ${MAX_FILES} files allowed.`); return;
                 }
                 if (file.size > MAX_SIZE) {
-                    _showUploadErr(`"${file.name}" exceeds the 1 MB limit and was not added.`); return;
+                    _showUploadErr(`"${file.name}" is ${(file.size/1024/1024).toFixed(1)} MB — over the 1 MB per-file limit.`); return;
+                }
+                const currentTotal = this._uploadedFiles.reduce((s, f) => s + f.size, 0);
+                if (currentTotal + file.size > MAX_TOTAL) {
+                    _showUploadErr(`Adding "${file.name}" would exceed the 3 MB total limit. Remove a file or send it to us by email after submitting.`); return;
                 }
                 if (this._uploadedFiles.some(f => f.name === file.name)) return;
                 this._uploadedFiles.push(file);
