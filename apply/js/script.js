@@ -1850,11 +1850,40 @@ class RentalApplication {
         });
     }
 
+    // Show a top-of-page banner — used for friendly resume-link messages.
+    _showResumeBanner(message, tone) {
+        try {
+            const existing = document.getElementById('resumeBanner');
+            if (existing) existing.remove();
+            const bg = tone === 'warn' ? '#fef3c7' : (tone === 'error' ? '#fee2e2' : '#dbeafe');
+            const fg = tone === 'warn' ? '#92400e' : (tone === 'error' ? '#991b1b' : '#1e3a8a');
+            const banner = document.createElement('div');
+            banner.id = 'resumeBanner';
+            banner.setAttribute('role', 'status');
+            banner.style.cssText = `position:sticky;top:0;z-index:9000;background:${bg};color:${fg};padding:12px 16px;font-size:14px;line-height:1.45;border-bottom:1px solid rgba(0,0,0,0.08);display:flex;gap:10px;align-items:flex-start;`;
+            const icon = document.createElement('i');
+            icon.className = tone === 'error' ? 'fas fa-circle-exclamation' : 'fas fa-circle-info';
+            icon.style.cssText = 'flex-shrink:0;margin-top:2px;';
+            const text = document.createElement('div');
+            text.style.cssText = 'flex:1;';
+            text.textContent = message;
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.setAttribute('aria-label', 'Dismiss');
+            close.textContent = '×';
+            close.style.cssText = `background:transparent;border:none;color:${fg};font-size:20px;cursor:pointer;line-height:1;padding:0 4px;`;
+            close.addEventListener('click', () => banner.remove());
+            banner.replaceChildren(icon, text, close);
+            document.body.insertBefore(banner, document.body.firstChild);
+        } catch (_) { /* non-fatal */ }
+    }
+
     // Restores saved progress using the resume token.
     // Fetches from the Supabase save-draft backend (cross-device), then falls
     // back to localStorage if the server is unreachable or the draft has expired.
     async _restoreFromServer(token) {
         let serverData = null;
+        let tokenStatus = 'unknown'; // 'ok' | 'expired' | 'unreachable' | 'unknown'
         try {
             const backendBase = (window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
                 ? window.CP_CONFIG.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/save-draft'
@@ -1865,11 +1894,33 @@ class RentalApplication {
                     const json = await res.json();
                     if (json.found && json.data && typeof json.data === 'object') {
                         serverData = json.data;
+                        tokenStatus = 'ok';
+                    } else {
+                        tokenStatus = 'expired';
                     }
+                } else if (res.status === 404 || res.status === 410) {
+                    tokenStatus = 'expired';
+                } else {
+                    tokenStatus = 'unreachable';
                 }
             }
         } catch (err) {
+            tokenStatus = 'unreachable';
             console.warn('[CP App] Draft restore from server failed (falling back to localStorage):', err);
+        }
+
+        // Surface a friendly message when the resume link can't load the draft.
+        if (!serverData) {
+            const hasLocal = (() => {
+                try { return !!localStorage.getItem('rentalApplicationDraft'); } catch (_) { return false; }
+            })();
+            if (tokenStatus === 'expired' && !hasLocal) {
+                this._showResumeBanner('This save-and-resume link has expired (links are valid for 7 days). You can start a new application below — your information is not lost if it was on the same device.', 'warn');
+            } else if (tokenStatus === 'unreachable' && !hasLocal) {
+                this._showResumeBanner('We could not reach the server to load your saved progress. Check your connection and refresh, or start a new application below.', 'error');
+            } else if (tokenStatus === 'expired' && hasLocal) {
+                this._showResumeBanner('Your save-and-resume link has expired, but we found a saved draft on this device and have restored it.', 'info');
+            }
         }
 
         if (serverData) {
