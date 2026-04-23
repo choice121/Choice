@@ -173,9 +173,130 @@
 .portal-footer{text-align:center;margin-top:32px;font-size:.76rem;color:var(--muted);line-height:2}
 .portal-footer a{color:#1d4ed8;text-decoration:none}
 .portal-footer a:hover{text-decoration:underline}
+
+/* ── Theme-aware status colors (dark-mode safe) ── */
+:root{
+  --acc-success-bg: var(--success-bg, #f0fdf4);
+  --acc-success-border: rgba(34,197,94,.35);
+  --acc-success-text: var(--success-strong, #15803d);
+  --acc-warn-bg: var(--warning-bg, #fffbeb);
+  --acc-warn-border: rgba(245,158,11,.35);
+  --acc-warn-text: var(--warning-strong, #a16207);
+  --acc-danger-bg: var(--danger-bg, #fef2f2);
+  --acc-danger-border: rgba(239,68,68,.35);
+  --acc-danger-text: var(--danger-strong, #b91c1c);
+  --acc-info-bg: rgba(59,130,246,.10);
+  --acc-info-border: rgba(59,130,246,.32);
+  --acc-info-text: #1d4ed8;
+  --acc-purple-bg: rgba(168,85,247,.12);
+  --acc-purple-border: rgba(168,85,247,.32);
+  --acc-purple-text: #7e22ce;
+}
+.payment-card{background:var(--acc-success-bg);border:1px solid var(--acc-success-border)}
+.payment-title{color:var(--acc-success-text)}
+.pay-unpaid-card{background:var(--acc-warn-bg);border:1px solid var(--acc-warn-border)}
+.pay-unpaid-title{color:var(--acc-warn-text)}
+.movein-card{background:var(--acc-success-bg);border:1px solid var(--acc-success-border)}
+.movein-title{color:var(--acc-success-text)}
+.denied-card{background:var(--acc-danger-bg);border:1px solid var(--acc-danger-border)}
+.denied-title{color:var(--acc-danger-text)}
+.waitlist-card{background:var(--acc-purple-bg);border:1px solid var(--acc-purple-border)}
+.waitlist-title{color:var(--acc-purple-text)}
+
+/* ── Inline SVG icons ── */
+.ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-0.15em;flex-shrink:0}
+.ico-lg{width:1.25em;height:1.25em}
+
+/* ── Hero ── */
+.hero{
+  position:relative;background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:22px 24px;margin-bottom:18px;overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:4px;
+  background:linear-gradient(90deg,var(--hero-from,#3b82f6),var(--hero-to,#8b5cf6));
+}
+.hero[data-tone="success"]{--hero-from:#22c55e;--hero-to:#16a34a}
+.hero[data-tone="warn"]{--hero-from:#f59e0b;--hero-to:#ea580c}
+.hero[data-tone="danger"]{--hero-from:#ef4444;--hero-to:#b91c1c}
+.hero[data-tone="info"]{--hero-from:#3b82f6;--hero-to:#6366f1}
+.hero[data-tone="purple"]{--hero-from:#a855f7;--hero-to:#7e22ce}
+.hero-eyebrow{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.10em;margin-bottom:6px}
+.hero-title{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:500;font-style:italic;line-height:1.25;color:var(--text);margin-bottom:6px}
+.hero-sub{font-size:.86rem;color:var(--muted);line-height:1.55;margin-bottom:14px}
+.hero-cta{
+  display:inline-flex;align-items:center;gap:8px;padding:11px 20px;
+  background:linear-gradient(135deg,var(--hero-from,#3b82f6),var(--hero-to,#6366f1));
+  color:#fff;border:none;border-radius:10px;font-size:.86rem;font-weight:700;
+  cursor:pointer;font-family:inherit;text-decoration:none;
+  box-shadow:0 4px 14px rgba(59,130,246,.30);transition:transform .15s,opacity .15s;
+}
+.hero-cta:hover{opacity:.92;transform:translateY(-1px)}
+.hero-cta-ghost{
+  display:inline-flex;align-items:center;gap:6px;padding:11px 16px;margin-left:8px;
+  background:transparent;color:var(--muted);border:1px solid var(--border);
+  border-radius:10px;font-size:.84rem;font-weight:600;text-decoration:none;
+}
+
+/* ── Progress bar ── */
+.progress-wrap{margin:14px 0 6px}
+.progress-row{display:flex;align-items:center;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.04em}
+.progress{height:6px;background:var(--surface-2,#f1f5f9);border-radius:999px;overflow:hidden;position:relative}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--hero-from,#3b82f6),var(--hero-to,#6366f1));transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── Countdown ── */
+.countdown{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  background:var(--acc-warn-bg);color:var(--acc-warn-text);border:1px solid var(--acc-warn-border);
+}
+.countdown[data-urgent="1"]{background:var(--acc-danger-bg);color:var(--acc-danger-text);border-color:var(--acc-danger-border);animation:pulse 2s ease-in-out infinite}
+.countdown[data-expired="1"]{background:var(--acc-danger-bg);color:var(--acc-danger-text);border-color:var(--acc-danger-border)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+
+/* ── Document checklist ── */
+.doc-check{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.doc-check:last-child{border-bottom:none}
+.doc-check-icon{
+  width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;font-weight:800;flex-shrink:0;
+  background:var(--surface-2,#f1f5f9);color:var(--muted);
+}
+.doc-check[data-state="done"] .doc-check-icon{background:var(--acc-success-bg);color:var(--acc-success-text)}
+.doc-check[data-state="optional"] .doc-check-icon{background:var(--surface-2,#f1f5f9);color:var(--muted-2,#64748b)}
+.doc-check-body{flex:1;min-width:0}
+.doc-check-label{font-size:.86rem;font-weight:600;color:var(--text)}
+.doc-check-status{font-size:.74rem;color:var(--muted);margin-top:2px;line-height:1.4}
+.doc-check-files{margin-top:4px;display:flex;flex-direction:column;gap:2px}
+.doc-check-file{font-size:.74rem;color:var(--acc-success-text);font-weight:500;display:flex;align-items:center;gap:5px}
+.btn-choose-mini{
+  padding:7px 14px;background:var(--acc-info-bg);border:1px solid var(--acc-info-border);
+  color:var(--acc-info-text);border-radius:8px;font-size:.76rem;font-weight:600;
+  cursor:pointer;font-family:inherit;flex-shrink:0;
+}
+.btn-choose-mini:hover{filter:brightness(.95)}
+
+/* ── Step icons (override to use SVG sizing) ── */
+.step-icon .ico{width:14px;height:14px;stroke-width:2.5}
 </style>
 </head>
 <body data-portal="tenant" data-page-title="My Portal" data-page-sub="Tenant Portal" data-refresh="0" data-live="0">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-dollar" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
+  </defs>
+</svg>
 <div class="app">
 <main class="app-content">
 
@@ -337,25 +458,29 @@ function renderPaymentStatus(app){
   return '';
 }
 
-// ── Document upload ──────────────────────────────────────────────────────────
+// ── Document upload (checklist with live file list) ──────────────────────────
 function renderDocUpload(app){
   if(['denied','withdrawn'].includes(app.status))return '';
-  function docRow(label,type){
-    return `<div class="doc-row">
-      <span class="doc-label">${label}</span>
-      <input type="file" id="fi-${type}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" data-doc-type="${type}" data-app-id="${esc(app.app_id)}" data-status-id="ds-${type}">
-      <button class="btn-choose" type="button" data-action="choose-file" data-target="fi-${type}">Choose File</button>
-      <span class="doc-status" id="ds-${type}"></span>
-    </div>`;
-  }
-  return `<div class="section"><div class="section-label">Upload Documents</div>
-    <div class="card">
-      <p style="color:var(--muted);font-size:.82rem;margin-bottom:14px">Upload required documents: government ID, pay stubs, bank statements. PDF, JPG, or PNG accepted.</p>
-      ${docRow('Government ID','government_id')}
-      ${docRow('Pay Stub (last 2 months)','pay_stub')}
-      ${docRow('Bank Statement','bank_statement')}
-      ${docRow('Other Document','other')}
+  // Initial render with empty grouped object — populated async via populateDocChecklist().
+  const checklist = renderDocChecklist({});
+  return `<div class="section"><div class="section-label">Documents</div>
+    <div class="card" id="doc-checklist-card" data-app-id="${esc(app.app_id)}">
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:6px">PDF, JPG, or PNG accepted. Files are private and shared only with our team.</p>
+      <div id="doc-checklist-list">${checklist}</div>
     </div></div>`;
+}
+
+async function populateDocChecklist(appId){
+  const card = document.getElementById('doc-checklist-card');
+  const list = document.getElementById('doc-checklist-list');
+  if(!card || !list) return;
+  // Set the data-app-id on inputs that need it for upload (REQUIRED_DOCS-driven).
+  const grouped = await loadUploadedDocsList(appId);
+  list.innerHTML = renderDocChecklist(grouped);
+  // Restamp the data-app-id attribute on each file input (uploadDoc reads it).
+  list.querySelectorAll('input[type=file][data-doc-type]').forEach(el => {
+    el.dataset.appId = appId;
+  });
 }
 
 async function uploadDoc(docType,appId,inputId,statusId){
@@ -377,8 +502,231 @@ async function uploadDoc(docType,appId,inputId,statusId){
     if(!res.ok||!d.signed_url){status.textContent='Error: '+(d.error||'Upload failed');status.style.color='#b91c1c';return;}
     const up=await fetch(d.signed_url,{method:'PUT',headers:{'Content-Type':file.type,'x-upsert':'true'},body:file});
     if(!up.ok){status.textContent='Upload failed. Try again.';status.style.color='#b91c1c';return;}
-    status.innerHTML='&#10003; '+esc(file.name);status.style.color='#15803d';input.value='';
-  }catch(e){status.textContent='Error: '+e.message;status.style.color='#b91c1c';}
+    status.innerHTML='&#10003; '+esc(file.name);status.style.color='var(--acc-success-text)';input.value='';
+    // Refresh the checklist so the new file appears in the right slot.
+    if(window._portalAppId) populateDocChecklist(window._portalAppId);
+  }catch(e){status.textContent='Error: '+e.message;status.style.color='var(--acc-danger-text)';}
+}
+
+// ── Required documents (also used by checklist + uploader) ──────────────────
+const REQUIRED_DOCS = [
+  { type:'government_id',  label:'Government ID',          required:true,  hint:"Driver's license, passport, or state ID" },
+  { type:'pay_stub',       label:'Pay Stub (last 2 months)', required:true, hint:'Most recent 2 months of pay stubs' },
+  { type:'bank_statement', label:'Bank Statement',         required:true,  hint:'Most recent statement' },
+  { type:'other',          label:'Other Document',         required:false, hint:'Optional supporting documents' },
+];
+
+// ── Next-step decision engine ─────────────────────────────────────────────────
+// Returns { tone, eyebrow, title, sub, ctaLabel, ctaHref, ctaAction, deadline }
+function nextStepFor(app){
+  const status      = app.status || 'pending';
+  const lease       = app.lease_status || 'none';
+  const mi          = app.move_in_status || null;
+  const payStatus   = app.payment_status || 'unpaid';
+  const hfReq       = !!app.holding_fee_requested;
+  const hfPaid      = !!app.holding_fee_paid;
+
+  // Move-in done — it's home time.
+  if(mi === 'completed' || mi === 'confirmed'){
+    return { tone:'success', eyebrow:'You\'re all set', title:'Welcome home.',
+      sub: app.move_in_date_actual
+        ? 'Move-in date: ' + fmtDate(app.move_in_date_actual) + '. We\'ll be in touch with key pickup details.'
+        : 'Your move-in is confirmed. We\'ll be in touch with key pickup details.' };
+  }
+
+  // Lease awaiting tenant signature
+  if(lease === 'sent' && app.tenant_sign_token){
+    return { tone:'info', eyebrow:'Action required', title:'Your lease is ready to sign.',
+      sub:'Please review and sign as soon as possible — your move-in date depends on it.',
+      ctaLabel:'Sign your lease', ctaHref:'/lease-sign.html?token=' + encodeURIComponent(app.tenant_sign_token),
+      ctaIcon:'i-edit',
+      deadline: app.lease_sent_date ? new Date(new Date(app.lease_sent_date).getTime() + 1000*60*60*48).toISOString() : null,
+      deadlineLabel:'48-hr signing window' };
+  }
+  if(lease === 'awaiting_co_sign'){
+    return { tone:'info', eyebrow:'Almost there', title:'Waiting on your co-applicant.',
+      sub:'You\'ve signed — we\'re waiting for your co-applicant to complete their signature.' };
+  }
+  if(lease === 'signed' || lease === 'co_signed'){
+    return { tone:'success', eyebrow:'Lease executed', title:'Your lease is signed.',
+      sub: app.lease_start_date ? 'Lease starts ' + fmtDate(app.lease_start_date) + '. Move-in details to follow.' : 'Move-in scheduling next. Your team will be in touch.',
+      ctaLabel:'Download lease', ctaAction:'download-lease', ctaIcon:'i-download' };
+  }
+
+  // Holding fee
+  if(hfReq && !hfPaid){
+    return { tone:'warn', eyebrow:'Time-sensitive', title:'Complete your holding fee to reserve the unit.',
+      sub: (app.holding_fee_amount ? 'Amount: ' + fmtMoney(app.holding_fee_amount) + '. ' : '') +
+           'This is fully credited toward your move-in costs. Without it, the unit remains available to other approved applicants.',
+      ctaLabel:'Call to confirm payment', ctaHref:'tel:7077063137', ctaIcon:'i-dollar',
+      deadline: app.holding_fee_due_date || null, deadlineLabel:'Due' };
+  }
+  if(hfPaid && lease === 'none'){
+    return { tone:'info', eyebrow:'Reserved', title:'Holding fee received — your unit is held.',
+      sub:'We\'re preparing your lease now. You\'ll be notified the moment it\'s ready to sign.' };
+  }
+
+  // Approved, no holding fee in motion yet
+  if(status === 'approved'){
+    return { tone:'success', eyebrow:'You were selected', title:'You\'ve been approved.',
+      sub:'Your team will reach out shortly with next steps to reserve the unit and prepare your lease.' };
+  }
+
+  // Application fee unpaid
+  if(payStatus === 'unpaid' && app.application_fee){
+    return { tone:'warn', eyebrow:'Action required', title:'Application fee due — ' + fmtMoney(app.application_fee) + '.',
+      sub:'Applications enter the active review queue once the fee is received. Faster payment means faster review.',
+      ctaLabel:'Call to pay', ctaHref:'tel:7077063137', ctaIcon:'i-dollar' };
+  }
+
+  if(status === 'waitlisted'){
+    return { tone:'purple', eyebrow:'On waitlist', title:'You\'re on the waitlist.',
+      sub:'We\'ll contact you the moment a unit opens up. Browsing other listings in the meantime is welcome.' };
+  }
+  if(status === 'denied'){
+    return { tone:'danger', eyebrow:'Decision', title:'Application not approved.',
+      sub:'You\'re welcome to apply for other available properties.',
+      ctaLabel:'Browse properties', ctaHref:'/listings.html', ctaIcon:'i-arrow' };
+  }
+  if(status === 'withdrawn'){
+    return { tone:'info', eyebrow:'Withdrawn', title:'This application has been withdrawn.',
+      sub:'If you\'d like to reapply in the future, we\'re here to help.' };
+  }
+
+  // Default — pending review
+  return { tone:'info', eyebrow:'In review', title:'Your application is being reviewed.',
+    sub:'Decisions typically come within 24–72 hours of payment confirmation. Applicants who respond promptly are often prioritized.' };
+}
+
+// ── Countdown badge ──────────────────────────────────────────────────────────
+function countdownHtml(deadlineISO, label){
+  if(!deadlineISO) return '';
+  return `<span class="countdown" data-deadline="${esc(deadlineISO)}" data-label="${esc(label||'')}">
+    <svg class="ico"><use href="#i-clock"/></svg><span class="cd-text">…</span>
+  </span>`;
+}
+function tickCountdown(el){
+  const deadline = new Date(el.dataset.deadline).getTime();
+  if(isNaN(deadline)) return;
+  const now = Date.now();
+  const diff = deadline - now;
+  const label = el.dataset.label || '';
+  const txt = el.querySelector('.cd-text');
+  if(diff <= 0){
+    el.dataset.expired = '1';
+    el.dataset.urgent = '0';
+    if(txt) txt.textContent = (label ? label + ' · ' : '') + 'Past due';
+    return;
+  }
+  const hrs = diff / (1000*60*60);
+  el.dataset.urgent = (hrs <= 12) ? '1' : '0';
+  el.dataset.expired = '0';
+  let str;
+  if(hrs >= 24){
+    const d = Math.floor(hrs / 24);
+    const h = Math.floor(hrs - d*24);
+    str = d + 'd ' + h + 'h left';
+  } else if(hrs >= 1){
+    const h = Math.floor(hrs);
+    const m = Math.floor((diff - h*1000*60*60) / (1000*60));
+    str = h + 'h ' + m + 'm left';
+  } else {
+    const m = Math.max(1, Math.ceil(diff / (1000*60)));
+    str = m + 'm left';
+  }
+  if(txt) txt.textContent = (label ? label + ' · ' : '') + str;
+}
+let _cdTimer = null;
+function startCountdownTickers(root){
+  if(_cdTimer){ clearInterval(_cdTimer); _cdTimer = null; }
+  const els = (root || document).querySelectorAll('.countdown[data-deadline]');
+  if(!els.length) return;
+  els.forEach(tickCountdown);
+  _cdTimer = setInterval(() => {
+    document.querySelectorAll('.countdown[data-deadline]').forEach(tickCountdown);
+  }, 30000);
+}
+
+// ── Hero block ───────────────────────────────────────────────────────────────
+function renderHero(app, step){
+  const cta = step.ctaLabel
+    ? (step.ctaHref
+        ? `<a class="hero-cta" href="${esc(step.ctaHref)}"><svg class="ico ico-lg"><use href="#${esc(step.ctaIcon||'i-arrow')}"/></svg>${esc(step.ctaLabel)}</a>`
+        : `<button class="hero-cta" type="button" data-action="${esc(step.ctaAction||'')}"><svg class="ico ico-lg"><use href="#${esc(step.ctaIcon||'i-arrow')}"/></svg>${esc(step.ctaLabel)}</button>`)
+    : '';
+  const cd = step.deadline ? countdownHtml(step.deadline, step.deadlineLabel) : '';
+  return `<div class="hero" data-tone="${esc(step.tone||'info')}">
+    <div class="hero-eyebrow">${esc(step.eyebrow||'')}${cd?' &nbsp;'+cd:''}</div>
+    <div class="hero-title">${esc(step.title||'')}</div>
+    <div class="hero-sub">${esc(step.sub||'')}</div>
+    ${cta}
+  </div>`;
+}
+
+// ── Progress bar ─────────────────────────────────────────────────────────────
+function renderProgress(steps){
+  const totalUnits = steps.length;
+  let done = 0;
+  steps.forEach(s => { if(s.done) done++; });
+  // Half-credit for the active step.
+  const active = steps.find(s => s.active && !s.done);
+  const pct = Math.round(((done + (active ? 0.5 : 0)) / totalUnits) * 100);
+  const labelIdx = active ? steps.indexOf(active) + 1 : done;
+  return `<div class="progress-wrap">
+    <div class="progress-row"><span>Step ${labelIdx} of ${totalUnits}</span><span>${pct}%</span></div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+      <div class="progress-fill" style="width:${pct}%"></div>
+    </div>
+  </div>`;
+}
+
+// ── Uploaded documents (live list from storage) ──────────────────────────────
+async function loadUploadedDocsList(appId){
+  try{
+    const sb = getSB();
+    const { data:files, error } = await sb.storage.from('application-docs')
+      .list(appId, { limit:100, sortBy:{ column:'created_at', order:'desc' } });
+    if(error) return {};
+    const grouped = {};
+    (files||[]).forEach(f => {
+      // Convention used by request-upload-url: <doc_type>_<timestamp>_<original>
+      const m = (f.name||'').match(/^([a-z_]+?)(?:_\d+)?[_-]/i) || (f.name||'').match(/^([a-z_]+)/i);
+      const type = (m && m[1]) ? m[1].toLowerCase() : 'other';
+      const key = REQUIRED_DOCS.find(d => d.type === type)?.type || 'other';
+      (grouped[key] = grouped[key] || []).push(f);
+    });
+    return grouped;
+  } catch(_){ return {}; }
+}
+
+function renderDocChecklist(grouped){
+  return REQUIRED_DOCS.map(d => {
+    const files = grouped[d.type] || [];
+    const has = files.length > 0;
+    const state = has ? 'done' : (d.required ? 'required' : 'optional');
+    const icon = has ? '<svg class="ico"><use href="#i-check"/></svg>' : (d.required ? '!' : '+');
+    const statusText = has
+      ? files.length + ' file' + (files.length!==1?'s':'') + ' uploaded'
+      : (d.required ? 'Required · ' + d.hint : 'Optional · ' + d.hint);
+    const filesList = has
+      ? `<div class="doc-check-files">${files.slice(0,3).map(f =>
+          `<span class="doc-check-file"><svg class="ico"><use href="#i-doc"/></svg>${esc(f.name)}</span>`
+        ).join('')}${files.length>3?`<span class="doc-check-file" style="color:var(--muted)">+ ${files.length-3} more</span>`:''}</div>`
+      : '';
+    const btnLabel = has ? 'Replace' : (d.required ? 'Upload' : 'Add');
+    return `<div class="doc-check" data-state="${state}">
+      <span class="doc-check-icon">${icon}</span>
+      <div class="doc-check-body">
+        <div class="doc-check-label">${esc(d.label)}</div>
+        <div class="doc-check-status">${statusText}</div>
+        ${filesList}
+      </div>
+      <input type="file" id="fi-${esc(d.type)}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none"
+        data-doc-type="${esc(d.type)}" data-status-id="ds-${esc(d.type)}">
+      <button class="btn-choose-mini" type="button" data-action="choose-file" data-target="fi-${esc(d.type)}">${btnLabel}</button>
+    </div>
+    <div class="doc-status" id="ds-${esc(d.type)}" style="font-size:.74rem;padding:0 0 6px 40px"></div>`;
+  }).join('');
 }
 
 // ── Portal render ─────────────────────────────────────────────────────────────
@@ -426,14 +774,22 @@ function renderPortal(app){
     },
   ];
 
-  const stepsHtml=steps.map(s=>{
+  const stepsHtml=steps.map((s,i)=>{
     const cls=s.done?'step-done':s.active?'step-active':'step-wait';
-    const icon=s.done?'&#10003;':s.active?'&bull;':'&ndash;';
+    const icon=s.done
+      ?'<svg class="ico"><use href="#i-check"/></svg>'
+      :s.active
+        ?'<svg class="ico"><use href="#i-clock"/></svg>'
+        :String(i+1);
     return `<li class="step-item">
       <span class="step-icon ${cls}">${icon}</span>
       <div><div class="step-text">${s.label}</div><div class="step-sub">${s.sub}</div></div>
     </li>`;
   }).join('');
+
+  const nextStep = nextStepFor(app);
+  const heroHtml = renderHero(app, nextStep);
+  const progressHtml = renderProgress(steps);
 
   // Lease actions
   let leaseHtml='';
@@ -495,16 +851,18 @@ function renderPortal(app){
     :'';
 
   return `
+    ${heroHtml}
     <div class="section">
       <div class="section-label">Your Application</div>
       <div class="card">
         <div class="status-header">
           <div>
             <div class="status-name">${name}</div>
-            <div class="status-prop"><span style="font-size:.7rem;color:var(--muted)">&#128205;</span>${prop}</div>
+            <div class="status-prop"><svg class="ico" style="color:var(--muted)"><use href="#i-pin"/></svg>${prop}</div>
           </div>
           <div class="badges-group">${statusBadge(status)}${leaseBadge(leaseStatus)}</div>
         </div>
+        ${progressHtml}
         <div class="meta-grid">
           <div class="meta-item"><span class="meta-label">App ID</span><span class="meta-val" style="font-family:monospace;font-size:.78rem">${esc(app.app_id||app.id)}</span></div>
           <div class="meta-item"><span class="meta-label">Submitted</span><span class="meta-val">${fmtDateShort(app.created_at)}</span></div>
@@ -892,6 +1250,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
     }
 
     content.innerHTML=switcherHtml+renderPortal(fullApp);
+    // Live countdowns + load the document checklist (storage list is async).
+    startCountdownTickers(content);
+    populateDocChecklist(appId);
   }
 
   window._switchApp=async function(appId){
