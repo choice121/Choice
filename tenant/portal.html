@@ -10,7 +10,7 @@
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
 <link rel="stylesheet" href="/css/cp-design.css?v=20260428">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
@@ -24,16 +24,23 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root{
+  /* Modern font stack */
+  --font-sans: 'Geist', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Instrument Serif', 'Fraunces', Georgia, serif;
   /* Spacing scale */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
   --sp-6:24px; --sp-7:32px; --sp-8:40px; --sp-9:56px; --sp-10:72px;
-  /* Radius scale */
-  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+  /* Radius scale — slightly softer for premium feel */
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:26px; --r-pill:999px;
   /* Elevation — layered for depth without heaviness */
   --elev-1:0 1px 2px rgba(15,23,42,.04), 0 1px 1px rgba(15,23,42,.03);
   --elev-2:0 2px 4px rgba(15,23,42,.04), 0 8px 24px -8px rgba(15,23,42,.08);
   --elev-3:0 4px 8px rgba(15,23,42,.06), 0 16px 40px -12px rgba(15,23,42,.14);
   --elev-cta:0 1px 2px rgba(15,23,42,.10), 0 8px 24px -6px rgba(15,23,42,.20);
+  /* Card surface gradient (lit-from-above effect) */
+  --card-grad: linear-gradient(180deg, color-mix(in srgb, var(--surface) 100%, white 0%) 0%, var(--surface) 100%);
+  --card-highlight: inset 0 1px 0 rgba(255,255,255,.6);
   /* Theme-aware status colors */
   --acc-success-bg: var(--success-bg, #f0fdf4);
   --acc-success-border: rgba(34,197,94,.35);
@@ -61,11 +68,22 @@
   --surface-2: rgba(255,255,255,.04);
 }
 
+/* ── Body font override (overrides Inter from cp-design.css for the portal) ── */
+body[data-portal="tenant"]{
+  font-family:var(--font-sans);
+  font-feature-settings:"ss01","cv11","cv02";
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  letter-spacing:-.005em;
+}
+body[data-portal="tenant"] code,
+body[data-portal="tenant"] .mono{font-family:var(--font-mono)}
+
 /* ── Layout ── */
 .main{
   max-width:760px;margin:0 auto;
   padding:var(--sp-7) var(--sp-4) var(--sp-10);
   animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both;
+  font-family:var(--font-sans);
 }
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
@@ -92,8 +110,9 @@
   border-radius:var(--r-xl);box-shadow:var(--elev-2);
 }
 .no-app h3{
-  font-family:'Fraunces',serif;font-style:italic;font-weight:500;
-  color:var(--text);font-size:1.4rem;margin-bottom:var(--sp-2);
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  color:var(--text);font-size:1.7rem;line-height:1.1;
+  margin-bottom:var(--sp-2);letter-spacing:-.01em;
 }
 .no-app p{color:var(--muted);font-size:.92rem;line-height:1.65;max-width:42ch;margin:0 auto}
 
@@ -109,14 +128,21 @@
   display:block;margin-left:var(--sp-2);
 }
 
-/* ── Card ── */
+/* ── Card — premium surface with lit-from-above highlight ── */
 .card{
-  background:var(--surface);
-  border:1px solid var(--border);
+  background:var(--card-grad);
+  border:1px solid var(--hairline);
   border-radius:var(--r-xl);
   padding:var(--sp-6) var(--sp-6);
-  box-shadow:var(--elev-2);
+  box-shadow:var(--elev-2), var(--card-highlight);
   position:relative;
+  transition:box-shadow .25s cubic-bezier(.16,1,.3,1), transform .25s cubic-bezier(.16,1,.3,1);
+}
+@media (hover:hover) and (min-width:768px){
+  .card:hover{box-shadow:var(--elev-3), var(--card-highlight)}
+}
+[data-theme="dark"] .card{
+  --card-highlight: inset 0 1px 0 rgba(255,255,255,.06);
 }
 
 /* ── Status header ── */
@@ -125,9 +151,9 @@
   flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-5);
 }
 .status-name{
-  font-family:'Fraunces',serif;font-style:italic;font-weight:500;
-  font-size:1.45rem;line-height:1.2;color:var(--text);
-  letter-spacing:-.01em;
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  font-size:1.7rem;line-height:1.1;color:var(--text);
+  letter-spacing:-.015em;
 }
 .status-prop{
   font-size:.84rem;color:var(--muted);margin-top:var(--sp-1);
@@ -168,8 +194,9 @@
   text-transform:uppercase;letter-spacing:.09em;
 }
 .meta-val{
-  font-size:.95rem;color:var(--text);font-weight:600;
-  font-variant-numeric:tabular-nums;letter-spacing:-.005em;
+  font-family:var(--font-mono);
+  font-size:.88rem;color:var(--text);font-weight:500;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
 }
 
 /* ── Divider ── */
@@ -358,9 +385,9 @@
   box-shadow:0 0 0 3px color-mix(in srgb,var(--hero-from,#3b82f6) 25%,transparent);
 }
 .hero-title{
-  font-family:'Fraunces',serif;font-style:italic;font-weight:500;
-  font-size:clamp(1.7rem, 4.5vw, 2.1rem);line-height:1.15;
-  color:var(--text);margin-bottom:var(--sp-3);letter-spacing:-.015em;
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  font-size:clamp(2rem, 5vw, 2.5rem);line-height:1.05;
+  color:var(--text);margin-bottom:var(--sp-3);letter-spacing:-.02em;
 }
 .hero-sub{
   font-size:.95rem;color:var(--muted);line-height:1.6;
