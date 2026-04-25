@@ -315,8 +315,16 @@ function setupDropzone(){
     dz.dataset.active = '0';
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if(!files.length) return;
-    // Route each file to the best-matching slot (image -> first empty required, pdf -> bank/pay/id)
-    files.forEach(f => routeDroppedFile(f));
+    // Phase 2 — Single file: route to first empty required slot (legacy
+    // behaviour). Multiple files: dump them all into the "other" bucket
+    // as a single batched upload (the upload pipeline will fan them out
+    // in parallel). We can't reliably auto-classify multiple files at
+    // once and putting them all in one slot at least keeps them grouped.
+    if(files.length === 1){
+      routeDroppedFile(files[0]);
+    } else {
+      routeDroppedFiles(files, 'other');
+    }
   };
   dz.addEventListener('dragover', onOver);
   dz.addEventListener('dragenter', onOver);
@@ -335,6 +343,18 @@ function routeDroppedFile(file){
   input.files = dt.files;
   input.dispatchEvent(new Event('change', { bubbles:true }));
   showToast('Uploading ' + file.name + '…', 'info', { icon:'i-upload-cloud' });
+}
+function routeDroppedFiles(files, preferredType){
+  // Find the input matching the preferred doc type (default 'other'); if
+  // missing, just pick the first input that exists.
+  let input = document.querySelector('input[type=file][data-doc-type="' + preferredType + '"]')
+           || document.querySelector('input[type=file][data-doc-type]');
+  if(!input) return;
+  const dt = new DataTransfer();
+  files.forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  input.dispatchEvent(new Event('change', { bubbles:true }));
+  showToast('Uploading ' + files.length + ' files…', 'info', { icon:'i-upload-cloud' });
 }
 
 async function signOut(){
@@ -460,12 +480,18 @@ function renderDocUpload(app){
     </div></div>`;
 }
 
-async function populateDocChecklist(appId){
+// Phase 2: accepts an optional `prefetchedDocs` array (rows from
+// application_documents, returned by the tenant_portal_state RPC). When
+// supplied, we skip the storage.list round-trip entirely. When omitted,
+// we fall back to listing the storage bucket (legacy path, still works
+// even if the migration is not applied).
+async function populateDocChecklist(appId, prefetchedDocs){
   const card = document.getElementById('doc-checklist-card');
   const list = document.getElementById('doc-checklist-list');
   if(!card || !list) return;
-  // Set the data-app-id on inputs that need it for upload (REQUIRED_DOCS-driven).
-  const grouped = await loadUploadedDocsList(appId);
+  const grouped = Array.isArray(prefetchedDocs)
+    ? groupDocsFromTable(prefetchedDocs)
+    : await loadUploadedDocsList(appId);
   list.innerHTML = renderDocChecklist(grouped);
   // Restamp the data-app-id attribute on each file input (uploadDoc reads it).
   list.querySelectorAll('input[type=file][data-doc-type]').forEach(el => {
@@ -473,30 +499,100 @@ async function populateDocChecklist(appId){
   });
 }
 
-async function uploadDoc(docType,appId,inputId,statusId){
-  const input=document.getElementById(inputId);
-  const status=document.getElementById(statusId);
-  const file=input.files[0];
-  if(!file)return;
-  status.textContent='Uploading…';status.style.color='#1d4ed8';
-  try{
-    const {data:{session}}=await getSB().auth.getSession();
-    const token=session?.access_token;
-    if(!token){status.textContent='Not signed in.';status.style.color='#b91c1c';showToast('Please sign in again','danger');return;}
-    const res=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/request-upload-url',{
+// Convert application_documents rows into the same shape that
+// loadUploadedDocsList (storage list) returns: { docType: [{name}, ...] }.
+function groupDocsFromTable(rows){
+  const grouped = {};
+  (rows || []).forEach(d => {
+    const type = String(d.doc_type || '').toLowerCase();
+    const key = REQUIRED_DOCS.find(x => x.type === type)?.type || 'other';
+    const name = d.original_file_name || String(d.storage_path || '').split('/').pop() || 'document';
+    (grouped[key] = grouped[key] || []).push({ name: name });
+  });
+  return grouped;
+}
+
+// ── Document upload (Phase 2: multi-file with parallel uploads) ─────────────
+// uploadOneFile is the single-file primitive — signs an upload URL via the
+// request-upload-url Edge Function and PUTs the file. Returns true/false.
+// uploadDocFiles is the multi-file orchestrator: reads every file from the
+// input, runs uploads in parallel (capped at 4 concurrent — polite to the
+// signing function), shows live progress in the per-doc status line, and
+// refreshes the checklist once all uploads settle.
+async function uploadOneFile(docType, appId, file){
+  if(!file) return { ok:false, name:'', error:'No file' };
+  try {
+    const { data:{ session } } = await getSB().auth.getSession();
+    const token = session?.access_token;
+    if(!token) return { ok:false, name:file.name, error:'Not signed in' };
+    const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/request-upload-url', {
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+token},
-      body:JSON.stringify({app_id:appId,file_name:file.name,file_type:file.type,doc_type:docType}),
+      headers:{ 'Content-Type':'application/json', 'apikey':CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + token },
+      body: JSON.stringify({ app_id:appId, file_name:file.name, file_type:file.type, doc_type:docType }),
     });
-    const d=await res.json();
-    if(!res.ok||!d.signed_url){status.textContent='Error: '+(d.error||'Upload failed');status.style.color='#b91c1c';showToast(d.error||'Upload failed','danger');return;}
-    const up=await fetch(d.signed_url,{method:'PUT',headers:{'Content-Type':file.type,'x-upsert':'true'},body:file});
-    if(!up.ok){status.textContent='Upload failed. Try again.';status.style.color='#b91c1c';showToast('Upload failed. Try again.','danger');return;}
-    status.innerHTML='&#10003; '+esc(file.name);status.style.color='var(--acc-success-text)';input.value='';
-    showToast(esc(file.name) + ' uploaded', 'success');
-    // Refresh the checklist so the new file appears in the right slot.
-    if(window._portalAppId) populateDocChecklist(window._portalAppId);
-  }catch(e){status.textContent='Error: '+e.message;status.style.color='var(--acc-danger-text)';showToast('Upload error: '+e.message,'danger');}
+    const d = await res.json().catch(() => ({}));
+    if(!res.ok || !d.signed_url) return { ok:false, name:file.name, error: d.error || ('HTTP ' + res.status) };
+    const up = await fetch(d.signed_url, { method:'PUT', headers:{ 'Content-Type':file.type, 'x-upsert':'true' }, body:file });
+    if(!up.ok) return { ok:false, name:file.name, error:'Upload PUT failed' };
+    return { ok:true, name:file.name };
+  } catch(e) {
+    return { ok:false, name:file?.name || '', error:e.message };
+  }
+}
+
+async function uploadDocFiles(docType, appId, inputId, statusId){
+  const input  = document.getElementById(inputId);
+  const status = document.getElementById(statusId);
+  if(!input) return;
+  const files = Array.from(input.files || []);
+  if(!files.length) return;
+  const total = files.length;
+  if(status){
+    status.style.color = '#1d4ed8';
+    status.textContent = total === 1 ? 'Uploading…' : ('Uploading 0 / ' + total + '…');
+  }
+
+  const CONCURRENCY = 4;
+  const queue = files.slice();
+  let done = 0, failed = 0;
+  const failures = [];
+  const updateStatus = () => {
+    if(!status || total <= 1) return;
+    const seen = done + failed;
+    status.textContent = 'Uploading ' + seen + ' / ' + total + (failed ? ' (' + failed + ' failed)' : '') + '…';
+  };
+  const worker = async () => {
+    while(queue.length){
+      const f = queue.shift();
+      const r = await uploadOneFile(docType, appId, f);
+      if(r.ok){ done++; } else { failed++; failures.push(r); }
+      updateStatus();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+
+  if(status){
+    if(failed === 0){
+      status.innerHTML = '&#10003; ' + (total === 1 ? esc(files[0].name) : (total + ' files uploaded'));
+      status.style.color = 'var(--acc-success-text)';
+      showToast(total === 1 ? (esc(files[0].name) + ' uploaded') : (total + ' files uploaded'), 'success');
+    } else if(done === 0){
+      status.textContent = total === 1 ? 'Upload failed. Try again.' : 'All ' + total + ' uploads failed.';
+      status.style.color = 'var(--acc-danger-text)';
+      showToast(failures[0]?.error || 'Upload failed. Try again.', 'danger');
+    } else {
+      status.innerHTML = '&#10003; ' + done + ' uploaded · ' + failed + ' failed';
+      status.style.color = 'var(--acc-warn-text)';
+      showToast(done + ' uploaded, ' + failed + ' failed', 'warn');
+    }
+  }
+  input.value = '';
+  if(window._portalAppId) populateDocChecklist(window._portalAppId);
+}
+
+// Back-compat alias — older code paths referenced uploadDoc().
+async function uploadDoc(docType, appId, inputId, statusId){
+  return uploadDocFiles(docType, appId, inputId, statusId);
 }
 
 // ── Required documents (also used by checklist + uploader) ──────────────────
@@ -720,7 +816,7 @@ function renderDocChecklist(grouped){
         <div class="doc-check-status">${statusText}</div>
         ${filesList}
       </div>
-      <input type="file" id="fi-${esc(d.type)}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none"
+      <input type="file" id="fi-${esc(d.type)}" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple style="display:none"
         data-doc-type="${esc(d.type)}" data-status-id="ds-${esc(d.type)}">
       <input type="file" id="${camId}" accept="image/*" capture="environment" style="display:none"
         data-doc-type="${esc(d.type)}" data-status-id="ds-${esc(d.type)}">
@@ -1221,26 +1317,54 @@ document.addEventListener('DOMContentLoaded',async()=>{
     window._portalAppId=appId;
     sessionStorage.setItem('pendingPortalAppId',appId);
 
-    const {data:fullApp,error:fetchErr}=await sb.from('applications')
-      .select(
-        'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,'+
-        'payment_amount_recorded,payment_method_recorded,payment_notes,'+
-        'holding_fee_requested,holding_fee_amount,holding_fee_due_date,holding_fee_paid,holding_fee_paid_at,'+
-        'payment_confirmed_at,payment_amount_collected,payment_method_confirmed,'+
-        'first_name,last_name,email,property_address,property_id,'+
-        'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,'+
-        'monthly_rent,security_deposit,move_in_costs,'+
-        'move_in_status,move_in_date_actual,move_in_notes,'+
-        'tenant_sign_token,has_co_applicant,admin_notes,desired_lease_term'
-      )
-      .eq('app_id',appId)
-      .maybeSingle();
+    // Phase 2 — single-shot tenant_portal_state RPC. Returns app +
+    // property + cover_photo + documents in one round-trip. If the
+    // function is missing on this Supabase project (e.g., migration
+    // not applied yet) or the call fails for any reason, we fall back
+    // to the legacy three-call path below — same as before this change.
+    let fullApp = null;
+    let prefetchedProperty = null;
+    let prefetchedCoverPhoto = null;
+    let prefetchedDocs = null;
+    try {
+      const { data:rpc, error:rpcErr } = await sb.rpc('tenant_portal_state', { p_app_id: appId });
+      if(!rpcErr && rpc && rpc.success){
+        fullApp = rpc.app;
+        prefetchedProperty = rpc.property;
+        prefetchedCoverPhoto = rpc.cover_photo;
+        prefetchedDocs = rpc.documents;
+      } else if(rpc && rpc.success === false){
+        // Server returned a structured error: not authenticated / not found / access denied.
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = '<div class="error-card">' + esc(rpc.error || 'Could not load application') + '. Please refresh or <a href="tel:7077063137" style="color:#1d4ed8">call us</a>.</div>';
+        return;
+      }
+      // Anything else (404 from missing function, network error) → fall through to legacy path.
+    } catch(_) { /* legacy fallback */ }
 
-    if(fetchErr||!fullApp){
-      errorEl.style.display='block';
-      errorEl.innerHTML='<div class="error-card">Could not load application details. Please refresh or <a href="tel:7077063137" style="color:#1d4ed8">call us</a>.</div>';
-      if(fetchErr)console.error('Portal fetch error:',fetchErr.message);
-      return;
+    if(!fullApp){
+      const {data:legacyApp,error:fetchErr}=await sb.from('applications')
+        .select(
+          'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,'+
+          'payment_amount_recorded,payment_method_recorded,payment_notes,'+
+          'holding_fee_requested,holding_fee_amount,holding_fee_due_date,holding_fee_paid,holding_fee_paid_at,'+
+          'payment_confirmed_at,payment_amount_collected,payment_method_confirmed,'+
+          'first_name,last_name,email,property_address,property_id,'+
+          'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,'+
+          'monthly_rent,security_deposit,move_in_costs,'+
+          'move_in_status,move_in_date_actual,move_in_notes,'+
+          'tenant_sign_token,has_co_applicant,admin_notes,desired_lease_term'
+        )
+        .eq('app_id',appId)
+        .maybeSingle();
+
+      if(fetchErr||!legacyApp){
+        errorEl.style.display='block';
+        errorEl.innerHTML='<div class="error-card">Could not load application details. Please refresh or <a href="tel:7077063137" style="color:#1d4ed8">call us</a>.</div>';
+        if(fetchErr)console.error('Portal fetch error:',fetchErr.message);
+        return;
+      }
+      fullApp = legacyApp;
     }
 
     let switcherHtml='';
@@ -1260,13 +1384,20 @@ document.addEventListener('DOMContentLoaded',async()=>{
     }
 
     content.innerHTML=switcherHtml+renderPortal(fullApp);
-    // Live countdowns + load the document checklist (storage list is async).
+    // Live countdowns + the document checklist. When the portal-pulse RPC
+    // returned docs, populateDocChecklist skips the storage.list round-trip.
     startCountdownTickers(content);
-    populateDocChecklist(appId);
+    populateDocChecklist(appId, prefetchedDocs);
     setupDropzone();
 
-    // Hydrate the property hero in the background (photo + beds/baths)
-    if(fullApp.property_id){
+    // Hydrate the property hero. When the portal-pulse RPC returned the
+    // property + cover photo, render synchronously (zero extra round-trips).
+    // Otherwise, fall back to fetchProperty() — same behaviour as before.
+    if(prefetchedProperty){
+      const prop = Object.assign({}, prefetchedProperty, { _photo: prefetchedCoverPhoto?.url || null });
+      const slot = document.getElementById('prop-hero-slot');
+      if(slot) slot.innerHTML = renderPropertyHero(fullApp, prop);
+    } else if(fullApp.property_id){
       fetchProperty(fullApp.property_id).then(prop => {
         const slot = document.getElementById('prop-hero-slot');
         if(slot) slot.innerHTML = renderPropertyHero(fullApp, prop);
