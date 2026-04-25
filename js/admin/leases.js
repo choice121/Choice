@@ -79,11 +79,12 @@
 
         <div class="row-flex gap-2" style="flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" data-action="generate" data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||'')}">${generateLabel}</button>
+          <a class="btn btn-ghost btn-sm" href="/admin/lease-detail.html?app_id=${encodeURIComponent(app.app_id||'')}">Detail &amp; history</a>
           ${app.lease_pdf_url ? `<button class="btn btn-ghost btn-sm" data-action="download" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-out"/></svg> Download PDF</button>` : ''}
           ${app.lease_status === 'sent' ? `<button class="btn btn-ghost btn-sm" data-action="remind" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-bell"/></svg> Send reminder</button>` : ''}
-          ${app.lease_status === 'signed' && !isCounter ? `<button class="btn btn-ghost btn-sm" data-action="cosign" data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-check"/></svg> Countersign</button>` : ''}
-          ${app.lease_status === 'sent' ? `<button class="btn btn-danger btn-sm" data-action="void" data-id="${S.esc(app.id)}">Void</button>` : ''}
-          <button class="btn btn-ghost btn-sm" data-action="toggle-detail" data-id="${S.esc(app.id)}">Notes / Details</button>
+          ${(app.lease_status === 'signed' || app.lease_status === 'co_signed') && !isCounter ? `<button class="btn btn-ghost btn-sm" data-action="cosign" data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||'')}"><svg class="i i-sm"><use href="#i-check"/></svg> Countersign</button>` : ''}
+          ${app.lease_status === 'sent' || app.lease_status === 'awaiting_co_sign' ? `<button class="btn btn-danger btn-sm" data-action="void" data-id="${S.esc(app.id)}">Void</button>` : ''}
+          <button class="btn btn-ghost btn-sm" data-action="toggle-detail" data-id="${S.esc(app.id)}">Notes</button>
         </div>
 
         <div id="ldetail-${S.esc(app.id)}" style="display:none;margin-top:12px;padding:12px;background:var(--surface-2);border-radius:var(--r-md);font-size:.82rem">
@@ -264,6 +265,38 @@
     S.on('download',      (t) => downloadLease(t.dataset.appId));
     S.on('save-notes',    (t) => saveNotes(t.dataset.id));
     S.on('toggle-detail', (t) => toggleDetail(t.dataset.id));
+
+    document.getElementById('btn-check-renewals').addEventListener('click', async () => {
+      const action = await new Promise(resolve => {
+        S.confirm({
+          title:'Check lease renewals',
+          message:'Preview which tenants are within 70 days of their lease end (and have not been nudged in the last 14 days). You can then send the renewal emails.',
+          ok:'Preview only',
+        }).then(ok => resolve(ok ? 'preview' : null));
+      });
+      if (!action) return;
+
+      S.toast('Checking renewals…');
+      const preview = await callFn('/check-renewals', { dry_run:true });
+      if (!preview || !preview.ok) { S.toast(preview?.json?.error || 'Check failed','error'); return; }
+      const j = preview.json;
+      if (!j.eligible_for_nudge) {
+        S.toast(`No tenants need a renewal nudge right now. (${j.total_in_window} in window)`, 'success');
+        return;
+      }
+      const sendOk = await S.confirm({
+        title:`Send ${j.eligible_for_nudge} renewal email${j.eligible_for_nudge===1?'':'s'}?`,
+        message: j.candidates.slice(0,8).map(c =>
+          `• ${c.email} — ${c.days_until_end} days remaining (${c.app_id})`
+        ).join('\n') + (j.candidates.length > 8 ? `\n…and ${j.candidates.length-8} more` : ''),
+        ok:'Send renewal emails',
+      });
+      if (!sendOk) return;
+      S.toast('Sending…');
+      const send = await callFn('/check-renewals', {});
+      if (!send || !send.ok) { S.toast(send?.json?.error || 'Send failed','error'); return; }
+      S.toast(`Sent ${send.json.sent_count}, failed ${send.json.failed_count}.`, 'success');
+    });
 
     document.getElementById('filter-tabs').addEventListener('click', async e => {
       const btn = e.target.closest('.chip');

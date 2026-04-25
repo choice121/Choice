@@ -1,0 +1,274 @@
+// Choice Properties — Admin: lease detail page
+//
+// Renders the full audit picture for a single application:
+//   • Header card (status, tenant, property, key dates)
+//   • Sign-events timeline
+//   • PDF version history with download links
+//   • Lease amendments list + "Create amendment" action
+//
+// Reads ?app_id=APP_ID from the URL.
+(function () {
+  'use strict';
+
+  function readyDeps() { return window.AdminShell && window.CP && CP.Auth; }
+  function waitReady(ms) {
+    return new Promise((res, rej) => {
+      const start = Date.now();
+      (function tick() {
+        if (readyDeps()) return res();
+        if (Date.now() - start > ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick, 80);
+      })();
+    });
+  }
+
+  let S;
+  let _appId = null;
+  let _app = null;
+
+  function fmt(d) { if (!d) return '—'; try { return new Date(d).toLocaleString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return d; } }
+  function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); } catch { return d; } }
+  function fmtMoney(v) { if (v == null || v === '') return '—'; return '$' + Number(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
+
+  function eventLabel(t) {
+    return ({
+      tenant:        'Primary applicant signed',
+      co_applicant:  'Co-applicant signed',
+      admin:         'Management countersigned',
+    })[t] || t;
+  }
+
+  function pdfEventLabel(e) {
+    return ({
+      pre_sign:      'PDF generated and sent for signing',
+      tenant_signed: 'Re-rendered with tenant signature',
+      co_signed:     'Re-rendered with co-applicant signature',
+      countersigned: 'Re-rendered with management signature',
+      amended:       'Lease amendment PDF',
+      renewed:       'Renewal PDF',
+      manual:        'Manual upload',
+    })[e] || e;
+  }
+
+  async function loadAll() {
+    const sb = CP.sb();
+    const url = new URL(location.href);
+    _appId = url.searchParams.get('app_id');
+    if (!_appId) {
+      document.getElementById('lease-detail-root').innerHTML =
+        '<div class="empty"><h3>Missing app_id</h3><p>Open a lease from the pipeline to view its detail.</p></div>';
+      return;
+    }
+
+    const [appRes, eventsRes, pdfsRes, amendmentsRes, ver] = await Promise.all([
+      sb.from('applications').select('*').eq('app_id', _appId).single(),
+      sb.from('sign_events').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
+      sb.from('lease_pdf_versions').select('*').eq('app_id', _appId).order('version_number', { ascending: false }),
+      sb.from('lease_amendments').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
+      sb.from('admin_actions').select('action, created_at, metadata').eq('target_id', _appId).eq('target_type','application').order('created_at',{ascending:false}).limit(50),
+    ]);
+
+    if (appRes.error || !appRes.data) {
+      document.getElementById('lease-detail-root').innerHTML =
+        '<div class="empty"><h3>Application not found</h3><p>'+(appRes.error?.message||'')+'</p></div>';
+      return;
+    }
+    _app = appRes.data;
+
+    document.body.dataset.pageSub = `${_app.first_name||''} ${_app.last_name||''} · ${_app.property_address||''}`;
+    document.title = `Lease ${_appId} · Choice Properties Admin`;
+
+    render({
+      app: _app,
+      events: eventsRes.data || [],
+      pdfs:   pdfsRes.data || [],
+      amends: amendmentsRes.data || [],
+      actions: ver.data || [],
+    });
+  }
+
+  function render({ app, events, pdfs, amends, actions }) {
+    const name = `${app.first_name||''} ${app.last_name||''}`.trim() || '(no name)';
+    const root = document.getElementById('lease-detail-root');
+
+    const eventsHtml = events.length
+      ? events.map(e => `<div class="ev">
+            <div class="ev-time">${S.esc(fmt(e.created_at))}</div>
+            <div class="ev-title">${S.esc(eventLabel(e.signer_type))} &mdash; ${S.esc(e.signer_name||'')}</div>
+            <div class="ev-meta">
+              ${e.signer_email ? `${S.esc(e.signer_email)} &middot; ` : ''}
+              IP ${S.esc(e.ip_address||'—')}
+              ${e.signature_image ? `<div style="margin-top:6px"><img class="sig-thumb" src="${S.esc(e.signature_image)}" alt="Signature image"></div>` : ''}
+            </div>
+          </div>`).join('')
+      : '<div class="text-sm muted" style="padding:8px 0">No signature events recorded yet.</div>';
+
+    const actionsHtml = actions.length
+      ? actions.map(a => `<div class="ev">
+            <div class="ev-time">${S.esc(fmt(a.created_at))}</div>
+            <div class="ev-title">${S.esc(a.action.replace(/_/g,' '))}</div>
+            ${a.metadata?.actor ? `<div class="ev-meta">by ${S.esc(a.metadata.actor)}</div>` : ''}
+          </div>`).join('')
+      : '<div class="text-sm muted" style="padding:8px 0">No admin actions logged yet.</div>';
+
+    const pdfsHtml = pdfs.length
+      ? pdfs.map(p => `<div class="pdf-row">
+            <div style="flex:1;min-width:0">
+              <span class="pdf-num">v${p.version_number}</span>
+              <span class="text-xs" style="margin-left:6px">${S.esc(pdfEventLabel(p.event))}</span>
+              <div class="text-xs muted" style="margin-top:2px">${S.esc(fmt(p.created_at))} ${p.created_by ? '· '+S.esc(p.created_by) : ''}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" data-action="dl-pdf" data-path="${S.esc(p.storage_path)}">Download</button>
+          </div>`).join('')
+      : '<div class="text-sm muted" style="padding:14px;text-align:center">No PDF versions yet.</div>';
+
+    const amendsHtml = amends.length
+      ? amends.map(a => `<div class="amend-card">
+            <div class="row-flex between">
+              <div>
+                <div class="amend-title">${S.esc(a.title)}</div>
+                <div class="text-xs muted">${S.esc(a.kind)} · created ${S.esc(fmt(a.created_at))} · status: <strong>${S.esc(a.status)}</strong></div>
+              </div>
+              <div class="row-flex gap-2">
+                ${a.pdf_path ? `<button class="btn btn-ghost btn-sm" data-action="dl-pdf" data-path="${S.esc(a.pdf_path)}">PDF</button>` : ''}
+              </div>
+            </div>
+            <div class="amend-body">${S.esc(a.body)}</div>
+            ${a.tenant_signature ? `<div class="text-xs" style="color:var(--success);margin-top:6px">Signed ${S.esc(fmt(a.signed_at))} by ${S.esc(a.tenant_signature)}</div>` : ''}
+          </div>`).join('')
+      : '<div class="text-sm muted" style="padding:8px 0">No amendments on this lease.</div>';
+
+    root.innerHTML = `
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div class="row-flex between" style="flex-wrap:wrap;gap:12px">
+            <div>
+              <div class="text-xs muted" style="font-family:ui-monospace,monospace">${S.esc(app.app_id)}</div>
+              <div class="text-strong" style="font-size:1.1rem">${S.esc(name)}</div>
+              <div class="text-sm muted">${S.esc(app.property_address||'—')}</div>
+              <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+                <span class="badge">${S.esc(app.lease_status||'—')}</span>
+                ${app.management_cosigned ? '<span class="badge success">Countersigned</span>' : ''}
+                ${app.has_co_applicant ? '<span class="badge">Co-applicant</span>' : ''}
+              </div>
+            </div>
+            <div class="row-flex gap-2" style="flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" data-action="new-amendment">+ New Amendment</button>
+              ${app.lease_pdf_url ? `<button class="btn btn-ghost btn-sm" data-action="dl-latest">Download latest PDF</button>` : ''}
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div><div class="text-xs muted">Lease start</div><div class="text-sm text-strong">${fmtDate(app.lease_start_date)}</div></div>
+            <div><div class="text-xs muted">Lease end</div><div class="text-sm text-strong">${fmtDate(app.lease_end_date)}</div></div>
+            <div><div class="text-xs muted">Monthly rent</div><div class="text-sm text-strong">${fmtMoney(app.monthly_rent)}</div></div>
+            <div><div class="text-xs muted">Security deposit</div><div class="text-sm text-strong">${fmtMoney(app.security_deposit)}</div></div>
+            <div><div class="text-xs muted">Tenant signed</div><div class="text-sm text-strong">${fmtDate(app.signature_timestamp)}</div></div>
+            <div><div class="text-xs muted">Co-app signed</div><div class="text-sm text-strong">${fmtDate(app.co_applicant_signature_timestamp)}</div></div>
+            <div><div class="text-xs muted">Mgmt countersigned</div><div class="text-sm text-strong">${fmtDate(app.management_cosigned_at)}</div></div>
+            <div><div class="text-xs muted">Template version</div><div class="text-sm text-strong">${app.lease_template_version_id ? 'pinned' : '—'}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Signature events</h3>
+          <div class="timeline">${eventsHtml}</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">PDF version history</h3>
+          <p class="text-xs muted" style="margin-bottom:10px">Every signature event creates a new PDF. Older versions are preserved for audit and never overwritten.</p>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">${pdfsHtml}</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Amendments &amp; addenda</h3>
+          ${amendsHtml}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Admin action log</h3>
+          <div class="timeline">${actionsHtml}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function downloadPath(path) {
+    if (!path) { S.toast('No file path', 'error'); return; }
+    const sb = CP.sb();
+    const { data, error } = await sb.storage.from('lease-pdfs').createSignedUrl(path, 600);
+    if (error || !data?.signedUrl) { S.toast('Could not get download link: ' + (error?.message||'unknown'), 'error'); return; }
+    window.open(data.signedUrl, '_blank');
+  }
+
+  async function newAmendment() {
+    if (!_app) return;
+    if (!_app.management_cosigned) {
+      S.toast('Amendments can only be added to fully executed leases.', 'error');
+      return;
+    }
+    const data = await S.formSheet({
+      title: 'New lease amendment',
+      submit: 'Create &amp; send',
+      fields: [
+        { name:'kind',  label:'Kind', type:'select', options:[
+          { value:'parking',     label:'Parking addendum' },
+          { value:'pet',         label:'Pet addendum' },
+          { value:'rent_change', label:'Rent change' },
+          { value:'roommate',    label:'Roommate / occupant change' },
+          { value:'other',       label:'Other' },
+        ]},
+        { name:'title', label:'Title (shown to tenant)', required:true, placeholder:'e.g. Pet Addendum — One Cat' },
+        { name:'body',  label:'Amendment body (supports {{variables}})', type:'textarea', rows:8, required:true },
+        { name:'send_email', type:'checkbox', label:'Send', checkLabel:'Email signing link to tenant immediately', value:true },
+      ],
+    });
+    if (!data) return;
+    if (!data.title || !data.body) { S.toast('Title and body are required', 'error'); return; }
+
+    S.toast('Creating amendment…');
+    const res = await S.callFn('/create-amendment', {
+      app_id: _appId,
+      kind:   data.kind,
+      title:  data.title.trim(),
+      body:   data.body.trim(),
+      send_email: !!data.send_email,
+    });
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json.error || 'Create failed', 'error'); return; }
+    S.toast(data.send_email ? 'Amendment created and email sent.' : 'Amendment saved as draft.', 'success');
+    await loadAll();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch (e) {
+      const root = document.getElementById('lease-detail-root');
+      if (root) root.innerHTML = '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    S = window.AdminShell;
+
+    document.addEventListener('click', e => {
+      const dl = e.target.closest('[data-action="dl-pdf"]');
+      if (dl) return downloadPath(dl.dataset.path);
+      const dlLatest = e.target.closest('[data-action="dl-latest"]');
+      if (dlLatest && _app) return downloadPath(_app.lease_pdf_url);
+      const newAmd = e.target.closest('[data-action="new-amendment"]');
+      if (newAmd) return newAmendment();
+    });
+
+    const okAuth = await S.requireAdmin();
+    if (!okAuth) return;
+    await loadAll();
+  });
+})();

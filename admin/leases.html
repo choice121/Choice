@@ -34,9 +34,19 @@
       <button class="chip" data-lease="voided">Voided</button>
     </div>
 
-    <div class="row-flex between" style="margin:8px 0 4px">
+    <div class="row-flex between" style="margin:8px 0 4px;flex-wrap:wrap;gap:8px">
       <div class="text-strong">Lease pipeline</div>
-      <span class="text-xs muted" id="count-label"></span>
+      <div class="row-flex gap-2" style="flex-wrap:wrap;align-items:center">
+        <span class="text-xs muted" id="count-label"></span>
+        <a class="btn btn-ghost btn-sm" href="/admin/lease-template.html">Edit template</a>
+        <button class="btn btn-ghost btn-sm" id="btn-check-renewals">Check renewals</button>
+      </div>
+    </div>
+
+    <div class="chip-row" style="margin-top:6px">
+      <span class="chip" style="background:transparent;border:none;color:var(--muted);font-size:.72rem">
+        Status filter:
+      </span>
     </div>
 
     <div id="leases-list"></div>

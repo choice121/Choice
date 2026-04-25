@@ -1330,3 +1330,260 @@ export function adminReviewSummaryHtml(
 </body>
 </html>`;
 }
+
+// ─── Phase 3 — Co-Applicant Invitation ──────────────────────────────────────
+
+export function coApplicantInviteHtml(
+  coFirstName: string,
+  primaryName: string,
+  propertyAddress: string,
+  signingUrl: string,
+  appId: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Co-Applicant Lease is Ready to Sign — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your Co-Applicant Lease is Ready', appId)}
+  <div class="status-line status-lease">&#x270D; &nbsp; Action Required — Co-Applicant Signature Needed</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${coFirstName},</p>
+    <p class="intro-text"><strong>${primaryName}</strong> has signed the lease for <strong>${propertyAddress}</strong> as the primary applicant and listed you as a co-applicant. The lease cannot be finalized by management until you also sign.</p>
+    <p class="intro-text">Please review the full lease agreement carefully. By signing, you will be jointly and severally liable for all obligations under the lease alongside the primary applicant.</p>
+
+    <div class="callout amber">
+      <h4>&#x23F0; Please Sign Within 48 Hours</h4>
+      <p>To keep the application on schedule, please complete your signature within <strong>48 hours</strong>. If you require additional time or have questions, please contact our team.</p>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${signingUrl}" class="cta-btn">Review &amp; Sign as Co-Applicant</a>
+      <div class="cta-note">Or copy this link: ${signingUrl}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">What to Expect</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Review the Full Lease</strong> — Including the signature already recorded by the primary applicant.</span></li>
+        <li><span class="step-num">2</span><span><strong>Confirm Your Identity</strong> — You will enter the email address you were contacted at on this message.</span></li>
+        <li><span class="step-num">3</span><span><strong>Sign Electronically</strong> — Type your full legal name. This is legally binding under the federal E-SIGN Act and applicable state law.</span></li>
+        <li><span class="step-num">4</span><span><strong>Management Countersignature</strong> — Once you sign, management will countersign and both of you will receive a fully executed copy.</span></li>
+      </ul>
+    </div>
+
+    <p style="color:#718096;font-size:13px;">This signing link is unique to you. Do not share it.</p>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">If you did not expect this email, or believe you were listed as a co-applicant in error, please contact us immediately and do <strong>not</strong> sign.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 3 — Co-Applicant Signed Confirmation ─────────────────────────────
+
+export function coApplicantSignedHtml(coFirstName: string, propertyAddress: string, appId: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Co-Applicant Signature Received — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your Signature Has Been Recorded', appId)}
+  <div class="status-line status-paid">&#x2705; &nbsp; Co-Applicant Signature Received</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${coFirstName},</p>
+    <p class="intro-text">Thank you. Your electronic signature on the lease for <strong>${propertyAddress}</strong> has been successfully recorded as a co-applicant. The lease will now be sent to management for final countersignature.</p>
+
+    <div class="callout green">
+      <h4>What Happens Next</h4>
+      <p style="margin-bottom:8px;">Management will countersign the lease, typically within 1-2 business days. Once countersigned, both you and the primary applicant will receive a copy of the fully executed lease.</p>
+      <p style="margin-bottom:0;">No further action is required from you at this time.</p>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 4 — Lease Amendment Request ──────────────────────────────────────
+
+export function amendmentRequestHtml(
+  firstName: string,
+  propertyAddress: string,
+  amendmentTitle: string,
+  signingUrl: string,
+  appId: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lease Amendment Ready to Sign — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Lease Amendment Ready', appId)}
+  <div class="status-line status-lease">&#x1F4DD; &nbsp; Action Required — Amendment Signature Needed</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Management has prepared an amendment to your existing lease for <strong>${propertyAddress}</strong>. This is a separate document that will be added to your file once signed; it does not replace your original lease.</p>
+
+    <div class="callout" style="border-color:#1e40af;">
+      <h4>${amendmentTitle}</h4>
+      <p>Please review the full text of the amendment carefully before signing. If anything is unclear, contact our team before proceeding.</p>
+    </div>
+
+    <div class="cta-wrap">
+      <a href="${signingUrl}" class="cta-btn">Review &amp; Sign Amendment</a>
+      <div class="cta-note">Or copy this link: ${signingUrl}</div>
+    </div>
+
+    <div class="callout amber">
+      <h4>You Are Not Required to Sign</h4>
+      <p>If you do not agree with the proposed amendment, you may decline by simply not signing, or by replying to this email with your concerns. Your existing lease remains in effect either way.</p>
+    </div>
+
+    <p style="color:#718096;font-size:13px;">This signing link is unique to you. Do not share it.</p>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 4 — Amendment Signed Confirmation ────────────────────────────────
+
+export function amendmentSignedHtml(
+  firstName: string,
+  propertyAddress: string,
+  amendmentTitle: string,
+  appId: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Amendment Signed — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Amendment Signed', appId)}
+  <div class="status-line status-paid">&#x2705; &nbsp; Amendment Recorded — Added to Your Lease File</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">Your signature on the following amendment has been recorded and the document is now part of your lease file for <strong>${propertyAddress}</strong>:</p>
+
+    <div class="callout green">
+      <h4>${amendmentTitle}</h4>
+      <p>A copy of the signed amendment is available in your tenant portal. Please retain this email for your records.</p>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 4 — Lease Renewal Nudge ──────────────────────────────────────────
+
+export function renewalNudgeHtml(
+  firstName: string,
+  propertyAddress: string,
+  leaseEndDate: string,
+  daysRemaining: number,
+  appId: string,
+): string {
+  const friendlyEnd = formatDate(leaseEndDate);
+  const urgencyTone = daysRemaining <= 30 ? 'amber' : '';
+  const urgencyHeader = daysRemaining <= 30
+    ? `&#x23F0; Less Than ${daysRemaining} Days Remaining`
+    : `Lease Renewal Window Open`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lease Renewal Coming Up — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Lease Renewal Coming Up', appId)}
+  <div class="status-line status-lease">&#x1F4C5; &nbsp; ${daysRemaining} Days Until Lease Ends</div>
+  <div class="email-body">
+    <p class="greeting">Dear ${firstName},</p>
+    <p class="intro-text">A friendly reminder that your lease for <strong>${propertyAddress}</strong> is scheduled to end on <strong>${friendlyEnd}</strong> &mdash; that is approximately <strong>${daysRemaining} days from today</strong>.</p>
+
+    <div class="callout ${urgencyTone}">
+      <h4>${urgencyHeader}</h4>
+      <p style="margin-bottom:8px;">Please let us know your plans so we can either prepare a renewal lease or coordinate move-out logistics with you.</p>
+      <p style="margin-bottom:0;">Reply to this email or text us at <strong>707-706-3137</strong> to begin the conversation.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Your Options</div>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span><strong>Renew Your Lease</strong> &mdash; We will prepare an updated lease for your review and signature, typically reflecting current market rent for the property.</span></li>
+        <li><span class="step-num">2</span><span><strong>Move Out</strong> &mdash; Standard notice requirements apply per your current lease. We will coordinate the move-out inspection and security deposit return.</span></li>
+        <li><span class="step-num">3</span><span><strong>Month-to-Month</strong> &mdash; Where permitted by local law and the property owner, we may be able to convert your tenancy to month-to-month.</span></li>
+      </ul>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">If you have already been in touch with our team about your renewal, please disregard this automated reminder.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}

@@ -1,9 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
+import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { signingEmailHtml } from '../_shared/email.ts';
-import { buildLeasePDF, substituteVars } from '../_shared/pdf.ts';
+import { buildLeasePDF } from '../_shared/pdf.ts';
 import { getSiteUrl } from '../_shared/config.ts';
+import { ensureSnapshotForApp, resolveLeaseTemplate, buildPdfStoragePath } from '../_shared/lease-render.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -27,29 +28,21 @@ Deno.serve(async (req: Request) => {
   const auth = await verifyAdmin(req);
   if (!auth.ok) return jsonErr(401, auth.error!);
 
-  // Phase 6 — accept dry_run flag
-  let body: { app_id: string; lease_data?: Record<string, unknown>; dry_run?: boolean };
+  let body: { app_id: string; lease_data?: Record<string, unknown>; dry_run?: boolean; template_id?: string };
   try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
 
-  const { app_id, lease_data = {}, dry_run = false } = body;
+  const { app_id, lease_data = {}, dry_run = false, template_id } = body;
   if (!app_id) return jsonErr(400, 'Missing app_id');
 
   // 1. Fetch application
   const { data: app, error: appErr } = await supabase
     .from('applications').select('*').eq('app_id', app_id).single();
   if (appErr || !app) return jsonErr(404, 'Application not found: ' + (appErr?.message || ''));
-
-  // Guard: only generate lease for approved applications (skip for dry_run)
   if (!dry_run && app.status !== 'approved') {
     return jsonErr(400, `Cannot generate lease: application status is "${app.status}". Application must be approved first.`);
   }
 
-  // 2. Fetch active lease template
-  const { data: tmpl, error: tmplErr } = await supabase
-    .from('lease_templates').select('*').eq('is_active', true).single();
-  if (tmplErr || !tmpl) return jsonErr(500, 'No active lease template found. Add one in Supabase Table Editor → lease_templates.');
-
-  // 3. Merge lease fields from admin input
+  // 2. Merge admin-supplied lease fields
   const leaseFields: Record<string, unknown> = {
     lease_start_date:       lease_data.lease_start_date       ?? app.lease_start_date,
     lease_end_date:         lease_data.lease_end_date         ?? app.lease_end_date,
@@ -69,13 +62,18 @@ Deno.serve(async (req: Request) => {
 
   const mergedApp = { ...app, ...leaseFields };
 
-  // 4. Generate PDF
-  let pdfBytes: Uint8Array;
-  try { pdfBytes = await buildLeasePDF(mergedApp, tmpl.template_body); }
-  catch (e) { return jsonErr(500, 'PDF generation failed: ' + (e as Error).message); }
-
-  // ── Phase 6 — DRY RUN: preview only, no DB changes, no email ────────────────
+  // ── Phase 6 — DRY RUN: preview only, no DB changes, no email ────────
+  // Dry-run uses the active editable template (since no snapshot
+  // is recorded for previews) so the admin sees what they're about
+  // to commit to.
   if (dry_run) {
+    const tmpl = await resolveLeaseTemplate(supabase, app);
+    if (!tmpl) return jsonErr(500, 'No active lease template found. Configure one in Admin → Leases → Edit Template.');
+
+    let pdfBytes: Uint8Array;
+    try { pdfBytes = await buildLeasePDF(mergedApp, tmpl.template_body); }
+    catch (e) { return jsonErr(500, 'PDF generation failed: ' + (e as Error).message); }
+
     const previewPath = `${app_id}/preview_${Date.now()}.pdf`;
     const { error: uploadErr } = await supabase.storage
       .from('lease-pdfs')
@@ -83,49 +81,82 @@ Deno.serve(async (req: Request) => {
     if (uploadErr) return jsonErr(500, 'Preview upload failed: ' + uploadErr.message);
 
     const { data: signedData, error: signErr } = await supabase.storage
-      .from('lease-pdfs')
-      .createSignedUrl(previewPath, 3600); // 60-minute expiry
+      .from('lease-pdfs').createSignedUrl(previewPath, 3600);
     if (signErr || !signedData?.signedUrl) return jsonErr(500, 'Could not generate preview URL');
 
-    // Log dry run to admin_actions (non-fatal)
     try {
       await supabase.from('admin_actions').insert({
         action:      'lease_preview_generated',
         target_type: 'application',
         target_id:   app_id,
-        metadata:    { app_id, actor: auth.userEmail || 'admin' },
+        metadata:    { app_id, actor: auth.userEmail || 'admin', template_source: tmpl.source },
       });
     } catch (_) {}
 
-    return jsonOk({ success: true, dry_run: true, preview_url: signedData.signedUrl, app_id });
+    return jsonOk({
+      success:           true,
+      dry_run:           true,
+      preview_url:       signedData.signedUrl,
+      app_id,
+      template_source:   tmpl.source,
+      template_version:  tmpl.version_number,
+    });
   }
 
-  // ── PRODUCTION: update DB, upload final PDF, generate tokens, send email ───
-
-  // 5. Update application with lease fields
+  // ── PRODUCTION ─────────────────────────────────────────────────────
+  // 3. Persist admin-edited lease fields
   await supabase.from('applications').update(leaseFields).eq('app_id', app_id);
 
-  // 6. Upload to Supabase Storage
-  const storagePath = `${app_id}/lease_${Date.now()}.pdf`;
+  // 4. Snapshot the active template (Phase 2). After this, every PDF
+  //    rebuild for this application will use the same immutable text.
+  const snapshot = await ensureSnapshotForApp(supabase, app_id, template_id);
+  if (!snapshot.ok) return jsonErr(500, 'Template snapshot failed: ' + (snapshot.error || 'unknown'));
+
+  // 5. Reload merged app (now with version_id pinned) and resolve template
+  const { data: appWithSnap } = await supabase
+    .from('applications').select('*').eq('app_id', app_id).single();
+  const tmpl = await resolveLeaseTemplate(supabase, appWithSnap || mergedApp);
+  if (!tmpl) return jsonErr(500, 'Snapshot succeeded but template could not be resolved');
+
+  // 6. Generate PDF
+  let pdfBytes: Uint8Array;
+  try { pdfBytes = await buildLeasePDF(appWithSnap || mergedApp, tmpl.template_body); }
+  catch (e) { return jsonErr(500, 'PDF generation failed: ' + (e as Error).message); }
+
+  // 7. Versioned PDF write (Phase 4 — never overwrite)
+  const { data: pv, error: pvErr } = await supabase.rpc('record_lease_pdf_version', {
+    p_app_id:              app_id,
+    p_event:               'pre_sign',
+    p_storage_path:        '',
+    p_template_version_id: tmpl.version_id,
+    p_amendment_id:        null,
+    p_created_by:          auth.userEmail || null,
+  });
+  if (pvErr) return jsonErr(500, 'Version registration failed: ' + pvErr.message);
+  const versionNumber = (pv as { version_number?: number })?.version_number || 1;
+  const storagePath = buildPdfStoragePath(app_id, versionNumber, 'pre_sign');
   const { error: uploadErr } = await supabase.storage
     .from('lease-pdfs')
-    .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: true });
+    .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: false });
   if (uploadErr) return jsonErr(500, 'PDF upload failed: ' + uploadErr.message);
 
-  // 7. Update lease_pdf_url
+  await supabase.from('lease_pdf_versions')
+    .update({ storage_path: storagePath, size_bytes: pdfBytes.byteLength })
+    .eq('app_id', app_id).eq('version_number', versionNumber);
+
+  // 8. Update application's "latest" PDF pointer
   await supabase.from('applications')
     .update({ lease_pdf_url: storagePath, updated_at: new Date().toISOString() })
     .eq('app_id', app_id);
 
-  // 8. Generate signing tokens (sets lease_status = 'sent')
+  // 9. Generate signing tokens (sets lease_status = 'sent')
   const { error: tokenErr } = await supabase.rpc('generate_lease_tokens', { p_app_id: app_id });
   if (tokenErr) return jsonErr(500, 'Token generation failed: ' + tokenErr.message);
 
-  // 9. Fetch updated app with tokens
+  // 10. Reload + send signing email
   const { data: updatedApp } = await supabase
     .from('applications').select('*').eq('app_id', app_id).single();
 
-  // 10. Send signing email
   if (updatedApp?.email && updatedApp?.tenant_sign_token) {
     const signingUrl = `${getSiteUrl()}/lease-sign.html?token=${updatedApp.tenant_sign_token}`;
     try {
@@ -137,15 +168,28 @@ Deno.serve(async (req: Request) => {
     } catch (e) { console.error('Signing email failed (non-fatal):', (e as Error).message); }
   }
 
-  // Log to admin_actions
   try {
     await supabase.from('admin_actions').insert({
       action:      'generate_lease',
       target_type: 'application',
       target_id:   app_id,
-      metadata:    { app_id, actor: auth.userEmail || 'admin' },
+      metadata:    {
+        app_id,
+        actor:                auth.userEmail || 'admin',
+        template_version_id:  snapshot.version_id,
+        template_version_no:  snapshot.version_number,
+        pdf_version_number:   versionNumber,
+      },
     });
   } catch (_) {}
 
-  return jsonOk({ success: true, app_id, storage_path: storagePath, lease_status: 'sent' });
+  return jsonOk({
+    success:               true,
+    app_id,
+    storage_path:          storagePath,
+    pdf_version_number:    versionNumber,
+    template_version_id:   snapshot.version_id,
+    template_version_no:   snapshot.version_number,
+    lease_status:          'sent',
+  });
 });

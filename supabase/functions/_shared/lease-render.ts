@@ -1,0 +1,140 @@
+// Choice Properties — Shared: lease-render.ts
+//
+// Single source of truth for "which lease template body should I
+// render right now?". Everywhere we previously hit
+//   .from('lease_templates').select(...).eq('is_active', true).single()
+// we now go through this module so the snapshotted version
+// (lease_template_version_id) wins over the live editable template.
+//
+// This is the legal hazard fix from Phase 2 — once an application
+// has a snapshot attached, every PDF rebuild for that application
+// must use the same immutable text the tenant agreed to.
+
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
+
+export interface ResolvedLeaseTemplate {
+  template_body: string;
+  name: string;
+  version_id: string | null;
+  version_number: number | null;
+  source: 'snapshot' | 'active_template' | 'fallback';
+}
+
+/**
+ * Resolve the lease template text to use when rendering a PDF
+ * for this application. Resolution order:
+ *
+ *   1. The application's pinned lease_template_version_id snapshot
+ *      (set by generate-lease via snapshot_lease_template_for_app).
+ *   2. The current active lease_templates row (used for previews
+ *      and dry runs before a snapshot exists).
+ *   3. Returns null only if no template at all is configured.
+ */
+export async function resolveLeaseTemplate(
+  supabase: SupabaseClient,
+  app: { app_id?: string; lease_template_version_id?: string | null },
+): Promise<ResolvedLeaseTemplate | null> {
+  // 1. Snapshot pinned to this app
+  if (app.lease_template_version_id) {
+    const { data, error } = await supabase
+      .from('lease_template_versions')
+      .select('id, version_number, name, template_body')
+      .eq('id', app.lease_template_version_id)
+      .single();
+    if (!error && data?.template_body) {
+      return {
+        template_body:  data.template_body,
+        name:           data.name,
+        version_id:     data.id,
+        version_number: data.version_number,
+        source:         'snapshot',
+      };
+    }
+    console.warn('[lease-render] pinned version_id missing/unreadable, falling back to active template:', error?.message);
+  }
+
+  // 2. Active editable template
+  const { data: tmpl } = await supabase
+    .from('lease_templates')
+    .select('id, name, template_body')
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tmpl?.template_body) {
+    return {
+      template_body:  tmpl.template_body,
+      name:           tmpl.name,
+      version_id:     null,
+      version_number: null,
+      source:         'active_template',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Snapshot the active template for an application, returning the
+ * resulting version metadata. Idempotent: if the application
+ * already has a snapshot pinned, this is a no-op.
+ */
+export async function ensureSnapshotForApp(
+  supabase: SupabaseClient,
+  appId: string,
+  templateId?: string,
+): Promise<{ ok: boolean; version_id?: string; version_number?: number; error?: string }> {
+  const { data, error } = await supabase.rpc('snapshot_lease_template_for_app', {
+    p_app_id:      appId,
+    p_template_id: templateId ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  const r = data as { success?: boolean; version_id?: string; version_number?: number; error?: string };
+  if (!r?.success) return { ok: false, error: r?.error || 'Snapshot failed' };
+  return { ok: true, version_id: r.version_id, version_number: r.version_number };
+}
+
+/**
+ * Record a new PDF version after a successful storage upload.
+ * Non-fatal — failures are logged but do not break the calling
+ * flow. The application's lease_pdf_url should still be updated
+ * by the caller to point at the latest path.
+ */
+export async function recordPdfVersion(
+  supabase: SupabaseClient,
+  args: {
+    appId: string;
+    event: 'pre_sign' | 'tenant_signed' | 'co_signed' | 'countersigned' | 'amended' | 'renewed' | 'manual';
+    storagePath: string;
+    sizeBytes?: number;
+    templateVersionId?: string | null;
+    amendmentId?: string | null;
+    createdBy?: string | null;
+  },
+): Promise<void> {
+  try {
+    await supabase.rpc('record_lease_pdf_version', {
+      p_app_id:              args.appId,
+      p_event:               args.event,
+      p_storage_path:        args.storagePath,
+      p_size_bytes:          args.sizeBytes ?? null,
+      p_template_version_id: args.templateVersionId ?? null,
+      p_amendment_id:        args.amendmentId ?? null,
+      p_created_by:          args.createdBy ?? null,
+    });
+  } catch (e) {
+    console.warn('[lease-render] recordPdfVersion non-fatal:', (e as Error).message);
+  }
+}
+
+/**
+ * Build a versioned storage path for a new PDF write. Format:
+ *   {app_id}/lease_v{N}_{event}_{ts}.pdf
+ * Includes the timestamp so even concurrent regenerations of the
+ * same event don't collide in storage (the row in
+ * lease_pdf_versions is the durable source of truth either way).
+ */
+export function buildPdfStoragePath(appId: string, versionNumber: number, event: string): string {
+  return `${appId}/lease_v${versionNumber}_${event}_${Date.now()}.pdf`;
+}

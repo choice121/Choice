@@ -1,100 +1,119 @@
-// Tenant lease signing page — extracted from lease-sign.html (Phase 1).
+// Choice Properties — Tenant lease signing page (Phases 1.5 → 4)
 //
-// Behaviour is identical to the previous inline script: hydrate the page from
-// the get-lease edge function, render the lease text + info grid, manage the
-// signature/email/agree-checkbox state machine, then POST to sign-lease and
-// flip to the success state. The only intentional change is that the legacy
-// hardcoded CSP nonce attribute is gone — this file is loaded as an external
-// `<script defer>` and is allowed by the script-src 'self' directive.
+// One page handles three signer flows, identified by the URL:
+//
+//   /lease-sign.html?token=…              → primary tenant OR co-applicant
+//                                            (server resolves which via
+//                                            lookup_signer_for_token)
+//   /lease-sign.html?amendment_token=…    → amendment (addendum) signing
+//
+// All three flows use the same UI: identity-verification email + typed
+// legal name + optional drawn signature pad + agreement checkbox.
+// The typed name is the legally binding signature; the canvas drawing
+// is an additional verification artifact embedded in the rendered PDF.
 (function () {
+  'use strict';
+
   const params = new URLSearchParams(location.search);
-  const token = params.get('token');
+  const token          = params.get('token');
+  const amendmentToken = params.get('amendment_token');
 
   const SERVER_BASE = typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL
-    ? CONFIG.SUPABASE_URL + '/functions/v1'
-    : '';
-  const ANON_KEY = typeof CONFIG !== 'undefined' ? (CONFIG.SUPABASE_ANON_KEY || '') : '';
+    ? CONFIG.SUPABASE_URL + '/functions/v1' : '';
+  const ANON_KEY    = typeof CONFIG !== 'undefined' ? (CONFIG.SUPABASE_ANON_KEY || '') : '';
 
+  // ── Mode (set after server response) ────────────────────────────────
+  // 'tenant'       → POST /sign-lease
+  // 'co_applicant' → POST /sign-lease-co-applicant
+  // 'amendment'    → POST /sign-amendment
+  let _mode = null;
+  let _activeToken = null;
+  let _appForLink = null;
+
+  // ── State helpers ───────────────────────────────────────────────────
   function showState(state) {
     ['loading', 'error', 'success', 'form'].forEach(s => {
       const el = document.getElementById('state-' + s);
       if (el) el.style.display = (s === state ? '' : 'none');
     });
   }
-
   function fmtMoney(v) {
     if (v == null || v === '') return '—';
     return '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 });
   }
   function fmtDate(d) {
     if (!d) return '—';
-    try {
-      return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    } catch { return d; }
+    try { return new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }); }
+    catch { return d; }
   }
 
-  // Kept for reference — the server already returns `rendered_lease` with
-  // variables substituted. This local copy is only used as a fallback if a
-  // future template carries unsubstituted vars.
-  function substituteVars(template, app) {
-    const vars = {
-      tenant_full_name:    (app.first_name || '') + ' ' + (app.last_name || ''),
-      tenant_email:        app.email || '',
-      tenant_phone:        app.phone || '',
-      property_address:    app.property_address || '',
-      lease_start_date:    fmtDate(app.lease_start_date),
-      lease_end_date:      fmtDate(app.lease_end_date),
-      monthly_rent:        fmtMoney(app.monthly_rent),
-      security_deposit:    fmtMoney(app.security_deposit),
-      move_in_costs:       fmtMoney(app.move_in_costs),
-      landlord_name:       app.lease_landlord_name    || 'Choice Properties',
-      landlord_address:    app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083',
-      late_fee_flat:       app.lease_late_fee_flat    ? fmtMoney(app.lease_late_fee_flat) : '',
-      late_fee_daily:      app.lease_late_fee_daily   ? fmtMoney(app.lease_late_fee_daily) : '',
-      state_code:          app.lease_state_code       || 'MI',
-      pets_policy:         app.lease_pets_policy      || 'No pets allowed.',
-      smoking_policy:      app.lease_smoking_policy   || 'No smoking permitted on premises.',
-      desired_lease_term:  app.desired_lease_term     || '',
-      app_id:              app.app_id || '',
-      signature_date:      '',
-      tenant_signature:    '',
-    };
-    return template.replace(/\{\{(\w+)\}\}/g, (m, k) => vars[k] !== undefined ? vars[k] : '');
-  }
-
-  function buildInfoGrid(app) {
+  function buildInfoGrid(app, mode) {
     const items = [
-      ['Tenant', (app.first_name || '') + ' ' + (app.last_name || '')],
-      ['Property', app.property_address || '—'],
-      ['Lease Start', fmtDate(app.lease_start_date)],
-      ['Lease End', fmtDate(app.lease_end_date)],
-      ['Monthly Rent', fmtMoney(app.monthly_rent)],
+      [mode === 'amendment' ? 'For Tenant' : 'Tenant', `${app.first_name||''} ${app.last_name||''}`],
+      ['Property',         app.property_address || '—'],
+      ['Lease Start',      fmtDate(app.lease_start_date)],
+      ['Lease End',        fmtDate(app.lease_end_date)],
+      ['Monthly Rent',     fmtMoney(app.monthly_rent)],
       ['Security Deposit', fmtMoney(app.security_deposit)],
-      ['Move-In Costs', fmtMoney(app.move_in_costs)],
     ];
     return items.map(([label, val]) =>
-      '<div class="info-item"><span class="info-label">' + label + '</span><span class="info-val">' + (val || '—') + '</span></div>'
+      `<div class="info-item"><span class="info-label">${label}</span><span class="info-val">${val || '—'}</span></div>`
     ).join('');
   }
 
+  function applySignerMode(mode, signerName) {
+    const banner = document.getElementById('signer-banner');
+    const titleEl = document.getElementById('form-title');
+    const sectionTitle = document.getElementById('sign-section-title');
+    const sectionHelp = document.getElementById('sign-section-help');
+    const labelEl = document.getElementById('lease-text-label');
+    const btnText = document.getElementById('btn-sign-text');
+    const successTitle = document.getElementById('success-title');
+
+    banner.style.display = 'flex';
+    if (mode === 'co_applicant') {
+      banner.className = 'signer-banner coapp';
+      banner.innerHTML = `<span class="b-mark">2</span><span>You are signing as the <strong>co-applicant</strong>. The primary applicant has already signed.</span>`;
+      sectionTitle.textContent = 'Sign as Co-Applicant';
+      sectionHelp.textContent  = 'By signing you become jointly and severally liable for the lease alongside the primary applicant.';
+      btnText.textContent      = 'Sign as Co-Applicant';
+      successTitle.textContent = 'Co-Applicant Signature Recorded';
+    } else if (mode === 'amendment') {
+      banner.className = 'signer-banner amend';
+      banner.innerHTML = `<span class="b-mark">+</span><span>You are signing a <strong>lease amendment</strong>. Your existing lease remains in effect.</span>`;
+      labelEl.textContent      = 'Amendment Document';
+      sectionTitle.textContent = 'Sign Amendment';
+      sectionHelp.textContent  = 'Type your full legal name to sign this amendment. Your original lease is unaffected.';
+      btnText.textContent      = 'Sign Amendment';
+      successTitle.textContent = 'Amendment Signed';
+    } else {
+      banner.className = 'signer-banner tenant';
+      banner.innerHTML = `<span class="b-mark">1</span><span>You are signing as the <strong>primary applicant</strong>${signerName ? ` (${signerName})` : ''}.</span>`;
+    }
+  }
+
+  // ── Loading ─────────────────────────────────────────────────────────
   async function loadLease() {
-    if (!token) {
+    if (!token && !amendmentToken) {
       document.getElementById('err-title').textContent = 'No Signing Token';
-      document.getElementById('err-message').textContent = 'This page requires a valid signing link. Please check your email for the correct link.';
+      document.getElementById('err-message').textContent = 'This page requires a valid signing link from your email.';
       showState('error');
       return;
     }
 
-    const url = SERVER_BASE + '/get-lease';
+    _activeToken = token || amendmentToken;
+    const isAmendment = !!amendmentToken;
+    const url = SERVER_BASE + (isAmendment ? '/get-amendment' : '/get-lease');
+
     let resp, json;
     try {
       resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: _activeToken }),
       });
       json = await resp.json();
-    } catch (e) {
+    } catch {
       document.getElementById('err-title').textContent = 'Connection Error';
       document.getElementById('err-message').textContent = 'Could not connect to the signing server. Please try again.';
       showState('error');
@@ -102,31 +121,116 @@
     }
 
     if (!resp.ok) {
-      document.getElementById('err-title').textContent = resp.status === 410 ? 'Already Signed' : 'Link Expired or Invalid';
-      document.getElementById('err-message').textContent = json.error || 'This signing link is no longer valid.';
+      document.getElementById('err-title').textContent =
+        resp.status === 410 ? 'Already Signed' : 'Link Expired or Invalid';
+      document.getElementById('err-message').textContent =
+        json.error || 'This signing link is no longer valid.';
       showState('error');
       return;
     }
 
-    const { app, rendered_lease } = json;
-    window._leaseApp = app;
-    window._leaseToken = token;
+    const app = json.app;
+    _appForLink = app;
 
-    document.getElementById('form-prop').textContent = app.property_address || 'your property';
-    document.getElementById('form-appid').textContent = app.app_id || '—';
-    document.getElementById('info-grid').innerHTML = buildInfoGrid(app);
-
-    if (rendered_lease) {
-      document.getElementById('lease-text-body').textContent = rendered_lease;
-      document.getElementById('rendered-notice').textContent = 'Scroll to review full lease';
+    if (isAmendment) {
+      _mode = 'amendment';
+      applySignerMode('amendment', json.signer?.name);
+      document.getElementById('form-prop').textContent  = json.amendment.title || 'Amendment';
+      document.getElementById('form-appid').textContent = app.app_id || '—';
+      document.getElementById('info-grid').innerHTML    = buildInfoGrid(app, 'amendment');
+      document.getElementById('lease-text-body').textContent =
+        `${json.amendment.title}\n\n${json.amendment.body}`;
+      document.getElementById('rendered-notice').textContent = 'Amendment to your existing lease';
     } else {
-      document.getElementById('lease-text-body').textContent = 'Lease template unavailable. Please contact Choice Properties.';
+      _mode = json.signer?.type || 'tenant';
+      applySignerMode(_mode, json.signer?.name);
+      document.getElementById('form-prop').textContent  = app.property_address || 'your property';
+      document.getElementById('form-appid').textContent = app.app_id || '—';
+      document.getElementById('info-grid').innerHTML    = buildInfoGrid(app, _mode);
+      const rendered = json.rendered_lease || '';
+      document.getElementById('lease-text-body').textContent = rendered || 'Lease template unavailable. Please contact Choice Properties.';
+      if (rendered) document.getElementById('rendered-notice').textContent = 'Scroll to review full lease';
     }
 
     showState('form');
   }
 
-  // Signature preview + validation
+  // ── Canvas signature pad ────────────────────────────────────────────
+  // Pure-DOM minimal pad. Captures pointer/touch events and exports a
+  // PNG data-URL trimmed to the actual ink bounding box.
+  const canvas = document.getElementById('sig-canvas');
+  const ctx = canvas.getContext('2d');
+  let _drawing = false, _hasInk = false;
+  let _lastX = 0, _lastY = 0;
+
+  function resizeCanvas() {
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1e293b';
+  }
+
+  function evtPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const t = (e.touches && e.touches[0]) || e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    _drawing = true;
+    const p = evtPos(e); _lastX = p.x; _lastY = p.y;
+  }
+  function moveDraw(e) {
+    if (!_drawing) return;
+    e.preventDefault();
+    const p = evtPos(e);
+    ctx.beginPath();
+    ctx.moveTo(_lastX, _lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    _lastX = p.x; _lastY = p.y;
+    if (!_hasInk) {
+      _hasInk = true;
+      canvas.classList.add('filled');
+    }
+  }
+  function endDraw(e) { e && e.preventDefault && e.preventDefault(); _drawing = false; }
+
+  function clearPad() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    _hasInk = false;
+    canvas.classList.remove('filled');
+  }
+
+  function getSignaturePngDataUrl() {
+    if (!_hasInk) return null;
+    // pdf-lib accepts the data URL directly via our decodeDataUrl helper
+    return canvas.toDataURL('image/png');
+  }
+
+  canvas.addEventListener('pointerdown', startDraw);
+  canvas.addEventListener('pointermove', moveDraw);
+  canvas.addEventListener('pointerup', endDraw);
+  canvas.addEventListener('pointercancel', endDraw);
+  canvas.addEventListener('pointerleave', endDraw);
+  // Fallback for non-pointer browsers
+  canvas.addEventListener('touchstart',  startDraw, { passive: false });
+  canvas.addEventListener('touchmove',   moveDraw,  { passive: false });
+  canvas.addEventListener('touchend',    endDraw);
+  document.getElementById('pad-clear').addEventListener('click', clearPad);
+  window.addEventListener('resize', resizeCanvas);
+  // Initial sizing — must run after layout
+  setTimeout(resizeCanvas, 60);
+
+  // ── Form state ──────────────────────────────────────────────────────
   const sigInput   = document.getElementById('sig-input');
   const emailInput = document.getElementById('signer-email');
   const sigPreview = document.getElementById('sig-preview');
@@ -134,7 +238,7 @@
   const btnSign    = document.getElementById('btn-sign');
 
   function updateSignBtn() {
-    const hasSig   = sigInput.value.trim().length >= 5; // Phase 3 — min 5 chars
+    const hasSig   = sigInput.value.trim().length >= 5;
     const hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim());
     const hasAgree = agreeCheck.checked;
     btnSign.disabled = !(hasSig && hasEmail && hasAgree);
@@ -142,78 +246,79 @@
 
   sigInput.addEventListener('input', () => {
     const val = sigInput.value.trim();
-    if (val) {
-      sigPreview.textContent = val;
-      sigPreview.classList.add('filled');
-    } else {
-      sigPreview.textContent = 'Your signature will appear here';
-      sigPreview.classList.remove('filled');
-    }
+    if (val) { sigPreview.textContent = val; sigPreview.classList.add('filled'); }
+    else { sigPreview.textContent = 'Your signature will appear here'; sigPreview.classList.remove('filled'); }
     updateSignBtn();
   });
   emailInput.addEventListener('input', updateSignBtn);
   agreeCheck.addEventListener('change', updateSignBtn);
 
-  // CSP-safe: bind click handler instead of inline onclick
   btnSign.addEventListener('click', submitSignature);
 
   async function submitSignature() {
     const signature = sigInput.value.trim();
-    if (!signature) return;
+    if (!signature || !_mode || !_activeToken) return;
 
     btnSign.disabled = true;
     document.getElementById('btn-sign-text').textContent = 'Submitting…';
     document.getElementById('sign-error').style.display = 'none';
 
-    const url = SERVER_BASE + '/sign-lease';
+    const endpoint = _mode === 'co_applicant' ? '/sign-lease-co-applicant'
+                   : _mode === 'amendment'    ? '/sign-amendment'
+                   : '/sign-lease';
+
+    const body = {
+      token:           _activeToken,
+      signature,
+      signature_image: getSignaturePngDataUrl(),
+      applicant_email: emailInput.value.trim(),
+      user_agent:      navigator.userAgent,
+    };
+
     let resp, json;
     try {
-      resp = await fetch(url, {
+      resp = await fetch(SERVER_BASE + endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
-        body: JSON.stringify({
-          token:           window._leaseToken,
-          signature,
-          applicant_email: emailInput.value.trim(), // Phase 3
-          user_agent:      navigator.userAgent,
-        }),
+        body: JSON.stringify(body),
       });
       json = await resp.json();
-    } catch (e) {
+    } catch {
       document.getElementById('sign-error').textContent = 'Connection error. Please try again.';
       document.getElementById('sign-error').style.display = 'block';
       btnSign.disabled = false;
-      document.getElementById('btn-sign-text').textContent = 'Sign Lease Agreement';
+      document.getElementById('btn-sign-text').textContent = 'Sign';
       return;
     }
 
     if (!resp.ok || !json.success) {
-      document.getElementById('sign-error').textContent = json.error || 'Signing failed. Please try again or contact support.';
+      document.getElementById('sign-error').textContent =
+        json.error || 'Signing failed. Please try again or contact support.';
       document.getElementById('sign-error').style.display = 'block';
       btnSign.disabled = false;
-      document.getElementById('btn-sign-text').textContent = 'Sign Lease Agreement';
+      const fallback = _mode === 'co_applicant' ? 'Sign as Co-Applicant'
+                     : _mode === 'amendment'    ? 'Sign Amendment'
+                     : 'Sign Lease Agreement';
+      document.getElementById('btn-sign-text').textContent = fallback;
       return;
     }
 
-    const appForLink = window._leaseApp;
-    if (appForLink && appForLink.app_id) {
+    if (_appForLink && _appForLink.app_id) {
       const portalBtn = document.getElementById('portal-link-btn');
-      if (portalBtn) portalBtn.href = '/tenant/login.html?app_id=' + encodeURIComponent(appForLink.app_id);
+      if (portalBtn) portalBtn.href = '/tenant/login.html?app_id=' + encodeURIComponent(_appForLink.app_id);
     }
     showState('success');
   }
 
-  // Load on DOMContentLoaded — config.js is deferred and may not be ready
-  // when this module first parses, so poll briefly then proceed anyway.
+  // ── Boot ────────────────────────────────────────────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadLease);
   } else {
     let tries = 0;
-    function tryLoad() {
+    (function tryLoad() {
       if (typeof CONFIG !== 'undefined') { loadLease(); return; }
       if (++tries < 30) { setTimeout(tryLoad, 100); return; }
-      loadLease(); // proceed anyway after 3 seconds
-    }
-    tryLoad();
+      loadLease();
+    })();
   }
 })();
