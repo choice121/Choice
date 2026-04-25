@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Choice Admin">
@@ -14,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=20260428">
+<link rel="stylesheet" href="/css/cp-design.css?v=20260429">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=20260428"></script>
-<script defer src="/js/cp-shell.js?v=20260428"></script>
+<script defer src="/js/cp-chrome.js?v=20260429"></script>
+<script defer src="/js/cp-shell.js?v=20260429"></script>
 </head>
 <body data-page-title="Dashboard" data-page-sub="Live overview">
 
@@ -84,11 +85,6 @@
   // NOTE: refresh + open-more actions are registered by cp-chrome.js.
   // This page only handles its own data loading.
 
-  function whenShellReady(cb){
-    if(window.AdminShell) return cb(window.AdminShell);
-    setTimeout(() => whenShellReady(cb), 20);
-  }
-
   function greetingFor(d){
     const h = d.getHours();
     if(h < 12) return 'Good morning';
@@ -97,19 +93,23 @@
   }
 
   function actionCard(opts){
-    return `<a class="action-card ${opts.tone||''}" href="${opts.href}">
-      <div class="ac-icon"><svg class="i"><use href="#${opts.icon}"/></svg></div>
+    const aria = (opts.count + ' ' + opts.label + '. ' + (opts.cta||'Review'));
+    return `<a class="action-card ${opts.tone||''}" href="${opts.href}" aria-label="${S.esc(aria)}">
+      <div class="ac-icon" aria-hidden="true"><svg class="i"><use href="#${opts.icon}"/></svg></div>
       <div class="ac-body">
         <div class="ac-count">${opts.count}</div>
         <div class="ac-label">${S.esc(opts.label)}</div>
       </div>
-      <div class="ac-cta">${S.esc(opts.cta||'Review')} <svg class="i i-sm"><use href="#i-arrow"/></svg></div>
+      <div class="ac-cta" aria-hidden="true">${S.esc(opts.cta||'Review')} <svg class="i i-sm"><use href="#i-arrow"/></svg></div>
     </a>`;
   }
   function kpi(opts){
-    return `<a class="kpi-chip ${opts.tone||''}" href="${opts.href||'#'}">
+    const isZero = (Number(opts.value) === 0);
+    const valCls = 'k-value' + (isZero ? ' is-zero' : '');
+    const aria = opts.label + ': ' + opts.value + (opts.sub ? ' (' + opts.sub + ')' : '');
+    return `<a class="kpi-chip ${opts.tone||''}" href="${opts.href||'#'}" aria-label="${S.esc(aria)}">
       <div class="k-label">${S.esc(opts.label)}</div>
-      <div class="k-value">${opts.value}</div>
+      <div class="${valCls}">${opts.value}</div>
       <div class="k-sub">${S.esc(opts.sub||'')}</div>
     </a>`;
   }
@@ -117,8 +117,10 @@
     const tone = a.status==='approved'?'success':a.status==='denied'?'danger':a.status==='waitlisted'?'warning':'';
     const initials = S.initials(a.first_name, a.last_name);
     const name = (a.first_name||'') + ' ' + (a.last_name||'');
-    return `<a class="activity-row ${tone}" href="applications.html" style="text-decoration:none;color:inherit">
-      <div class="dot" style="background:${S.avatarColor(a.email||name)};color:#fff;font-size:.78rem;font-weight:700">${S.esc(initials)}</div>
+    // Deep-link straight to this application's card on the applications page.
+    const href = 'applications.html?id=' + encodeURIComponent(a.app_id || a.id || '');
+    return `<a class="activity-row ${tone}" href="${href}" style="text-decoration:none;color:inherit" aria-label="${S.esc(name.trim()||'Applicant')} — ${S.esc(a.status||'')}">
+      <div class="dot" style="background:${S.avatarColor(a.email||name)};color:#fff;font-size:.78rem;font-weight:700" aria-hidden="true">${S.esc(initials)}</div>
       <div class="a-body">
         <div class="a-text"><strong>${S.esc(name.trim()||'Applicant')}</strong> ${S.statusPill(a.status)}</div>
         <div class="a-meta">${S.esc(a.property_address||'—')} · ${S.fmtRelative(a.created_at)}</div>
@@ -177,7 +179,9 @@
 
     // ── Recent feed ──
     const feed = document.getElementById('recent-feed');
-    if(!appsOk || !recent?.length){
+    if(!appsOk){
+      feed.innerHTML = `<div class="empty"><svg class="i"><use href="#i-alert"/></svg><h3>Could not load activity</h3><p>Try refreshing the page.</p></div>`;
+    } else if(!recent?.length){
       feed.innerHTML = `<div class="empty"><svg class="i"><use href="#i-clock"/></svg><h3>No activity yet</h3><p>Applications will appear here as they come in.</p></div>`;
     } else {
       feed.innerHTML = '<div class="activity-feed">' + recent.map(activityRow).join('') + '</div>';
@@ -187,21 +191,17 @@
     stamp.textContent = 'Live — last refreshed at ' + S.fmtTime(new Date());
   }
 
-  whenShellReady(function(shell){
-    S = shell;
-    document.addEventListener('cp:realtime', () => load().catch(()=>{}));
-    if(document.readyState === 'loading'){
-      document.addEventListener('DOMContentLoaded', () => load().catch(err => {
-        console.error('[dashboard] load failed', err);
-        S.toast('Failed to load dashboard', 'error');
-      }));
-    } else {
+  // Wait for shell + run; cp-shell.js exposes Shell.ready as a Promise.
+  (window.CPShell && window.CPShell.ready ? window.CPShell.ready : Promise.resolve(window.AdminShell))
+    .then(shell => {
+      S = shell || window.AdminShell;
+      document.addEventListener('cp:realtime', () => load().catch(()=>{}));
       load().catch(err => {
         console.error('[dashboard] load failed', err);
         S.toast('Failed to load dashboard', 'error');
       });
-    }
-  });
+    })
+    .catch(err => { console.error('[dashboard] shell ready failed', err); });
 })();
 </script>
 

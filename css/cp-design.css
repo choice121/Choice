@@ -274,6 +274,14 @@ img,svg{display:block;max-width:100%}
 }
 .kpi-chip .k-label{font-size:.65rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
 .kpi-chip .k-value{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+.kpi-chip .k-value.is-zero{color:var(--muted-2);font-weight:600;opacity:.6}
+.kpi-chip.brand .k-value.is-zero,
+.kpi-chip.gold .k-value.is-zero,
+.kpi-chip.warn .k-value.is-zero,
+.kpi-chip.success .k-value.is-zero,
+.kpi-chip.danger .k-value.is-zero{color:var(--muted-2)}
+.chip[aria-selected="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .kpi-chip .k-sub{font-size:.7rem;color:var(--muted)}
 .kpi-chip.brand .k-value{color:var(--brand)}
 .kpi-chip.gold .k-value{color:var(--gold)}

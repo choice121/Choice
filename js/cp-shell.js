@@ -206,17 +206,29 @@
   }
 
   // ───────────────────────── Realtime live indicator ─────────────────────────
+  // Coalesce bursts of postgres_changes events into a single cp:realtime
+  // dispatch per 400ms window to avoid hammering page-level load() handlers.
+  let _rtTimer = null;
+  let _rtPending = new Set();
+  function _emitRealtime(table){
+    _rtPending.add(table);
+    if(_rtTimer) return;
+    _rtTimer = setTimeout(() => {
+      const tables = Array.from(_rtPending);
+      _rtPending.clear();
+      _rtTimer = null;
+      tables.forEach(t => {
+        document.dispatchEvent(new CustomEvent('cp:realtime', { detail: { table: t } }));
+      });
+    }, 400);
+  }
   function initLiveIndicator(){
     if(!window.CP || !CP.sb) return;
     try {
       const channel = CP.sb()
         .channel('admin-live')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => {
-          document.dispatchEvent(new CustomEvent('cp:realtime', { detail: { table: 'applications' } }));
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'leases' }, () => {
-          document.dispatchEvent(new CustomEvent('cp:realtime', { detail: { table: 'leases' } }));
-        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => _emitRealtime('applications'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leases' },       () => _emitRealtime('leases'))
         .subscribe((status) => {
           const dots = $$('.live-dot');
           if(status === 'SUBSCRIBED') dots.forEach(d => d.style.background = 'var(--success)');
@@ -474,12 +486,180 @@
     document.body.classList.add('has-cp-bottom-tabs');
   }
 
+  // ───────────────────────── Chip a11y auto-sync ─────────────────────────
+  // Page chip rows toggle `.active` on click. Mirror that into role/aria-selected
+  // so screen readers and keyboard users get the right semantics — without
+  // requiring per-page changes. Also wires arrow-key navigation within a row.
+  function _syncChipAria(row){
+    if(!row.hasAttribute('role')) row.setAttribute('role','tablist');
+    const chips = row.querySelectorAll('.chip');
+    chips.forEach(c => {
+      if(!c.hasAttribute('role'))     c.setAttribute('role','tab');
+      if(!c.hasAttribute('tabindex')) c.setAttribute('tabindex', c.classList.contains('active') ? '0' : '-1');
+      c.setAttribute('aria-selected', c.classList.contains('active') ? 'true' : 'false');
+    });
+  }
+  function initChipA11y(){
+    $$('.chip-row').forEach(_syncChipAria);
+    const mo = new MutationObserver(muts => {
+      const rows = new Set();
+      muts.forEach(m => {
+        const t = m.target;
+        if(t && t.classList && t.classList.contains('chip')){
+          const row = t.closest('.chip-row');
+          if(row) rows.add(row);
+        }
+      });
+      rows.forEach(_syncChipAria);
+    });
+    $$('.chip-row').forEach(row => mo.observe(row, { attributes:true, subtree:true, attributeFilter:['class'] }));
+    document.addEventListener('keydown', (e) => {
+      if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+      const c = document.activeElement;
+      if(!c || !c.classList.contains('chip')) return;
+      const row = c.closest('.chip-row');
+      if(!row) return;
+      const chips = Array.from(row.querySelectorAll('.chip'));
+      const i = chips.indexOf(c);
+      let next = i;
+      if(e.key === 'ArrowLeft')  next = (i - 1 + chips.length) % chips.length;
+      if(e.key === 'ArrowRight') next = (i + 1) % chips.length;
+      if(e.key === 'Home') next = 0;
+      if(e.key === 'End')  next = chips.length - 1;
+      if(next !== i){ e.preventDefault(); chips[next].focus(); chips[next].click(); }
+    });
+  }
+
+  // ───────────────────────── Keyboard shortcuts ─────────────────────────
+  // `/`           focus first visible search input
+  // `g d/a/l/m/p` go to Dashboard / Applications / Leases / Move-ins / Properties
+  // `?`           show shortcut help sheet
+  // `Esc`         close any open sheet
+  // Suppressed when typing in inputs / textareas / selects / contenteditable.
+  function _isTyping(){
+    const a = document.activeElement;
+    if(!a) return false;
+    const tag = a.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if(a.isContentEditable) return true;
+    return false;
+  }
+  function _portalDir(){
+    const p = location.pathname;
+    if(p.includes('/admin/'))    return '/admin/';
+    if(p.includes('/landlord/')) return '/landlord/';
+    if(p.includes('/tenant/'))   return '/tenant/';
+    return '/';
+  }
+  function _showShortcutHelp(){
+    Shell.openSheet({
+      title: 'Keyboard shortcuts',
+      body:
+        '<div class="form-stack" style="font-size:.88rem">' +
+          '<div class="row-flex between"><span><kbd>/</kbd></span><span>Focus search</span></div>' +
+          '<div class="row-flex between"><span><kbd>g</kbd> <kbd>d</kbd></span><span>Go to Dashboard</span></div>' +
+          '<div class="row-flex between"><span><kbd>g</kbd> <kbd>a</kbd></span><span>Go to Applications</span></div>' +
+          '<div class="row-flex between"><span><kbd>g</kbd> <kbd>l</kbd></span><span>Go to Leases</span></div>' +
+          '<div class="row-flex between"><span><kbd>g</kbd> <kbd>m</kbd></span><span>Go to Move-ins</span></div>' +
+          '<div class="row-flex between"><span><kbd>g</kbd> <kbd>p</kbd></span><span>Go to Properties</span></div>' +
+          '<div class="row-flex between"><span><kbd>?</kbd></span><span>Show this help</span></div>' +
+          '<div class="row-flex between"><span><kbd>Esc</kbd></span><span>Close sheet</span></div>' +
+        '</div>'
+    });
+  }
+  function initKeyboardShortcuts(){
+    let gPending = null;
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape'){
+        if($('.sheet.open') || $('.sheet-backdrop')) Shell.closeSheet();
+        return;
+      }
+      if(_isTyping()) return;
+      if(e.metaKey || e.ctrlKey || e.altKey) return;
+      if(e.key === '?'){ e.preventDefault(); _showShortcutHelp(); return; }
+      if(e.key === '/'){
+        const sel = '#search-input, #search, #f-app, .search input[type="text"], input[type="search"]';
+        const inp = $(sel);
+        if(inp){ e.preventDefault(); inp.focus(); inp.select && inp.select(); }
+        return;
+      }
+      if(gPending){
+        clearTimeout(gPending.t);
+        const map = { d:'dashboard.html', a:'applications.html', l:'leases.html', m:'move-ins.html', p:'properties.html' };
+        const target = map[e.key];
+        gPending = null;
+        if(target){ e.preventDefault(); location.href = _portalDir() + target; }
+        return;
+      }
+      if(e.key === 'g'){
+        gPending = { t: setTimeout(() => { gPending = null; }, 1200) };
+        return;
+      }
+    });
+  }
+
+  // ───────────────────────── Error capture ─────────────────────────
+  // Captures the last 30 unhandled errors / promise rejections into a ring
+  // buffer. Surfaces a single discreet toast on the first error per page (so
+  // silent failures stop being silent), and exposes Shell.diagnostics() text
+  // for support copy-paste.
+  Shell.__errors = [];
+  let _firstErrToasted = false;
+  function _record(kind, payload){
+    try {
+      Shell.__errors.push(Object.assign({
+        ts: new Date().toISOString(),
+        kind,
+        url: location.pathname + location.search,
+        ua: navigator.userAgent
+      }, payload));
+      if(Shell.__errors.length > 30) Shell.__errors.splice(0, Shell.__errors.length - 30);
+      if(!_firstErrToasted){
+        _firstErrToasted = true;
+        Shell.toast('A background error occurred — see console.', 'warn', 4000);
+      }
+    } catch(_){ /* never let logging itself break the page */ }
+  }
+  Shell.diagnostics = function(){
+    return JSON.stringify({
+      page: location.href,
+      generated_at: new Date().toISOString(),
+      errors: Shell.__errors
+    }, null, 2);
+  };
+  function initErrorCapture(){
+    window.addEventListener('error', (e) => {
+      _record('error', {
+        message: e.message || String(e.error||''),
+        source: e.filename || '', line: e.lineno||0, col: e.colno||0,
+        stack: (e.error && e.error.stack) ? String(e.error.stack).slice(0, 1200) : ''
+      });
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      const r = e.reason;
+      _record('unhandledrejection', {
+        message: (r && (r.message || String(r))) || 'Unknown rejection',
+        stack: (r && r.stack) ? String(r.stack).slice(0, 1200) : ''
+      });
+    });
+  }
+
+  // ───────────────────────── Ready promise ─────────────────────────
+  // Replaces ad-hoc whenShellReady polling. Pages can do:
+  //   await Shell.ready;     OR     document.addEventListener('cp:shell-ready', …)
+  // Resolves once boot() has finished.
+  let _readyResolve;
+  Shell.ready = new Promise(res => { _readyResolve = res; });
+
   // ───────────────────────── Boot ─────────────────────────
   function boot(){
     initActions();
     initActiveNav();
     initSwipeRows();
     initBottomTabs();
+    initChipA11y();
+    initKeyboardShortcuts();
+    initErrorCapture();
     if('ontouchstart' in window) initPullToRefresh();
     // Cross-tab session sync: if user signs out in another tab, follow.
     window.addEventListener('storage', (e) => {
@@ -496,6 +676,9 @@
     });
     // Defer realtime to after CP is ready
     setTimeout(initLiveIndicator, 800);
+    // Signal readiness — replaces per-page whenShellReady polling.
+    try { _readyResolve && _readyResolve(Shell); } catch(_){}
+    document.dispatchEvent(new CustomEvent('cp:shell-ready', { detail: { shell: Shell } }));
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
