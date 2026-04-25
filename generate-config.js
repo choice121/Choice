@@ -332,8 +332,13 @@ const BUILD_VERSION = Date.now().toString();
 // Since Cloudflare Pages deploys _headers and HTML files from the same build output,
 // the nonce is guaranteed consistent within each deployment.
 
-const crypto = require('crypto');
-const nonce = crypto.randomBytes(16).toString('base64url'); // URL-safe, no padding chars
+// Stable placeholder for the per-request CSP nonce.
+// functions/_middleware.js (Cloudflare Pages middleware) generates a fresh
+// random nonce on every request and rewrites this placeholder in the response
+// body, then sets the matching Content-Security-Policy header. Per-request
+// rotation is stronger than per-build rotation (a leaked build-time nonce
+// would be valid for the entire deployment lifetime).
+const nonce = '__CSP_NONCE__';
 
 htmlFiles.forEach(function(file) {
   let src = fs.readFileSync(file, 'utf8');
@@ -459,26 +464,10 @@ await (async function injectInitialListings() {
   console.log('✅ Property pre-load: ' + data.rows.length + ' listings embedded in listings.html (total: ' + data.total + ')');
 })();
 
-// Rewrite _headers: keep script-src nonce synchronized with the generated HTML
-try {
-  let headers = fs.readFileSync('_headers', 'utf8');
-  let fixed = headers.replace(
-    /(script-src\b[^;]*?)\s*'nonce-[^']+'([^;]*;)/,
-    `$1 'nonce-${nonce}'$2`
-  );
-  fixed = fixed.replace(
-    /(script-src\b[^;]*?)\s*'unsafe-inline'([^;]*;)/,
-    `$1 'nonce-${nonce}'$2`
-  );
-  if (fixed !== headers) {
-    fs.writeFileSync('_headers', fixed);
-    console.log('✅ CSP: script-src nonce synchronized in _headers');
-  } else {
-    console.warn('⚠  CSP: script-src nonce pattern not found in _headers');
-  }
-} catch(e) {
-  console.warn('⚠  Could not rewrite _headers:', e.message);
-}
+// Note: Content-Security-Policy is no longer set in _headers; it is set
+// per-request by functions/_middleware.js so the nonce can rotate on every
+// request. No build-time _headers rewrite is needed.
+console.log('ℹ  CSP nonce: written to HTML as __CSP_NONCE__; per-request rotation handled by functions/_middleware.js');
 
 })().catch(function(err) {
   console.error('Build script error:', err);

@@ -1,0 +1,111 @@
+(function(){
+  'use strict';
+  const PAGE_SIZE = 50;
+  let currentPage = 1, totalCount = 0;
+  let activeAction = '', activeAppId = '';
+
+  const ACTION_LABELS = {
+    update_status:'Update status', mark_paid:'Mark paid', mark_movein:'Mark move-in',
+    generate_lease:'Generate lease', resend_lease:'Resend lease', void_lease:'Void lease',
+    tenant_signed_lease:'Tenant signed', co_applicant_signed_lease:'Co-applicant signed'
+  };
+  const ACTION_PILL = {
+    update_status:'pill-info', mark_paid:'pill-success', mark_movein:'pill-purple',
+    generate_lease:'pill-warning', resend_lease:'pill-warning', void_lease:'pill-danger',
+    tenant_signed_lease:'pill-success', co_applicant_signed_lease:'pill-success'
+  };
+
+  function row(r){
+    const S = AdminShell;
+    const label = ACTION_LABELS[r.action] || r.action;
+    const cls = ACTION_PILL[r.action] || 'pill-muted';
+    const target = r.target_id
+      ? '<a href="applications.html?id='+S.esc(r.target_id)+'" style="font-family:monospace">'+S.esc(r.target_id)+'</a>'
+      : '<span class="muted">'+S.esc(r.target_type||'—')+'</span>';
+    const meta = (r.metadata && typeof r.metadata === 'object')
+      ? Object.entries(r.metadata).filter(([,v]) => v!=null && v!=='')
+          .map(([k,v]) => '<span class="meta-pill">'+S.esc(k)+': '+S.esc(String(v).slice(0,40))+'</span>').join('')
+      : '';
+    const actor = r.user_id
+      ? '<span class="muted text-xs">'+S.esc(r.user_id.slice(0,8))+'…</span>'
+      : '<span class="muted text-xs" style="font-style:italic">System / Tenant</span>';
+    return ''
+      + '<div class="audit-row">'
+      +   '<div class="arow-head">'
+      +     '<span class="pill '+cls+'">'+S.esc(label)+'</span>'
+      +     '<span class="row-meta" title="'+S.esc(r.created_at)+'">'+S.fmtRelative(r.created_at)+'</span>'
+      +   '</div>'
+      +   '<div class="row-sub">'+target+' · '+actor+'</div>'
+      +   (meta ? '<div class="arow-meta">'+meta+'</div>' : '')
+      + '</div>';
+  }
+
+  async function loadPage(page){
+    currentPage = Math.max(1, page);
+    document.getElementById('audit-list').innerHTML = AdminShell.skeletonRows(5, { avatar:false });
+    const from = (currentPage-1)*PAGE_SIZE, to = from+PAGE_SIZE-1;
+    let q = CP.sb().from('admin_actions').select('*',{count:'exact'}).order('created_at',{ascending:false}).range(from,to);
+    if(activeAction) q = q.eq('action', activeAction);
+    if(activeAppId)  q = q.eq('target_id', activeAppId.toUpperCase());
+    const { data, count, error } = await q;
+    if(error){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><svg class="i"><use href="#i-alert"/></svg><h3>Failed to load</h3><p>'+AdminShell.esc(error.message)+'</p></div>';
+      return;
+    }
+    totalCount = count || 0;
+    const rows = data || [];
+    if(!rows.length){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><svg class="i"><use href="#i-history"/></svg><h3>No entries</h3><p>Admin actions will appear here.</p></div>';
+    } else {
+      document.getElementById('audit-list').innerHTML = rows.map(row).join('');
+    }
+    const totalPages = Math.max(1, Math.ceil(totalCount/PAGE_SIZE));
+    document.getElementById('page-info').textContent = totalCount ? ('Page '+currentPage+' of '+totalPages) : '—';
+    document.getElementById('btn-prev').disabled = currentPage <= 1;
+    document.getElementById('btn-next').disabled = currentPage >= totalPages;
+    document.getElementById('result-count').textContent = totalCount.toLocaleString()+' entr'+(totalCount===1?'y':'ies');
+    document.getElementById('page-sub').textContent = totalCount.toLocaleString()+' total';
+  }
+
+  function applyFilters(){
+    activeAction = document.getElementById('f-action').value;
+    activeAppId  = document.getElementById('f-app').value.trim();
+    loadPage(1);
+  }
+
+  function readyDeps(){ return window.AdminShell && window.CP && CP.sb && CP.Auth; }
+  function waitReady(ms){
+    return new Promise((res,rej)=>{
+      const start=Date.now();
+      (function tick(){
+        if(readyDeps()) return res();
+        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
+        setTimeout(tick,80);
+      })();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await waitReady(8000); }
+    catch(e){
+      document.getElementById('audit-list').innerHTML =
+        '<div class="empty"><h3>Could not load admin tools</h3><p>'+e.message+'</p></div>';
+      return;
+    }
+    const ok = await AdminShell.requireAdmin();
+    if(!ok) return;
+
+    let deb = null;
+    document.getElementById('f-action').addEventListener('change', applyFilters);
+    document.getElementById('f-app').addEventListener('input', () => {
+      clearTimeout(deb); deb = setTimeout(applyFilters, 250);
+    });
+    document.getElementById('btn-prev').addEventListener('click', () => loadPage(currentPage-1));
+    document.getElementById('btn-next').addEventListener('click', () => loadPage(currentPage+1));
+
+    AdminShell.on('refresh', () => loadPage(currentPage));
+    loadPage(1);
+  });
+})();

@@ -15,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=20260429">
+<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
 <script defer src="/config.js"></script>
 <script defer src="/js/supabase.min.js"></script>
 <script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=20260429"></script>
-<script defer src="/js/cp-shell.js?v=20260429"></script>
+<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
 </head>
 <body data-page-title="Dashboard" data-page-sub="Live overview">
 
@@ -56,6 +56,12 @@
         <div class="text-strong">Pulse</div>
         <a class="card-link" href="applications.html">All applications <svg class="i i-sm"><use href="#i-arrow"/></svg></a>
       </div>
+      <div class="chip-row date-range-chips" id="range-tabs" role="tablist" aria-label="Date range" style="margin-bottom:10px">
+        <button class="chip" data-range="1d">Today</button>
+        <button class="chip" data-range="7d">Last 7d</button>
+        <button class="chip" data-range="30d">Last 30d</button>
+        <button class="chip active" data-range="all">All time</button>
+      </div>
       <div class="kpi-strip" id="kpi-strip">
         <!-- skeletons until loaded -->
       </div>
@@ -79,131 +85,7 @@
   </main>
 </div>
 
-<script nonce="VZEkWatH2Jtta2vFy8dRhA">
-(function(){
-  'use strict';
-  // NOTE: refresh + open-more actions are registered by cp-chrome.js.
-  // This page only handles its own data loading.
-
-  function greetingFor(d){
-    const h = d.getHours();
-    if(h < 12) return 'Good morning';
-    if(h < 18) return 'Good afternoon';
-    return 'Good evening';
-  }
-
-  function actionCard(opts){
-    const aria = (opts.count + ' ' + opts.label + '. ' + (opts.cta||'Review'));
-    return `<a class="action-card ${opts.tone||''}" href="${opts.href}" aria-label="${S.esc(aria)}">
-      <div class="ac-icon" aria-hidden="true"><svg class="i"><use href="#${opts.icon}"/></svg></div>
-      <div class="ac-body">
-        <div class="ac-count">${opts.count}</div>
-        <div class="ac-label">${S.esc(opts.label)}</div>
-      </div>
-      <div class="ac-cta" aria-hidden="true">${S.esc(opts.cta||'Review')} <svg class="i i-sm"><use href="#i-arrow"/></svg></div>
-    </a>`;
-  }
-  function kpi(opts){
-    const isZero = (Number(opts.value) === 0);
-    const valCls = 'k-value' + (isZero ? ' is-zero' : '');
-    const aria = opts.label + ': ' + opts.value + (opts.sub ? ' (' + opts.sub + ')' : '');
-    return `<a class="kpi-chip ${opts.tone||''}" href="${opts.href||'#'}" aria-label="${S.esc(aria)}">
-      <div class="k-label">${S.esc(opts.label)}</div>
-      <div class="${valCls}">${opts.value}</div>
-      <div class="k-sub">${S.esc(opts.sub||'')}</div>
-    </a>`;
-  }
-  function activityRow(a){
-    const tone = a.status==='approved'?'success':a.status==='denied'?'danger':a.status==='waitlisted'?'warning':'';
-    const initials = S.initials(a.first_name, a.last_name);
-    const name = (a.first_name||'') + ' ' + (a.last_name||'');
-    // Deep-link straight to this application's card on the applications page.
-    const href = 'applications.html?id=' + encodeURIComponent(a.app_id || a.id || '');
-    return `<a class="activity-row ${tone}" href="${href}" style="text-decoration:none;color:inherit" aria-label="${S.esc(name.trim()||'Applicant')} — ${S.esc(a.status||'')}">
-      <div class="dot" style="background:${S.avatarColor(a.email||name)};color:#fff;font-size:.78rem;font-weight:700" aria-hidden="true">${S.esc(initials)}</div>
-      <div class="a-body">
-        <div class="a-text"><strong>${S.esc(name.trim()||'Applicant')}</strong> ${S.statusPill(a.status)}</div>
-        <div class="a-meta">${S.esc(a.property_address||'—')} · ${S.fmtRelative(a.created_at)}</div>
-      </div>
-    </a>`;
-  }
-
-  let S; // populated when AdminShell is ready
-
-  async function load(){
-    const stamp = document.getElementById('greeting-stamp');
-    const okAuth = await S.requireAdmin();
-    if(!okAuth) return;
-
-    const user = await CP.Auth.getUser();
-    const display = (user?.email||'').split('@')[0] || 'Admin';
-    document.getElementById('greeting-name').textContent = greetingFor(new Date()) + ', ' + display.charAt(0).toUpperCase() + display.slice(1);
-
-    // Pull counts + recent in parallel
-    const [{ ok: countsOk, data: counts }, { ok: appsOk, data: recent }, listingsRes, failedRes] = await Promise.all([
-      CP.Applications.getCounts().catch(e => ({ ok:false, error:e })),
-      CP.Applications.getAll({ limit: 8 }).catch(e => ({ ok:false, error:e })),
-      CP.sb().from('properties').select('status').then(r => r).catch(() => ({ data: [] })),
-      CP.sb().from('email_logs').select('id,type,recipient,created_at').eq('status','failed').gte('created_at', new Date(Date.now()-172800000).toISOString()).limit(20).then(r => r).catch(() => ({ data: [] }))
-    ]);
-
-    const c = countsOk ? counts : {};
-    const activeListings = (listingsRes?.data || []).filter(l => l.status === 'active').length;
-
-    // ── Action queue ──
-    const queue = [];
-    if((c.pending||0) > 0)        queue.push(actionCard({ icon:'i-clock',  tone:'warn',    count:c.pending,        label:'Applications pending review',     cta:'Review',  href:'applications.html?status=pending' }));
-    if((c.unpaid_approved||0) > 0)queue.push(actionCard({ icon:'i-alert',  tone:'urgent',  count:c.unpaid_approved,label:'Approved but fee unpaid',          cta:'Chase',   href:'applications.html?status=approved' }));
-    if((c.lease_pending||0) > 0)  queue.push(actionCard({ icon:'i-leases', tone:'info',    count:c.lease_pending,  label:'Leases awaiting send / countersign', cta:'Process', href:'leases.html' }));
-    if((c.movein_pending||0) > 0) queue.push(actionCard({ icon:'i-door',   tone:'info',    count:c.movein_pending, label:'Move-ins to confirm',              cta:'Confirm', href:'move-ins.html' }));
-    if((failedRes?.data||[]).length > 0) queue.push(actionCard({ icon:'i-mail', tone:'urgent', count:failedRes.data.length, label:'Failed emails (last 48h)', cta:'Investigate', href:'email-logs.html?status=failed' }));
-
-    document.getElementById('action-queue').innerHTML = queue.length
-      ? queue.join('')
-      : `<div class="card"><div class="card-body" style="text-align:center;padding:32px 16px">
-           <div style="font-size:2rem;margin-bottom:8px">✓</div>
-           <div class="text-strong">All clear</div>
-           <div class="muted text-sm">Nothing needs your attention right now.</div>
-         </div></div>`;
-    document.getElementById('aq-count').textContent = queue.length ? (queue.length + ' item' + (queue.length>1?'s':'')) : '';
-
-    // ── KPI strip ──
-    document.getElementById('kpi-strip').innerHTML = [
-      kpi({ label:'Active listings',   value:activeListings,                tone:'gold',    sub:'Live on platform', href:'listings.html' }),
-      kpi({ label:'Total apps',        value:c.total||0,                    tone:'brand',   sub:(c.this_month||0) + ' this month', href:'applications.html' }),
-      kpi({ label:'Pending',           value:c.pending||0,                  tone:'warn',    sub:'Awaiting decision', href:'applications.html?status=pending' }),
-      kpi({ label:'Approved',          value:c.approved||0,                 tone:'success', sub:(c.unpaid_approved||0) + ' unpaid', href:'applications.html?status=approved' }),
-      kpi({ label:'Leases sent',       value:c.lease_sent||0,               tone:'',        sub:(c.lease_signed||0) + ' signed', href:'leases.html' }),
-      kpi({ label:'Move-ins confirmed',value:c.movein_confirmed||0,         tone:'success', sub:'This month', href:'move-ins.html' })
-    ].join('');
-
-    // ── Recent feed ──
-    const feed = document.getElementById('recent-feed');
-    if(!appsOk){
-      feed.innerHTML = `<div class="empty"><svg class="i"><use href="#i-alert"/></svg><h3>Could not load activity</h3><p>Try refreshing the page.</p></div>`;
-    } else if(!recent?.length){
-      feed.innerHTML = `<div class="empty"><svg class="i"><use href="#i-clock"/></svg><h3>No activity yet</h3><p>Applications will appear here as they come in.</p></div>`;
-    } else {
-      feed.innerHTML = '<div class="activity-feed">' + recent.map(activityRow).join('') + '</div>';
-    }
-
-    // ── Stamp ──
-    stamp.textContent = 'Live — last refreshed at ' + S.fmtTime(new Date());
-  }
-
-  // Wait for shell + run; cp-shell.js exposes Shell.ready as a Promise.
-  (window.CPShell && window.CPShell.ready ? window.CPShell.ready : Promise.resolve(window.AdminShell))
-    .then(shell => {
-      S = shell || window.AdminShell;
-      document.addEventListener('cp:realtime', () => load().catch(()=>{}));
-      load().catch(err => {
-        console.error('[dashboard] load failed', err);
-        S.toast('Failed to load dashboard', 'error');
-      });
-    })
-    .catch(err => { console.error('[dashboard] shell ready failed', err); });
-})();
-</script>
+<script defer src="/js/admin/dashboard.js?v=__BUILD_VERSION__"></script>
 
 </body>
 </html>
