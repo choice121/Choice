@@ -18,5 +18,28 @@
 /landlord/listings          /landlord/dashboard.html                      302
 /landlord/messages.html     /landlord/inquiries.html                     302
 /landlord/messages          /landlord/inquiries.html                     302
+# --- Block source / config / docs from being served on the CDN -----------
+# (band-aid for the fact that destination_dir = "." ships the entire repo;
+# .cfpagesignore is ignored in that mode. Long-term fix: build into dist/.)
+/SETUP.sql                  /404.html                                    404
+/MIGRATION_SCHEMA.sql       /404.html                                    404
+/MISSING_SCHEMA.sql         /404.html                                    404
+/GAS-EMAIL-RELAY.gs         /404.html                                    404
+/serve.js                   /404.html                                    404
+/generate-config.js         /404.html                                    404
+/scripts/*                  /404.html                                    404
+/supabase/*                 /404.html                                    404
+/.agents/*                  /404.html                                    404
+/.github/*                  /404.html                                    404
+/.githooks/*                /404.html                                    404
+/db/*                       /404.html                                    404
+/ARCHITECTURE.md            /404.html                                    404
+/FIXES.md                   /404.html                                    404
+/SECURITY.md                /404.html                                    404
+/MIGRATION_PATTERNS.md      /404.html                                    404
+/PROJECT_STATUS.md          /404.html                                    404
+/KNOWN_ISSUES.md            /404.html                                    404
+/README.md                  /404.html                                    404
+
 # Catch-all 404
 /*                          /404.html                                    404
