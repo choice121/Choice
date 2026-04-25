@@ -40,7 +40,50 @@ function makeNonce() {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+// Paths that exist on disk but must not be served from the CDN.
+// Middleware runs BEFORE static asset matching, so this is the only reliable
+// way to block them while destination_dir is "." (the repo root).
+const BLOCKED_EXACT = new Set([
+  '/SETUP.sql',
+  '/MIGRATION_SCHEMA.sql',
+  '/MISSING_SCHEMA.sql',
+  '/GAS-EMAIL-RELAY.gs',
+  '/serve.js',
+  '/generate-config.js',
+  '/ARCHITECTURE.md',
+  '/FIXES.md',
+  '/SECURITY.md',
+  '/MIGRATION_PATTERNS.md',
+  '/PROJECT_STATUS.md',
+  '/KNOWN_ISSUES.md',
+  '/README.md',
+]);
+const BLOCKED_PREFIXES = [
+  '/scripts/',
+  '/supabase/',
+  '/.agents/',
+  '/.github/',
+  '/.githooks/',
+  '/db/',
+];
+
+function isBlocked(pathname) {
+  if (BLOCKED_EXACT.has(pathname)) return true;
+  for (const p of BLOCKED_PREFIXES) if (pathname.startsWith(p)) return true;
+  // Any *.sql, *.gs, or top-level *.md file falls through to here too:
+  if (/^\/[^/]+\.(sql|gs)$/i.test(pathname)) return true;
+  return false;
+}
+
 export async function onRequest(context) {
+  const url = new URL(context.request.url);
+  if (isBlocked(url.pathname)) {
+    return new Response('Not Found', {
+      status: 404,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+
   const response = await context.next();
 
   // Only rewrite successful HTML responses. Skip 3xx redirects, non-HTML
