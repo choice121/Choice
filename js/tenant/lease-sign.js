@@ -14,6 +14,11 @@
 (function () {
   'use strict';
 
+  // HTML-escape helper (local to this IIFE, mirrors js/tenant/portal.js:37
+  // pattern so we don't depend on cp-ui.js being loaded). Used to harden
+  // every interpolation that flows into innerHTML below.
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+
   const params = new URLSearchParams(location.search);
   const token          = params.get('token');
   const amendmentToken = params.get('amendment_token');
@@ -57,7 +62,7 @@
       ['Security Deposit', fmtMoney(app.security_deposit)],
     ];
     return items.map(([label, val]) =>
-      `<div class="info-item"><span class="info-label">${label}</span><span class="info-val">${val || '—'}</span></div>`
+      `<div class="info-item"><span class="info-label">${esc(label)}</span><span class="info-val">${esc(val || '—')}</span></div>`
     ).join('');
   }
 
@@ -88,7 +93,7 @@
       successTitle.textContent = 'Amendment Signed';
     } else {
       banner.className = 'signer-banner tenant';
-      banner.innerHTML = `<span class="b-mark">1</span><span>You are signing as the <strong>primary applicant</strong>${signerName ? ` (${signerName})` : ''}.</span>`;
+      banner.innerHTML = `<span class="b-mark">1</span><span>You are signing as the <strong>primary applicant</strong>${signerName ? ` (${esc(signerName)})` : ''}.</span>`;
     }
   }
 
