@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Property Inspection — Choice Properties</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/tenant/inspection.js?v=__BUILD_VERSION__"></script>
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Inspection wizard — Phase 08 chunk 3/N
+     Mobile-first; widens to a single centered column on desktop.
+     ─────────────────────────────────────────────────────────────── */
+  body[data-portal="tenant"]{
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 120px}
+
+  .hero{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px 18px 14px;margin-bottom:14px;
+  }
+  .hero h1{font-size:1.25rem;font-weight:800;color:var(--text);margin:0 0 4px;letter-spacing:-.01em}
+  .hero p{color:var(--muted);font-size:.86rem;margin:0;line-height:1.45}
+  .hero .addr{font-size:.86rem;color:var(--text);font-weight:600;margin-top:8px}
+
+  /* Stepper */
+  .steps{display:flex;gap:6px;margin-bottom:16px}
+  .step-pill{
+    flex:1;padding:8px 6px;text-align:center;font-size:.7rem;font-weight:600;
+    border:1px solid var(--border);border-radius:999px;color:var(--muted);
+    background:var(--surface);transition:all .15s;
+  }
+  .step-pill[data-active]{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+  .step-pill[data-done]{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+
+  /* Card */
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px;margin-bottom:14px;
+  }
+  .card h2{font-size:1rem;font-weight:700;margin:0 0 4px;color:var(--text)}
+  .card p.help{color:var(--muted);font-size:.82rem;margin:0 0 12px;line-height:1.5}
+
+  /* Type tiles */
+  .type-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 4px}
+  @media (min-width:520px){ .type-grid{grid-template-columns:1fr 1fr 1fr} }
+  .type-tile{
+    border:1px solid var(--border);border-radius:12px;padding:14px;
+    background:var(--surface);text-align:left;cursor:pointer;
+    display:flex;flex-direction:column;gap:4px;transition:all .12s;
+  }
+  .type-tile:hover{border-color:#1d4ed8;background:#eff6ff}
+  .type-tile[aria-pressed="true"]{border-color:#1d4ed8;background:#eff6ff;box-shadow:0 0 0 2px rgba(29,78,216,.15)}
+  .type-tile strong{font-size:.95rem;font-weight:700;color:var(--text)}
+  .type-tile span{font-size:.74rem;color:var(--muted);line-height:1.4}
+
+  /* Room nav */
+  .room-tabs{
+    display:flex;gap:6px;overflow-x:auto;padding:0 0 6px;margin:0 0 14px;
+    scrollbar-width:thin;
+  }
+  .room-tab{
+    flex-shrink:0;padding:7px 12px;border:1px solid var(--border);
+    border-radius:999px;background:var(--surface);font-size:.76rem;
+    font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;
+  }
+  .room-tab[data-state="done"]{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+  .room-tab[data-state="active"]{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+
+  .room-toolbar{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:8px;margin:10px 0 14px;flex-wrap:wrap;
+  }
+  .room-title{font-size:1.1rem;font-weight:700;color:var(--text);margin:0}
+  .room-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+  /* Item row */
+  .item{
+    border:1px solid var(--border);border-radius:10px;padding:12px;
+    margin-bottom:10px;background:var(--surface);
+  }
+  .item-head{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    margin-bottom:8px;
+  }
+  .item-name{
+    font-size:.92rem;font-weight:600;color:var(--text);
+    border:none;background:transparent;padding:2px 0;flex:1;min-width:0;
+    border-bottom:1px dashed transparent;
+  }
+  .item-name:focus{outline:none;border-bottom-color:#94a3b8}
+  .item-name[readonly]{cursor:default}
+  .item-remove{
+    background:transparent;border:none;color:#dc2626;font-size:.78rem;
+    cursor:pointer;padding:2px 6px;border-radius:4px;
+  }
+  .item-remove:hover{background:#fee2e2}
+
+  .cond-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .cond-btn{
+    border:1px solid var(--border);background:var(--surface);
+    padding:5px 10px;border-radius:999px;font-size:.74rem;font-weight:600;
+    cursor:pointer;color:var(--text);transition:all .1s;
+  }
+  .cond-btn:hover{border-color:#94a3b8}
+  .cond-btn[data-c="good"][aria-pressed="true"]{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+  .cond-btn[data-c="fair"][aria-pressed="true"]{background:#fef3c7;color:#92400e;border-color:#fde68a}
+  .cond-btn[data-c="poor"][aria-pressed="true"]{background:#ffedd5;color:#c2410c;border-color:#fed7aa}
+  .cond-btn[data-c="damaged"][aria-pressed="true"]{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
+
+  .item-notes{
+    width:100%;border:1px solid var(--border);border-radius:8px;
+    padding:8px 10px;font:inherit;font-size:.84rem;resize:vertical;min-height:38px;
+    background:var(--surface);color:var(--text);
+  }
+  .item-notes:focus{outline:none;border-color:#1d4ed8}
+
+  /* Photo gallery */
+  .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;margin-top:8px}
+  .photo{
+    position:relative;aspect-ratio:1;background:#f1f5f9;border-radius:8px;
+    overflow:hidden;border:1px solid var(--border);
+  }
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .rm{
+    position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;
+    border:none;width:22px;height:22px;border-radius:50%;font-size:.78rem;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-weight:700;line-height:1;
+  }
+  .photo .badge{
+    position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);
+    color:#fff;font-size:.66rem;padding:2px 4px;text-align:center;
+  }
+  .photo[data-state="uploading"] img{opacity:.5;filter:grayscale(.5)}
+  .photo[data-state="failed"]{border-color:#fecaca;background:#fef2f2}
+  .photo .add{
+    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    background:#f8fafc;color:#64748b;font-size:1.6rem;cursor:pointer;
+    border:2px dashed #cbd5e1;border-radius:8px;
+  }
+  .photo .add:hover{border-color:#1d4ed8;color:#1d4ed8}
+
+  .add-item-btn{
+    border:1px dashed var(--border);background:transparent;color:var(--muted);
+    padding:8px 12px;border-radius:8px;font-size:.82rem;cursor:pointer;
+    width:100%;margin-top:4px;
+  }
+  .add-item-btn:hover{border-color:#1d4ed8;color:#1d4ed8}
+
+  /* Sig pad */
+  .sig-wrap{
+    border:2px dashed var(--border);border-radius:10px;padding:0;
+    background:var(--surface);position:relative;
+  }
+  #sig-canvas{
+    display:block;width:100%;height:140px;touch-action:none;border-radius:10px;
+  }
+  .sig-actions{display:flex;justify-content:space-between;align-items:center;padding:6px 10px}
+  .sig-actions small{color:var(--muted);font-size:.72rem}
+  .sig-clear{
+    background:transparent;border:none;color:#dc2626;font-size:.78rem;cursor:pointer;
+    padding:2px 6px;border-radius:4px;
+  }
+  .sig-clear:hover{background:#fee2e2}
+
+  /* Footer with prev/next */
+  .nav-footer{
+    position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+    border-top:1px solid var(--border);padding:10px 16px;
+    display:flex;justify-content:space-between;gap:8px;
+    box-shadow:0 -2px 8px rgba(0,0,0,.04);z-index:50;
+  }
+  .nav-footer button{flex:1;max-width:200px}
+  .btn{
+    padding:11px 16px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:.86rem;font-weight:600;
+    cursor:pointer;transition:all .12s;
+  }
+  .btn-primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+  .btn-primary:hover{background:#1e40af}
+  .btn-primary:disabled{background:#94a3b8;border-color:#94a3b8;cursor:not-allowed}
+  .btn-ghost:hover{border-color:#94a3b8}
+
+  /* Loading / error */
+  .loading,.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+  .loading .spin{
+    display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;
+    border-top-color:#1d4ed8;border-radius:50%;animation:spin .8s linear infinite;
+    margin-bottom:12px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .alert{
+    padding:12px 14px;border-radius:10px;margin-bottom:12px;font-size:.84rem;line-height:1.5;
+  }
+  .alert-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+  .alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+  .alert-ok{background:#dcfce7;border:1px solid #bbf7d0;color:#15803d}
+
+  /* Review screen */
+  .review-room{
+    border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;
+    background:var(--surface);
+  }
+  .review-room h4{margin:0 0 6px;font-size:.92rem;font-weight:700;color:var(--text)}
+  .review-item{font-size:.8rem;color:var(--muted);padding:3px 0}
+  .review-item .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .dot-good{background:#16a34a}.dot-fair{background:#eab308}.dot-poor{background:#f97316}.dot-damaged{background:#dc2626}.dot-none{background:#cbd5e1}
+</style>
+</head>
+<body data-portal="tenant" data-page-title="Property Inspection" data-page-sub="Tenant" data-refresh="0" data-live="0">
+<main class="wrap" id="wrap">
+
+  <div class="loading" id="loading">
+    <div class="spin"></div>
+    <div>Loading your application…</div>
+  </div>
+
+  <div id="content" hidden>
+    <header class="hero">
+      <h1 id="hero-title">Property Inspection</h1>
+      <p>Document the condition of the property room by room. Both you and the landlord will sign this report.</p>
+      <div class="addr" id="hero-addr"></div>
+    </header>
+
+    <nav class="steps" aria-label="Wizard steps">
+      <div class="step-pill" data-step="1">1. Type</div>
+      <div class="step-pill" data-step="2">2. Rooms</div>
+      <div class="step-pill" data-step="3">3. Sign</div>
+      <div class="step-pill" data-step="4">4. Review</div>
+    </nav>
+
+    <!-- Step 1 — type selection -->
+    <section class="card" id="step-1">
+      <h2>What kind of inspection is this?</h2>
+      <p class="help">Pick the inspection type. You can do separate move-in and move-out reports for the same lease.</p>
+      <div class="type-grid" role="radiogroup" aria-label="Inspection type">
+        <button class="type-tile" type="button" role="radio" aria-checked="false" data-type="move_in">
+          <strong>Move-In</strong>
+          <span>Required in 9 states to deduct from your security deposit at move-out.</span>
+        </button>
+        <button class="type-tile" type="button" role="radio" aria-checked="false" data-type="mid_term">
+          <strong>Mid-Term</strong>
+          <span>Optional periodic check during your lease.</span>
+        </button>
+        <button class="type-tile" type="button" role="radio" aria-checked="false" data-type="move_out">
+          <strong>Move-Out</strong>
+          <span>Final walkthrough when you hand back the keys.</span>
+        </button>
+      </div>
+      <div id="step1-existing" class="alert alert-info" style="margin-top:14px;display:none"></div>
+    </section>
+
+    <!-- Step 2 — room walkthrough -->
+    <section class="card" id="step-2" hidden>
+      <h2 class="room-title" id="step2-title">Walk through each room</h2>
+      <p class="help">Tap an item, set its condition, add notes if anything's worn or damaged, and snap a photo. Add custom items as needed.</p>
+      <div class="room-tabs" id="room-tabs" role="tablist"></div>
+      <div class="room-toolbar">
+        <h3 class="room-title" id="active-room-name">—</h3>
+        <div class="room-actions">
+          <button class="btn btn-ghost" type="button" id="btn-add-room">+ Add Room</button>
+          <button class="btn btn-ghost" type="button" id="btn-remove-room">Remove Room</button>
+        </div>
+      </div>
+      <div id="items-host"><!-- items rendered here --></div>
+      <button type="button" class="add-item-btn" id="btn-add-item">+ Add another item to this room</button>
+    </section>
+
+    <!-- Step 3 — notes + signature -->
+    <section class="card" id="step-3" hidden>
+      <h2>Final notes and signature</h2>
+      <p class="help">Anything else you want on the record? Then sign below.</p>
+      <textarea id="general-notes" class="item-notes" rows="3" placeholder="Optional general observations about the property as a whole."></textarea>
+
+      <h3 style="font-size:.92rem;font-weight:700;margin:18px 0 6px;color:var(--text)">Your signature</h3>
+      <div class="sig-wrap">
+        <canvas id="sig-canvas"></canvas>
+        <div class="sig-actions">
+          <small>Sign with your finger or stylus. The line below is your signature line.</small>
+          <button type="button" class="sig-clear" id="sig-clear">Clear</button>
+        </div>
+      </div>
+      <p class="help" style="margin-top:10px">
+        By signing, you confirm this report accurately reflects the condition of the property
+        as of today. The landlord will counter-sign within their portal.
+      </p>
+    </section>
+
+    <!-- Step 4 — review -->
+    <section class="card" id="step-4" hidden>
+      <h2>Review &amp; submit</h2>
+      <p class="help">Last chance to fix anything before this becomes part of your lease record.</p>
+      <div id="review-host"></div>
+      <div id="submit-error" class="alert alert-err" style="display:none"></div>
+      <div id="submit-ok" class="alert alert-ok" style="display:none"></div>
+    </section>
+  </div>
+
+  <div class="empty" id="not-authorized" hidden>
+    <h3>You don't have access to this inspection</h3>
+    <p>Sign in as the tenant on this application, or check that the link from your email is correct.</p>
+    <p style="margin-top:10px"><a href="/tenant/login.html" class="btn btn-primary" style="display:inline-block">Sign in</a></p>
+  </div>
+</main>
+
+<footer class="nav-footer" id="nav-footer" hidden>
+  <button class="btn btn-ghost" type="button" id="btn-prev" hidden>← Back</button>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" type="button" id="btn-next" disabled>Next →</button>
+</footer>
+
+</body>
+</html>
