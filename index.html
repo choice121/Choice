@@ -453,37 +453,59 @@
   </script>
 </section>
 
-<!-- ── Testimonials ── -->
-<section class="testimonials-section" id="testimonials">
+<!-- ── Testimonials (Phase 9.5 mv2 humanization) ── -->
+<section class="testimonials-section mv2-testimonials" id="testimonials" aria-labelledby="testimonials-heading">
   <div class="container">
-    <div style="text-align:center">
-      <div class="section-eyebrow">Testimonials</div>
-      <h2 class="section-title testimonials-title">What Renters Are Saying</h2>
-      <p class="testimonials-subtitle">Real experiences from people who found their home through Choice Properties.</p>
-    </div>
-    <div class="testimonials-grid">
-      <figure class="testimonial-card">
-        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
-        <blockquote class="testimonial-text">I applied on a Tuesday and had an approval by Thursday. The process was so much easier than anything I'd tried before — no confusing paperwork, just a clean online form.</blockquote>
-        <figcaption class="testimonial-meta">
-          <div class="testimonial-name">Marcus T.</div>
-          <div class="testimonial-detail">Atlanta, GA &middot; 2-Bedroom Apartment</div>
+    <header class="mv2-testimonials__header">
+      <p class="mv2-eyebrow">Renter stories</p>
+      <h2 id="testimonials-heading" class="mv2-headline mv2-headline--md">
+        What it's like to <em>find your home</em> with us.
+      </h2>
+      <p class="mv2-testimonials__subtitle">
+        Real experiences from people who found their home through Choice Properties.
+      </p>
+    </header>
+
+    <div class="mv2-testimonials__row" role="list">
+      <!-- Card 1 -->
+      <figure class="mv2-testimonial" role="listitem">
+        <div class="mv2-testimonial__avatar mv2-avatar mv2-avatar--mt" aria-hidden="true">MT</div>
+        <blockquote class="mv2-testimonial__quote">
+          I applied on a Tuesday and had an approval by Thursday. The process was so much
+          easier than anything I'd tried before — no confusing paperwork, just a clean online form.
+        </blockquote>
+        <figcaption class="mv2-testimonial__meta">
+          <span class="mv2-testimonial__name">Marcus T.</span>
+          <span class="mv2-testimonial__detail">Atlanta, GA · 2-Bedroom Apartment</span>
         </figcaption>
       </figure>
-      <figure class="testimonial-card">
-        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
-        <blockquote class="testimonial-text">I'd been burned by scam listings on other sites. Choice Properties felt different from the start — the landlord was verified, the listing photos matched the actual unit, and someone answered my email the same day.</blockquote>
-        <figcaption class="testimonial-meta">
-          <div class="testimonial-name">Priya S.</div>
-          <div class="testimonial-detail">Phoenix, AZ &middot; 1-Bedroom Condo</div>
+
+      <!-- Card 2 — promoted "story tile" (italic display quote, gold accent) -->
+      <figure class="mv2-testimonial mv2-testimonial--story" role="listitem">
+        <div class="mv2-testimonial__avatar mv2-avatar mv2-avatar--ps" aria-hidden="true">PS</div>
+        <i class="fas fa-quote-left mv2-testimonial__quote-icon" aria-hidden="true"></i>
+        <blockquote class="mv2-testimonial__quote mv2-testimonial__quote--display">
+          I'd been burned by scam listings on other sites. Choice Properties felt
+          different from the start — the landlord was verified, the photos matched
+          the actual unit, and someone answered my email the same day.
+        </blockquote>
+        <figcaption class="mv2-testimonial__meta">
+          <span class="mv2-testimonial__name">Priya S.</span>
+          <span class="mv2-testimonial__detail">Phoenix, AZ · 1-Bedroom Condo</span>
         </figcaption>
       </figure>
-      <figure class="testimonial-card">
-        <i class="fas fa-quote-left testimonial-quote-icon" aria-hidden="true"></i>
-        <blockquote class="testimonial-text">As someone relocating from out of state, I needed a platform I could trust without being able to visit properties first. The team was responsive and walked me through everything.</blockquote>
-        <figcaption class="testimonial-meta">
-          <div class="testimonial-name">James &amp; Keisha R.</div>
-          <div class="testimonial-detail">Dallas, TX &middot; 3-Bedroom House</div>
+
+      <!-- Card 3 -->
+      <figure class="mv2-testimonial" role="listitem">
+        <div class="mv2-testimonial__avatar mv2-avatar mv2-avatar--jk" aria-hidden="true">J&amp;K</div>
+        <blockquote class="mv2-testimonial__quote">
+          As someone relocating from out of state, I needed a platform I could trust
+          without being able to visit properties first. The team was responsive and
+          walked me through everything.
+        </blockquote>
+        <figcaption class="mv2-testimonial__meta">
+          <span class="mv2-testimonial__name">James &amp; Keisha R.</span>
+          <span class="mv2-testimonial__detail">Dallas, TX · 3-Bedroom House</span>
         </figcaption>
       </figure>
     </div>

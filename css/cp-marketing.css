@@ -4072,3 +4072,194 @@ body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-desc {
   max-width: 36ch;
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.5 — Testimonials humanization                              ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.5, agent_issues #35) ║
+   ║                                                                      ║
+   ║  - Initials avatar circles (italic Fraunces, soft gold tint)        ║
+   ║  - Middle card promoted to "story tile": italic display quote +     ║
+   ║    gold left accent + warmer paper bg                                ║
+   ║  - Mobile: 1-up vertical, then horizontal snap carousel >=600px,    ║
+   ║    3-up grid on desktop (story tile spans 2 columns)                 ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+body[data-portal="public"][data-page="home"] .mv2-testimonials {
+  background: #FFFFFF;
+  padding: var(--mv2-section-y-mobile) 0;
+  position: relative;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-testimonials {
+    padding: var(--mv2-section-y-desktop) 0;
+  }
+}
+
+/* Header */
+body[data-portal="public"][data-page="home"] .mv2-testimonials__header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--mv2-stack-7);
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonials__header .mv2-eyebrow {
+  justify-content: center;
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonials__subtitle {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: var(--mv2-stack-3) auto 0;
+  max-width: 56ch;
+}
+
+/* ── Row layout ───────────────────────────────────────────────────
+   Mobile (<600px): vertical stack
+   Tablet (600–1023px): horizontal snap carousel
+   Desktop (>=1024px): 3-column grid; story tile spans 2 columns
+*/
+body[data-portal="public"][data-page="home"] .mv2-testimonials__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--mv2-stack-4);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  body[data-portal="public"][data-page="home"] .mv2-testimonials__row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding: 6px var(--mv2-container-x) 22px;
+    margin: 0 calc(-1 * var(--mv2-container-x));
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-testimonials__row::-webkit-scrollbar { display: none; }
+  body[data-portal="public"][data-page="home"] .mv2-testimonials__row > .mv2-testimonial {
+    flex: 0 0 86%;
+    max-width: 460px;
+    scroll-snap-align: start;
+  }
+}
+@media (min-width: 1024px) {
+  body[data-portal="public"][data-page="home"] .mv2-testimonials__row {
+    grid-template-columns: 1fr 1.5fr 1fr;
+    gap: var(--mv2-stack-5);
+    align-items: stretch;
+  }
+}
+
+/* ── Single testimonial card ─────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-testimonial {
+  background: #FFFFFF;
+  border: 1px solid var(--mv2-hairline);
+  border-radius: var(--mv2-r-lg);
+  padding: 28px 24px 24px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  transition: border-color var(--mv2-dur) var(--mv2-ease),
+              box-shadow var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial:hover {
+  border-color: rgba(0, 106, 255, 0.18);
+  box-shadow: 0 6px 24px rgba(10, 23, 41, 0.06);
+}
+
+/* Story tile variant */
+body[data-portal="public"][data-page="home"] .mv2-testimonial--story {
+  background: var(--mv2-bg-warm);
+  border-color: rgba(212, 160, 23, 0.30);
+  box-shadow: 0 1px 0 rgba(212, 160, 23, 0.12) inset;
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial--story::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 24px; bottom: 24px;
+  width: 3px;
+  background: linear-gradient(180deg, var(--mv2-gold) 0%, rgba(212, 160, 23, 0.5) 100%);
+  border-radius: 0 3px 3px 0;
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial__quote-icon {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-size: 22px;
+  color: rgba(212, 160, 23, 0.45);
+}
+
+/* ── Initials avatar ─────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mv2-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: #5A4416;
+  background: rgba(212, 160, 23, 0.16);
+  border: 1px solid rgba(212, 160, 23, 0.28);
+  flex-shrink: 0;
+}
+/* per-card hue tints (additive variety, still in the warm gold family) */
+body[data-portal="public"][data-page="home"] .mv2-avatar--mt {
+  background: rgba(0, 106, 255, 0.10);
+  color: #1B3A87;
+  border-color: rgba(0, 106, 255, 0.22);
+}
+body[data-portal="public"][data-page="home"] .mv2-avatar--ps {
+  /* keep the gold default — it's the story tile */
+}
+body[data-portal="public"][data-page="home"] .mv2-avatar--jk {
+  background: rgba(4, 120, 87, 0.10);
+  color: #044E37;
+  border-color: rgba(4, 120, 87, 0.22);
+}
+
+/* ── Quote text ──────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-testimonial__quote {
+  margin: 0;
+  color: var(--mv2-ink);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-style: normal;
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial__quote--display {
+  font-family: var(--mv2-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 0.95rem + 0.7vw, 1.45rem);
+  line-height: 1.45;
+  color: var(--mv2-ink);
+  padding-left: 8px;
+}
+
+/* ── Meta ────────────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-testimonial__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--mv2-ink);
+}
+body[data-portal="public"][data-page="home"] .mv2-testimonial__detail {
+  font-size: 0.85rem;
+  color: var(--mv2-muted);
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
