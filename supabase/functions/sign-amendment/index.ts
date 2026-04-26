@@ -1,9 +1,7 @@
 /**
- * sign-amendment — Phase 4
+ * sign-amendment -- Phase 4 + Phase 05
  * Tenant signs a lease amendment via single-use token from email.
- * Same identity-verification pattern as sign-lease (token + email).
- * Records a sign_event and re-renders the addendum PDF with the
- * tenant's signature block embedded.
+ * Phase 05 adds per-IP and per-token rate limiting + E-SIGN consent gating.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
@@ -14,6 +12,8 @@ import { renderTemplate, createSupabasePartialResolver } from '../_shared/templa
 import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 import { getAdminEmails, getAdminUrl } from '../_shared/config.ts';
 import { buildPdfStoragePath } from '../_shared/lease-render.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
+import { ESIGN_DISCLOSURE_VERSION } from '../_shared/esign-consent.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 
@@ -21,6 +21,16 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
+
+function mapTokenError(message: string): { status: number; body: string } {
+  if (/TOKEN_EXPIRED/.test(message))       return { status: 410, body: message.replace(/^TOKEN_EXPIRED:?\s*/, '') || 'This amendment link has expired.' };
+  if (/TOKEN_REVOKED/.test(message))       return { status: 410, body: message.replace(/^TOKEN_REVOKED:?\s*/, '') || 'This amendment link has been revoked.' };
+  if (/TOKEN_ALREADY_USED/.test(message))  return { status: 410, body: 'This amendment link has already been used.' };
+  if (/TOKEN_NOT_FOUND/.test(message))     return { status: 404, body: 'This amendment link is not recognized.' };
+  if (/TOKEN_WRONG_ROLE/.test(message))    return { status: 400, body: 'This link is for a different signer.' };
+  if (/TOKEN_IP_MISMATCH/.test(message))   return { status: 403, body: 'This amendment link can only be used from the original network.' };
+  return { status: 400, body: message || 'Signing failed. The link may have expired.' };
+}
 
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
@@ -42,6 +52,14 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'Signature must be at least 5 characters. Please type your full legal name.');
   }
 
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  if (await isDbRateLimited(ip, 'sign-amendment', 20, 60 * 60 * 1000)) {
+    return jsonErr(429, 'Too many signing attempts from this network. Please wait an hour and try again.');
+  }
+  if (await isDbRateLimited(ip, 'sign-amendment:tok:' + token.slice(0, 16), 5, 60 * 60 * 1000)) {
+    return jsonErr(429, 'This amendment link has been used too many times in the last hour. Please wait and retry.');
+  }
+
   // Look up amendment and parent app
   const { data: amend } = await supabase
     .from('lease_amendments').select('*').eq('signing_token', token).maybeSingle();
@@ -57,7 +75,15 @@ Deno.serve(async (req: Request) => {
     return jsonErr(403, 'The email you entered does not match our records. Please use the same email address you applied with.');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '';
+  // Phase 05 -- E-SIGN consent for amendments
+  const { data: hasConsent } = await supabase.rpc('has_recent_esign_consent', {
+    p_app_id:  app.app_id,
+    p_email:   app.email,
+    p_version: ESIGN_DISCLOSURE_VERSION,
+  });
+  if (!hasConsent) {
+    return jsonErr(412, 'E-SIGN consent has not been recorded for this signer. Please complete the consent step before signing.');
+  }
 
   const { error: signErr } = await supabase.rpc('sign_lease_amendment', {
     p_token:           token,
@@ -66,7 +92,10 @@ Deno.serve(async (req: Request) => {
     p_user_agent:      user_agent || '',
     p_signature_image: signature_image || null,
   });
-  if (signErr) return jsonErr(400, signErr.message || 'Signing failed.');
+  if (signErr) {
+    const m = mapTokenError(signErr.message || '');
+    return jsonErr(m.status, m.body);
+  }
 
   const now = new Date().toISOString();
 
@@ -74,7 +103,7 @@ Deno.serve(async (req: Request) => {
   try {
     const partials  = createSupabasePartialResolver(supabase);
     const innerBody = await renderTemplate(amend.body, buildLeaseRenderContext(app), { partials });
-    const signedAddendum = `LEASE ADDENDUM — ${amend.title}\n\n${innerBody}\n\n` +
+    const signedAddendum = `LEASE ADDENDUM -- ${amend.title}\n\n${innerBody}\n\n` +
       `This addendum modifies the lease for property: ${app.property_address}\n` +
       `Application: ${app.app_id}\n`;
     const appWithSig = {
@@ -109,17 +138,16 @@ Deno.serve(async (req: Request) => {
   try {
     await sendEmail({
       to:      app.email,
-      subject: `\u{2705} Amendment Signed — Choice Properties (Ref: ${app.app_id})`,
+      subject: `\u{2705} Amendment Signed -- Choice Properties (Ref: ${app.app_id})`,
       html:    amendmentSignedHtml(app.first_name || 'Applicant', app.property_address || '', amend.title, app.app_id),
     });
   } catch (e) { console.error('Amendment confirm email failed:', (e as Error).message); }
 
-  // Notify admins
   for (const adminEmail of ADMIN_EMAILS) {
     try {
       await sendEmail({
         to: adminEmail,
-        subject: `[Amendment Signed] ${amend.title} — ${app.app_id}`,
+        subject: `[Amendment Signed] ${amend.title} -- ${app.app_id}`,
         html: `<p><strong>Lease amendment signed</strong> by ${app.first_name || ''} ${app.last_name || ''} (${app.email})</p>
 <p>Application: ${app.app_id}<br>Amendment: ${amend.title} (${amend.kind})<br>Signed: ${new Date().toLocaleString('en-US')}</p>
 <p><a href="${getAdminUrl('/admin/leases.html')}">View in Admin Panel &rarr;</a></p>`,

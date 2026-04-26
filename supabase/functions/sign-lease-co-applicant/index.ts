@@ -1,12 +1,10 @@
 /**
- * sign-lease-co-applicant — Phase 3
+ * sign-lease-co-applicant -- Phase 3 + Phase 05
  *
- * Co-applicant counterpart to sign-lease. Same identity-verification
- * pattern (token + email match) and the same drawn-signature support,
- * but the email check targets the co-applicant's email rather than
- * the primary applicant's. Calls sign_lease_co_applicant() in the DB
- * and triggers the "Lease Fully Executed (pending management)" UI
- * downstream by setting status to 'co_signed'.
+ * Co-applicant counterpart to sign-lease.  Phase 05 adds:
+ *   * per-IP and per-token rate limiting (20/hr/IP, 5/hr/token)
+ *   * E-SIGN consent gating (412 if no recent consent on file)
+ *   * structured token-error mapping (410 expired/revoked/used)
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
@@ -15,6 +13,8 @@ import { coApplicantSignedHtml } from '../_shared/email.ts';
 import { buildLeasePDF } from '../_shared/pdf.ts';
 import { getAdminEmails, getAdminUrl } from '../_shared/config.ts';
 import { resolveLeaseTemplate, buildPdfStoragePath } from '../_shared/lease-render.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
+import { ESIGN_DISCLOSURE_VERSION } from '../_shared/esign-consent.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 
@@ -22,6 +22,16 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
+
+function mapTokenError(message: string): { status: number; body: string } {
+  if (/TOKEN_EXPIRED/.test(message))       return { status: 410, body: message.replace(/^TOKEN_EXPIRED:?\s*/, '') || 'This signing link has expired.' };
+  if (/TOKEN_REVOKED/.test(message))       return { status: 410, body: message.replace(/^TOKEN_REVOKED:?\s*/, '') || 'This signing link has been revoked.' };
+  if (/TOKEN_ALREADY_USED/.test(message))  return { status: 410, body: 'This signing link has already been used.' };
+  if (/TOKEN_NOT_FOUND/.test(message))     return { status: 404, body: 'This signing link is not recognized.' };
+  if (/TOKEN_WRONG_ROLE/.test(message))    return { status: 400, body: 'This signing link is for a different signer.' };
+  if (/TOKEN_IP_MISMATCH/.test(message))   return { status: 403, body: 'This signing link can only be used from the original network.' };
+  return { status: 400, body: message || 'Signing failed. The link may have expired.' };
+}
 
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
@@ -41,6 +51,14 @@ Deno.serve(async (req: Request) => {
   if (!signature) return jsonErr(400, 'Missing signature');
   if (signature.trim().length < 5) {
     return jsonErr(400, 'Signature must be at least 5 characters. Please type your full legal name.');
+  }
+
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  if (await isDbRateLimited(ip, 'sign-lease-co-applicant', 20, 60 * 60 * 1000)) {
+    return jsonErr(429, 'Too many signing attempts from this network. Please wait an hour and try again.');
+  }
+  if (await isDbRateLimited(ip, 'sign-lease-co-applicant:tok:' + token.slice(0, 16), 5, 60 * 60 * 1000)) {
+    return jsonErr(429, 'This signing link has been used too many times in the last hour. Please wait and retry.');
   }
 
   // Look up by co-applicant token
@@ -70,7 +88,15 @@ Deno.serve(async (req: Request) => {
     return jsonErr(403, 'The email you entered does not match our records. Please use the email the co-applicant was contacted at.');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '';
+  // Phase 05 -- E-SIGN consent must be on file (separate from primary tenant's)
+  const { data: hasConsent } = await supabase.rpc('has_recent_esign_consent', {
+    p_app_id:  preApp.app_id,
+    p_email:   co.email,
+    p_version: ESIGN_DISCLOSURE_VERSION,
+  });
+  if (!hasConsent) {
+    return jsonErr(412, 'E-SIGN consent has not been recorded for this signer. Please complete the consent step before signing.');
+  }
 
   const { error: signErr } = await supabase.rpc('sign_lease_co_applicant', {
     p_token:           token,
@@ -79,13 +105,15 @@ Deno.serve(async (req: Request) => {
     p_user_agent:      user_agent || '',
     p_signature_image: signature_image || null,
   });
-  if (signErr) return jsonErr(400, signErr.message || 'Signing failed. The link may have expired.');
+  if (signErr) {
+    const m = mapTokenError(signErr.message || '');
+    return jsonErr(m.status, m.body);
+  }
 
   const { data: appSigned } = await supabase
     .from('applications').select('*').eq('id', preApp.id).single();
 
   if (appSigned) {
-    // Versioned PDF re-gen using pinned template snapshot
     const tmpl = await resolveLeaseTemplate(supabase, appSigned);
     if (tmpl) {
       try {
@@ -113,17 +141,15 @@ Deno.serve(async (req: Request) => {
       } catch (e) { console.error('PDF re-gen failed (non-fatal):', (e as Error).message); }
     }
 
-    // Confirmation to co-applicant
     try {
       await sendEmail({
         to:      co.email,
-        subject: `\u{2705} Co-Applicant Signature Received — Choice Properties (Ref: ${appSigned.app_id})`,
+        subject: `\u{2705} Co-Applicant Signature Received -- Choice Properties (Ref: ${appSigned.app_id})`,
         html:    coApplicantSignedHtml(co.first_name || 'Co-Applicant', appSigned.property_address || '', appSigned.app_id),
       });
     } catch (e) { console.error('Co-applicant confirm email failed:', (e as Error).message); }
 
-    // Notify admins
-    const adminSubject = `[Co-Applicant Signed] ${co.first_name || ''} ${co.last_name || ''} — ${appSigned.app_id}`;
+    const adminSubject = `[Co-Applicant Signed] ${co.first_name || ''} ${co.last_name || ''} -- ${appSigned.app_id}`;
     const adminHtml = `<p><strong>Co-applicant signed</strong> by ${co.first_name || ''} ${co.last_name || ''} (${co.email})</p>
 <p>Application: ${appSigned.app_id}<br>Property: ${appSigned.property_address}<br>Signed: ${new Date().toLocaleString('en-US')}</p>
 <p>Status: <strong>${appSigned.lease_status}</strong> &middot; ready for management countersignature</p>
