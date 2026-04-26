@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped)
+**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped; Lease Phase 08 — condition reports backend foundation IN-PROGRESS — chunks 1-2/N shipped, UI chunks 3-5 pending)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
@@ -60,7 +60,7 @@ A 13-phase epic that takes the lease subsystem from "Michigan-only Word doc" to 
 | 05 | Signing security hardening | ✅ DONE | (pre-Apr 26) |
 | 06 | PDF integrity (SHA-256 + audit certificate page + public verify endpoint) | ✅ DONE | `cc6fafc` + `4861c30` + `f7a936c` |
 | 07 | Itemized financials + utility responsibility matrix | ✅ DONE (Apr 26 2026) | `c52a2f9` (1/3) + `8495ec3` (2/3) + `05573c9` (3/3) |
-| 08 | Move-in/out condition reports | TODO | — |
+| 08 | Move-in/out condition reports | 🟡 IN PROGRESS (Apr 26 2026 — backend done, UI pending) | `989fe5e` (1/N — DB+bucket+RLS) + `294f3cc` (2/N — record-inspection edge fn + inspection-pdf.ts + event constraint) |
 | 09 | Deposit accounting (interest, itemised return) | TODO | — |
 | 10 | Leases as first-class records (split from `applications`) | TODO | — |
 | 11 | Document generators (notices, addenda, renewals) | TODO | — |
