@@ -9,7 +9,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { amendmentRequestHtml } from '../_shared/email.ts';
-import { buildLeasePDF, substituteVars } from '../_shared/pdf.ts';
+import { buildLeasePDF } from '../_shared/pdf.ts';
+import { renderTemplate, createSupabasePartialResolver } from '../_shared/template-engine.ts';
+import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 import { getSiteUrl } from '../_shared/config.ts';
 import { buildPdfStoragePath } from '../_shared/lease-render.ts';
 
@@ -74,11 +76,13 @@ Deno.serve(async (req: Request) => {
   // Render an addendum PDF (uses the same builder; the body IS the template)
   let pdfPath: string | null = null;
   try {
-    const renderedBody = `LEASE ADDENDUM — ${title}\n\n${substituteVars(amendBody, app)}\n\n` +
+    const partials  = createSupabasePartialResolver(supabase);
+    const innerBody = await renderTemplate(amendBody, buildLeaseRenderContext(app), { partials });
+    const renderedBody = `LEASE ADDENDUM — ${title}\n\n${innerBody}\n\n` +
       `This addendum modifies the lease for property: ${app.property_address}\n` +
       `Application: ${app_id}\n` +
       `Original lease executed: ${app.management_cosigned_at || ''}\n`;
-    const pdfBytes = await buildLeasePDF(app, renderedBody);
+    const pdfBytes = await buildLeasePDF(app, renderedBody, { partials });
     const { data: pv } = await supabase.rpc('record_lease_pdf_version', {
       p_app_id:              app_id,
       p_event:               'amended',

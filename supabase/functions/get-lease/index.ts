@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
-import { substituteVars } from '../_shared/pdf.ts';
+import { renderTemplate, createSupabasePartialResolver } from '../_shared/template-engine.ts';
+import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 import { resolveLeaseTemplate } from '../_shared/lease-render.ts';
 
 const supabase = createClient(
@@ -81,9 +82,17 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // 4. Render template — snapshot pinned to this app wins (Phase 2)
+  // 4. Render template — snapshot pinned to this app wins (Phase 2).
+  //    Phase 01 engine resolves {% include %} partials from
+  //    lease_template_partials via the Supabase resolver.
   const tmpl = await resolveLeaseTemplate(supabase, app);
-  const rendered = tmpl ? substituteVars(tmpl.template_body, app) : '';
+  const rendered = tmpl
+    ? await renderTemplate(
+        tmpl.template_body,
+        buildLeaseRenderContext(app),
+        { partials: createSupabasePartialResolver(supabase) },
+      )
+    : '';
 
   return jsonOk({
     app,

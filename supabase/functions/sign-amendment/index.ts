@@ -9,7 +9,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { amendmentSignedHtml } from '../_shared/email.ts';
-import { buildLeasePDF, substituteVars } from '../_shared/pdf.ts';
+import { buildLeasePDF } from '../_shared/pdf.ts';
+import { renderTemplate, createSupabasePartialResolver } from '../_shared/template-engine.ts';
+import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 import { getAdminEmails, getAdminUrl } from '../_shared/config.ts';
 import { buildPdfStoragePath } from '../_shared/lease-render.ts';
 
@@ -70,7 +72,9 @@ Deno.serve(async (req: Request) => {
 
   // Re-render addendum PDF including signature block
   try {
-    const signedAddendum = `LEASE ADDENDUM — ${amend.title}\n\n${substituteVars(amend.body, app)}\n\n` +
+    const partials  = createSupabasePartialResolver(supabase);
+    const innerBody = await renderTemplate(amend.body, buildLeaseRenderContext(app), { partials });
+    const signedAddendum = `LEASE ADDENDUM — ${amend.title}\n\n${innerBody}\n\n` +
       `This addendum modifies the lease for property: ${app.property_address}\n` +
       `Application: ${app.app_id}\n`;
     const appWithSig = {
@@ -80,7 +84,7 @@ Deno.serve(async (req: Request) => {
       signature_timestamp:     now,
       lease_ip_address:        ip,
     };
-    const pdfBytes = await buildLeasePDF(appWithSig, signedAddendum);
+    const pdfBytes = await buildLeasePDF(appWithSig, signedAddendum, { partials });
     const { data: pv } = await supabase.rpc('record_lease_pdf_version', {
       p_app_id:              app.app_id,
       p_event:               'amended',

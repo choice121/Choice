@@ -6,7 +6,8 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
-import { substituteVars } from '../_shared/pdf.ts';
+import { renderTemplate, createSupabasePartialResolver } from '../_shared/template-engine.ts';
+import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -42,7 +43,11 @@ Deno.serve(async (req: Request) => {
 
   if (!app) return jsonErr(404, 'Parent lease not found.');
 
-  const renderedBody = substituteVars(amend.body, app);
+  const renderedBody = await renderTemplate(
+    amend.body,
+    buildLeaseRenderContext(app),
+    { partials: createSupabasePartialResolver(supabase) },
+  );
 
   return jsonOk({
     amendment: {

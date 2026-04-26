@@ -1,4 +1,15 @@
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import {
+  renderTemplate,
+  renderTemplateSync,
+  type PartialResolver,
+} from './template-engine.ts';
+import { buildLeaseRenderContext } from './lease-context.ts';
+
+// Re-export so callers that need the partial-resolver type can grab it
+// from the same module they're already importing buildLeasePDF from.
+export type { PartialResolver } from './template-engine.ts';
+export { createSupabasePartialResolver } from './template-engine.ts';
 
 // Word-wrap helper (pdf-lib doesn't auto-wrap)
 function wrapText(text: string, maxWidth: number, fontSize: number, font: import('npm:pdf-lib@1.17.1').PDFFont): string[] {
@@ -40,31 +51,17 @@ function fmtDateTime(d: string | null | undefined): string {
   catch { return d; }
 }
 
+/**
+ * @deprecated Phase 01 — prefer `renderTemplate` from
+ * `_shared/template-engine.ts` together with `buildLeaseRenderContext`
+ * from `_shared/lease-context.ts`. This wrapper exists only so legacy
+ * call sites keep compiling during the rollout and so we have a clear
+ * single-line backward-compat path; it does NOT support
+ * `{% include %}` (use the async renderer if your template needs
+ * partials).
+ */
 export function substituteVars(template: string, app: Record<string, unknown>): string {
-  const vars: Record<string, string> = {
-    tenant_full_name:    `${app.first_name || ''} ${app.last_name || ''}`.trim(),
-    tenant_email:        String(app.email || ''),
-    tenant_phone:        String(app.phone || ''),
-    property_address:    String(app.property_address || ''),
-    lease_start_date:    fmtDate(app.lease_start_date as string),
-    lease_end_date:      fmtDate(app.lease_end_date as string),
-    monthly_rent:        fmtMoney(app.monthly_rent as number),
-    security_deposit:    fmtMoney(app.security_deposit as number),
-    move_in_costs:       fmtMoney(app.move_in_costs as number),
-    landlord_name:       String(app.lease_landlord_name    || 'Choice Properties'),
-    landlord_address:    String(app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083'),
-    late_fee_flat:       app.lease_late_fee_flat  ? fmtMoney(app.lease_late_fee_flat as number) : '',
-    late_fee_daily:      app.lease_late_fee_daily ? fmtMoney(app.lease_late_fee_daily as number) : '',
-    state_code:          String(app.lease_state_code    || 'MI'),
-    pets_policy:         String(app.lease_pets_policy   || 'No pets allowed.'),
-    smoking_policy:      String(app.lease_smoking_policy|| 'No smoking permitted on premises.'),
-    desired_lease_term:  String(app.desired_lease_term  || ''),
-    app_id:              String(app.app_id || app.id || ''),
-    signature_date:      app.signature_timestamp ? fmtDate(app.signature_timestamp as string) : '',
-    tenant_signature:    String(app.tenant_signature || ''),
-    co_applicant_signature: String(app.co_applicant_signature || ''),
-  };
-  return template.replace(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '');
+  return renderTemplateSync(template, buildLeaseRenderContext(app));
 }
 
 /** Replace non-WinAnsi characters with ASCII equivalents so pdf-lib doesn't choke */
@@ -97,7 +94,11 @@ function decodeDataUrl(dataUrl: string | null | undefined): { mime: string; byte
   } catch { return null; }
 }
 
-export async function buildLeasePDF(app: Record<string, unknown>, templateText: string): Promise<Uint8Array> {
+export async function buildLeasePDF(
+  app: Record<string, unknown>,
+  templateText: string,
+  opts?: { partials?: PartialResolver },
+): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const fontNormal = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold   = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -157,8 +158,15 @@ export async function buildLeasePDF(app: Record<string, unknown>, templateText: 
   drawText('RESIDENTIAL LEASE AGREEMENT', 15, fontBold, 4);
   drawText('Choice Properties  ·  2265 Livernois Suite 500, Troy MI 48083', 9, fontNormal, 20);
 
-  // Lease body
-  const rendered = sanitizeForPDF(substituteVars(templateText, app));
+  // Lease body — Phase 01 templating engine. Uses async renderTemplate
+  // so {% include "common/disclaimer" %} (and Phase 03+ state partials)
+  // resolve via the optional partial resolver.
+  const renderedRaw = await renderTemplate(
+    templateText,
+    buildLeaseRenderContext(app),
+    { partials: opts?.partials },
+  );
+  const rendered = sanitizeForPDF(renderedRaw);
   drawWrapped(rendered, bodySize, fontNormal, 4);
 
   // ── Signature block ────────────────────────────────────────
