@@ -410,7 +410,7 @@ await (async function injectInitialListings() {
     'id','title','address','city','state','zip',
     'bedrooms','bathrooms','square_footage','monthly_rent',
     'property_type','parking','pets_allowed','available_date',
-    'utilities_included','featured','lat','lng','status'
+    'utilities_included','lat','lng','status'
   ].join(',');
   const apiPath = '/rest/v1/properties'
     + '?select=' + cols
