@@ -59,7 +59,7 @@ A 13-phase epic that takes the lease subsystem from "Michigan-only Word doc" to 
 | 04 | Disclosures library + EPA pamphlet sourcing | ✅ DONE | `67d764c` (followup) |
 | 05 | Signing security hardening | ✅ DONE | (pre-Apr 26) |
 | 06 | PDF integrity (SHA-256 + audit certificate page + public verify endpoint) | ✅ DONE | `cc6fafc` + `4861c30` + `f7a936c` |
-| 07 | Itemized financials + utility responsibility matrix | ✅ DONE (Apr 26 2026) | `c52a2f9` (1/3) + `8495ec3` (2/3) + `%PHASE07_C3_SHA%` (3/3) |
+| 07 | Itemized financials + utility responsibility matrix | ✅ DONE (Apr 26 2026) | `c52a2f9` (1/3) + `8495ec3` (2/3) + `05573c9` (3/3) |
 | 08 | Move-in/out condition reports | TODO | — |
 | 09 | Deposit accounting (interest, itemised return) | TODO | — |
 | 10 | Leases as first-class records (split from `applications`) | TODO | — |
