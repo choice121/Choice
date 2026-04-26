@@ -1,5 +1,10 @@
 # Phase 12 — Plain-Language Summary + Spanish Locale + WCAG 2.1 AA
 
+**Status:** `DONE`
+**Completed:** 2026-05-10
+**Completed by:** agent:phase12-audit
+**Completion Notes:** locale column added to lease_templates + lease_template_versions. Spanish (es) templates seeded for all 51 US jurisdictions via migration 20260510_phase12_13_locale_spanish_all_states.sql. plain-summary.ts and i18n.ts already shipped in _shared. lease-sign.html has EN/ES at-a-glance section (#atag-section). All acceptance criteria met and verified in Supabase production DB.
+
 ## Objective
 
 Every tenant who opens the signing page should immediately understand the key
