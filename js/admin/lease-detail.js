@@ -200,7 +200,7 @@
       // Phase 05 - signing-token registry (active/used/revoked/expired)
       sb.from('lease_signing_tokens_admin').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
       // Phase 10 - all leases attached to this application (chronological)
-      sb.from('leases').select('id, status, lease_start_date, lease_end_date, monthly_rent, created_at').eq('app_id', _appId).order('created_at', { ascending: false }),
+      sb.from('leases').select('id, lease_status, lease_start_date, lease_end_date, monthly_rent, created_at').eq('app_id', _appId).order('created_at', { ascending: false }),
     ]);
 
     if (appRes.error || !appRes.data) {
@@ -340,11 +340,11 @@
             superseded:       'badge',
             terminated:       'badge error',
             ended:            'badge',
-          })[L.status] || 'badge';
+          })[L.lease_status] || 'badge';
           return `<div class="pdf-row" style="flex-wrap:wrap;gap:8px">
             <div style="flex:1;min-width:240px">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span class="${statusCls}">${S.esc(L.status||'—')}</span>
+                <span class="${statusCls}">${S.esc(L.lease_status||'—')}</span>
                 ${isCurrent ? '<span class="badge success">CURRENT</span>' : ''}
                 <span class="text-xs muted" style="font-family:ui-monospace,monospace">${S.esc(L.id)}</span>
               </div>
