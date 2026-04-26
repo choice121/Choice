@@ -249,7 +249,6 @@
           <div>
             <span style="font-weight:600;color:#92400e">⏱ Unsaved Draft Found</span>
             <span id="resumeBannerAge" style="font-size:.78rem;color:#78350f;margin-left:8px"></span>
-            <div style="font-size:.78rem;font-weight:600;color:#92400e;margin-top:6px">⚠ Photos are not saved in drafts — you will need to re-upload them after resuming.</div>
           </div>
           <div style="display:flex;gap:var(--sp-2)">
             <button class="btn btn-ghost btn-sm" id="discardDraftBtn">Discard</button>
@@ -665,7 +664,7 @@
 
 <script type="module" nonce="VZEkWatH2Jtta2vFy8dRhA">
   import { requireAuth, getLandlordProfile, supabase } from '../js/cp-api.js';
-  import { uploadMultipleToImageKit } from '../js/imagekit.js';
+  import { uploadToImageKit, deleteFromImageKit } from '../js/imagekit.js';
 
   // CSP-safe image error fallback
   document.addEventListener('error', function(e) {
@@ -719,6 +718,13 @@
   const totalSteps = 6;
   const pendingFiles = [];
   const pendingPreviews = [];
+  // Issue #14b: per-photo upload state, parallel-indexed to pendingFiles.
+  //   uploads[i] = { status: 'uploading' | 'ready' | 'error',
+  //                  url?, fileId?, error?, _promise? }
+  // Photos are uploaded to ImageKit as the landlord adds them so they
+  // survive a draft resume; at submit time we just call add_property_photo
+  // for each entry that already reached 'ready'.
+  const uploads = [];
   let geocodedLat = null;
   let geocodedLng = null;
   let _geocodePromise = null;
@@ -762,6 +768,64 @@
 
   let propId = null;
 
+  // ── Issue #14b: per-session draft photo folder + background upload ──
+  // Each fresh draft session gets its own folder under
+  // /properties/_drafts/<token>/ in ImageKit, so abandoned drafts can be
+  // cleaned up later without colliding with live property IDs.
+  function _draftPhotoToken() {
+    let t = sessionStorage.getItem('cp_draft_photo_token');
+    if (!t) {
+      t = (window.crypto?.randomUUID?.()) ||
+          (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      sessionStorage.setItem('cp_draft_photo_token', t);
+    }
+    return t;
+  }
+
+  // Kick off a background upload for pendingFiles[idx] / uploads[idx].
+  // Sets uploads[idx].status to 'ready' or 'error' and triggers a re-render
+  // + autosave on completion. Returns a promise that resolves either way.
+  function kickPhotoUpload(idx) {
+    const file = pendingFiles[idx];
+    if (!file || file._restored) return Promise.resolve();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
+      uploads[idx] = { status: 'error', error: 'Photo upload is not configured.' };
+      renderPhotoGrid();
+      return Promise.resolve();
+    }
+    const slot = uploads[idx] = { status: 'uploading' };
+    const folder = `/properties/_drafts/${_draftPhotoToken()}`;
+    const p = (async () => {
+      try {
+        const accessToken = await window.CP?.Auth?.getAccessToken?.();
+        if (!accessToken) throw new Error('Session expired — please log back in.');
+        const r = await uploadToImageKit(file, {
+          folder,
+          supabaseUrl: CONFIG.SUPABASE_URL,
+          anonKey:     CONFIG.SUPABASE_ANON_KEY,
+          userToken:   accessToken,
+          // No propertyId — listing doesn't exist yet. We commit to
+          // property_photos at submit time via add_property_photo.
+        });
+        if (uploads[idx] === slot) {
+          slot.status = 'ready';
+          slot.url    = r.url;
+          slot.fileId = r.fileId || null;
+          renderPhotoGrid();
+          autosaveDraft();
+        }
+      } catch (e) {
+        if (uploads[idx] === slot) {
+          slot.status = 'error';
+          slot.error  = (e && e.message) || String(e);
+          renderPhotoGrid();
+        }
+      }
+    })();
+    slot._promise = p;
+    return p;
+  }
+
   // ── Autosave to localStorage ──
   let _draftDirty = false;
 
@@ -803,6 +867,18 @@
       leaseTerms:    [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value),
       utilities:     [...document.querySelectorAll('#utilitiesGroup input:checked')].map(c => c.value),
       amenities:     [...document.querySelectorAll('#amenitiesGroup input:checked')].map(c => c.value),
+      // Issue #14b: persist already-uploaded photos so a draft resume
+      // brings them back instead of forcing the landlord to re-upload.
+      // We only save 'ready' photos (URL + fileId from ImageKit). Photos
+      // still uploading or in error state are skipped — they have no
+      // canonical URL yet, so they're effectively lost on resume (the
+      // landlord can re-add them).
+      photos:        uploads.map((u, i) => (u && u.status === 'ready') ? {
+        url:      u.url,
+        fileId:   u.fileId || null,
+        name:     pendingFiles[i]?.name || '',
+        size:     pendingFiles[i]?.size || 0,
+      } : null).filter(Boolean),
     };
     localStorage.setItem('cp_draft_s1', JSON.stringify(draft));
   }
@@ -871,6 +947,27 @@
       document.getElementById('descCount').textContent = s1.description.length;
     }
     if (s1.showingInstructions) document.getElementById('showingInstructions').value = s1.showingInstructions;
+    // Issue #14b: restore previously-uploaded photos. We don't have the
+    // original File objects any more, so we use placeholder entries
+    // marked _restored so kickPhotoUpload skips them. The grid renders
+    // them straight from the ImageKit URL.
+    if (Array.isArray(s1.photos) && s1.photos.length) {
+      for (const ph of s1.photos) {
+        if (!ph || !ph.url) continue;
+        pendingFiles.push({
+          _restored: true,
+          name: ph.name || 'photo',
+          size: ph.size || 0,
+        });
+        pendingPreviews.push(ph.url);
+        uploads.push({
+          status: 'ready',
+          url:    ph.url,
+          fileId: ph.fileId || null,
+        });
+      }
+      renderPhotoGrid();
+    }
   }
 
   // ── Resume banner ──
@@ -883,6 +980,7 @@
       if (age >= SEVEN_DAYS) {
         localStorage.removeItem('cp_draft_s1');
         localStorage.removeItem('cp_draft_propid');
+        sessionStorage.removeItem('cp_draft_photo_token'); // Issue #14b
       } else {
         const banner = document.getElementById('resumeBanner');
         const ageEl = document.getElementById('resumeBannerAge');
@@ -904,6 +1002,7 @@
         document.getElementById('discardDraftBtn').addEventListener('click', () => {
           localStorage.removeItem('cp_draft_s1');
           localStorage.removeItem('cp_draft_propid');
+          sessionStorage.removeItem('cp_draft_photo_token'); // Issue #14b
           banner.style.display = 'none';
           CP.UI.toast('Draft discarded.', 'info');
         });
@@ -1077,6 +1176,11 @@
         reader.readAsDataURL(file);
       }).catch(() => null);
       if (dataUri) addPhotoPreview(dataUri, file);
+      // Issue #14b: kick off the ImageKit upload in the background. The
+      // grid re-renders with a "ready" check (or "failed — retry") badge
+      // when the upload settles, and autosaveDraft() is called on
+      // success so the URL is persisted to localStorage.
+      kickPhotoUpload(pendingFiles.length - 1);
     }
     photoInput.value = '';
   }
@@ -1089,12 +1193,36 @@
     const grid = document.getElementById('photoPreviewGrid');
     grid.innerHTML = '';
     pendingFiles.forEach((file, i) => {
+      const u = uploads[i];
       const item = document.createElement('div');
       item.className = 'photo-preview-item' + (i === 0 ? ' is-cover' : '');
+      // Issue #14b: per-photo upload status overlay.
+      let statusBadge = '';
+      if (u?.status === 'uploading') {
+        statusBadge =
+          `<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);` +
+          `display:flex;align-items:center;justify-content:center;color:#fff;` +
+          `font-size:.72rem;font-weight:600;border-radius:inherit">Uploading…</div>`;
+      } else if (u?.status === 'error') {
+        const safeErr = String(u.error || 'Upload failed').replace(/"/g, '&quot;');
+        statusBadge =
+          `<div class="photo-upload-retry" title="${safeErr}" ` +
+          `style="position:absolute;inset:0;background:rgba(220,38,38,.85);` +
+          `display:flex;align-items:center;justify-content:center;color:#fff;` +
+          `font-size:.7rem;font-weight:600;border-radius:inherit;cursor:pointer;` +
+          `text-align:center;padding:6px">⚠ Upload failed<br>(click to retry)</div>`;
+      } else if (u?.status === 'ready') {
+        statusBadge =
+          `<div title="Uploaded" style="position:absolute;top:6px;left:6px;` +
+          `background:#16a34a;color:#fff;border-radius:50%;width:20px;height:20px;` +
+          `display:flex;align-items:center;justify-content:center;font-size:.66rem;` +
+          `font-weight:700">✓</div>`;
+      }
       item.innerHTML = `
         <img src="${pendingPreviews[i]}" alt="Preview" loading="lazy">
         ${i === 0 ? '<div class="new-cover-label">Cover</div>' : ''}
         <div class="photo-size-badge">${fmtSize(file.size)}</div>
+        ${statusBadge}
         <div class="photo-action-bar">
           ${i !== 0 ? `<button class="photo-action-btn new-cover-btn" title="Set as cover" type="button">★</button>` : ''}
           <button class="photo-action-btn new-delete-btn" title="Remove" type="button">✕</button>
@@ -1103,14 +1231,37 @@
         item.querySelector('.new-cover-btn').addEventListener('click', () => {
           pendingFiles.unshift(pendingFiles.splice(i, 1)[0]);
           pendingPreviews.unshift(pendingPreviews.splice(i, 1)[0]);
+          uploads.unshift(uploads.splice(i, 1)[0]);
           renderPhotoGrid();
+          autosaveDraft();
           CP.UI.toast('Cover photo updated.', 'success');
         });
       }
-      item.querySelector('.new-delete-btn').addEventListener('click', () => {
+      // Issue #14b: retry click on a failed upload re-runs kickPhotoUpload.
+      const retryEl = item.querySelector('.photo-upload-retry');
+      if (retryEl) {
+        retryEl.addEventListener('click', () => kickPhotoUpload(i));
+      }
+      item.querySelector('.new-delete-btn').addEventListener('click', async () => {
+        // Best-effort: remove the file from ImageKit if it was already uploaded.
+        if (u && u.status === 'ready' && u.fileId &&
+            CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+          try {
+            const accessToken = await window.CP?.Auth?.getAccessToken?.();
+            if (accessToken) {
+              deleteFromImageKit(u.fileId, {
+                supabaseUrl: CONFIG.SUPABASE_URL,
+                anonKey:     CONFIG.SUPABASE_ANON_KEY,
+                userToken:   accessToken,
+              }).catch(e => console.warn('cleanup delete failed:', e));
+            }
+          } catch (e) { console.warn('cleanup token fetch failed:', e); }
+        }
         pendingFiles.splice(i, 1);
         pendingPreviews.splice(i, 1);
+        uploads.splice(i, 1);
         renderPhotoGrid();
+        autosaveDraft();
       });
       grid.appendChild(item);
     });
@@ -1161,7 +1312,22 @@
     return true;
   }
   function validatePhotos() {
+    // Issue #14b: gate progression on the actual upload state, not just
+    // on how many files are sitting in the picker. Photos still in flight
+    // would be lost on submit.
+    const inflight = uploads.filter(u => u?.status === 'uploading').length;
+    const ready    = uploads.filter(u => u?.status === 'ready').length;
+    const failed   = uploads.filter(u => u?.status === 'error').length;
     if (pendingFiles.length < 3) return err('Please upload at least 3 photos.');
+    if (inflight > 0) {
+      return err(`${inflight} photo${inflight !== 1 ? 's are' : ' is'} still uploading — please wait a moment.`);
+    }
+    if (ready < 3) {
+      const msg = failed > 0
+        ? `Only ${ready} photo${ready !== 1 ? 's' : ''} uploaded successfully (${failed} failed). Please retry the failed photos or remove them.`
+        : `Only ${ready} photo${ready !== 1 ? 's' : ''} uploaded — at least 3 are required.`;
+      return err(msg);
+    }
     return true;
   }
   function validate5() {
@@ -1307,6 +1473,7 @@
       if (error.code === '23505') {
         localStorage.removeItem('cp_draft_propid');
         localStorage.removeItem('cp_draft_s1');
+        sessionStorage.removeItem('cp_draft_photo_token'); // Issue #14b
         CP.UI.toast('A conflict was detected. Please refresh the page and resubmit.', 'error');
       } else {
         CP.UI.toast('Failed to save listing. Please try again.', 'error');
@@ -1315,52 +1482,48 @@
       return;
     }
 
-    // Phase 3c: photos are now stored exclusively in the property_photos table.
-    // The imagekit-upload edge function inserts each row directly when we pass
-    // propertyId, so the listing must already exist (ownership check). We do
-    // the upload AFTER the property insert. Failures here leave the listing
-    // live with whatever photos succeeded — the landlord can add the rest from
-    // Edit Listing.
-    if (pendingFiles.length) {
-      if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
-        CP.UI.toast('Listing saved, but photo uploads are not configured. You can add photos from Edit Listing.', 'info');
-      } else {
-        const accessToken = await window.CP?.Auth?.getAccessToken?.();
-        if (!accessToken) {
-          CP.UI.toast('Listing saved, but your session expired before photos uploaded. Please log back in and add them from Edit Listing.', 'info');
-        } else {
-          btn.textContent = 'Uploading photos…';
-          const bar = document.getElementById('uploadBar');
-          const txt = document.getElementById('uploadStatusText');
-          const pctLbl = document.getElementById('uploadPct');
-          document.getElementById('uploadProgress').style.display = '';
+    // Issue #14b: photos are uploaded to ImageKit as the landlord adds them
+    // (kickPhotoUpload), so by the time we get here most/all are already in
+    // the CDN. We just need to wait for any in-flight uploads to settle and
+    // then commit the URLs to property_photos via add_property_photo (which
+    // handles the ownership check and assigns display_order).
+    if (uploads.length) {
+      const inflight = uploads.filter(u => u?.status === 'uploading');
+      if (inflight.length) {
+        btn.textContent = `Waiting on ${inflight.length} upload${inflight.length !== 1 ? 's' : ''}…`;
+        await Promise.allSettled(inflight.map(u => u._promise).filter(Boolean));
+      }
+      const ready  = uploads.filter(u => u?.status === 'ready');
+      const failed = uploads.filter(u => u?.status === 'error').length;
+      if (ready.length) {
+        btn.textContent = `Saving photos… (0/${ready.length})`;
+        let done = 0;
+        for (const u of ready) {
           try {
-            let doneCount = 0;
-            const results = await uploadMultipleToImageKit(pendingFiles, {
-              folder:      `/properties/${propId}`,
-              propertyId:  propId,
-              supabaseUrl: CONFIG.SUPABASE_URL,
-              anonKey:     CONFIG.SUPABASE_ANON_KEY,
-              userToken:   accessToken,
-              onFileProgress: (i, pct) => {
-                if (pct === 100) doneCount++;
-                txt.textContent = `Uploading photos… (${doneCount} of ${pendingFiles.length} done)`;
-              },
-              onTotalProgress: (overall) => {
-                bar.style.width = overall + '%';
-                pctLbl.textContent = overall + '%';
-              },
+            const { error: phErr } = await supabase.rpc('add_property_photo', {
+              p_property_id: propId,
+              p_url:         u.url,
+              p_file_id:     u.fileId || '',
             });
-            const failed = results.filter(r => r?.error);
-            if (failed.length > 0) {
-              const names = failed.map(f => `"${f.fileName}"`).join(', ');
-              CP.UI.toast(`Listing saved. ${failed.length} photo(s) skipped: ${names}. You can retry from Edit Listing.`, 'info');
+            if (phErr) {
+              console.warn('add_property_photo failed for', u.url, phErr);
             }
-          } catch (uploadErr) {
-            CP.UI.toast('Listing saved, but photo upload failed: ' + uploadErr.message + '. You can add photos from Edit Listing.', 'info');
+          } catch (rpcErr) {
+            console.warn('add_property_photo threw for', u.url, rpcErr);
           }
-          document.getElementById('uploadProgress').style.display = 'none';
+          done++;
+          btn.textContent = `Saving photos… (${done}/${ready.length})`;
         }
+      } else if (!failed) {
+        // No ready photos and no failures — should not happen because we
+        // gate validation on ready ≥ 3, but log just in case.
+        console.warn('Submit reached photo step with no ready or failed photos.');
+      }
+      if (failed > 0) {
+        CP.UI.toast(
+          `Listing saved. ${failed} photo${failed !== 1 ? 's' : ''} had upload errors. You can retry from Edit Listing.`,
+          'info'
+        );
       }
     }
 
@@ -1394,6 +1557,7 @@
     _draftDirty = false;
     localStorage.removeItem('cp_draft_propid');
     localStorage.removeItem('cp_draft_s1');
+    sessionStorage.removeItem('cp_draft_photo_token'); // Issue #14b
     sessionStorage.removeItem('cp_listing_preview');
 
     let redirectTimer = setTimeout(() => { window.location.href = '/landlord/dashboard.html'; }, 8000);
