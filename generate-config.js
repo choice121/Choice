@@ -371,6 +371,18 @@ htmlFiles.forEach(function(file) {
   });
   if (afterNonce !== src) { src = afterNonce; modified = true; }
 
+  // Step C2: inject the client-side error reporter as the first <head> script
+  // so it can capture errors from later-loading scripts. Idempotent — only
+  // injects if the file isn't already referenced.
+  if (!/cp-error-reporter\.js/.test(src)) {
+    const reporterTag =
+      '\n  <script src="/js/cp-error-reporter.js?v=' + BUILD_VERSION + '"></script>';
+    const afterReporter = src.replace(/<head\b([^>]*)>/i, function (m) {
+      return m + reporterTag;
+    });
+    if (afterReporter !== src) { src = afterReporter; modified = true; }
+  }
+
   // Step D: inject nav + footer into their placeholder slots
   if (buildNavHtml) {
     const afterNav = src.replace(
