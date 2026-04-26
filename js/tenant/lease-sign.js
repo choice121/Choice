@@ -44,6 +44,12 @@
     let _addendaSlugs = [];
     const _addendaAcked = new Set();
 
+    // Phase 05 - E-SIGN consent state. Cached so we know whether to show the
+    // consent panel before revealing the lease body / sign section.
+    let _consentRequired       = false;
+    let _disclosureVersion     = null;
+    let _signerEmailFromServer = '';
+
     // ----- State helpers -----
     function showState(state) {
       ['loading', 'error', 'success', 'form'].forEach(s => {
@@ -200,6 +206,119 @@
       updateSignBtn();
     }
 
+    // ----- Phase 05: E-SIGN consent panel -----
+    function renderConsentPanel(disclosure, signerEmail) {
+      // Populate disclosure text
+      const introEl    = document.getElementById('consent-intro');
+      const hwEl       = document.getElementById('ack-hardware-body');
+      const paperEl    = document.getElementById('ack-paper-body');
+      const wdEl       = document.getElementById('ack-withdrawal-body');
+      const procEl     = document.getElementById('consent-procedures');
+
+      if (introEl) introEl.textContent  = disclosure.intro || '';
+      if (hwEl)    hwEl.textContent     = disclosure.hardware_software || '';
+      if (paperEl) paperEl.textContent  = disclosure.paper_copy_right || '';
+      if (wdEl)    wdEl.textContent     = disclosure.withdrawal_right || '';
+      if (procEl) {
+        procEl.innerHTML =
+          '<strong>How to request a paper copy:</strong> ' + esc(disclosure.paper_copy_procedure || '') +
+          '<br><strong>How to withdraw consent:</strong> ' + esc(disclosure.withdrawal_procedure || '') +
+          '<br><strong>Contact:</strong> ' + esc(disclosure.contact_email || '') + ' &middot; ' + esc(disclosure.contact_phone || '');
+      }
+
+      // Pre-fill the signer email if we have it
+      const emailInputC = document.getElementById('consent-email');
+      if (emailInputC && signerEmail) emailInputC.value = signerEmail;
+
+      // Show/hide sections
+      document.getElementById('consent-section').style.display = '';
+      document.querySelector('.lease-text-wrap').style.display = 'none';
+      const addSec = document.getElementById('addenda-section');
+      if (addSec) addSec.style.display = 'none';
+      document.querySelector('.sign-section').style.display = 'none';
+
+      // Wire up checkboxes -> button enable
+      const ackIds  = ['ack-hardware', 'ack-paper', 'ack-withdrawal'];
+      const btnC    = document.getElementById('btn-consent');
+      const updateConsentBtn = () => {
+        const allAcked = ackIds.every(id => document.getElementById(id).checked);
+        const emailVal = (emailInputC?.value || '').trim();
+        const hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+        btnC.disabled = !(allAcked && hasEmail);
+      };
+      ackIds.forEach(id => {
+        const cb = document.getElementById(id);
+        cb.addEventListener('change', () => {
+          cb.closest('.consent-ack').classList.toggle('checked', cb.checked);
+          updateConsentBtn();
+        });
+      });
+      if (emailInputC) emailInputC.addEventListener('input', updateConsentBtn);
+      updateConsentBtn();
+
+      // Wire up the consent submit button
+      btnC.addEventListener('click', submitConsent);
+    }
+
+    async function submitConsent() {
+      const btnC      = document.getElementById('btn-consent');
+      const errEl     = document.getElementById('consent-error');
+      const emailEl   = document.getElementById('consent-email');
+      const txtEl     = document.getElementById('btn-consent-text');
+      if (!btnC || !errEl || !emailEl) return;
+
+      btnC.disabled = true;
+      txtEl.textContent = 'Submitting\u2026';
+      errEl.style.display = 'none';
+
+      const body = {
+        token:                          _activeToken,
+        signer_email:                   emailEl.value.trim(),
+        hardware_software_acknowledged: document.getElementById('ack-hardware').checked,
+        paper_copy_right_acknowledged:  document.getElementById('ack-paper').checked,
+        withdrawal_right_acknowledged:  document.getElementById('ack-withdrawal').checked,
+        user_agent:                     navigator.userAgent,
+        disclosure_version:             _disclosureVersion,
+      };
+
+      let resp, json;
+      try {
+        resp = await fetch(SERVER_BASE + '/record-esign-consent', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
+          body:    JSON.stringify(body),
+        });
+        json = await resp.json();
+      } catch {
+        errEl.textContent = 'Connection error. Please try again.';
+        errEl.style.display = 'block';
+        btnC.disabled = false;
+        txtEl.textContent = 'I Consent \u2014 Continue to the Document';
+        return;
+      }
+
+      if (!resp.ok || !json.success) {
+        errEl.textContent = json.error || 'Consent could not be recorded. Please try again.';
+        errEl.style.display = 'block';
+        btnC.disabled = false;
+        txtEl.textContent = 'I Consent \u2014 Continue to the Document';
+        return;
+      }
+
+      // Success: hide consent panel, reveal lease body / addenda / sign section,
+      // and pre-fill the signer-email field on the sign section so the user
+      // does not have to type it twice.
+      _consentRequired = false;
+      document.getElementById('consent-section').style.display = 'none';
+      document.querySelector('.lease-text-wrap').style.display = '';
+      const addSec = document.getElementById('addenda-section');
+      if (addSec && _addendaSlugs.length) addSec.style.display = '';
+      document.querySelector('.sign-section').style.display = '';
+      const emailInput2 = document.getElementById('signer-email');
+      if (emailInput2 && !emailInput2.value) emailInput2.value = body.signer_email;
+      updateSignBtn();
+    }
+
     // ----- Loading -----
     async function loadLease() {
       if (!token && !amendmentToken) {
@@ -240,6 +359,11 @@
       const app = json.app;
       _appForLink = app;
 
+      // Phase 05 - cache consent state from server
+      _consentRequired       = !!json.consent_required;
+      _disclosureVersion     = json.esign_disclosure_version || null;
+      _signerEmailFromServer = (json.signer && json.signer.email) || (app && app.email) || '';
+
       if (isAmendment) {
         _mode = 'amendment';
         applySignerMode('amendment', json.signer?.name);
@@ -262,6 +386,12 @@
         if (rendered) document.getElementById('rendered-notice').textContent = 'Scroll to review full lease';
         // Phase 04 - addenda
         renderAddenda(json.addenda || []);
+      }
+
+      // Phase 05 - if E-SIGN consent is needed for this signer, gate the
+      // entire lease body + sign section behind the disclosure step.
+      if (_consentRequired && json.esign_disclosure) {
+        renderConsentPanel(json.esign_disclosure, _signerEmailFromServer);
       }
 
       showState('form');

@@ -91,6 +91,29 @@
       .checkbox-row input{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#1d4ed8}
       .checkbox-row span{font-size:.82rem;color:var(--text);line-height:1.55}
 
+      /* Phase 05 -- E-SIGN consent step (15 USC 7001(c)) */
+      .consent-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}
+      .consent-banner{padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:18px;font-size:.82rem;line-height:1.6;color:#1e3a8a;display:flex;gap:10px;align-items:flex-start}
+      .consent-banner .c-icon{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;margin-top:1px}
+      .consent-banner strong{color:#1d4ed8;font-weight:700}
+      .consent-h{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px}
+      .consent-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6}
+      .consent-ack{padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:background .15s,border-color .15s}
+      .consent-ack:hover{background:#f8fafc}
+      .consent-ack.checked{background:#f0fdf4;border-color:#86efac}
+      .consent-ack input{width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#1d4ed8}
+      .consent-ack.checked input{accent-color:#15803d}
+      .consent-ack-text{flex:1;min-width:0}
+      .consent-ack-title{font-size:.84rem;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.4}
+      .consent-ack-body{font-size:.76rem;color:var(--muted);line-height:1.55}
+      .consent-procedures{margin-top:14px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:.74rem;color:#78350f;line-height:1.6}
+      .consent-procedures strong{color:#7c2d12}
+      .btn-consent{width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(29,78,216,.25);font-family:inherit;transition:opacity .15s}
+      .btn-consent:hover:not(:disabled){opacity:.92}
+      .btn-consent:disabled{background:var(--surface);color:var(--muted);border:1px solid var(--border);box-shadow:none;cursor:not-allowed}
+      .consent-email-block{margin-bottom:16px}
+      .consent-email-label{font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px}
+
       .btn-sign{width:100%;padding:14px;background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border:none;border-radius:10px;font-size:.96rem;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(34,197,94,.25);font-family:inherit}
       .btn-sign:hover:not(:disabled){opacity:.9}
       .btn-sign:disabled{background:var(--surface);color:var(--muted);border:1px solid var(--border);box-shadow:none;cursor:not-allowed}
@@ -168,6 +191,54 @@
           <div class="signer-banner" id="signer-banner" style="display:none"></div>
 
           <div class="info-grid" id="info-grid"></div>
+
+          <!-- Phase 05 -- E-SIGN consent step (hidden until consent_required=true) -->
+          <div class="consent-section" id="consent-section" style="display:none">
+            <div class="consent-banner">
+              <span class="c-icon">!</span>
+              <span><strong>One-time consent required.</strong> Before you can view and sign this document electronically, federal law requires us to collect your consent on three specific points. This is a one-time step.</span>
+            </div>
+
+            <div class="consent-h">Electronic Signature Consent (E-SIGN Act)</div>
+            <div class="consent-sub" id="consent-intro"></div>
+
+            <div class="consent-email-block">
+              <label for="consent-email" class="consent-email-label">Confirm your email address (the one we contacted you at)</label>
+              <input class="sig-input" id="consent-email" type="email" placeholder="e.g. jane@email.com" autocomplete="email" spellcheck="false" style="font-style:normal;font-size:.92rem">
+            </div>
+
+            <label class="consent-ack" for="ack-hardware">
+              <input type="checkbox" id="ack-hardware">
+              <div class="consent-ack-text">
+                <div class="consent-ack-title">1. System Requirements</div>
+                <div class="consent-ack-body" id="ack-hardware-body"></div>
+              </div>
+            </label>
+
+            <label class="consent-ack" for="ack-paper">
+              <input type="checkbox" id="ack-paper">
+              <div class="consent-ack-text">
+                <div class="consent-ack-title">2. Right to a Paper Copy</div>
+                <div class="consent-ack-body" id="ack-paper-body"></div>
+              </div>
+            </label>
+
+            <label class="consent-ack" for="ack-withdrawal">
+              <input type="checkbox" id="ack-withdrawal">
+              <div class="consent-ack-text">
+                <div class="consent-ack-title">3. Right to Withdraw Consent</div>
+                <div class="consent-ack-body" id="ack-withdrawal-body"></div>
+              </div>
+            </label>
+
+            <div class="consent-procedures" id="consent-procedures"></div>
+
+            <div class="error-msg" id="consent-error"></div>
+
+            <button class="btn-consent" id="btn-consent" type="button" disabled>
+              <span id="btn-consent-text">I Consent &mdash; Continue to the Document</span>
+            </button>
+          </div>
 
           <div class="lease-text-wrap">
             <div class="lease-text-header">

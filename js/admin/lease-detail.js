@@ -60,12 +60,14 @@
       return;
     }
 
-    const [appRes, eventsRes, pdfsRes, amendmentsRes, ver] = await Promise.all([
+    const [appRes, eventsRes, pdfsRes, amendmentsRes, ver, tokensRes] = await Promise.all([
       sb.from('applications').select('*').eq('app_id', _appId).single(),
       sb.from('sign_events').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
       sb.from('lease_pdf_versions').select('*').eq('app_id', _appId).order('version_number', { ascending: false }),
       sb.from('lease_amendments').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
       sb.from('admin_actions').select('action, created_at, metadata').eq('target_id', _appId).eq('target_type','application').order('created_at',{ascending:false}).limit(50),
+      // Phase 05 - signing-token registry (active/used/revoked/expired)
+      sb.from('lease_signing_tokens_admin').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
     ]);
 
     if (appRes.error || !appRes.data) {
@@ -84,10 +86,29 @@
       pdfs:   pdfsRes.data || [],
       amends: amendmentsRes.data || [],
       actions: ver.data || [],
+      tokens:  tokensRes.data || [],
     });
   }
 
-  function render({ app, events, pdfs, amends, actions }) {
+  // Phase 05 -- map status -> badge class + label
+  function tokenStatusBadge(status) {
+    const cls = ({
+      active:  'badge success',
+      used:    'badge',
+      revoked: 'badge error',
+      expired: 'badge warn',
+    })[status] || 'badge';
+    return `<span class="${cls}">${status}</span>`;
+  }
+  function tokenRoleLabel(role) {
+    return ({
+      tenant:       'Primary tenant',
+      co_applicant: 'Co-applicant',
+      amendment:    'Amendment',
+    })[role] || role;
+  }
+
+  function render({ app, events, pdfs, amends, actions, tokens }) {
     const name = `${app.first_name||''} ${app.last_name||''}`.trim() || '(no name)';
     const root = document.getElementById('lease-detail-root');
 
@@ -121,6 +142,39 @@
             <button class="btn btn-ghost btn-sm" data-action="dl-pdf" data-path="${S.esc(p.storage_path)}">Download</button>
           </div>`).join('')
       : '<div class="text-sm muted" style="padding:14px;text-align:center">No PDF versions yet.</div>';
+
+    // Phase 05 -- signing-token registry rows
+    const tokensHtml = (tokens && tokens.length)
+      ? tokens.map(t => {
+          const masked = (t.token || '').slice(0, 8) + '\u2026' + (t.token || '').slice(-4);
+          const isActive = t.status === 'active';
+          const tokenAttr = S.esc(t.token || '');
+          const roleAttr  = S.esc(t.signer_role || '');
+          const amendAttr = t.amendment_id ? S.esc(t.amendment_id) : '';
+          const reasonLine = t.revoke_reason
+            ? `<div class="text-xs muted">Reason: ${S.esc(t.revoke_reason)}</div>` : '';
+          const usedLine = t.used_at
+            ? `<div class="text-xs muted">Used ${S.esc(fmt(t.used_at))}</div>` : '';
+          const ipLine = t.ip_address
+            ? `<div class="text-xs muted">IP ${S.esc(t.ip_address)}</div>` : '';
+          return `<div class="pdf-row" style="flex-wrap:wrap;gap:8px">
+            <div style="flex:1;min-width:240px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                ${tokenStatusBadge(t.status)}
+                <span class="text-strong" style="font-size:.84rem">${S.esc(tokenRoleLabel(t.signer_role))}</span>
+                ${t.signer_email ? `<span class="text-xs muted">&middot; ${S.esc(t.signer_email)}</span>` : ''}
+              </div>
+              <div class="text-xs muted" style="margin-top:4px;font-family:ui-monospace,monospace">${S.esc(masked)}</div>
+              <div class="text-xs muted">Issued ${S.esc(fmt(t.created_at))}${t.expires_at ? ' &middot; expires ' + S.esc(fmt(t.expires_at)) : ''}</div>
+              ${usedLine}${ipLine}${reasonLine}
+            </div>
+            <div class="row-flex gap-2">
+              ${isActive ? `<button class="btn btn-ghost btn-sm" data-action="revoke-token" data-token="${tokenAttr}" data-role="${roleAttr}">Revoke</button>` : ''}
+              ${isActive ? `<button class="btn btn-ghost btn-sm" data-action="resend-token" data-role="${roleAttr}"${amendAttr ? ` data-amendment="${amendAttr}"` : ''}>Resend</button>` : ''}
+            </div>
+          </div>`;
+        }).join('')
+      : '<div class="text-sm muted" style="padding:14px;text-align:center">No signing tokens have been issued for this lease yet.</div>';
 
     const amendsHtml = amends.length
       ? amends.map(a => `<div class="amend-card">
@@ -188,6 +242,17 @@
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-body">
+          <div class="row-flex between" style="margin-bottom:10px">
+            <h3 style="font-size:.92rem;font-weight:700">Signing tokens</h3>
+            <span class="text-xs muted">Single-use links sent to signers</span>
+          </div>
+          <p class="text-xs muted" style="margin-bottom:10px">Each row is a signing link. Active links can be revoked or replaced; revoking immediately invalidates the link the signer received in their email.</p>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">${tokensHtml}</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
           <h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Amendments &amp; addenda</h3>
           ${amendsHtml}
         </div>
@@ -208,6 +273,61 @@
     const { data, error } = await sb.storage.from('lease-pdfs').createSignedUrl(path, 600);
     if (error || !data?.signedUrl) { S.toast('Could not get download link: ' + (error?.message||'unknown'), 'error'); return; }
     window.open(data.signedUrl, '_blank');
+  }
+
+  // Phase 05 -- revoke a single signing token
+  async function revokeToken(token, role) {
+    if (!token) return;
+    const reason = await S.formSheet({
+      title: 'Revoke signing token',
+      submit: 'Revoke link',
+      fields: [
+        { name: 'reason', label: 'Reason (visible in audit log)', required: true,
+          placeholder: 'e.g. signer requested a fresh link' },
+      ],
+    });
+    if (!reason) return;
+    if (!reason.reason || !reason.reason.trim()) { S.toast('Reason required', 'error'); return; }
+
+    S.toast('Revoking link\u2026');
+    const res = await S.callFn('/revoke-signing-token', {
+      token,
+      reason: reason.reason.trim(),
+    });
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json.error || 'Revoke failed', 'error'); return; }
+    S.toast('Signing link revoked. The signer can no longer use it.', 'success');
+    await loadAll();
+  }
+
+  // Phase 05 -- reissue a fresh signing token (and email it)
+  async function resendToken(role, amendmentId) {
+    if (!role) return;
+    const data = await S.formSheet({
+      title: 'Resend signing link',
+      submit: 'Reissue & send',
+      fields: [
+        { name: 'send_email', type: 'checkbox', label: 'Email',
+          checkLabel: 'Email the new link to the signer immediately', value: true },
+      ],
+    });
+    if (!data) return;
+
+    const payload = {
+      app_id: _appId,
+      role,
+      send_email: !!data.send_email,
+    };
+    if (amendmentId) payload.amendment_id = amendmentId;
+
+    S.toast('Reissuing link\u2026');
+    const res = await S.callFn('/resend-signing-link', payload);
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json.error || 'Reissue failed', 'error'); return; }
+    S.toast(data.send_email
+      ? 'New link issued and emailed. Any prior link for this signer has been revoked.'
+      : 'New link issued. Any prior link for this signer has been revoked.', 'success');
+    await loadAll();
   }
 
   async function newAmendment() {
@@ -265,6 +385,11 @@
       if (dlLatest && _app) return downloadPath(_app.lease_pdf_url);
       const newAmd = e.target.closest('[data-action="new-amendment"]');
       if (newAmd) return newAmendment();
+      // Phase 05 -- signing-token actions
+      const rev = e.target.closest('[data-action="revoke-token"]');
+      if (rev) return revokeToken(rev.dataset.token, rev.dataset.role);
+      const rs  = e.target.closest('[data-action="resend-token"]');
+      if (rs) return resendToken(rs.dataset.role, rs.dataset.amendment || null);
     });
 
     const okAuth = await S.requireAdmin();
