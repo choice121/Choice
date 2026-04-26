@@ -3752,3 +3752,224 @@ body[data-portal="public"] .property-card-fresh-dot {
   body[data-portal="public"] .property-card-fresh-dot { animation: none; }
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.3 — How It Works: vertical scroll-progress timeline        ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.3, agent_issues #33) ║
+   ║                                                                      ║
+   ║  - Vertical rail with progress fill driven by --hiw-progress (0-1)  ║
+   ║    set by the inline rAF script in the section.                      ║
+   ║  - Step bubbles transition to active state when their center crosses ║
+   ║    the viewport anchor (55% down).                                   ║
+   ║  - Reduced motion: rail full, all steps active by default, no transit║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+body[data-portal="public"][data-page="home"] .mv2-hiw {
+  background: #FFFFFF;
+  padding: var(--mv2-section-y-mobile) 0;
+  position: relative;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-hiw {
+    padding: var(--mv2-section-y-desktop) 0;
+  }
+}
+
+/* Header */
+body[data-portal="public"][data-page="home"] .mv2-hiw__header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--mv2-stack-7);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__header .mv2-eyebrow {
+  justify-content: center;
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__subtitle {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: var(--mv2-stack-3) auto 0;
+  max-width: 56ch;
+}
+
+/* ── Track + rail ─────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__track {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  position: relative;
+  max-width: 760px;
+  --hiw-progress: 0;
+  --hiw-bubble-size: 56px;
+  --hiw-rail-x: 28px;          /* center of bubble = (56/2) */
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-hiw__track {
+    --hiw-bubble-size: 72px;
+    --hiw-rail-x: 36px;
+  }
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__rail {
+  position: absolute;
+  top: var(--hiw-bubble-size);
+  bottom: var(--hiw-bubble-size);
+  left: var(--hiw-rail-x);
+  width: 2px;
+  background: var(--mv2-hairline);
+  transform: translateX(-1px);
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 0;
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__rail-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, var(--mv2-brand) 0%, var(--mv2-brand-dark) 100%);
+  transform: scaleY(var(--hiw-progress));
+  transform-origin: top center;
+  transition: transform 240ms var(--mv2-ease);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-hiw__rail-fill { transition: none; }
+}
+
+/* ── Step row ─────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--hiw-bubble-size) 1fr;
+  gap: clamp(16px, 3vw, 28px);
+  align-items: flex-start;
+  padding: 8px 0 clamp(36px, 6vw, 72px);
+  z-index: 1;
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__step:last-child {
+  padding-bottom: 0;
+}
+
+/* ── Bubble (default = pre-active state) ──────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__bubble {
+  width: var(--hiw-bubble-size);
+  height: var(--hiw-bubble-size);
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--mv2-hairline);
+  color: var(--mv2-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  transition: background var(--mv2-dur-lg) var(--mv2-ease),
+              border-color var(--mv2-dur-lg) var(--mv2-ease),
+              color var(--mv2-dur-lg) var(--mv2-ease),
+              transform var(--mv2-dur-lg) var(--mv2-ease),
+              box-shadow var(--mv2-dur-lg) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__bubble-num {
+  font-family: var(--mv2-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(0.95rem, 0.9rem + 0.3vw, 1.15rem);
+  line-height: 1;
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: inherit;
+  opacity: 0.65;
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__bubble-icon {
+  font-size: clamp(18px, 1.2vw + 14px, 24px);
+}
+
+/* ── Bubble: active state ─────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__step.is-active .mv2-hiw__bubble {
+  background: var(--mv2-brand);
+  border-color: var(--mv2-brand);
+  color: #FFFFFF;
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(0, 106, 255, 0.28);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__step.is-active .mv2-hiw__bubble-num {
+  opacity: 0.9;
+}
+
+/* ── Step body ────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__body {
+  padding-top: 6px;
+  transition: opacity var(--mv2-dur-lg) var(--mv2-ease),
+              transform var(--mv2-dur-lg) var(--mv2-ease);
+  opacity: 0.62;
+  transform: translateY(2px);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__step.is-active .mv2-hiw__body {
+  opacity: 1;
+  transform: translateY(0);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__step-title {
+  font-family: var(--mv2-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+  line-height: 1.25;
+  color: var(--mv2-ink);
+  margin: 0 0 8px;
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__step-desc {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: 0;
+  max-width: 56ch;
+}
+
+/* Reduced motion fallback: all bodies fully visible by default */
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-hiw__bubble,
+  body[data-portal="public"][data-page="home"] .mv2-hiw__body { transition: none; }
+  body[data-portal="public"][data-page="home"] .mv2-hiw__body { opacity: 1; transform: none; }
+}
+
+/* ── CTA ──────────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hiw__cta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mv2-stack-3);
+  align-items: center;
+  margin-top: var(--mv2-stack-7);
+  text-align: center;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-hiw__cta {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--mv2-stack-5);
+  }
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mv2-brand);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link:hover {
+  color: var(--mv2-brand-dark);
+  border-bottom-color: var(--mv2-brand);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link i {
+  font-size: 12px;
+  transition: transform var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link:hover i { transform: translateX(3px); }
+
+/* ╚══════════════════════════════════════════════════════════════════╝ */

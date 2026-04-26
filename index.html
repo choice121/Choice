@@ -267,55 +267,128 @@
   </div>
 </section>
 
-<!-- ── How It Works ── -->
-<section class="hiw-section" id="how-it-works">
-  <div class="hiw-section-glow"></div>
+<!-- ── How It Works (Phase 9.3 mv2 vertical scroll-progress timeline) ── -->
+<section class="hiw-section mv2-hiw" id="how-it-works" aria-labelledby="hiw-heading">
   <div class="container">
-    <div class="hiw-header">
-      <div class="section-eyebrow hiw-eyebrow">Simple Process</div>
-      <h2 class="hiw-title">A Clear, Structured Path to Your Next Home</h2>
-      <p class="hiw-subtitle">Apply → Payment → Review → Approval → Reservation → Lease → Move-In. Every step is transparent, and you always know where you stand.</p>
-    </div>
-    <div class="hiw-track">
-      <div class="hiw-connector"></div>
-      <div class="hiw-steps">
-        <div class="hiw-step">
-          <div class="hiw-step-bubble">
-            <span>01</span>
-          </div>
-          <div class="hiw-step-body">
-            <div class="hiw-step-icon"><i class="fas fa-search"></i></div>
-            <h3 class="hiw-step-title">Find Your Home</h3>
-            <p class="hiw-step-desc">Browse verified rentals across our active markets. Filter by bedrooms, price, pet policy, and more to find your perfect fit.</p>
-          </div>
+    <header class="mv2-hiw__header">
+      <p class="mv2-eyebrow">Simple Process</p>
+      <h2 id="hiw-heading" class="mv2-headline mv2-headline--md">
+        From browse to keys, in <em>three clear steps</em>.
+      </h2>
+      <p class="mv2-hiw__subtitle">
+        Apply, get reviewed, sign, move in. Every step is transparent — and
+        you always know where you stand.
+      </p>
+    </header>
+
+    <ol class="mv2-hiw__track" role="list">
+      <!-- Vertical progress rail (decorative). Fills based on scroll. -->
+      <span class="mv2-hiw__rail" aria-hidden="true">
+        <span class="mv2-hiw__rail-fill"></span>
+      </span>
+
+      <li class="mv2-hiw__step" data-step="1">
+        <div class="mv2-hiw__bubble" aria-hidden="true">
+          <span class="mv2-hiw__bubble-num">01</span>
+          <i class="fas fa-search mv2-hiw__bubble-icon"></i>
         </div>
-        <div class="hiw-step">
-          <div class="hiw-step-bubble">
-            <span>02</span>
-          </div>
-          <div class="hiw-step-body">
-            <div class="hiw-step-icon"><i class="fas fa-file-alt"></i></div>
-            <h3 class="hiw-step-title">Apply &amp; Activate Review</h3>
-            <p class="hiw-step-desc">Complete our secure 15-minute application. After submission, a $50 application fee activates your file for active review — typically within 24 to 72 hours.</p>
-          </div>
+        <div class="mv2-hiw__body">
+          <h3 class="mv2-hiw__step-title">Find your home</h3>
+          <p class="mv2-hiw__step-desc">
+            Browse verified rentals across our active markets. Filter by
+            bedrooms, price, pet policy, and more to find your perfect fit.
+          </p>
         </div>
-        <div class="hiw-step">
-          <div class="hiw-step-bubble hiw-step-bubble--last">
-            <span>03</span>
-          </div>
-          <div class="hiw-step-body">
-            <div class="hiw-step-icon"><i class="fas fa-key"></i></div>
-            <h3 class="hiw-step-title">Reserve, Sign &amp; Move In</h3>
-            <p class="hiw-step-desc">If selected, reserve your unit with a holding fee (credited toward move-in), sign your lease digitally, and coordinate your move-in. Welcome home.</p>
-          </div>
+      </li>
+
+      <li class="mv2-hiw__step" data-step="2">
+        <div class="mv2-hiw__bubble" aria-hidden="true">
+          <span class="mv2-hiw__bubble-num">02</span>
+          <i class="fas fa-file-alt mv2-hiw__bubble-icon"></i>
         </div>
-      </div>
-    </div>
-    <div class="hiw-cta">
-      <a href="/listings.html" class="btn btn-primary btn-lg">Browse Listings</a>
-      <a href="/how-to-apply.html" class="hiw-cta-link">Learn more about the process <i class="fas fa-arrow-right"></i></a>
+        <div class="mv2-hiw__body">
+          <h3 class="mv2-hiw__step-title">Apply &amp; activate review</h3>
+          <p class="mv2-hiw__step-desc">
+            Complete our secure 15-minute application. A flat $50 fee
+            activates your file for active review — typically within 24–72 hours.
+          </p>
+        </div>
+      </li>
+
+      <li class="mv2-hiw__step" data-step="3">
+        <div class="mv2-hiw__bubble" aria-hidden="true">
+          <span class="mv2-hiw__bubble-num">03</span>
+          <i class="fas fa-key mv2-hiw__bubble-icon"></i>
+        </div>
+        <div class="mv2-hiw__body">
+          <h3 class="mv2-hiw__step-title">Reserve, sign &amp; move in</h3>
+          <p class="mv2-hiw__step-desc">
+            If selected, reserve your unit with a holding fee (credited toward
+            move-in), sign your lease digitally, and coordinate move-in. Welcome home.
+          </p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="mv2-hiw__cta">
+      <a href="/listings.html" class="mv2-btn mv2-btn--primary">
+        <span>Browse listings</span>
+        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+      <a href="/how-to-apply.html" class="mv2-hiw__cta-link">
+        <span>Learn more about the process</span>
+        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
     </div>
   </div>
+
+  <!-- Scroll-progress driver (Phase 9.3). No-op under prefers-reduced-motion. -->
+  <script>
+  (function () {
+    if (!('querySelector' in document)) return;
+    var prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var section = document.getElementById('how-it-works');
+    if (!section) return;
+    var track = section.querySelector('.mv2-hiw__track');
+    if (!track) return;
+    var steps = track.querySelectorAll('.mv2-hiw__step');
+    if (!steps.length) return;
+
+    if (prefersReduce) {
+      // Reduced motion: render all steps active by default, full progress.
+      track.style.setProperty('--hiw-progress', '1');
+      steps.forEach(function (s) { s.classList.add('is-active'); });
+      return;
+    }
+
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var rect = track.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var anchor = vh * 0.55;
+      var progress = (anchor - rect.top) / Math.max(1, rect.height);
+      if (progress < 0) progress = 0;
+      if (progress > 1) progress = 1;
+      track.style.setProperty('--hiw-progress', progress.toFixed(3));
+
+      for (var i = 0; i < steps.length; i++) {
+        var bubble = steps[i].querySelector('.mv2-hiw__bubble') || steps[i];
+        var bRect = bubble.getBoundingClientRect();
+        var bMid  = bRect.top + bRect.height / 2;
+        steps[i].classList.toggle('is-active', bMid <= anchor);
+      }
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+  })();
+  </script>
 </section>
 
 <!-- ── Testimonials ── -->
