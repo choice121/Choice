@@ -57,6 +57,7 @@
   </style>
 <script defer src="/config.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
 <script type="module" src="/js/cp-api.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/components.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/card-builder.js?v=__BUILD_VERSION__"></script>
@@ -1003,13 +1004,7 @@ function updateFilterBadge() {
   }
 
 /* ─── Utilities ─── */
-
-function setupScrollTop() {
-  const btn = document.getElementById('scrollTopBtn');
-  if (!btn) return;
-  window.addEventListener('scroll', () => btn.classList.toggle('visible', window.scrollY > 400), { passive: true });
-  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-}
+/* setupScrollTop() and showToast() are provided as window globals by /js/cp-ui.js (issue #16 dedup). */
 
 function renderError(errorMsg = 'Failed to load listings') {
   const grid = document.getElementById('propertyGrid');
@@ -1028,22 +1023,7 @@ function renderError(errorMsg = 'Failed to load listings') {
 }
 
 
-function showToast(msg, type = 'info') {
-  const c = document.getElementById('toastContainer');
-  if (!c) return;
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
-  t.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i> ${msg}`;
-  c.appendChild(t);
-  const duration = type === 'error' ? 5000 : 3200;
-  setTimeout(() => {
-    t.style.opacity = '0';
-    t.style.transform = 'translateY(6px) scale(0.97)';
-    t.style.transition = 'all 280ms';
-    setTimeout(() => t.remove(), 280);
-  }, duration);
-}
+// showToast() is provided as a window global by /js/cp-ui.js (issue #16 dedup).
 
 async function toggleSave(id, btn) {
   btn.disabled = true;

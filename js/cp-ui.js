@@ -1,6 +1,6 @@
 /* ============================================================
- * cp-ui.js — Shared UI helpers for ALL dashboards
- *   CP.UI.toast(msg, opts)        – transient bottom toast
+ * cp-ui.js — Shared UI helpers for ALL pages (dashboards + public)
+ *   CP.UI.toast(msg, opts)        – transient bottom toast (ds-toast styling, dashboards)
  *   CP.UI.empty(el, opts)         – render empty-state
  *   CP.UI.skeleton(el, n)         – render skeleton loaders
  *   CP.UI.badge(status)           – consistent status pill HTML
@@ -10,6 +10,11 @@
  *   CP.UI.fmtPhone(p)             – US phone formatter, null-safe
  *   CP.UI.esc(s)                  – HTML-escape, null-safe
  *
+ * Public-page legacy helpers (added in v2 for issue #16 dedup):
+ *   window.showToast(msg, type)   – legacy public-page toast (#toastContainer + .toast.{type} + FA icons)
+ *                                   Used by index.html, listings.html, property.html.
+ *   window.setupScrollTop()       – wires #scrollTopBtn to a smooth scroll-to-top
+ *
  * Self-contained, no module imports — load via classic <script>.
  * Pairs with css/cp-design.css for visuals (was dashboard-system.css pre-Phase 2).
  * ========================================================== */
@@ -17,7 +22,7 @@
   'use strict';
 
   window.CP = window.CP || {};
-  if (window.CP.UI && window.CP.UI.__v >= 1) return; // idempotent
+  if (window.CP.UI && window.CP.UI.__v >= 2) return; // idempotent
 
   // --- esc / formatters -------------------------------------
   function esc(s) {
@@ -155,10 +160,56 @@
     }, dur);
   }
 
+  // --- legacy public-page toast (issue #16 dedup) -----------
+  // Mirrors the inline showToast that used to live in property.html /
+  // listings.html / index.html. Uses #toastContainer + .toast.{type} +
+  // FontAwesome icons so the existing public CSS (.toast / .toast.success
+  // / .toast.error / .toast.info) keeps working unchanged. Pages without
+  // #toastContainer fall back to the dashboard CP.UI.toast above so the
+  // helper is safe on any page.
+  function showToast(msg, type) {
+    type = type || 'info';
+    var c = document.getElementById('toastContainer');
+    if (!c) return toast(msg, { type: (type === 'error' ? 'error' : (type === 'success' ? 'success' : '')) });
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    var icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+    t.innerHTML = '<i class="fas fa-' + (icons[type] || 'info-circle') + '"></i> ' + msg;
+    c.appendChild(t);
+    var duration = (type === 'error') ? 5000 : 3200;
+    setTimeout(function () {
+      t.style.opacity = '0';
+      t.style.transform = 'translateY(6px) scale(0.97)';
+      t.style.transition = 'all 280ms';
+      setTimeout(function () { t.remove(); }, 280);
+    }, duration);
+  }
+
+  // --- legacy public-page scroll-top button (issue #16 dedup) -----
+  // Wires #scrollTopBtn to a smooth scroll-to-top, with a .visible class
+  // toggled at >400px scroll depth. No-op if the button isn't on the page.
+  function setupScrollTop() {
+    var btn = document.getElementById('scrollTopBtn');
+    if (!btn) return;
+    window.addEventListener('scroll', function () {
+      btn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+    btn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   window.CP.UI = {
-    __v: 1,
+    __v: 2,
     esc: esc, fmtDate: fmtDate, fmtMoney: fmtMoney, fmtPhone: fmtPhone,
     badge: badge, safeAvatar: safeAvatar,
-    skeleton: skeleton, empty: empty, toast: toast
+    skeleton: skeleton, empty: empty, toast: toast,
+    showToast: showToast, setupScrollTop: setupScrollTop
   };
+
+  // Expose the legacy public-page helpers as bare globals so existing
+  // call-sites in index.html / listings.html / property.html (and the
+  // extracted js/property.js) keep working without any rewrite.
+  window.showToast = showToast;
+  window.setupScrollTop = setupScrollTop;
 })();

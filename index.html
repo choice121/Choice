@@ -63,6 +63,7 @@
   </style>
 <script defer src="/config.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
 <script type="module" src="/js/cp-api.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/components.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/card-builder.js?v=__BUILD_VERSION__"></script>
@@ -600,11 +601,7 @@ function goToListings() {
 }
 
 
-function setupScrollTop() {
-  const btn = document.getElementById('scrollTopBtn');
-  window.addEventListener('scroll', () => btn.classList.toggle('visible', window.scrollY > 400), { passive: true });
-  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-}
+// setupScrollTop() is provided as a window global by /js/cp-ui.js (issue #16 dedup).
 
 // ── Smooth Scroll Section Highlighting ────────────────────
 function setupSmoothScrollSections() {
