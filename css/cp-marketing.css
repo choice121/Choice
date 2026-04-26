@@ -3008,3 +3008,347 @@ body[data-portal="public"] .mobile-cta-bar .mcta-ghost {
   body[data-portal="public"] .mobile-cta-bar { display: flex; }
   body[data-portal="public"]:not([data-page="apply"]) { padding-bottom: 76px; }
 }
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9 — mv2-* additive layer (Public Marketing Refresh v2)       ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.0, agent_issues #30) ║
+   ║                                                                      ║
+   ║  Purpose: an additive token + utility namespace that lets phases     ║
+   ║  9.1 → 9.13 build a premium, mobile-first public-marketing surface  ║
+   ║  WITHOUT touching any existing class name, ID, or token.            ║
+   ║                                                                      ║
+   ║  Design direction: Editorial / Boutique (warm off-white, restrained ║
+   ║  gold accent, Fraunces italic emphasis, generous whitespace).       ║
+   ║                                                                      ║
+   ║  Activation: a page opts in by adding the .mv2-section / .mv2-card  ║
+   ║  / .mv2-headline etc. classes. Tokens are always defined but only   ║
+   ║  consumed by these utilities — so this whole block is dormant       ║
+   ║  until a page chooses to use it. No visual change in 9.0 itself.    ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* ── Color tokens ──────────────────────────────────────────────── */
+  --mv2-bg-warm:        #FAF8F5;   /* warm off-white page bg */
+  --mv2-bg-warm-2:      #F4EFE7;   /* slightly deeper warm panel */
+  --mv2-ink:            #0A1729;   /* primary text (matches existing --m-ink) */
+  --mv2-ink-2:          #1A2540;
+  --mv2-muted:          #4B5563;
+  --mv2-muted-2:        #6B7280;
+  --mv2-hairline:       #E8E2D6;   /* warm hairline (replaces cool grey) */
+  --mv2-hairline-strong:#D6CDB9;
+  --mv2-accent:         #D4A017;   /* gold — used SPARINGLY, one moment per section */
+  --mv2-accent-pale:    #FAF3DD;
+  --mv2-accent-strong:  #B8860B;
+  --mv2-brand:          #006AFF;   /* reserved for primary buttons + links only */
+  --mv2-brand-dark:     #0054CC;
+  --mv2-success:        #047857;
+  --mv2-overlay-ink:    rgba(10, 23, 41, 0.72);  /* hero photo overlay */
+
+  /* ── Typography tokens ─────────────────────────────────────────── */
+  --mv2-font-display:   'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --mv2-font-body:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mv2-fs-eyebrow:     0.78rem;
+  --mv2-fs-body:        clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);   /* 16 → 17 px */
+  --mv2-fs-lede:        clamp(1.0625rem, 1rem + 0.4vw, 1.1875rem); /* 17 → 19 px */
+  --mv2-fs-h2:          clamp(1.625rem, 1.4rem + 1.2vw, 2.25rem);  /* 26 → 36 px */
+  --mv2-fs-h1:          clamp(2rem, 1.6rem + 2.4vw, 3.25rem);      /* 32 → 52 px */
+  --mv2-lh-body:        1.7;
+  --mv2-lh-tight:       1.15;
+  --mv2-letter-eyebrow: 0.14em;
+  --mv2-max-prose:      62ch;        /* readable measure for body copy */
+
+  /* ── Spacing rhythm ────────────────────────────────────────────── */
+  --mv2-section-y-mobile:  clamp(48px, 9vw, 72px);
+  --mv2-section-y-desktop: clamp(72px, 7vw, 112px);
+  --mv2-container-x:       clamp(20px, 4vw, 32px);
+  --mv2-stack-1: 8px;
+  --mv2-stack-2: 12px;
+  --mv2-stack-3: 16px;
+  --mv2-stack-4: 24px;
+  --mv2-stack-5: 32px;
+  --mv2-stack-6: 48px;
+
+  /* ── Radii + shadows ───────────────────────────────────────────── */
+  --mv2-r-sm:   8px;
+  --mv2-r-md:   14px;
+  --mv2-r-lg:   22px;
+  --mv2-r-pill: 999px;
+  --mv2-shadow-hairline: 0 0 0 1px var(--mv2-hairline);
+  --mv2-shadow-soft:     0 1px 2px rgba(10,23,41,.04), 0 8px 24px rgba(10,23,41,.06);
+  --mv2-shadow-lift:     0 2px 4px rgba(10,23,41,.05), 0 18px 40px rgba(10,23,41,.10);
+  --mv2-shadow-gold:     0 0 0 1px rgba(212,160,23,.35), 0 6px 18px rgba(212,160,23,.18);
+
+  /* ── Motion tokens (honoring reduced-motion downstream) ────────── */
+  --mv2-dur:        220ms;
+  --mv2-dur-slow:   380ms;
+  --mv2-ease:       cubic-bezier(.4, 0, .2, 1);
+  --mv2-ease-out:   cubic-bezier(.2, .8, .2, 1);
+
+  /* ── Touch targets + safe area ─────────────────────────────────── */
+  --mv2-tap-min:    44px;
+  --mv2-safe-bot:   env(safe-area-inset-bottom, 0px);
+
+  /* ── Sticky CTA bar height (used to pad page bottom on mobile) ── */
+  --mv2-cta-bar-h:  64px;
+}
+
+/* ── Section ─────────────────────────────────────────────────────── */
+body[data-portal="public"] .mv2-section {
+  padding: var(--mv2-section-y-mobile) 0;
+  background: var(--mv2-bg-warm);
+  color: var(--mv2-ink);
+}
+@media (min-width: 769px) {
+  body[data-portal="public"] .mv2-section {
+    padding: var(--mv2-section-y-desktop) 0;
+  }
+}
+body[data-portal="public"] .mv2-section--white { background: #FFFFFF; }
+body[data-portal="public"] .mv2-section--ink {
+  background: linear-gradient(150deg, #04111F 0%, #0B1D38 50%, #0E2347 100%);
+  color: #F4F2EE;
+}
+body[data-portal="public"] .mv2-section--ink :where(h1,h2,h3) { color: #FFFFFF; }
+body[data-portal="public"] .mv2-section--ink .mv2-eyebrow { color: var(--mv2-accent); }
+
+body[data-portal="public"] .mv2-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--mv2-container-x);
+}
+body[data-portal="public"] .mv2-container--prose {
+  max-width: var(--mv2-max-prose);
+}
+
+/* ── Eyebrow tag ─────────────────────────────────────────────────── */
+body[data-portal="public"] .mv2-eyebrow {
+  font-family: var(--mv2-font-body);
+  font-size: var(--mv2-fs-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--mv2-letter-eyebrow);
+  color: var(--mv2-accent-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--mv2-stack-3);
+}
+body[data-portal="public"] .mv2-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: var(--mv2-accent);
+  display: inline-block;
+}
+
+/* ── Headline (display, with italic emphasis support) ─────────────── */
+body[data-portal="public"] .mv2-headline {
+  font-family: var(--mv2-font-display);
+  font-weight: 400;
+  font-size: var(--mv2-fs-h1);
+  line-height: var(--mv2-lh-tight);
+  letter-spacing: -0.01em;
+  color: var(--mv2-ink);
+  margin: 0 0 var(--mv2-stack-4);
+  text-wrap: balance;
+}
+body[data-portal="public"] .mv2-headline em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--mv2-accent-strong);
+  font-feature-settings: "ss01" 1;   /* Fraunces stylistic set */
+}
+body[data-portal="public"] .mv2-headline--md { font-size: var(--mv2-fs-h2); }
+
+body[data-portal="public"] .mv2-lede {
+  font-size: var(--mv2-fs-lede);
+  line-height: var(--mv2-lh-body);
+  color: var(--mv2-muted);
+  max-width: var(--mv2-max-prose);
+  margin: 0 0 var(--mv2-stack-5);
+}
+
+/* ── Card surface ────────────────────────────────────────────────── */
+body[data-portal="public"] .mv2-card {
+  background: #FFFFFF;
+  border-radius: var(--mv2-r-lg);
+  box-shadow: var(--mv2-shadow-hairline), var(--mv2-shadow-soft);
+  padding: var(--mv2-stack-5);
+  transition: box-shadow var(--mv2-dur) var(--mv2-ease),
+              transform var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"] .mv2-card--lift:hover {
+  box-shadow: var(--mv2-shadow-hairline), var(--mv2-shadow-lift);
+  transform: translateY(-2px);
+}
+body[data-portal="public"] .mv2-card--accent {
+  box-shadow: var(--mv2-shadow-gold), var(--mv2-shadow-soft);
+}
+
+/* ── Pill / chip ─────────────────────────────────────────────────── */
+body[data-portal="public"] .mv2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--mv2-r-pill);
+  font-size: 0.84rem;
+  font-weight: 500;
+  background: var(--mv2-bg-warm-2);
+  color: var(--mv2-ink-2);
+  border: 1px solid var(--mv2-hairline);
+  text-decoration: none;
+  min-height: 32px;
+  transition: background var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"] a.mv2-pill:hover { background: #FFFFFF; color: var(--mv2-brand); }
+body[data-portal="public"] .mv2-pill--fresh {
+  background: rgba(4, 120, 87, 0.08);
+  color: var(--mv2-success);
+  border-color: rgba(4, 120, 87, 0.18);
+  font-weight: 600;
+}
+body[data-portal="public"] .mv2-pill--accent {
+  background: var(--mv2-accent-pale);
+  color: var(--mv2-accent-strong);
+  border-color: rgba(212,160,23,.30);
+}
+
+/* ── Button (primary / ghost) — uses brand blue, not gold ───────── */
+body[data-portal="public"] .mv2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--mv2-tap-min);
+  padding: 12px 22px;
+  border-radius: var(--mv2-r-pill);
+  font-family: var(--mv2-font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease),
+              border-color var(--mv2-dur) var(--mv2-ease),
+              box-shadow var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"] .mv2-btn--primary {
+  background: var(--mv2-brand);
+  color: #FFFFFF;
+}
+body[data-portal="public"] .mv2-btn--primary:hover { background: var(--mv2-brand-dark); }
+body[data-portal="public"] .mv2-btn--ghost {
+  background: transparent;
+  color: var(--mv2-ink);
+  border-color: var(--mv2-hairline-strong);
+}
+body[data-portal="public"] .mv2-btn--ghost:hover { background: #FFFFFF; border-color: var(--mv2-ink); }
+body[data-portal="public"] .mv2-btn--inverse {
+  background: #FFFFFF;
+  color: var(--mv2-ink);
+}
+
+/* ── Hairline divider + accent rule ──────────────────────────────── */
+body[data-portal="public"] .mv2-divider {
+  height: 1px;
+  background: var(--mv2-hairline);
+  border: 0;
+  margin: var(--mv2-stack-6) 0;
+}
+body[data-portal="public"] .mv2-accent-rule {
+  width: 56px;
+  height: 2px;
+  background: var(--mv2-accent);
+  border: 0;
+  margin: 0 0 var(--mv2-stack-3);
+}
+
+/* ── Stat (display number + small label) ─────────────────────────── */
+body[data-portal="public"] .mv2-stat-num {
+  font-family: var(--mv2-font-display);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--mv2-ink);
+}
+body[data-portal="public"] .mv2-stat-num em {
+  font-style: italic;
+  color: var(--mv2-accent-strong);
+}
+body[data-portal="public"] .mv2-stat-label {
+  font-size: 0.82rem;
+  color: var(--mv2-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── Horizontal snap-row (used for mobile carousels in 9.2 / 9.5) ── */
+body[data-portal="public"] .mv2-snap-row {
+  display: flex;
+  gap: var(--mv2-stack-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--mv2-container-x);
+  -webkit-overflow-scrolling: touch;
+  padding: var(--mv2-stack-2) var(--mv2-container-x) var(--mv2-stack-4);
+  margin: 0 calc(-1 * var(--mv2-container-x));
+  scrollbar-width: none;
+}
+body[data-portal="public"] .mv2-snap-row::-webkit-scrollbar { display: none; }
+body[data-portal="public"] .mv2-snap-row > * {
+  flex: 0 0 86%;
+  max-width: 360px;
+  scroll-snap-align: start;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"] .mv2-snap-row {
+    overflow-x: visible;
+    scroll-snap-type: none;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+  }
+  body[data-portal="public"] .mv2-snap-row > * {
+    flex: 0 0 calc((100% - 2 * var(--mv2-stack-3)) / 3);
+  }
+}
+
+/* ── Sticky mobile CTA bar (consumed by 9.7) ─────────────────────── */
+body[data-portal="public"] .mv2-cta-bar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 60;
+  display: none;          /* shown via .is-visible class set by 9.7 JS */
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mv2-stack-3);
+  padding: 10px 16px calc(10px + var(--mv2-safe-bot));
+  background: rgba(255,255,255, 0.96);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-top: 1px solid var(--mv2-hairline);
+  box-shadow: 0 -4px 16px rgba(10,23,41,.06);
+}
+body[data-portal="public"] .mv2-cta-bar.is-visible { display: flex; }
+@media (min-width: 769px) {
+  body[data-portal="public"] .mv2-cta-bar.is-visible { display: none; }
+}
+
+/* ── Focus ring (consistent across all mv2-* interactives) ───────── */
+body[data-portal="public"] .mv2-btn:focus-visible,
+body[data-portal="public"] a.mv2-pill:focus-visible {
+  outline: 2px solid var(--mv2-brand);
+  outline-offset: 3px;
+}
+
+/* ── Reduced motion: kill non-essential transitions ──────────────── */
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"] .mv2-card,
+  body[data-portal="public"] .mv2-btn,
+  body[data-portal="public"] .mv2-pill {
+    transition: none;
+  }
+  body[data-portal="public"] .mv2-card--lift:hover { transform: none; }
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */

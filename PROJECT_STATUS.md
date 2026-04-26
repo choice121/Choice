@@ -69,6 +69,27 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 | 8 final | Delete `main.css`, `mobile.css`, `listings.css`, `property.css` (sub-phase 7.3.4) | ✅ DONE (April 22 2026) |
 | 9 | **Public Marketing Refresh** — premium, mobile-first redesign of all public pages (Editorial / Boutique direction). 14 sub-phases (9.0 → 9.13), one PR / one `agent_issues` row each. Plan: `DESIGN_EXTENSION_PLAN.md` §9. | 🚧 IN PROGRESS (kicked off April 26 2026) |
 
+### Phase 9 sub-phase progress
+
+| Sub-phase | Issue | Status | Commit |
+|---|---|---|---|
+| 9.0 — Add mv2-* token + utility layer (additive)             | #30 | ✅ DONE (Apr 26 2026) | _set on push_ |
+| 9.1 — index.html hero refresh                                | #31 | ⏳ open               | — |
+| 9.2 — Available Now horizontal-snap carousel                 | #32 | ⏳ open               | — |
+| 9.3 — How-It-Works vertical timeline                         | #33 | ⏳ open               | — |
+| 9.4 — NEW Verified, every time trust block                   | #34 | ⏳ open               | — |
+| 9.5 — Testimonials humanization                              | #35 | ⏳ open               | — |
+| 9.6 — NEW City spotlight strip                               | #36 | ⏳ open               | — |
+| 9.7 — Sticky mobile CTA bar + final CTA                      | #37 | ⏳ open               | — |
+| 9.8 — listings.html polish                                   | #38 | ⏳ open               | — |
+| 9.9 — property.html polish                                   | #39 | ⏳ open               | — |
+| 9.10 — Apply v2 layout to 4 secondary pages                  | #40 | ⏳ open               | — |
+| 9.11 — Refresh nav.html + footer.html                        | #41 | ⏳ open               | — |
+| 9.12 — 404.html friendly redesign                            | #42 | ⏳ open               | — |
+| 9.13 — Final QA pass                                         | #43 | ⏳ open               | — |
+
+> Each sub-phase is one commit. To update this table after a sub-phase ships, replace the row's status with ✅ DONE and paste the commit short SHA into the Commit column. Future-AI handoff: query `SELECT id, status FROM public.agent_issues WHERE component='phase9' ORDER BY id;` for the source of truth.
+
 ### Active CSS surface
 
 ```
