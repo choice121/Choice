@@ -70,7 +70,7 @@ Transform the lease system from a single-state (Michigan-only) electronic signin
 | 01  | State-aware templating engine                               | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
 | 02  | State law metadata table                                    | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
 | 03  | Multi-state base templates (top 10 states)                  | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
-| 04  | State-required disclosures library + auto-attach            | IN PROGRESS   | 2026-04-26 | —          | —             |
+| 04  | State-required disclosures library + auto-attach            | DONE          | 2026-04-26 | 2026-04-26 | 553f555, 576efc9, +this |
 | 05  | Token & signing security hardening + E-SIGN consent         | TODO          | —          | —          | —             |
 | 06  | PDF integrity (SHA-256 hash + audit certificate page)       | TODO          | —          | —          | —             |
 | 07  | Itemized financials + utility responsibility matrix         | TODO          | —          | —          | —             |
