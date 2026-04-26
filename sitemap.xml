@@ -1,96 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Domain: choice-properties-site.pages.dev -->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<!--
+  Domain: choice-properties-site.pages.dev
 
-  <url>
-    <loc>https://choice-properties-site.pages.dev/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
+  This is now a SITEMAP INDEX. It points to two child sitemaps:
 
-  <url>
-    <loc>https://choice-properties-site.pages.dev/listings.html</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.95</priority>
-  </url>
+  1. /sitemap-pages.xml     — the small set of static marketing pages
+  2. /sitemap-properties.xml — every active property listing
+                               (generated dynamically by
+                                functions/sitemap-properties.xml.js)
 
-  <url>
-    <loc>https://choice-properties-site.pages.dev/about.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://choice-properties-site.pages.dev/how-it-works.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://choice-properties-site.pages.dev/how-to-apply.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://choice-properties-site.pages.dev/faq.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://choice-properties-site.pages.dev/privacy.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-
-  <url>
-    <loc>https://choice-properties-site.pages.dev/terms.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/fair-housing.html</loc>
-      <changefreq>yearly</changefreq>
-      <priority>0.4</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/holding-deposit-policy.html</loc>
-      <changefreq>yearly</changefreq>
-      <priority>0.4</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/rental-application-policy.html</loc>
-      <changefreq>yearly</changefreq>
-      <priority>0.4</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/application-credit-policy.html</loc>
-      <changefreq>yearly</changefreq>
-      <priority>0.4</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/landlord-platform-agreement.html</loc>
-      <changefreq>yearly</changefreq>
-      <priority>0.4</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/policies.html</loc>
-      <changefreq>monthly</changefreq>
-      <priority>0.6</priority>
-    </url>
-
-    <url>
-      <loc>https://choice-properties-site.pages.dev/policy-changelog.html</loc>
-      <changefreq>monthly</changefreq>
-      <priority>0.3</priority>
-    </url>
-
-  </urlset>
+  The dynamic file is generated at request time from Supabase, cached
+  for 1 hour at the edge, and revalidated in the background after that.
+-->
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://choice-properties-site.pages.dev/sitemap-pages.xml</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://choice-properties-site.pages.dev/sitemap-properties.xml</loc>
+  </sitemap>
+</sitemapindex>

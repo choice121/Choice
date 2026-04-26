@@ -41,6 +41,10 @@ let isLoading      = false;
 let mapInstance    = null;
 let mapMarkers     = [];
 let savedIds       = loadSavedIds();
+// Phase C: cache the rows from the most-recent fetch so the
+// click-anywhere-on-card handler can build the canonical slug URL
+// without a second API call.
+let pageProperties = [];
 const PER_PAGE     = 24;
 
 function loadSavedIds() {
@@ -173,6 +177,7 @@ async function fetchAndRender() {
     const { rows, total, total_pages } = cached;
     totalCount = total;
     totalPages = total_pages;
+    pageProperties = rows || [];
     renderProperties(rows);
     renderPagination();
     return;
@@ -230,6 +235,7 @@ async function fetchAndRender() {
     const { rows, total, total_pages } = result.data;
     totalCount = total;
     totalPages = total_pages;
+    pageProperties = rows || [];
 
     renderProperties(rows);
     renderPagination();
@@ -415,11 +421,20 @@ function setupGridDelegation() {
     }
   });
 
-  // Card click-through (not on links or buttons)
+  // Card click-through (not on links or buttons).
+  // Phase C: Navigate to the canonical slug URL using the property data
+  // we already cached from the search response. Falls back to the legacy
+  // ?id= URL only when the cached row is missing.
   grid.addEventListener('click', e => {
     if (e.target.closest('a, button')) return;
     const card = e.target.closest('.property-card');
-    if (card) window.location.href = `/property.html?id=${card.dataset.id}`;
+    if (!card) return;
+    const id = card.dataset.id;
+    const cached = (pageProperties || []).find(p => p && p.id === id);
+    const href = (window.CP && window.CP.UI && window.CP.UI.propertyUrl && cached)
+      ? window.CP.UI.propertyUrl(cached)
+      : `/property.html?id=${encodeURIComponent(id)}`;
+    window.location.href = href;
   });
 
   // P1-D: Switch non-first slide images from lazy → eager on first hover
@@ -502,6 +517,12 @@ function initMap(props) {
     const safeTitle = esc(p.title || 'Rental property');
     const safeImg = esc(CONFIG.img(p.photo_urls?.[0] || '','card'));
     const safeRent = Number(p.monthly_rent || 0);
+    // Phase C: canonical slug URL when we have the data, legacy URL otherwise.
+    const popupHref = esc(
+      (window.CP && window.CP.UI && window.CP.UI.propertyUrl)
+        ? window.CP.UI.propertyUrl(p)
+        : `/property.html?id=${safeId}`
+    );
     bounds.push([lat, lng]);
     const icon = L.divIcon({
       className: '',
@@ -510,7 +531,7 @@ function initMap(props) {
     });
     const marker = L.marker([lat, lng], { icon }).addTo(mapInstance);
     marker.bindPopup(`
-      <a href="/property.html?id=${safeId}" class="map-popup-card">
+      <a href="${popupHref}" class="map-popup-card">
         <img class="map-popup-img" src="${safeImg}" alt="${safeTitle}" loading="lazy">
         <div class="map-popup-body">
           <div class="map-popup-price">$${safeRent.toLocaleString()}<span>/mo</span></div>
@@ -519,7 +540,7 @@ function initMap(props) {
             ${p.bedrooms != null ? `<span>${p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' bd'}</span>` : ''}
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
           </div>
-          <a href="/property.html?id=${safeId}" class="map-popup-apply">View Property →</a>
+          <a href="${popupHref}" class="map-popup-apply">View Property →</a>
         </div>
       </a>`, { maxWidth: 260 });
     mapMarkers.push(marker);

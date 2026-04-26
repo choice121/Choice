@@ -21,7 +21,10 @@ Disallow: /health.html
 # Public landlord profiles are allowed
 Allow: /landlord/profile.html
 
-# This placeholder is automatically rewritten at build time by generate-config.js
-# when SITE_URL is set in your Cloudflare Pages environment variables.
-# You do not need to edit this file manually.
+# Sitemaps. The root file is a sitemap INDEX that fans out to:
+#   /sitemap-pages.xml       — static marketing pages
+#   /sitemap-properties.xml  — every active property (dynamic)
+# This placeholder is automatically rewritten at build time by
+# generate-config.js when SITE_URL is set in your Cloudflare Pages
+# environment variables.
 Sitemap: https://choice-properties-site.pages.dev/sitemap.xml

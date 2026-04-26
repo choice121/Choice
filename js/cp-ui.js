@@ -199,12 +199,43 @@
     });
   }
 
+  // --- propertyUrl --------------------------------------------------
+  // Build the canonical, keyword-rich slug URL for a property row.
+  // Format: /rent/<state-2-lower>/<city-slug>/<beds>-<type-slug>-<id-lower>/
+  // Used by card-builder.js, listings.js, share buttons, and edit-listing
+  // "View listing" links so internal navigation lands on the canonical URL
+  // (avoiding the legacy /property.html?id=… → 301 hop). Falls back to the
+  // legacy URL when the row is missing the geo/type fields needed for a
+  // good slug (e.g. preview/draft mode).
+  function _slugSeg(s) {
+    return String(s == null ? '' : s)
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+  }
+  function propertyUrl(p) {
+    if (!p || !p.id) return '/listings.html';
+    var id = String(p.id);
+    if (!/^PROP-[A-Z0-9]{8}$/i.test(id)) return '/property.html?id=' + encodeURIComponent(id);
+    var state = String(p.state || '').toLowerCase().slice(0, 2);
+    var city = _slugSeg(p.city);
+    if (!state || !city) return '/property.html?id=' + encodeURIComponent(id);
+    var beds = (p.bedrooms == null) ? 'home'
+             : (Number(p.bedrooms) === 0 ? 'studio' : Number(p.bedrooms) + 'br');
+    var type = _slugSeg(p.property_type) || 'home';
+    return '/rent/' + state + '/' + city + '/' + beds + '-' + type + '-' + id.toLowerCase() + '/';
+  }
+
   window.CP.UI = {
     __v: 2,
     esc: esc, fmtDate: fmtDate, fmtMoney: fmtMoney, fmtPhone: fmtPhone,
     badge: badge, safeAvatar: safeAvatar,
     skeleton: skeleton, empty: empty, toast: toast,
-    showToast: showToast, setupScrollTop: setupScrollTop
+    showToast: showToast, setupScrollTop: setupScrollTop,
+    propertyUrl: propertyUrl
   };
 
   // Expose the legacy public-page helpers as bare globals so existing

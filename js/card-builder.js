@@ -175,11 +175,12 @@
           // Save heart — top-right, always visible
           '<button class="property-card-save" data-id="' + id + '" aria-label="Save property"><i class="far fa-heart"></i></button>' +
           // Share icon — bottom-right, always visible
-          '<button class="property-card-share" data-id="' + id + '" data-title="' + title + '" data-url="/property.html?id=' + id + '" aria-label="Share property"><i class="fas fa-share-nodes"></i></button>' +
+          // URL: canonical slug URL (Phase C SEO). Falls back to /property.html?id= when fields missing.
+          '<button class="property-card-share" data-id="' + id + '" data-title="' + title + '" data-url="' + (window.CP && window.CP.UI && window.CP.UI.propertyUrl ? window.CP.UI.propertyUrl(p) : '/property.html?id=' + id) + '" aria-label="Share property"><i class="fas fa-share-nodes"></i></button>' +
         '</div>' +
 
-        // Body — full-width link for clean click-through
-        '<a href="/property.html?id=' + id + '" class="property-card-body" aria-label="' + title + '">' +
+        // Body — full-width link for clean click-through (canonical slug URL — Phase C)
+        '<a href="' + (window.CP && window.CP.UI && window.CP.UI.propertyUrl ? window.CP.UI.propertyUrl(p) : '/property.html?id=' + id) + '" class="property-card-body" aria-label="' + title + '">' +
           typeHtml +
           '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
