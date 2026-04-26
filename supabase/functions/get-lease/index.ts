@@ -5,6 +5,7 @@ import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
 import { resolveLeaseTemplate } from '../_shared/lease-render.ts';
 import { fetchAttachedAddenda } from '../_shared/lease-addenda.ts';
 import { ESIGN_DISCLOSURE, ESIGN_DISCLOSURE_VERSION } from '../_shared/esign-consent.ts';
+import { resolveLease } from '../_shared/lease-resolve.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -92,11 +93,16 @@ Deno.serve(async (req: Request) => {
   }
 
   // 4. Render template
-  const tmpl = await resolveLeaseTemplate(supabase, app);
+  // Phase 10: prefer the leases-table snapshot (immutable per lease) if a
+  // lease row exists for this app. Falls back to the application columns
+  // for unbackfilled apps. resolveLease() returns null silently for those.
+  const leaseResolved = await resolveLease(supabase, { app_id: app.app_id });
+  const renderSource = leaseResolved.ok ? { ...app, ...leaseResolved.lease } : app;
+  const tmpl = await resolveLeaseTemplate(supabase, renderSource);
   const rendered = tmpl
     ? await renderTemplate(
         tmpl.template_body,
-        buildLeaseRenderContext(app),
+        buildLeaseRenderContext(renderSource),
         { partials: createSupabasePartialResolver(supabase) },
       )
     : '';
@@ -117,6 +123,10 @@ Deno.serve(async (req: Request) => {
 
   return jsonOk({
     app,
+    // Phase 10: surface the lease_id alongside the legacy app payload so
+    // the signing UI can pass it back to sign-lease / sign-amendment.
+    lease_id:                leaseResolved.ok ? leaseResolved.lease.id : null,
+    lease_status:            leaseResolved.ok ? leaseResolved.lease.lease_status : null,
     signer,
     rendered_lease:          rendered,
     template_version_id:     tmpl?.version_id    || null,

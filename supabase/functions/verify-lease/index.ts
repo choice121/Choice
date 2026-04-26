@@ -47,6 +47,11 @@ interface PublicLeaseSummary {
   certificate_appended: boolean;
   storage_path:         string;
   created_at:           string | null;
+  // Phase 10: lookup_lease_by_qr_token may surface lease_id for callers
+  // that want to deep-link the lease history view. Optional for backwards
+  // compat with the older RPC body.
+  lease_id?:            string | null;
+  app_id_last4?:        string | null;
   signers: Array<{
     role:         string;
     display_name: string;
@@ -153,10 +158,26 @@ Deno.serve(async (req: Request) => {
     } catch (_) { /* non-fatal */ }
   }
 
+  // Phase 10: opportunistically enrich with lease_id from lease_pdf_versions
+  // so downstream UIs (admin lease history) can deep-link from a verify
+  // result back to the lease detail page.
+  let leaseId: string | null = summaryRaw.lease_id || null;
+  if (!leaseId && summaryRaw.storage_path) {
+    try {
+      const { data: pv } = await supabase
+        .from('lease_pdf_versions')
+        .select('lease_id')
+        .eq('storage_path', summaryRaw.storage_path)
+        .maybeSingle();
+      leaseId = (pv as { lease_id: string | null } | null)?.lease_id || null;
+    } catch (_) { /* non-fatal */ }
+  }
+
   return jsonOk({
     ok:                true,
     hash_match,
-    summary:           summaryRaw,
+    lease_id:          leaseId,
+    summary:           { ...summaryRaw, lease_id: leaseId },
     recomputed_sha256: recomputed,
     stored_sha256:     summaryRaw.sha256,
     size_bytes:        ab.byteLength,
