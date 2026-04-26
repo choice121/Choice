@@ -122,13 +122,13 @@
 </div>
 
 <!-- ── Detail Content ── -->
-<div class="property-detail">
+<div class="property-detail mv2-property">
   <div class="container">
     <div class="detail-layout">
 
   <!-- Main column -->
   <div class="detail-main" id="detailMain">
-    <div class="detail-breadcrumb">
+    <div class="detail-breadcrumb mv2-breadcrumb">
       <a href="/listings.html" id="backToResults">Listings</a>
       <i class="fas fa-chevron-right" style="font-size:10px"></i>
       <span id="breadcrumbCity">Loading…</span>
@@ -138,7 +138,7 @@
       </span>
     </div>
 
-    <div class="detail-header">
+    <div class="detail-header mv2-detail-header">
       <div class="detail-price" id="detailPrice">
         <div class="skeleton" style="height:44px;width:200px;border-radius:8px"></div>
       </div>
@@ -153,7 +153,7 @@
     <div class="detail-meta-row" id="detailMeta"></div>
 
     <div class="detail-section">
-      <div class="detail-section-title">About This Property</div>
+      <div class="detail-section-title mv2-section-title">About this <em>home</em>.</div>
       <div class="detail-desc" id="detailDesc">
         <div class="skeleton skeleton-line" style="width:100%;height:15px;margin-bottom:10px"></div>
         <div class="skeleton skeleton-line" style="width:96%;height:15px;margin-bottom:10px"></div>
@@ -194,7 +194,7 @@
 
     <!-- Map section — uses Leaflet if lat/lng available, fallback iframe -->
     <div class="detail-section">
-      <div class="detail-section-title">Location</div>
+      <div class="detail-section-title mv2-section-title">Where it <em>sits</em>.</div>
       <div class="map-container" id="mapContainer">
         <div id="mapFallback" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#8892a2">
           <i class="fas fa-map-marker-alt" style="font-size:32px;color:#2563eb"></i>
@@ -214,7 +214,7 @@
   <!-- Sidebar -->
   <div class="detail-sidebar">
     <!-- Apply Card -->
-    <div class="apply-card">
+    <div class="apply-card mv2-apply-card">
       <div class="apply-card-header">
         <div class="apply-card-price" id="sidebarPrice"><div class="skeleton" style="height:32px;width:140px;border-radius:6px;display:inline-block"></div></div>
         <div class="apply-card-avail" id="sidebarAvail">
@@ -267,7 +267,7 @@
     </div>
 
     <!-- Landlord Profile Card -->
-    <div class="landlord-card" id="landlordCard" style="display:none;">
+    <div class="landlord-card mv2-landlord-card" id="landlordCard" style="display:none;">
       <div class="landlord-card-avatar" id="landlordAvatar">?</div>
       <div class="landlord-card-info">
         <div class="landlord-card-label">Listed by</div>
@@ -278,7 +278,7 @@
     </div>
 
     <!-- Contact Card -->
-    <div class="contact-card" id="contactCard">
+    <div class="contact-card mv2-contact-card" id="contactCard">
       <div class="contact-drawer-handle-bar"></div>
       <div class="contact-card-header-row">
         <div class="share-row">
