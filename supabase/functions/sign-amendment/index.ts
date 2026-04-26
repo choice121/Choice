@@ -7,11 +7,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { amendmentSignedHtml } from '../_shared/email.ts';
-import { buildLeasePDF } from '../_shared/pdf.ts';
 import { renderTemplate, createSupabasePartialResolver } from '../_shared/template-engine.ts';
 import { buildLeaseRenderContext } from '../_shared/lease-context.ts';
-import { getAdminEmails, getAdminUrl } from '../_shared/config.ts';
-import { buildPdfStoragePath } from '../_shared/lease-render.ts';
+import { getAdminEmails, getAdminUrl, getSiteUrl } from '../_shared/config.ts';
+import { finalizeAndStorePdf } from '../_shared/lease-render.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
 import { ESIGN_DISCLOSURE_VERSION } from '../_shared/esign-consent.ts';
 
@@ -100,6 +99,8 @@ Deno.serve(async (req: Request) => {
   const now = new Date().toISOString();
 
   // Re-render addendum PDF including signature block
+  // Phase 06: appends Certificate of Completion w/ tenant signer + QR.
+  let amendmentPdfPath: string | null = null;
   try {
     const partials  = createSupabasePartialResolver(supabase);
     const innerBody = await renderTemplate(amend.body, buildLeaseRenderContext(app), { partials });
@@ -113,26 +114,46 @@ Deno.serve(async (req: Request) => {
       signature_timestamp:     now,
       lease_ip_address:        ip,
     };
-    const pdfBytes = await buildLeasePDF(appWithSig, signedAddendum, { partials });
-    const { data: pv } = await supabase.rpc('record_lease_pdf_version', {
-      p_app_id:              app.app_id,
-      p_event:               'amended',
-      p_storage_path:        '',
-      p_template_version_id: app.lease_template_version_id || null,
-      p_amendment_id:        amend.id,
-      p_created_by:          app.email,
+
+    const fin = await finalizeAndStorePdf({
+      supabase,
+      app_id:              app.app_id,
+      app:                 appWithSig,
+      templateText:        signedAddendum,
+      templateVersionId:   app.lease_template_version_id || null,
+      templateVersion:     null,
+      event:               'amended',
+      amendmentId:         amend.id,
+      createdBy:           app.email,
+      partials,
+      addendaAssetBaseUrl: getSiteUrl(),
+      // NOT updating applications.lease_pdf_url -- amendments live on
+      // lease_amendments.pdf_path, the parent lease pointer is unchanged.
+      updateAppPointer:    false,
+      certificate: {
+        state_code:        app.lease_state_code || null,
+        edge_function_tag: 'sign-amendment@phase06',
+        site_url:          getSiteUrl(),
+        signers: [{
+          role:       'tenant',
+          name:       signature,
+          email:      app.email,
+          signed_at:  now,
+          ip:         ip,
+          user_agent: user_agent || null,
+          has_image:  !!signature_image,
+        }],
+      },
     });
-    const versionNumber = (pv as { version_number?: number })?.version_number || 1;
-    const path = buildPdfStoragePath(app.app_id, versionNumber, 'amended');
-    const { error: upErr } = await supabase.storage.from('lease-pdfs')
-      .upload(path, pdfBytes, { contentType: 'application/pdf', upsert: false });
-    if (!upErr) {
-      await supabase.from('lease_pdf_versions')
-        .update({ storage_path: path, size_bytes: pdfBytes.byteLength })
-        .eq('app_id', app.app_id).eq('version_number', versionNumber);
-      await supabase.from('lease_amendments').update({ pdf_path: path }).eq('id', amend.id);
+    if (fin.ok && fin.storage_path) {
+      amendmentPdfPath = fin.storage_path;
+      await supabase.from('lease_amendments')
+        .update({ pdf_path: fin.storage_path }).eq('id', amend.id);
+    } else if (!fin.ok) {
+      console.error('Amendment PDF finalize failed:', fin.error);
     }
   } catch (e) { console.error('Amendment PDF re-gen failed (non-fatal):', (e as Error).message); }
+  void amendmentPdfPath;
 
   // Confirmation to tenant
   try {

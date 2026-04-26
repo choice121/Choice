@@ -10,9 +10,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { coApplicantSignedHtml } from '../_shared/email.ts';
-import { buildLeasePDF } from '../_shared/pdf.ts';
-import { getAdminEmails, getAdminUrl } from '../_shared/config.ts';
-import { resolveLeaseTemplate, buildPdfStoragePath } from '../_shared/lease-render.ts';
+import { getAdminEmails, getAdminUrl, getSiteUrl } from '../_shared/config.ts';
+import { resolveLeaseTemplate, finalizeAndStorePdf } from '../_shared/lease-render.ts';
+import { fetchAttachedAddenda } from '../_shared/lease-addenda.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
 import { ESIGN_DISCLOSURE_VERSION } from '../_shared/esign-consent.ts';
 
@@ -117,27 +117,46 @@ Deno.serve(async (req: Request) => {
     const tmpl = await resolveLeaseTemplate(supabase, appSigned);
     if (tmpl) {
       try {
-        const pdfBytes = await buildLeasePDF(appSigned, tmpl.template_body);
-        const { data: pv } = await supabase.rpc('record_lease_pdf_version', {
-          p_app_id:              appSigned.app_id,
-          p_event:               'co_signed',
-          p_storage_path:        '',
-          p_template_version_id: tmpl.version_id,
-          p_amendment_id:        null,
-          p_created_by:          co.email,
+        const attachedAddenda = await fetchAttachedAddenda(supabase, appSigned.app_id);
+        const fin = await finalizeAndStorePdf({
+          supabase,
+          app_id:              appSigned.app_id,
+          app:                 appSigned,
+          templateText:        tmpl.template_body,
+          templateVersionId:   tmpl.version_id,
+          templateVersion:     tmpl.version_number || null,
+          event:               'co_signed',
+          createdBy:           co.email,
+          addenda:             attachedAddenda,
+          addendaAssetBaseUrl: getSiteUrl(),
+          updateAppPointer:    true,
+          certificate: {
+            state_code:        appSigned.lease_state_code || null,
+            edge_function_tag: 'sign-lease-co-applicant@phase06',
+            site_url:          getSiteUrl(),
+            signers: [
+              {
+                role:       'tenant',
+                name:       appSigned.tenant_signature || `${appSigned.first_name || ''} ${appSigned.last_name || ''}`.trim(),
+                email:      appSigned.email,
+                signed_at:  appSigned.signature_timestamp || null,
+                ip:         appSigned.lease_ip_address || null,
+                user_agent: appSigned.lease_user_agent || null,
+                has_image:  !!appSigned.tenant_signature_image,
+              },
+              {
+                role:       'co_applicant',
+                name:       signature,
+                email:      co.email,
+                signed_at:  appSigned.co_applicant_signature_timestamp || new Date().toISOString(),
+                ip:         ip,
+                user_agent: user_agent || null,
+                has_image:  !!signature_image,
+              },
+            ],
+          },
         });
-        const versionNumber = (pv as { version_number?: number })?.version_number || 2;
-        const path = buildPdfStoragePath(appSigned.app_id, versionNumber, 'co_signed');
-        const { error: upErr } = await supabase.storage.from('lease-pdfs')
-          .upload(path, pdfBytes, { contentType: 'application/pdf', upsert: false });
-        if (!upErr) {
-          await supabase.from('lease_pdf_versions')
-            .update({ storage_path: path, size_bytes: pdfBytes.byteLength })
-            .eq('app_id', appSigned.app_id).eq('version_number', versionNumber);
-          await supabase.from('applications')
-            .update({ lease_pdf_url: path, updated_at: new Date().toISOString() })
-            .eq('id', appSigned.id);
-        }
+        if (!fin.ok) console.error('PDF finalize failed:', fin.error);
       } catch (e) { console.error('PDF re-gen failed (non-fatal):', (e as Error).message); }
     }
 

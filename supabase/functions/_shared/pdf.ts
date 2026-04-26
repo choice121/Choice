@@ -6,6 +6,23 @@ import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
   } from './template-engine.ts';
   import { buildLeaseRenderContext } from './lease-context.ts';
   import type { RenderedAddendum } from './lease-addenda.ts';
+  import {
+    appendCertificateOfCompletion,
+    generateQrVerifyToken,
+    sha256Hex,
+    type CertOptions,
+    type CertSigner,
+    type CertEsignConsent,
+  } from './audit-certificate.ts';
+
+  // Phase 06 -- re-export so callers can import the cert helpers from
+  // the same surface as buildLeasePDF.
+  export {
+    appendCertificateOfCompletion,
+    generateQrVerifyToken,
+    sha256Hex,
+  } from './audit-certificate.ts';
+  export type { CertOptions, CertSigner, CertEsignConsent } from './audit-certificate.ts';
 
   // Re-export so callers that need the partial-resolver type can grab it
   // from the same module they're already importing buildLeasePDF from.
@@ -336,5 +353,110 @@ import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
     }
 
     return pdfDoc.save();
+  }
+
+
+  // =====================================================================
+  // Phase 06 -- Finalized PDF helper
+  //
+  // buildLeasePDFFinalized() wraps buildLeasePDF + (optional) audit
+  // certificate page + SHA-256 hashing in a single call so every signing
+  // edge function follows the exact same integrity flow:
+  //
+  //   1. Render lease body (templating + addenda + signatures).
+  //   2. SHA-256 the body bytes  -> body_sha256 (printed on cert page).
+  //   3. If `certificate` opts are passed, append the cert page:
+  //        - signers table
+  //        - E-SIGN consent rows
+  //        - QR code -> /verify-lease.html?t=<qr_token>
+  //   4. SHA-256 the FINAL bytes -> sha256 (stored in lease_pdf_versions
+  //      and re-checked by verify-lease at retrieval time).
+  //
+  // Callers receive everything they need to:
+  //   * upload the final bytes to storage,
+  //   * call record_lease_pdf_integrity(sha256, certificate_appended,
+  //     qr_verify_token).
+  // =====================================================================
+
+  export interface FinalizedPdf {
+    bytes:                 Uint8Array;
+    sha256:                string;
+    body_sha256:           string;
+    certificate_appended:  boolean;
+    qr_verify_token:       string | null;
+  }
+
+  export interface CertificateInput {
+    /** Required to compute the verify URL printed in the cert. */
+    site_url:           string;
+    app_id:             string;
+    state_code:         string | null;
+    template_version:   number | null;
+    pdf_version:        number;
+    edge_function_tag:  string;
+    signers:            CertSigner[];
+    esign_consents:     CertEsignConsent[];
+    amendment_id?:      string | null;
+    /** If omitted, a fresh 22-char URL-safe token is generated. */
+    qr_verify_token?:   string;
+  }
+
+  export interface BuildLeasePDFFinalizedOptions extends BuildLeasePDFOptions {
+    /** When provided, an audit certificate page is appended. */
+    certificate?: CertificateInput;
+  }
+
+  export async function buildLeasePDFFinalized(
+    app: Record<string, unknown>,
+    templateText: string,
+    opts: BuildLeasePDFFinalizedOptions,
+  ): Promise<FinalizedPdf> {
+    // 1. Body
+    const bodyBytes = await buildLeasePDF(app, templateText, {
+      partials:            opts.partials,
+      addenda:             opts.addenda,
+      addendaAssetBaseUrl: opts.addendaAssetBaseUrl,
+    });
+    const body_sha256 = await sha256Hex(bodyBytes);
+
+    // 2. Optionally append cert
+    if (!opts.certificate) {
+      return {
+        bytes:                 bodyBytes,
+        sha256:                body_sha256,
+        body_sha256,
+        certificate_appended:  false,
+        qr_verify_token:       null,
+      };
+    }
+
+    const c = opts.certificate;
+    const qrToken = c.qr_verify_token || generateQrVerifyToken();
+    const verifyUrl = `${c.site_url.replace(/\/+$/, '')}/verify-lease.html?t=${qrToken}`;
+
+    const certOpts: CertOptions = {
+      app_id:            c.app_id,
+      state_code:        c.state_code,
+      template_version:  c.template_version,
+      pdf_version:       c.pdf_version,
+      body_sha256,
+      generated_at:      new Date().toISOString(),
+      edge_function_tag: c.edge_function_tag,
+      signers:           c.signers,
+      esign_consents:    c.esign_consents,
+      verify_url:        verifyUrl,
+      amendment_id:      c.amendment_id || null,
+    };
+
+    const finalBytes = await appendCertificateOfCompletion(bodyBytes, certOpts);
+    const finalSha   = await sha256Hex(finalBytes);
+
+    return {
+      bytes:                 finalBytes,
+      sha256:                finalSha,
+      body_sha256,
+      certificate_appended:  true,
+      qr_verify_token:       qrToken,
+    };
   }
   

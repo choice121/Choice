@@ -13,9 +13,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { leaseFullyExecutedHtml } from '../_shared/email.ts';
-import { buildLeasePDF } from '../_shared/pdf.ts';
-import { getTenantLoginUrl } from '../_shared/config.ts';
-import { resolveLeaseTemplate, buildPdfStoragePath } from '../_shared/lease-render.ts';
+import { getTenantLoginUrl, getSiteUrl } from '../_shared/config.ts';
+import { resolveLeaseTemplate, finalizeAndStorePdf } from '../_shared/lease-render.ts';
+import { fetchAttachedAddenda } from '../_shared/lease-addenda.ts';
 
 const TENANT_LOGIN_URL = getTenantLoginUrl();
 
@@ -78,6 +78,7 @@ Deno.serve(async (req: Request) => {
   if (updateErr) return jsonErr(500, 'Failed to record countersignature: ' + updateErr.message);
 
   // Versioned PDF re-gen using the pinned template snapshot
+  // Phase 06: appends Certificate of Completion w/ all signers + QR.
   try {
     const appWithMgmt = {
       ...app,
@@ -88,27 +89,69 @@ Deno.serve(async (req: Request) => {
     };
     const tmpl = await resolveLeaseTemplate(supabase, appWithMgmt);
     if (tmpl) {
-      const pdfBytes = await buildLeasePDF(appWithMgmt, tmpl.template_body);
-      const { data: pv } = await supabase.rpc('record_lease_pdf_version', {
-        p_app_id:              app_id,
-        p_event:               'countersigned',
-        p_storage_path:        '',
-        p_template_version_id: tmpl.version_id,
-        p_amendment_id:        null,
-        p_created_by:          auth.userEmail || signer_name,
-      });
-      const versionNumber = (pv as { version_number?: number })?.version_number || 1;
-      const path = buildPdfStoragePath(app_id, versionNumber, 'countersigned');
-      const { error: upErr } = await supabase.storage.from('lease-pdfs')
-        .upload(path, pdfBytes, { contentType: 'application/pdf', upsert: false });
-      if (!upErr) {
-        await supabase.from('lease_pdf_versions')
-          .update({ storage_path: path, size_bytes: pdfBytes.byteLength })
-          .eq('app_id', app_id).eq('version_number', versionNumber);
-        await supabase.from('applications')
-          .update({ lease_pdf_url: path, updated_at: new Date().toISOString() })
-          .eq('app_id', app_id);
+      const attachedAddenda = await fetchAttachedAddenda(supabase, app_id);
+      const adminIp = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'admin-console';
+      const adminUa = req.headers.get('user-agent') || '';
+
+      // Pull co-applicant info if present so the cert lists every signer.
+      let coRow: { first_name: string | null; last_name: string | null; email: string | null } | null = null;
+      if (app.has_co_applicant) {
+        const { data } = await supabase
+          .from('co_applicants').select('first_name, last_name, email')
+          .eq('app_id', app_id).maybeSingle();
+        coRow = data;
       }
+
+      const signers = [
+        {
+          role:       'tenant' as const,
+          name:       app.tenant_signature || `${app.first_name || ''} ${app.last_name || ''}`.trim(),
+          email:      app.email,
+          signed_at:  app.signature_timestamp || null,
+          ip:         app.lease_ip_address || null,
+          user_agent: app.lease_user_agent || null,
+          has_image:  !!app.tenant_signature_image,
+        },
+        ...(app.has_co_applicant && coRow ? [{
+          role:       'co_applicant' as const,
+          name:       app.co_applicant_signature || `${coRow.first_name || ''} ${coRow.last_name || ''}`.trim(),
+          email:      coRow.email,
+          signed_at:  app.co_applicant_signature_timestamp || null,
+          ip:         app.co_applicant_lease_ip_address || null,
+          user_agent: app.co_applicant_lease_user_agent || null,
+          has_image:  !!app.co_applicant_signature_image,
+        }] : []),
+        {
+          role:       'management' as const,
+          name:       signer_name,
+          email:      auth.userEmail || null,
+          signed_at:  now,
+          ip:         adminIp,
+          user_agent: adminUa,
+          has_image:  false,
+        },
+      ];
+
+      const fin = await finalizeAndStorePdf({
+        supabase,
+        app_id,
+        app:                 appWithMgmt,
+        templateText:        tmpl.template_body,
+        templateVersionId:   tmpl.version_id,
+        templateVersion:     tmpl.version_number || null,
+        event:               'countersigned',
+        createdBy:           auth.userEmail || signer_name,
+        addenda:             attachedAddenda,
+        addendaAssetBaseUrl: getSiteUrl(),
+        updateAppPointer:    true,
+        certificate: {
+          state_code:        app.lease_state_code || null,
+          edge_function_tag: 'countersign@phase06',
+          site_url:          getSiteUrl(),
+          signers,
+        },
+      });
+      if (!fin.ok) console.error('PDF finalize failed:', fin.error);
     }
   } catch (e) { console.error('PDF re-gen failed (non-fatal):', (e as Error).message); }
 

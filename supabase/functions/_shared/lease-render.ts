@@ -17,6 +17,13 @@
   // immutable text the tenant agreed to.
 
   import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
+  import {
+    buildLeasePDFFinalized,
+    type CertSigner,
+    type CertEsignConsent,
+  } from './pdf.ts';
+  import type { RenderedAddendum } from './lease-addenda.ts';
+  import type { PartialResolver } from './template-engine.ts';
 
   export interface ResolvedLeaseTemplate {
     template_body: string;
@@ -212,5 +219,232 @@
    */
   export function buildPdfStoragePath(appId: string, versionNumber: number, event: string): string {
     return `${appId}/lease_v${versionNumber}_${event}_${Date.now()}.pdf`;
+  }
+
+  // =====================================================================
+  // Phase 06 -- finalizeAndStorePdf
+  //
+  // One-stop helper that every signing edge function calls. Steps:
+  //   1. Build the lease PDF body (template + addenda + signatures).
+  //   2. SHA-256 the body bytes.
+  //   3. Optionally append a Certificate of Completion page (with QR
+  //      verify token).
+  //   4. SHA-256 the final bytes.
+  //   5. Reserve the next version_number via record_lease_pdf_version.
+  //   6. Upload bytes to the lease-pdfs bucket at the versioned path.
+  //   7. Patch storage_path + size_bytes on the version row.
+  //   8. Pin sha256 + certificate_appended + qr_verify_token via
+  //      record_lease_pdf_integrity.
+  //   9. Optionally update applications.lease_pdf_url to the new path.
+  //
+  // Failure of any step after (5) is logged with the version_number so an
+  // operator can recover. The function still returns a result object so
+  // callers can decide whether to short-circuit (e.g. send emails only on
+  // success).
+  // =====================================================================
+
+  export interface FinalizeAndStorePdfArgs {
+    supabase:            SupabaseClient;
+    app_id:              string;
+    app:                 Record<string, unknown>;
+    templateText:        string;
+    templateVersionId:   string | null;
+    templateVersion:     number | null;
+    event: 'pre_sign' | 'tenant_signed' | 'co_signed' | 'countersigned' | 'amended' | 'renewed' | 'manual';
+    amendmentId?:        string | null;
+    createdBy?:          string | null;
+    addenda?:            RenderedAddendum[];
+    addendaAssetBaseUrl?: string;
+    partials?:           PartialResolver;
+    /**
+     * If supplied, an audit certificate page is appended. Required for
+     * tenant_signed / co_signed / countersigned / amended / renewed.
+     */
+    certificate?: {
+      state_code:        string | null;
+      signers:           CertSigner[];
+      edge_function_tag: string;
+      site_url:          string;
+    };
+    /** Whether to update applications.lease_pdf_url to the new path. */
+    updateAppPointer?:   boolean;
+  }
+
+  export interface FinalizeAndStorePdfResult {
+    ok:                   boolean;
+    error?:               string;
+    storage_path?:        string;
+    version_number?:      number;
+    sha256?:              string;
+    body_sha256?:         string;
+    certificate_appended?: boolean;
+    qr_verify_token?:     string | null;
+  }
+
+  /**
+   * Load the most recent E-SIGN consent row per (signer_email, role) for an
+   * application. Used by the cert page so it can list which signer
+   * acknowledged which disclosure version.
+   */
+  export async function loadEsignConsentsForCert(
+    supabase: SupabaseClient,
+    app_id:   string,
+  ): Promise<CertEsignConsent[]> {
+    const { data, error } = await supabase
+      .from('esign_consents')
+      .select('signer_role, signer_email, disclosure_version, consented_at, ip_address')
+      .eq('app_id', app_id)
+      .eq('consent_given', true)
+      .is('withdrawn_at', null)
+      .order('consented_at', { ascending: false });
+    if (error || !data) {
+      console.warn('[finalizeAndStorePdf] esign_consents lookup failed:', error?.message);
+      return [];
+    }
+    // De-dup to latest per (role, email)
+    const seen = new Set<string>();
+    const out: CertEsignConsent[] = [];
+    for (const r of data as Array<{
+      signer_role: string; signer_email: string; disclosure_version: string;
+      consented_at: string; ip_address: string | null;
+    }>) {
+      const k = (r.signer_role || '') + '|' + (r.signer_email || '').toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({
+        role:               r.signer_role as CertEsignConsent['role'],
+        disclosure_version: r.disclosure_version,
+        consented_at:       r.consented_at,
+        ip:                 r.ip_address,
+      });
+    }
+    return out;
+  }
+
+  export async function finalizeAndStorePdf(
+    args: FinalizeAndStorePdfArgs,
+  ): Promise<FinalizeAndStorePdfResult> {
+    const {
+      supabase, app_id, app, templateText, templateVersionId, templateVersion,
+      event, amendmentId, createdBy, addenda, addendaAssetBaseUrl, partials,
+      certificate, updateAppPointer,
+    } = args;
+
+    // 1-4. Build + hash + (optionally) append cert + final hash
+    let finalized;
+    try {
+      // Look up E-SIGN consents only when we're actually appending a cert.
+      let esignConsents: CertEsignConsent[] = [];
+      if (certificate) {
+        esignConsents = await loadEsignConsentsForCert(supabase, app_id);
+      }
+      finalized = await buildLeasePDFFinalized(app, templateText, {
+        partials,
+        addenda,
+        addendaAssetBaseUrl,
+        certificate: certificate ? {
+          site_url:          certificate.site_url,
+          app_id,
+          state_code:        certificate.state_code,
+          template_version:  templateVersion,
+          // pdf_version is the version we're about to reserve; we don't
+          // know it yet, so we patch it onto the cert AFTER reserving in
+          // step 5. To do that without a second build, we reserve the
+          // version FIRST (step 5), then build with the known version.
+          // Re-shape: reserve first, then call this -- see refactor below.
+          pdf_version:       0, // placeholder, overwritten below
+          edge_function_tag: certificate.edge_function_tag,
+          signers:           certificate.signers,
+          esign_consents:    esignConsents,
+          amendment_id:      amendmentId || null,
+        } : undefined,
+      });
+    } catch (e) {
+      return { ok: false, error: 'PDF build failed: ' + (e as Error).message };
+    }
+
+    // 5. Reserve next version_number
+    const { data: pv, error: pvErr } = await supabase.rpc('record_lease_pdf_version', {
+      p_app_id:              app_id,
+      p_event:               event,
+      p_storage_path:        '',
+      p_template_version_id: templateVersionId,
+      p_amendment_id:        amendmentId || null,
+      p_created_by:          createdBy || null,
+    });
+    if (pvErr) return { ok: false, error: 'Version reservation failed: ' + pvErr.message };
+    const versionNumber = (pv as { version_number?: number })?.version_number || 1;
+
+    // If we appended a cert with a placeholder pdf_version, rebuild now
+    // so the cert page shows the real version number. (Body rendering is
+    // deterministic so the body hash is stable across builds.)
+    if (certificate && finalized.certificate_appended) {
+      try {
+        const esignConsents = await loadEsignConsentsForCert(supabase, app_id);
+        finalized = await buildLeasePDFFinalized(app, templateText, {
+          partials,
+          addenda,
+          addendaAssetBaseUrl,
+          certificate: {
+            site_url:          certificate.site_url,
+            app_id,
+            state_code:        certificate.state_code,
+            template_version:  templateVersion,
+            pdf_version:       versionNumber,
+            edge_function_tag: certificate.edge_function_tag,
+            signers:           certificate.signers,
+            esign_consents:    esignConsents,
+            amendment_id:      amendmentId || null,
+            qr_verify_token:   finalized.qr_verify_token || undefined,
+          },
+        });
+      } catch (e) {
+        // Non-fatal -- we already have a cert PDF, just with a wrong
+        // version number printed. Log and continue.
+        console.warn('[finalizeAndStorePdf] cert version-rebuild failed (non-fatal):', (e as Error).message);
+      }
+    }
+
+    // 6. Upload
+    const path = buildPdfStoragePath(app_id, versionNumber, event);
+    const { error: upErr } = await supabase.storage.from('lease-pdfs')
+      .upload(path, finalized.bytes, { contentType: 'application/pdf', upsert: false });
+    if (upErr) {
+      return { ok: false, error: 'PDF upload failed: ' + upErr.message, version_number: versionNumber };
+    }
+
+    // 7. Patch storage_path + size_bytes
+    await supabase.from('lease_pdf_versions')
+      .update({ storage_path: path, size_bytes: finalized.bytes.byteLength })
+      .eq('app_id', app_id).eq('version_number', versionNumber);
+
+    // 8. Pin integrity columns
+    const { error: intErr } = await supabase.rpc('record_lease_pdf_integrity', {
+      p_app_id:               app_id,
+      p_version_number:       versionNumber,
+      p_sha256:               finalized.sha256,
+      p_certificate_appended: finalized.certificate_appended,
+      p_qr_verify_token:      finalized.qr_verify_token,
+    });
+    if (intErr) {
+      console.warn('[finalizeAndStorePdf] integrity write failed (non-fatal):', intErr.message);
+    }
+
+    // 9. Update app pointer
+    if (updateAppPointer) {
+      await supabase.from('applications')
+        .update({ lease_pdf_url: path, updated_at: new Date().toISOString() })
+        .eq('app_id', app_id);
+    }
+
+    return {
+      ok:                   true,
+      storage_path:         path,
+      version_number:       versionNumber,
+      sha256:               finalized.sha256,
+      body_sha256:          finalized.body_sha256,
+      certificate_appended: finalized.certificate_appended,
+      qr_verify_token:      finalized.qr_verify_token,
+    };
   }
   

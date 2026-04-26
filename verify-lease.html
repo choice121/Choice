@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Verify Lease Document — Choice Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/verify-lease.js?v=__BUILD_VERSION__"></script>
+  <style>
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+    .header-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0}
+    .header-logo{color:var(--text);font-size:.97rem;font-weight:700}
+    .header-sub{color:var(--muted);font-size:.7rem;margin-top:2px}
+
+    .container{max-width:760px;margin:28px auto;padding:0 16px 60px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.04);overflow:hidden}
+    .card-header{background:var(--surface-2);border-bottom:1px solid var(--border);padding:18px 24px}
+    .card-header h1{font-size:1.05rem;font-weight:700;color:var(--text)}
+    .card-header p{font-size:.8rem;color:var(--muted);margin-top:4px}
+    .card-body{padding:22px 24px}
+
+    .verify-status{display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:12px;margin-bottom:20px}
+    .verify-status.ok    {background:#ecfdf5;border:1px solid #a7f3d0}
+    .verify-status.fail  {background:#fef2f2;border:1px solid #fecaca}
+    .verify-status.pending{background:#f1f5f9;border:1px solid var(--border)}
+    .verify-status .vs-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:#fff;flex-shrink:0}
+    .verify-status.ok    .vs-icon{background:#059669}
+    .verify-status.fail  .vs-icon{background:#dc2626}
+    .verify-status.pending .vs-icon{background:#64748b;font-size:1.1rem}
+    .verify-status .vs-title{font-size:1rem;font-weight:700;color:var(--text)}
+    .verify-status .vs-sub  {font-size:.78rem;color:var(--muted);margin-top:3px}
+
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 20px;margin:18px 0;padding:14px 18px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)}
+    .info-item{display:flex;flex-direction:column;gap:3px}
+    .info-label{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .info-val{font-size:.84rem;font-weight:600;color:var(--text);word-break:break-word}
+
+    .signers{margin-top:20px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+    .signers h3{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+    .signer-row{display:grid;grid-template-columns:90px 1fr auto;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:.84rem}
+    .signer-row:last-child{border-bottom:none}
+    .signer-role{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;align-self:center}
+    .signer-name{font-weight:600;color:var(--text);align-self:center}
+    .signer-date{font-size:.74rem;color:var(--muted);align-self:center;text-align:right}
+
+    .hash-block{margin-top:18px;padding:12px 14px;background:#0f172a;color:#a7f3d0;border-radius:8px;font-family:'SFMono-Regular',Consolas,monospace;font-size:.7rem;word-break:break-all;line-height:1.5}
+    .hash-block .h-label{display:block;color:#94a3b8;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+    .hash-block .h-mismatch{color:#fda4af}
+
+    .audit-note{margin-top:18px;padding:11px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:.76rem;color:#92400e;line-height:1.55}
+
+    .footer-note{margin-top:14px;font-size:.7rem;color:var(--muted);line-height:1.55;text-align:center}
+    .footer-note a{color:#1d4ed8;text-decoration:none}
+    .footer-note a:hover{text-decoration:underline}
+
+    .err-box{padding:14px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;font-size:.86rem;line-height:1.5}
+    .err-box strong{display:block;font-size:.95rem;margin-bottom:4px}
+
+    .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(100,116,139,.25);border-top-color:#1d4ed8;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-mark">CP</div>
+    <div>
+      <div class="header-logo">Choice Properties</div>
+      <div class="header-sub">Lease document verification</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <div class="card-header">
+        <h1>Lease Document Verification</h1>
+        <p>Confirms that the lease PDF on file matches the cryptographic hash recorded when the document was finalized.</p>
+      </div>
+      <div class="card-body" id="verify-body">
+        <div class="verify-status pending">
+          <div class="vs-icon"><span class="spin"></span></div>
+          <div>
+            <div class="vs-title">Verifying lease document...</div>
+            <div class="vs-sub">Re-computing SHA-256 of the stored PDF.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Need help? Email <a href="mailto:support@choiceproperties.com">support@choiceproperties.com</a><br>
+      This page does not display any personally-identifying information.
+    </p>
+  </main>
+</body>
+</html>

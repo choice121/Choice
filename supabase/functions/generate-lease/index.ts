@@ -7,7 +7,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     import {
       ensureSnapshotForApp,
       resolveLeaseTemplateDetailed,
-      buildPdfStoragePath,
+      finalizeAndStorePdf,
     } from '../_shared/lease-render.ts';
     import {
       selectRequiredAddenda,
@@ -227,40 +227,26 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       );
       if (!attachRes.ok) return jsonErr(500, 'Addenda attachment failed: ' + attachRes.error);
 
-      // 9. Generate PDF (with addenda)
-      let pdfBytes: Uint8Array;
-      try {
-        pdfBytes = await buildLeasePDF(appWithSnap || mergedApp, tmpl.template_body, {
-          addenda:             addenda.attached,
-          addendaAssetBaseUrl: getSiteUrl(),
-        });
-      } catch (e) { return jsonErr(500, 'PDF generation failed: ' + (e as Error).message); }
-
-      // 10. Versioned PDF write
-      const { data: pv, error: pvErr } = await supabase.rpc('record_lease_pdf_version', {
-        p_app_id:              app_id,
-        p_event:               'pre_sign',
-        p_storage_path:        '',
-        p_template_version_id: tmpl.version_id,
-        p_amendment_id:        null,
-        p_created_by:          auth.userEmail || null,
+      // 9-11. Build + hash + upload + version-row + integrity-row +
+      //       application pointer in one shared helper. NO certificate
+      //       page on pre_sign (no signers yet).
+      const fin = await finalizeAndStorePdf({
+        supabase,
+        app_id,
+        app:                 appWithSnap || mergedApp,
+        templateText:        tmpl.template_body,
+        templateVersionId:   tmpl.version_id,
+        templateVersion:     tmpl.version_number,
+        event:               'pre_sign',
+        createdBy:           auth.userEmail || null,
+        addenda:             addenda.attached,
+        addendaAssetBaseUrl: getSiteUrl(),
+        updateAppPointer:    true,
+        // certificate intentionally omitted: pre_sign has no signers
       });
-      if (pvErr) return jsonErr(500, 'Version registration failed: ' + pvErr.message);
-      const versionNumber = (pv as { version_number?: number })?.version_number || 1;
-      const storagePath = buildPdfStoragePath(app_id, versionNumber, 'pre_sign');
-      const { error: uploadErr } = await supabase.storage
-        .from('lease-pdfs')
-        .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: false });
-      if (uploadErr) return jsonErr(500, 'PDF upload failed: ' + uploadErr.message);
-
-      await supabase.from('lease_pdf_versions')
-        .update({ storage_path: storagePath, size_bytes: pdfBytes.byteLength })
-        .eq('app_id', app_id).eq('version_number', versionNumber);
-
-      // 11. Update application's "latest" PDF pointer
-      await supabase.from('applications')
-        .update({ lease_pdf_url: storagePath, updated_at: new Date().toISOString() })
-        .eq('app_id', app_id);
+      if (!fin.ok) return jsonErr(500, fin.error || 'PDF write failed');
+      const versionNumber = fin.version_number!;
+      const storagePath   = fin.storage_path!;
 
       // 12. Generate signing tokens
       const { error: tokenErr } = await supabase.rpc('generate_lease_tokens', { p_app_id: app_id });
