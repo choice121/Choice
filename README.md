@@ -121,7 +121,6 @@ For new contributors and AI agents, the documentation map:
 | `PROJECT_STATUS.md` | You're picking up the project — single source of truth for what's done and what's left. |
 | `ARCHITECTURE.md` | You need to understand how a piece of the system works. |
 | `DESIGN_EXTENSION_PLAN.md` | You're touching CSS, page layouts, or migrating a page to the unified design system. |
-| `FIXES.md` | You're touching backend Edge Functions or email templates (historical — all phases shipped). |
 | `KNOWN_ISSUES.md` | You hit a bug — check whether it's already documented (all entries currently resolved). |
 | `SETUP.md` | You're standing up a fresh Supabase project, Cloudflare Pages project, or GAS deployment. |
 | `MIGRATION.md` + `MIGRATION_*.sql` | You're applying or rolling back a database schema change. |

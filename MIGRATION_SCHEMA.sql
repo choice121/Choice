@@ -860,8 +860,8 @@ GRANT EXECUTE ON FUNCTION get_apps_by_email(TEXT) TO authenticated;
 
 -- ============================================================
 -- END OF MIGRATION_SCHEMA.sql
--- After running this, proceed with:
---   1. serve.js changes (MIGRATION_PATTERNS.md, Section 5)
---   2. Admin HTML page updates (MIGRATION_PATTERNS.md, Section 4)
---   3. Lease template configuration (admin panel → Leases)
+-- This file is the authoritative schema. Application-side wiring
+-- (serve.js handlers, admin HTML pages, lease template config) was
+-- completed in earlier migration phases. See ARCHITECTURE.md for the
+-- current end-to-end picture.
 -- ============================================================

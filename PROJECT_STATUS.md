@@ -3,13 +3,13 @@
 **Last reconciled:** April 22, 2026 (sub-phase 7.3.4 — legacy CSS deletion)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
-This file replaces the need to read FIXES.md, DESIGN_EXTENSION_PLAN.md, KNOWN_ISSUES.md, and the README change history just to figure out "what's done and what isn't."
+This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
 
 ---
 
 ## TL;DR
 
-- **Backend (Edge Functions, DB, email, storage):** all 8 phases of `FIXES.md` shipped. Stable.
+- **Backend (Edge Functions, DB, email, storage):** all 8 backend phases shipped. Stable.
 - **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026), browse page `listings.html` (100% — sub-phase 7.3.2, April 22 2026), and property detail `property.html` (100% — sub-phase 7.3.3, April 24 2026). All public pages now load only `cp-design.css` + `cp-marketing.css`. Sub-phase 7.3.4 (legacy CSS deletion sweep) complete — `main.css`, `mobile.css`, `listings.css`, `property.css` removed from repo (~5,634 lines).
 - **Documentation:** reconciled with code. ARCHITECTURE.md, README.md, DESIGN_EXTENSION_PLAN.md, this file, and KNOWN_ISSUES.md are all current.
 - **Production deployment:** Cloudflare Pages auto-deploys from `main`. Supabase project is live. No outstanding bugs in `KNOWN_ISSUES.md`.
@@ -25,11 +25,11 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 3. **Replit is for editing code only.** Never set up a workflow, never run a server, never `npm install` here. `scripts/enforce-cloudflare-only.js` is wired into the `preinstall` npm hook and will hard-fail the install.
 4. **Never commit Replit-only files to GitHub.** `.gitignore` lists them; `.github/workflows/cloudflare-only.yml` actively rejects any push that contains them.
 5. **Cache-bust on CSS/JS edits.** Bump `?v=YYYYMMDD` on changed assets. Date-based, not semver.
-6. **One phase at a time, owner-approved.** Per `.agents/instructions.md`: read FIXES.md (or DESIGN_EXTENSION_PLAN.md) fully, mark the phase IN PROGRESS, ship it, then STOP and wait for the owner to say "proceed."
+6. **One issue at a time, owner-approved.** Per `.agents/instructions.md`: read the open `agent_issues` row (or the relevant section of `DESIGN_EXTENSION_PLAN.md`) fully, mark it IN PROGRESS, ship it, then STOP and wait for the owner to say "proceed."
 
 ---
 
-## Backend status — `FIXES.md`
+## Backend status — Edge Functions phases
 
 | Phase | Topic | Status |
 |---|---|---|
@@ -115,7 +115,7 @@ css/apply.css           ← internal /apply/ form only (separate sub-app)
 
 | Symptom | Start here |
 |---|---|
-| New Edge Function or email-template work | `FIXES.md` (history) + `supabase/functions/<name>/index.ts` |
+| New Edge Function or email-template work | `ARCHITECTURE.md` + `supabase/functions/<name>/index.ts` |
 | New page or CSS work | `DESIGN_EXTENSION_PLAN.md` §0 rules + `css/cp-design.css` + `css/cp-marketing.css` |
 | Production bug report | `KNOWN_ISSUES.md` (search by symptom), then `ARCHITECTURE.md` |
 | DB schema change | `MIGRATION.md` template + new `MIGRATION_*.sql` file in repo root |

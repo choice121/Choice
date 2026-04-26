@@ -5,14 +5,15 @@
 
 > **FOR ANY AI BEGINNING WORK ON THIS PROJECT:**
 > Before writing a single line of code, you MUST read:
-> 1. This file (`MIGRATION.md`) ÃÂ¢ÃÂÃÂ the project context and phase tracker
-> 2. `MIGRATION_SCHEMA.sql` ÃÂ¢ÃÂÃÂ the authoritative SQL for all tables and policies
-> 3. `MIGRATION_PATTERNS.md` ÃÂ¢ÃÂÃÂ every coding convention you must follow
+> 1. `REPLIT.md` -- onboarding + how to read the `agent_issues` source-of-truth tracker
+> 2. `ARCHITECTURE.md` -- current system architecture
+> 3. This file (`MIGRATION.md`) -- historical migration context
+> 4. `MIGRATION_SCHEMA.sql` -- authoritative SQL for all tables and policies
 >
 > These files exist precisely because multiple AIs across multiple platforms
 > and sessions are working on this project. Contradictory decisions and
 > lost context are the two failure modes this documentation prevents.
-> Do not trust your own assumptions ÃÂ¢ÃÂÃÂ trust these files.
+> Do not trust your own assumptions -- trust these files.
 
 ---
 
@@ -265,7 +266,7 @@ Steps:
 ### Phase 2 ÃÂ¢ÃÂÃÂ Cutover
 
 1. Export all GAS data from Google Sheets as CSV
-2. Import into `applications` table (field mapping guide needed ÃÂ¢ÃÂÃÂ see MIGRATION_PATTERNS.md)
+2. Import into `applications` table (field mapping done in earlier migration phase)
 3. Change `BACKEND_URL` in apply form's `config.js` / Cloudflare env to point to a new Supabase Edge Function (or serve.js endpoint) instead of GAS
 4. Test one real application end-to-end through new system
 5. GAS remains live but in read-only archive mode
