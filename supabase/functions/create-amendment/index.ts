@@ -58,6 +58,17 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'Amendments can only be added to fully executed leases.');
   }
 
+  // Phase 10 -- attach the amendment to the application's CURRENT lease.
+  // Falls back to most-recent lease for backwards compat with apps that
+  // were never explicitly pointed via current_lease_id.
+  let leaseId: string | null = (app as { current_lease_id?: string }).current_lease_id || null;
+  if (!leaseId) {
+    const { data: l } = await supabase
+      .from('leases').select('id').eq('app_id', app_id)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    leaseId = (l as { id: string } | null)?.id || null;
+  }
+
   const token = genToken();
 
   // Insert the amendment row first so we have its id for the PDF version FK
@@ -65,7 +76,8 @@ Deno.serve(async (req: Request) => {
     .from('lease_amendments')
     .insert({
       app_id, kind, title: title.trim(), body: amendBody.trim(),
-      status: send_email ? 'sent' : 'draft',
+      lease_id:      leaseId,
+      status:        send_email ? 'sent' : 'draft',
       signing_token: send_email ? token : null,
       sent_at:       send_email ? new Date().toISOString() : null,
       created_by:    auth.userEmail || null,
@@ -136,6 +148,7 @@ Deno.serve(async (req: Request) => {
   return jsonOk({
     success: true,
     amendment_id: amend.id,
+    lease_id:    leaseId,
     pdf_path: pdfPath,
     signing_url: send_email ? `${getSiteUrl()}/lease-sign.html?amendment_token=${token}` : null,
   });

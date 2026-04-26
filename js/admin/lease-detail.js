@@ -176,13 +176,22 @@
     const sb = CP.sb();
     const url = new URL(location.href);
     _appId = url.searchParams.get('app_id');
+    const queryLeaseId = url.searchParams.get('lease_id');
+
+    // Phase 10 -- accept ?lease_id= and resolve to its app_id.
+    // Lets admins deep-link directly to a specific lease (renewals etc).
+    if (!_appId && queryLeaseId) {
+      const { data: lr } = await sb.from('leases').select('app_id').eq('id', queryLeaseId).maybeSingle();
+      if (lr?.app_id) _appId = lr.app_id;
+    }
+
     if (!_appId) {
       document.getElementById('lease-detail-root').innerHTML =
-        '<div class="empty"><h3>Missing app_id</h3><p>Open a lease from the pipeline to view its detail.</p></div>';
+        '<div class="empty"><h3>Missing app_id or lease_id</h3><p>Open a lease from the pipeline to view its detail.</p></div>';
       return;
     }
 
-    const [appRes, eventsRes, pdfsRes, amendmentsRes, ver, tokensRes] = await Promise.all([
+    const [appRes, eventsRes, pdfsRes, amendmentsRes, ver, tokensRes, leasesRes] = await Promise.all([
       sb.from('applications').select('*').eq('app_id', _appId).single(),
       sb.from('sign_events').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
       sb.from('lease_pdf_versions').select('*').eq('app_id', _appId).order('version_number', { ascending: false }),
@@ -190,6 +199,8 @@
       sb.from('admin_actions').select('action, created_at, metadata').eq('target_id', _appId).eq('target_type','application').order('created_at',{ascending:false}).limit(50),
       // Phase 05 - signing-token registry (active/used/revoked/expired)
       sb.from('lease_signing_tokens_admin').select('*').eq('app_id', _appId).order('created_at', { ascending: false }),
+      // Phase 10 - all leases attached to this application (chronological)
+      sb.from('leases').select('id, status, lease_start_date, lease_end_date, monthly_rent, created_at').eq('app_id', _appId).order('created_at', { ascending: false }),
     ]);
 
     if (appRes.error || !appRes.data) {
@@ -209,6 +220,7 @@
       amends: amendmentsRes.data || [],
       actions: ver.data || [],
       tokens:  tokensRes.data || [],
+      leases:  leasesRes.data || [],
     });
   }
 
@@ -230,7 +242,7 @@
     })[role] || role;
   }
 
-  function render({ app, events, pdfs, amends, actions, tokens }) {
+  function render({ app, events, pdfs, amends, actions, tokens, leases }) {
     const name = `${app.first_name||''} ${app.last_name||''}`.trim() || '(no name)';
     const root = document.getElementById('lease-detail-root');
 
@@ -314,6 +326,36 @@
           </div>`).join('')
       : '<div class="text-sm muted" style="padding:8px 0">No amendments on this lease.</div>';
 
+    // Phase 10 -- list leases attached to this application (for visibility into renewals/voids)
+    const currentLeaseId = app.current_lease_id || null;
+    const leasesHtml = (leases && leases.length)
+      ? leases.map(L => {
+          const isCurrent = L.id === currentLeaseId;
+          const statusCls = ({
+            active:           'badge success',
+            partially_signed: 'badge warn',
+            fully_signed:     'badge warn',
+            draft:            'badge',
+            void:             'badge error',
+            superseded:       'badge',
+            terminated:       'badge error',
+            ended:            'badge',
+          })[L.status] || 'badge';
+          return `<div class="pdf-row" style="flex-wrap:wrap;gap:8px">
+            <div style="flex:1;min-width:240px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span class="${statusCls}">${S.esc(L.status||'—')}</span>
+                ${isCurrent ? '<span class="badge success">CURRENT</span>' : ''}
+                <span class="text-xs muted" style="font-family:ui-monospace,monospace">${S.esc(L.id)}</span>
+              </div>
+              <div class="text-xs muted" style="margin-top:4px">
+                ${fmtDate(L.lease_start_date)} \u2192 ${fmtDate(L.lease_end_date)} &middot; ${fmtMoney(L.monthly_rent)}/mo &middot; created ${S.esc(fmt(L.created_at))}
+              </div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div class="text-sm muted" style="padding:14px;text-align:center">No leases on file. (Pre-Phase-10 application.)</div>';
+
     root.innerHTML = `
       <div class="card" style="margin-bottom:14px">
         <div class="card-body">
@@ -326,6 +368,7 @@
                 <span class="badge">${S.esc(app.lease_status||'—')}</span>
                 ${app.management_cosigned ? '<span class="badge success">Countersigned</span>' : ''}
                 ${app.has_co_applicant ? '<span class="badge">Co-applicant</span>' : ''}
+                ${currentLeaseId ? `<span class="badge" title="Current lease id" style="font-family:ui-monospace,monospace;font-size:.66rem">lease ${S.esc(currentLeaseId.slice(0,8))}</span>` : ''}
               </div>
             </div>
             <div class="row-flex gap-2" style="flex-wrap:wrap">
@@ -349,6 +392,17 @@
 
       ${renderMoneyBreakdownCard(app)}
       ${renderUtilityMatrixCard(app)}
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div class="row-flex between" style="margin-bottom:10px">
+            <h3 style="font-size:.92rem;font-weight:700">Leases on this application</h3>
+            <span class="text-xs muted">Phase 10 \u2014 leases as first-class entities</span>
+          </div>
+          <p class="text-xs muted" style="margin-bottom:10px">Each row is a lease that has existed for this application (originals, renewals, voided drafts). Only one lease can be CURRENT.</p>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">${leasesHtml}</div>
+        </div>
+      </div>
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-body">
