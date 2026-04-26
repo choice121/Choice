@@ -3,9 +3,14 @@
 //   • Admin users (admin_roles table)
 //   • Authenticated landlords — only for applications on their own properties
 // Tenant replies use the submit_tenant_reply() DB RPC (anon-callable) instead.
+//
+// Issue #25 (Apr 26 2026): every GAS call now goes through gasSend() in
+// _shared/send-email.ts so the HMAC-signed payload is identical across
+// every edge function.
 import { corsResponse } from '../_shared/cors.ts';
 import { requireAuth } from '../_shared/auth.ts';
 import { jsonResponse } from '../_shared/utils.ts';
+import { gasSend } from '../_shared/send-email.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse()
@@ -69,26 +74,46 @@ Deno.serve(async (req) => {
     await supabase.from('messages').insert({ app_id, sender: sender || 'admin', sender_name: sender_name || 'Choice Properties', message })
 
     // P1-A: Graceful GAS relay check — if not configured, skip email but still return success
-    const gasUrl    = Deno.env.get('GAS_EMAIL_URL')
-    const gasSecret = Deno.env.get('GAS_RELAY_SECRET')
-    if (!gasUrl || !gasSecret) {
+    const gasConfigured = !!Deno.env.get('GAS_EMAIL_URL') && !!Deno.env.get('GAS_RELAY_SECRET')
+    if (!gasConfigured) {
       console.warn('GAS_EMAIL_URL or GAS_RELAY_SECRET not configured — email notification skipped')
       return jsonResponse({ success: true, warning: 'Email relay not configured' })
     }
 
+    // Fire-and-forget GAS send + email_logs insert helper.
+    const fireAndLog = (
+      template: string,
+      to: string,
+      data: Record<string, unknown>,
+      logExtra: Record<string, unknown> = {},
+    ) => {
+      gasSend({ template, to, data }).then(async (res) => {
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: res.ok ? 'sent' : 'failed',
+          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+          ...logExtra,
+        }).catch(() => {})
+      }).catch(async (e) => {
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: 'failed',
+          error_msg: e?.message || 'Network error',
+          ...logExtra,
+        }).catch(() => {})
+      })
+    }
+
     // P1-A: new_message_tenant — notify tenant when admin or landlord sends a message
     if (sender === 'admin' || sender === 'landlord' || !sender) {
-      fetch(gasUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: gasSecret, template: 'new_message_tenant', to: app.email,
-          data: { app_id, first_name: app.first_name, message, preferred_language: app.preferred_language || 'en' } })
-      }).then(async (r) => {
-        const json = await r.json().catch(() => ({}))
-        const ok = r.ok && json.success !== false
-        await supabase.from('email_logs').insert({ type: 'new_message_tenant', recipient: app.email, status: ok ? 'sent' : 'failed', app_id, error_msg: ok ? null : (json.error || `HTTP ${r.status}`) })
-      }).catch(async (e) => {
-        await supabase.from('email_logs').insert({ type: 'new_message_tenant', recipient: app.email, status: 'failed', app_id, error_msg: e?.message || 'Network error' })
-      })
+      fireAndLog(
+        'new_message_tenant',
+        app.email,
+        { app_id, first_name: app.first_name, message, preferred_language: app.preferred_language || 'en' },
+        { app_id },
+      )
     }
 
     // P1-B: new_message_landlord — notify landlord when a tenant message is forwarded by admin.
@@ -100,17 +125,12 @@ Deno.serve(async (req) => {
         const { data: landlordData } = await supabase.from('landlords').select('email, contact_name, business_name').eq('id', app.landlord_id).maybeSingle()
         if (landlordData?.email) {
           const landlordName = landlordData.business_name || landlordData.contact_name || 'Landlord'
-          fetch(gasUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ secret: gasSecret, template: 'new_message_landlord', to: landlordData.email,
-              data: { app_id, landlordName, tenantName: sender_name || 'Tenant', message } })
-          }).then(async (r) => {
-            const json = await r.json().catch(() => ({}))
-            const ok = r.ok && json.success !== false
-            await supabase.from('email_logs').insert({ type: 'new_message_landlord', recipient: landlordData.email, status: ok ? 'sent' : 'failed', app_id, error_msg: ok ? null : (json.error || `HTTP ${r.status}`) })
-          }).catch(async (e) => {
-            await supabase.from('email_logs').insert({ type: 'new_message_landlord', recipient: landlordData.email, status: 'failed', app_id, error_msg: e?.message || 'Network error' })
-          })
+          fireAndLog(
+            'new_message_landlord',
+            landlordData.email,
+            { app_id, landlordName, tenantName: sender_name || 'Tenant', message },
+            { app_id },
+          )
         }
       }
     }

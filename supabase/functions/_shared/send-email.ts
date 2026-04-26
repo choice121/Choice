@@ -3,6 +3,11 @@
  * Dual-provider email helper: tries Resend first, falls back to GAS relay,
  * then falls back to Gmail via nodemailer.
  * Failure is non-fatal — callers should log errors but not crash.
+ *
+ * Also exports `gasSend()`: a dedicated helper for callers that already
+ * know they want to hit the GAS relay directly with a named template
+ * (send-inquiry, send-message). It centralises the HMAC signing introduced
+ * in M-3 so every GAS call uses the same payload shape.
  */
 
 import nodemailer from 'npm:nodemailer@6.9.16';
@@ -25,6 +30,68 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     hex += bytes[i].toString(16).padStart(2, '0');
   }
   return hex;
+}
+
+// ── gasSend: shared GAS-relay caller ────────────────────────────────────────
+// Resolves issue #25 — send-inquiry and send-message previously built the GAS
+// payload by hand and only sent the legacy `secret` field, so any GAS-side
+// rollout that drops legacy auth would break those two functions. Funnel
+// every GAS call through this helper so they all sign identically.
+export interface GasSendInput {
+  template: string;                          // GAS template name (e.g. 'inquiry_reply')
+  to: string;                                // recipient email
+  cc?: string | null;                        // optional cc
+  data?: Record<string, unknown>;            // template variables
+}
+
+export interface GasSendResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+}
+
+/**
+ * POST a signed payload to the GAS email relay. Includes both the HMAC
+ * signature (`ts`+`sig`) and the legacy `secret` field for one rollout
+ * cycle — see issue #24 for the planned removal of the legacy field.
+ */
+export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
+  const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
+  const gasSecret = Deno.env.get('GAS_RELAY_SECRET');
+  if (!gasUrl || !gasSecret) {
+    return { ok: false, status: 0, error: 'GAS_EMAIL_URL or GAS_RELAY_SECRET not configured' };
+  }
+
+  const ts = Math.floor(Date.now() / 1000);
+  // Legacy `secret` field is included for one rollout cycle so the relay
+  // continues to accept us before the owner redeploys the updated GAS code.
+  // Once GAS prefers `sig`, we can drop the legacy field (issue #24).
+  const inner = {
+    ts,
+    secret: gasSecret,
+    template: input.template,
+    to: input.to,
+    cc: input.cc ?? null,
+    data: input.data ?? {},
+  };
+  const innerJson = JSON.stringify(inner);
+  const sig = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
+
+  try {
+    const r = await fetch(gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...inner, sig }),
+    });
+    let json: any = {};
+    try { json = await r.json(); } catch { /* relay sometimes returns text */ }
+    const ok = r.ok && json.success !== false;
+    return ok
+      ? { ok: true, status: r.status }
+      : { ok: false, status: r.status, error: json.error || `HTTP ${r.status}` };
+  } catch (e) {
+    return { ok: false, status: 0, error: (e as Error)?.message || 'Network error' };
+  }
 }
 
 export interface EmailPayload {
@@ -64,45 +131,15 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     } catch (e) { console.warn('Resend threw:', (e as Error)?.message, '— trying next provider'); }
   }
 
-  // ── 2. Try GAS relay ──────────────────────────────────────────────────────
-  // M-3: send a signed (ts + sig) payload. The GAS relay still accepts the
-  // legacy `secret` field for one rollout cycle, but new traffic must use
-  // HMAC so a leaked secret is only valid for ±5 minutes.
+  // ── 2. Try GAS relay (via shared signed helper) ───────────────────────────
   if (gasUrl && gasSecret && (payload.template || payload.html)) {
-    try {
-      const gasTemplate = payload.template || 'raw_html';
-      const gasData = gasTemplate === 'raw_html'
-        ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
-        : (payload.data ?? {});
-      const ts = Math.floor(Date.now() / 1000);
-      // ROLLOUT NOTE: we include BOTH the legacy `secret` field AND the new
-      // signed (`ts` + `sig`) fields. The Apps Script relay can only be
-      // deployed manually by the owner; until they redeploy the updated
-      // GAS code, the relay will accept us via the legacy `secret` check.
-      // After the GAS update is live, the relay prefers `sig` and the
-      // legacy field is ignored — at which point we can drop it here.
-      const inner = {
-        ts,
-        secret: gasSecret,           // legacy compatibility — see comment above
-        template: gasTemplate,
-        to: payload.to,
-        cc: payload.cc ?? null,
-        data: gasData,
-      };
-      // Sign the (ts + body) pair. The body bytes are the inner JSON minus
-      // the eventual `sig` field, so we serialise once for signing then
-      // re-serialise WITH `sig` for the actual HTTP send.
-      const innerJson = JSON.stringify(inner);
-      const sig = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
-      const r = await fetch(gasUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...inner, sig }),
-      });
-      const json = await r.json().catch(() => ({}));
-      if (r.ok && json.success !== false) return { ok: true, provider: 'gas' };
-      console.warn('GAS relay failed:', json.error || r.status, '— trying Gmail');
-    } catch (e) { console.warn('GAS relay threw:', (e as Error)?.message, '— trying Gmail'); }
+    const template = payload.template || 'raw_html';
+    const data = template === 'raw_html'
+      ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
+      : (payload.data ?? {});
+    const res = await gasSend({ template, to: payload.to, cc: payload.cc ?? null, data });
+    if (res.ok) return { ok: true, provider: 'gas' };
+    console.warn('GAS relay failed:', res.error, '— trying Gmail');
   }
 
   // ── 3. Fall back to Gmail (nodemailer) ────────────────────────────────────
