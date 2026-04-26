@@ -374,6 +374,9 @@
             <div class="row-flex gap-2" style="flex-wrap:wrap">
               <button class="btn btn-primary btn-sm" data-action="new-amendment">+ New Amendment</button>
               ${app.lease_pdf_url ? `<button class="btn btn-ghost btn-sm" data-action="dl-latest">Download latest PDF</button>` : ''}
+              ${currentLeaseId ? `<button class="btn btn-ghost btn-sm" data-action="gen-renewal" data-lease-id="${S.esc(currentLeaseId)}">&#x1F504; Renew Lease</button>` : ''}
+              ${currentLeaseId ? `<button class="btn btn-ghost btn-sm" data-action="gen-termination" data-lease-id="${S.esc(currentLeaseId)}">&#x26A0; Termination Notice</button>` : ''}
+              ${currentLeaseId ? `<button class="btn btn-ghost btn-sm" data-action="gen-rent-increase" data-lease-id="${S.esc(currentLeaseId)}">&#x1F4C8; Rent Increase</button>` : ''}
             </div>
           </div>
 
@@ -509,6 +512,131 @@
     await loadAll();
   }
 
+  // Phase 11 — generate a renewal lease for the current lease
+  async function generateRenewal(leaseId) {
+    if (!leaseId) return;
+    const data = await S.formSheet({
+      title: 'Generate Renewal Lease',
+      submit: 'Create Renewal',
+      fields: [
+        { name: 'new_monthly_rent', label: 'New monthly rent (leave blank to keep current)', type: 'number',
+          placeholder: _app ? String(_app.monthly_rent || '') : '' },
+        { name: 'new_lease_start_date', label: 'New lease start date (YYYY-MM-DD, leave blank to auto)',
+          placeholder: 'Auto: day after current lease ends' },
+        { name: 'new_lease_end_date', label: 'New lease end date (YYYY-MM-DD, leave blank to auto)',
+          placeholder: 'Auto: same duration as current lease' },
+        { name: 'notes', label: 'Admin notes (optional)', type: 'textarea', rows: 3,
+          placeholder: 'Internal note — not shown to tenant' },
+      ],
+    });
+    if (!data) return;
+
+    const payload = { lease_id: leaseId };
+    if (data.new_monthly_rent && parseFloat(data.new_monthly_rent) > 0)
+      payload.new_monthly_rent = parseFloat(data.new_monthly_rent);
+    if (data.new_lease_start_date && data.new_lease_start_date.trim())
+      payload.new_lease_start_date = data.new_lease_start_date.trim();
+    if (data.new_lease_end_date && data.new_lease_end_date.trim())
+      payload.new_lease_end_date = data.new_lease_end_date.trim();
+    if (data.notes && data.notes.trim())
+      payload.notes = data.notes.trim();
+
+    S.toast('Generating renewal lease\u2026');
+    const res = await S.callFn('/generate-renewal', payload);
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json?.error || 'Renewal generation failed', 'error'); return; }
+    const d = res.json;
+    S.toast(
+      `Renewal lease created (ID: ${(d.renewal_lease_id || '').slice(0, 8)}\u2026).` +
+      (d.is_large_increase ? ' NOTE: Large rent increase — extended notice required.' : '') +
+      ' The parent lease is now superseded.',
+      'success'
+    );
+    await loadAll();
+  }
+
+  // Phase 11 — generate a termination notice for the current lease
+  async function generateTerminationNotice(leaseId) {
+    if (!leaseId) return;
+    const data = await S.formSheet({
+      title: 'Generate Termination Notice',
+      submit: 'Generate Notice',
+      fields: [
+        { name: 'notice_type', label: 'Notice type', type: 'select', required: true, options: [
+          { value: 'landlord_nonpayment',      label: 'Notice to Pay Rent or Quit (non-payment)' },
+          { value: 'landlord_lease_violation', label: 'Notice to Cure or Quit (lease violation)' },
+          { value: 'landlord_no_renewal',      label: 'Notice of Non-Renewal (landlord)' },
+          { value: 'tenant_initiated_30_day',  label: 'Notice of Intent to Vacate (tenant)' },
+          { value: 'mutual',                   label: 'Mutual Agreement to Terminate' },
+        ]},
+        { name: 'effective_date', label: 'Effective / vacate-by date (YYYY-MM-DD)', required: true,
+          placeholder: 'e.g. 2026-07-01' },
+        { name: 'reason_text', label: 'Reason / just-cause statement (required for just-cause states & no-renewal)',
+          type: 'textarea', rows: 4, placeholder: 'Describe the reason. Required for just-cause jurisdictions.' },
+      ],
+    });
+    if (!data) return;
+    if (!data.notice_type || !data.effective_date) { S.toast('Notice type and effective date are required', 'error'); return; }
+
+    S.toast('Generating termination notice\u2026');
+    const res = await S.callFn('/generate-termination-notice', {
+      lease_id:      leaseId,
+      notice_type:   data.notice_type,
+      effective_date: data.effective_date.trim(),
+      reason_text:   data.reason_text ? data.reason_text.trim() : undefined,
+    });
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json?.error || 'Notice generation failed', 'error'); return; }
+    const d = res.json;
+    S.toast(
+      `Termination notice generated. ` +
+      `State-required notice: ${d.notice_days_required} day(s). ` +
+      (d.just_cause_warnings && d.just_cause_warnings.length ? 'Just-cause warning on file. ' : '') +
+      'PDF saved — download from PDF version history.',
+      'success'
+    );
+    await loadAll();
+  }
+
+  // Phase 11 — generate a rent increase letter for the current lease
+  async function generateRentIncreaseLetter(leaseId) {
+    if (!leaseId) return;
+    const data = await S.formSheet({
+      title: 'Generate Rent Increase Letter',
+      submit: 'Generate Letter',
+      fields: [
+        { name: 'new_monthly_rent', label: 'New monthly rent ($)', type: 'number', required: true,
+          placeholder: _app ? String((_app.monthly_rent || 0) + 50) : '' },
+        { name: 'effective_date', label: 'Effective date (YYYY-MM-DD)', required: true,
+          placeholder: 'Must meet state notice period' },
+        { name: 'override_cap_check', type: 'checkbox', label: 'Override',
+          checkLabel: 'Override statutory rent-cap check (CA/OR only — confirm with attorney first)' },
+      ],
+    });
+    if (!data) return;
+    if (!data.new_monthly_rent || !data.effective_date) { S.toast('New rent and effective date are required', 'error'); return; }
+
+    S.toast('Generating rent increase letter\u2026');
+    const res = await S.callFn('/generate-rent-increase-letter', {
+      lease_id:          leaseId,
+      new_monthly_rent:  parseFloat(data.new_monthly_rent),
+      effective_date:    data.effective_date.trim(),
+      override_cap_check: !!data.override_cap_check,
+    });
+    if (!res) return;
+    if (!res.ok) { S.toast(res.json?.error || 'Letter generation failed', 'error'); return; }
+    const d = res.json;
+    S.toast(
+      `Rent increase letter generated (${d.rent_increase_pct}% increase, ` +
+      `effective ${data.effective_date}). ` +
+      `Notice period: ${d.notice_days_required} day(s)` +
+      (d.is_large_increase ? ' (large-increase extended notice applied)' : '') +
+      '. PDF saved — download from PDF version history.',
+      'success'
+    );
+    await loadAll();
+  }
+
   async function newAmendment() {
     if (!_app) return;
     if (!_app.management_cosigned) {
@@ -569,6 +697,13 @@
       if (rev) return revokeToken(rev.dataset.token, rev.dataset.role);
       const rs  = e.target.closest('[data-action="resend-token"]');
       if (rs) return resendToken(rs.dataset.role, rs.dataset.amendment || null);
+      // Phase 11 -- lifecycle document generators
+      const genR = e.target.closest('[data-action="gen-renewal"]');
+      if (genR) return generateRenewal(genR.dataset.leaseId);
+      const genT = e.target.closest('[data-action="gen-termination"]');
+      if (genT) return generateTerminationNotice(genT.dataset.leaseId);
+      const genRi = e.target.closest('[data-action="gen-rent-increase"]');
+      if (genRi) return generateRentIncreaseLetter(genRi.dataset.leaseId);
     });
 
     const okAuth = await S.requireAdmin();

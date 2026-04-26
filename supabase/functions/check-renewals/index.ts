@@ -92,13 +92,22 @@ Deno.serve(async (req: Request) => {
       });
       // Dedupe: log to admin_actions so the view's recently_nudged
       // flag flips to true for the next run.
+      // Phase 11 — include deep link to admin lease detail page so the admin
+      // can quickly navigate to "Start Renewal" from the action log.
+      const adminDetailUrl =
+        `https://choice-properties-site.pages.dev/admin/lease-detail.html?app_id=${r.app_id}`;
       await supabase.from('admin_actions').insert({
         action:      'lease_renewal_nudge_sent',
         target_type: 'application',
         target_id:   r.app_id,
-        metadata:    { actor: auth.actor, days_until_end: r.days_until_end, email: r.email },
+        metadata: {
+          actor:          auth.actor,
+          days_until_end: r.days_until_end,
+          email:          r.email,
+          admin_detail_url: adminDetailUrl,
+        },
       });
-      sent.push({ app_id: r.app_id, email: r.email, days: r.days_until_end });
+      sent.push({ app_id: r.app_id, email: r.email, days: r.days_until_end, admin_detail_url: adminDetailUrl });
     } catch (e) {
       failed.push({ app_id: r.app_id, error: (e as Error).message });
     }

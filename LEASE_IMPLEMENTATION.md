@@ -76,8 +76,8 @@ Transform the lease system from a single-state (Michigan-only) electronic signin
 | 07  | Itemized financials + utility responsibility matrix         | DONE          | 2026-04-26 | 2026-04-26 | c52a2f9, 8495ec3, 05573c9, ef644c1 |
 | 08  | Move-in / move-out condition reports                        | DONE          | 2026-04-26 | 2026-04-26 | 989fe5e, 294f3cc, b232eea, 7d37b3e, +closeout |
 | 09  | Security deposit accounting + deduction letter generator    | DONE          | 2026-04-26 | 2026-04-26 | 9044e76, 07ff1c8, b2b4394, 1676368, +chunk5 |
-| 10  | Leases as first-class entity (refactor)                     | TODO          | —          | —          | —             |
-| 11  | Document generators (renewal, termination, rent increase)   | TODO          | —          | —          | —             |
+| 10  | Leases as first-class entity (refactor)                     | DONE          | 2026-04-26 | 2026-04-26 | agent:claude (phase10 code was pre-built; closeout confirmed) |
+| 11  | Document generators (renewal, termination, rent increase)   | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
 | 12  | Plain-language summary + Spanish locale + accessibility     | TODO          | —          | —          | —             |
 | 13  | Remaining-40-states templates rollout                       | TODO          | —          | —          | —             |
 
