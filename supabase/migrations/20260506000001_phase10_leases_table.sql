@@ -14,14 +14,17 @@
 --                              (draft|sent|partially_signed|fully_signed|active
 --                               |expiring|expired|terminated|renewed|cancelled)
 --
--- The DEPRECATED columns on applications (lease_*) stay in place per
--- LEASE_IMPLEMENTATION.md §3 — removal is explicitly scheduled for Phase 14.
--- Column comments mark them deprecated so future schema scans surface it.
---
--- Idempotent: every CREATE uses IF NOT EXISTS / DO blocks.
+-- Idempotency note: an abandoned earlier attempt at Phase 10 left a partial
+-- public.leases shell with a different column set and three incoming FKs.
+-- We CASCADE-drop it here. The dropped FK constraints (on lease_pdf_versions,
+-- lease_addenda_attached, lease_deposit_accountings) get re-created in
+-- migration 20260506000002.
+
+-- 0. Tear down any pre-existing partial leases shell -------------------------
+DROP TABLE IF EXISTS public.leases CASCADE;
 
 -- 1. The table itself ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.leases (
+CREATE TABLE public.leases (
   id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id              UUID REFERENCES public.applications(id) ON DELETE SET NULL,
   app_id                      TEXT,                         -- human-readable, denormalized from applications.app_id
@@ -55,8 +58,7 @@ CREATE TABLE IF NOT EXISTS public.leases (
   -- Phase 07 utility responsibilities
   utility_responsibilities    JSONB,
 
-  -- Policies + landlord identity (snapshotted on the lease so renewals
-  -- can carry forward even if the application was scrubbed/archived)
+  -- Policies + landlord identity
   lease_landlord_name         TEXT,
   lease_landlord_address      TEXT,
   lease_late_fee_flat         NUMERIC(10,2),
@@ -111,7 +113,6 @@ CREATE TABLE IF NOT EXISTS public.leases (
   ))
 );
 
--- Comments — make schema introspection self-documenting
 COMMENT ON TABLE public.leases IS
   'Phase 10: leases lifted out of applications. One application can spawn many leases (renewals, replacements). All lease ops should be keyed by leases.id; applications.lease_* columns are deprecated and slated for removal in Phase 14.';
 COMMENT ON COLUMN public.leases.app_id IS
@@ -122,13 +123,13 @@ COMMENT ON COLUMN public.leases.lease_status IS
   'Lifecycle state: draft → sent → partially_signed → fully_signed → active → (expiring | expired | terminated | renewed | cancelled).';
 
 -- Indexes for the common access patterns -------------------------------------
-CREATE INDEX IF NOT EXISTS leases_application_id_idx       ON public.leases (application_id);
-CREATE INDEX IF NOT EXISTS leases_app_id_idx               ON public.leases (app_id);
-CREATE INDEX IF NOT EXISTS leases_parent_lease_id_idx      ON public.leases (parent_lease_id);
-CREATE INDEX IF NOT EXISTS leases_landlord_id_idx          ON public.leases (landlord_id);
-CREATE INDEX IF NOT EXISTS leases_lease_status_idx         ON public.leases (lease_status);
-CREATE INDEX IF NOT EXISTS leases_lease_end_date_idx       ON public.leases (lease_end_date);
-CREATE UNIQUE INDEX IF NOT EXISTS leases_active_per_app_idx
+CREATE INDEX leases_application_id_idx       ON public.leases (application_id);
+CREATE INDEX leases_app_id_idx               ON public.leases (app_id);
+CREATE INDEX leases_parent_lease_id_idx      ON public.leases (parent_lease_id);
+CREATE INDEX leases_landlord_id_idx          ON public.leases (landlord_id);
+CREATE INDEX leases_lease_status_idx         ON public.leases (lease_status);
+CREATE INDEX leases_lease_end_date_idx       ON public.leases (lease_end_date);
+CREATE UNIQUE INDEX leases_active_per_app_idx
   ON public.leases (application_id)
   WHERE lease_status IN ('draft','sent','partially_signed','fully_signed','active','expiring');
 -- ^ at most one "live" lease per application — renewals must transition the
@@ -142,18 +143,12 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-DROP TRIGGER IF EXISTS leases_set_updated_at ON public.leases;
 CREATE TRIGGER leases_set_updated_at
   BEFORE UPDATE ON public.leases
   FOR EACH ROW EXECUTE FUNCTION public._leases_set_updated_at();
 
 -- 2. RLS ---------------------------------------------------------------------
 ALTER TABLE public.leases ENABLE ROW LEVEL SECURITY;
-
--- Service role bypasses RLS automatically; explicit policies for authenticated:
-DROP POLICY IF EXISTS leases_admin_all       ON public.leases;
-DROP POLICY IF EXISTS leases_landlord_select ON public.leases;
-DROP POLICY IF EXISTS leases_tenant_select   ON public.leases;
 
 -- Admin: full access
 CREATE POLICY leases_admin_all ON public.leases
