@@ -20,6 +20,39 @@ jobs:
         with:
           version: latest
 
+      # Fail-fast guard: type-check every edge function before pulling Docker
+      # layers and round-tripping to Supabase. Catches syntax errors (e.g. an
+      # unescaped apostrophe in a single-quoted string) in seconds instead of
+      # minutes, and prevents a partial deploy where the first N functions
+      # update successfully and function N+1 leaves the rest stale.
+      - name: Set up Deno (for syntax check)
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Type-check edge functions before deploy
+        run: |
+          set -e
+          shopt -s nullglob
+          FAIL=0
+          for d in supabase/functions/*/; do
+            slug=$(basename "$d")
+            case "$slug" in _*) continue;; esac
+            entry="$d/index.ts"
+            [ -f "$entry" ] || continue
+            echo "::group::deno check $slug"
+            if ! deno check --no-lock --quiet "$entry"; then
+              echo "::error file=$entry::Type/syntax error in edge function '$slug' — fix before deploy"
+              FAIL=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            echo "One or more edge functions failed type-check — aborting deploy."
+            exit 1
+          fi
+          echo "All edge functions type-check OK."
+
       # M-1 hardening: deploy each function INDIVIDUALLY so the per-function
       # `verify_jwt` setting in supabase/config.toml is respected. The previous
       # bulk `supabase functions deploy --no-verify-jwt` invocation overrode
