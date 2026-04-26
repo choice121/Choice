@@ -4556,3 +4556,184 @@ body[data-portal="public"][data-page="home"] .mv2-finalcta__reassurance i {
   body[data-portal="public"][data-page="home"] { padding-bottom: 76px; }
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.8 — listings.html mv2 refresh                              ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.8, agent_issues #38) ║
+   ║                                                                      ║
+   ║  Scoped to body[data-portal="public"][data-page="listings"]         ║
+   ║  Additive — preserves all #IDs that listings.js depends on.          ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Page header: warm bg, italic Fraunces title ────────────────── */
+body[data-portal="public"][data-page="listings"] .mv2-listings-header {
+  position: relative;
+  padding: clamp(40px, 6vw, 72px) 0 clamp(24px, 3vw, 36px);
+  isolation: isolate;
+  border-bottom: 1px solid var(--mv2-hairline);
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse at top left, rgba(212, 160, 23, 0.07) 0%, transparent 55%),
+    linear-gradient(180deg, var(--mv2-bg-warm) 0%, #FFFEFC 100%);
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mv2-stack-3);
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__eyebrow {
+  margin: 0;
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__title {
+  margin: 0;
+  font-family: var(--mv2-display);
+  font-weight: 400;
+  font-style: normal;
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--mv2-ink);
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--mv2-ink);
+  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.18) 65%);
+  padding: 0 0.05em;
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-header__subtitle {
+  margin: 0;
+  color: var(--mv2-muted);
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.1rem);
+  line-height: 1.55;
+  max-width: 56ch;
+}
+
+/* ── Search row: bigger fields, hairline borders, brand focus ring ── */
+body[data-portal="public"][data-page="listings"] .mv2-search-row {
+  margin-top: var(--mv2-stack-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid var(--mv2-hairline);
+  border-radius: var(--mv2-r-md);
+  transition: border-color var(--mv2-dur) var(--mv2-ease),
+              box-shadow var(--mv2-dur) var(--mv2-ease);
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field:focus-within {
+  border-color: var(--mv2-brand);
+  box-shadow: 0 0 0 3px rgba(0, 106, 255, 0.15);
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field > i.fas {
+  flex-shrink: 0;
+  width: 38px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--mv2-muted-2);
+  transition: color var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field:focus-within > i.fas {
+  color: var(--mv2-brand);
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field input,
+body[data-portal="public"][data-page="listings"] .mv2-search-field select {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 12px 14px 12px 0;
+  font-size: 0.95rem;
+  color: var(--mv2-ink);
+  font-family: inherit;
+  min-width: 0;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field--text {
+  flex: 2 1 280px;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field--select {
+  flex: 1 1 150px;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-field--select select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='%23788494'><path d='M6 8L2 4h8z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px;
+  padding-right: 32px;
+  cursor: pointer;
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 24px;
+  border-radius: var(--mv2-r-md);
+  background: linear-gradient(180deg, var(--mv2-brand) 0%, var(--mv2-brand-dark) 100%);
+  color: #FFFFFF;
+  border: 1px solid var(--mv2-brand-dark);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 106, 255, 0.25);
+  transition: background var(--mv2-dur) var(--mv2-ease),
+              box-shadow var(--mv2-dur) var(--mv2-ease),
+              transform var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="listings"] .mv2-search-btn:hover,
+body[data-portal="public"][data-page="listings"] .mv2-search-btn:focus-visible {
+  background: var(--mv2-brand-dark);
+  box-shadow: 0 4px 14px rgba(0, 106, 255, 0.35);
+  transform: translateY(-1px);
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="listings"] .mv2-search-btn:hover { transform: none; }
+}
+@media (max-width: 600px) {
+  body[data-portal="public"][data-page="listings"] .mv2-search-field--text { flex: 1 1 100%; }
+  body[data-portal="public"][data-page="listings"] .mv2-search-btn { flex: 1 1 100%; }
+}
+
+/* ── Filter bar polish ─────────────────────────────────────────── */
+body[data-portal="public"][data-page="listings"] .mv2-filter-bar {
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--mv2-hairline);
+}
+
+/* ── Listings section header ────────────────────────────────────── */
+body[data-portal="public"][data-page="listings"] .mv2-listings-section {
+  background: #FFFFFF;
+  padding-top: clamp(28px, 4vw, 48px);
+}
+body[data-portal="public"][data-page="listings"] .mv2-listings-heading {
+  font-family: var(--mv2-display);
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 1.1rem + 0.8vw, 1.85rem);
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--mv2-ink);
+}
+/* JS may set heading text like "23 results in Atlanta, GA" — italicize
+   anything inside <em> if present (post-9.8 future-proofing) */
+body[data-portal="public"][data-page="listings"] .mv2-listings-heading em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--mv2-ink);
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
