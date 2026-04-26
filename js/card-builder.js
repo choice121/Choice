@@ -29,6 +29,26 @@
     return '<span class="property-card-price-dollar">$</span>' + n.toLocaleString();
   }
 
+  // ── Freshness label (Phase 9.2) ─────────────────────────────
+  // Returns a small chip text for cards listed within the last 7 days.
+  // Returns null otherwise (chip omitted entirely from the card markup).
+  //   < 30h    → "Just listed"
+  //   30h–168h → "N days ago" (rounded to whole days)
+  //   > 7 days → null (no chip)
+  function freshnessLabel(createdAt) {
+    if (!createdAt) return null;
+    var t = new Date(createdAt).getTime();
+    if (isNaN(t)) return null;
+    var hours = (Date.now() - t) / 36e5;
+    if (hours < 0) return null;
+    if (hours < 30) return 'Just listed';
+    if (hours < 168) {
+      var days = Math.max(1, Math.round(hours / 24));
+      return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+    return null;
+  }
+
   // ── Unified card builder ────────────────────────────────────
   /**
    * Build a property card HTML string.
@@ -97,6 +117,12 @@
       badge = '<div class="property-card-badge badge-avail-date"><i class="fas fa-calendar-days"></i> Avail. ' + availLabel + '</div>';
     }
 
+    // ── Freshness chip (Phase 9.2) — stacks under the badge, top-left ──
+    var freshText = freshnessLabel(p.created_at);
+    var freshChipHtml = freshText
+      ? '<div class="property-card-fresh-chip"><span class="property-card-fresh-dot" aria-hidden="true"></span>' + esc(freshText) + '</div>'
+      : '';
+
 
     // P2-C: Property type label — defined here so typeChipHtml below can use it ──────
     var typeMap = { apartment: 'Apartment', house: 'House', condo: 'Condo', townhouse: 'Townhouse',
@@ -139,6 +165,8 @@
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
           // Availability / status badge — top-left
           badge +
+          // Freshness chip — top-left, stacks under badge (Phase 9.2)
+          freshChipHtml +
           // Carousel position indicators — bottom-center
           dotsHtml +
           photoCountHtml +

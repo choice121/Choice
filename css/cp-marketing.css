@@ -3601,3 +3601,154 @@ body[data-portal="public"][data-page="home"] .mv2-hero__trust li i {
   }
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.2 — Featured listings refresh + freshness chip             ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.2, agent_issues #32) ║
+   ║                                                                      ║
+   ║  - mv2-featured: warm-white section with editorial header           ║
+   ║  - mobile horizontal snap-scroll (3-up grid on desktop)             ║
+   ║  - .property-card-fresh-chip: small "Just listed" chip in top-left  ║
+   ║    of the card, stacked under the existing availability badge       ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+body[data-portal="public"][data-page="home"] .mv2-featured {
+  background: var(--mv2-bg-warm);
+  padding: var(--mv2-section-y-mobile) 0;
+  position: relative;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-featured {
+    padding: var(--mv2-section-y-desktop) 0;
+  }
+}
+
+/* Header row */
+body[data-portal="public"][data-page="home"] .mv2-featured__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mv2-stack-3);
+  margin-bottom: var(--mv2-stack-5);
+  align-items: flex-start;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-featured__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--mv2-stack-5);
+  }
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__heading {
+  max-width: 640px;
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__title {
+  margin-bottom: var(--mv2-stack-2);
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__subtitle {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: 0;
+  max-width: 56ch;
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mv2-brand);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  padding: 6px 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease);
+  white-space: nowrap;
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__view-all:hover {
+  color: var(--mv2-brand-dark);
+  border-bottom-color: var(--mv2-brand);
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__view-all i {
+  font-size: 12px;
+  transition: transform var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-featured__view-all:hover i { transform: translateX(3px); }
+
+/* Bottom CTA */
+body[data-portal="public"][data-page="home"] .mv2-featured__cta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--mv2-stack-6);
+}
+
+/* ── Mobile horizontal snap-scroll ─────────────────────────────────
+   Higher specificity than the global .property-grid rule, so the same
+   <div id="featuredGrid" class="property-grid"> renders as snap-row on
+   mobile only on the home page. Listings.html is unaffected. */
+@media (max-width: 768px) {
+  body[data-portal="public"][data-page="home"] #featuredGrid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--mv2-container-x);
+    -webkit-overflow-scrolling: touch;
+    padding: 4px var(--mv2-container-x) 22px;
+    margin: 0 calc(-1 * var(--mv2-container-x));
+    scrollbar-width: none;
+  }
+  body[data-portal="public"][data-page="home"] #featuredGrid::-webkit-scrollbar { display: none; }
+  body[data-portal="public"][data-page="home"] #featuredGrid > .property-card,
+  body[data-portal="public"][data-page="home"] #featuredGrid > .property-card-skeleton {
+    flex: 0 0 86%;
+    max-width: 340px;
+    scroll-snap-align: start;
+  }
+}
+
+/* ── Freshness chip (rendered by card-builder.js) ──────────────────
+   Uses absolute positioning inside .property-card-img, stacked under
+   the existing top-left badge with a small gap. Visible on every card
+   that has p.created_at within the last 7 days. */
+body[data-portal="public"] .property-card-fresh-chip {
+  position: absolute;
+  top: 56px;                    /* sits under the existing badge (≈40px tall + gap) */
+  left: 12px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 9px;
+  background: rgba(4, 120, 87, 0.95);
+  color: #FFFFFF;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: var(--mv2-r-pill);
+  box-shadow: 0 2px 8px rgba(4, 120, 87, 0.30);
+  pointer-events: none;
+}
+body[data-portal="public"] .property-card-fresh-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #B7F1C6;
+  box-shadow: 0 0 0 0 rgba(183, 241, 198, 0.8);
+  animation: mv2-fresh-pulse 2.4s ease-out infinite;
+}
+@keyframes mv2-fresh-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(183, 241, 198, 0.8); }
+  70%  { box-shadow: 0 0 0 8px rgba(183, 241, 198, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(183, 241, 198, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"] .property-card-fresh-dot { animation: none; }
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
