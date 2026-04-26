@@ -64,7 +64,27 @@ BEGIN
         app.co_applicant_signature, app.co_applicant_signature_image, app.co_applicant_signature_timestamp,
         COALESCE(app.management_signed, false), app.management_signer_name, app.management_signed_at, app.management_notes,
         COALESCE(app.management_cosigned, false), app.management_cosigned_by, app.management_cosigned_at,
-        COALESCE(app.lease_status::text, 'draft'),
+        -- Map legacy applications.lease_status enum to the new
+        -- Phase-10 lifecycle vocabulary. Legacy values:
+        --   none, sent, signed, awaiting_co_sign, co_signed, voided, expired
+        -- New vocabulary:
+        --   draft, sent, partially_signed, fully_signed, active,
+        --   expiring, expired, terminated, renewed, cancelled
+        CASE
+          WHEN app.lease_status IS NULL                        THEN 'draft'
+          WHEN app.lease_status::text = 'none'                 THEN 'draft'
+          WHEN app.lease_status::text = 'sent'                 THEN 'sent'
+          WHEN app.lease_status::text = 'awaiting_co_sign'     THEN 'partially_signed'
+          -- 'signed' = tenant signed; if landlord also countersigned, treat as active
+          WHEN app.lease_status::text = 'signed' AND COALESCE(app.management_cosigned, app.management_signed, false) THEN 'active'
+          WHEN app.lease_status::text = 'signed'               THEN 'partially_signed'
+          -- 'co_signed' = both tenant signers complete; active iff landlord also countersigned
+          WHEN app.lease_status::text = 'co_signed' AND COALESCE(app.management_cosigned, app.management_signed, false) THEN 'active'
+          WHEN app.lease_status::text = 'co_signed'            THEN 'fully_signed'
+          WHEN app.lease_status::text = 'voided'               THEN 'cancelled'
+          WHEN app.lease_status::text = 'expired'              THEN 'expired'
+          ELSE 'draft'
+        END,
         app.lease_sent_date, app.lease_signed_date, app.lease_expiry_date,
         CASE WHEN app.management_cosigned_at IS NOT NULL THEN app.management_cosigned_at
              WHEN app.management_signed_at  IS NOT NULL THEN app.management_signed_at
