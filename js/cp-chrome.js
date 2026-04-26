@@ -86,8 +86,9 @@
           { href: 'email-logs.html',      icon: 'i-mail',     label: 'Email Logs' }
         ]},
         { sect: 'Admin',          items: [
-          { href: 'audit-log.html',       icon: 'i-history',  label: 'Audit Log' },
-          { href: 'watermark-review.html',icon: 'i-image',    label: 'Watermark Review' }
+          { href: 'audit-log.html',         icon: 'i-history',  label: 'Audit Log' },
+          { href: 'watermark-review.html',  icon: 'i-image',    label: 'Watermark Review' },
+          { href: 'deposit-accounting.html',icon: 'i-mail',     label: 'Deposit Accounting' }
         ]}
       ],
       tabs: [
@@ -97,13 +98,14 @@
         { href: 'properties.html',   icon: 'i-property', label: 'Property' }
       ],
       more: [
-        { href: 'move-ins.html',         icon: 'i-door',    label: 'Move-ins' },
-        { href: 'listings.html',         icon: 'i-list',    label: 'Listings' },
-        { href: 'landlords.html',        icon: 'i-user',    label: 'Landlords' },
-        { href: 'messages.html',         icon: 'i-message', label: 'Messages' },
-        { href: 'email-logs.html',       icon: 'i-mail',    label: 'Email logs' },
-        { href: 'audit-log.html',        icon: 'i-history', label: 'Audit log' },
-        { href: 'watermark-review.html', icon: 'i-image',   label: 'Watermark review' }
+        { href: 'move-ins.html',          icon: 'i-door',    label: 'Move-ins' },
+        { href: 'listings.html',          icon: 'i-list',    label: 'Listings' },
+        { href: 'landlords.html',         icon: 'i-user',    label: 'Landlords' },
+        { href: 'messages.html',          icon: 'i-message', label: 'Messages' },
+        { href: 'email-logs.html',        icon: 'i-mail',    label: 'Email logs' },
+        { href: 'audit-log.html',         icon: 'i-history', label: 'Audit log' },
+        { href: 'watermark-review.html',  icon: 'i-image',   label: 'Watermark review' },
+        { href: 'deposit-accounting.html',icon: 'i-mail',    label: 'Deposit accounting' }
       ]
     },
 
