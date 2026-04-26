@@ -132,7 +132,7 @@ Deno.serve(async (req: Request) => {
       updateAppPointer:    false,
       certificate: {
         state_code:        app.lease_state_code || null,
-        edge_function_tag: 'sign-amendment@phase06',
+        edge_function_tag: 'sign-amendment@phase10',
         site_url:          getSiteUrl(),
         signers: [{
           role:       'tenant',

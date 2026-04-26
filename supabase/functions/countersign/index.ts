@@ -159,7 +159,7 @@ Deno.serve(async (req: Request) => {
         updateAppPointer:    true,
         certificate: {
           state_code:        app.lease_state_code || null,
-          edge_function_tag: 'countersign@phase06',
+          edge_function_tag: 'countersign@phase10',
           site_url:          getSiteUrl(),
           signers,
         },

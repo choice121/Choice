@@ -219,6 +219,9 @@ function _attachPhotoArrays(row) {
   photos.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
   row.photo_urls     = photos.map(p => p.url).filter(Boolean);
   row.photo_file_ids = photos.map(p => p.file_id ?? null);
+  if (row.landlords && !row.landlords.avatar_url) {
+    row.landlords.avatar_url = '/assets/avatar-placeholder.svg';
+  }
   return row;
 }
 
