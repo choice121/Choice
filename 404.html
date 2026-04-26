@@ -9,77 +9,198 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
   <style>
+    /* ── mv2 boutique tokens (inlined to keep 404 self-contained) ── */
+    :root {
+      --mv2-bg-warm: #FAF8F5;
+      --mv2-ink: #1A1A1A;
+      --mv2-muted: #5A5A5A;
+      --mv2-muted-2: #8A8A8A;
+      --mv2-hairline: rgba(26, 26, 26, 0.10);
+      --mv2-gold: #d4a017;
+      --mv2-brand-dark: #006AFF;
+      --mv2-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+      --mv2-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      font-family: var(--mv2-body);
+      color: var(--mv2-ink);
+      background: var(--mv2-bg-warm);
+    }
+
+    /* ── Wrap: warm paper bg with layered radial accents ── */
     .nf-wrap {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: var(--sp-6);
-      background: var(--bg);
+      padding: clamp(24px, 5vw, 48px);
+      position: relative;
+      isolation: isolate;
     }
+    .nf-wrap::before {
+      content: "";
+      position: absolute; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(212, 160, 23, 0.10) 0%, transparent 55%),
+        radial-gradient(ellipse at 70% 80%, rgba(0, 106, 255, 0.05) 0%, transparent 55%),
+        var(--mv2-bg-warm);
+    }
+
+    /* ── Card ── */
     .nf-card {
       width: 100%;
-      max-width: 520px;
+      max-width: 540px;
       text-align: center;
     }
-    .nf-code {
-      font-size: clamp(72px, 14vw, 132px);
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.04em;
-      color: var(--brand);
-      margin: 0 0 var(--sp-3);
-    }
-    .nf-title {
-      font-size: clamp(22px, 3.5vw, 30px);
-      font-weight: 700;
-      color: var(--text);
-      margin: 0 0 var(--sp-2);
-      letter-spacing: -0.01em;
-    }
-    .nf-sub {
-      font-size: 15px;
-      color: var(--muted);
-      line-height: 1.6;
-      margin: 0 auto var(--sp-6);
-      max-width: 380px;
-    }
-    .nf-actions {
-      display: flex;
-      gap: var(--sp-3);
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: var(--sp-6);
-    }
-    .nf-help {
-      font-size: 13px;
-      color: var(--muted-2);
-    }
-    .nf-help a {
-      color: var(--brand);
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .nf-help a:hover { text-decoration: underline; }
+
+    /* ── Brand wordmark (italic Fraunces, like nav/footer) ── */
     .nf-brand {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: var(--sp-6);
-      color: var(--text);
+      gap: 10px;
+      margin-bottom: clamp(40px, 6vw, 64px);
+      color: var(--mv2-ink);
       text-decoration: none;
-      font-weight: 700;
-      font-size: 15px;
+      font-family: var(--mv2-display);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 1.15rem;
+      letter-spacing: -0.005em;
+      transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .nf-brand:hover, .nf-brand:focus-visible {
+      opacity: 0.75;
+      outline: none;
     }
     .nf-brand-mark {
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
       border-radius: 8px;
-      background: var(--brand);
+      background: linear-gradient(135deg, var(--mv2-brand-dark) 0%, #0052CC 100%);
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 106, 255, 0.20);
+    }
+
+    /* ── 404 numerals: huge italic Fraunces with gold-tinted stroke ── */
+    .nf-code {
+      font-family: var(--mv2-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(96px, 18vw, 180px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      margin: 0 0 clamp(20px, 3vw, 32px);
+      background: linear-gradient(180deg, var(--mv2-ink) 0%, #5A4416 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-wrap: balance;
+    }
+
+    /* ── Title: Fraunces with italic emphasis on 'lost' ── */
+    .nf-title {
+      font-family: var(--mv2-display);
+      font-style: normal;
+      font-weight: 400;
+      font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--mv2-ink);
+      margin: 0 0 clamp(12px, 2vw, 18px);
+      text-wrap: balance;
+    }
+    .nf-title em {
+      font-style: italic;
+      background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.20) 65%);
+      padding: 0 0.05em;
+    }
+
+    /* ── Subtitle ── */
+    .nf-sub {
+      font-size: 1rem;
+      color: var(--mv2-muted);
+      line-height: 1.6;
+      margin: 0 auto clamp(28px, 4vw, 40px);
+      max-width: 42ch;
+      text-wrap: pretty;
+    }
+
+    /* ── Actions: refined buttons ── */
+    .nf-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: clamp(28px, 4vw, 40px);
+    }
+    .nf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: 10px;
+      font-family: var(--mv2-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                  background 220ms cubic-bezier(0.22, 1, 0.36, 1);
+      border: 1px solid transparent;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .nf-btn { transition: none; }
+    }
+    .nf-btn--primary {
+      background: linear-gradient(135deg, var(--mv2-brand-dark) 0%, #0052CC 100%);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 106, 255, 0.18);
+    }
+    .nf-btn--primary:hover, .nf-btn--primary:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 106, 255, 0.28);
+      outline: none;
+    }
+    .nf-btn--ghost {
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--mv2-ink);
+      border-color: var(--mv2-hairline);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .nf-btn--ghost:hover, .nf-btn--ghost:focus-visible {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(26, 26, 26, 0.20);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    /* ── Help text ── */
+    .nf-help {
+      font-size: 0.85rem;
+      color: var(--mv2-muted-2);
+      margin: 0;
+    }
+    .nf-help a {
+      color: var(--mv2-brand-dark);
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-color: rgba(0, 106, 255, 0.35);
+      text-underline-offset: 3px;
+      transition: text-decoration-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .nf-help a:hover, .nf-help a:focus-visible {
+      text-decoration-color: var(--mv2-brand-dark);
+      outline: none;
     }
   </style>
 </head>
@@ -96,11 +217,11 @@
         Choice Properties
       </a>
       <p class="nf-code">404</p>
-      <h1 class="nf-title">Page Not Found</h1>
+      <h1 class="nf-title">This page is <em>lost</em>.</h1>
       <p class="nf-sub">The page you're looking for doesn't exist or has been moved. Let's get you back on track.</p>
       <div class="nf-actions">
-        <a href="/index.html" class="btn btn-primary">Back to Home</a>
-        <a href="/listings.html" class="btn btn-ghost">Browse Listings</a>
+        <a href="/index.html" class="nf-btn nf-btn--primary">Back to Home</a>
+        <a href="/listings.html" class="nf-btn nf-btn--ghost">Browse Listings</a>
       </div>
       <p class="nf-help">
         Need help? <a href="mailto:support@choiceproperties.com" data-cfg-email>support@choiceproperties.com</a>
