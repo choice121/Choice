@@ -107,10 +107,18 @@ jobs:
             fi
 
             echo "Applying: $BASENAME"
+            # Write the JSON payload to a tempfile and stream it to curl with
+            # `--data-binary @-` so we don't hit ARG_MAX (~128 KB) when a
+            # migration file is large. Previously the SQL was interpolated
+            # directly into the shell command line, which crashed on the
+            # 274 KB phase13_remaining_states_templates.sql with
+            # "Argument list too long" (exit 126) and stranded later
+            # migrations as never-applied.
+            python3 -c 'import sys,json; print(json.dumps({"query": open(sys.argv[1]).read()}))' "$f" > /tmp/mig_payload.json
             STATUS=$(curl -s -o /tmp/mig_resp.json -w "%{http_code}" \
               -X POST "$API" \
               -H "$AUTH" -H "Content-Type: application/json" \
-              -d "{\"query\": $(python3 -c 'import sys,json; print(json.dumps(open(sys.argv[1]).read()))' "$f")}")
+              --data-binary @/tmp/mig_payload.json)
             RESP=$(cat /tmp/mig_resp.json)
             echo "  HTTP $STATUS — $BASENAME"
             echo "$RESP" | head -c 400
