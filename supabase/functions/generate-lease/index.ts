@@ -13,6 +13,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       selectRequiredAddenda,
       persistAttachedAddenda,
     } from '../_shared/lease-addenda.ts';
+    import { computeFirstMonthProration, type ProrationMethod } from '../_shared/proration.ts';
+    import { normalizeUtilityMatrix } from '../_shared/utility-matrix.ts';
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -91,7 +93,14 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
         return jsonErr(400, `Invalid lease_state_code "${leaseStateCode}" - must be a 2-letter US state code.`);
       }
 
-      // 3. Merge admin-supplied lease fields
+      // 3. Merge admin-supplied lease fields (Phase 07 added itemized + utilities)
+      const pickNum = (v: unknown, fallback: unknown) => {
+        if (v === null) return null;
+        if (v === undefined) return fallback ?? null;
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n : (fallback ?? null);
+      };
+
       const leaseFields: Record<string, unknown> = {
         lease_start_date:       lease_data.lease_start_date       ?? app.lease_start_date,
         lease_end_date:         lease_data.lease_end_date         ?? app.lease_end_date,
@@ -106,8 +115,75 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
         lease_state_code:       leaseStateCode,
         lease_pets_policy:      lease_data.lease_pets_policy      ?? app.lease_pets_policy,
         lease_smoking_policy:   lease_data.lease_smoking_policy   ?? app.lease_smoking_policy,
+
+        // Phase 07 — itemized financial components
+        first_month_rent:        pickNum(lease_data.first_month_rent,        app.first_month_rent),
+        last_month_rent:         pickNum(lease_data.last_month_rent,         app.last_month_rent),
+        pet_deposit:             pickNum(lease_data.pet_deposit,             app.pet_deposit),
+        pet_rent:                pickNum(lease_data.pet_rent,                app.pet_rent),
+        admin_fee:               pickNum(lease_data.admin_fee,               app.admin_fee),
+        key_deposit:             pickNum(lease_data.key_deposit,             app.key_deposit),
+        parking_fee:             pickNum(lease_data.parking_fee,             app.parking_fee),
+        cleaning_fee:            pickNum(lease_data.cleaning_fee,            app.cleaning_fee),
+        cleaning_fee_refundable: typeof lease_data.cleaning_fee_refundable === 'boolean'
+                                   ? lease_data.cleaning_fee_refundable
+                                   : (app.cleaning_fee_refundable ?? null),
+        rent_due_day_of_month:   (() => {
+                                   const v = pickNum(lease_data.rent_due_day_of_month, app.rent_due_day_of_month ?? 1);
+                                   const n = Number(v);
+                                   return Math.max(1, Math.min(28, Number.isFinite(n) ? Math.round(n) : 1));
+                                 })(),
+        rent_proration_method:   (lease_data.rent_proration_method ?? app.rent_proration_method ?? 'daily') as ProrationMethod,
+
+        // Phase 07 — utility responsibility matrix (always normalized to canonical shape)
+        utility_responsibilities: normalizeUtilityMatrix(
+          lease_data.utility_responsibilities ?? app.utility_responsibilities ?? {}
+        ),
+
         updated_at:             new Date().toISOString(),
       };
+
+      // Phase 07 — auto-compute prorated first month when not explicitly set
+      // and the move-in date lands mid-cycle.
+      const monthlyRent = Number(leaseFields.monthly_rent) || 0;
+      const startDate   = leaseFields.lease_start_date as string | undefined;
+      let prorationDetail: ReturnType<typeof computeFirstMonthProration> | null = null;
+      if (startDate && monthlyRent > 0) {
+        try {
+          prorationDetail = computeFirstMonthProration({
+            moveInDate:  String(startDate).slice(0, 10),
+            monthlyRent,
+            dueDay:      leaseFields.rent_due_day_of_month as number,
+            method:      leaseFields.rent_proration_method as ProrationMethod,
+          });
+          if (lease_data.prorated_first_month != null) {
+            leaseFields.prorated_first_month = pickNum(lease_data.prorated_first_month, null);
+          } else if (app.prorated_first_month != null) {
+            leaseFields.prorated_first_month = app.prorated_first_month;
+          } else {
+            leaseFields.prorated_first_month = prorationDetail.proratedAmount;
+          }
+        } catch (_) {
+          // bad date — leave proration unset, lease still generates
+          leaseFields.prorated_first_month = lease_data.prorated_first_month ?? app.prorated_first_month ?? null;
+        }
+      }
+
+      // Phase 07 — state-cap validation (defense-in-depth: also enforced in DB).
+      try {
+        const { data: vRes, error: vErr } = await supabase.rpc('validate_lease_financials', {
+          p_state_code:          leaseStateCode,
+          p_monthly_rent:        monthlyRent,
+          p_security_deposit:    leaseFields.security_deposit       ?? null,
+          p_pet_deposit:         leaseFields.pet_deposit            ?? null,
+          p_last_month_rent:     leaseFields.last_month_rent        ?? null,
+          p_cleaning_fee:        leaseFields.cleaning_fee           ?? null,
+          p_cleaning_refundable: leaseFields.cleaning_fee_refundable ?? null,
+        });
+        if (!vErr && typeof vRes === 'string' && vRes.trim()) {
+          return jsonErr(400, vRes);
+        }
+      } catch (_) { /* validator missing → skip rather than block */ }
 
       const mergedApp = { ...app, ...leaseFields };
 
