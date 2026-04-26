@@ -403,8 +403,19 @@ await (async function injectInitialListings() {
   const https = require('https');
   const PER_PAGE = 24;
   const supabaseUrl = config.SUPABASE_URL.replace(/\/$/, '');
+  // Project only the columns listings.html actually renders (cards + map markers).
+  // Skipping description, search_vector, amenities, lease_terms, etc. cuts the
+  // inline JSON snapshot from ~134 KB to ~12 KB so listings.html stays small.
+  const cols = [
+    'id','title','address','city','state','zip',
+    'bedrooms','bathrooms','square_footage','monthly_rent',
+    'property_type','parking','pets_allowed','available_date',
+    'utilities_included','featured','lat','lng','status'
+  ].join(',');
   const apiPath = '/rest/v1/properties'
-    + '?select=*,landlords(contact_name,business_name,avatar_url,verified),property_photos(url,file_id,display_order)'
+    + '?select=' + cols
+    + ',landlords(contact_name,business_name,avatar_url,verified)'
+    + ',property_photos(url,file_id,display_order)'
     + '&status=eq.active'
     + '&order=created_at.desc'
     + '&limit=' + PER_PAGE
