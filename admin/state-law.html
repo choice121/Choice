@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<title>State Law Reference · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/admin/state-law.js?v=__BUILD_VERSION__" type="module"></script>
+<style>
+  .sl-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:var(--sp-3)}
+  .sl-controls .sl-search{flex:1;min-width:180px}
+  .sl-meta{font-size:.78rem;color:var(--muted)}
+  .sl-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}
+  .sl-table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:1100px}
+  .sl-table thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 10px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+  .sl-table thead th .sort-ind{font-size:.7rem;color:var(--muted);margin-left:4px}
+  .sl-table tbody td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  .sl-table tbody tr:hover{background:var(--surface-2)}
+  .sl-table .sl-state{font-weight:700;font-family:ui-monospace,Menlo,monospace}
+  .sl-table .sl-num{text-align:right;font-variant-numeric:tabular-nums}
+  .sl-pill{display:inline-block;padding:1px 6px;border-radius:6px;font-size:.7rem;font-weight:600;border:1px solid var(--border);background:var(--surface-2);color:var(--muted)}
+  .sl-pill.warn{background:#3b2a14;border-color:#7a4f1a;color:#f5b849}
+  .sl-pill.ok{background:#0f3320;border-color:#1f6a3a;color:#7ad99e}
+  .sl-pill.bad{background:#3a1418;border-color:#7a1d28;color:#f08491}
+  .sl-pill.lang{background:#102a3a;border-color:#1d4f73;color:#7fc6f5;margin-right:4px;margin-bottom:2px}
+  .sl-link{color:var(--accent);text-decoration:none;font-size:.72rem}
+  .sl-link:hover{text-decoration:underline}
+  .sl-empty{padding:32px 18px;text-align:center;color:var(--muted)}
+  .sl-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--sp-3)}
+  .sl-stat{padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:.78rem}
+  .sl-stat strong{color:var(--ink);font-size:.9rem;margin-right:6px}
+  details.sl-notes{margin-top:4px}
+  details.sl-notes summary{cursor:pointer;font-size:.7rem;color:var(--accent);list-style:none}
+  details.sl-notes summary::-webkit-details-marker{display:none}
+  details.sl-notes[open] summary::after{content:" ▾"}
+  details.sl-notes:not([open]) summary::after{content:" ▸"}
+  details.sl-notes p{margin:6px 0 0 0;font-size:.74rem;color:var(--muted);line-height:1.45;max-width:520px}
+</style>
+</head>
+<body data-page-title="State Law Reference" data-page-sub="50-state landlord-tenant statute matrix" data-live="0">
+<div class="app">
+  <main class="app-content">
+
+    <div class="sl-stats" id="sl-stats" hidden></div>
+
+    <div class="sl-controls">
+      <input id="sl-search" class="form-input sl-search" type="search" placeholder="Search state name or code (e.g. CA, Texas)…">
+      <select id="sl-filter-cap" class="form-input">
+        <option value="">All deposit caps</option>
+        <option value="1">≤ 1 month</option>
+        <option value="2">≤ 2 months</option>
+        <option value="3">≤ 3 months</option>
+        <option value="none">No statutory cap</option>
+      </select>
+      <select id="sl-filter-jc" class="form-input">
+        <option value="">Just-cause: any</option>
+        <option value="true">Required</option>
+        <option value="false">Not required</option>
+      </select>
+    </div>
+
+    <div class="sl-meta" id="sl-meta">Loading state law data…</div>
+
+    <div class="sl-table-wrap" style="margin-top:var(--sp-2)">
+      <table class="sl-table">
+        <thead>
+          <tr>
+            <th data-sort="state_code">State <span class="sort-ind"></span></th>
+            <th data-sort="security_deposit_max_months" class="sl-num">Dep cap (mo) <span class="sort-ind"></span></th>
+            <th data-sort="security_deposit_return_days" class="sl-num">Dep return (d) <span class="sort-ind"></span></th>
+            <th>Dep handling</th>
+            <th data-sort="late_fee_cap_pct_of_rent" class="sl-num">Late fee cap <span class="sort-ind"></span></th>
+            <th data-sort="entry_notice_hours" class="sl-num">Entry (h) <span class="sort-ind"></span></th>
+            <th data-sort="eviction_notice_nonpayment_days" class="sl-num">Evict NP (d) <span class="sort-ind"></span></th>
+            <th>Holdover</th>
+            <th data-sort="just_cause_required">Just cause <span class="sort-ind"></span></th>
+            <th data-sort="rent_increase_notice_days" class="sl-num">Rent ↑ notice (d) <span class="sort-ind"></span></th>
+            <th>Required translations</th>
+            <th>Sources</th>
+          </tr>
+        </thead>
+        <tbody id="sl-tbody">
+          <tr><td colspan="12" class="sl-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>
