@@ -49,13 +49,19 @@
       font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       background:#fff;color:#1f2937;line-height:1.6;font-size:15.5px;
     }
-    .hero{
+    /* Phase 9.1: warm hero base + LCP-photo paint zone */
+    .mv2-hero{
       position:relative;
-      background:linear-gradient(150deg,#04111F 0%,#0B1D38 45%,#0E2347 75%,#071627 100%);
-      min-height:500px;
-      padding:clamp(60px,10vw,110px) 0 clamp(60px,8vw,90px);
+      isolation:isolate;
+      min-height:560px;
+      padding:clamp(80px,14vw,140px) 0 clamp(56px,10vw,96px);
       display:flex;align-items:center;overflow:hidden;
+      background:#FAF8F5;
+      color:#fff;
     }
+    .mv2-hero__bg{position:absolute;inset:0;z-index:-1;overflow:hidden}
+    .mv2-hero__bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%}
+    .mv2-hero__bg-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,23,41,.78) 0%,rgba(10,23,41,.55) 45%,rgba(10,23,41,.30) 100%)}
     .property-grid{display:grid;grid-template-columns:1fr;gap:16px}
     .property-card{overflow:hidden;background:#fff;border-radius:22px}
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
@@ -108,86 +114,91 @@
 <!-- Shared site nav — injected by /js/components.js from /components/nav.html -->
 <div id="site-nav"></div>
 
-<!-- ── Hero ── -->
-<section class="hero">
-  <div class="hero-atmosphere"></div>
-  <div class="hero-grain"></div>
-  <div class="hero-rule"></div>
-  <div class="hero-vertical-rule"></div>
+<!-- ── Hero (Phase 9.1 mv2 refresh) ── -->
+<section class="hero mv2-hero" aria-labelledby="hero-headline">
+  <!-- Background photo + warm overlay. Photo is preloaded in <head> (LCP). -->
+  <div class="mv2-hero__bg" aria-hidden="true">
+    <!-- TODO: swap to owner-provided photography. URL must match <head> preload. -->
+    <img class="mv2-hero__bg-img"
+         src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80"
+         alt=""
+         fetchpriority="high"
+         decoding="async">
+    <div class="mv2-hero__bg-overlay"></div>
+    <div class="mv2-hero__bg-vignette"></div>
+  </div>
 
-  <div class="container">
-    <div class="hero-inner">
-      <div class="hero-content">
-        <div class="hero-eyebrow">
-          <span class="hero-eyebrow-pulse"></span>
-          Nationwide Rental Marketplace
-        </div>
+  <div class="container mv2-hero__inner">
+    <div class="mv2-hero__content">
+      <p class="mv2-eyebrow">
+        <span class="mv2-eyebrow-pulse" aria-hidden="true"></span>
+        Nationwide Rental Marketplace
+      </p>
 
-        <h1 class="hero-headline">
-          Find a Home<br>You'll <em>Truly</em> Love
-        </h1>
+      <h1 id="hero-headline" class="mv2-headline">
+        Real homes. Real landlords.<br>
+        <em>No surprises.</em>
+      </h1>
 
-        <p class="hero-sub">
-          Verified listings and transparent pricing — a clear, structured process with transparent steps.
-          Expanding nationwide with active listings in select markets. Apply in about 15 minutes.
-        </p>
+      <p class="mv2-lede">
+        Verified listings, transparent pricing, and a flat $50 application —
+        apply in about 15 minutes and hear back in 24–72 hours.
+      </p>
 
-        <!-- Search Bar — submits to /listings.html -->
-        <div class="search-bar">
-          <div class="search-bar-top">
-            <div class="search-field">
-              <i class="fas fa-search"></i>
-              <input type="text" id="searchInput"
-                placeholder="City, zip code, or neighborhood…"
-                autocomplete="off" aria-label="Search listings">
-            </div>
-            <div class="search-field">
-              <i class="fas fa-bed"></i>
-              <select id="bedroomsFilter" aria-label="Bedrooms">
-                <option value="">Any beds</option>
-                <option value="0">Studio</option>
-                <option value="1">1 Bed</option>
-                <option value="2">2 Beds</option>
-                <option value="3">3 Beds</option>
-                <option value="4">4+ Beds</option>
-              </select>
-            </div>
-            <div class="search-field">
-              <i class="fas fa-dollar-sign"></i>
-              <select id="maxRentFilter" aria-label="Max rent">
-                <option value="">Any price</option>
-                <option value="700">Up to $700</option>
-                <option value="900">Up to $900</option>
-                <option value="1100">Up to $1,100</option>
-                <option value="1400">Up to $1,400</option>
-                <option value="1700">Up to $1,700</option>
-                <option value="2200">Up to $2,200</option>
-                <option value="2500">Up to $2,500</option>
-                <option value="3000">Up to $3,000</option>
-                <option value="3500">Up to $3,500</option>
-                <option value="4000">Up to $4,000</option>
-                <option value="5000">Up to $5,000</option>
-              </select>
-            </div>
-            <button class="search-btn" id="searchBtn" aria-label="Search">
-              <i class="fas fa-search"></i> Search
-            </button>
+      <!-- Search bar — IDs preserved exactly (cp-ui.js + card-builder.js bindings).
+           Wrapped in <form> so Enter/Go submits cleanly; #searchBtn click handler
+           still fires unchanged for explicit button clicks. -->
+      <form class="mv2-hero__search" role="search" aria-label="Search rentals"
+            onsubmit="event.preventDefault(); document.getElementById('searchBtn').click(); return false;">
+        <div class="mv2-hero__search-row">
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="text" id="searchInput"
+              placeholder="City, zip code, or neighborhood…"
+              autocomplete="off" aria-label="Search location">
           </div>
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-bed" aria-hidden="true"></i>
+            <select id="bedroomsFilter" aria-label="Bedrooms">
+              <option value="">Any beds</option>
+              <option value="0">Studio</option>
+              <option value="1">1 Bed</option>
+              <option value="2">2 Beds</option>
+              <option value="3">3 Beds</option>
+              <option value="4">4+ Beds</option>
+            </select>
+          </div>
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+            <select id="maxRentFilter" aria-label="Max rent">
+              <option value="">Any price</option>
+              <option value="700">Up to $700</option>
+              <option value="900">Up to $900</option>
+              <option value="1100">Up to $1,100</option>
+              <option value="1400">Up to $1,400</option>
+              <option value="1700">Up to $1,700</option>
+              <option value="2200">Up to $2,200</option>
+              <option value="2500">Up to $2,500</option>
+              <option value="3000">Up to $3,000</option>
+              <option value="3500">Up to $3,500</option>
+              <option value="4000">Up to $4,000</option>
+              <option value="5000">Up to $5,000</option>
+            </select>
+          </div>
+          <button type="submit" class="mv2-btn mv2-btn--primary mv2-hero__search-btn"
+                  id="searchBtn" aria-label="Search">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <span>Search</span>
+          </button>
         </div>
+      </form>
 
-        <!-- Stats -->
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <div class="hero-stat-num">$50</div>
-            <div class="hero-stat-label">Flat Application Fee</div>
-          </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
-            <div class="hero-stat-num">24–72h</div>
-            <div class="hero-stat-label">Review Time</div>
-          </div>
-        </div>
-      </div>
+      <!-- Micro-trust signals (replaces the old .hero-stats two-stat block) -->
+      <ul class="mv2-hero__trust" aria-label="Why renters choose Choice Properties">
+        <li><i class="fas fa-shield-alt" aria-hidden="true"></i> Every listing verified</li>
+        <li><i class="fas fa-bolt" aria-hidden="true"></i> Flat $50 application</li>
+        <li><i class="fas fa-clock" aria-hidden="true"></i> Decision in 24–72 hours</li>
+      </ul>
     </div>
   </div>
 </section>
