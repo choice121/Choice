@@ -14,6 +14,10 @@
     <script defer src="/js/tenant/lease-sign.js?v=__BUILD_VERSION__"></script>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <style>
+      /* Skip navigation — WCAG 2.1 AA 2.4.1 */
+      .skip-link{position:absolute;top:-100%;left:0;z-index:9999;padding:10px 18px;background:#1d4ed8;color:#fff;font-size:.88rem;font-weight:700;border-radius:0 0 8px 0;text-decoration:none;transition:top .1s}
+      .skip-link:focus{top:0;outline:3px solid #fff;outline-offset:2px}
+
       .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
       .header-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0}
       .header-logo{color:var(--text);font-size:.97rem;font-weight:700}
@@ -26,12 +30,27 @@
       .card-header p{font-size:.8rem;color:var(--muted);margin-top:4px}
       .card-body{padding:22px 24px}
 
-      /* Phase 3 — signer-mode badge */
+      /* Phase 03 — signer-mode badge */
       .signer-banner{padding:10px 14px;border-radius:8px;font-size:.78rem;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:10px}
       .signer-banner.tenant{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
       .signer-banner.coapp {background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe}
       .signer-banner.amend {background:#fffbeb;color:#92400e;border:1px solid #fde68a}
       .signer-banner .b-mark{width:24px;height:24px;border-radius:50%;background:currentColor;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;opacity:.85}
+
+      /* Phase 12 — at-a-glance summary */
+      .atag-section{margin-bottom:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+      .atag-header{background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:12px 18px;display:flex;align-items:center;gap:10px}
+      .atag-header h3{color:#fff;font-size:.9rem;font-weight:700;margin:0}
+      .atag-body{background:var(--surface-2);padding:14px 18px}
+      .atag-rent{font-size:1.8rem;font-weight:800;color:#1d4ed8;margin-bottom:10px;line-height:1}
+      .atag-rent-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+      .atag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 16px;margin-bottom:14px}
+      .atag-field{display:flex;flex-direction:column;gap:2px}
+      .atag-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+      .atag-val{font-size:.84rem;font-weight:600;color:var(--text)}
+      .atag-notices{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+      .atag-notice{display:flex;gap:8px;align-items:flex-start;font-size:.78rem;color:var(--text);line-height:1.5}
+      .atag-notice-icon{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;margin-top:1px}
 
       .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 20px;margin-bottom:22px;padding:14px 18px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)}
       .info-item{display:flex;flex-direction:column;gap:3px}
@@ -46,7 +65,6 @@
       .addenda-section{margin-bottom:22px}
       .addenda-intro{padding:14px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:14px;font-size:.82rem;line-height:1.55;color:#78350f;display:flex;gap:10px;align-items:flex-start}
       .addenda-intro .a-icon{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#d97706;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.74rem;margin-top:1px}
-      .addenda-intro strong{color:#7c2d12;font-weight:700}
       .addenda-counter{font-size:.74rem;color:var(--muted);font-weight:600;text-align:right;margin-bottom:10px}
       .addenda-counter strong{color:#15803d}
       .addendum-card{border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--surface);transition:border-color .15s,box-shadow .15s}
@@ -73,19 +91,21 @@
       .sign-section p{font-size:.78rem;color:var(--muted);margin-bottom:16px}
 
       .sig-input{width:100%;padding:11px 14px;font-size:1rem;font-family:'Georgia',serif;font-style:italic;border:1.5px solid var(--border);border-radius:8px;color:var(--text);background:var(--surface);transition:border-color .15s}
-      .sig-input:focus{outline:none;border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.10)}
+      .sig-input:focus{outline:3px solid rgba(29,78,216,.45);outline-offset:2px;border-color:#1d4ed8;box-shadow:none}
 
       .sig-preview{min-height:54px;padding:12px 16px;background:var(--surface);border-radius:8px;border:2px dashed var(--border);margin-top:10px;font-size:1.25rem;font-family:'Georgia',serif;font-style:italic;color:var(--text);transition:all .15s;display:flex;align-items:center}
       .sig-preview.filled{border-color:#1d4ed8;border-style:solid;background:#eff6ff}
 
-      /* Phase 3 — drawn signature pad */
+      /* Phase 03 — drawn signature pad */
       .pad-wrap{margin-top:16px}
       .pad-label{font-size:.78rem;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
       .pad-label .pad-hint{font-weight:400;color:var(--muted);font-size:.72rem}
       .pad-canvas{width:100%;height:140px;border:2px dashed var(--border);border-radius:8px;background:#fff;touch-action:none;display:block;cursor:crosshair}
+      .pad-canvas:focus{outline:3px solid rgba(29,78,216,.45);outline-offset:2px}
       .pad-canvas.filled{border-style:solid;border-color:#1d4ed8;background:#fafbff}
       .pad-row{display:flex;justify-content:flex-end;margin-top:6px}
       .pad-clear{background:none;border:none;color:#1d4ed8;font-size:.74rem;font-weight:600;cursor:pointer;padding:4px 8px}
+      .pad-clear:focus{outline:3px solid rgba(29,78,216,.45);outline-offset:2px;border-radius:4px}
 
       .checkbox-row{display:flex;align-items:flex-start;gap:10px;margin:16px 0;cursor:pointer}
       .checkbox-row input{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#1d4ed8}
@@ -110,12 +130,14 @@
       .consent-procedures strong{color:#7c2d12}
       .btn-consent{width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(29,78,216,.25);font-family:inherit;transition:opacity .15s}
       .btn-consent:hover:not(:disabled){opacity:.92}
+      .btn-consent:focus{outline:3px solid rgba(29,78,216,.45);outline-offset:2px}
       .btn-consent:disabled{background:var(--surface);color:var(--muted);border:1px solid var(--border);box-shadow:none;cursor:not-allowed}
       .consent-email-block{margin-bottom:16px}
       .consent-email-label{font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px}
 
       .btn-sign{width:100%;padding:14px;background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border:none;border-radius:10px;font-size:.96rem;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(34,197,94,.25);font-family:inherit}
       .btn-sign:hover:not(:disabled){opacity:.9}
+      .btn-sign:focus{outline:3px solid rgba(21,128,61,.55);outline-offset:2px}
       .btn-sign:disabled{background:var(--surface);color:var(--muted);border:1px solid var(--border);box-shadow:none;cursor:not-allowed}
 
       .state-loading,.state-error,.state-success{text-align:center;padding:60px 24px}
@@ -136,27 +158,30 @@
   </head>
   <body data-portal="tenant" data-page-title="Sign Your Lease">
 
-  <div class="header">
-    <div class="header-mark">CP</div>
+  <!-- Phase 12 WCAG 2.1 AA — skip navigation -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="header" role="banner">
+    <div class="header-mark" aria-hidden="true">CP</div>
     <div>
       <div class="header-logo">Choice Properties</div>
-      <div class="header-sub">Lease Signing Portal</div>
+      <div class="header-sub" id="header-sub-text">Lease Signing Portal</div>
     </div>
-  </div>
+  </header>
 
-  <div class="container">
+  <main id="main-content" class="container">
 
-    <div class="card" id="state-loading">
+    <div class="card" id="state-loading" role="status" aria-live="polite">
       <div class="card-body">
         <div class="state-loading">
-          <div class="spinner"></div>
-          <h3>Loading your lease…</h3>
-          <p>Please wait a moment.</p>
+          <div class="spinner" aria-hidden="true"></div>
+          <h3 id="loading-heading">Loading your lease…</h3>
+          <p id="loading-sub">Please wait a moment.</p>
         </div>
       </div>
     </div>
 
-    <div class="card" id="state-error" style="display:none">
+    <div class="card" id="state-error" style="display:none" role="alert">
       <div class="card-body">
         <div class="state-error">
           <h3 id="err-title">Lease Not Found</h3>
@@ -166,14 +191,14 @@
       </div>
     </div>
 
-    <div class="card" id="state-success" style="display:none">
+    <div class="card" id="state-success" style="display:none" role="region" aria-label="Signing complete">
       <div class="card-body">
         <div class="state-success">
-          <div style="font-size:48px;margin-bottom:14px">&#10003;</div>
+          <div style="font-size:48px;margin-bottom:14px" aria-hidden="true">&#10003;</div>
           <h3 id="success-title">Lease Signed Successfully</h3>
           <p id="success-message">Thank you! Your signature has been recorded and a confirmation email is on its way to you.</p>
           <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <a id="portal-link-btn" href="/tenant/login.html" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:10px;font-size:.86rem;font-weight:700;text-decoration:none">&#8595; View &amp; Download</a>
+            <a id="portal-link-btn" href="/tenant/login.html" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:10px;font-size:.86rem;font-weight:700;text-decoration:none">&#8595; <span id="success-view-text">View &amp; Download</span></a>
           </div>
           <p style="margin-top:16px;font-size:.78rem;color:var(--muted)">Questions? <a href="tel:+17077063137" style="color:#1d4ed8">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">support@choiceproperties.com</a></p>
         </div>
@@ -184,18 +209,21 @@
       <div class="card" style="margin-bottom:18px">
         <div class="card-header">
           <h2 id="form-title">Lease Agreement — <span id="form-prop"></span></h2>
-          <p>Application ID: <strong id="form-appid"></strong> &nbsp;&middot;&nbsp; Please review carefully before signing.</p>
+          <p><span id="card-subhead-text">Application ID:</span> <strong id="form-appid"></strong> &nbsp;&middot;&nbsp; <span id="card-review-text">Please review carefully before signing.</span></p>
         </div>
         <div class="card-body">
 
-          <div class="signer-banner" id="signer-banner" style="display:none"></div>
+          <div class="signer-banner" id="signer-banner" style="display:none" role="status"></div>
 
-          <div class="info-grid" id="info-grid"></div>
+          <!-- Phase 12 — plain-language at-a-glance section (injected by JS) -->
+          <div id="atag-section"></div>
+
+          <div class="info-grid" id="info-grid" role="region" aria-label="Lease key terms"></div>
 
           <!-- Phase 05 -- E-SIGN consent step (hidden until consent_required=true) -->
-          <div class="consent-section" id="consent-section" style="display:none">
+          <div class="consent-section" id="consent-section" style="display:none" role="region" aria-label="Electronic signature consent">
             <div class="consent-banner">
-              <span class="c-icon">!</span>
+              <span class="c-icon" aria-hidden="true">!</span>
               <span><strong>One-time consent required.</strong> Before you can view and sign this document electronically, federal law requires us to collect your consent on three specific points. This is a one-time step.</span>
             </div>
 
@@ -204,11 +232,16 @@
 
             <div class="consent-email-block">
               <label for="consent-email" class="consent-email-label">Confirm your email address (the one we contacted you at)</label>
-              <input class="sig-input" id="consent-email" type="email" placeholder="e.g. jane@email.com" autocomplete="email" spellcheck="false" style="font-style:normal;font-size:.92rem">
+              <input class="sig-input" id="consent-email" type="email"
+                placeholder="e.g. jane@email.com"
+                autocomplete="email" spellcheck="false"
+                style="font-style:normal;font-size:.92rem"
+                aria-required="true"
+                aria-describedby="consent-error">
             </div>
 
             <label class="consent-ack" for="ack-hardware">
-              <input type="checkbox" id="ack-hardware">
+              <input type="checkbox" id="ack-hardware" aria-required="true">
               <div class="consent-ack-text">
                 <div class="consent-ack-title">1. System Requirements</div>
                 <div class="consent-ack-body" id="ack-hardware-body"></div>
@@ -216,7 +249,7 @@
             </label>
 
             <label class="consent-ack" for="ack-paper">
-              <input type="checkbox" id="ack-paper">
+              <input type="checkbox" id="ack-paper" aria-required="true">
               <div class="consent-ack-text">
                 <div class="consent-ack-title">2. Right to a Paper Copy</div>
                 <div class="consent-ack-body" id="ack-paper-body"></div>
@@ -224,7 +257,7 @@
             </label>
 
             <label class="consent-ack" for="ack-withdrawal">
-              <input type="checkbox" id="ack-withdrawal">
+              <input type="checkbox" id="ack-withdrawal" aria-required="true">
               <div class="consent-ack-text">
                 <div class="consent-ack-title">3. Right to Withdraw Consent</div>
                 <div class="consent-ack-body" id="ack-withdrawal-body"></div>
@@ -233,62 +266,74 @@
 
             <div class="consent-procedures" id="consent-procedures"></div>
 
-            <div class="error-msg" id="consent-error"></div>
+            <div class="error-msg" id="consent-error" role="alert" aria-live="assertive"></div>
 
-            <button class="btn-consent" id="btn-consent" type="button" disabled>
+            <button class="btn-consent" id="btn-consent" type="button" disabled aria-disabled="true">
               <span id="btn-consent-text">I Consent &mdash; Continue to the Document</span>
             </button>
           </div>
 
-          <div class="lease-text-wrap">
+          <div class="lease-text-wrap" role="region" aria-label="Lease agreement text">
             <div class="lease-text-header">
               <span id="lease-text-label">Lease Agreement</span>
-              <span id="rendered-notice" style="font-size:.68rem;color:var(--muted)"></span>
+              <span id="rendered-notice" style="font-size:.68rem;color:var(--muted)" aria-live="polite"></span>
             </div>
-            <div class="lease-text-body" id="lease-text-body">Loading…</div>
+            <div class="lease-text-body" id="lease-text-body" tabindex="0" aria-label="Full lease agreement text">Loading…</div>
           </div>
 
           <!-- Phase 04 — required addenda section, populated by JS -->
-          <div class="addenda-section" id="addenda-section" style="display:none">
+          <div class="addenda-section" id="addenda-section" style="display:none" role="region" aria-label="Required addenda">
             <div class="addenda-intro">
-              <span class="a-icon">!</span>
-              <span><strong>Required disclosures and addenda.</strong> The following documents form an integral part of your lease and are required by federal, state, or local law. <strong>Please review each one and check the acknowledgment box</strong> before signing the lease below.</span>
+              <span class="a-icon" aria-hidden="true">!</span>
+              <span id="addenda-intro-text"><strong>Required disclosures and addenda.</strong> The following documents form an integral part of your lease and are required by federal, state, or local law. <strong>Please review each one and check the acknowledgment box</strong> before signing the lease below.</span>
             </div>
-            <div class="addenda-counter" id="addenda-counter"></div>
+            <div class="addenda-counter" id="addenda-counter" aria-live="polite"></div>
             <div id="addenda-list"></div>
           </div>
 
-          <div class="sign-section">
+          <div class="sign-section" role="region" aria-label="Signature section">
             <h3 id="sign-section-title">Sign Your Lease</h3>
             <p id="sign-section-help">Type your full legal name as your electronic signature, optionally draw your signature below, then check the agreement box.</p>
 
-            <label for="signer-email" style="font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px">Your Email Address (the one we contacted you at)</label>
-            <input class="sig-input" id="signer-email" type="email" placeholder="e.g. jane@email.com" autocomplete="email" spellcheck="false" style="font-style:normal;font-size:.92rem;margin-bottom:16px">
+            <label for="signer-email" style="font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px" id="signer-email-label">Your Email Address (the one we contacted you at)</label>
+            <input class="sig-input" id="signer-email" type="email"
+              placeholder="e.g. jane@email.com"
+              autocomplete="email" spellcheck="false"
+              style="font-style:normal;font-size:.92rem;margin-bottom:16px"
+              aria-required="true"
+              aria-describedby="sign-error">
 
-            <label for="sig-input" style="font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px">Full Legal Name (as it appears on your ID)</label>
-            <input class="sig-input" id="sig-input" type="text" placeholder="e.g. Jane Marie Doe" autocomplete="name" spellcheck="false">
+            <label for="sig-input" style="font-size:.78rem;font-weight:600;color:var(--text);display:block;margin-bottom:6px" id="sig-input-label">Full Legal Name (as it appears on your ID)</label>
+            <input class="sig-input" id="sig-input" type="text"
+              placeholder="e.g. Jane Marie Doe"
+              autocomplete="name" spellcheck="false"
+              aria-required="true"
+              aria-describedby="sign-error">
 
-            <div class="sig-preview" id="sig-preview">Your signature will appear here</div>
+            <div class="sig-preview" id="sig-preview" aria-live="polite" aria-label="Signature preview">Your signature will appear here</div>
 
             <div class="pad-wrap">
-              <div class="pad-label">
+              <div class="pad-label" id="pad-label-text">
                 <span>Draw your signature (optional)</span>
-                <span class="pad-hint">For added verification &middot; the typed name above is what is legally binding</span>
+                <span class="pad-hint" id="pad-hint-text">For added verification &middot; the typed name above is what is legally binding</span>
               </div>
-              <canvas class="pad-canvas" id="sig-canvas" width="600" height="140"></canvas>
+              <canvas class="pad-canvas" id="sig-canvas" width="600" height="140"
+                role="img"
+                aria-label="Signature drawing pad — optional. Use mouse or touch to draw your signature."
+                tabindex="0"></canvas>
               <div class="pad-row">
-                <button type="button" class="pad-clear" id="pad-clear">Clear drawing</button>
+                <button type="button" class="pad-clear" id="pad-clear" aria-label="Clear signature drawing">Clear drawing</button>
               </div>
             </div>
 
             <div class="checkbox-row">
-              <input type="checkbox" id="agree-check">
+              <input type="checkbox" id="agree-check" aria-required="true" aria-describedby="agree-label">
               <span id="agree-label">I have read and agree to all terms and conditions of this lease agreement and to each of the required addenda above. I understand this constitutes a legally binding electronic signature under the federal E-SIGN Act.</span>
             </div>
 
-            <div class="error-msg" id="sign-error"></div>
+            <div class="error-msg" id="sign-error" role="alert" aria-live="assertive"></div>
 
-            <button class="btn-sign" id="btn-sign" type="button" disabled>
+            <button class="btn-sign" id="btn-sign" type="button" disabled aria-disabled="true">
               <span id="btn-sign-text">Sign Lease Agreement</span>
             </button>
           </div>
@@ -300,8 +345,7 @@
       </p>
     </div>
 
-  </div>
+  </main>
 
   </body>
   </html>
-  

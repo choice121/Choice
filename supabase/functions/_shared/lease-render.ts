@@ -24,6 +24,7 @@
   } from './pdf.ts';
   import type { RenderedAddendum } from './lease-addenda.ts';
   import type { PartialResolver } from './template-engine.ts';
+  import { prependSummaryPage } from './plain-summary.ts';
 
   export interface ResolvedLeaseTemplate {
     template_body: string;
@@ -268,6 +269,12 @@
     };
     /** Whether to update applications.lease_pdf_url to the new path. */
     updateAppPointer?:   boolean;
+    /**
+     * Phase 12 — Prepend a plain-language cover page as page 1 of the PDF.
+     * Defaults to true.  Pass false only for amendment PDFs or when the
+     * caller explicitly needs raw template output.
+     */
+    includeSummary?:     boolean;
   }
 
   export interface FinalizeAndStorePdfResult {
@@ -402,6 +409,19 @@
         // Non-fatal -- we already have a cert PDF, just with a wrong
         // version number printed. Log and continue.
         console.warn('[finalizeAndStorePdf] cert version-rebuild failed (non-fatal):', (e as Error).message);
+      }
+    }
+
+    // Phase 12 — prepend plain-language summary page (default on)
+    if (args.includeSummary !== false) {
+      try {
+        finalized = {
+          ...finalized,
+          bytes: await prependSummaryPage(finalized.bytes, app),
+        };
+      } catch (e) {
+        // Non-fatal: log the error and continue with the unsummarised PDF.
+        console.warn('[finalizeAndStorePdf] summary prepend failed (non-fatal):', (e as Error).message);
       }
     }
 
