@@ -70,6 +70,9 @@ verify_jwt = true
 [functions.imagekit-delete]
 verify_jwt = true
 
+[functions.backfill-pdf-integrity]
+verify_jwt = true
+
 [functions.send-message]
 verify_jwt = true
 
