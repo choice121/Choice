@@ -79,7 +79,7 @@ Transform the lease system from a single-state (Michigan-only) electronic signin
 | 10  | Leases as first-class entity (refactor)                     | DONE          | 2026-04-26 | 2026-04-26 | agent:claude (phase10 code was pre-built; closeout confirmed) |
 | 11  | Document generators (renewal, termination, rent increase)   | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
 | 12  | Plain-language summary + Spanish locale + accessibility     | DONE          | 2026-05-08 | 2026-05-08 | agent:claude  |
-| 13  | Remaining-40-states templates rollout                       | TODO          | —          | —          | —             |
+| 13  | Remaining-40-states templates rollout                       | DONE          | 2026-05-09 | 2026-05-09 | agent:claude  |
 
 **Status legend:** `TODO` (not started) → `IN PROGRESS` (an AI is actively working on it) → `BLOCKED` (waiting on owner decision; explain in phase file) → `DONE` (acceptance criteria met, pushed, archived).
 
