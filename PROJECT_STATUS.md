@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped; Lease Phase 08 — condition reports IN-PROGRESS — chunks 1-4/N shipped (DB foundation + record-inspection edge fn + tenant mobile wizard at /tenant/inspection + landlord side-by-side review at /landlord/inspection-review + admin index at /admin/inspections), chunk 5 pending (9-state move-in warning system: CA GA KY MD MA NH NJ VA WA — flag executed leases without move-in inspection 7d after move-in))
+**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped; Lease Phase 08 — condition reports COMPLETE — all chunks shipped: DB foundation + record-inspection edge fn + tenant mobile wizard at /tenant/inspection + landlord side-by-side review at /landlord/inspection-review + admin index at /admin/inspections + 9-state move-in warning banner (CA GA KY MD MA NH NJ VA WA — fires 7d after move-in if no inspection on file) + tenant portal CTA after lease execution. Next: Phase 09 — security deposit accounting + per-state deduction-letter generator.)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
@@ -60,7 +60,7 @@ A 13-phase epic that takes the lease subsystem from "Michigan-only Word doc" to 
 | 05 | Signing security hardening | ✅ DONE | (pre-Apr 26) |
 | 06 | PDF integrity (SHA-256 + audit certificate page + public verify endpoint) | ✅ DONE | `cc6fafc` + `4861c30` + `f7a936c` |
 | 07 | Itemized financials + utility responsibility matrix | ✅ DONE (Apr 26 2026) | `c52a2f9` (1/3) + `8495ec3` (2/3) + `05573c9` (3/3) |
-| 08 | Move-in/out condition reports | 🟡 IN PROGRESS (Apr 26 2026 — backend done, UI pending) | `989fe5e` (1/N — DB+bucket+RLS) + `294f3cc` (2/N — record-inspection edge fn + inspection-pdf.ts + event constraint) |
+| 08 | Move-in/out condition reports | ✅ DONE (Apr 26 2026) | `989fe5e` (1/N — DB+bucket+RLS) + `294f3cc` (2/N — record-inspection edge fn + inspection-pdf.ts + event constraint) + `b232eea` (3/N — tenant mobile wizard) + `7d37b3e` (4/N — landlord review + admin index) + closeout (9-state 7d warning banner + tenant portal CTA + master status table fix) |
 | 09 | Deposit accounting (interest, itemised return) | TODO | — |
 | 10 | Leases as first-class records (split from `applications`) | TODO | — |
 | 11 | Document generators (notices, addenda, renewals) | TODO | — |

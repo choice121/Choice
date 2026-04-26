@@ -1,18 +1,35 @@
 'use strict';
 
 // ─────────────────────────────────────────────────────────────────────
-// admin/inspections.js — Phase 08 chunk 4/N
+// admin/inspections.js — Phase 08 chunk 4/N + closeout
 // Admin index of all condition reports across all applications. Filters
 // by inspection type, by signature state, and free-text on tenant name
 // / property address / app_id. Click a row → opens the unified
 // landlord/inspection-review page (which auto-detects admin role from
 // auth and uses the same record-inspection edge fn for any updates).
+//
+// Closeout (Phase 8 acceptance criterion): in the 9 states that legally
+// require a move-in checklist before any deposit can be deducted
+// (CA, GA, KY, MD, MA, NH, NJ, VA, WA), surface a warning banner for
+// every fully-executed lease whose tenant has been in the unit for >7
+// days without a recorded move_in inspection.
 // ─────────────────────────────────────────────────────────────────────
 
 (function(){
   'use strict';
 
+  // States that mandate a move-in condition report as a precondition
+  // for withholding any portion of the security deposit at move-out.
+  const REQUIRED_MOVE_IN_STATES = ['CA','GA','KY','MD','MA','NH','NJ','VA','WA'];
+  const REQUIRED_STATE_NAMES = {
+    CA: 'California',     GA: 'Georgia',     KY: 'Kentucky',
+    MD: 'Maryland',       MA: 'Massachusetts', NH: 'New Hampshire',
+    NJ: 'New Jersey',     VA: 'Virginia',    WA: 'Washington',
+  };
+  const WARN_GRACE_DAYS = 7;
+
   let _all       = [];
+  let _warnings  = [];
   let _typeFilter   = 'all';
   let _statusFilter = 'all';
   let _search       = '';
@@ -101,7 +118,45 @@
     return '<div class="summary-tile"><div class="num">' + n + '</div><div class="lbl">' + esc(lbl) + '</div></div>';
   }
 
+  // ── 7-day warning banner (Phase 8 acceptance criterion) ─────────────
+  function renderWarnings(){
+    const host = document.getElementById('warnings');
+    if (!host) return;
+    if (!_warnings.length) { host.innerHTML = ''; return; }
+    const items = _warnings.map(w => {
+      const tName = ((w.first_name||'') + ' ' + (w.last_name||'')).trim() || 'Unknown tenant';
+      const stateName = REQUIRED_STATE_NAMES[w.lease_state_code] || w.lease_state_code;
+      const inspectLink = '/landlord/inspection-review.html?app=' + encodeURIComponent(w.id) + '&type=move_in';
+      const appLink = '/admin/applications.html?id=' + encodeURIComponent(w.app_id);
+      return ''
+        + '<li class="warn-item">'
+        +   '<div class="warn-item-main">'
+        +     '<div class="warn-item-name">' + esc(tName) + ' · <span class="warn-item-state">' + esc(stateName) + '</span></div>'
+        +     '<div class="warn-item-addr">' + esc(w.property_address || '—') + '</div>'
+        +     '<div class="warn-item-meta">Moved in <strong>' + esc(fmtDate(w.move_in_date_actual)) + '</strong>'
+        +       ' · <strong>' + w.daysOverdue + ' day' + (w.daysOverdue===1?'':'s') + '</strong> past 7-day grace</div>'
+        +   '</div>'
+        +   '<div class="warn-item-acts">'
+        +     '<a class="btn btn-sm btn-primary" href="' + inspectLink + '">Start move-in inspection →</a>'
+        +     '<a class="btn btn-sm btn-ghost" href="' + appLink + '">View application</a>'
+        +   '</div>'
+        + '</li>';
+    }).join('');
+    host.innerHTML = ''
+      + '<div class="warn-banner">'
+      +   '<div class="warn-banner-head">'
+      +     '<span class="warn-icon" aria-hidden="true">!</span>'
+      +     '<div>'
+      +       '<div class="warn-title">Move-in checklist required for ' + _warnings.length + ' lease' + (_warnings.length===1?'':'s') + '</div>'
+      +       '<div class="warn-sub">These states require a documented move-in condition report before any portion of the security deposit can be withheld at move-out.</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<ul class="warn-list">' + items + '</ul>'
+      + '</div>';
+  }
+
   function render(){
+    renderWarnings();
     renderSummary();
     const list = filtered();
     const host = document.getElementById('list');
@@ -110,23 +165,52 @@
     document.body.setAttribute('data-page-sub', _all.length + ' total · showing ' + list.length);
   }
 
+  async function loadWarnings(sb){
+    // Find executed leases in required states whose move-in date is >7d ago
+    // and which have NO move_in inspection on file.
+    const cutoff = new Date(Date.now() - WARN_GRACE_DAYS * 86400000).toISOString().slice(0, 10);
+    const { data: needsReport, error: appErr } = await sb.from('applications')
+      .select('id, app_id, first_name, last_name, property_address, lease_state_code, move_in_date_actual')
+      .eq('lease_status', 'co_signed')
+      .in('lease_state_code', REQUIRED_MOVE_IN_STATES)
+      .not('move_in_date_actual', 'is', null)
+      .lte('move_in_date_actual', cutoff);
+    if (appErr) { console.warn('warning query failed:', appErr.message); _warnings = []; return; }
+    if (!needsReport || !needsReport.length) { _warnings = []; return; }
+    const appIds = needsReport.map(a => a.id);
+    const { data: existing } = await sb.from('lease_inspections')
+      .select('app_id').eq('inspection_type', 'move_in').in('app_id', appIds);
+    const haveMoveIn = new Set((existing || []).map(x => x.app_id));
+    const today = Date.now();
+    _warnings = needsReport
+      .filter(a => !haveMoveIn.has(a.id))
+      .map(a => ({
+        ...a,
+        daysOverdue: Math.max(0, Math.floor((today - new Date(a.move_in_date_actual).getTime()) / 86400000) - WARN_GRACE_DAYS),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+  }
+
   async function load(){
     try {
       const sb = (window.CP && CP.sb) ? CP.sb() : null;
       if (!sb) throw new Error('Supabase not initialised');
       // RLS: admin row in admin_roles required; the policies on lease_inspections
       // already allow admins to read everything.
-      const { data, error } = await sb.from('lease_inspections')
-        .select(`
-          id, app_id, inspection_type, photos_count, completed_at,
-          tenant_signed_at, landlord_signed_at,
-          created_at, updated_at,
-          applications:app_id ( app_id, first_name, last_name, email, property_address, city, state )
-        `)
-        .order('updated_at', { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      _all = data || [];
+      const [inspectionsRes] = await Promise.all([
+        sb.from('lease_inspections')
+          .select(`
+            id, app_id, inspection_type, photos_count, completed_at,
+            tenant_signed_at, landlord_signed_at,
+            created_at, updated_at,
+            applications:app_id ( app_id, first_name, last_name, email, property_address, city, state )
+          `)
+          .order('updated_at', { ascending: false })
+          .limit(500),
+        loadWarnings(sb),
+      ]);
+      if (inspectionsRes.error) throw inspectionsRes.error;
+      _all = inspectionsRes.data || [];
       document.getElementById('loading').style.display = 'none';
       render();
     } catch (e) {

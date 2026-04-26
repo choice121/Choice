@@ -896,6 +896,21 @@ function renderPortal(app){
     leaseHtml=`<div class="lease-section"><button class="btn-download" type="button" data-action="download-lease">&#8595; Download Lease</button></div>`;
   }
 
+  // Phase 8 closeout — Move-in / move-out inspection wizard CTA.
+  // Surfaced once the lease is fully executed so tenants can document
+  // the property's condition with photos. Required by 9 states to
+  // protect the security deposit at move-out.
+  if(leaseStatus==='co_signed' && app.id){
+    leaseHtml += `<div class="lease-section" style="margin-top:var(--sp-3)">`
+      + `<a href="/tenant/inspection.html?app=${esc(app.id)}&type=move_in" class="btn-sign" style="background:linear-gradient(135deg,#0891b2,#06b6d4);box-shadow:0 4px 14px rgba(8,145,178,.25)">`
+      +   `&#128247; Complete Move-In Inspection`
+      + `</a>`
+      + `<div style="font-size:.76rem;color:var(--muted);margin-top:8px;text-align:center;line-height:1.5">`
+      +   `Document the property's condition with photos before move-in. Required to protect your security deposit in many states.`
+      + `</div>`
+      + `</div>`;
+  }
+
   // Denied card
   let deniedHtml='';
   if(status==='denied'){

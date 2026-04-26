@@ -73,8 +73,8 @@ Transform the lease system from a single-state (Michigan-only) electronic signin
 | 04  | State-required disclosures library + auto-attach            | DONE          | 2026-04-26 | 2026-04-26 | 553f555, 576efc9, +this |
 | 05  | Token & signing security hardening + E-SIGN consent         | DONE          | 2026-04-26 | 2026-04-26 | 6f3a8869, +this |
 | 06  | PDF integrity (SHA-256 hash + audit certificate page)       | DONE          | 2026-04-26 | 2026-04-26 | cc6fafc       |
-| 07  | Itemized financials + utility responsibility matrix         | TODO          | —          | —          | —             |
-| 08  | Move-in / move-out condition reports                        | TODO          | —          | —          | —             |
+| 07  | Itemized financials + utility responsibility matrix         | DONE          | 2026-04-26 | 2026-04-26 | c52a2f9, 8495ec3, 05573c9, ef644c1 |
+| 08  | Move-in / move-out condition reports                        | DONE          | 2026-04-26 | 2026-04-26 | 989fe5e, 294f3cc, b232eea, 7d37b3e, +closeout |
 | 09  | Security deposit accounting + deduction letter generator    | TODO          | —          | —          | —             |
 | 10  | Leases as first-class entity (refactor)                     | TODO          | —          | —          | —             |
 | 11  | Document generators (renewal, termination, rent increase)   | TODO          | —          | —          | —             |
