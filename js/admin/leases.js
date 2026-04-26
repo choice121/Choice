@@ -133,43 +133,189 @@
   // for CONFIG / network / non-2xx failures.
   const callFn = (path, body) => S.callFn(path, body);
 
+  // Phase 07 — itemized financials + utility responsibility matrix.
+  //
+  // The 13 standard utility keys must stay in sync with
+  // _shared/utility-matrix.ts so the admin form, the JSONB on disk, and
+  // the PDF renderer all agree.
+  const UTILITY_KEYS = [
+    ['electric',         'Electric'],
+    ['gas',              'Gas'],
+    ['water',            'Water'],
+    ['sewer',            'Sewer'],
+    ['trash',            'Trash / Garbage'],
+    ['recycling',        'Recycling'],
+    ['internet',         'Internet'],
+    ['cable',            'Cable / Satellite TV'],
+    ['hoa',              'HOA Dues'],
+    ['lawn_care',        'Lawn Care'],
+    ['snow_removal',     'Snow Removal'],
+    ['pest_control',     'Pest Control'],
+    ['pool_maintenance', 'Pool Maintenance'],
+  ];
+  const RESP_OPTS = [
+    { value:'n/a',      label:'— Not applicable —' },
+    { value:'tenant',   label:'Tenant' },
+    { value:'landlord', label:'Landlord' },
+    { value:'shared',   label:'Shared' },
+  ];
+
+  function existingUtility(app, key){
+    const m = app.utility_responsibilities;
+    if(!m || typeof m !== 'object') return { responsibility:'n/a', notes:'' };
+    const v = m[key];
+    if(v == null) return { responsibility:'n/a', notes:'' };
+    if(typeof v === 'string') return { responsibility:v, notes:'' };
+    return {
+      responsibility: typeof v.responsibility === 'string' ? v.responsibility : 'n/a',
+      notes:          typeof v.notes === 'string' ? v.notes : '',
+    };
+  }
+
+  function buildUtilityMatrixHtml(app){
+    const rows = UTILITY_KEYS.map(([key, label]) => {
+      const cur = existingUtility(app, key);
+      const sel = RESP_OPTS.map(o =>
+        '<option value="'+o.value+'"'+(o.value===cur.responsibility?' selected':'')+'>'+o.label+'</option>'
+      ).join('');
+      return (
+        '<tr>'+
+          '<td style="padding:4px 6px;font-size:.78rem;color:var(--text)">'+label+'</td>'+
+          '<td style="padding:4px 6px"><select class="form-input" name="util_resp_'+key+'" style="padding:4px 6px;font-size:.78rem">'+sel+'</select></td>'+
+          '<td style="padding:4px 6px"><input class="form-input" type="text" name="util_notes_'+key+'" value="'+(cur.notes||'').replace(/"/g,'&quot;')+'" placeholder="optional" style="padding:4px 6px;font-size:.78rem"></td>'+
+        '</tr>'
+      );
+    }).join('');
+    return (
+      '<div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">'+
+        'Pick who pays for each utility. Rows left as "Not applicable" are hidden from the lease.'+
+      '</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem">'+
+        '<thead><tr style="background:var(--surface-2)">'+
+          '<th style="padding:4px 6px;text-align:left">Utility</th>'+
+          '<th style="padding:4px 6px;text-align:left">Paid by</th>'+
+          '<th style="padding:4px 6px;text-align:left">Notes</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    );
+  }
+
   async function openGenerateSheet(id, appId){
     const app = findApp(id) || {};
+    const moneyVal = (v) => (v == null || v === '') ? '' : v;
+
     const data = await S.formSheet({
       title: 'Generate & send lease',
       submit: 'Generate & send',
       fields: [
+        // ───────── Lease basics ─────────
+        { type:'section', label:'Lease basics' },
         { name:'lease_start_date',  label:'Lease start date', type:'date', value: app.lease_start_date ? String(app.lease_start_date).slice(0,10) : '' },
         { name:'lease_end_date',    label:'Lease end date',   type:'date', value: app.lease_end_date   ? String(app.lease_end_date).slice(0,10)   : '' },
-        { name:'monthly_rent',      label:'Monthly rent ($)', type:'number', value: app.monthly_rent || '', placeholder:'1200.00' },
-        { name:'security_deposit',  label:'Security deposit ($)', type:'number', value: app.security_deposit || '', placeholder:'1200.00' },
-        { name:'move_in_costs',     label:'Move-in costs ($)', type:'number', value: app.move_in_costs || '', placeholder:'2400.00' },
-        { name:'lease_late_fee_flat', label:'Late fee (flat $)', type:'number', value: app.lease_late_fee_flat || '', placeholder:'50' },
-        { name:'lease_landlord_name', label:'Landlord name', value: app.lease_landlord_name || 'Choice Properties' },
-        { name:'lease_state_code',  label:'State code', value: app.lease_state_code || 'MI' },
+        { name:'monthly_rent',      label:'Monthly rent ($)', type:'number', value: moneyVal(app.monthly_rent), placeholder:'1200.00' },
+        { name:'lease_state_code',  label:'State code (2-letter)', value: app.lease_state_code || 'MI', placeholder:'MI' },
+
+        // ───────── Itemized financials (Phase 07) ─────────
+        { type:'section', label:'Itemized financials',
+          help:'Replace the lump-sum "Move-in costs" with discrete components. Leave blank to skip a row.' },
+        { name:'first_month_rent',  label:'First month rent ($)',  type:'number', value: moneyVal(app.first_month_rent),
+          placeholder:'(defaults to monthly rent if blank)' },
+        { name:'last_month_rent',   label:'Last month rent ($)',   type:'number', value: moneyVal(app.last_month_rent),  placeholder:'optional' },
+        { name:'security_deposit',  label:'Security deposit ($)',  type:'number', value: moneyVal(app.security_deposit), placeholder:'1200.00' },
+        { name:'pet_deposit',       label:'Pet deposit ($)',       type:'number', value: moneyVal(app.pet_deposit),      placeholder:'optional' },
+        { name:'pet_rent',          label:'Pet rent ($/month)',    type:'number', value: moneyVal(app.pet_rent),         placeholder:'optional' },
+        { name:'admin_fee',         label:'Administrative fee ($)',type:'number', value: moneyVal(app.admin_fee),        placeholder:'optional' },
+        { name:'key_deposit',       label:'Key deposit ($)',       type:'number', value: moneyVal(app.key_deposit),      placeholder:'optional' },
+        { name:'parking_fee',       label:'Parking fee ($/month)', type:'number', value: moneyVal(app.parking_fee),      placeholder:'optional' },
+        { name:'cleaning_fee',      label:'Cleaning fee ($)',      type:'number', value: moneyVal(app.cleaning_fee),     placeholder:'optional' },
+        { name:'cleaning_fee_refundable', type:'checkbox', label:'Cleaning fee refundable', checkLabel:'Cleaning fee is refundable (required in CA, MD)', value: app.cleaning_fee_refundable === true },
+        { name:'rent_due_day_of_month', label:'Rent due day of month (1–28)', type:'number', value: app.rent_due_day_of_month || 1, placeholder:'1' },
+        { name:'rent_proration_method', label:'First-month proration method', type:'select',
+          value: app.rent_proration_method || 'daily',
+          options: [
+            { value:'daily',  label:'Daily — rent ÷ days in move-in month × days occupied' },
+            { value:'30day',  label:'30-day — rent ÷ 30 × days occupied' },
+            { value:'none',   label:'None — full month charged regardless' },
+          ] },
+
+        // Legacy lump-sum (kept editable for backward compat — leave blank to use itemized total)
+        { name:'move_in_costs', label:'Legacy move-in lump sum ($) — optional override', type:'number',
+          value: moneyVal(app.move_in_costs),
+          placeholder:'(leave blank to use itemized total)',
+          help:'Backward-compatibility field. If left blank, the lease uses the sum of the itemized components above.' },
+
+        { name:'lease_late_fee_flat', label:'Late fee (flat $)', type:'number', value: moneyVal(app.lease_late_fee_flat), placeholder:'50' },
+
+        // ───────── Utility responsibility matrix (Phase 07) ─────────
+        { type:'section', label:'Utility responsibility matrix' },
+        { type:'html', html: buildUtilityMatrixHtml(app) },
+
+        // ───────── Policies & landlord ─────────
+        { type:'section', label:'Policies & landlord' },
+        { name:'lease_landlord_name',    label:'Landlord name',    value: app.lease_landlord_name    || 'Choice Properties' },
         { name:'lease_landlord_address', label:'Landlord address', value: app.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083' },
-        { name:'lease_pets_policy', label:'Pets policy', value: app.lease_pets_policy || '', placeholder:'No pets allowed.' },
-        { name:'lease_smoking_policy', label:'Smoking policy', value: app.lease_smoking_policy || '', placeholder:'No smoking permitted on premises.' },
-        { name:'lease_notes', label:'Lease notes (internal)', type:'textarea', rows:2, value: app.lease_notes || '' },
+        { name:'lease_pets_policy',      label:'Pets policy',      value: app.lease_pets_policy     || '', placeholder:'No pets allowed.' },
+        { name:'lease_smoking_policy',   label:'Smoking policy',   value: app.lease_smoking_policy  || '', placeholder:'No smoking permitted on premises.' },
+        { name:'lease_notes',            label:'Lease notes (internal)', type:'textarea', rows:2, value: app.lease_notes || '' },
         { name:'preview_only', type:'checkbox', label:'Preview only', checkLabel:'Preview PDF without sending email', value:false }
       ]
     });
     if(!data) return;
+
+    // The utility matrix selects/inputs aren't in formSheet's standard
+    // FormData pass-through (they live inside the type:'html' block), so
+    // we read them directly off the still-mounted form just before submit.
+    // formSheet has already closed the sheet by the time it resolves, so
+    // we mirror its DOM lookup using the rendered selects' generated names.
+    // Workaround: since the sheet is already torn down, capture the
+    // utility values from `data` itself — formSheet's FormData walk picks
+    // up native form controls regardless of where they were embedded.
+    const utility_responsibilities = {};
+    UTILITY_KEYS.forEach(([key]) => {
+      const r = data['util_resp_'+key];
+      const n = data['util_notes_'+key];
+      utility_responsibilities[key] = {
+        responsibility: (typeof r === 'string' && r) ? r : 'n/a',
+        notes:          (typeof n === 'string') ? n.trim() : '',
+      };
+    });
+
+    const num = (v) => (v == null || v === '') ? null : (Number.isFinite(parseFloat(v)) ? parseFloat(v) : null);
+
     const leaseData = {
       lease_start_date:       data.lease_start_date || null,
       lease_end_date:         data.lease_end_date   || null,
-      monthly_rent:           data.monthly_rent     ? parseFloat(data.monthly_rent) : null,
-      security_deposit:       data.security_deposit ? parseFloat(data.security_deposit) : null,
-      move_in_costs:          data.move_in_costs    ? parseFloat(data.move_in_costs) : null,
-      lease_late_fee_flat:    data.lease_late_fee_flat ? parseFloat(data.lease_late_fee_flat) : null,
+      monthly_rent:           num(data.monthly_rent),
+      security_deposit:       num(data.security_deposit),
+      move_in_costs:          num(data.move_in_costs),
+      lease_late_fee_flat:    num(data.lease_late_fee_flat),
       lease_landlord_name:    data.lease_landlord_name    || 'Choice Properties',
       lease_landlord_address: data.lease_landlord_address || '2265 Livernois Suite 500, Troy MI 48083',
       lease_state_code:       data.lease_state_code       || 'MI',
       lease_pets_policy:      data.lease_pets_policy      || null,
       lease_smoking_policy:   data.lease_smoking_policy   || null,
-      lease_notes:            data.lease_notes            || null
+      lease_notes:            data.lease_notes            || null,
+
+      // Phase 07 — itemized financials
+      first_month_rent:        num(data.first_month_rent),
+      last_month_rent:         num(data.last_month_rent),
+      pet_deposit:             num(data.pet_deposit),
+      pet_rent:                num(data.pet_rent),
+      admin_fee:               num(data.admin_fee),
+      key_deposit:             num(data.key_deposit),
+      parking_fee:             num(data.parking_fee),
+      cleaning_fee:            num(data.cleaning_fee),
+      cleaning_fee_refundable: data.cleaning_fee_refundable === 'on'
+                                 || data.cleaning_fee_refundable === true
+                                 || data.cleaning_fee_refundable === 'true',
+      rent_due_day_of_month:   (() => {
+                                 const v = parseInt(data.rent_due_day_of_month, 10);
+                                 return Number.isFinite(v) ? Math.max(1, Math.min(28, v)) : 1;
+                               })(),
+      rent_proration_method:   data.rent_proration_method || 'daily',
+      utility_responsibilities,
     };
-    const dryRun = !!data.preview_only;
+
+    const dryRun = !!(data.preview_only === 'on' || data.preview_only === true || data.preview_only === 'true');
     S.toast(dryRun ? 'Generating preview…' : 'Generating lease…');
     const res = await callFn('/generate-lease', { app_id: appId, lease_data: leaseData, dry_run: dryRun });
     if(!res){ return; }

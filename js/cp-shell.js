@@ -305,6 +305,21 @@
     return new Promise(resolve => {
       const id = 'fs_' + Math.random().toString(36).slice(2);
       const fields = (opts.fields||[]).map(f => {
+        // Phase 07 — non-input field types for layout + custom widgets:
+        //   type:'html'     → emits raw HTML (caller responsible for escaping).
+        //                    Useful for section dividers, help blocks, or
+        //                    custom widgets whose values are read separately
+        //                    from the standard FormData pass.
+        //   type:'section'  → shorthand for a divider with f.label as heading.
+        if(f.type === 'html'){
+          return '<div class="form-row form-row-html">'+(f.html||'')+'</div>';
+        }
+        if(f.type === 'section'){
+          return '<div class="form-row form-row-section" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+                 '<div class="form-label" style="font-size:.85rem;font-weight:700;color:var(--text)">'+Shell.esc(f.label||'')+'</div>'+
+                 (f.help ? '<div class="form-help">'+Shell.esc(f.help)+'</div>' : '')+
+                 '</div>';
+        }
         const lbl = '<label class="form-label">'+Shell.esc(f.label||f.name)+(f.required?' *':'')+'</label>';
         const help = f.help ? '<div class="form-help">'+Shell.esc(f.help)+'</div>' : '';
         let input;

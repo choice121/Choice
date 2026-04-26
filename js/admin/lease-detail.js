@@ -30,6 +30,128 @@
   function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); } catch { return d; } }
   function fmtMoney(v) { if (v == null || v === '') return '—'; return '$' + Number(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
 
+  // Phase 07 — read-only render of the itemized money breakdown.
+  // Falls back gracefully on legacy applications where only `move_in_costs`
+  // was set and none of the per-component fields are populated.
+  function renderMoneyBreakdownCard(app){
+    const num = (v) => (v == null || v === '') ? null : (Number.isFinite(Number(v)) && Number(v) !== 0 ? Number(v) : null);
+    const rows = [];
+    const prorated = num(app.prorated_first_month);
+    const firstMo  = num(app.first_month_rent);
+    const monthly  = num(app.monthly_rent);
+    if (prorated != null)      rows.push(['First month (prorated)', prorated]);
+    else if (firstMo != null)  rows.push(['First month rent',       firstMo]);
+    else if (monthly != null)  rows.push(['First month rent',       monthly]);
+    const lastMo = num(app.last_month_rent);
+    if (lastMo != null)        rows.push(['Last month rent',        lastMo]);
+    const sec = num(app.security_deposit);
+    if (sec != null)           rows.push(['Security deposit (refundable)', sec]);
+    const petDep = num(app.pet_deposit);
+    if (petDep != null)        rows.push(['Pet deposit',            petDep]);
+    const adminFee = num(app.admin_fee);
+    if (adminFee != null)      rows.push(['Administrative fee',     adminFee]);
+    const keyDep = num(app.key_deposit);
+    if (keyDep != null)        rows.push(['Key deposit',            keyDep]);
+    const parking = num(app.parking_fee);
+    if (parking != null)       rows.push(['Parking fee (first month)', parking]);
+    const cleaning = num(app.cleaning_fee);
+    if (cleaning != null) {
+      const refLabel = app.cleaning_fee_refundable === true
+        ? ' (refundable)'
+        : (app.cleaning_fee_refundable === false ? ' (non-refundable)' : '');
+      rows.push(['Cleaning fee' + refLabel, cleaning]);
+    }
+
+    let body;
+    if (rows.length === 0) {
+      const legacy = num(app.move_in_costs);
+      if (legacy == null) {
+        body = '<div class="text-sm muted">No itemized financials set yet. Click "Generate &amp; send lease" to enter them.</div>';
+      } else {
+        body =
+          '<div class="text-sm muted" style="margin-bottom:6px">Legacy lease (no itemized breakdown). Single move-in lump sum:</div>'+
+          '<div class="row-flex between" style="font-weight:700;border-top:2px solid var(--border);padding-top:6px">'+
+            '<span>Total due at move-in</span><span>'+fmtMoney(legacy)+'</span>'+
+          '</div>';
+      }
+    } else {
+      const total = rows.reduce((s, r) => s + r[1], 0);
+      const recurring = (num(app.pet_rent) || 0) + (num(app.parking_fee) || 0);
+      const recurringLine = recurring > 0
+        ? '<div class="row-flex between text-xs muted" style="margin-top:8px">'+
+            '<span>Plus recurring (pet rent + parking)</span><span>+ '+fmtMoney(recurring)+' / mo</span>'+
+          '</div>'
+        : '';
+      body = rows.map(([label, amt]) =>
+        '<div class="row-flex between text-sm" style="padding:4px 0;border-bottom:1px solid var(--border)">'+
+          '<span class="muted">'+S.esc(label)+'</span><span class="text-strong">'+fmtMoney(amt)+'</span>'+
+        '</div>'
+      ).join('') +
+      '<div class="row-flex between" style="margin-top:8px;font-weight:700;border-top:2px solid var(--accent);padding-top:6px">'+
+        '<span>Total due at move-in</span><span>'+fmtMoney(total)+'</span>'+
+      '</div>' + recurringLine;
+    }
+
+    const dueDay  = app.rent_due_day_of_month || 1;
+    const method  = app.rent_proration_method || 'daily';
+    const methodLabel = { daily:'Daily', '30day':'30-day', none:'Full month (no proration)' }[method] || method;
+
+    return (
+      '<div class="card" style="margin-bottom:14px"><div class="card-body">'+
+        '<h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Money breakdown</h3>'+
+        body +
+        '<div class="text-xs muted" style="margin-top:10px;border-top:1px dashed var(--border);padding-top:8px">'+
+          'Rent due day: <span class="text-strong">'+S.esc(String(dueDay))+'</span>'+
+          ' · Proration: <span class="text-strong">'+S.esc(methodLabel)+'</span>'+
+        '</div>'+
+      '</div></div>'
+    );
+  }
+
+  function renderUtilityMatrixCard(app){
+    const STD = [
+      ['electric','Electric'],['gas','Gas'],['water','Water'],['sewer','Sewer'],
+      ['trash','Trash / Garbage'],['recycling','Recycling'],['internet','Internet'],
+      ['cable','Cable / Satellite TV'],['hoa','HOA Dues'],['lawn_care','Lawn Care'],
+      ['snow_removal','Snow Removal'],['pest_control','Pest Control'],['pool_maintenance','Pool Maintenance'],
+    ];
+    const RESP = { tenant:'Tenant', landlord:'Landlord', shared:'Shared', 'n/a':'—' };
+    const m = app.utility_responsibilities;
+    const rows = [];
+    if (m && typeof m === 'object') {
+      STD.forEach(([key, label]) => {
+        const v = m[key];
+        if (!v) return;
+        const r = (typeof v === 'string') ? v : (typeof v.responsibility === 'string' ? v.responsibility : 'n/a');
+        const notes = (typeof v === 'object' && typeof v.notes === 'string') ? v.notes : '';
+        if (r === 'n/a' && !notes) return;
+        rows.push(
+          '<tr>'+
+            '<td style="padding:4px 8px;font-size:.78rem;border-bottom:1px solid var(--border)">'+S.esc(label)+'</td>'+
+            '<td style="padding:4px 8px;font-size:.78rem;border-bottom:1px solid var(--border)" class="text-strong">'+S.esc(RESP[r] || r)+'</td>'+
+            '<td style="padding:4px 8px;font-size:.78rem;border-bottom:1px solid var(--border);color:var(--muted)">'+S.esc(notes||'')+'</td>'+
+          '</tr>'
+        );
+      });
+    }
+
+    const body = rows.length
+      ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+          '<thead><tr style="background:var(--surface-2)">'+
+            '<th style="padding:4px 8px;text-align:left;font-size:.75rem;color:var(--muted)">Utility</th>'+
+            '<th style="padding:4px 8px;text-align:left;font-size:.75rem;color:var(--muted)">Paid by</th>'+
+            '<th style="padding:4px 8px;text-align:left;font-size:.75rem;color:var(--muted)">Notes</th>'+
+          '</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>'
+      : '<div class="text-sm muted">No utility responsibilities set. They will default to the lease body\'s blanket "Utilities" clause.</div>';
+
+    return (
+      '<div class="card" style="margin-bottom:14px"><div class="card-body">'+
+        '<h3 style="font-size:.92rem;font-weight:700;margin-bottom:10px">Utility responsibilities</h3>'+
+        body +
+      '</div></div>'
+    );
+  }
+
   function eventLabel(t) {
     return ({
       tenant:        'Primary applicant signed',
@@ -224,6 +346,9 @@
           </div>
         </div>
       </div>
+
+      ${renderMoneyBreakdownCard(app)}
+      ${renderUtilityMatrixCard(app)}
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-body">
