@@ -72,7 +72,7 @@ Transform the lease system from a single-state (Michigan-only) electronic signin
 | 03  | Multi-state base templates (top 10 states)                  | DONE          | 2026-04-26 | 2026-04-26 | agent:claude  |
 | 04  | State-required disclosures library + auto-attach            | DONE          | 2026-04-26 | 2026-04-26 | 553f555, 576efc9, +this |
 | 05  | Token & signing security hardening + E-SIGN consent         | DONE          | 2026-04-26 | 2026-04-26 | 6f3a8869, +this |
-| 06  | PDF integrity (SHA-256 hash + audit certificate page)       | DONE          | 2026-04-26 | 2026-04-26 | phase06       |
+| 06  | PDF integrity (SHA-256 hash + audit certificate page)       | DONE          | 2026-04-26 | 2026-04-26 | cc6fafc       |
 | 07  | Itemized financials + utility responsibility matrix         | TODO          | —          | —          | —             |
 | 08  | Move-in / move-out condition reports                        | TODO          | —          | —          | —             |
 | 09  | Security deposit accounting + deduction letter generator    | TODO          | —          | —          | —             |
