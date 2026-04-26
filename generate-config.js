@@ -414,8 +414,8 @@ await (async function injectInitialListings() {
   ].join(',');
   const apiPath = '/rest/v1/properties'
     + '?select=' + cols
-    + ',landlords(contact_name,business_name,avatar_url,verified)'
-    + ',property_photos(url,file_id,display_order)'
+    + ',landlords(verified)'
+    + ',property_photos(url,display_order)'
     + '&status=eq.active'
     + '&order=created_at.desc'
     + '&limit=' + PER_PAGE
@@ -445,12 +445,13 @@ await (async function injectInitialListings() {
         try {
           const rows = JSON.parse(body);
           if (!Array.isArray(rows)) { console.warn('⚠  Property pre-load: unexpected response shape'); resolve(null); return; }
-          // Phase 3c: derive legacy photo_urls / photo_file_ids from embedded property_photos.
+          // Derive photo_urls from embedded property_photos, then drop the
+          // raw embed (listings cards only need photo_urls + verified flag).
           rows.forEach(function(p) {
             var photos = Array.isArray(p.property_photos) ? p.property_photos.slice() : [];
             photos.sort(function(a, b) { return (a.display_order || 0) - (b.display_order || 0); });
-            p.photo_urls     = photos.map(function(x) { return x.url; }).filter(Boolean);
-            p.photo_file_ids = photos.map(function(x) { return x.file_id || null; });
+            p.photo_urls = photos.map(function(x) { return x.url; }).filter(Boolean);
+            delete p.property_photos;
           });
           let total = rows.length;
           const rangeHeader = res.headers['content-range'];
