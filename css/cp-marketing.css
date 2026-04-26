@@ -3973,3 +3973,102 @@ body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link i {
 body[data-portal="public"][data-page="home"] .mv2-hiw__cta-link:hover i { transform: translateX(3px); }
 
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.4 — "Verified, every time" trust block                     ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.4, agent_issues #34) ║
+   ║                                                                      ║
+   ║  4-pillar trust section between Featured & HIW. Warm-bg, centered   ║
+   ║  header, 4-up grid on desktop, 2x2 on tablet, 1-up on mobile.       ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+body[data-portal="public"][data-page="home"] .mv2-trustblock {
+  background: var(--mv2-bg-warm);
+  padding: var(--mv2-section-y-mobile) 0;
+  position: relative;
+}
+@media (min-width: 769px) {
+  body[data-portal="public"][data-page="home"] .mv2-trustblock {
+    padding: var(--mv2-section-y-desktop) 0;
+  }
+}
+
+/* Header */
+body[data-portal="public"][data-page="home"] .mv2-trustblock__header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--mv2-stack-7);
+}
+body[data-portal="public"][data-page="home"] .mv2-trustblock__header .mv2-eyebrow {
+  justify-content: center;
+}
+body[data-portal="public"][data-page="home"] .mv2-trustblock__subtitle {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: var(--mv2-stack-3) auto 0;
+  max-width: 60ch;
+}
+
+/* Pillar grid */
+body[data-portal="public"][data-page="home"] .mv2-trustblock__pillars {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--mv2-stack-5);
+  max-width: 1100px;
+}
+@media (min-width: 600px) {
+  body[data-portal="public"][data-page="home"] .mv2-trustblock__pillars {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--mv2-stack-5) var(--mv2-stack-5);
+  }
+}
+@media (min-width: 1024px) {
+  body[data-portal="public"][data-page="home"] .mv2-trustblock__pillars {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--mv2-stack-5);
+  }
+}
+
+/* Single pillar */
+body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0;
+}
+body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(212, 160, 23, 0.10);
+  color: var(--mv2-gold);
+  font-size: 22px;
+  margin-bottom: var(--mv2-stack-3);
+  box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.18);
+}
+body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-title {
+  font-family: var(--mv2-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.125rem, 0.95rem + 0.5vw, 1.3rem);
+  line-height: 1.25;
+  color: var(--mv2-ink);
+  margin: 0 0 8px;
+}
+body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-desc {
+  color: var(--mv2-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 36ch;
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
