@@ -379,15 +379,16 @@ function fmtDatetime(lang) {
 //   became an open Gmail spam endpoint with no way to revoke without
 //   a coordinated rotation across edge functions + Apps Script.
 //
-//   We now accept EITHER:
-//     (a) Legacy mode — `secret` field equal to RELAY_SECRET. Kept
-//         for backwards compatibility during rollout; calls trigger
-//         a console warning so we can spot any caller still on it.
-//     (b) Signed mode (preferred) — `ts` (Unix-seconds) and `sig`
-//         where `sig = HMAC-SHA256(RELAY_SECRET, ts + "." + payload)`
-//         hex-encoded, and `|now - ts| <= 5 minutes`. A leaked HMAC
-//         is only valid for ±5 min, so the blast radius of a leak
-//         drops from "forever" to "minutes".
+// Issue #24 (2026-04-26):
+//   The legacy `secret`-only acceptance path was removed once every
+//   caller (send-inquiry, send-message, sendEmail) routed through the
+//   shared `gasSend()` helper that always HMAC-signs. Only signed
+//   mode is now accepted:
+//     `ts` (Unix-seconds) and `sig` where
+//     `sig = HMAC-SHA256(RELAY_SECRET, ts + "." + rawBody)` hex-encoded,
+//     and `|now - ts| <= 5 minutes`. A leaked HMAC is only valid for
+//     ±5 min, so the blast radius of a leak drops from "forever" to
+//     "minutes".
 //
 //   Every call also runs through `constantTimeEquals` so we don't
 //   leak validity through string-comparison timing.
@@ -417,29 +418,23 @@ function hmacSha256Hex(secret, message) {
 function authorizeRequest(rawBody, body, cfg) {
   if (!cfg.secret) return { ok: false, error: 'Relay not configured' };
 
-  // Signed mode — preferred.
-  if (body && body.ts != null && body.sig) {
-    var ts = Number(body.ts);
-    if (!isFinite(ts) || ts <= 0) return { ok: false, error: 'Invalid timestamp' };
-    var nowSec = Math.floor(Date.now() / 1000);
-    if (Math.abs(nowSec - ts) > SIG_WINDOW_SECONDS) {
-      return { ok: false, error: 'Timestamp outside ±5 min window' };
-    }
-    // Sign over the EXACT raw body so re-serialisation can't change a thing.
-    var expected = hmacSha256Hex(cfg.secret, ts + '.' + rawBody);
-    if (!constantTimeEquals(String(body.sig).toLowerCase(), expected)) {
-      return { ok: false, error: 'Bad signature' };
-    }
-    return { ok: true, mode: 'signed' };
+  // Signed mode is the only accepted path (issue #24, 2026-04-26).
+  if (!body || body.ts == null || !body.sig) {
+    return { ok: false, error: 'Unauthorized: signed mode required (ts + sig)' };
   }
 
-  // Legacy mode — still accepted, but logged.
-  if (body && constantTimeEquals(String(body.secret || ''), cfg.secret)) {
-    console.warn('GAS relay: caller used legacy `secret` mode — migrate to signed (ts + sig).');
-    return { ok: true, mode: 'legacy' };
+  var ts = Number(body.ts);
+  if (!isFinite(ts) || ts <= 0) return { ok: false, error: 'Invalid timestamp' };
+  var nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - ts) > SIG_WINDOW_SECONDS) {
+    return { ok: false, error: 'Timestamp outside ±5 min window' };
   }
-
-  return { ok: false, error: 'Unauthorized' };
+  // Sign over the EXACT raw body so re-serialisation can't change a thing.
+  var expected = hmacSha256Hex(cfg.secret, ts + '.' + rawBody);
+  if (!constantTimeEquals(String(body.sig).toLowerCase(), expected)) {
+    return { ok: false, error: 'Bad signature' };
+  }
+  return { ok: true, mode: 'signed' };
 }
 
 function doPost(e) {

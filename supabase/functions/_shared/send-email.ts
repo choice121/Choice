@@ -51,9 +51,10 @@ export interface GasSendResult {
 }
 
 /**
- * POST a signed payload to the GAS email relay. Includes both the HMAC
- * signature (`ts`+`sig`) and the legacy `secret` field for one rollout
- * cycle — see issue #24 for the planned removal of the legacy field.
+ * POST a signed payload to the GAS email relay. Issue #24 (Apr 26 2026):
+ * the legacy `secret` field has been removed — every call is now HMAC-signed
+ * (`ts` + `sig`). The companion change in `GAS-EMAIL-RELAY.gs` removes the
+ * legacy acceptance path on the relay side.
  */
 export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
@@ -63,12 +64,11 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   }
 
   const ts = Math.floor(Date.now() / 1000);
-  // Legacy `secret` field is included for one rollout cycle so the relay
-  // continues to accept us before the owner redeploys the updated GAS code.
-  // Once GAS prefers `sig`, we can drop the legacy field (issue #24).
+  // Signed mode only — no legacy `secret` field. The HMAC is computed over
+  // the EXACT body that gets serialised below so re-serialisation can never
+  // shift a byte and invalidate the signature.
   const inner = {
     ts,
-    secret: gasSecret,
     template: input.template,
     to: input.to,
     cc: input.cc ?? null,
