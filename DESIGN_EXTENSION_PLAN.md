@@ -449,11 +449,115 @@ This plan is safe to execute provided every rule in §0 is followed and every ph
 - **Phase 7 batch 2 — legal/policy pages** (committed April 22 2026): All seven legal/policy pages (`terms.html`, `privacy.html`, `fair-housing.html`, `application-credit-policy.html`, `holding-deposit-policy.html`, `rental-application-policy.html`, `landlord-platform-agreement.html`) migrated. cp-marketing.css extended with legal-doc helpers (`.info-body`, `.info-doc`, `.info-section h3`/`h4`/`ol`, `.policy-nav`, `.effective-date`). Migration script `scripts/migrate-legal-pages.js` is idempotent and re-runnable. Average page size reduction: ~45% (e.g. `terms.html` 21k → 12k bytes; `fair-housing.html` 15k → 6k).
 - **Phase 8 partial — JS shim cleanup** (committed): `js/admin-chrome.js` and `js/admin-shell.js` shims (placeholder loaders from Phase 2) deleted. All admin pages reference the renamed files directly. `css/admin.css`, `css/admin-v2.css`, `css/landlord.css`, `css/dashboard-system.css` deleted.
 
-### Deferred to later phases
+### Reconciled status of previously-deferred items (April 26 2026)
 
-- **Phase 7 batch 3 — heavy public pages**: split into three sub-phases (one PR each) — see the prescriptive playbook in `BATCH_3_MIGRATION.md`.
-  - **7.3.1 — `index.html` ✅ DONE (April 22 2026).** Homepage now loads only `cp-design.css` + `cp-marketing.css`. Hero, search bar, trust strip, featured listings, how-it-works (dark strip), why-us (dark strip), property card, scroll-top, toast, and skeleton components added to `cp-marketing.css` (~700 lines) under `body[data-portal="public"]` scope. Nav/footer switched to the slot pattern (`<div id="site-nav"></div>` + `<div id="site-footer"></div>`). All SEO tags, JSON-LD blocks, form ids, and the inline `<script type="module" nonce="…">` block preserved exactly. Cache-bust `?v=20260424`.
-  - **7.3.2 — `listings.html`** ⏳ NOT STARTED. Filter bar, advanced filter panel, sort/results, pagination, map panel + popup styles must be ported into `cp-marketing.css`. Key risks: sticky header behavior, Leaflet map markers, list/map toggle.
-  - **7.3.3 — `property.html`** ⏳ NOT STARTED. Photo gallery, info panels, sidebar pricing card, contact form, amenities grid, structured data must be ported. Key risks: photo gallery layout, sticky sidebar, dynamic OG meta in `renderProperty`.
-- **Phase 8 final cleanup**: delete `css/main.css`, `css/mobile.css`, `css/listings.css`, `css/property.css` after sub-phases 7.3.2 and 7.3.3 ship and are verified live for ≥ 2 weeks.
-- **Tenant chrome unification (open §3)**: decide whether `tenant/portal.html` should adopt `cp-chrome.js`/`cp-shell.js` or remain with its bespoke topbar. No-op until product owner decides.
+- **Phase 7 batch 3 — heavy public pages: ✅ ALL DONE**
+  - **7.3.1 — `index.html` ✅ DONE (April 22 2026).** Homepage on `cp-design.css` + `cp-marketing.css`. Slot-pattern nav/footer. SEO tags / JSON-LD / form ids preserved. Cache-bust `?v=20260424`.
+  - **7.3.2 — `listings.html` ✅ DONE (April 22 2026).** Filter bar, advanced filter dropdown, mobile filters drawer, view toggle, pagination, empty state, map panel, full property-card extensions migrated under `body[data-portal="public"]` scope.
+  - **7.3.3 — `property.html` ✅ DONE (April 24 2026).** Gallery mosaic + skeleton, lightbox, detail layout grid, sticky sidebar, apply card, landlord card, contact card + mobile drawer all migrated under `body[data-portal="public"][data-page="property"]` scope.
+  - **7.3.4 — legacy CSS deletion sweep ✅ DONE (April 22 2026).** `main.css`, `mobile.css`, `listings.css`, `property.css` removed (~5,634 lines).
+- **Phase 8 final cleanup ✅ DONE.** All four legacy public-page stylesheets deleted in 7.3.4.
+- **Tenant chrome unification (open §3) ✅ RESOLVED (April 22 2026).** `tenant/portal.html` now uses `cp-chrome.js` + `cp-shell.js` via the existing `tenant` portal config; bespoke topbar removed.
+
+
+---
+
+## 9. Phase 9 — Public Marketing Refresh (premium, mobile-first)
+
+**Status:** APPROVED — 2026-04-26. Implementation in progress.
+**Owner sign-off:** "Make the implementation plan for this and push to GitHub" + "Start, make sure u push to git and update documentation after each phase and then continue to the next phase" — chat session 2026-04-26.
+**Scope:** Premium, mobile-first redesign of all public marketing pages. Layered on the existing `cp-design.css` + `cp-marketing.css` token system using a new additive `mv2-*` namespace. **No** changes to `/apply/`, edge functions, schema, URLs, or SEO tags. Every change is reversible by a single commit revert.
+
+### 9.0 Pages in scope
+
+Chosen to cover the entire renter-facing journey, not just the homepage:
+
+| # | Page | Why |
+|---|---|---|
+| 1 | `index.html` | Primary landing — biggest conversion lever |
+| 2 | `listings.html` | Where the search lands — must feel as premium as the homepage |
+| 3 | `property.html` | Moment of truth — trust signals matter most here |
+| 4 | `how-it-works.html` | Sells the process — currently very plain |
+| 5 | `how-to-apply.html` | High-intent renters land here from email/SEO |
+| 6 | `about.html` | Builds brand trust and human credibility |
+| 7 | `faq.html` | Last-mile reassurance before applying |
+| 8 | `components/nav.html` + `components/footer.html` | Shared chrome — touched once, fixes everywhere |
+| 9 | `404.html` | First impression after broken link — polished 404 = trust signal |
+
+**Out of scope:** all `/apply/*` (R3), all `/admin/*`, `/landlord/*`, `/tenant/*`, all legal pages, all auth pages, all edge functions, all DB schema.
+
+### 9.1 Design direction (locked: Option A — Editorial / Boutique)
+
+- **Background:** warm off-white `#FAF8F5` instead of pure white — feels editorial, not template.
+- **Primary text:** deep navy `#0a1729` (existing).
+- **Accent:** existing gold `#d4a017` used **once per section** for a key moment (number, badge, underline). Restraint is the point.
+- **Brand blue `#006aff`:** reserved for primary buttons + links only. No more "blue everywhere".
+- **Typography:** Fraunces italic for the emphasized word in display headlines; Inter for body. Mobile body bumped to 16.5 px / line-height 1.7. Max line length 60ch on body copy.
+- **Section dividers:** thin 1 px hairlines `#e4e8ef` instead of background-color shifts.
+- **Mobile-first behaviors baked in:** sticky bottom CTA bar (after hero scroll), bottom-sheet filter modal, blur-up image lazy-load, 44×44 px tap targets, `safe-area-inset-bottom` honored.
+
+### 9.2 Multi-AI handoff contract (so any future AI can pick up cleanly)
+
+Every Phase 9 sub-phase is tracked as one row in `public.agent_issues` with this `metadata` shape:
+
+```json
+{
+  "phase": "9.x",
+  "depends_on": ["9.0"],
+  "files_touched": ["index.html", "css/cp-marketing.css"],
+  "acceptance": ["LCP image preloaded", "ID #searchInput preserved", "375/768/1280 px verified"],
+  "rollback": "Revert single commit; no schema change.",
+  "ai_handoff_notes": "Read DESIGN_EXTENSION_PLAN.md §9 first."
+}
+```
+
+**Onboarding for a future AI session:**
+1. Read `REPLIT.md` + `.agents/AI_RULES.md` + this §9.
+2. `list_issues` (or query `public.agent_issues WHERE component='phase9' AND status='open'`) → pick lowest open phase number.
+3. Do that one issue. Push via GitHub REST API. Resolve. STOP.
+4. Wait for owner approval before next phase (per §0 R8).
+
+### 9.3 Sub-phases (each = 1 PR = 1 `agent_issues` row = 1 commit)
+
+| # | Title | Files | Risk | Acceptance |
+|---|---|---|---|---|
+| **9.0** | Add `mv2-*` token + utility layer (additive, no page changes) | `css/cp-marketing.css` | none — additive only | Visual diff = identical; cache-bust to `?v=20260426` |
+| **9.1** | `index.html` hero refresh — cinematic photo, sticky search, micro-trust | `index.html`, `css/cp-marketing.css` | preserve all 4 search IDs | LCP image preloaded; `#searchInput`/`#bedroomsFilter`/`#maxRentFilter`/`#searchBtn` bound; 375/768/1280 OK |
+| **9.2** | "Available Now" horizontal-snap carousel + freshness chips | `index.html`, `js/card-builder.js` | preserve `loadFeaturedListings()` query | Cards render; freshness label correct; empty state preserved |
+| **9.3** | How-It-Works → vertical scroll-progress timeline | `index.html`, `css/cp-marketing.css` | reduced-motion compliance | Keyboard navigable; reduced-motion users see static |
+| **9.4** | NEW "Verified, every time" trust block (between Featured & Testimonials) | `index.html`, `css/cp-marketing.css` | copy must be owner-approved | Contrast ≥ 4.5:1; gold accent only on header |
+| **9.5** | Testimonials humanization — initials avatars + story tile + carousel | `index.html`, `css/cp-marketing.css` | screen-reader semantics | Each is `<figure>`; arrows/dots keyboard-accessible |
+| **9.6** | NEW City spotlight strip (pills → `/listings.html?city=…`) | `index.html`, `css/cp-marketing.css` | SEO-crawlable anchors | Real `<a>` tags with valid query strings |
+| **9.7** | Sticky mobile CTA bar + emotional final CTA section | `index.html`, `css/cp-marketing.css` | hidden on `/listings.html` (collides with sticky filter) | safe-area-inset-bottom honored; not over footer |
+| **9.8** | `listings.html` polish — refined card grid, filter panel, warm bg | `listings.html`, `css/cp-marketing.css` | preserve all filter IDs | Filters work; pagination unchanged |
+| **9.9** | `property.html` polish — refined gallery, sticky apply card, landlord trust | `property.html`, `css/cp-marketing.css` | preserve all gallery/lightbox bindings | Apply URL builder unchanged; gallery works |
+| **9.10** | Apply v2 layout to 4 secondary pages | `how-it-works.html`, `how-to-apply.html`, `about.html`, `faq.html`, `css/cp-marketing.css` | preserve SEO tags | Renders at 375/768/1280; SEO meta untouched |
+| **9.11** | Refresh `nav.html` + `footer.html` — sticky shrink nav, mega-footer | `components/nav.html`, `components/footer.html`, `css/cp-marketing.css` | every public page picks up via slot pattern | Nav transparent over hero, solid below |
+| **9.12** | `404.html` — friendly redesign with search + suggested cities | `404.html`, `css/cp-marketing.css` | still returns 404 status | Cloudflare config unchanged |
+| **9.13** | QA pass — Cloudflare branch preview, Lighthouse ≥ 90 mobile, WCAG AA contrast | (verification only) | none | All sub-phases verified together; sign-off from owner |
+
+### 9.4 Per-phase execution checklist (used at the end of every Phase 9 sub-phase)
+
+In addition to §6 (visual checklist) and §4 (per-phase rules), every Phase 9 sub-phase must satisfy:
+
+- [ ] Cache-bust `?v=YYYYMMDD` on every modified CSS/JS reference.
+- [ ] Verified at 375 px / 768 px / 1280 px on a Cloudflare branch preview.
+- [ ] All `id`s referenced by JS still present (grep `js/*.js` before deleting any element).
+- [ ] All SEO tags present (`<title>`, `<meta description>`, `og:*`, `canonical`, JSON-LD, `<h1>`).
+- [ ] Lighthouse mobile score ≥ 90 (perf + a11y + SEO + best practices) for any modified page.
+- [ ] Contrast 4.5:1 body / 3:1 large text — verified.
+- [ ] `prefers-reduced-motion` honored.
+- [ ] Tap targets ≥ 44 × 44 px on mobile.
+- [ ] `agent_issues` row marked `resolved` with commit SHA in `resolution_note`.
+- [ ] PROJECT_STATUS.md updated with the sub-phase status.
+
+### 9.5 Rollback
+
+Every Phase 9 sub-phase is a single commit. Rollback = single `git revert <sha>` (executed via the GitHub REST API path documented in `REPLIT.md`). No schema, no migration, no data loss possible. The `mv2-*` CSS namespace is additive — even Phase 9.0 leaving CSS in place after a revert is harmless because no existing class names are touched.
+
+### 9.6 Open questions (owner to decide as we go)
+
+1. **Real photography** — owner to provide hero/listing photography, or use high-quality stock during design phase with a swap plan documented per page.
+2. **Headline final copy** — three drafts to be presented in 9.1; owner picks one before merge.
+3. **Sticky mobile CTA bar** — owner has approved by default; can be toggled off per-page if it conflicts.
+4. **Trust block proof points** — final wording for 9.4 needs owner approval before merge.
