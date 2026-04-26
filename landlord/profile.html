@@ -356,11 +356,9 @@
       document.body.classList.add('public-view');
       return;
     }
-    const { data: profile } = await supabase
-      .from('landlords')
-      .select('contact_name,business_name,email,id')
-      .eq('user_id', user.id)
-      .single();
+    // SECURITY DEFINER RPC — direct .select() on email/contact_name would
+    // 401 once authenticated SELECT is column-restricted (000013).
+    const { data: profile } = await supabase.rpc('get_my_landlord_profile');
     if (profile) {
       // If landlord viewing their OWN profile, redirect to settings
       if (profile.id === landlordId) {

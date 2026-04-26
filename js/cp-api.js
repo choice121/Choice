@@ -158,8 +158,10 @@ const Auth = {
   async requireLandlord(redirectTo = '../landlord/login.html') {
     const user = await Auth.getUser();
     if (!user) { location.href = redirectTo; return null; }
-    const { data } = await sb().from('landlords').select('*').eq('user_id', user.id).maybeSingle();
-    if (!data) { location.href = redirectTo; return null; }
+    // SECURITY DEFINER RPC — direct select('*') would 401 under
+    // 000013 column GRANTs (PII cols are not granted to authenticated).
+    const { data } = await sb().rpc('get_my_landlord_profile');
+    if (!data || !data.id) { location.href = redirectTo; return null; }
     return data;
   },
   async requireAdmin(redirectTo = '../admin/login.html') {
@@ -332,7 +334,9 @@ const Properties = {
     return _ok((data || []).map(_attachPhotoArrays), error);
   },
   async getOne(id) {
-    const { data, error } = await sb().from('properties').select('*, landlords(*), property_photos(url, file_id, display_order)').eq('id', id).single();
+    // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
+    // Public landlord card only needs the safe-cols set granted to anon + authenticated.
+    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(url, file_id, display_order)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }
@@ -463,23 +467,28 @@ const Inquiries = {
 // -- Landlords API -----------------------------------------
 const Landlords = {
   async getProfile(userId)  {
-    const { data, error } = await sb().from('landlords').select('*').eq('user_id', userId).maybeSingle();
-    return _ok(data, error);
+    // userId param is honoured for backwards compatibility but the RPC
+    // ignores it — it always returns auth.uid()'s own row. All current
+    // call sites pass the current user's id (Auth.getUser().id) anyway.
+    const { data, error } = await sb().rpc('get_my_landlord_profile');
+    if (error) return _ok(null, error);
+    return _ok(data && data.id ? data : null, null);
   },
   async update(id, payload) {
-    const { data, error } = await sb().from('landlords').update(payload).eq('id', id).select().single();
+    // SECURITY DEFINER RPC enforces own-row ownership and field whitelist.
+    // The id param is kept for signature stability — RPC routes by auth.uid().
+    const { data, error } = await sb().rpc('update_my_landlord_profile', { payload });
     return _ok(data, error);
   },
   async getAll(filters = {})            {
     const perPage = filters.perPage || 50;
     const page    = filters.page    || 0;
-    const { data, error, count } = await sb()
-      .from('landlords')
-      .select('*, properties(count)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(page * perPage, (page + 1) * perPage - 1);
+    // Admin RPC enforces admin role check. Direct .select('*') would 401
+    // for non-admin authenticated users (and even admins under 000013
+    // column GRANTs since admin_roles is checked at row level, not column).
+    const { data, error } = await sb().rpc('admin_list_landlords', { p_page: page, p_per_page: perPage });
     if (error) return { ok: false, data: null, error: error.message };
-    return { ok: true, data: data || [], error: null, count: count || 0, page, perPage };
+    return { ok: true, data: data?.rows || [], error: null, count: data?.total || 0, page, perPage };
   },
 };
 
