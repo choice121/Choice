@@ -16,6 +16,7 @@ import { leaseFullyExecutedHtml } from '../_shared/email.ts';
 import { getTenantLoginUrl, getSiteUrl } from '../_shared/config.ts';
 import { resolveLeaseTemplate, finalizeAndStorePdf } from '../_shared/lease-render.ts';
 import { fetchAttachedAddenda } from '../_shared/lease-addenda.ts';
+import { mirrorAppToLease } from '../_shared/lease-mirror.ts';
 
 const TENANT_LOGIN_URL = getTenantLoginUrl();
 
@@ -76,6 +77,18 @@ Deno.serve(async (req: Request) => {
     updated_at:             now,
   }).eq('app_id', app_id);
   if (updateErr) return jsonErr(500, 'Failed to record countersignature: ' + updateErr.message);
+
+  // Phase 10 -- mirror countersignature into the lease row + transition to 'active'
+  let mirroredLeaseId: string | null = null;
+  {
+    const { data: appAfter } = await supabase
+      .from('applications').select('*').eq('app_id', app_id).single();
+    if (appAfter) {
+      const mir = await mirrorAppToLease(supabase, appAfter, 'countersigned');
+      if (mir.ok) mirroredLeaseId = mir.lease_id;
+      else console.error('mirrorAppToLease failed (non-fatal):', mir.error);
+    }
+  }
 
   // Versioned PDF re-gen using the pinned template snapshot
   // Phase 06: appends Certificate of Completion w/ all signers + QR.
@@ -190,5 +203,15 @@ Deno.serve(async (req: Request) => {
     });
   } catch (_) {}
 
-  return jsonOk({ success: true, app_id, message: 'Lease countersigned by ' + signer_name });
+  // Phase 10: also mirror the lease.lease_pdf_url after the countersigned PDF
+  // has been written, so the leases row reflects the fully-executed pointer.
+  if (mirroredLeaseId) {
+    try {
+      const { data: appFinal } = await supabase
+        .from('applications').select('*').eq('app_id', app_id).single();
+      if (appFinal) await mirrorAppToLease(supabase, appFinal, 'countersigned');
+    } catch (_) { /* non-fatal */ }
+  }
+
+  return jsonOk({ success: true, app_id, lease_id: mirroredLeaseId, message: 'Lease countersigned by ' + signer_name });
 });

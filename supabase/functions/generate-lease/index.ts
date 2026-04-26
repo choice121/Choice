@@ -15,6 +15,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
     } from '../_shared/lease-addenda.ts';
     import { computeFirstMonthProration, type ProrationMethod } from '../_shared/proration.ts';
     import { normalizeUtilityMatrix } from '../_shared/utility-matrix.ts';
+    import { ensureLeaseForApp } from '../_shared/lease-mirror.ts';
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -328,6 +329,19 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       const { error: tokenErr } = await supabase.rpc('generate_lease_tokens', { p_app_id: app_id });
       if (tokenErr) return jsonErr(500, 'Token generation failed: ' + tokenErr.message);
 
+      // 12b. Phase 10 -- create or refresh the leases row that mirrors
+      // this application's lease snapshot. Sets applications.current_lease_id
+      // and stamps lease_id on the freshly-minted signing tokens + child
+      // rows (pdf versions, addenda attachments) for downstream resolvers.
+      const { data: appAfterTokens } = await supabase
+        .from('applications').select('*').eq('app_id', app_id).single();
+      let leaseId: string | null = null;
+      if (appAfterTokens) {
+        const ensured = await ensureLeaseForApp(supabase, appAfterTokens, auth.userEmail || null);
+        if (ensured.ok) leaseId = ensured.lease_id;
+        else console.error('ensureLeaseForApp failed (non-fatal):', ensured.error);
+      }
+
       // 13. Reload + send signing email
       const { data: updatedApp } = await supabase
         .from('applications').select('*').eq('app_id', app_id).single();
@@ -365,6 +379,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       return jsonOk({
         success:               true,
         app_id,
+        // Phase 10: surface the new lease_id so admin UIs can navigate
+        // straight to the lease detail/history view without re-resolving.
+        lease_id:              leaseId,
         storage_path:          storagePath,
         pdf_version_number:    versionNumber,
         template_version_id:   snapshot.version_id,

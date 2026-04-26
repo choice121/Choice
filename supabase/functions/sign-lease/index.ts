@@ -7,6 +7,7 @@ import { resolveLeaseTemplate, finalizeAndStorePdf } from '../_shared/lease-rend
 import { fetchAttachedAddenda, recordAddendaAcknowledgment } from '../_shared/lease-addenda.ts';
 import { isDbRateLimited }             from '../_shared/rate-limit.ts';
 import { ESIGN_DISCLOSURE_VERSION }    from '../_shared/esign-consent.ts';
+import { mirrorAppToLease }            from '../_shared/lease-mirror.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 
@@ -117,6 +118,14 @@ Deno.serve(async (req: Request) => {
   const { data: appSigned } = await supabase
     .from('applications').select('*').eq('id', preApp.id).single();
 
+  // Phase 10 -- mirror tenant signature into the lease row + advance lifecycle
+  let mirroredLeaseId: string | null = null;
+  if (appSigned) {
+    const mir = await mirrorAppToLease(supabase, appSigned, 'tenant_signed');
+    if (mir.ok) mirroredLeaseId = mir.lease_id;
+    else console.error('mirrorAppToLease failed (non-fatal):', mir.error);
+  }
+
   if (appSigned) {
     const tmpl = await resolveLeaseTemplate(supabase, appSigned);
     if (tmpl) {
@@ -211,5 +220,5 @@ Deno.serve(async (req: Request) => {
     } catch (_) {}
   }
 
-  return jsonOk({ success: true, message: 'Lease signed successfully.' });
+  return jsonOk({ success: true, lease_id: mirroredLeaseId, message: 'Lease signed successfully.' });
 });
