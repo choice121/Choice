@@ -71,11 +71,16 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  -- The portal is reachable by both the primary applicant AND any
+  -- co-applicant on the same application, so we check both columns.
   SELECT a.*
     INTO v_app
   FROM public.applications a
   WHERE a.id::text = p_app_id
-    AND lower(a.applicant_email) = v_email
+    AND (
+      lower(a.email) = v_email
+      OR lower(COALESCE(a.co_applicant_email, '')) = v_email
+    )
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -133,7 +138,11 @@ CREATE POLICY tenant_portal_select
   FOR SELECT
   TO authenticated
   USING (
-    lower(applicant_email) = public.current_confirmed_email()
+    -- Match the RPC: primary applicant OR co-applicant whose inbox is confirmed.
+    -- public.current_confirmed_email() returns NULL when the caller has not
+    -- yet confirmed, which makes both equality checks fail safely.
+    lower(email) = public.current_confirmed_email()
+    OR lower(COALESCE(co_applicant_email, '')) = public.current_confirmed_email()
   );
 
 COMMENT ON POLICY tenant_portal_select ON public.applications IS
