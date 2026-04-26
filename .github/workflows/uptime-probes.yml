@@ -1,0 +1,133 @@
+# Phase 1 monitoring — uptime probes (no paid services).
+#
+# Every 10 minutes (best-effort GitHub cron), probe the critical user
+# surfaces. On failure, insert/refresh a row in public.agent_issues
+# (the existing single source of truth). Recovery flips the same row
+# back to status='resolved' automatically.
+#
+# Reuses the two repo secrets the supabase-deploy workflow already needs:
+#   - SUPABASE_PROJECT_REF
+#   - SUPABASE_ACCESS_TOKEN
+
+name: Uptime probes
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SITE_BASE: https://choice-properties-site.pages.dev
+    steps:
+      - name: Probe URLs and report failures
+        shell: bash
+        run: |
+          set -u
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ] || [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::warning::SUPABASE_PROJECT_REF / SUPABASE_ACCESS_TOKEN not set — probes will run but failures cannot be recorded."
+            CAN_RECORD=0
+          else
+            CAN_RECORD=1
+          fi
+
+          API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
+          AUTH="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+
+          # path | max_seconds | expected_http
+          PROBES=(
+            "/|5|200"
+            "/listings.html|8|200"
+            "/about.html|5|200"
+            "/health.html|5|200"
+            "/apply/|6|200"
+          )
+
+          run_sql() {
+            [ "$CAN_RECORD" = "1" ] || { echo "  (skip record — no secrets)"; return; }
+            local payload="$1"
+            curl -sS -X POST "$API" \
+              -H "$AUTH" \
+              -H "Content-Type: application/json" \
+              --data "$payload" \
+              -o /tmp/sql_resp.json -w "  recorded HTTP %{http_code}\n" || true
+          }
+
+          insert_or_bump_issue() {
+            local fp="$1" title="$2" evidence="$3"
+            local payload
+            payload=$(python3 - "$fp" "$title" "$evidence" <<'PY'
+import json, sys
+fp, title, evidence = sys.argv[1], sys.argv[2], sys.argv[3]
+sql = (
+"INSERT INTO public.agent_issues "
+"(severity, status, title, kind, detector, evidence, fingerprint, auto_fix_attempts) "
+"VALUES ('high','open',"
++ json.dumps(title) + ",'uptime','github-actions/uptime-probes',"
++ json.dumps(json.loads(evidence)) + "::jsonb,"
++ json.dumps(fp) + ",0) "
+"ON CONFLICT (fingerprint) DO UPDATE "
+"SET status   = CASE WHEN public.agent_issues.status = 'resolved' "
+                   "THEN 'open' ELSE public.agent_issues.status END, "
+    "evidence = EXCLUDED.evidence;"
+)
+print(json.dumps({"query": sql}))
+PY
+            )
+            run_sql "$payload"
+          }
+
+          mark_resolved() {
+            local fp="$1"
+            local payload
+            payload=$(python3 - "$fp" <<'PY'
+import json, sys
+fp = sys.argv[1]
+sql = (
+"UPDATE public.agent_issues "
+"SET status='resolved', "
+    "resolved_at = NOW(), "
+    "resolved_by = 'agent:uptime-probe', "
+    "resolution_note = COALESCE(resolution_note,'') || E'\\nAuto-resolved by uptime probe at ' || NOW()::text "
+"WHERE fingerprint = " + json.dumps(fp) + " AND status = 'open';"
+)
+print(json.dumps({"query": sql}))
+PY
+            )
+            run_sql "$payload"
+          }
+
+          for line in "${PROBES[@]}"; do
+            path=$(echo  "$line" | awk -F'|' '{print $1}')
+            maxt=$(echo  "$line" | awk -F'|' '{print $2}')
+            want=$(echo  "$line" | awk -F'|' '{print $3}')
+            url="${SITE_BASE}${path}"
+            fp="uptime:${path}"
+
+            CODE=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" \
+                        --max-time "$maxt" -A "ChoiceUptime/1.0" "$url" || echo "000|0")
+            http=$(echo "$CODE" | awk -F'|' '{print $1}')
+            secs=$(echo "$CODE" | awk -F'|' '{print $2}')
+
+            if [ "$http" = "$want" ]; then
+              echo "OK   $http  ${secs}s  $url"
+              mark_resolved "$fp"
+            else
+              echo "FAIL $http  ${secs}s  $url"
+              EV=$(python3 -c "import json,sys; print(json.dumps({'url':sys.argv[1],'http':sys.argv[2],'expected':sys.argv[3],'time_s':sys.argv[4]}))" \
+                   "$url" "$http" "$want" "$secs")
+              insert_or_bump_issue "$fp" "Uptime probe failed: ${path} (HTTP ${http}, expected ${want})" "$EV"
+            fi
+          done
+
+          # Always exit 0 — probe failures are tracked in agent_issues, not in
+          # the Action's exit code, so the next scheduled run still executes.
+          exit 0
