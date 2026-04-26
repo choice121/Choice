@@ -1,0 +1,145 @@
+# Phase 2 monitoring — Supabase edge function & RPC probes.
+#
+# Goals:
+#  1. Verify each verify_jwt=true edge function rejects anon traffic with
+#     an auth error (i.e. didn't get accidentally re-deployed as public).
+#  2. Verify the report_client_error RPC (introduced in Phase 1) accepts
+#     a well-formed payload from anon — proving the client error pipeline
+#     is still wired end-to-end.
+#
+# Failures land in public.agent_issues. No additional secrets required.
+
+name: Edge function probes
+
+on:
+  schedule:
+    - cron: '37 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SITE_BASE: https://choice-properties-site.pages.dev
+    steps:
+      - name: Probe edge functions and RPCs
+        shell: bash
+        run: |
+          set -u
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ] || [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::warning::SUPABASE_PROJECT_REF / SUPABASE_ACCESS_TOKEN not set — probes will run but failures cannot be recorded."
+            CAN_RECORD=0
+          else
+            CAN_RECORD=1
+          fi
+
+          CFG=$(curl -fsSL --max-time 8 "${SITE_BASE}/config.js" || true)
+          if [ -z "$CFG" ]; then
+            echo "::warning::could not fetch ${SITE_BASE}/config.js — skipping"
+            exit 0
+          fi
+          SUPA_URL=$(printf "%s" "$CFG" | grep -oE "SUPABASE_URL:\s*'[^']+'" | head -n1 | sed -E "s/.*'([^']+)'.*/\1/")
+          ANON_KEY=$(printf "%s" "$CFG" | grep -oE "SUPABASE_ANON_KEY:\s*'[^']+'" | head -n1 | sed -E "s/.*'([^']+)'.*/\1/")
+          [ -z "$SUPA_URL" ] || [ -z "$ANON_KEY" ] && { echo "::warning::config parse failed"; exit 0; }
+
+          API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
+          AUTH="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+          esc() { printf "%s" "$1" | sed "s/'/''/g"; }
+
+          run_sql() {
+            [ "$CAN_RECORD" = "1" ] || return
+            local q="$1"; local payload
+            payload=$(jq -nc --arg q "$q" '{query:$q}')
+            curl -sS -X POST "$API" -H "$AUTH" -H "Content-Type: application/json" \
+              --data "$payload" -o /tmp/sql_resp.json -w "  recorded HTTP %{http_code}\n" || true
+          }
+
+          report_issue() {
+            local fp="$1" title="$2" severity="$3" evidence_json="$4" kind="$5"
+            local efp etitle eev esev ekind
+            efp=$(esc "$fp"); etitle=$(esc "$title"); eev=$(esc "$evidence_json")
+            esev=$(esc "$severity"); ekind=$(esc "$kind")
+            local sql
+            sql="INSERT INTO public.agent_issues (severity, status, title, kind, detector, evidence, fingerprint, auto_fix_attempts) "
+            sql="${sql}VALUES ('${esev}','open','${etitle}','${ekind}','github-actions/edge-function-probes','${eev}'::jsonb,'${efp}',0) "
+            sql="${sql}ON CONFLICT (fingerprint) DO UPDATE SET "
+            sql="${sql}status = CASE WHEN public.agent_issues.status = 'resolved' THEN 'open' ELSE public.agent_issues.status END, "
+            sql="${sql}evidence = EXCLUDED.evidence;"
+            run_sql "$sql"
+          }
+
+          mark_resolved() {
+            local fp="$1"; local efp; efp=$(esc "$fp")
+            local sql
+            sql="UPDATE public.agent_issues SET status='resolved', resolved_at = NOW(), "
+            sql="${sql}resolved_by = 'agent:edge-fn-probe', "
+            sql="${sql}resolution_note = COALESCE(resolution_note,'') || E'\nAuto-resolved by edge-fn probe at ' || NOW()::text "
+            sql="${sql}WHERE fingerprint = '${efp}' AND status = 'open';"
+            run_sql "$sql"
+          }
+
+          # Every verify_jwt=true function must refuse an unauthenticated POST
+          # with HTTP 401. (verify_jwt=false functions are skipped — they handle
+          # their own auth and return varied codes by design.)
+          PRIVATE_FNS=(
+            "imagekit-upload"
+            "imagekit-delete"
+            "send-message"
+            "download-lease"
+            "generate-lease"
+            "create-application"
+            "submit-application"
+          )
+          for fn in "${PRIVATE_FNS[@]}"; do
+            url="${SUPA_URL}/functions/v1/${fn}"
+            fp="edgefn:${fn}:anon-must-401"
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+                       -X POST -H "Content-Type: application/json" \
+                       -H "apikey: ${ANON_KEY}" \
+                       --data '{}' "$url" || echo "000")
+            # 401 = jwt missing/invalid (good). 404 = function not deployed (record it).
+            # 2xx = SECURITY REGRESSION.
+            if [ "$CODE" = "401" ] || [ "$CODE" = "403" ]; then
+              echo "OK   ${CODE}  ${fn}"
+              mark_resolved "$fp"
+            elif [ "$CODE" = "404" ]; then
+              echo "MISS 404  ${fn} (function missing)"
+              ev=$(jq -nc --arg url "$url" --arg fn "$fn" '{url:$url, fn:$fn, note:"function returned 404 — not deployed?"}')
+              report_issue "$fp" "Edge function missing: ${fn}" "high" "$ev" "deploy"
+            else
+              echo "FAIL ${CODE}  ${fn} — anon POST should have been rejected"
+              ev=$(jq -nc --arg url "$url" --arg fn "$fn" --arg http "$CODE" \
+                     '{url:$url, fn:$fn, http:$http, note:"anon POST got non-401/403 — verify_jwt may have been disabled"}')
+              report_issue "$fp" "SECURITY: ${fn} accepts anon traffic (got HTTP ${CODE})" "critical" "$ev" "security"
+            fi
+          done
+
+          # Verify report_client_error RPC works end-to-end (anon should be able
+          # to call it, it should return 204).
+          rpc_url="${SUPA_URL}/rest/v1/rpc/report_client_error"
+          payload='{"_message":"probe ping","_source":"github-actions/edge-function-probes","_lineno":0,"_colno":0,"_url":"https://probe.invalid/","_user_agent":"probe","_app_version":"probe","_kind":"probe","_fingerprint":"probe:'"$(date +%s)"'","_extra":{"probe":true}}'
+          fp="rpc:report_client_error"
+          CODE=$(curl -s -o /tmp/rpc_resp -w "%{http_code}" --max-time 10 \
+                     -X POST \
+                     -H "Content-Type: application/json" \
+                     -H "apikey: ${ANON_KEY}" \
+                     -H "Authorization: Bearer ${ANON_KEY}" \
+                     --data "$payload" "$rpc_url" || echo "000")
+          if [ "$CODE" = "204" ] || [ "$CODE" = "200" ]; then
+            echo "OK   ${CODE}  rpc:report_client_error"
+            mark_resolved "$fp"
+          else
+            BODY=$(head -c 240 /tmp/rpc_resp | tr -d '\n')
+            echo "FAIL ${CODE}  rpc:report_client_error — ${BODY}"
+            ev=$(jq -nc --arg url "$rpc_url" --arg http "$CODE" --arg body "$BODY" \
+                   '{url:$url, http:$http, body_preview:$body, note:"client-error reporter pipeline broken"}')
+            report_issue "$fp" "report_client_error RPC failing (HTTP ${CODE})" "high" "$ev" "deploy"
+          fi
+
+          exit 0
