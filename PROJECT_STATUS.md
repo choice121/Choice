@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped; Lease Phase 08 — condition reports backend foundation IN-PROGRESS — chunks 1-2/N shipped, UI chunks 3-5 pending)
+**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped; Lease Phase 08 — condition reports IN-PROGRESS — chunks 1-3/N shipped (DB foundation + record-inspection edge fn + tenant mobile wizard at /tenant/inspection.html), UI chunks 4-5 pending (landlord+admin review pages, 9-state move-in warning system))
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
