@@ -215,8 +215,25 @@ function renderProperty(p) {
   ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
-  setMeta('ogUrl', window.location.href);
   document.querySelector('meta[name="description"]')?.setAttribute('content', ogDesc);
+
+  // Phase C: canonical URL — always points to the keyword-rich slug URL.
+  // The slug-router edge function (functions/rent/[state]/[city]/[slug].js)
+  // injects this into the initial HTML for crawlers, but for legacy
+  // /property.html?id=… requests that bypass the redirector (e.g. backend
+  // unavailable), this client-side fallback makes sure search engines and
+  // social cards still see the canonical URL.
+  const canonicalUrl = (window.CP?.UI?.propertyUrl)
+    ? new URL(window.CP.UI.propertyUrl(p), window.location.origin).href
+    : window.location.href;
+  let canonLink = document.querySelector('link[rel="canonical"]');
+  if (!canonLink) {
+    canonLink = document.createElement('link');
+    canonLink.rel = 'canonical';
+    document.head.appendChild(canonLink);
+  }
+  canonLink.href = canonicalUrl;
+  setMeta('ogUrl', canonicalUrl);
 
   // ── I-059: Structured data — RealEstateListing schema for Google Rich Results ──
   // Added: potentialAction (RentalAction), numberOfRooms, floorSize, leaseLength,
