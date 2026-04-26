@@ -93,10 +93,21 @@ async function loadProperty(id) {
   try {
     const { data: prop, error } = await supabase
       .from('properties')
-      .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified)')
+      .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(url, file_id, display_order)')
       .eq('id', id)
       .single();
     if (error || !prop) throw new Error('Not found');
+
+    // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
+    // (the legacy array columns were dropped; property_photos is now the source of truth)
+    if (Array.isArray(prop.property_photos)) {
+      const _sorted = prop.property_photos.slice().sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      prop.photo_urls     = _sorted.map(p => p.url).filter(Boolean);
+      prop.photo_file_ids = _sorted.map(p => p.file_id ?? null);
+    } else {
+      prop.photo_urls     = [];
+      prop.photo_file_ids = [];
+    }
 
     // Guard non-active listings from public view
     if (prop.status !== 'active') {
@@ -481,7 +492,11 @@ function renderProperty(p) {
     document.getElementById('landlordName').textContent = name;
     if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
     const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) avatarEl.innerHTML = `<img src="${esc(CONFIG.img(ll.avatar_url,'avatar'))}" alt="${esc(name)}" loading="lazy" onerror="this.onerror=null; this.src='/assets/avatar-placeholder.svg';">`;
+    if (ll.avatar_url) {
+      avatarEl.innerHTML = `<img src="${esc(CONFIG.img(ll.avatar_url,'avatar'))}" alt="${esc(name)}" loading="lazy">`;
+      const avatarImg = avatarEl.querySelector('img');
+      if (avatarImg) avatarImg.onerror = function() { this.onerror = null; this.src = '/assets/avatar-placeholder.svg'; };
+    }
     else avatarEl.textContent = name.charAt(0).toUpperCase();
     if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
   }
@@ -658,8 +673,7 @@ function renderGallery(photos) {
                alt="Property photo ${idx+1}"
                loading="${i === 0 ? 'eager' : 'lazy'}"
                ${i === 0 ? 'fetchpriority="high"' : ''}
-               decoding="async"
-               onerror="this.onerror=null;this.srcset='';this.src='/assets/placeholder-property.jpg'">
+               decoding="async">
           ${isLast ? `
             <div class="mosaic-cell-overlay">
               <span class="mosaic-overlay-icon"><i class="fas fa-images"></i></span>
@@ -667,15 +681,19 @@ function renderGallery(photos) {
             </div>` : ''}
         </div>`;
     }).join('');
-    // Fade out each cell's LQIP placeholder once its image loads
+    // Fade out each cell's LQIP placeholder once its image loads;
+    // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
       cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
       const img = cell.querySelector('img');
       const bg  = cell.querySelector('.lqip-bg');
-      if (img && bg) {
-        const fadeBg = () => bg.classList.add('faded');
-        img.addEventListener('load', fadeBg, { once: true });
-        if (img.complete && img.naturalWidth > 0) fadeBg();
+      if (img) {
+        img.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
+        if (bg) {
+          const fadeBg = () => bg.classList.add('faded');
+          img.addEventListener('load', fadeBg, { once: true });
+          if (img.complete && img.naturalWidth > 0) fadeBg();
+        }
       }
     });
   } else {

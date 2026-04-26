@@ -171,7 +171,7 @@ function renderPropertyHero(app, prop){
       (bathTxt ? '<span><svg class="ico"><use href="#i-bath"/></svg>' + esc(bathTxt) + '</span>' : '') +
     '</div>' : '';
   const imgPart = photo
-    ? '<img class="prop-hero-img" src="' + esc(photo) + '" alt="' + esc(addr) + '" loading="eager" decoding="async" onerror="this.outerHTML=\'<div class=&quot;prop-hero-img is-placeholder&quot;>Your future home</div>\'">'
+    ? '<img class="prop-hero-img" src="' + esc(photo) + '" alt="' + esc(addr) + '" loading="eager" decoding="async" data-hero-fallback="1">'
     : '<div class="prop-hero-img is-placeholder">Your future home</div>';
   return '' +
     '<div class="prop-hero">' +
@@ -1183,6 +1183,19 @@ async function waitForMagicLinkSession(sb){
 
   return null;
 }
+
+// ── CSP-safe image error fallback for prop-hero photo ────────────────────────
+// Replaces the inline onerror="..." attribute (blocked by nonce CSP) with a
+// delegated capture listener. When the hero property photo fails to load,
+// swap it for the placeholder div.
+document.addEventListener('error', function(e) {
+  const img = e.target;
+  if (img.tagName !== 'IMG' || !img.dataset.heroFallback) return;
+  const placeholder = document.createElement('div');
+  placeholder.className = 'prop-hero-img is-placeholder';
+  placeholder.textContent = 'Your future home';
+  if (img.parentNode) img.parentNode.replaceChild(placeholder, img);
+}, true);
 
 // ── CSP-safe delegated event handlers ────────────────────────────────────────
 document.addEventListener('click', function(e){

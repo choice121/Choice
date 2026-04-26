@@ -42,7 +42,7 @@
     const grid = document.getElementById('prop-grid');
     grid.innerHTML = '<div class="skeleton sk-line lg" style="height:220px;border-radius:12px"></div>'.repeat(3);
     document.getElementById('page-sub').textContent = 'Loading…';
-    let q = CP.sb().from('properties').select('*').order('created_at',{ascending:false});
+    let q = CP.sb().from('properties').select('*, property_photos(url,display_order)').order('created_at',{ascending:false});
     if(_statusFilter !== 'all') q = q.eq('status', _statusFilter);
     if(_q.trim()){
       const s = _q.trim().replace(/'/g,"''");
@@ -54,7 +54,16 @@
       document.getElementById('page-sub').textContent = 'Error';
       return;
     }
-    _allCache = data || [];
+    // Phase 3c: derive photo_urls from property_photos join (legacy array columns dropped)
+    _allCache = (data || []).map(function(p) {
+      if (Array.isArray(p.property_photos) && p.property_photos.length) {
+        var sorted = p.property_photos.slice().sort(function(a,b){ return (a.display_order||0)-(b.display_order||0); });
+        p.photo_urls = sorted.map(function(x){ return x.url; }).filter(Boolean);
+      } else {
+        p.photo_urls = [];
+      }
+      return p;
+    });
     document.getElementById('page-sub').textContent = _allCache.length+' propert'+(_allCache.length===1?'y':'ies');
     if(!_allCache.length){
       grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg class="i"><use href="#i-property"/></svg><h3>No properties</h3><p>Tap + to add one.</p></div>';
