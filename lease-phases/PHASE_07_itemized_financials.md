@@ -1,8 +1,16 @@
 # PHASE 07 — Itemized Financials + Utility Responsibility Matrix
 
-**Status:** `TODO`
+**Status:** `DONE` (April 26 2026 — shipped in 3 chunks)
 **Depends on:** Phase 01, 02, 03 (`DONE`)
 **Blocks:** Phase 09
+
+### Shipped commits
+
+| Chunk | Commit | What it shipped |
+|-------|--------|-----------------|
+| 1/3 — backend foundation | `c52a2f9` | DB schema (`applications` itemized columns, `utility_responsibilities`, `rent_due_day_of_month`, `rent_proration_method`); shared `utility-matrix.ts`, `proration.ts`; `buildLeaseRenderContext()` exposing `move_in_breakdown_html`, `utility_table_html`, `proration_explanation`, `move_in_total`, `utility_summary` |
+| 2/3 — admin UI | `8495ec3` | Itemized financial inputs + utility matrix grid wired into the admin lease-generation form; lease body renders the Phase 07 HTML for new applications |
+| 3/3 — template seed refresh | _(this commit)_ | Two new partials (`common/move_in_breakdown`, `common/utility_matrix`); all 10 active state templates refactored to delegate to those partials so Section 6 owns the financial breakdown and Section 7 owns the utility matrix; `lease_template_versions` snapshot row inserted per template |
 
 ---
 

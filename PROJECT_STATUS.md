@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped)
+**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped; Lease Phase 07 — itemized financials + utility matrix COMPLETE — all 3 chunks shipped)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
@@ -44,6 +44,30 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 | 8 | Storage bucket + signed-URL workflow | ✅ DONE |
 
 **Active Edge Functions (14):** countersign, download-lease, generate-lease, get-lease, imagekit-delete, imagekit-upload, receive-application, request-upload-url, save-draft, send-email, send-inquiry, send-magic-link, send-message, sign-lease.
+
+---
+
+## Lease initiative status — `lease-phases/`
+
+A 13-phase epic that takes the lease subsystem from "Michigan-only Word doc" to "multi-state, attorney-reviewable, tamper-evident document pipeline with first-class lease records, deposit accounting, and condition reports." Each phase ships as one or more commits + one resolved row in `public.agent_issues` (`component='lease-phase-NN'`).
+
+| Phase | Topic | Status | Final commit(s) |
+|---|---|---|---|
+| 01 | State templating engine (Liquid-subset) + partials table | ✅ DONE | (pre-Apr 26) |
+| 02 | State law metadata table (`state_lease_law`) | ✅ DONE | (pre-Apr 26) |
+| 03 | Multi-state seed templates (top 10 states) | ✅ DONE | (pre-Apr 26) |
+| 04 | Disclosures library + EPA pamphlet sourcing | ✅ DONE | `67d764c` (followup) |
+| 05 | Signing security hardening | ✅ DONE | (pre-Apr 26) |
+| 06 | PDF integrity (SHA-256 + audit certificate page + public verify endpoint) | ✅ DONE | `cc6fafc` + `4861c30` + `f7a936c` |
+| 07 | Itemized financials + utility responsibility matrix | ✅ DONE (Apr 26 2026) | `c52a2f9` (1/3) + `8495ec3` (2/3) + `%PHASE07_C3_SHA%` (3/3) |
+| 08 | Move-in/out condition reports | TODO | — |
+| 09 | Deposit accounting (interest, itemised return) | TODO | — |
+| 10 | Leases as first-class records (split from `applications`) | TODO | — |
+| 11 | Document generators (notices, addenda, renewals) | TODO | — |
+| 12 | Summary, locale, and a11y pass | TODO | — |
+| 13 | Remaining 40 state templates | TODO | — |
+
+> Source of truth for in-progress detail: `SELECT id, title, status, resolution_note FROM public.agent_issues WHERE component LIKE 'lease-phase-%' ORDER BY id;`. Per-phase briefs live in `lease-phases/PHASE_NN_*.md` — those individual `Status:` headers are updated only when the phase ships.
 
 ---
 
