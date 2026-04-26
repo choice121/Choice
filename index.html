@@ -648,6 +648,34 @@
   </div>
 </section>
 
+<!-- ── Final CTA (Phase 9.7 NEW: emotional close) ── -->
+<section class="mv2-finalcta" id="final-cta" aria-labelledby="finalcta-heading">
+  <div class="mv2-finalcta__bg" aria-hidden="true"></div>
+  <div class="container mv2-finalcta__inner">
+    <p class="mv2-eyebrow mv2-finalcta__eyebrow">Your next chapter</p>
+    <h2 id="finalcta-heading" class="mv2-headline mv2-headline--lg mv2-finalcta__headline">
+      Find a place that <em>actually feels like home</em>.
+    </h2>
+    <p class="mv2-finalcta__subtitle">
+      Browse verified rentals at your own pace, or start an application in
+      about fifteen minutes — whichever feels right today.
+    </p>
+    <div class="mv2-finalcta__actions">
+      <a href="/listings.html" class="mv2-btn mv2-btn--primary mv2-finalcta__cta">
+        <span>Browse listings</span>
+        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+      <a href="/how-to-apply.html" class="mv2-btn mv2-btn--ghost mv2-finalcta__cta">
+        How applying works
+      </a>
+    </div>
+    <p class="mv2-finalcta__reassurance">
+      <i class="fas fa-shield-alt" aria-hidden="true"></i>
+      Free to browse · Verified landlords · No spam, ever
+    </p>
+  </div>
+</section>
+
 <!-- Shared site footer — injected by /js/components.js from /components/footer.html -->
 <div id="site-footer"></div>
 
@@ -898,11 +926,40 @@ function setupSmoothScrollSections() {
 }
 </script>
 
-<!-- ── Mobile sticky CTA bar (Phase 1) ─────────────────────── -->
-<div class="mobile-cta-bar" role="navigation" aria-label="Quick actions">
-  <a href="/listings.html" class="mcta-ghost"><i class="fas fa-search"></i> Browse</a>
-  <a href="/how-to-apply.html" class="mcta-primary"><i class="fas fa-bolt"></i> Start Application</a>
+<!-- ── Mobile sticky CTA bar (Phase 9.7 mv2 refresh) ─────────────── -->
+<div class="mobile-cta-bar mv2-mcta" id="mobile-cta" role="navigation" aria-label="Quick actions" data-mv2-mcta>
+  <a href="/listings.html" class="mcta-ghost mv2-mcta__btn mv2-mcta__btn--ghost">
+    <i class="fas fa-search" aria-hidden="true"></i>
+    <span>Browse</span>
+  </a>
+  <a href="/how-to-apply.html" class="mcta-primary mv2-mcta__btn mv2-mcta__btn--primary">
+    <i class="fas fa-bolt" aria-hidden="true"></i>
+    <span>Start application</span>
+  </a>
 </div>
+<script nonce="VZEkWatH2Jtta2vFy8dRhA">
+/* Phase 9.7: reveal mobile sticky CTA only after user scrolls past the hero */
+(function () {
+  var bar = document.getElementById('mobile-cta');
+  if (!bar) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    bar.classList.add('mv2-mcta--visible'); return;
+  }
+  var hero = document.querySelector('.mv2-hero');
+  if (!hero) { bar.classList.add('mv2-mcta--visible'); return; }
+  var threshold = hero.offsetHeight * 0.6;
+  var ticking = false;
+  function check() {
+    var visible = window.scrollY > threshold;
+    bar.classList.toggle('mv2-mcta--visible', visible);
+    ticking = false;
+  }
+  window.addEventListener('scroll', function () {
+    if (!ticking) { window.requestAnimationFrame(check); ticking = true; }
+  }, { passive: true });
+  check();
+})();
+</script>
 
 </body>
 </html>

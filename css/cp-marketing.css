@@ -4388,3 +4388,171 @@ body[data-portal="public"][data-page="home"] .mv2-cities__pill-state {
   body[data-portal="public"][data-page="home"] .mv2-cities__pill:hover { transform: none; }
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.7 — Emotional final CTA + mv2 mobile sticky CTA refresh    ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.7, agent_issues #37) ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Final CTA section (warm gradient, editorial close) ───────────── */
+body[data-portal="public"][data-page="home"] .mv2-finalcta {
+  position: relative;
+  padding: clamp(72px, 10vw, 128px) 0;
+  overflow: hidden;
+  text-align: center;
+  isolation: isolate;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse at top, rgba(212, 160, 23, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(0, 106, 255, 0.06) 0%, transparent 60%),
+    linear-gradient(180deg, var(--mv2-bg-warm) 0%, #FFFEFC 100%);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__bg::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(212, 160, 23, 0.35) 50%,
+    transparent 100%);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__inner {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mv2-stack-4);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__eyebrow {
+  margin: 0;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__headline {
+  margin: 0;
+  max-width: 16ch;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__subtitle {
+  margin: 0;
+  color: var(--mv2-muted);
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem);
+  line-height: 1.6;
+  max-width: 52ch;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: var(--mv2-stack-3);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__cta {
+  min-height: 52px;
+  padding: 0 28px;
+  font-size: 1rem;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__cta i {
+  margin-left: 8px;
+  font-size: 0.85em;
+  transition: transform var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__cta:hover i {
+  transform: translateX(3px);
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__reassurance {
+  margin: var(--mv2-stack-3) 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mv2-muted-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+body[data-portal="public"][data-page="home"] .mv2-finalcta__reassurance i {
+  color: var(--mv2-gold);
+  font-size: 0.95em;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-finalcta__cta:hover i { transform: none; }
+}
+
+/* ── Mobile sticky CTA refresh (mv2-mcta) ──────────────────────────
+   Scoped under [data-portal="public"] so it works on any public page,
+   not just home (matches placement of the bar in the markup).
+*/
+[data-portal="public"] .mv2-mcta {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 254, 251, 0.92);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--mv2-hairline);
+  box-shadow: 0 -6px 24px rgba(10, 23, 41, 0.06);
+  transform: translateY(110%);
+  transition: transform 280ms var(--mv2-ease);
+}
+[data-portal="public"] .mv2-mcta.mv2-mcta--visible {
+  transform: translateY(0);
+}
+[data-portal="public"] .mv2-mcta__btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--mv2-r-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease),
+              border-color var(--mv2-dur) var(--mv2-ease);
+}
+[data-portal="public"] .mv2-mcta__btn--ghost {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--mv2-ink);
+  border: 1px solid var(--mv2-hairline);
+}
+[data-portal="public"] .mv2-mcta__btn--ghost:hover,
+[data-portal="public"] .mv2-mcta__btn--ghost:focus-visible {
+  background: #FFFFFF;
+  color: var(--mv2-brand-dark);
+  border-color: var(--mv2-brand);
+  outline: none;
+}
+[data-portal="public"] .mv2-mcta__btn--primary {
+  background: linear-gradient(180deg, var(--mv2-brand) 0%, var(--mv2-brand-dark) 100%);
+  color: #FFFFFF;
+  border: 1px solid var(--mv2-brand-dark);
+  box-shadow: 0 2px 8px rgba(0, 106, 255, 0.25);
+}
+[data-portal="public"] .mv2-mcta__btn--primary:hover,
+[data-portal="public"] .mv2-mcta__btn--primary:focus-visible {
+  background: var(--mv2-brand-dark);
+  color: #FFFFFF;
+  outline: none;
+}
+[data-portal="public"] .mv2-mcta__btn i {
+  font-size: 0.9em;
+}
+@media (min-width: 769px) {
+  [data-portal="public"] .mv2-mcta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-portal="public"] .mv2-mcta { transition: none; }
+}
+
+/* On home page when mobile CTA is visible, add bottom padding so footer
+   isn't covered. Footer is injected so we add padding to body. */
+@media (max-width: 768px) {
+  body[data-portal="public"][data-page="home"] { padding-bottom: 76px; }
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
