@@ -1679,14 +1679,20 @@ class RentalApplication {
             renderList();
         };
 
-        input.addEventListener('change', () => { handleFiles(input.files); input.value = ''; });
+        input.addEventListener('change', () => { handleFiles(input.files); input.value = ''; this.saveProgress(); });
         zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
         zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
         zone.addEventListener('drop', e => {
             e.preventDefault(); zone.classList.remove('drag-over');
             handleFiles(e.dataTransfer.files);
+            this.saveProgress();
         });
 
+        // Re-render hook so draft-restore can repopulate the list after
+        // _uploadedFiles has been re-hydrated from a saved/server draft.
+        // setupFileUploads is only called once, so renderList lives in this
+        // closure — exposing it via `this` is the cleanest bridge. (Issue #14)
+        this._rerenderUploadedFiles = () => { renderList(); updateMeter(); };
     }
 
     // ---------- Save & Resume Later ----------
@@ -1769,7 +1775,7 @@ class RentalApplication {
               const token = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
               // Collect progress snapshot (strip sensitive fields before sending to server)
-              this.saveProgress();
+              await this.saveProgress();
               const rawData = this.getAllFormData();
               ['SSN', 'Application ID', 'Co-Applicant SSN', 'DOB', 'Co-Applicant DOB'].forEach(k => delete rawData[k]);
               rawData._last_updated = new Date().toISOString();
@@ -1778,6 +1784,9 @@ class RentalApplication {
               const _urlP = new URLSearchParams(window.location.search);
               const propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || '';
               rawData._propertyFingerprint = propertyFingerprint;
+              // Issue #14: include attached documents in the server-side draft
+              // so resuming on another device brings them back too.
+              rawData._documents = await this._collectDocumentsForDraft();
 
               // Build resume URL — includes the token so any device can retrieve the draft
               const currentParams = new URLSearchParams(window.location.search);
@@ -1927,7 +1936,7 @@ class RentalApplication {
             // Server draft found — apply it to the form, then also mirror to
             // localStorage so subsequent auto-saves work normally.
             try {
-                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint']);
+                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint', '_documents']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
                 Object.keys(serverData).forEach(key => {
@@ -1965,6 +1974,8 @@ class RentalApplication {
                         }, 10);
                     }
                 }
+                // Issue #14: re-attach documents that were saved with the draft.
+                this._restoreDocumentsFromDraft(serverData._documents);
                 // Mirror to localStorage so auto-save picks up from here
                 try { localStorage.setItem(this.config.LOCAL_STORAGE_KEY, JSON.stringify(serverData)); } catch(e) {}
             } catch (e) {
@@ -1995,7 +2006,7 @@ class RentalApplication {
                     return; // Different property — start completely fresh
                 }
 
-                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint']);
+                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint', '_documents']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
 
@@ -2035,11 +2046,84 @@ class RentalApplication {
                         }, 10);
                     }
                 }
+                // Issue #14: re-attach documents that were saved with the draft.
+                this._restoreDocumentsFromDraft(data._documents);
             } catch (e) { console.warn('[CP App] Non-critical error in restoreSavedProgress:', e); }
         }
     }
 
-    saveProgress() {
+    // Issue #14: drafts now persist attached supporting documents alongside
+    // the form fields, so a browser crash or "save & resume" trip no longer
+    // forces the applicant to re-attach their paystubs. Documents are
+    // base64-encoded into the same JSON payload, capped at the same 3 MB
+    // total used by the submit path so localStorage / draft_applications.data
+    // stays bounded.
+    async _encodeFileForDraft(file) {
+        if (!file) return null;
+        try {
+            const buf = await file.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let bin = '';
+            // Use a chunked loop to avoid blowing the JS call-stack on
+            // ~1 MB binary buffers (apply.fromCharCode has arg limits).
+            const CHUNK = 0x8000;
+            for (let i = 0; i < bytes.length; i += CHUNK) {
+                bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+            }
+            return {
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                size: file.size,
+                base64: btoa(bin),
+            };
+        } catch (e) {
+            console.warn('[CP App] Failed to encode draft document:', file?.name, e);
+            return null;
+        }
+    }
+
+    async _collectDocumentsForDraft() {
+        const files = this._uploadedFiles || [];
+        if (files.length === 0) return [];
+        const MAX_TOTAL = 3 * 1024 * 1024;
+        const total = files.reduce((s, f) => s + (f.size || 0), 0);
+        if (total > MAX_TOTAL) return [];
+        const out = [];
+        for (const f of files) {
+            const enc = await this._encodeFileForDraft(f);
+            if (enc) out.push(enc);
+        }
+        return out;
+    }
+
+    // Issue #14 restore: turn the base64 docs back into real File objects so
+    // the existing remove/upload/submit code paths see them as if they were
+    // freshly attached. Mirrors the encoder in _encodeFileForDraft.
+    _restoreDocumentsFromDraft(docs) {
+        if (!Array.isArray(docs) || docs.length === 0) return;
+        if (!this._uploadedFiles) this._uploadedFiles = [];
+        for (const d of docs) {
+            if (!d || typeof d.base64 !== 'string' || !d.name) continue;
+            try {
+                const bin = atob(d.base64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                const file = new File([bytes], d.name, {
+                    type: d.type || 'application/octet-stream',
+                });
+                if (!this._uploadedFiles.some(f => f.name === file.name)) {
+                    this._uploadedFiles.push(file);
+                }
+            } catch (e) {
+                console.warn('[CP App] Failed to decode draft document:', d.name, e);
+            }
+        }
+        if (typeof this._rerenderUploadedFiles === 'function') {
+            this._rerenderUploadedFiles();
+        }
+    }
+
+    async saveProgress() {
         const data = this.getAllFormData();
         const sensitiveKeys = ['SSN', 'Application ID', 'Co-Applicant SSN', 'DOB', 'Co-Applicant DOB'];
         sensitiveKeys.forEach(key => delete data[key]);
@@ -2050,6 +2134,15 @@ class RentalApplication {
         // Uses the property ID URL param (most specific), falling back to the address param.
         const _urlP = new URLSearchParams(window.location.search);
         data._propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || '';
+        // Issue #14: include attached documents so draft restore brings them back.
+        // Encoding is async — do it before the localStorage write so the saved
+        // payload is internally consistent (auto-save callers don't await us;
+        // that's fine, the flash indicator just fires after the encode finishes).
+        try {
+            data._documents = await this._collectDocumentsForDraft();
+        } catch (_) {
+            data._documents = [];
+        }
         try { localStorage.setItem(this.config.LOCAL_STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
         this._flashAutoSave();
     }
