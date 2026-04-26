@@ -1,97 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0f1e">
-<meta name="color-scheme" content="dark">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="robots" content="noindex, nofollow">
-<title>Lease Template · Choice Properties Admin</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
-<script defer src="/config.js"></script>
-<script defer src="/js/supabase.min.js"></script>
-<script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
-<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
-<style>
-  .tpl-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-  @media(max-width:900px){.tpl-grid{grid-template-columns:1fr}}
-  .tpl-editor{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.55;min-height:520px;width:100%;padding:14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);resize:vertical}
-  .var-pill{display:inline-block;padding:3px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;font-family:ui-monospace,monospace;font-size:.72rem;margin:2px;cursor:pointer}
-  .var-pill:hover{background:var(--accent-subtle);border-color:var(--accent)}
-  .ver-row{display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);font-size:.82rem}
-  .ver-row:last-child{border-bottom:none}
-  .ver-row .ver-num{font-family:ui-monospace,monospace;color:var(--muted);min-width:46px}
-</style>
-</head>
-<body data-page-title="Lease Template" data-page-sub="Editor &amp; version history">
-<div class="app">
-  <main class="app-content">
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Lease Template · Choice Properties Admin</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+  <script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+  <style>
+    .tpl-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+    @media(max-width:900px){.tpl-grid{grid-template-columns:1fr}}
+    .tpl-editor{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.55;min-height:520px;width:100%;padding:14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);resize:vertical}
+    .var-pill{display:inline-block;padding:3px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;font-family:ui-monospace,monospace;font-size:.72rem;margin:2px;cursor:pointer}
+    .var-pill:hover{background:var(--accent-subtle);border-color:var(--accent)}
+    .ver-row{display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);font-size:.82rem}
+    .ver-row:last-child{border-bottom:none}
+    .ver-row .ver-num{font-family:ui-monospace,monospace;color:var(--muted);min-width:46px}
+    .review-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent}
+    .review-badge.statute_derived{background:rgba(245,158,11,.12);color:#f59e0b;border-color:rgba(245,158,11,.4)}
+    .review-badge.attorney_reviewed{background:rgba(16,185,129,.12);color:#10b981;border-color:rgba(16,185,129,.4)}
+    .review-badge.outdated{background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.4)}
+  </style>
+  </head>
+  <body data-page-title="Lease Template" data-page-sub="State-aware editor &amp; version history">
+  <div class="app">
+    <main class="app-content">
 
-    <div class="row-flex between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div>
-        <a href="/admin/leases.html" class="text-xs muted" style="text-decoration:none">&larr; Back to lease pipeline</a>
-      </div>
-      <div class="row-flex gap-2">
-        <button class="btn btn-ghost btn-sm" id="btn-preview">Preview as PDF</button>
-        <button class="btn btn-primary btn-sm" id="btn-publish">Save &amp; Publish New Version</button>
-      </div>
-    </div>
-
-    <div class="tpl-grid">
-      <div class="card">
-        <div class="card-body">
-          <div class="row-flex gap-2" style="margin-bottom:10px;flex-wrap:wrap">
-            <div style="flex:1;min-width:220px">
-              <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">Template name</label>
-              <input class="form-input" id="tpl-name" placeholder="e.g. Standard Residential Lease">
-            </div>
-            <div style="min-width:160px">
-              <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">State default</label>
-              <input class="form-input" id="tpl-state" placeholder="MI" maxlength="2">
-            </div>
-          </div>
-
-          <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:6px">Template body (Markdown / plain text with {{variables}})</label>
-          <textarea class="tpl-editor" id="tpl-body" spellcheck="false"></textarea>
-
-          <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:14px">Internal notes for this version (optional)</label>
-          <textarea class="form-input" id="tpl-notes" rows="2" placeholder="What changed in this version? e.g. Added pet addendum reference."></textarea>
+      <div class="row-flex between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div>
+          <a href="/admin/leases.html" class="text-xs muted" style="text-decoration:none">&larr; Back to lease pipeline</a>
+        </div>
+        <div class="row-flex gap-2" style="align-items:center;flex-wrap:wrap">
+          <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">State</label>
+          <select id="state-filter" class="form-input" style="min-width:200px">
+            <option value="">— pick a state —</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-preview">Preview as PDF</button>
+          <button class="btn btn-primary btn-sm" id="btn-publish">Save &amp; Publish New Version</button>
         </div>
       </div>
 
-      <div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-body">
-            <h3 style="font-size:.92rem;font-weight:700;margin-bottom:8px">Available variables</h3>
-            <p class="text-xs muted" style="margin-bottom:10px">Click a variable to copy it. Replace at render time with the application's values.</p>
-            <div id="var-list"></div>
-          </div>
-        </div>
+      <div id="state-meta" class="text-xs muted" style="margin-bottom:10px"></div>
 
+      <div class="tpl-grid">
         <div class="card">
           <div class="card-body">
-            <div class="row-flex between" style="margin-bottom:8px">
-              <h3 style="font-size:.92rem;font-weight:700">Version history</h3>
-              <span class="text-xs muted" id="ver-count"></span>
+            <div class="row-flex gap-2" style="margin-bottom:10px;flex-wrap:wrap;align-items:flex-end">
+              <div style="flex:1;min-width:220px">
+                <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">Template name</label>
+                <input class="form-input" id="tpl-name" placeholder="e.g. Standard Residential Lease">
+              </div>
+              <div style="min-width:110px">
+                <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">State</label>
+                <input class="form-input" id="tpl-state" placeholder="MI" maxlength="2" readonly title="Use the state selector at the top to switch states">
+              </div>
+              <div style="min-width:180px">
+                <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em">Legal review</label>
+                <span id="tpl-review-badge" class="review-badge statute_derived">Statute-derived</span>
+              </div>
             </div>
-            <p class="text-xs muted" style="margin-bottom:10px">Every "Save &amp; Publish" creates an immutable snapshot. Snapshots are pinned to applications at lease-generation time, so editing this template never changes the text of leases that were already sent.</p>
-            <div id="ver-list" style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden"></div>
+
+            <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:6px">Template body (Markdown / plain text with {{variables}} and {% include "slug" %})</label>
+            <textarea class="tpl-editor" id="tpl-body" spellcheck="false"></textarea>
+
+            <label class="text-xs muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:14px">Internal notes for this version (optional)</label>
+            <textarea class="form-input" id="tpl-notes" rows="2" placeholder="What changed in this version? e.g. Added pet addendum reference."></textarea>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-body">
+              <h3 style="font-size:.92rem;font-weight:700;margin-bottom:8px">Available variables</h3>
+              <p class="text-xs muted" style="margin-bottom:10px">Click a variable to copy it. Replace at render time with the application's values.</p>
+              <div id="var-list"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="row-flex between" style="margin-bottom:8px">
+                <h3 style="font-size:.92rem;font-weight:700">Version history</h3>
+                <span class="text-xs muted" id="ver-count"></span>
+              </div>
+              <p class="text-xs muted" style="margin-bottom:10px">Every "Save &amp; Publish" creates an immutable snapshot. Snapshots are pinned to applications at lease-generation time, so editing this template never changes the text of leases that were already sent.</p>
+              <div id="ver-list" style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden"></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-  </main>
-</div>
+    </main>
+  </div>
 
-<script defer src="/js/admin/lease-template.js?v=__BUILD_VERSION__"></script>
-</body>
-</html>
+  <script defer src="/js/admin/lease-template.js?v=__BUILD_VERSION__"></script>
+  </body>
+  </html>
+  
