@@ -51,9 +51,14 @@ jobs:
             "/apply/|6|200"
           )
 
+          # Escape single quotes for safe inclusion inside SQL string literals.
+          esc() { printf "%s" "$1" | sed "s/'/''/g"; }
+
           run_sql() {
             [ "$CAN_RECORD" = "1" ] || { echo "  (skip record — no secrets)"; return; }
-            local payload="$1"
+            local q="$1"
+            local payload
+            payload=$(jq -nc --arg q "$q" '{query:$q}')
             curl -sS -X POST "$API" \
               -H "$AUTH" \
               -H "Content-Type: application/json" \
@@ -62,49 +67,33 @@ jobs:
           }
 
           insert_or_bump_issue() {
-            local fp="$1" title="$2" evidence="$3"
-            local payload
-            payload=$(python3 - "$fp" "$title" "$evidence" <<'PY'
-import json, sys
-fp, title, evidence = sys.argv[1], sys.argv[2], sys.argv[3]
-sql = (
-"INSERT INTO public.agent_issues "
-"(severity, status, title, kind, detector, evidence, fingerprint, auto_fix_attempts) "
-"VALUES ('high','open',"
-+ json.dumps(title) + ",'uptime','github-actions/uptime-probes',"
-+ json.dumps(json.loads(evidence)) + "::jsonb,"
-+ json.dumps(fp) + ",0) "
-"ON CONFLICT (fingerprint) DO UPDATE "
-"SET status   = CASE WHEN public.agent_issues.status = 'resolved' "
-                   "THEN 'open' ELSE public.agent_issues.status END, "
-    "evidence = EXCLUDED.evidence;"
-)
-print(json.dumps({"query": sql}))
-PY
-            )
-            run_sql "$payload"
+            local fp="$1" title="$2" evidence_json="$3"
+            local efp etitle eev
+            efp=$(esc "$fp")
+            etitle=$(esc "$title")
+            eev=$(esc "$evidence_json")
+            local sql
+            sql="INSERT INTO public.agent_issues (severity, status, title, kind, detector, evidence, fingerprint, auto_fix_attempts) "
+            sql="${sql}VALUES ('high','open','${etitle}','uptime','github-actions/uptime-probes','${eev}'::jsonb,'${efp}',0) "
+            sql="${sql}ON CONFLICT (fingerprint) DO UPDATE SET "
+            sql="${sql}status = CASE WHEN public.agent_issues.status = 'resolved' THEN 'open' ELSE public.agent_issues.status END, "
+            sql="${sql}evidence = EXCLUDED.evidence;"
+            run_sql "$sql"
           }
 
           mark_resolved() {
             local fp="$1"
-            local payload
-            payload=$(python3 - "$fp" <<'PY'
-import json, sys
-fp = sys.argv[1]
-sql = (
-"UPDATE public.agent_issues "
-"SET status='resolved', "
-    "resolved_at = NOW(), "
-    "resolved_by = 'agent:uptime-probe', "
-    "resolution_note = COALESCE(resolution_note,'') || E'\\nAuto-resolved by uptime probe at ' || NOW()::text "
-"WHERE fingerprint = " + json.dumps(fp) + " AND status = 'open';"
-)
-print(json.dumps({"query": sql}))
-PY
-            )
-            run_sql "$payload"
+            local efp
+            efp=$(esc "$fp")
+            local sql
+            sql="UPDATE public.agent_issues "
+            sql="${sql}SET status='resolved', resolved_at = NOW(), resolved_by = 'agent:uptime-probe', "
+            sql="${sql}resolution_note = COALESCE(resolution_note,'') || E'\nAuto-resolved by uptime probe at ' || NOW()::text "
+            sql="${sql}WHERE fingerprint = '${efp}' AND status = 'open';"
+            run_sql "$sql"
           }
 
+          OVERALL=0
           for line in "${PROBES[@]}"; do
             path=$(echo  "$line" | awk -F'|' '{print $1}')
             maxt=$(echo  "$line" | awk -F'|' '{print $2}')
@@ -122,12 +111,14 @@ PY
               mark_resolved "$fp"
             else
               echo "FAIL $http  ${secs}s  $url"
-              EV=$(python3 -c "import json,sys; print(json.dumps({'url':sys.argv[1],'http':sys.argv[2],'expected':sys.argv[3],'time_s':sys.argv[4]}))" \
-                   "$url" "$http" "$want" "$secs")
-              insert_or_bump_issue "$fp" "Uptime probe failed: ${path} (HTTP ${http}, expected ${want})" "$EV"
+              OVERALL=1
+              ev=$(jq -nc --arg url "$url" --arg http "$http" --arg expected "$want" --arg time_s "$secs" \
+                     '{url:$url, http:$http, expected:$expected, time_s:$time_s}')
+              insert_or_bump_issue "$fp" "Uptime probe failed: ${path} (HTTP ${http}, expected ${want})" "$ev"
             fi
           done
 
           # Always exit 0 — probe failures are tracked in agent_issues, not in
           # the Action's exit code, so the next scheduled run still executes.
+          echo "overall_failed=${OVERALL}"
           exit 0
