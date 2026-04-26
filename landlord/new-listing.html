@@ -24,6 +24,9 @@
   <script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
   <script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
   <script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+  <!-- H-9: Convert HEIC iPhone photos to JPEG client-side so landlords can
+       upload straight from the camera roll without going to Settings. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <style>
     /* Wizard layout */
     .listing-form-card {
@@ -1026,26 +1029,55 @@
     handleFiles([...e.dataTransfer.files]);
   });
 
-  function handleFiles(files) {
+  // H-9: HEIC -> JPEG conversion is asynchronous (heic2any decodes via
+  // libheif in a Web Worker), so handleFiles is now async. Each file is
+  // processed in sequence to keep iPhone memory pressure low and to
+  // preserve the original drop order in the preview grid.
+  async function handleFiles(files) {
     const MAX_PHOTOS = 40;
-    files.forEach(file => {
-      if (!file.type.startsWith('image/')) return;
-      if (['image/heic','image/heif'].includes(file.type.toLowerCase()) || /\.heic$/i.test(file.name)) {
-        err(`"${file.name}" is in HEIC format (iPhone default). Go to Settings → Camera → Formats → Most Compatible to shoot in JPG, then re-upload.`);
-        return;
+    const HEIC_MIME = /^image\/(heic|heif|heic-sequence|heif-sequence)$/i;
+    const HEIC_NAME = /\.(heic|heif)$/i;
+
+    for (const original of files) {
+      let file = original;
+      const looksHeic =
+        HEIC_MIME.test((file.type || '').toLowerCase()) || HEIC_NAME.test(file.name);
+
+      if (looksHeic) {
+        if (typeof window.heic2any !== 'function') {
+          err(`HEIC converter is still loading — please try "${file.name}" again in a moment.`);
+          continue;
+        }
+        try {
+          const out = await window.heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+          const blob = Array.isArray(out) ? out[0] : out;
+          const newName = file.name.replace(HEIC_NAME, '') + '.jpg';
+          file = new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() });
+        } catch (e) {
+          console.error('HEIC conversion failed', e);
+          err(`Couldn't convert "${original.name}" from HEIC. Try saving it as JPG on your phone and re-upload.`);
+          continue;
+        }
+      } else if (!file.type.startsWith('image/')) {
+        continue;
       }
+
       if (file.size > 10 * 1024 * 1024) {
         err(`"${file.name}" is too large (${fmtSize(file.size)}). Maximum photo size is 10 MB.`);
-        return;
+        continue;
       }
-      if (pendingFiles.length >= MAX_PHOTOS) { err(`Maximum ${MAX_PHOTOS} photos allowed.`); return; }
-      if (pendingFiles.find(f => f.name === file.name && f.size === file.size)) return;
+      if (pendingFiles.length >= MAX_PHOTOS) { err(`Maximum ${MAX_PHOTOS} photos allowed.`); continue; }
+      if (pendingFiles.find(f => f.name === file.name && f.size === file.size)) continue;
 
       pendingFiles.push(file);
-      const reader = new FileReader();
-      reader.onload = (e) => addPhotoPreview(e.target.result, file);
-      reader.readAsDataURL(file);
-    });
+      const dataUri = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Read failed'));
+        reader.readAsDataURL(file);
+      }).catch(() => null);
+      if (dataUri) addPhotoPreview(dataUri, file);
+    }
     photoInput.value = '';
   }
 

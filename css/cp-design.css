@@ -983,3 +983,30 @@ body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item.active{ color:#006aff;
   .bulk-bar{ flex-direction:column; align-items:stretch; }
   .bulk-bar-count{ margin-right:0; }
 }
+
+/* ============================================================
+   M-7: Skip-link for keyboard / screen-reader users.
+   Hidden until focused, then becomes a high-contrast pill in the
+   top-left corner that links to <main id="main">.
+   ============================================================ */
+.cp-skip-link{
+  position:absolute;
+  top:-100px;
+  left:8px;
+  z-index:10000;
+  background:var(--brand, #0a4d8c);
+  color:#fff;
+  padding:10px 14px;
+  border-radius:8px;
+  text-decoration:none;
+  font-weight:600;
+  font-size:.9rem;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+  transition:top .15s ease;
+}
+.cp-skip-link:focus,
+.cp-skip-link:focus-visible{
+  top:8px;
+  outline:3px solid #fff;
+  outline-offset:2px;
+}

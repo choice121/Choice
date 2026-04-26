@@ -49,7 +49,10 @@
       if (targetPath === '/admin/login.html'       && path.indexOf('/admin/')    === 0) { el.classList.add('active'); return; }
     });
 
-    /* ── Wire mobile drawer ── */
+    /* ── M-7: ensure a "Skip to main content" link is present ── */
+    ensureSkipLink();
+
+    /* ── Wire mobile drawer (with M-7 focus trap) ── */
     setupMobileDrawer();
 
     /* ── Wire nav scroll shadow ── */
@@ -63,7 +66,7 @@
   }
 
   /* ─────────────────────────────────────────────────────────────
-   * setupMobileDrawer
+   * setupMobileDrawer  (M-7: skip-link + focus trap)
    * ───────────────────────────────────────────────────────────── */
   function setupMobileDrawer() {
     var toggle  = document.getElementById('mobileToggle');
@@ -72,11 +75,35 @@
     var close   = document.getElementById('drawerClose');
     if (!toggle || !drawer || !overlay || !close) return;
 
+    // M-7: which element receives focus when the drawer closes — usually
+    // the toggle button that opened it. Stored so keyboard users return
+    // to the spot they came from.
+    var lastFocused = null;
+
+    // M-7: get an in-DOM-order list of focusable items inside the drawer.
+    function focusableInside() {
+      var sel = 'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]),' +
+                ' select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      return Array.prototype.filter.call(
+        drawer.querySelectorAll(sel),
+        function (el) {
+          // Skip hidden / aria-hidden descendants.
+          if (el.offsetParent === null && el !== document.activeElement) return false;
+          if (el.getAttribute('aria-hidden') === 'true') return false;
+          return true;
+        }
+      );
+    }
+
     function openDrawer() {
+      lastFocused = document.activeElement;
       overlay.classList.add('visible');
       setTimeout(function () {
         overlay.classList.add('open');
         drawer.classList.add('open');
+        // M-7: move focus into the drawer once it animates in.
+        var first = focusableInside()[0] || close;
+        if (first && first.focus) first.focus();
       }, 10);
       document.body.style.overflow = 'hidden';
       toggle.setAttribute('aria-expanded', 'true');
@@ -90,14 +117,53 @@
       setTimeout(function () { overlay.classList.remove('visible'); }, 360);
       toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', 'Open menu');
+      // M-7: hand focus back to the element that opened the drawer.
+      if (lastFocused && typeof lastFocused.focus === 'function') {
+        try { lastFocused.focus(); } catch (_) {}
+      }
     }
 
     toggle.addEventListener('click', openDrawer);
     close.addEventListener('click', closeDrawer);
     overlay.addEventListener('click', closeDrawer);
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+      if (!drawer.classList.contains('open')) return;
+      if (e.key === 'Escape') { closeDrawer(); return; }
+      // M-7: focus trap — Tab cycles inside the drawer only.
+      if (e.key !== 'Tab') return;
+      var nodes = focusableInside();
+      if (!nodes.length) { e.preventDefault(); return; }
+      var first = nodes[0], last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
     });
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+   * ensureSkipLink — M-7
+   * ───────────────────────────────────────────────────────────── */
+  // Inserts a "Skip to main content" link as the first focusable element
+  // on the page. Looks for an existing <main> or [data-page] container
+  // to target. Only added when:
+  //   • the page does not already have a skip-link, and
+  //   • a <main> element (or known fallback) exists to skip to.
+  function ensureSkipLink() {
+    if (document.querySelector('.cp-skip-link')) return;
+    var main =
+      document.querySelector('main') ||
+      document.querySelector('.app-content') ||
+      document.querySelector('[data-page]') ||
+      document.querySelector('[data-portal] > .container');
+    if (!main) return;
+    if (!main.id) main.id = 'main';
+    var link = document.createElement('a');
+    link.href = '#' + main.id;
+    link.className = 'cp-skip-link';
+    link.textContent = 'Skip to main content';
+    document.body.insertBefore(link, document.body.firstChild);
   }
 
   /* ─────────────────────────────────────────────────────────────

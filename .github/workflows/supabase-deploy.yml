@@ -7,6 +7,7 @@ on:
     paths:
       - 'supabase/functions/**'
       - 'supabase/migrations/**'
+      - 'supabase/config.toml'
       - '.github/workflows/supabase-deploy.yml'
 
 jobs:
@@ -19,11 +20,25 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy all Edge Functions
-        run: |
-          supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --no-verify-jwt
+      # M-1 hardening: deploy each function INDIVIDUALLY so the per-function
+      # `verify_jwt` setting in supabase/config.toml is respected. The previous
+      # bulk `supabase functions deploy --no-verify-jwt` invocation overrode
+      # config.toml and forced verify_jwt=false on every function.
+      - name: Deploy Edge Functions (per-function so config.toml wins)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -e
+          shopt -s nullglob
+          for d in supabase/functions/*/; do
+            slug=$(basename "$d")
+            # Skip the _shared utilities directory.
+            case "$slug" in _*) continue;; esac
+            echo "::group::Deploying $slug"
+            supabase functions deploy "$slug" --project-ref "$SUPABASE_PROJECT_REF"
+            echo "::endgroup::"
+          done
 
       - name: Apply new database migrations (skip already-applied)
         env:

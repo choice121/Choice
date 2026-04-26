@@ -7,6 +7,26 @@
 
 import nodemailer from 'npm:nodemailer@6.9.16';
 
+// ── M-3: HMAC-SHA256 helper for the GAS-relay request signature ─────────────
+// Returns lowercase hex. WebCrypto is available in the Deno Edge runtime.
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  const bytes = new Uint8Array(sigBuf);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
+}
+
 export interface EmailPayload {
   to: string
   subject?: string
@@ -45,22 +65,39 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   }
 
   // ── 2. Try GAS relay ──────────────────────────────────────────────────────
+  // M-3: send a signed (ts + sig) payload. The GAS relay still accepts the
+  // legacy `secret` field for one rollout cycle, but new traffic must use
+  // HMAC so a leaked secret is only valid for ±5 minutes.
   if (gasUrl && gasSecret && (payload.template || payload.html)) {
     try {
       const gasTemplate = payload.template || 'raw_html';
       const gasData = gasTemplate === 'raw_html'
         ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
         : (payload.data ?? {});
+      const ts = Math.floor(Date.now() / 1000);
+      // ROLLOUT NOTE: we include BOTH the legacy `secret` field AND the new
+      // signed (`ts` + `sig`) fields. The Apps Script relay can only be
+      // deployed manually by the owner; until they redeploy the updated
+      // GAS code, the relay will accept us via the legacy `secret` check.
+      // After the GAS update is live, the relay prefers `sig` and the
+      // legacy field is ignored — at which point we can drop it here.
+      const inner = {
+        ts,
+        secret: gasSecret,           // legacy compatibility — see comment above
+        template: gasTemplate,
+        to: payload.to,
+        cc: payload.cc ?? null,
+        data: gasData,
+      };
+      // Sign the (ts + body) pair. The body bytes are the inner JSON minus
+      // the eventual `sig` field, so we serialise once for signing then
+      // re-serialise WITH `sig` for the actual HTTP send.
+      const innerJson = JSON.stringify(inner);
+      const sig = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
       const r = await fetch(gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          secret: gasSecret,
-          template: gasTemplate,
-          to: payload.to,
-          cc: payload.cc ?? null,
-          data: gasData,
-        }),
+        body: JSON.stringify({ ...inner, sig }),
       });
       const json = await r.json().catch(() => ({}));
       if (r.ok && json.success !== false) return { ok: true, provider: 'gas' };

@@ -30,14 +30,30 @@ additional_redirect_urls = ["https://choice-properties-site.pages.dev"]
 jwt_expiry = 3600
 enable_signup = true
 
+# ============================================================
+# Edge function JWT verification policy (M-1 hardening)
+# ------------------------------------------------------------
+# • Truly admin-only writers + service-to-service callers MUST require a
+#   valid Supabase JWT at the gateway, in addition to in-code auth checks.
+#   This is defense in depth — one missed `requireAuth(...)` inside a
+#   function body cannot expose the endpoint.
+# • Functions that are intentionally callable without a session (token-
+#   gated public flows, magic-link issuance, public lease viewer, public
+#   inquiry/application receivers) keep verify_jwt = false.
+# ============================================================
+
+# --- Admin / authenticated-landlord workflows: enforce JWT at gateway ---
 [functions.generate-lease]
 verify_jwt = true
 
-[functions.get-lease]
-verify_jwt = false
+[functions.create-amendment]
+verify_jwt = true
 
-[functions.sign-lease]
-verify_jwt = false
+[functions.sign-amendment]
+verify_jwt = true
+
+[functions.countersign]
+verify_jwt = true
 
 [functions.send-email]
 verify_jwt = true
@@ -45,8 +61,42 @@ verify_jwt = true
 [functions.download-lease]
 verify_jwt = true
 
+[functions.check-renewals]
+verify_jwt = true
+
+[functions.imagekit-upload]
+verify_jwt = true
+
+[functions.imagekit-delete]
+verify_jwt = true
+
+[functions.send-message]
+verify_jwt = true
+
+[functions.save-draft]
+verify_jwt = true
+
+[functions.request-upload-url]
+verify_jwt = true
+
+# --- Intentionally public / token-gated endpoints: keep open ---
+[functions.get-lease]
+verify_jwt = false
+
+[functions.get-amendment]
+verify_jwt = false
+
+[functions.sign-lease]
+verify_jwt = false
+
+[functions.sign-lease-co-applicant]
+verify_jwt = false
+
 [functions.receive-application]
 verify_jwt = false
 
 [functions.send-magic-link]
+verify_jwt = false
+
+[functions.send-inquiry]
 verify_jwt = false
