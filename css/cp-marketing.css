@@ -4932,3 +4932,191 @@ body[data-portal="public"][data-page="property"] .mv2-contact-card .form-label {
   letter-spacing: 0.01em;
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.10 — Secondary marketing pages (about, how-to-apply,       ║
+   ║                how-it-works, faq) mv2 refresh                        ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.10, agent_issues #40)║
+   ║                                                                      ║
+   ║  Shared CSS — 4 pages have identical .info-hero/.info-page/.info-   ║
+   ║  content/.info-section skeleton; selector list scopes per data-page. ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Hero: warm paper bg, italic Fraunces title ─────────────────── */
+body[data-portal="public"][data-page="about"] .mv2-info-hero,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero {
+  position: relative;
+  padding: clamp(56px, 8vw, 96px) 0 clamp(40px, 5vw, 64px);
+  isolation: isolate;
+  border-bottom: 1px solid var(--mv2-hairline);
+  text-align: center;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-hero__bg,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero__bg,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero__bg,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero__bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse at top, rgba(212, 160, 23, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(0, 106, 255, 0.05) 0%, transparent 60%),
+    linear-gradient(180deg, var(--mv2-bg-warm) 0%, #FFFEFC 100%);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-hero-inner,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero-inner,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero-inner,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero-inner {
+  position: relative;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mv2-stack-3);
+  align-items: center;
+}
+
+/* ── Hero title (italic Fraunces with gold marker on emphasis) ──── */
+body[data-portal="public"][data-page="about"] .mv2-info-hero-title,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero-title,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero-title,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero-title {
+  margin: 0;
+  font-family: var(--mv2-display);
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--mv2-ink);
+  text-wrap: balance;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-hero-title em,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero-title em,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero-title em,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero-title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--mv2-ink);
+  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.20) 65%);
+  padding: 0 0.05em;
+}
+
+/* ── Hero subtitle ──────────────────────────────────────────────── */
+body[data-portal="public"][data-page="about"] .mv2-info-hero-sub,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero-sub,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero-sub,
+body[data-portal="public"][data-page="faq"] .mv2-info-hero-sub {
+  margin: 0;
+  color: var(--mv2-muted);
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.2rem);
+  line-height: 1.55;
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+/* ── Page body: white, comfortable reading width ───────────────── */
+body[data-portal="public"][data-page="about"] .mv2-info-page,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-page,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-page,
+body[data-portal="public"][data-page="faq"] .mv2-info-page {
+  background: #FFFFFF;
+  padding: clamp(40px, 6vw, 80px) 0;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-content,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-content,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-content,
+body[data-portal="public"][data-page="faq"] .mv2-info-content {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ── Sections within the body get rhythm + Fraunces h2s ────────── */
+body[data-portal="public"][data-page="about"] .mv2-info-section,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section,
+body[data-portal="public"][data-page="faq"] .mv2-info-section {
+  margin-bottom: var(--mv2-stack-6);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section:last-child,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section:last-child,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section:last-child,
+body[data-portal="public"][data-page="faq"] .mv2-info-section:last-child {
+  margin-bottom: 0;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section h2,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section h2,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section h2,
+body[data-portal="public"][data-page="faq"] .mv2-info-section h2 {
+  font-family: var(--mv2-display);
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 1.15rem + 1vw, 1.85rem);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--mv2-ink);
+  margin: 0 0 var(--mv2-stack-3);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section p,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section p,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section p,
+body[data-portal="public"][data-page="faq"] .mv2-info-section p {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--mv2-ink);
+  margin: 0 0 var(--mv2-stack-3);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section p:last-child,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section p:last-child,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section p:last-child,
+body[data-portal="public"][data-page="faq"] .mv2-info-section p:last-child {
+  margin-bottom: 0;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section ul, .mv2-info-section ol,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section ul, .mv2-info-section ol,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section ul, .mv2-info-section ol,
+body[data-portal="public"][data-page="faq"] .mv2-info-section ul, .mv2-info-section ol {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--mv2-ink);
+  padding-left: 1.4em;
+  margin: 0 0 var(--mv2-stack-3);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section li,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section li,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section li,
+body[data-portal="public"][data-page="faq"] .mv2-info-section li {
+  margin-bottom: 0.4em;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section li::marker,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section li::marker,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section li::marker,
+body[data-portal="public"][data-page="faq"] .mv2-info-section li::marker {
+  color: var(--mv2-gold);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section a,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section a,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section a,
+body[data-portal="public"][data-page="faq"] .mv2-info-section a {
+  color: var(--mv2-brand-dark);
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 106, 255, 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section a:hover, .mv2-info-section a:focus-visible,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section a:hover, .mv2-info-section a:focus-visible,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section a:hover, .mv2-info-section a:focus-visible,
+body[data-portal="public"][data-page="faq"] .mv2-info-section a:hover, .mv2-info-section a:focus-visible {
+  text-decoration-color: var(--mv2-brand-dark);
+  outline: none;
+}
+body[data-portal="public"][data-page="about"] .mv2-info-section strong,
+body[data-portal="public"][data-page="how-to-apply"] .mv2-info-section strong,
+body[data-portal="public"][data-page="how-it-works"] .mv2-info-section strong,
+body[data-portal="public"][data-page="faq"] .mv2-info-section strong {
+  font-weight: 600;
+  color: var(--mv2-ink);
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
