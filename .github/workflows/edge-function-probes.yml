@@ -122,8 +122,13 @@ jobs:
 
           # Verify report_client_error RPC works end-to-end (anon should be able
           # to call it, it should return 204).
+          # Param names MUST match the function signature exactly:
+          #   report_client_error(p_fingerprint, p_message, p_stack, p_page_path,
+          #                       p_user_agent, p_browser_lang)
           rpc_url="${SUPA_URL}/rest/v1/rpc/report_client_error"
-          payload='{"_message":"probe ping","_source":"github-actions/edge-function-probes","_lineno":0,"_colno":0,"_url":"https://probe.invalid/","_user_agent":"probe","_app_version":"probe","_kind":"probe","_fingerprint":"probe:'"$(date +%s)"'","_extra":{"probe":true}}'
+          payload=$(jq -nc --arg fp "probe:edge-fn-probes:$(date +%s)" \
+                           --arg msg "probe ping (edge-fn-probes)" \
+                           '{p_fingerprint:$fp, p_message:$msg, p_stack:"", p_page_path:"/probe", p_user_agent:"github-actions-probe", p_browser_lang:"en"}')
           fp="rpc:report_client_error"
           CODE=$(curl -s -o /tmp/rpc_resp -w "%{http_code}" --max-time 10 \
                      -X POST \
