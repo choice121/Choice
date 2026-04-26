@@ -145,11 +145,13 @@
       brand: { logo: 'CP', name: 'Choice Properties', sub: 'Tenant' },
       nav: [
         { sect: 'Portal', items: [
-          { href: 'portal.html', icon: 'i-home', label: 'Home' }
+          { href: 'portal.html',  icon: 'i-home', label: 'Home' },
+          { href: 'deposit.html', icon: 'i-mail', label: 'Move-out & Deposit' }
         ]}
       ],
       tabs: [
-        { href: 'portal.html', icon: 'i-home', label: 'Home' }
+        { href: 'portal.html',  icon: 'i-home', label: 'Home' },
+        { href: 'deposit.html', icon: 'i-mail', label: 'Deposit' }
       ],
       more: []
     }

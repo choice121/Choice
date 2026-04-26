@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Move-out & Deposit — Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+<style>
+  :root{
+    --font-sans:'Geist','Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  body{font-family:var(--font-sans)}
+  .dep-wrap{max-width:780px;margin:0 auto;padding:20px 16px 80px}
+  .dep-card{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .dep-card h2{margin:0 0 8px;font-size:1.05rem;font-weight:700}
+  .dep-card .sub{color:var(--muted,#64748b);font-size:.86rem;margin-bottom:14px}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}
+  .summary-grid .tile{background:var(--surface-2,#f8fafc);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:12px}
+  .summary-grid .k{font-size:.7rem;color:var(--muted,#64748b);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .summary-grid .v{font-size:1.1rem;font-weight:700;margin-top:4px}
+  .summary-grid .v.refund-pos{color:#15803d}
+  .summary-grid .v.refund-zero{color:#a16207}
+  .deductions-list{margin-top:14px;border-top:1px solid var(--border,#e5e7eb)}
+  .deduction-row{padding:12px 0;border-bottom:1px solid var(--border,#e5e7eb);display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+  .deduction-row:last-child{border-bottom:none}
+  .ded-cat{font-size:.66rem;color:var(--muted,#64748b);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:3px}
+  .ded-desc{font-size:.92rem;line-height:1.4}
+  .ded-amt{font-weight:700;color:#b91c1c;white-space:nowrap}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:6px}
+  .pill-late{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .pill-disputed{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+  .pill-ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  .pill-info{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+  .late-banner{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:8px;padding:14px 16px;margin-bottom:14px;color:#7f1d1d;font-size:.92rem;line-height:1.5}
+  .late-banner strong{color:#991b1b}
+  .disputed-banner{background:#fef3c7;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:8px;padding:14px 16px;margin-bottom:14px;color:#78350f;font-size:.92rem;line-height:1.5}
+  .row-flex{display:flex;align-items:center}
+  .row-flex.between{justify-content:space-between}
+  .gap-2{gap:8px}
+  .btn{display:inline-block;padding:10px 18px;border-radius:8px;border:1px solid transparent;font-weight:600;cursor:pointer;font-size:.92rem;text-decoration:none;transition:filter .15s}
+  .btn:hover{filter:brightness(.96)}
+  .btn-primary{background:#0f172a;color:#fff}
+  .btn-secondary{background:#fff;color:#0f172a;border-color:#e5e7eb}
+  .btn-warn{background:#dc2626;color:#fff}
+  .actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted,#64748b)}
+  .empty-state .ico{font-size:3rem;margin-bottom:12px}
+  .empty-state h3{margin:0 0 8px;color:var(--text,#0f172a);font-size:1.1rem}
+  .empty-state p{margin:0;font-size:.9rem;line-height:1.5;max-width:420px;margin-left:auto;margin-right:auto}
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:30px 16px;overflow:auto}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:22px 24px;box-shadow:0 20px 50px rgba(15,23,42,.3)}
+  .modal h2{margin:0 0 6px;font-size:1.1rem;font-weight:700}
+  .modal .sub{color:var(--muted,#64748b);font-size:.86rem;margin-bottom:14px;line-height:1.5}
+  .modal label{display:block;font-size:.78rem;font-weight:600;color:var(--muted,#64748b);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .modal textarea{width:100%;min-height:200px;padding:12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-family:var(--font-sans);font-size:.92rem;line-height:1.5;resize:vertical;box-sizing:border-box}
+  .modal-actions{margin-top:16px;display:flex;justify-content:flex-end;gap:10px}
+  .char-count{font-size:.74rem;color:var(--muted,#64748b);text-align:right;margin-top:4px}
+  .char-count.warn{color:#b91c1c}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;font-size:.9rem;font-weight:500;box-shadow:0 8px 30px rgba(15,23,42,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:300}
+  .toast.show{opacity:1}
+  .toast.error{background:#b91c1c}
+  .toast.ok{background:#15803d}
+  .small{font-size:.78rem;color:var(--muted,#64748b);margin-top:6px;line-height:1.5}
+  .meta-row{display:flex;justify-content:space-between;font-size:.84rem;padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)}
+  .meta-row:last-child{border-bottom:none}
+  .meta-row .k{color:var(--muted,#64748b)}
+  .meta-row .v{font-weight:600}
+  .totals-section{border-top:2px solid var(--border,#e5e7eb);padding-top:14px;margin-top:6px}
+  .totals-row{display:flex;justify-content:space-between;font-size:.92rem;padding:6px 0}
+  .totals-row.emph{font-size:1.05rem;font-weight:700;border-top:1px solid var(--border,#e5e7eb);padding-top:10px;margin-top:4px}
+  .totals-row.emph .v.refund-pos{color:#15803d}
+  .totals-row.emph .v.refund-zero{color:#a16207}
+</style>
+</head>
+<body data-portal="tenant" data-page-title="Move-out & Deposit" data-page-sub="Loading…">
+
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+  </defs>
+</svg>
+
+<div class="dep-wrap">
+  <div id="loading" class="dep-card" style="text-align:center;color:var(--muted,#64748b)">Loading your deposit accounting…</div>
+  <div id="content" style="display:none"></div>
+  <div id="empty" class="dep-card empty-state" style="display:none">
+    <div class="ico">🏠</div>
+    <h3>No deposit accounting yet</h3>
+    <p>Your security deposit accounting will appear here once your move-out is processed and your landlord finalizes the deduction letter for your lease. You'll receive an email when it's ready.</p>
+  </div>
+</div>
+
+<!-- Dispute modal -->
+<div class="modal-bg" id="disputeBg" role="dialog" aria-modal="true" aria-labelledby="disputeTitle">
+  <div class="modal">
+    <h2 id="disputeTitle">Dispute this deposit accounting</h2>
+    <div class="sub">
+      Use this form to formally object to one or more of the deductions listed in your deposit-accounting letter.
+      Your landlord and our team will be notified. You can also pursue the dispute directly with your landlord
+      under your state's tenant-rights law.
+    </div>
+    <label for="disputeText">Describe your objection (10–5,000 characters)</label>
+    <textarea id="disputeText" placeholder="e.g. The $250 'paint' charge is for normal wear and tear after 4 years of tenancy, which is not a permitted deduction in my state. I have move-in photos showing the prior condition…"></textarea>
+    <div class="char-count" id="charCount">0 / 5000</div>
+    <div class="small">Your dispute text becomes part of the lease record (audit-logged) and may be reviewed by Choice Properties staff. False statements may affect your tenant record.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancelDispute">Cancel</button>
+      <button class="btn btn-warn" id="btnSubmitDispute">Submit dispute</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script defer src="/js/tenant/deposit.js?v=__BUILD_VERSION__"></script>
+</body>
+</html>

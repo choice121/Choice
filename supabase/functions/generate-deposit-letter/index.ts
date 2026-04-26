@@ -454,9 +454,62 @@ Deno.serve(async (req) => {
     });
   } catch (_) { /* non-fatal */ }
 
-  // 16. Email tenant (deferred to chunk 5 — flag accepted, no-op for now)
+  // 16. Email tenant (Phase 09 chunk 5 — wired up via _shared/send-email.ts)
+  let email_sent = false;
+  let email_provider: string | null = null;
+  let email_error: string | null = null;
   if (send_email) {
-    console.log('[generate-deposit-letter] send_email requested but email wiring lands in chunk 5');
+    try {
+      const { sendEmail } = await import('../_shared/send-email.ts');
+      // 7-day signed URL so the tenant has plenty of time to download from
+      // the email link without re-auth. The PDF itself is also reachable
+      // via /tenant/deposit.html which generates a fresh 10-min signed URL
+      // on demand once they sign in.
+      const { data: signedUrlData } = await supabase.storage
+        .from('lease-pdfs')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+      const downloadUrl = signedUrlData?.signedUrl || '';
+      const tenantPortalUrl = (Deno.env.get('SITE_URL') || 'https://choiceproperties.cc') + '/tenant/deposit.html';
+      const propLabel  = `${app.property_address || ''}${app.city ? ', ' + app.city : ''}${stateCode ? ', ' + stateCode : ''}`.trim();
+      const tenantName = `${app.first_name || ''} ${app.last_name || ''}`.trim() || 'there';
+      const refundLine = refundOwed > 0
+        ? `Your refund of <strong>$${refundOwed.toFixed(2)}</strong> will be issued per your state's statute.`
+        : `Based on the itemized deductions, no refund is due. Please review the letter for details.`;
+      const lateNotice = lateGenerated
+        ? `<p style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 14px;color:#7f1d1d;border-radius:4px;font-size:14px"><strong>Note:</strong> This accounting was generated past your state's statutory return deadline (${deadlineISO}). The letter PDF carries a notice of the late issuance, and you may have additional rights under your state's tenant-protection statute.</p>`
+        : '';
+      const html = `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#0f172a">
+          <h2 style="color:#0f172a;margin:0 0 16px">Your security deposit accounting</h2>
+          <p>Hi ${tenantName},</p>
+          <p>Your final security deposit accounting for <strong>${propLabel}</strong> is ready. ${refundLine}</p>
+          ${lateNotice}
+          <p style="margin:24px 0">
+            <a href="${downloadUrl}" style="display:inline-block;background:#0f172a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Download your letter PDF</a>
+          </p>
+          <p style="font-size:13px;color:#64748b">You can also view this accounting and its itemized deductions at any time by signing in to your tenant portal: <a href="${tenantPortalUrl}" style="color:#0f172a">${tenantPortalUrl}</a></p>
+          <p style="font-size:13px;color:#64748b">If you disagree with any of the deductions, you can file a formal dispute directly from the portal page above.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+          <p style="font-size:12px;color:#94a3b8">This is an automated notification from Choice Properties. The download link above is valid for 7 days.</p>
+        </div>
+      `;
+      const result = await sendEmail({
+        to:      app.email,
+        subject: `Your security deposit accounting — ${propLabel || 'Choice Properties'}`,
+        html,
+      });
+      email_sent     = result.ok;
+      email_provider = result.provider;
+      email_error    = result.error || null;
+      if (result.ok) {
+        await supabase.from('lease_deposit_accountings')
+          .update({ sent_at: new Date().toISOString(), sent_to_email: app.email })
+          .eq('id', accounting.id);
+      }
+    } catch (e) {
+      email_error = (e as Error)?.message || 'unknown';
+      console.error('[generate-deposit-letter] email send failed:', email_error);
+    }
   }
 
   return jsonOk({
