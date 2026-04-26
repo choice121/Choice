@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<title>Inspections · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+<script defer src="/config.js"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+<style>
+  .insp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-2)}
+  .insp-card + .insp-card{margin-top:var(--sp-2)}
+  .insp-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--sp-2);padding:var(--sp-3) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .insp-meta .k{font-size:.65rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .insp-meta .v{font-size:.82rem;color:var(--text);font-weight:600;margin-top:2px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:700;border:1px solid;margin-right:4px}
+  .pill-info{background:rgba(59,130,246,.12);color:#93c5fd;border-color:rgba(59,130,246,.4)}
+  .pill-warn{background:rgba(245,158,11,.12);color:#fcd34d;border-color:rgba(245,158,11,.4)}
+  .pill-ok{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.4)}
+  .pill-muted{background:rgba(148,163,184,.15);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
+  .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .search{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font:inherit;font-size:.86rem}
+  .search:focus{outline:none;border-color:#3b82f6}
+  .empty,.loading-state{text-align:center;padding:60px 20px;color:var(--muted-2)}
+  .summary-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .summary-tile{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px}
+  .summary-tile .num{font-size:1.5rem;font-weight:800;color:var(--text);line-height:1}
+  .summary-tile .lbl{font-size:.7rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;font-weight:700}
+</style>
+</head>
+<body data-page-title="Inspections" data-page-sub="Loading…">
+<div class="app">
+  <main class="app-content">
+
+    <div class="summary-bar" id="summary"></div>
+
+    <div class="filter-bar">
+      <input class="search" type="search" id="q" placeholder="Search by address, tenant name, or app ID…">
+    </div>
+
+    <div class="chip-row" id="chips">
+      <button class="chip active" data-type="all">All types</button>
+      <button class="chip" data-type="move_in">Move-in</button>
+      <button class="chip" data-type="mid_term">Mid-term</button>
+      <button class="chip" data-type="move_out">Move-out</button>
+    </div>
+
+    <div class="chip-row" id="chips2" style="margin-top:8px">
+      <button class="chip active" data-status="all">All states</button>
+      <button class="chip" data-status="awaiting_tenant">Awaiting tenant</button>
+      <button class="chip" data-status="awaiting_landlord">Awaiting landlord</button>
+      <button class="chip" data-status="complete">Both signed</button>
+    </div>
+
+    <div id="list"></div>
+    <div id="empty" class="empty" style="display:none">No inspections match these filters.</div>
+    <div id="loading" class="loading-state">Loading inspections…</div>
+
+  </main>
+</div>
+
+<script defer src="/js/admin/inspections.js?v=__BUILD_VERSION__"></script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Inspection Review — Choice Properties Landlord</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=__BUILD_VERSION__">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=__BUILD_VERSION__"></script>
+  <script defer src="/js/cp-chrome.js?v=__BUILD_VERSION__"></script>
+  <script defer src="/js/cp-shell.js?v=__BUILD_VERSION__"></script>
+  <script defer src="/js/landlord/inspection-review.js?v=__BUILD_VERSION__"></script>
+  <style>
+    .wrap{max-width:880px;margin:0 auto;padding:18px 16px 140px}
+    .hero{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+    .hero h1{font-size:1.2rem;font-weight:800;margin:0 0 4px;letter-spacing:-.01em;color:var(--text)}
+    .hero .meta{font-size:.84rem;color:var(--muted);margin-top:4px}
+    .hero .pill-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+    .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:600;border:1px solid}
+    .pill-info{background:#eff6ff;color:#1e40af;border-color:#bfdbfe}
+    .pill-warn{background:#fffbeb;color:#92400e;border-color:#fde68a}
+    .pill-ok{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+    .pill-muted{background:#f1f5f9;color:#475569;border-color:#cbd5e1}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+    .card h2{font-size:1rem;font-weight:700;margin:0 0 6px;color:var(--text)}
+    .card p.help{color:var(--muted);font-size:.82rem;margin:0 0 12px;line-height:1.5}
+
+    .room{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
+    .room h3{margin:0 0 8px;font-size:.95rem;font-weight:700;color:var(--text)}
+
+    .item{border-top:1px solid var(--border);padding:10px 0}
+    .item:first-child{border-top:none;padding-top:0}
+    .item-name{font-weight:600;font-size:.9rem;color:var(--text);margin-bottom:6px}
+
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:640px){ .row{grid-template-columns:1fr} }
+    .col{border:1px solid var(--border);border-radius:8px;padding:10px;background:#fbfdff}
+    .col h4{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
+    .col[data-side="landlord"]{background:#fafaf9}
+
+    .cond-display{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.74rem;font-weight:600;margin-right:6px}
+    .cond-good{background:#dcfce7;color:#15803d}
+    .cond-fair{background:#fef3c7;color:#92400e}
+    .cond-poor{background:#ffedd5;color:#c2410c}
+    .cond-damaged{background:#fee2e2;color:#b91c1c}
+    .cond-none{background:#f1f5f9;color:#64748b}
+
+    .notes-display{font-size:.82rem;color:var(--text);margin-top:6px;line-height:1.45}
+    .notes-display.empty{color:var(--muted);font-style:italic}
+
+    .agree-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+    .agree-btn{border:1px solid var(--border);background:var(--surface);padding:5px 10px;border-radius:999px;font-size:.74rem;font-weight:600;cursor:pointer;color:var(--text)}
+    .agree-btn[aria-pressed="true"][data-v="agree"]{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+    .agree-btn[aria-pressed="true"][data-v="dispute"]{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
+
+    .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;margin-top:6px}
+    .photo{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f1f5f9;border:1px solid var(--border)}
+    .photo img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+    .photo .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-weight:700;font-size:.78rem;line-height:1;display:flex;align-items:center;justify-content:center}
+    .photo[data-state="uploading"] img{opacity:.5}
+    .photo .add{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#64748b;font-size:1.5rem;cursor:pointer;border:2px dashed #cbd5e1;border-radius:8px}
+    .photo .add:hover{border-color:#1d4ed8;color:#1d4ed8}
+
+    .lord-notes{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit;font-size:.84rem;resize:vertical;min-height:36px;background:var(--surface);color:var(--text)}
+    .lord-notes:focus{outline:none;border-color:#1d4ed8}
+
+    .sig-wrap{border:2px dashed var(--border);border-radius:10px;background:var(--surface)}
+    #sig-canvas{display:block;width:100%;height:140px;touch-action:none;border-radius:10px}
+    .sig-actions{display:flex;justify-content:space-between;align-items:center;padding:6px 10px}
+    .sig-actions small{color:var(--muted);font-size:.72rem}
+    .sig-clear{background:transparent;border:none;color:#dc2626;font-size:.78rem;cursor:pointer;padding:2px 6px;border-radius:4px}
+
+    .tenant-sig-block{border:1px solid var(--border);border-radius:10px;padding:10px;background:#fbfdff;margin-bottom:14px}
+    .tenant-sig-block img{max-height:90px;background:#fff;border:1px solid var(--border);border-radius:6px}
+
+    .actions{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;gap:8px;box-shadow:0 -2px 8px rgba(0,0,0,.04);z-index:50}
+    .btn{padding:11px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.86rem;font-weight:600;cursor:pointer}
+    .btn-primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+    .btn-primary:hover{background:#1e40af}
+    .btn-primary:disabled{background:#94a3b8;border-color:#94a3b8;cursor:not-allowed}
+
+    .alert{padding:12px 14px;border-radius:10px;margin-bottom:12px;font-size:.84rem;line-height:1.5}
+    .alert-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+    .alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+    .alert-ok{background:#dcfce7;border:1px solid #bbf7d0;color:#15803d}
+
+    .loading{padding:60px 20px;text-align:center;color:var(--muted)}
+    .spin{display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#1d4ed8;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Lightbox */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+    .lightbox[data-open]{display:flex}
+    .lightbox img{max-width:100%;max-height:100%;border-radius:8px}
+    .lightbox .close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer}
+  </style>
+</head>
+<body data-portal="landlord" data-page-title="Inspection Review">
+<main class="wrap" id="wrap">
+
+  <div class="loading" id="loading">
+    <div class="spin"></div>
+    <div>Loading inspection…</div>
+  </div>
+
+  <div id="content" hidden>
+    <header class="hero">
+      <h1 id="title">Inspection Review</h1>
+      <div class="meta" id="property-line"></div>
+      <div class="meta" id="tenant-line"></div>
+      <div class="pill-row" id="status-pills"></div>
+    </header>
+
+    <section class="card">
+      <h2>Tenant signature</h2>
+      <p class="help">The tenant signed this report on the date shown. Review their entries below, then counter-sign at the bottom.</p>
+      <div class="tenant-sig-block" id="tenant-sig-block">
+        <em>No tenant signature on file yet.</em>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Room-by-room review</h2>
+      <p class="help">For each item, mark whether you agree with the tenant's assessment. Add your own notes and photos as needed for the record.</p>
+      <div id="rooms-host"></div>
+    </section>
+
+    <section class="card">
+      <h2>Your notes (optional)</h2>
+      <textarea id="landlord-notes" class="lord-notes" rows="3" placeholder="Anything you want on the record about the inspection as a whole."></textarea>
+      <h3 style="font-size:.92rem;font-weight:700;margin:18px 0 6px;color:var(--text)">Your counter-signature</h3>
+      <div class="sig-wrap">
+        <canvas id="sig-canvas"></canvas>
+        <div class="sig-actions">
+          <small>Sign with mouse, finger, or stylus.</small>
+          <button type="button" class="sig-clear" id="sig-clear">Clear</button>
+        </div>
+      </div>
+      <div id="submit-error" class="alert alert-err" style="display:none;margin-top:12px"></div>
+      <div id="submit-ok" class="alert alert-ok" style="display:none;margin-top:12px"></div>
+    </section>
+  </div>
+
+  <div id="not-found" hidden>
+    <div class="alert alert-err">
+      Inspection not found, or you don't have permission to view it.
+      Open the application from your dashboard to find its inspection.
+    </div>
+  </div>
+</main>
+
+<footer class="actions" id="actions" hidden>
+  <button class="btn" type="button" id="btn-back">← Back</button>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" type="button" id="btn-sign" disabled>Counter-sign &amp; Save</button>
+</footer>
+
+<div class="lightbox" id="lightbox">
+  <button class="close" id="lightbox-close" type="button">×</button>
+  <img id="lightbox-img" alt="">
+</div>
+
+</body>
+</html>

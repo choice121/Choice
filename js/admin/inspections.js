@@ -1,0 +1,161 @@
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────
+// admin/inspections.js — Phase 08 chunk 4/N
+// Admin index of all condition reports across all applications. Filters
+// by inspection type, by signature state, and free-text on tenant name
+// / property address / app_id. Click a row → opens the unified
+// landlord/inspection-review page (which auto-detects admin role from
+// auth and uses the same record-inspection edge fn for any updates).
+// ─────────────────────────────────────────────────────────────────────
+
+(function(){
+  'use strict';
+
+  let _all       = [];
+  let _typeFilter   = 'all';
+  let _statusFilter = 'all';
+  let _search       = '';
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+  function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
+  function labelType(t){return t==='move_in'?'Move-in':t==='move_out'?'Move-out':t==='mid_term'?'Mid-term':t;}
+  function statusOf(insp){
+    if (insp.tenant_signed_at && insp.landlord_signed_at) return 'complete';
+    if (insp.tenant_signed_at && !insp.landlord_signed_at) return 'awaiting_landlord';
+    if (!insp.tenant_signed_at && insp.landlord_signed_at) return 'awaiting_tenant';
+    return 'awaiting_tenant';
+  }
+  function statusPill(s){
+    if (s === 'complete')          return '<span class="pill pill-ok">Both signed</span>';
+    if (s === 'awaiting_landlord') return '<span class="pill pill-warn">Awaiting landlord</span>';
+    if (s === 'awaiting_tenant')   return '<span class="pill pill-warn">Awaiting tenant</span>';
+    return '<span class="pill pill-muted">' + esc(s) + '</span>';
+  }
+
+  function card(row){
+    const a = row.applications || {};
+    const tenantName = ((a.first_name||'') + ' ' + (a.last_name||'')).trim() || 'Unknown';
+    const reviewLink = `/landlord/inspection-review.html?id=${encodeURIComponent(row.id)}`;
+    const status = statusOf(row);
+    return ''
+      + '<div class="insp-card">'
+      +   '<div class="row-flex between" style="align-items:flex-start">'
+      +     '<div style="min-width:0">'
+      +       '<div class="text-xs muted" style="font-family:monospace">' + esc(a.app_id || row.app_id) + '</div>'
+      +       '<div class="row-title">' + esc(tenantName) + ' — ' + esc(labelType(row.inspection_type)) + '</div>'
+      +       '<div class="row-sub">' + esc(a.property_address || '—') + (a.city ? ' · ' + esc(a.city) : '') + (a.state ? ', ' + esc(a.state) : '') + '</div>'
+      +       '<div style="margin-top:6px">'
+      +         '<span class="pill pill-info">' + esc(labelType(row.inspection_type)) + '</span>'
+      +         statusPill(status)
+      +         (row.photos_count ? '<span class="pill pill-muted">' + row.photos_count + ' photo' + (row.photos_count===1?'':'s') + '</span>' : '')
+      +       '</div>'
+      +     '</div>'
+      +     '<div class="row-meta" style="text-align:right">'
+      +       'Updated <strong>' + esc(fmtDate(row.updated_at || row.created_at)) + '</strong>'
+      +       (row.tenant_signed_at  ? '<br>Tenant: <strong style="color:var(--success)">' + esc(fmtDate(row.tenant_signed_at)) + '</strong>' : '')
+      +       (row.landlord_signed_at ? '<br>Landlord: <strong style="color:var(--success)">' + esc(fmtDate(row.landlord_signed_at)) + '</strong>' : '')
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="insp-meta">'
+      +     '<div><div class="k">Created</div><div class="v">' + esc(fmtDate(row.created_at)) + '</div></div>'
+      +     '<div><div class="k">Status</div><div class="v">' + statusPill(status) + '</div></div>'
+      +     '<div><div class="k">Type</div><div class="v">' + esc(labelType(row.inspection_type)) + '</div></div>'
+      +     '<div><div class="k">Photos</div><div class="v">' + (row.photos_count ?? 0) + '</div></div>'
+      +   '</div>'
+      +   '<div class="row-flex between" style="align-items:center;gap:8px;flex-wrap:wrap">'
+      +     '<a class="btn btn-primary btn-sm" href="' + reviewLink + '">Open review →</a>'
+      +     '<a class="btn btn-ghost btn-sm" href="/admin/applications.html?id=' + encodeURIComponent(row.app_id) + '">View application</a>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function filtered(){
+    return _all.filter(r => {
+      if (_typeFilter !== 'all' && r.inspection_type !== _typeFilter) return false;
+      if (_statusFilter !== 'all' && statusOf(r) !== _statusFilter) return false;
+      if (_search) {
+        const a = r.applications || {};
+        const hay = [
+          a.first_name || '', a.last_name || '', a.email || '',
+          a.property_address || '', a.app_id || '', r.app_id, r.id,
+        ].join(' ').toLowerCase();
+        if (!hay.includes(_search.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderSummary(){
+    const total = _all.length;
+    const moveIn = _all.filter(r => r.inspection_type === 'move_in').length;
+    const awaitingLord = _all.filter(r => statusOf(r) === 'awaiting_landlord').length;
+    const complete = _all.filter(r => statusOf(r) === 'complete').length;
+    document.getElementById('summary').innerHTML = ''
+      + tile(total, 'Total reports')
+      + tile(moveIn, 'Move-in reports')
+      + tile(awaitingLord, 'Need your sign-off')
+      + tile(complete, 'Fully signed');
+  }
+  function tile(n, lbl){
+    return '<div class="summary-tile"><div class="num">' + n + '</div><div class="lbl">' + esc(lbl) + '</div></div>';
+  }
+
+  function render(){
+    renderSummary();
+    const list = filtered();
+    const host = document.getElementById('list');
+    document.getElementById('empty').style.display = list.length ? 'none' : '';
+    host.innerHTML = list.map(card).join('');
+    document.body.setAttribute('data-page-sub', _all.length + ' total · showing ' + list.length);
+  }
+
+  async function load(){
+    try {
+      const sb = (window.CP && CP.sb) ? CP.sb() : null;
+      if (!sb) throw new Error('Supabase not initialised');
+      // RLS: admin row in admin_roles required; the policies on lease_inspections
+      // already allow admins to read everything.
+      const { data, error } = await sb.from('lease_inspections')
+        .select(`
+          id, app_id, inspection_type, photos_count, completed_at,
+          tenant_signed_at, landlord_signed_at,
+          created_at, updated_at,
+          applications:app_id ( app_id, first_name, last_name, email, property_address, city, state )
+        `)
+        .order('updated_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      _all = data || [];
+      document.getElementById('loading').style.display = 'none';
+      render();
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loading').innerHTML =
+        '<div style="color:#fca5a5">Failed to load inspections: ' + esc((e && e.message) || 'unknown error') + '</div>';
+    }
+  }
+
+  function wire(){
+    document.querySelectorAll('#chips .chip').forEach(c => c.addEventListener('click', () => {
+      document.querySelectorAll('#chips .chip').forEach(x => x.classList.toggle('active', x === c));
+      _typeFilter = c.dataset.type; render();
+    }));
+    document.querySelectorAll('#chips2 .chip').forEach(c => c.addEventListener('click', () => {
+      document.querySelectorAll('#chips2 .chip').forEach(x => x.classList.toggle('active', x === c));
+      _statusFilter = c.dataset.status; render();
+    }));
+    let t;
+    document.getElementById('q').addEventListener('input', e => {
+      clearTimeout(t);
+      t = setTimeout(() => { _search = (e.target.value || '').trim(); render(); }, 150);
+    });
+  }
+
+  // Wait for cp-api to expose CP global, then load
+  function ready(){
+    if (window.CP && CP.sb) { wire(); load(); return; }
+    setTimeout(ready, 80);
+  }
+  document.addEventListener('DOMContentLoaded', ready);
+})();
