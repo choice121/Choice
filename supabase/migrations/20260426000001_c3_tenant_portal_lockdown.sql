@@ -45,7 +45,15 @@ COMMENT ON FUNCTION public.current_confirmed_email() IS
 -- Now we additionally require the caller to have a confirmed email AND
 -- check against the SECURITY DEFINER helper so an unconfirmed signup
 -- can never reach a victim's row.
-CREATE OR REPLACE FUNCTION public.tenant_portal_state(p_app_id text)
+--
+-- A previous migration created tenant_portal_state(text) with a slightly
+-- different return shape, so CREATE OR REPLACE would fail with
+-- 42P13 ("cannot change return type"). Drop the old definition first;
+-- the only callers (tenant portal page + cp-api.js helper) consume the
+-- returned jsonb generically and don't care about the column layout.
+DROP FUNCTION IF EXISTS public.tenant_portal_state(text);
+
+CREATE FUNCTION public.tenant_portal_state(p_app_id text)
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
