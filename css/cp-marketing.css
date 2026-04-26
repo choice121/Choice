@@ -4263,3 +4263,128 @@ body[data-portal="public"][data-page="home"] .mv2-testimonial__detail {
   color: var(--mv2-muted);
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase 9.6 — City spotlight strip                                   ║
+   ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.6, agent_issues #36) ║
+   ║                                                                      ║
+   ║  Pill row of 8 markets, each → /listings.html?city=<Name>.          ║
+   ║  Mobile: horizontal snap scroll. Desktop: wrap to 2 rows of 4.      ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+body[data-portal="public"][data-page="home"] .mv2-cities {
+  background: #FFFFFF;
+  padding: clamp(48px, 7vw, 80px) 0;
+  position: relative;
+}
+
+body[data-portal="public"][data-page="home"] .mv2-cities__header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--mv2-stack-5);
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__header .mv2-eyebrow {
+  justify-content: center;
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__subtitle {
+  color: var(--mv2-muted);
+  font-size: var(--mv2-fs-body);
+  line-height: var(--mv2-lh-body);
+  margin: var(--mv2-stack-3) auto 0;
+  max-width: 56ch;
+}
+
+/* ── Pill row ──────────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-cities__row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (max-width: 600px) {
+  body[data-portal="public"][data-page="home"] .mv2-cities__row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px var(--mv2-container-x) 18px;
+    margin: 0 calc(-1 * var(--mv2-container-x));
+    gap: 10px;
+    scrollbar-width: none;
+    justify-content: flex-start;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-cities__row::-webkit-scrollbar { display: none; }
+  body[data-portal="public"][data-page="home"] .mv2-cities__item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+}
+
+body[data-portal="public"][data-page="home"] .mv2-cities__item { margin: 0; }
+
+/* ── Single pill ──────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-cities__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 12px 14px;
+  background: var(--mv2-bg-warm);
+  border: 1px solid var(--mv2-hairline);
+  border-radius: var(--mv2-r-pill);
+  color: var(--mv2-ink);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--mv2-dur) var(--mv2-ease),
+              border-color var(--mv2-dur) var(--mv2-ease),
+              color var(--mv2-dur) var(--mv2-ease),
+              transform var(--mv2-dur) var(--mv2-ease),
+              box-shadow var(--mv2-dur) var(--mv2-ease);
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__pill:hover,
+body[data-portal="public"][data-page="home"] .mv2-cities__pill:focus-visible {
+  background: #FFFFFF;
+  border-color: var(--mv2-brand);
+  color: var(--mv2-brand-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 106, 255, 0.10);
+  outline: none;
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__pill-icon {
+  font-size: 14px;
+  color: var(--mv2-gold);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(212, 160, 23, 0.12);
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__pill:hover .mv2-cities__pill-icon,
+body[data-portal="public"][data-page="home"] .mv2-cities__pill:focus-visible .mv2-cities__pill-icon {
+  background: rgba(0, 106, 255, 0.10);
+  color: var(--mv2-brand);
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__pill-name {
+  font-weight: 600;
+}
+body[data-portal="public"][data-page="home"] .mv2-cities__pill-state {
+  color: var(--mv2-muted-2);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-cities__pill { transition: none; }
+  body[data-portal="public"][data-page="home"] .mv2-cities__pill:hover { transform: none; }
+}
+/* ╚══════════════════════════════════════════════════════════════════╝ */
