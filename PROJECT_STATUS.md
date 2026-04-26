@@ -1,6 +1,6 @@
 # Choice Properties — Project Status
 
-**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh kicked off)
+**Last reconciled:** April 26, 2026 (Phase 9 — public marketing refresh COMPLETE — all 14 sub-phases shipped)
 **Purpose:** A single, accurate snapshot of where the codebase stands. Read this first when picking up the project.
 
 This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough to figure out "what's done and what isn't" without spelunking through the README change history.
@@ -13,7 +13,7 @@ This file plus `DESIGN_EXTENSION_PLAN.md` and `KNOWN_ISSUES.md` should be enough
 - **Frontend design system:** unified system rolled out to admin (100%), landlord (100%), tenant (100%), auth pages (100%), public informational pages (100%), legal/policy pages (100%), homepage `index.html` (100% — sub-phase 7.3.1, April 22 2026), browse page `listings.html` (100% — sub-phase 7.3.2, April 22 2026), and property detail `property.html` (100% — sub-phase 7.3.3, April 24 2026). All public pages now load only `cp-design.css` + `cp-marketing.css`. Sub-phase 7.3.4 (legacy CSS deletion sweep) complete — `main.css`, `mobile.css`, `listings.css`, `property.css` removed from repo (~5,634 lines).
 - **Documentation:** reconciled with code. ARCHITECTURE.md, README.md, DESIGN_EXTENSION_PLAN.md, this file, and KNOWN_ISSUES.md are all current.
 - **Production deployment:** Cloudflare Pages auto-deploys from `main`. Supabase project is live. No outstanding bugs in `KNOWN_ISSUES.md`.
-- **In flight (April 26 2026):** **Phase 9 — Public Marketing Refresh** (premium, mobile-first redesign of all public pages). Plan in `DESIGN_EXTENSION_PLAN.md` §9. Per-sub-phase tracking in `public.agent_issues` with `component='phase9'`. Multi-AI handoff contract documented; any future session reads §9 + queries open `phase9` rows to continue.
+- **Recently shipped (April 26 2026):** **Phase 9 — Public Marketing Refresh** ✅ COMPLETE. All 14 sub-phases shipped in a single day, one PR each, with per-sub-phase tracking in `public.agent_issues`. Premium mobile-first editorial direction (warm `#FAF8F5` paper + Fraunces italic display + gold `#d4a017` restraint accent) now live across `index.html`, `listings.html`, `property.html`, `about.html`, `how-to-apply.html`, `how-it-works.html`, `faq.html`, shared `components/nav.html` + `components/footer.html`, and `404.html`. All JS-critical IDs preserved, additive `mv2-*` namespace only, every change reversible by single commit revert.
 
 ---
 
@@ -67,26 +67,26 @@ These are non-negotiable. They are enforced by code, by CI, and by `.agents/inst
 | 7 batch 3.3 | `property.html` migrated to `cp-design.css` + `cp-marketing.css`; nav/footer use slot pattern; gallery mosaic + skeleton shimmer, gallery thumbnail strip, lightbox (header/stage/nav/thumbs/LQIP/spinner/slide animations), detail layout grid, breadcrumb, header/meta-row, share row, sections + amenities grid (with colored category icons), detail tabs, map container + open-in-maps button, sticky sidebar, apply card (dark gradient header), landlord card, contact card + mobile drawer, contact-drawer overlay, and mobile message button all live in `cp-marketing.css` under `body[data-portal="public"][data-page="property"]` scope. ~865 lines added to cp-marketing.css (1,930 → 2,795). property.html: 1,559 → 1,462 lines | ✅ DONE (April 24 2026) — pending owner verification on a Cloudflare branch preview |
 | 8 partial | Delete admin/landlord legacy CSS + JS shims (`admin.css`, `admin-v2.css`, `landlord.css`, `dashboard-system.css`, `js/admin-chrome.js`, `js/admin-shell.js`) | ✅ DONE |
 | 8 final | Delete `main.css`, `mobile.css`, `listings.css`, `property.css` (sub-phase 7.3.4) | ✅ DONE (April 22 2026) |
-| 9 | **Public Marketing Refresh** — premium, mobile-first redesign of all public pages (Editorial / Boutique direction). 14 sub-phases (9.0 → 9.13), one PR / one `agent_issues` row each. Plan: `DESIGN_EXTENSION_PLAN.md` §9. | 🚧 IN PROGRESS (kicked off April 26 2026) |
+| 9 | **Public Marketing Refresh** — premium, mobile-first redesign of all public pages (Editorial / Boutique direction). 14 sub-phases (9.0 → 9.13), one PR / one `agent_issues` row each. Plan: `DESIGN_EXTENSION_PLAN.md` §9. | ✅ DONE (April 26 2026) |
 
 ### Phase 9 sub-phase progress
 
 | Sub-phase | Issue | Status | Commit |
 |---|---|---|---|
-| 9.0 — Add mv2-* token + utility layer (additive)             | #30 | ✅ DONE (Apr 26 2026) | _set on push_ |
-| 9.1 — index.html hero refresh                                | #31 | ⏳ open               | — |
-| 9.2 — Available Now horizontal-snap carousel                 | #32 | ⏳ open               | — |
-| 9.3 — How-It-Works vertical timeline                         | #33 | ⏳ open               | — |
-| 9.4 — NEW Verified, every time trust block                   | #34 | ⏳ open               | — |
-| 9.5 — Testimonials humanization                              | #35 | ⏳ open               | — |
-| 9.6 — NEW City spotlight strip                               | #36 | ⏳ open               | — |
-| 9.7 — Sticky mobile CTA bar + final CTA                      | #37 | ⏳ open               | — |
-| 9.8 — listings.html polish                                   | #38 | ⏳ open               | — |
-| 9.9 — property.html polish                                   | #39 | ⏳ open               | — |
-| 9.10 — Apply v2 layout to 4 secondary pages                  | #40 | ⏳ open               | — |
-| 9.11 — Refresh nav.html + footer.html                        | #41 | ⏳ open               | — |
-| 9.12 — 404.html friendly redesign                            | #42 | ⏳ open               | — |
-| 9.13 — Final QA pass                                         | #43 | ⏳ open               | — |
+| 9.0 — Add mv2-* token + utility layer (additive)             | #30 | ✅ DONE (Apr 26 2026) | `edceb8b` |
+| 9.1 — index.html hero refresh                                | #31 | ✅ DONE (Apr 26 2026) | `2621978` |
+| 9.2 — Available Now horizontal-snap carousel                 | #32 | ✅ DONE (Apr 26 2026) | `9a3606d` |
+| 9.3 — How-It-Works vertical timeline                         | #33 | ✅ DONE (Apr 26 2026) | `4862e1f` |
+| 9.4 — NEW Verified, every time trust block                   | #34 | ✅ DONE (Apr 26 2026) | `a0641b2` |
+| 9.5 — Testimonials humanization                              | #35 | ✅ DONE (Apr 26 2026) | `dcfe446` |
+| 9.6 — NEW City spotlight strip                               | #36 | ✅ DONE (Apr 26 2026) | `70295e6` |
+| 9.7 — Sticky mobile CTA bar + final CTA                      | #37 | ✅ DONE (Apr 26 2026) | `45ba930` |
+| 9.8 — listings.html polish                                   | #38 | ✅ DONE (Apr 26 2026) | `fafa336` |
+| 9.9 — property.html polish                                   | #39 | ✅ DONE (Apr 26 2026) | `a0ff833` |
+| 9.10 — Apply v2 layout to 4 secondary pages                  | #40 | ✅ DONE (Apr 26 2026) | `4b96d1d` |
+| 9.11 — Refresh nav.html + footer.html                        | #41 | ✅ DONE (Apr 26 2026) | `d475bd3` |
+| 9.12 — 404.html friendly redesign                            | #42 | ✅ DONE (Apr 26 2026) | `cf52b6d` |
+| 9.13 — Final QA pass                                         | #43 | ✅ DONE (Apr 26 2026) | `%SHORT%` |
 
 > Each sub-phase is one commit. To update this table after a sub-phase ships, replace the row's status with ✅ DONE and paste the commit short SHA into the Commit column. Future-AI handoff: query `SELECT id, status FROM public.agent_issues WHERE component='phase9' ORDER BY id;` for the source of truth.
 

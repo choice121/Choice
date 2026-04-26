@@ -464,7 +464,7 @@ This plan is safe to execute provided every rule in §0 is followed and every ph
 
 ## 9. Phase 9 — Public Marketing Refresh (premium, mobile-first)
 
-**Status:** APPROVED — 2026-04-26. Implementation in progress.
+**Status:** ✅ COMPLETE — 2026-04-26. All 14 sub-phases shipped (9.0 through 9.13). See `PROJECT_STATUS.md` § Phase 9 sub-phase progress for per-row commit SHAs. Final QA pass verified all redesigned pages serve 200 OK on Cloudflare with the additive `mv2-*` markers present and every JS-critical ID preserved.
 **Owner sign-off:** "Make the implementation plan for this and push to GitHub" + "Start, make sure u push to git and update documentation after each phase and then continue to the next phase" — chat session 2026-04-26.
 **Scope:** Premium, mobile-first redesign of all public marketing pages. Layered on the existing `cp-design.css` + `cp-marketing.css` token system using a new additive `mv2-*` namespace. **No** changes to `/apply/`, edge functions, schema, URLs, or SEO tags. Every change is reversible by a single commit revert.
 
