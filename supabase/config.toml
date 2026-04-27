@@ -103,3 +103,14 @@ verify_jwt = false
 
 [functions.send-inquiry]
 verify_jwt = false
+
+# Phase 14 — public QR-code lease verifier. Token-bound by qr_verify_token
+# in lease_pdf_versions; previously inherited the project default
+# (verify_jwt = true) which made the public verify page rely on the anon
+# JWT being attached on every request. Now explicitly public so /verify-lease
+# works for anyone scanning the QR on a printed lease.
+[functions.verify-lease]
+verify_jwt = false
+
+[functions.record-esign-consent]
+verify_jwt = false
