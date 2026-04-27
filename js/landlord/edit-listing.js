@@ -5,15 +5,9 @@
 
     import { requireAuth, getLandlordProfile, signOut, supabase } from '/js/cp-api.js';
   import { uploadMultipleToImageKit, deleteFromImageKit } from '/js/imagekit.js';
+  import { STATES, whenSidebarReady, installImageFallback } from '/js/landlord/shared.js';
 
-  // CSP-safe image error fallback
-  document.addEventListener('error', function(e) {
-    var t = e.target;
-    if (t.tagName !== 'IMG') return;
-    if (t.src !== location.origin + '/assets/placeholder-property.jpg') {
-      t.src = '/assets/placeholder-property.jpg';
-    }
-  }, true);
+  installImageFallback();
 
   const _params  = new URLSearchParams(window.location.search);
   const _isAdmin = _params.get('admin') === '1';
@@ -88,19 +82,7 @@
   const sel = (opt, val) => opt == val ? 'selected' : '';
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  const STATES = [
-    ['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],
-    ['CO','Colorado'],['CT','Connecticut'],['DE','Delaware'],['FL','Florida'],['GA','Georgia'],
-    ['HI','Hawaii'],['ID','Idaho'],['IL','Illinois'],['IN','Indiana'],['IA','Iowa'],
-    ['KS','Kansas'],['KY','Kentucky'],['LA','Louisiana'],['ME','Maine'],['MD','Maryland'],
-    ['MA','Massachusetts'],['MI','Michigan'],['MN','Minnesota'],['MS','Mississippi'],['MO','Missouri'],
-    ['MT','Montana'],['NE','Nebraska'],['NV','Nevada'],['NH','New Hampshire'],['NJ','New Jersey'],
-    ['NM','New Mexico'],['NY','New York'],['NC','North Carolina'],['ND','North Dakota'],['OH','Ohio'],
-    ['OK','Oklahoma'],['OR','Oregon'],['PA','Pennsylvania'],['RI','Rhode Island'],['SC','South Carolina'],
-    ['SD','South Dakota'],['TN','Tennessee'],['TX','Texas'],['UT','Utah'],['VT','Vermont'],
-    ['VA','Virginia'],['WA','Washington'],['WV','West Virginia'],['WI','Wisconsin'],['WY','Wyoming'],
-    ['DC','Washington D.C.']
-  ];
+  // STATES imported from shared.js
 
   document.getElementById('formCard').innerHTML = `
     <div class="form-section">
@@ -806,8 +788,4 @@
     setTimeout(() => window.location.href = backURL, 1500);
   });
 
-  function whenSidebarReady(cb, tries = 0) {
-    if (document.getElementById('admin-name')) return cb();
-    if (tries > 50) return;
-    setTimeout(() => whenSidebarReady(cb, tries + 1), 40);
-  }
+
