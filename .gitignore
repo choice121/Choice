@@ -25,6 +25,7 @@ package-lock.json.bak
 # ============================================================
 .replit
 replit.nix
+REPLIT.md
 replit.md
 REPLIT_SAFETY.md
 .replit-guard.js

@@ -7,17 +7,18 @@
 //
 // CALLED PUBLICLY (verify_jwt = false). Rate-limited per email.
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { buildCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/send-email.ts";
 import { isDbRateLimited } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Static CORS headers for non-OPTIONS responses — pinned to production origin.
+// OPTIONS preflights use corsResponse(origin) for preview-deploy support.
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  ...buildCorsHeaders(null),
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -72,8 +73,8 @@ Need help? Reply to this email or call 707-706-3137.
 support@choiceproperties.com`;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return corsResponse(req.headers.get("origin"));
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), {
       status: 405, headers: { ...CORS, "Content-Type": "application/json" },

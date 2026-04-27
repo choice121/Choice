@@ -8,6 +8,8 @@ supabase/
 node_modules/
 db/
 scripts/
+docs/
+lease-phases/
 *.md
 *.sql
 package.json

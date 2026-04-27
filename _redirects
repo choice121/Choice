@@ -19,27 +19,42 @@
 /landlord/messages.html     /landlord/inquiries.html                     302
 /landlord/messages          /landlord/inquiries.html                     302
 # --- Block source / config / docs from being served on the CDN -----------
-# (band-aid for the fact that destination_dir = "." ships the entire repo;
-# .cfpagesignore is ignored in that mode. Long-term fix: build into dist/.)
+# (Cloudflare Pages serves static files before _redirects is consulted
+#  only for exact file matches; wildcard rules below override static serving
+#  for anything we explicitly don't want public.)
 /SETUP.sql                  /404.html                                    404
 /MIGRATION_SCHEMA.sql       /404.html                                    404
 /MISSING_SCHEMA.sql         /404.html                                    404
 /GAS-EMAIL-RELAY.gs         /404.html                                    404
 /serve.js                   /404.html                                    404
 /generate-config.js         /404.html                                    404
+/deploy.sh                  /404.html                                    404
+/push.sh                    /404.html                                    404
 /scripts/*                  /404.html                                    404
 /supabase/*                 /404.html                                    404
 /.agents/*                  /404.html                                    404
 /.github/*                  /404.html                                    404
 /.githooks/*                /404.html                                    404
 /db/*                       /404.html                                    404
+/docs/*                     /404.html                                    404
+/lease-phases/*             /404.html                                    404
+/components/*               /404.html                                    404
+# Developer / planning docs — blocked from public access
 /ARCHITECTURE.md            /404.html                                    404
+/CONTRIBUTING.md            /404.html                                    404
+/DEPLOYMENT_GUIDE.md        /404.html                                    404
 /FIXES.md                   /404.html                                    404
-/SECURITY.md                /404.html                                    404
+/IMAGEKIT-SETUP.md          /404.html                                    404
+/IMPLEMENTATION_PLAN.md     /404.html                                    404
+/KNOWN_ISSUES.md            /404.html                                    404
+/MIGRATION.md               /404.html                                    404
 /MIGRATION_PATTERNS.md      /404.html                                    404
 /PROJECT_STATUS.md          /404.html                                    404
-/KNOWN_ISSUES.md            /404.html                                    404
 /README.md                  /404.html                                    404
+/REPLIT.md                  /404.html                                    404
+/SECURITY.md                /404.html                                    404
+/SETUP.md                   /404.html                                    404
+/SUPABASE_CHANGES.md        /404.html                                    404
 
 # Catch-all 404
 /*                          /404.html                                    404
