@@ -95,28 +95,62 @@ endpoint directly when manipulating `agent_issues`.
 - A failed migration leaves itself **unrecorded**, so the next push retries
   it automatically — fix the SQL, push again.
 
-## What was just shipped (commits 55562ba / 443a85f / 6c011d5)
+## What was just shipped — Phase 14 (Apr 27 2026)
 
-Security-focused batch closing items from the latest deep scan:
-- **C-3** — `tenant_portal_state(text)` and the `tenant_portal_select` RLS
-  policy on `applications` now require the caller's email to be confirmed,
-  via the new SECURITY DEFINER helper `public.current_confirmed_email()`.
-  Combined with `mailer_autoconfirm=false`, this closes the account-takeover
-  hole that auto-confirm opened.
-- **M-1** — per-function `verify_jwt` actually enforced.
-- **M-2** — strict CORS allowlist (`_shared/cors.ts`).
-- **M-3** — GAS email relay accepts HMAC-SHA256(`ts.body`); legacy static
-  secret still accepted during rollout.
-- **M-7** — focus trap on mobile drawer + skip-link on every page.
-- **M-9** — password min length 10 + lower/upper/digit required + 1-hour
-  JWTs. (HIBP requires Pro plan, tracked as a follow-up.)
-- **M-10** — `pipeline_*` tables moved out of `public` into a locked-down
-  `pipeline` schema.
-- **H-9** — HEIC photos converted to JPEG client-side via heic2any.
+Production-readiness sweep across edge functions, DB advisor lints, the
+email pipeline, the admin bundle, and repo hygiene.
 
-Deferred (tracked as follow-up issues):
-- M-4 drafts persisting photos
-- M-5 / M-6 inline-JSON / inline-JS extraction (refactors, not security)
-- M-11 obsolete root `.md` doc cleanup (needs README link updates first)
-- HIBP enable-on-Pro
-- send-inquiry / send-message GAS legacy-secret migration
+**Lease subsystem (commit `19245066`)**
+- `verify-lease` and `record-esign-consent` flipped to `verify_jwt=false`
+  so the public QR-scan + e-sign consent flows actually work without
+  attaching the anon JWT on every request.
+- Daily 09:00 UTC GitHub Actions cron `check-renewals.yml` POSTs the
+  edge function with `x-cron-secret: $CRON_SECRET`. New `CRON_SECRET`
+  (256-bit hex) provisioned on both Supabase secrets and GH Actions.
+- New SQL function `public.purge_orphaned_lease_pdfs(p_dry_run boolean)`
+  — locked to `service_role`, lists/deletes lease-pdfs storage objects
+  with no matching `lease_pdf_versions` row.
+
+**Supabase advisor remediations (commits `c094bf58` + `d3b323cf`)**
+- 4 SECURITY DEFINER views (`lease_money_summary`, `landlords_public`,
+  `lease_renewals_due`, `lease_signing_tokens_admin`) flipped to
+  `security_invoker = true` so they respect RLS instead of running as
+  postgres.
+- 11 trigger / utility functions had `search_path = public, pg_temp`
+  pinned to prevent search-path-shadowing attacks.
+- 5 RLS-enabled-no-policy tables (`_migration_history`,
+  `draft_applications`, `pipeline.*`) got explicit deny-all policies.
+- Anon `EXECUTE` revoked from trigger functions and admin-only RPCs
+  (`admin_list_landlords`, `dashboard_pulse`, `publish_lease_template`,
+  `snapshot_lease_template_for_app`, `generate_lease_tokens`,
+  `record_lease_pdf_*`, `purge_old_logs`, `validate_lease_financials`,
+  all `*_touch_updated_at`/`*_set_updated_at`).
+- Auth `mailer_otp_exp` lowered from 24 h → 1 h via the auth admin API.
+- Result: advisor lints 79 → 45.
+
+**Email pipeline (commit `f39fbec9`)**
+- Resend branch removed from `_shared/send-email.ts` (project never had
+  `RESEND_API_KEY` set — was dead code).
+- Provider order is now: 1. GAS relay (HMAC-signed), 2. Gmail SMTP
+  (transitional fallback). Dead `RESEND_FROM` Supabase secret dropped.
+- **Open follow-up**: `GAS_EMAIL_URL` is still missing on Supabase
+  (only `GAS_RELAY_SECRET` is set). Until it's added, every email
+  silently falls through to Gmail SMTP. Once provisioned, the Gmail
+  block + `GMAIL_USER` / `GMAIL_APP_PASSWORD` secrets can be removed.
+
+**Admin bundle (commit `a1a72770`)**
+- 113 KB vendored `js/supabase.min.js` deleted; 17 admin pages now
+  load `@supabase/supabase-js@2.49.1` from jsDelivr with an SHA-384 SRI
+  hash so any byte-level CDN compromise is rejected by the browser.
+
+**Repo hygiene (commit `4dbf009c`)**
+- 11 stray root-level `MIGRATION_*.sql` / `SETUP.sql` / `MISSING_SCHEMA.sql`
+  files moved into `docs/sql-archive/` with a short README. None of them
+  are run from the build path; they're pre-formal-migrations history.
+
+**Open items the user owns**
+- Add `GAS_EMAIL_URL` to Supabase secrets (copy from GH `GAS_URL`).
+- HIBP password protection — needs Pro plan.
+- Custom domain, Turnstile, branch protection, DB CIDR allowlist.
+- Token rotation: GH / Supabase / Cloudflare tokens used by the agent
+  during this sweep should be rotated.

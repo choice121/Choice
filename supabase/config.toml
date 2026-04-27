@@ -61,8 +61,13 @@ verify_jwt = true
 [functions.download-lease]
 verify_jwt = true
 
+# check-renewals does its own auth: it accepts EITHER a valid admin JWT
+# OR a matching x-cron-secret header (CRON_SECRET). The header path is
+# how the daily GitHub Actions cron invokes it without an admin session.
+# verify_jwt MUST be false here so Supabase's gateway lets the cron POST
+# through to the internal validator.
 [functions.check-renewals]
-verify_jwt = true
+verify_jwt = false
 
 [functions.imagekit-upload]
 verify_jwt = true
