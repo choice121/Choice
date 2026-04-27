@@ -971,12 +971,23 @@ async function updateNav() {
         payment_date: paymentStatus === 'paid' ? now : null,
         updated_at: now,
       };
-      if (amount  != null) patch.payment_amount_recorded = amount;
-      if (method)          patch.payment_method_recorded  = method;
-      if (notes)           patch.payment_notes            = notes;
+      // Manual recording IS the confirmation in our workflow — keep both
+      // column families (_recorded and _collected/_confirmed) in sync so
+      // tenant_portal_state RPC and the tenant portal display the right
+      // values. (Audit fix M-1, 2026-04-27.)
+      if (amount  != null) {
+        patch.payment_amount_recorded  = amount;
+        patch.payment_amount_collected = amount;
+      }
+      if (method) {
+        patch.payment_method_recorded  = method;
+        patch.payment_method_confirmed = method;
+      }
+      if (notes) patch.payment_notes = notes;
+      if (paymentStatus === 'paid') patch.payment_confirmed_at = now;
       const { data, error } = await sb().from('applications')
         .update(patch).eq('id', id)
-        .select('id,app_id,payment_status,payment_date,payment_amount_recorded,payment_method_recorded,payment_notes').single();
+        .select('id,app_id,payment_status,payment_date,payment_confirmed_at,payment_amount_recorded,payment_amount_collected,payment_method_recorded,payment_method_confirmed,payment_notes').single();
       const result = _ok(data, error);
       if (result.ok && paymentStatus === 'paid' && opts.sendEmail !== false) {
         const email = await Applications._sendNotification(data, 'payment_confirmed', {
