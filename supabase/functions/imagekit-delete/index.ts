@@ -20,6 +20,13 @@
 import { corsResponse } from '../_shared/cors.ts';
 import { requireAuth }  from '../_shared/auth.ts';
 import { jsonResponse } from '../_shared/utils.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
+
+// Per-user delete cap: 100 / 10 min. Deletes are cheap on our side but
+// each one hits the CDN; cap protects against runaway scripts and
+// makes any compromised-account misuse obvious in the rate-limit table.
+const DELETE_MAX_PER_WINDOW = 100;
+const DELETE_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse();
@@ -29,6 +36,11 @@ Deno.serve(async (req) => {
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
   // ── End auth check ────────────────────────────────────────
+
+  // ── Per-user rate limit (DB-backed, survives cold starts) ──
+  if (await isDbRateLimited('user:' + user.id, 'imagekit-delete', DELETE_MAX_PER_WINDOW, DELETE_WINDOW_MS)) {
+    return jsonResponse({ success: false, error: 'Too many delete requests. Please wait a few minutes and try again.' }, 429);
+  }
 
   try {
     const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY');

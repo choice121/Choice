@@ -28,6 +28,13 @@
 import { corsResponse } from '../_shared/cors.ts';
 import { requireAuth } from '../_shared/auth.ts';
 import { jsonResponse } from '../_shared/utils.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
+
+// Per-user upload cap: 60 / 10 min. Allows landlord bulk-listing flows
+// (typical new property = 20-30 photos) twice per window, while capping
+// abuse that would burn ImageKit bandwidth + storage budget.
+const UPLOAD_MAX_PER_WINDOW = 60;
+const UPLOAD_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse();
@@ -35,8 +42,13 @@ Deno.serve(async (req) => {
   // ── Auth check — reject unauthenticated callers ───────────
   const auth = await requireAuth(req);
   if (!auth.ok) return auth.response;
-  const { supabase } = auth;
+  const { user, supabase } = auth;
   // ── End auth check ────────────────────────────────────────
+
+  // ── Per-user rate limit (DB-backed, survives cold starts) ──
+  if (await isDbRateLimited('user:' + user.id, 'imagekit-upload', UPLOAD_MAX_PER_WINDOW, UPLOAD_WINDOW_MS)) {
+    return jsonResponse({ success: false, error: 'Too many uploads. Please wait a few minutes and try again.' }, 429);
+  }
 
   try {
     const IMAGEKIT_PRIVATE_KEY  = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
