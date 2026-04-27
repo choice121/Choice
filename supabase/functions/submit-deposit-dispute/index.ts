@@ -20,16 +20,17 @@
 // Body: { accounting_id: uuid, dispute_text: string }
 // ─────────────────────────────────────────────────────────────────────
 
-import { serve }        from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import { buildCorsHeaders, corsResponse } from '../_shared/cors.ts';
 
 const SB_URL  = Deno.env.get('SUPABASE_URL')              || '';
 const SB_SRV  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const SB_ANON = Deno.env.get('SUPABASE_ANON_KEY')         || '';
 
+// Static CORS headers for non-OPTIONS responses — pinned to production.
+// The OPTIONS preflight uses buildCorsHeaders(origin) for preview-deploy support.
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  ...buildCorsHeaders(null),
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -63,8 +64,8 @@ async function getAuthCtx(req: Request): Promise<{ ok: boolean; ctx?: AuthCtx; e
   return { ok: true, ctx: { user_id: userData.user.id, email: userData.user.email || '' } };
 }
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return corsResponse(req.headers.get('origin'));
   if (req.method !== 'POST')    return jsonErr('METHOD_NOT_ALLOWED', 'POST required', 405);
 
   // 1. Auth

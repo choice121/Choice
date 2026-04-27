@@ -81,8 +81,12 @@ verify_jwt = true
 [functions.send-message]
 verify_jwt = true
 
+# save-draft is called by anonymous applicants filling out /apply/ —
+# they have no Supabase session. Auth is enforced inside the function
+# via a high-entropy random token (TOKEN_RE) that the browser generates
+# locally and persists in sessionStorage.
 [functions.save-draft]
-verify_jwt = true
+verify_jwt = false
 
 [functions.request-upload-url]
 verify_jwt = true

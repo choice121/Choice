@@ -32,7 +32,7 @@ const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in ms
 // ── End C-03 ──────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse()
+  if (req.method === 'OPTIONS') return corsResponse(req.headers.get('origin'))
 
   // ── Parse body early — needed to check type for rate-limit exemptions ──
   let body: any = {}
@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
     return jsonResponse(
       { success: false, error: 'Too many requests. Please wait a few minutes before trying again.' },
       429,
-      { 'Retry-After': '300' }
+      { 'Retry-After': '300' },
+      req
     )
   }
   // ── End rate-limit check ──────────────────────────────────────────────
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
       !!Deno.env.get('GAS_EMAIL_URL') && !!Deno.env.get('GAS_RELAY_SECRET')
     if (!gasConfigured) {
       console.warn('GAS_EMAIL_URL or GAS_RELAY_SECRET not configured — email skipped')
-      return jsonResponse({ success: true, warning: 'Email relay not configured' })
+      return jsonResponse({ success: true, warning: 'Email relay not configured' }, 200, {}, req)
     }
 
     // Helper: fire-and-forget GAS send + email_logs insert.
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return jsonResponse({ success: true })
+      return jsonResponse({ success: true }, 200, {}, req)
     }
 
     // ── App-ID Recovery by Email (server-side lookup) ──────
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return jsonResponse({ success: true })
+      return jsonResponse({ success: true }, 200, {}, req)
     }
 
     // ── App-ID Recovery ────────────────────────────────────
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
         app_id,
       })
 
-      return jsonResponse({ success: true })
+      return jsonResponse({ success: true }, 200, {}, req)
     }
 
     // ── Inquiry Emails (tenant confirmation + landlord alert) ──
@@ -230,13 +231,13 @@ Deno.serve(async (req) => {
     // let callers control id, created_at, read, and any other column on the
     // inquiries table. The server now builds the row from validated fields.
     if (!tenant_name || typeof tenant_name !== 'string' || !tenant_name.trim()) {
-      return jsonResponse({ success: false, error: 'tenant_name required' }, 400)
+      return jsonResponse({ success: false, error: 'tenant_name required' }, 400, {}, req)
     }
     if (!tenant_email || typeof tenant_email !== 'string' || !tenant_email.trim()) {
-      return jsonResponse({ success: false, error: 'tenant_email required' }, 400)
+      return jsonResponse({ success: false, error: 'tenant_email required' }, 400, {}, req)
     }
     if (!message || typeof message !== 'string' || !message.trim()) {
-      return jsonResponse({ success: false, error: 'message required' }, 400)
+      return jsonResponse({ success: false, error: 'message required' }, 400, {}, req)
     }
 
     // H-05 FIX: Block messages containing URLs to prevent phishing links being
@@ -280,7 +281,7 @@ Deno.serve(async (req) => {
     const { error: insertErr } = await supabase.from('inquiries').insert(inquiryRow)
     if (insertErr) {
       console.error('[send-inquiry] inquiries insert failed:', insertErr)
-      return jsonResponse({ success: false, error: 'Failed to save inquiry' }, 500)
+      return jsonResponse({ success: false, error: 'Failed to save inquiry' }, 500, {}, req)
     }
 
     // Resolve property title up front so both emails show a human-readable
@@ -336,10 +337,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    return jsonResponse({ success: true })
+    return jsonResponse({ success: true }, 200, {}, req)
 
   } catch (err: any) {
     console.error('[send-inquiry] handler error:', err)
-    return jsonResponse({ success: false, error: 'Failed to process inquiry' }, 500)
+    return jsonResponse({ success: false, error: 'Failed to process inquiry' }, 500, {}, req)
   }
 })

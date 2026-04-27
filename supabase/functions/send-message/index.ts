@@ -21,7 +21,7 @@ const MSG_MAX_PER_WINDOW = 30;
 const MSG_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse()
+  if (req.method === 'OPTIONS') return corsResponse(req.headers.get('origin'))
 
   // ── Authenticate caller ───────────────────────────────────
   const auth = await requireAuth(req)
@@ -33,12 +33,12 @@ Deno.serve(async (req) => {
   const isAdmin    = !!adminRow
   const isLandlord = !!landlordRow
 
-  if (!isAdmin && !isLandlord) return jsonResponse({ success: false, error: 'Forbidden' }, 403)
+  if (!isAdmin && !isLandlord) return jsonResponse({ success: false, error: 'Forbidden' }, 403, {}, req)
   // ── End auth check ────────────────────────────────────────
 
   // ── Per-user rate limit (DB-backed, survives cold starts) ──
   if (await isDbRateLimited('user:' + user.id, 'send-message', MSG_MAX_PER_WINDOW, MSG_WINDOW_MS)) {
-    return jsonResponse({ success: false, error: 'Too many messages. Please wait a few minutes and try again.' }, 429)
+    return jsonResponse({ success: false, error: 'Too many messages. Please wait a few minutes and try again.' }, 429, {}, req)
   }
 
   try {
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     // 4,000 chars ≈ ~600 words — more than enough for any landlord message.
     const MAX_MESSAGE_LENGTH = 4000
     if (typeof message !== 'string' || message.trim().length === 0) {
-      return jsonResponse({ success: false, error: 'message must be a non-empty string' }, 400)
+      return jsonResponse({ success: false, error: 'message must be a non-empty string' }, 400, {}, req)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
       return jsonResponse(
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         .select('landlord_id, property_id')
         .eq('app_id', app_id)
         .maybeSingle()
-      if (!appCheck) return jsonResponse({ success: false, error: 'Application not found' }, 404)
+      if (!appCheck) return jsonResponse({ success: false, error: 'Application not found' }, 404, {}, req)
       let hasAccess = appCheck.landlord_id === landlordRow!.id
       if (!hasAccess && appCheck.property_id) {
         const { data: propCheck } = await supabase
@@ -78,15 +78,15 @@ Deno.serve(async (req) => {
           .maybeSingle()
         hasAccess = propCheck?.landlord_id === landlordRow!.id
       }
-      if (!hasAccess) return jsonResponse({ success: false, error: 'Forbidden — not your property' }, 403)
+      if (!hasAccess) return jsonResponse({ success: false, error: 'Forbidden — not your property' }, 403, {}, req)
     }
 
     const { data: app, error: fetchErr } = await supabase.from('applications').select('email,first_name,preferred_language,landlord_id').eq('app_id', app_id).maybeSingle()
     if (fetchErr) {
       console.error('[send-message] applications fetch failed:', fetchErr)
-      return jsonResponse({ success: false, error: 'Failed to load application' }, 500)
+      return jsonResponse({ success: false, error: 'Failed to load application' }, 500, {}, req)
     }
-    if (!app) return jsonResponse({ success: false, error: 'Application not found' }, 404)
+    if (!app) return jsonResponse({ success: false, error: 'Application not found' }, 404, {}, req)
 
     // ── SECURITY: derive sender + sender_name from auth, not body ─
     // Previously both came straight from the request body, so a landlord
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     const gasConfigured = !!Deno.env.get('GAS_EMAIL_URL') && !!Deno.env.get('GAS_RELAY_SECRET')
     if (!gasConfigured) {
       console.warn('GAS_EMAIL_URL or GAS_RELAY_SECRET not configured — email notification skipped')
-      return jsonResponse({ success: true, warning: 'Email relay not configured' })
+      return jsonResponse({ success: true, warning: 'Email relay not configured' }, 200, {}, req)
     }
 
     // Fire-and-forget GAS send + email_logs insert helper.
@@ -191,9 +191,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return jsonResponse({ success: true })
+    return jsonResponse({ success: true }, 200, {}, req)
   } catch (err) {
     console.error('[send-message] handler error:', err)
-    return jsonResponse({ success: false, error: 'Failed to send message' }, 500)
+    return jsonResponse({ success: false, error: 'Failed to send message' }, 500, {}, req)
   }
 })

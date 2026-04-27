@@ -29,7 +29,7 @@ const DELETE_MAX_PER_WINDOW = 100;
 const DELETE_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse();
+  if (req.method === 'OPTIONS') return corsResponse(req.headers.get('origin'));
 
   // ── Auth check ────────────────────────────────────────────
   const auth = await requireAuth(req);
@@ -39,18 +39,18 @@ Deno.serve(async (req) => {
 
   // ── Per-user rate limit (DB-backed, survives cold starts) ──
   if (await isDbRateLimited('user:' + user.id, 'imagekit-delete', DELETE_MAX_PER_WINDOW, DELETE_WINDOW_MS)) {
-    return jsonResponse({ success: false, error: 'Too many delete requests. Please wait a few minutes and try again.' }, 429);
+    return jsonResponse({ success: false, error: 'Too many delete requests. Please wait a few minutes and try again.' }, 429, {}, req);
   }
 
   try {
     const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
     if (!IMAGEKIT_PRIVATE_KEY) {
-      return jsonResponse({ success: false, error: 'ImageKit not configured' }, 500);
+      return jsonResponse({ success: false, error: 'ImageKit not configured' }, 500, {}, req);
     }
 
     const { fileId } = await req.json();
     if (!fileId || typeof fileId !== 'string') {
-      return jsonResponse({ success: false, error: 'fileId is required' }, 400);
+      return jsonResponse({ success: false, error: 'fileId is required' }, 400, {}, req);
     }
 
     // ── Ownership + DB row removal via RPC (Phase 3b) ─────────
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (ownerErr || !owned) {
-          return jsonResponse({ success: false, error: 'Forbidden' }, 403);
+          return jsonResponse({ success: false, error: 'Forbidden' }, 403, {}, req);
         }
       }
       isOwner = true;
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
           .filter('photo_file_ids', 'cs', JSON.stringify([fileId]))
           .maybeSingle();
         if (!legacyOwned) {
-          return jsonResponse({ success: false, error: 'Forbidden' }, 403);
+          return jsonResponse({ success: false, error: 'Forbidden' }, 403, {}, req);
         }
       }
     }
@@ -123,12 +123,12 @@ Deno.serve(async (req) => {
       // (raw text could leak account internals).
       const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
       console.error('[imagekit-delete] ImageKit error:', errText);
-      return jsonResponse({ success: false, error: 'Image delete failed. Please try again.' }, 502);
+      return jsonResponse({ success: false, error: 'Image delete failed. Please try again.' }, 502, {}, req);
     }
 
-    return jsonResponse({ success: true });
+    return jsonResponse({ success: true }, 200, {}, req);
   } catch (err: any) {
     console.error('[imagekit-delete] handler error:', err);
-    return jsonResponse({ success: false, error: 'Failed to delete image' }, 500);
+    return jsonResponse({ success: false, error: 'Failed to delete image' }, 500, {}, req);
   }
 });

@@ -37,7 +37,7 @@ const UPLOAD_MAX_PER_WINDOW = 60;
 const UPLOAD_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse();
+  if (req.method === 'OPTIONS') return corsResponse(req.headers.get('origin'));
 
   // ── Auth check — reject unauthenticated callers ───────────
   const auth = await requireAuth(req);
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
   // ── Per-user rate limit (DB-backed, survives cold starts) ──
   if (await isDbRateLimited('user:' + user.id, 'imagekit-upload', UPLOAD_MAX_PER_WINDOW, UPLOAD_WINDOW_MS)) {
-    return jsonResponse({ success: false, error: 'Too many uploads. Please wait a few minutes and try again.' }, 429);
+    return jsonResponse({ success: false, error: 'Too many uploads. Please wait a few minutes and try again.' }, 429, {}, req);
   }
 
   try {
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const IMAGEKIT_URL_ENDPOINT = Deno.env.get('IMAGEKIT_URL_ENDPOINT');
 
     if (!IMAGEKIT_PRIVATE_KEY || !IMAGEKIT_URL_ENDPOINT) {
-      return jsonResponse({ success: false, error: 'ImageKit not configured' }, 500);
+      return jsonResponse({ success: false, error: 'ImageKit not configured' }, 500, {}, req);
     }
 
     const { fileData, fileName, folder, propertyId, altText, caption } =
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       };
 
     if (!fileData || !fileName) {
-      return jsonResponse({ success: false, error: 'fileData and fileName required' }, 400);
+      return jsonResponse({ success: false, error: 'fileData and fileName required' }, 400, {}, req);
     }
 
     // ── I-055: Input validation ───────────────────────────────
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return jsonResponse(
         { success: false, error: `File type .${ext} not allowed. Accepted: jpg, jpeg, png, webp` },
-        400
+        400, {}, req
       );
     }
 
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     if (payloadSize > MAX_BASE64_BYTES) {
       return jsonResponse(
         { success: false, error: 'File too large. Maximum upload size is 15 MB.' },
-        413
+        413, {}, req
       );
     }
     // ── End I-055 validation ──────────────────────────────────
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       // message to client (raw text could leak account internals or URLs).
       const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
       console.error('[imagekit-upload] ImageKit error:', errText);
-      return jsonResponse({ success: false, error: 'Image upload failed. Please try again.' }, 502);
+      return jsonResponse({ success: false, error: 'Image upload failed. Please try again.' }, 502, {}, req);
     }
 
     const ikData = await ikRes.json();
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         console.error('[imagekit-upload] add_property_photo failed:', rpcErr);
         return jsonResponse(
           { success: false, error: 'Photo metadata save failed' },
-          500
+          500, {}, req
         );
       }
 
@@ -171,9 +171,9 @@ Deno.serve(async (req) => {
     }
     // ── End Phase 3b ──────────────────────────────────────────
 
-    return jsonResponse({ success: true, url, fileId, photoId });
+    return jsonResponse({ success: true, url, fileId, photoId }, 200, {}, req);
   } catch (err: any) {
     console.error('[imagekit-upload] Exception:', { message: err.message, stack: err.stack });
-    return jsonResponse({ success: false, error: 'Image upload failed' }, 500);
+    return jsonResponse({ success: false, error: 'Image upload failed' }, 500, {}, req);
   }
 });
