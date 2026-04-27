@@ -6123,3 +6123,101 @@ body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
   }
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L8 — Skeleton-screen primitives (BATCH_08)                   ║
+   ║                                                                     ║
+   ║  Two reusable affordances that replace mechanical spinners site-    ║
+   ║  wide with a calmer, type-led shimmer language:                     ║
+   ║    • .cp-shimmer-bar  — slim animated horizontal bar (used in       ║
+   ║      pull-to-refresh + the "still loading" featured-grid fallback). ║
+   ║    • .cp-loading-still — the typographic "Still gathering…" row     ║
+   ║      that appears under the featured grid when the fetch is slow.   ║
+   ║                                                                     ║
+   ║  Honors prefers-reduced-motion (no shimmer translation).            ║
+   ║  Dark-mode variants inherit from L7 token redefinition.             ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* Shimmer bar primitive — 3px tall, 240px wide track, 60px traveler */
+.cp-shimmer-bar {
+  display: inline-block;
+  position: relative;
+  width: 240px;
+  max-width: 60vw;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(10, 23, 41, 0.06);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.cp-shimmer-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--mv2-accent, #d4a017) 50%,
+    transparent 100%
+  );
+  opacity: 0.85;
+  animation: cp-shimmer-bar-travel 1.6s cubic-bezier(.4,0,.2,1) infinite;
+  will-change: transform;
+}
+@keyframes cp-shimmer-bar-travel {
+  0%   { transform: translateX(-60px); }
+  100% { transform: translateX(240px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-shimmer-bar::after {
+    animation: none;
+    transform: translateX(90px);  /* park it center-ish */
+    opacity: 0.55;
+  }
+}
+
+/* Pull-to-refresh tweaks — make the bar inline with the label */
+.ptr {
+  gap: 10px;
+}
+.ptr .cp-shimmer-bar {
+  width: 90px;
+  max-width: 90px;
+}
+
+/* "Still gathering listings…" row under the featured grid */
+.cp-loading-still {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 24px 8px;
+  color: var(--mv2-muted, #6b7280);
+  font-size: 0.92rem;
+  font-family: var(--mv2-font-body, inherit);
+  letter-spacing: 0.01em;
+  animation: cp-loading-still-fade 240ms ease-out both;
+}
+.cp-loading-still__text {
+  opacity: 0.92;
+}
+@keyframes cp-loading-still-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-loading-still { animation: none; }
+}
+
+/* Dark-mode override for the shimmer track (the traveler picks up
+   --mv2-accent which is already lightened in L7). */
+@media (prefers-color-scheme: dark) {
+  body[data-portal="public"][data-page="home"] .cp-shimmer-bar {
+    background: rgba(245, 241, 232, 0.10);
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */

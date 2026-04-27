@@ -122,7 +122,8 @@
   function initPullToRefresh(){
     const ptr = document.createElement('div');
     ptr.className = 'ptr';
-    ptr.innerHTML = '<div class="spinner"></div><span>Refreshing…</span>';
+    // BATCH_08: shimmer bar replaces the spinner — same affordance, less mechanical.
+    ptr.innerHTML = '<span class="cp-shimmer-bar" aria-hidden="true"></span><span>Refreshing…</span>';
     document.body.appendChild(ptr);
 
     let startY = 0, pulling = false;
