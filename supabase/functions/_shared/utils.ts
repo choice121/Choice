@@ -3,16 +3,6 @@
 
 import { cors } from './cors.ts';
 
-// Escape HTML special characters to prevent XSS in generated documents.
-export function escHtml(s: any): string {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 // Extract the real client IP from Supabase Edge Function request headers.
 export function getClientIp(req: Request): string {
   return (
