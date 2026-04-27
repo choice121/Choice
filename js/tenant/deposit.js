@@ -336,7 +336,7 @@
         body:    JSON.stringify({ accounting_id: accId, dispute_text: text }),
       });
       const body = await resp.json().catch(() => ({}));
-      if (!resp.ok || !body.success) throw new Error(body.message || ('HTTP ' + resp.status));
+      if (!resp.ok || !body.success) throw new Error(body.message || body.error || ('HTTP ' + resp.status));
 
       toast(body.was_first_dispute ? 'Dispute submitted — landlord notified' : 'Dispute updated', 'ok');
       _state.accounting.tenant_disputed_at  = body.tenant_disputed_at;
