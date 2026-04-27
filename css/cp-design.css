@@ -44,8 +44,10 @@
   --brand:      #006aff;
   --brand-600:  #0058d6;
   --brand-glow: rgba(0,106,255,.18);
-  --gold:       #c9a55c;
-  --gold-glow:  rgba(201,165,92,.18);
+  /* Gold — single brand value across light/dark surfaces. Mirrored as
+     --m-gold in cp-marketing.css; keep the two in sync. */
+  --gold:       #d4a017;
+  --gold-glow:  rgba(212,160,23,.20);
 
   /* Semantic */
   --success: #22c55e; --success-bg: rgba(34,197,94,.15);  --success-strong: #16a34a;

@@ -17,6 +17,7 @@
   --m-brand: #006aff;
   --m-brand-dark: #0054cc;
   --m-brand-pale: #eaf2ff;
+  /* Gold — single brand value. Mirrored as --gold in cp-design.css; keep in sync. */
   --m-gold: #d4a017;
   --m-gold-pale: #faf3dd;
   --m-ink: #0a1729;

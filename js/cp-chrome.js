@@ -64,6 +64,9 @@
   // Per-portal navigation. All hrefs are relative — they resolve against
   // the current page's directory (/admin/, /landlord/, or /tenant/).
   // ─────────────────────────────────────────────────────────────────────
+  // ⚠️  Adding a new admin/landlord/tenant page? You MUST register it in BOTH
+  //     `nav` (desktop sidebar) AND `more` (mobile overflow drawer) below,
+  //     otherwise the page will exist but have no link to reach it.
   const PORTAL = {
     admin: {
       brand: { logo: 'CP', name: 'Choice Properties', sub: 'Admin' },
@@ -85,10 +88,14 @@
           { href: 'messages.html',        icon: 'i-message',  label: 'Messages' },
           { href: 'email-logs.html',      icon: 'i-mail',     label: 'Email Logs' }
         ]},
+        { sect: 'Operations',     items: [
+          { href: 'inspections.html',     icon: 'i-door',     label: 'Inspections' }
+        ]},
         { sect: 'Admin',          items: [
           { href: 'audit-log.html',         icon: 'i-history',  label: 'Audit Log' },
           { href: 'watermark-review.html',  icon: 'i-image',    label: 'Watermark Review' },
-          { href: 'deposit-accounting.html',icon: 'i-mail',     label: 'Deposit Accounting' }
+          { href: 'deposit-accounting.html',icon: 'i-mail',     label: 'Deposit Accounting' },
+          { href: 'state-law.html',         icon: 'i-history',  label: 'State Law Reference' }
         ]}
       ],
       tabs: [
@@ -99,13 +106,15 @@
       ],
       more: [
         { href: 'move-ins.html',          icon: 'i-door',    label: 'Move-ins' },
+        { href: 'inspections.html',       icon: 'i-door',    label: 'Inspections' },
         { href: 'listings.html',          icon: 'i-list',    label: 'Listings' },
         { href: 'landlords.html',         icon: 'i-user',    label: 'Landlords' },
         { href: 'messages.html',          icon: 'i-message', label: 'Messages' },
         { href: 'email-logs.html',        icon: 'i-mail',    label: 'Email logs' },
         { href: 'audit-log.html',         icon: 'i-history', label: 'Audit log' },
         { href: 'watermark-review.html',  icon: 'i-image',   label: 'Watermark review' },
-        { href: 'deposit-accounting.html',icon: 'i-mail',    label: 'Deposit accounting' }
+        { href: 'deposit-accounting.html',icon: 'i-mail',    label: 'Deposit accounting' },
+        { href: 'state-law.html',         icon: 'i-history', label: 'State law reference' }
       ]
     },
 

@@ -56,7 +56,7 @@
       'linear-gradient(135deg,#f59e0b,#ef4444)',
       'linear-gradient(135deg,#a855f7,#ec4899)',
       'linear-gradient(135deg,#06b6d4,#3b82f6)',
-      'linear-gradient(135deg,#c9a55c,#a855f7)'
+      'linear-gradient(135deg,#d4a017,#a855f7)'
     ];
     let h = 0;
     for(const c of String(seed||'')) h = (h*31 + c.charCodeAt(0)) >>> 0;
