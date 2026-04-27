@@ -388,7 +388,8 @@ function renderProperty(p) {
   // Header
   document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('detailTitle').textContent = p.title;
-  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
+  const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
+  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
 
   // Listed-by attribution
   if (p.landlords) {
@@ -403,7 +404,12 @@ function renderProperty(p) {
   // Meta row
   const metas = [];
   if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
-  if (p.bathrooms)        metas.push({ label:'Bathrooms', value: p.bathrooms, icon:'fa-bath' });
+  if (p.bathrooms) {
+    const bathVal = p.half_bathrooms
+      ? `${p.bathrooms} + ½`
+      : p.bathrooms;
+    metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
+  }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: capitalize(p.property_type), icon:'fa-home' });
   if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
@@ -458,6 +464,23 @@ function renderProperty(p) {
     document.getElementById('appliancesGrid').innerHTML = p.appliances.map(a =>
       `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(a)}</div>`).join('');
   }
+  if (p.flooring?.length) {
+    hasAmenities = true;
+    const flooringSec = document.getElementById('appliancesSection');
+    let flooringDiv = document.getElementById('flooringSection');
+    if (!flooringDiv) {
+      flooringDiv = document.createElement('div');
+      flooringDiv.id = 'flooringSection';
+      flooringDiv.style.marginTop = '20px';
+      flooringDiv.innerHTML = `
+        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
+        <div class="amenities-grid" id="flooringGrid"></div>`;
+      flooringSec.insertAdjacentElement('afterend', flooringDiv);
+    }
+    flooringDiv.style.display = '';
+    document.getElementById('flooringGrid').innerHTML = p.flooring.map(f =>
+      `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(f)}</div>`).join('');
+  }
 
   const utilRows = [];
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included.map(u =>
@@ -466,7 +489,6 @@ function renderProperty(p) {
     if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
     if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${esc(p.heating_type)}</div>`);
     if (p.cooling_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-snowflake"></i>Cooling: ${esc(p.cooling_type)}</div>`);
-    if (p.ev_charging && p.ev_charging !== 'none') utilRows.push(`<div class="amenity-item"><i class="fas fa-charging-station icon-green"></i>EV Charging: ${esc(p.ev_charging)}</div>`);
     if (p.garage_spaces) utilRows.push(`<div class="amenity-item"><i class="fas fa-car-side"></i>Parking Spaces: ${p.garage_spaces}</div>`);
     if (p.parking_fee) utilRows.push(`<div class="amenity-item"><i class="fas fa-dollar-sign icon-amber"></i>Parking Fee: ${Number(p.parking_fee).toLocaleString()}/mo</div>`);
   if (utilRows.length) {
@@ -476,13 +498,16 @@ function renderProperty(p) {
 
   const leaseItems = [];
   if (p.lease_terms?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${p.lease_terms.map(esc).join(', ')}</div>`);
-  if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: ${p.security_deposit.toLocaleString()}</div>`);
-    if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: ${Number(p.last_months_rent).toLocaleString()}</div>`);
-    if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: ${Number(p.admin_fee).toLocaleString()}</div>`);
-    if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-    if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: ${Number(p.pet_deposit).toLocaleString()}</div>`);
-    if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
-    if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
+  if (p.minimum_lease_months) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-check"></i>Min. Lease: ${p.minimum_lease_months} month${p.minimum_lease_months !== 1 ? 's' : ''}</div>`);
+  if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: $${Number(p.security_deposit).toLocaleString()}</div>`);
+  if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
+  if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
+  if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
+  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
+  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
+  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
+  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
+  if (p.smoking_allowed != null) leaseItems.push(`<div class="amenity-item"><i class="fas ${p.smoking_allowed ? 'fa-smoking icon-amber' : 'fa-ban icon-rose'}"></i>${p.smoking_allowed ? 'Smoking Permitted' : 'No Smoking'}</div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (leaseItems.length) {
     hasLease = true;
@@ -538,8 +563,8 @@ function renderProperty(p) {
   document.getElementById('sidebarPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:${availNow?'#10b981':'#d4a017'}"></i> ${availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date)}`;
   document.getElementById('sidebarRent').textContent    = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}`;
-  document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${p.security_deposit.toLocaleString()}` : 'Contact landlord';
-  document.getElementById('sidebarFee').textContent     = (p.application_fee != null && p.application_fee > 0) ? `$${p.application_fee}` : 'Free';
+  document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
+  document.getElementById('sidebarFee').textContent     = (p.application_fee != null && p.application_fee > 0) ? `$${Number(p.application_fee).toLocaleString()}` : 'Free';
   if (p.available_date) {
     document.getElementById('sidebarMoveInRow').style.display = '';
     document.getElementById('sidebarMoveIn').textContent = formatDate(p.available_date);
