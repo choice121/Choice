@@ -40,10 +40,21 @@ Deno.serve(async (req) => {
   const { type } = body
 
   // ── C-03: DB-backed rate-limit check ──────────────────────
-  // 'tenant_reply' and 'app_id_recovery' are internal notification callbacks,
-  // not user-initiated cold inquiries — exempt them from IP rate limiting.
+  // SECURITY: tenant_reply was previously exempt under the assumption it
+  // was an internal callback after submit_tenant_reply() DB RPC succeeded.
+  // But this endpoint is publicly callable — there is no server-side proof
+  // the RPC actually ran. An attacker can POST {type:'tenant_reply', app_id, message}
+  // directly and spam landlord inboxes for any known app_id, bypassing the
+  // IP throttle. Subjecting tenant_reply to the standard 5-per-5-min IP cap
+  // closes the abuse path while leaving legitimate use (one POST per actual
+  // reply) well inside the limit.
+  //
+  // app_id_recovery remains exempt: it's a self-service "I forgot my app ID"
+  // flow that a user might legitimately retry several times in quick
+  // succession across devices, and the email is sent only to the address
+  // tied to the matching application — no third-party harm vector.
   const clientIp = getClientIp(req)
-  const rateLimitExempt = type === 'tenant_reply' || type === 'app_id_recovery'
+  const rateLimitExempt = type === 'app_id_recovery'
   if (!rateLimitExempt && await isDbRateLimited(clientIp, 'send-inquiry', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW)) {
     return jsonResponse(
       { success: false, error: 'Too many requests. Please wait a few minutes before trying again.' },
