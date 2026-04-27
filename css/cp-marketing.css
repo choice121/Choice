@@ -5888,3 +5888,63 @@ body[data-portal="public"][data-page="home"] .featured-subtitle {
   }
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L6 — Backdrop-blur sticky nav refinement (BATCH_06)          ║
+   ║  Scope: body[data-portal="public"][data-page="home"]                ║
+   ║                                                                     ║
+   ║  Two-state sticky nav: at the very top the nav is more transparent  ║
+   ║  so the hero photo subtly bleeds through; once the user starts to   ║
+   ║  scroll, the nav frosts up, gains a hairline, and lifts with a soft ║
+   ║  shadow. iOS "scroll edge" feel.                                    ║
+   ║  Body attribute toggled by /js/cp-scroll-nav.js.                    ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+body[data-portal="public"][data-page="home"] .mv2-nav,
+body[data-portal="public"][data-page="home"] .nav {
+  transition:
+    background-color 280ms cubic-bezier(.22,1,.36,1),
+    border-bottom-color 280ms cubic-bezier(.22,1,.36,1),
+    box-shadow 280ms cubic-bezier(.22,1,.36,1),
+    -webkit-backdrop-filter 280ms cubic-bezier(.22,1,.36,1),
+    backdrop-filter 280ms cubic-bezier(.22,1,.36,1);
+  will-change: background-color;
+}
+
+/* ── Default (no JS yet / pre-toggle) — same as scrolled, safe contrast */
+body[data-portal="public"][data-page="home"]:not([data-mv2-scrolled]) .mv2-nav,
+body[data-portal="public"][data-page="home"]:not([data-mv2-scrolled]) .nav {
+  background: rgba(255, 254, 251, 0.94);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+}
+
+/* ── Top state: at-rest over the hero photo ─────────────────────── */
+body[data-portal="public"][data-page="home"][data-mv2-scrolled="false"] .mv2-nav,
+body[data-portal="public"][data-page="home"][data-mv2-scrolled="false"] .nav {
+  background: rgba(255, 254, 251, 0.78);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  backdrop-filter: saturate(160%) blur(10px);
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+
+/* ── Scrolled state: lifted, fully frosted, hairline visible ──── */
+body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .mv2-nav,
+body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
+  background: rgba(255, 254, 251, 0.96);
+  -webkit-backdrop-filter: saturate(190%) blur(16px);
+  backdrop-filter: saturate(190%) blur(16px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 6px 18px -12px rgba(0, 0, 0, 0.10);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-nav,
+  body[data-portal="public"][data-page="home"] .nav {
+    transition: none;
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
