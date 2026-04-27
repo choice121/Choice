@@ -57,6 +57,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
+import { requireAdmin } from '../_shared/auth.ts';
 import {
   buildDepositLetterPDF,
   type DepositDeduction,
@@ -91,20 +92,6 @@ function num(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-interface AuthCtx { user_id: string; email: string; }
-
-async function requireAdmin(req: Request): Promise<{ ok: true; ctx: AuthCtx } | { ok: false; status: number; msg: string }> {
-  const authHeader = req.headers.get('Authorization') || '';
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) return { ok: false, status: 401, msg: 'Missing Authorization header' };
-  const { data: userData, error: userErr } = await supabase.auth.getUser(match[1]);
-  if (userErr || !userData?.user) return { ok: false, status: 401, msg: 'Invalid session' };
-  const { data: roleRow } = await supabase
-    .from('admin_roles').select('user_id').eq('user_id', userData.user.id).maybeSingle();
-  if (!roleRow) return { ok: false, status: 403, msg: 'Admin role required' };
-  return { ok: true, ctx: { user_id: userData.user.id, email: userData.user.email || '' } };
-}
-
 // Compute the per-state return deadline as move_out + return_days.
 // Both inputs are at calendar-date granularity (UTC).
 function computeReturnDeadline(moveOutISO: string, returnDays: number): string {
@@ -136,7 +123,7 @@ Deno.serve(async (req) => {
 
   // 1. Auth
   const auth = await requireAdmin(req);
-  if (!auth.ok) return jsonErr(auth.msg, auth.status, req);
+  if (!auth.ok) return auth.response;
 
   // 2. Parse + validate body
   let body: any;
@@ -390,7 +377,7 @@ Deno.serve(async (req) => {
       letter_pdf_sha256:          sha256,
       letter_pdf_bytes:           pdfBytes.length,
       generated_at:               generatedAtISO,
-      generated_by:               auth.ctx.user_id,
+      generated_by:               auth.user.id,
       admin_notes:                admin_notes ?? accounting.admin_notes,
     })
     .eq('id', accounting.id);
@@ -417,7 +404,7 @@ Deno.serve(async (req) => {
       event:                  'deposit_accounting',
       storage_path:           storagePath,
       size_bytes:             pdfBytes.length,
-      created_by:             auth.ctx.email || null,
+      created_by:             auth.user.email || null,
       sha256,
       certificate_appended:   false,
     });
@@ -435,7 +422,7 @@ Deno.serve(async (req) => {
       metadata: {
         app_id,
         accounting_id:         accounting.id,
-        actor:                 auth.ctx.email,
+        actor:                 auth.user.email,
         state_code:            stateCode,
         state_return_days:     returnDays,
         state_return_deadline: deadlineISO,
