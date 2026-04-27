@@ -63,34 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_05 — Editorial typography pass
-- **Last commit on main**: `7c391d13`
-- **Last verified deploy**: `7633567c` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_06 — Backdrop-blur sticky nav (two-state)
+- **Last commit on main**: `39ab5de3`
+- **Last verified deploy**: `d5b711e7` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_06 — Backdrop-blur sticky nav
-
-**Goal**: Once the user scrolls past the hero, the top nav becomes
-position-fixed with a `backdrop-filter: blur(14px)` and a soft 1px hairline.
-iOS-native feel.
-
-**Files touched**:
-- `js/cp-chrome.js` (or `js/components.js`, whichever owns the nav) — add a
-  scroll listener that toggles `data-scrolled="true"` on `#site-nav`.
-- `css/cp-marketing.css` — `#site-nav[data-scrolled="true"]` rules with
-  backdrop blur, fallback solid background for browsers that don't support it.
-- `index.html` — add `<!-- batch-marker: BATCH_06 -->`.
-
-**Acceptance**:
-- Nav becomes blurred-frosted after 80px of scroll, smooth transition.
-- Falls back to a solid white `rgba(255,255,255,0.96)` background on browsers
-  without `backdrop-filter` support.
-
----
 
 ### BATCH_07 — Warm dark mode (`prefers-color-scheme`)
 
@@ -139,3 +119,4 @@ _(append-only; one line per completed batch — `BATCH_NN — name — <commit-s
 - BATCH_03 — Featured listings snap-scroll on mobile — `8ad9213e` — deploy `8e6109da` — 2026-04-27
 - BATCH_04 — Save-without-signup nudge + heart pulse — `df26fc2c` — deploy `672b76e5` — 2026-04-27
 - BATCH_05 — Editorial typography pass — `7c391d13` — deploy `7633567c` — 2026-04-27
+- BATCH_06 — Backdrop-blur sticky nav (two-state) — `39ab5de3` — deploy `d5b711e7` — 2026-04-27
