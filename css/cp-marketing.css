@@ -5611,3 +5611,57 @@ body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__submit {
   gap: 8px;
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L3 — Featured listings: horizontal snap-scroll on mobile     ║
+   ║  Added: BATCH_03 of IMPLEMENTATION_PLAN.md                          ║
+   ║  Scope: home page, .featured-section .property-grid only            ║
+   ║  Desktop layout (≥541px) is unchanged.                              ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+@media (max-width: 540px) {
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 12px;
+    padding: 4px 4px 14px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 4px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    /* Bleed slightly past the .container padding so cards reach the edge */
+    margin-inline: calc(var(--m-s-4, 16px) * -1);
+    padding-inline: var(--m-s-4, 16px);
+    scroll-padding-left: var(--m-s-4, 16px);
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid::-webkit-scrollbar {
+    display: none;
+  }
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid > .property-card {
+    flex: 0 0 78vw;
+    max-width: 320px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    /* Override the entrance translate so cards always render visible
+       in the rail (the IntersectionObserver-driven cp-card-visible
+       trigger may not fire reliably for off-screen rail cards). */
+    opacity: 1;
+    transform: none;
+  }
+  /* Subtle right-edge fade hint that there's more to scroll */
+  body[data-portal="public"][data-page="home"] .featured-section .mv2-featured__container,
+  body[data-portal="public"][data-page="home"] .featured-section .container {
+    position: relative;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid {
+    scroll-behavior: auto;
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
