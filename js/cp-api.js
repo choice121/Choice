@@ -1075,12 +1075,28 @@ async function updateNav() {
   };
   
 window.CP_esc = esc;
-window.CP = {
-    Applications, sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs, UI,
-    buildApplyURL, incrementCounter,
-    getSession, getLandlordProfile, requireAuth,
-    signIn, signUp, signOut, resetPassword, updateNav,
-  };
+// IMPORTANT: merge — do not replace.
+// cp-ui.js (loaded as a classic defer script before this module) installs
+// window.CP.UI with the public-page helpers (esc, propertyUrl, fmtDate,
+// safeAvatar, showToast, setupScrollTop, badge, …). Replacing window.CP
+// here would wipe those out, leaving `CP.UI.esc` undefined on
+// /property.html and crashing renderProperty the moment it tries to
+// HTML-escape the address — which is exactly the "Some details could not
+// be displayed. Please refresh." regression we just chased.
+//
+// So:
+//   1. Merge top-level CP entries (services, helpers) onto whatever
+//      cp-ui.js already put there.
+//   2. Merge cp-api.js's UI methods (lqipUrl, statusBadge, paymentBadge,
+//      cpConfirm, fmt, …) into the existing CP.UI object so the public
+//      helpers (esc, propertyUrl, …) stay alive.
+window.CP = Object.assign(window.CP || {}, {
+  Applications, sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs,
+  buildApplyURL, incrementCounter,
+  getSession, getLandlordProfile, requireAuth,
+  signIn, signUp, signOut, resetPassword, updateNav,
+});
+window.CP.UI = Object.assign(window.CP.UI || {}, UI);
 
 // -- ES Module exports -------------------------------------
 // Landlord pages and property.html import these by name.
