@@ -52,16 +52,15 @@ function decideStatus(app: Record<string, any>, event: SignerEvent | null): stri
   if (event === 'countersigned' || app.management_cosigned || app.management_signed) {
     return 'active';
   }
-  if (app.has_co_applicant && app.tenant_signature && app.co_applicant_signature) {
-    return 'fully_signed';
+  // Audit fix L-1 (2026-04-27): collapsed three overlapping branches into
+  // two clean ones so a stray co_applicant_signature on a single-signer
+  // application can never short-circuit to 'fully_signed' without management.
+  if (app.has_co_applicant) {
+    if (app.tenant_signature && app.co_applicant_signature) return 'fully_signed';
+    if (app.tenant_signature) return 'partially_signed';
+    return 'sent';
   }
-  if (app.tenant_signature && app.co_applicant_signature) {
-    return 'fully_signed';
-  }
-  if (!app.has_co_applicant && app.tenant_signature) {
-    return 'fully_signed';
-  }
-  if (app.tenant_signature) return 'partially_signed';
+  if (app.tenant_signature) return 'fully_signed';
   return 'sent';
 }
 
