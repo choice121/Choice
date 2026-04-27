@@ -4,7 +4,6 @@
   "private": true,
   "description": "Choice Properties — Nationwide rental property marketplace. Deployed exclusively to Cloudflare Pages.",
   "scripts": {
-    "start": "node serve.js",
     "build": "node generate-config.js",
     "preinstall": "node scripts/enforce-cloudflare-only.js"
   },

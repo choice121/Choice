@@ -26,7 +26,6 @@
 /MIGRATION_SCHEMA.sql       /404.html                                    404
 /MISSING_SCHEMA.sql         /404.html                                    404
 /GAS-EMAIL-RELAY.gs         /404.html                                    404
-/serve.js                   /404.html                                    404
 /generate-config.js         /404.html                                    404
 /deploy.sh                  /404.html                                    404
 /push.sh                    /404.html                                    404

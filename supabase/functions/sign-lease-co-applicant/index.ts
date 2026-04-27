@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
 <p><a href="${getAdminUrl('/admin/leases.html')}">View in Admin Panel &rarr;</a></p>`;
     for (const adminEmail of ADMIN_EMAILS) {
       try { await sendEmail({ to: adminEmail, subject: adminSubject, html: adminHtml }); }
-      catch (e) { console.error(`Admin notify (${adminEmail}) failed:`, (e as Error).message); }
+      catch (e) { console.error('Admin notify failed:', (e as Error).message); }
     }
 
     try {

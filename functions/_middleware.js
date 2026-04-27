@@ -52,7 +52,6 @@ const BLOCKED_EXACT = new Set([
   '/MIGRATION_SCHEMA.sql',
   '/MISSING_SCHEMA.sql',
   '/GAS-EMAIL-RELAY.gs',
-  '/serve.js',
   '/generate-config.js',
   '/ARCHITECTURE.md',
   '/FIXES.md',

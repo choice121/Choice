@@ -329,12 +329,19 @@ function tokenizeExpr(src: string): string[] {
 
 export class TemplateError extends Error { constructor(m: string) { super('[template] ' + m); } }
 
+// Block prototype-chain access so a malicious template path like
+// `__proto__.polluted` or `constructor.prototype` cannot read or be used
+// as a vector to mutate Object.prototype downstream. Templates are
+// server-controlled today, but this is cheap defense in depth.
+const FORBIDDEN_LOOKUP_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function lookup(ctx: RenderContext, path: string): unknown {
   if (path === '.') return ctx;
   const parts = path.split('.');
   let cur: unknown = ctx;
   for (const p of parts) {
     if (cur == null) return undefined;
+    if (FORBIDDEN_LOOKUP_KEYS.has(p)) return undefined;
     cur = (cur as Record<string, unknown>)[p];
   }
   return cur;
