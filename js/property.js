@@ -106,27 +106,39 @@ if (isPreview) {
 }
 
 async function loadProperty(id) {
+  // Phase 1 — DB lookup. Only this phase may legitimately raise the
+  // "Property not found." toast + redirect, because only this phase can
+  // tell us the row truly does not exist (or is hidden by RLS).
+  let prop;
   try {
-    const { data: prop, error } = await supabase
+    const { data, error } = await supabase
       .from('properties')
       .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(url, file_id, display_order)')
       .eq('id', id)
       .single();
-    if (error || !prop) throw new Error('Not found');
+    if (error || !data) throw new Error('Not found');
+    prop = data;
+  } catch (e) {
+    console.error('[property] lookup failed for id=', id, e);
+    showToast('Property not found.', 'error');
+    setTimeout(() => window.location.href = '/index.html', 2000);
+    return;
+  }
 
-    // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
-    // (the legacy array columns were dropped; property_photos is now the source of truth)
-    if (Array.isArray(prop.property_photos)) {
-      const _sorted = prop.property_photos.slice().sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-      prop.photo_urls     = _sorted.map(p => p.url).filter(Boolean);
-      prop.photo_file_ids = _sorted.map(p => p.file_id ?? null);
-    } else {
-      prop.photo_urls     = [];
-      prop.photo_file_ids = [];
-    }
+  // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
+  // (the legacy array columns were dropped; property_photos is now the source of truth)
+  if (Array.isArray(prop.property_photos)) {
+    const _sorted = prop.property_photos.slice().sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    prop.photo_urls     = _sorted.map(p => p.url).filter(Boolean);
+    prop.photo_file_ids = _sorted.map(p => p.file_id ?? null);
+  } else {
+    prop.photo_urls     = [];
+    prop.photo_file_ids = [];
+  }
 
-    // Guard non-active listings from public view
-    if (prop.status !== 'active') {
+  // Guard non-active listings from public view
+  if (prop.status !== 'active') {
+    try {
       const session    = await getSession();
       const viewerId   = session?.user?.id || null;
       const ownerId    = prop.landlords?.user_id || null;
@@ -135,12 +147,42 @@ async function loadProperty(id) {
         renderUnavailable(prop.status);
         return;
       }
+    } catch (e) {
+      console.warn('[property] session check failed; treating as anonymous', e);
+      renderUnavailable(prop.status);
+      return;
     }
+  }
 
-    currentProperty = prop;
+  currentProperty = prop;
+
+  // Phase 2 — view-counter bump. Pure side-effect; never block render
+  // and never trip the not-found path if the RPC errors out.
+  try {
     await incrementCounter('properties', id, 'views_count');
+  } catch (e) {
+    console.warn('[property] increment_counter failed (non-fatal)', e);
+  }
+
+  // Phase 3 — render. If anything in renderProperty throws, the row
+  // really does exist, so DO NOT show "Property not found." and DO NOT
+  // redirect away — that destroys the user's session for what is
+  // almost certainly a UI bug. Surface the real error to the console
+  // and the error reporter so we can fix it.
+  try {
     renderProperty(prop);
-    // Refresh save state from Supabase for authenticated users (non-blocking)
+  } catch (e) {
+    console.error('[property] renderProperty crashed:', e);
+    if (typeof window.cpReportError === 'function') {
+      try { window.cpReportError(e); } catch (_) { /* swallow */ }
+    }
+    showToast('Some details could not be displayed. Please refresh.', 'error');
+  }
+
+  // Refresh save state from Supabase for authenticated users (non-blocking).
+  // Wrapped so a thrown TypeError (e.g. SavedProperties undefined in a
+  // partial-import edge case) cannot bubble up and trigger a redirect.
+  try {
     SavedProperties.getIds().then(ids => {
       savedIds = ids;
       const saveBtn = document.getElementById('savePropBtn');
@@ -151,10 +193,9 @@ async function loadProperty(id) {
           saveBtn.innerHTML = '<i class="far fa-heart"></i> Save';
         }
       }
-    }).catch(() => {});
-  } catch(e) {
-    showToast('Property not found.', 'error');
-    setTimeout(() => window.location.href = '/index.html', 2000);
+    }).catch(err => console.warn('[property] saved-state load failed', err));
+  } catch (e) {
+    console.warn('[property] saved-state init failed', e);
   }
 }
 
