@@ -73,6 +73,7 @@
 <script type="module" src="/js/cp-api.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/components.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/card-builder.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-live-hero.js?v=__BUILD_VERSION__"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -199,9 +200,21 @@
         <li><i class="fas fa-bolt" aria-hidden="true"></i> Flat $50 application</li>
         <li><i class="fas fa-clock" aria-hidden="true"></i> Decision in 24–72 hours</li>
       </ul>
+
+      <!-- Phase L1 — Living Hero activity chip (BATCH_01).
+           Rotates through simulated live signals; no Supabase calls.
+           Numbers are seeded by date for stability within a day. -->
+      <div class="mv2-hero__live" role="status" aria-live="polite" aria-label="Live marketplace activity">
+        <span class="mv2-hero__live-label">
+          <span class="mv2-hero__live-dot" aria-hidden="true"></span>
+          Live
+        </span>
+        <span class="mv2-hero__live-text">Loading live activity…</span>
+      </div>
     </div>
   </div>
 </section>
+<!-- batch-marker: BATCH_01 -->
 
 <!-- ── Trust Strip ── -->
 <div class="trust-strip" id="trust-section">

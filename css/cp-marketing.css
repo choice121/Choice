@@ -5286,3 +5286,103 @@ body[data-portal="public"][data-page="faq"] .mv2-info-section strong {
 @media (max-width: 1280px) {
   [data-portal="public"] .policy-toc-side { display: none; }
 }
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L1 — Living Hero (Ken Burns + live activity chip)            ║
+   ║  Added: BATCH_01 of IMPLEMENTATION_PLAN.md                          ║
+   ║  Scope: home page only (body[data-page="home"])                     ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Slow Ken Burns drift on the hero photo ──────────────────────────── */
+@keyframes mv2-kenburns {
+  0%   { transform: scale(1.06) translate3d(0, 0, 0); }
+  50%  { transform: scale(1.14) translate3d(-1.5%, -1.2%, 0); }
+  100% { transform: scale(1.06) translate3d(0, 0, 0); }
+}
+body[data-portal="public"][data-page="home"] .mv2-hero__bg-img {
+  animation: mv2-kenburns 28s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center 35%;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-hero__bg-img {
+    animation: none;
+  }
+}
+
+/* ── Live activity chip ─────────────────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-hero__live {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 12px;
+  background: rgba(10, 23, 41, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: saturate(160%) blur(8px);
+  -webkit-backdrop-filter: saturate(160%) blur(8px);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  max-width: min(100%, 460px);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+body[data-portal="public"][data-page="home"] .mv2-hero__live[data-ready="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+body[data-portal="public"][data-page="home"] .mv2-hero__live-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(183, 241, 198, 0.18);
+  color: #B7F1C6;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+body[data-portal="public"][data-page="home"] .mv2-hero__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #B7F1C6;
+  box-shadow: 0 0 0 0 rgba(183, 241, 198, 0.7);
+  animation: mv2-pulse 2.4s ease-out infinite;
+  display: inline-block;
+}
+body[data-portal="public"][data-page="home"] .mv2-hero__live-text {
+  display: inline-block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 350ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="home"] .mv2-hero__live-dot { animation: none; }
+  body[data-portal="public"][data-page="home"] .mv2-hero__live { transition: none; }
+  body[data-portal="public"][data-page="home"] .mv2-hero__live-text { transition: none; }
+}
+@media (max-width: 768px) {
+  body[data-portal="public"][data-page="home"] .mv2-hero__live {
+    margin-top: 14px;
+    font-size: 0.82rem;
+    padding: 7px 12px 7px 10px;
+    gap: 8px;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-hero__live-label {
+    font-size: 0.66rem;
+    padding: 2px 6px;
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
