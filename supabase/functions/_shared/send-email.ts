@@ -3,24 +3,22 @@
  *
  * Single-purpose email helper for the Supabase edge functions.
  *
- * Order of preference:
- *   1. Google Apps Script relay (`GAS_EMAIL_URL` + `GAS_RELAY_SECRET`).
- *      Every call is HMAC-signed (`ts` + `sig`) — see `gasSend()`.
- *   2. Direct Gmail SMTP via `nodemailer` (transitional fallback).
+ * Sole transport: Google Apps Script relay (`GAS_EMAIL_URL` +
+ * `GAS_RELAY_SECRET`). Every call is HMAC-signed (`ts` + `sig`) —
+ * see `gasSend()`.
  *
- * Resend was removed in Phase 14 — the project never had a `RESEND_API_KEY`
- * provisioned, so the Resend branch was dead code that just delayed every
- * send by one extra HTTP attempt.
- *
- * The Gmail SMTP fallback exists ONLY so email keeps flowing while
- * `GAS_EMAIL_URL` is being provisioned on the Supabase side. Once GAS is
- * live in production, this fallback (and the `GMAIL_*` secrets) should be
- * removed; see issue tracker.
+ * History:
+ *   - Resend was removed in Phase 14 — the project never had a
+ *     `RESEND_API_KEY` provisioned, so the Resend branch was dead
+ *     code that just delayed every send by one extra HTTP attempt.
+ *   - Gmail SMTP fallback was removed on 2026-04-27 (audit fix E-1)
+ *     so that GAS-relay failures surface to `email_logs` and the
+ *     admin dashboard immediately, rather than being masked by a
+ *     silent SMTP retry. The `GMAIL_USER` / `GMAIL_APP_PASSWORD`
+ *     secrets can now be deleted from the Supabase function env.
  *
  * Failure is non-fatal — callers should log errors but never crash.
  */
-
-import nodemailer from 'npm:nodemailer@6.9.16';
 
 // ── HMAC-SHA256 helper for the GAS-relay request signature ──────────────────
 // Returns lowercase hex. WebCrypto is available in the Deno Edge runtime.
@@ -105,48 +103,31 @@ export interface EmailPayload {
 
 export interface EmailResult {
   ok: boolean
-  provider: 'gas' | 'gmail' | 'none'
+  provider: 'gas' | 'none'
   error?: string
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
   const gasSecret = Deno.env.get('GAS_RELAY_SECRET');
-  const gmailUser = Deno.env.get('GMAIL_USER');
-  const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD');
 
-  // ── 1. Try GAS relay (preferred) ──────────────────────────────────────────
-  if (gasUrl && gasSecret && (payload.template || payload.html)) {
-    const template = payload.template || 'raw_html';
-    const data = template === 'raw_html'
-      ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
-      : (payload.data ?? {});
-    const res = await gasSend({ template, to: payload.to, cc: payload.cc ?? null, data });
-    if (res.ok) return { ok: true, provider: 'gas' };
-    console.warn('GAS relay failed:', res.error, '— falling back to Gmail SMTP');
+  // GAS relay is the only transport. If it's not configured or the call
+  // fails we surface that explicitly so the failure shows up in
+  // email_logs and the admin can react. (Audit fix E-1, 2026-04-27.)
+  if (!gasUrl || !gasSecret) {
+    console.warn('sendEmail: GAS_EMAIL_URL / GAS_RELAY_SECRET not configured');
+    return { ok: false, provider: 'none', error: 'GAS relay not configured' };
+  }
+  if (!payload.template && !payload.html) {
+    return { ok: false, provider: 'none', error: 'sendEmail requires either template or html' };
   }
 
-  // ── 2. Gmail SMTP fallback (transitional — remove once GAS is live) ───────
-  if (gmailUser && gmailPass && payload.html) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: gmailUser, pass: gmailPass },
-      });
-      await transporter.sendMail({
-        from: `"Choice Properties" <${gmailUser}>`,
-        to:      payload.to,
-        subject: payload.subject || 'Choice Properties',
-        html:    payload.html,
-      });
-      return { ok: true, provider: 'gmail' };
-    } catch (e) {
-      const msg = (e as Error)?.message || 'unknown error';
-      console.error('Gmail SMTP send failed:', msg);
-      return { ok: false, provider: 'gmail', error: msg };
-    }
-  }
-
-  console.warn('sendEmail: no provider configured/usable for this payload');
-  return { ok: false, provider: 'none', error: 'No email provider available' };
+  const template = payload.template || 'raw_html';
+  const data = template === 'raw_html'
+    ? { ...(payload.data ?? {}), subject: payload.subject || 'Choice Properties', html: payload.html || '' }
+    : (payload.data ?? {});
+  const res = await gasSend({ template, to: payload.to, cc: payload.cc ?? null, data });
+  if (res.ok) return { ok: true, provider: 'gas' };
+  console.error('GAS relay send failed:', res.error);
+  return { ok: false, provider: 'none', error: res.error || `GAS relay HTTP ${res.status}` };
 }
