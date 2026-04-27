@@ -224,9 +224,20 @@ Deno.serve(async (req) => {
     // C-04 FIX: The DB insert now happens here in the Edge Function (service-role key),
     // not in cp-api.js via the anon REST API. The anon INSERT grant and
     // inquiries_public_insert RLS policy have been removed from SETUP.sql.
-    const { tenant_name, tenant_email, tenant_language, message, property_id, insert_payload } = body
-    if (!tenant_email) throw new Error('tenant_email required')
-    if (!message) throw new Error('message required')
+    const { tenant_name, tenant_email, tenant_language, tenant_phone, message, property_id } = body
+    // SECURITY: do NOT read insert_payload from body. The previous code passed
+    // the entire client-supplied object straight to supabase.insert(), which
+    // let callers control id, created_at, read, and any other column on the
+    // inquiries table. The server now builds the row from validated fields.
+    if (!tenant_name || typeof tenant_name !== 'string' || !tenant_name.trim()) {
+      return jsonResponse({ success: false, error: 'tenant_name required' }, 400)
+    }
+    if (!tenant_email || typeof tenant_email !== 'string' || !tenant_email.trim()) {
+      return jsonResponse({ success: false, error: 'tenant_email required' }, 400)
+    }
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return jsonResponse({ success: false, error: 'message required' }, 400)
+    }
 
     // H-05 FIX: Block messages containing URLs to prevent phishing links being
     // forwarded to landlords via the platform email relay.
@@ -238,10 +249,38 @@ Deno.serve(async (req) => {
       }, 400)
     }
 
-    // Insert the inquiry row using the service-role client (bypasses RLS)
-    if (insert_payload && typeof insert_payload === 'object') {
-      const { error: insertErr } = await supabase.from('inquiries').insert(insert_payload)
-      if (insertErr) throw new Error(`Failed to save inquiry: ${insertErr.message}`)
+    // Length caps. The inquiries table has no DB-level length constraints,
+    // so cap on the way in to prevent unbounded strings being persisted.
+    const NAME_MAX  = 200
+    const EMAIL_MAX = 254
+    const PHONE_MAX = 50
+    const MSG_MAX   = 4000
+    const cleanName    = tenant_name.trim().slice(0, NAME_MAX)
+    const cleanEmail   = tenant_email.trim().toLowerCase().slice(0, EMAIL_MAX)
+    const cleanPhone   = typeof tenant_phone === 'string' && tenant_phone.trim()
+                           ? tenant_phone.trim().slice(0, PHONE_MAX)
+                           : null
+    const cleanMessage = message.trim().slice(0, MSG_MAX)
+    const cleanPropId  = typeof property_id === 'string' && property_id.trim()
+                           ? property_id.trim()
+                           : null
+
+    // Build the row server-side. id, read, created_at all fall back to DB
+    // defaults — never client-controlled.
+    const inquiryRow = {
+      tenant_name:  cleanName,
+      tenant_email: cleanEmail,
+      tenant_phone: cleanPhone,
+      message:      cleanMessage,
+      property_id:  cleanPropId,
+    }
+
+    // Insert using service-role client (bypasses RLS — RLS policies for
+    // public inserts have been intentionally removed; see C-04 above).
+    const { error: insertErr } = await supabase.from('inquiries').insert(inquiryRow)
+    if (insertErr) {
+      console.error('[send-inquiry] inquiries insert failed:', insertErr)
+      return jsonResponse({ success: false, error: 'Failed to save inquiry' }, 500)
     }
 
     // Resolve property title up front so both emails show a human-readable
