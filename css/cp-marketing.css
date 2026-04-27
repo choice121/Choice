@@ -5948,3 +5948,178 @@ body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
   }
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L7 — Warm dark mode (BATCH_07)                               ║
+   ║  Scope: body[data-portal="public"][data-page="home"]                ║
+   ║                                                                     ║
+   ║  Activates only when the OS reports prefers-color-scheme: dark.     ║
+   ║  No user toggle yet — pure system-preference response.              ║
+   ║  Warm dark (mahogany / espresso) — never pure black — to keep the   ║
+   ║  editorial / architectural feel. Brand blue + gold preserved as     ║
+   ║  accent moments. Hero (photo + dark overlay) needs no changes.      ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+@media (prefers-color-scheme: dark) {
+
+  /* ── Token redefinition (both --m-* and --mv2-* token systems) ─── */
+  body[data-portal="public"][data-page="home"] {
+    color-scheme: dark;
+    /* legacy --m-* */
+    --m-bg:             #0e0c08;
+    --m-white:          #181410;
+    --m-surface:        #1f1812;
+    --m-surface-2:      #2a221b;
+    --m-border:         #2e261c;
+    --m-border-strong:  #3d3324;
+    --m-ink:            #f5f1e8;
+    --m-ink-2:          #e7e0d2;
+    --m-text:           #e0d8c8;
+    --m-muted:          #b8aea0;
+    --m-muted-2:        #9b9183;
+    --m-soft:           #6e6759;
+    --m-brand-pale:     #102239;     /* deep ink-blue swap */
+    --m-gold-pale:      #2a221b;
+    --m-shadow-sm:      0 1px 2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.30);
+    --m-shadow-md:      0 6px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.30);
+    --m-shadow-lg:      0 18px 40px rgba(0,0,0,.55), 0 6px 14px rgba(0,0,0,.32);
+    /* modern --mv2-* */
+    --mv2-bg-warm:        #0e0c08;
+    --mv2-bg-warm-2:      #1a1610;
+    --mv2-ink:            #f5f1e8;
+    --mv2-ink-2:          #e7e0d2;
+    --mv2-muted:          #b8aea0;
+    --mv2-muted-2:        #9b9183;
+    --mv2-hairline:       #2e261c;
+    --mv2-hairline-strong:#3d3324;
+    --mv2-accent:         #f4d27a;
+    --mv2-accent-pale:    #2a221b;
+    --mv2-accent-strong:  #f4d27a;
+    --mv2-shadow-hairline:0 0 0 1px var(--mv2-hairline);
+    --mv2-shadow-soft:    0 1px 2px rgba(0,0,0,.50), 0 8px 24px rgba(0,0,0,.45);
+    --mv2-shadow-lift:    0 2px 4px rgba(0,0,0,.55), 0 18px 40px rgba(0,0,0,.55);
+    --mv2-overlay-ink:    rgba(0, 0, 0, 0.62);
+  }
+
+  /* Page background */
+  body[data-portal="public"][data-page="home"] {
+    background: #0e0c08;
+    color: #f5f1e8;
+  }
+
+  /* ── Property card image placeholder — slightly lighter than card */
+  body[data-portal="public"][data-page="home"] .property-card-img {
+    background: #2a221b;
+  }
+  /* Save/share buttons on cards — light frosted on dark */
+  body[data-portal="public"][data-page="home"] .property-card-save,
+  body[data-portal="public"][data-page="home"] .property-card-share {
+    background: rgba(20, 16, 12, 0.78);
+    border-color: rgba(245, 241, 232, 0.20);
+    color: #f5f1e8;
+  }
+  body[data-portal="public"][data-page="home"] .property-card-save:hover,
+  body[data-portal="public"][data-page="home"] .property-card-share:hover {
+    background: rgba(20, 16, 12, 0.92);
+  }
+  body[data-portal="public"][data-page="home"] .property-card-save.saved {
+    color: #f87171;
+  }
+
+  /* ── Nav (overrides Phase L6 frosted bg for dark) ──────────────── */
+  body[data-portal="public"][data-page="home"]:not([data-mv2-scrolled]) .mv2-nav,
+  body[data-portal="public"][data-page="home"]:not([data-mv2-scrolled]) .nav,
+  body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .mv2-nav,
+  body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
+    background: rgba(14, 12, 8, 0.86);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    backdrop-filter: saturate(180%) blur(16px);
+    border-bottom-color: rgba(245, 241, 232, 0.10);
+  }
+  body[data-portal="public"][data-page="home"][data-mv2-scrolled="false"] .mv2-nav,
+  body[data-portal="public"][data-page="home"][data-mv2-scrolled="false"] .nav {
+    background: rgba(14, 12, 8, 0.55);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    backdrop-filter: saturate(160%) blur(10px);
+    border-bottom-color: transparent;
+  }
+
+  /* Mobile search pill — dark frosted */
+  body[data-portal="public"][data-page="home"] .mv2-msearch-pill {
+    background: rgba(20, 16, 12, 0.92);
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.10);
+    box-shadow: 0 6px 18px -8px rgba(0,0,0,.5);
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-pill__icon {
+    color: #b8aea0;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-pill__filters {
+    color: #9b9183;
+  }
+
+  /* Mobile search sheet — dark surface */
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet {
+    background: #181410;
+    color: #f5f1e8;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__title { color: #f5f1e8; }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__handle {
+    background: rgba(245, 241, 232, 0.20);
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet input,
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet select {
+    background: #0e0c08;
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.12);
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet input::placeholder {
+    color: #6e6759;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__close {
+    color: #b8aea0;
+  }
+  body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__close:hover {
+    background: rgba(245, 241, 232, 0.06);
+    color: #f5f1e8;
+  }
+
+  /* Saved nudge — dark variant */
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__inner {
+    background: #181410;
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.10);
+    box-shadow:
+      0 12px 32px -8px rgba(0,0,0,.55),
+      0 4px 12px -4px rgba(0,0,0,.35);
+  }
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__icon {
+    background: rgba(248, 113, 113, 0.18);
+    color: #f87171;
+  }
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__text strong { color: #f5f1e8; }
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__text span   { color: #b8aea0; }
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__close       { color: #9b9183; }
+  body[data-portal="public"][data-page="home"] .cp-saved-nudge__close:hover {
+    background: rgba(245, 241, 232, 0.06);
+    color: #f5f1e8;
+  }
+
+  /* Live hero chip & lede — keep readable over photo (already photo-dark) */
+  body[data-portal="public"][data-page="home"] .mv2-hero__live {
+    background: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+  }
+
+  /* Skeleton shimmer — darker base */
+  body[data-portal="public"][data-page="home"] .property-card.skeleton,
+  body[data-portal="public"][data-page="home"] .skeleton-shimmer {
+    background: linear-gradient(90deg, #1f1812 25%, #2a221b 50%, #1f1812 75%);
+  }
+
+  /* Heart pulse accent fill on dark */
+  body[data-portal="public"][data-page="home"] .property-card-save.saved .fa-heart {
+    color: #f87171;
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
