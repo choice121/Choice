@@ -337,14 +337,18 @@
       certificate, updateAppPointer,
     } = args;
 
+    // Look up E-SIGN consents ONCE — only when we're actually appending
+    // a cert. Cached and reused across both build passes (initial build
+    // with placeholder pdf_version + rebuild with real version) so we
+    // don't double up on the round-trip.
+    let esignConsents: CertEsignConsent[] = [];
+    if (certificate) {
+      esignConsents = await loadEsignConsentsForCert(supabase, app_id);
+    }
+
     // 1-4. Build + hash + (optionally) append cert + final hash
     let finalized;
     try {
-      // Look up E-SIGN consents only when we're actually appending a cert.
-      let esignConsents: CertEsignConsent[] = [];
-      if (certificate) {
-        esignConsents = await loadEsignConsentsForCert(supabase, app_id);
-      }
       finalized = await buildLeasePDFFinalized(app, templateText, {
         partials,
         addenda,
@@ -382,12 +386,27 @@
     if (pvErr) return { ok: false, error: 'Version reservation failed: ' + pvErr.message };
     const versionNumber = (pv as { version_number?: number })?.version_number || 1;
 
+    // From this point on, any failure path that exits before storage_path
+    // is patched (step 7) must delete the reserved version row, otherwise
+    // it sits in lease_pdf_versions forever with storage_path = ''.
+    const releaseReservedVersion = async (reason: string) => {
+      const { error: delErr } = await supabase.from('lease_pdf_versions')
+        .delete()
+        .eq('app_id', app_id)
+        .eq('version_number', versionNumber);
+      if (delErr) {
+        console.warn(
+          `[finalizeAndStorePdf] could not release orphan version row v${versionNumber} (${reason}):`,
+          delErr.message,
+        );
+      }
+    };
+
     // If we appended a cert with a placeholder pdf_version, rebuild now
     // so the cert page shows the real version number. (Body rendering is
     // deterministic so the body hash is stable across builds.)
     if (certificate && finalized.certificate_appended) {
       try {
-        const esignConsents = await loadEsignConsentsForCert(supabase, app_id);
         finalized = await buildLeasePDFFinalized(app, templateText, {
           partials,
           addenda,
@@ -430,7 +449,11 @@
     const { error: upErr } = await supabase.storage.from('lease-pdfs')
       .upload(path, finalized.bytes, { contentType: 'application/pdf', upsert: false });
     if (upErr) {
-      return { ok: false, error: 'PDF upload failed: ' + upErr.message, version_number: versionNumber };
+      // Roll back the reservation so we don't leak a row with an empty
+      // storage_path. Best-effort: if the delete itself fails it is
+      // logged but does not change the surfaced error to the caller.
+      await releaseReservedVersion('upload-failed');
+      return { ok: false, error: 'PDF upload failed: ' + upErr.message };
     }
 
     // 7. Patch storage_path + size_bytes
