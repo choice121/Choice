@@ -5798,3 +5798,93 @@ body:has(#mobile-cta) .cp-saved-nudge {
   .cp-saved-nudge { transition: opacity 1ms; transform: none; }
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  Phase L5 — Editorial typography pass (BATCH_05)                    ║
+   ║  Scope: body[data-portal="public"][data-page="home"]                ║
+   ║                                                                     ║
+   ║  Now that the Fraunces upright axis is loaded, display headlines    ║
+   ║  actually render in Fraunces (previously fell back to Georgia).     ║
+   ║  This block tightens tracking, sets optical sizing, refines         ║
+   ║  eyebrows toward an "editorial / architectural" register.           ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Display headlines: real Fraunces with proper optical sizing ──── */
+body[data-portal="public"][data-page="home"] .mv2-headline,
+body[data-portal="public"][data-page="home"] .featured-title,
+body[data-portal="public"][data-page="home"] h2.mv2-headline--md {
+  font-family: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  font-optical-sizing: auto;
+  font-variation-settings: 'opsz' 96, 'SOFT' 50;
+  letter-spacing: -0.022em;
+  line-height: 1.05;
+  text-wrap: balance;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The featured section headline was Inter 800 — promote to Fraunces 500
+   to unify the editorial voice. Slightly larger to earn the lighter weight. */
+body[data-portal="public"][data-page="home"] .featured-title {
+  font-weight: 500;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.08;
+  margin-bottom: 6px;
+}
+
+/* Italic accent words (existing <em> in hero, future <em>s in section heads).
+   Use tabular alignment + a touch of weight so italics carry visual mass. */
+body[data-portal="public"][data-page="home"] .mv2-headline em,
+body[data-portal="public"][data-page="home"] .featured-title em {
+  font-style: italic;
+  font-weight: 500;
+  font-variation-settings: 'opsz' 96, 'SOFT' 50;
+  letter-spacing: -0.012em;
+}
+
+/* ── Eyebrows: more tracking + slightly heavier; signals "editorial" ── */
+body[data-portal="public"][data-page="home"] .mv2-eyebrow {
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  font-feature-settings: 'tnum' 1;
+}
+/* The decorative rule before the eyebrow — extend & soften */
+body[data-portal="public"][data-page="home"] .mv2-eyebrow::before {
+  width: 24px;
+  opacity: 0.85;
+}
+
+/* ── Lede: more reading rhythm ───────────────────────────────────── */
+body[data-portal="public"][data-page="home"] .mv2-lede {
+  line-height: 1.55;
+  letter-spacing: -0.001em;
+  max-width: 56ch;
+}
+
+/* ── Section subtitles (under section headlines) — softer color, italic
+   small-caps tracking is too much; just tighten the lede-style tone. */
+body[data-portal="public"][data-page="home"] .featured-subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--m-muted-2);
+  letter-spacing: -0.001em;
+}
+
+/* ── Mobile: pull headline size down a touch so the editorial face
+   reads as confident rather than cramped at small widths. */
+@media (max-width: 540px) {
+  body[data-portal="public"][data-page="home"] .mv2-hero .mv2-headline {
+    font-size: clamp(2rem, 7vw, 2.5rem);
+    letter-spacing: -0.024em;
+  }
+  body[data-portal="public"][data-page="home"] .featured-title {
+    font-size: clamp(26px, 6.5vw, 32px);
+  }
+  body[data-portal="public"][data-page="home"] .mv2-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+  }
+}
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
