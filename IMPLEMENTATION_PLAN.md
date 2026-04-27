@@ -63,36 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_03 — Featured listings snap-scroll on mobile
-- **Last commit on main**: `8ad9213e`
-- **Last verified deploy**: `8e6109da` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_04 — Save-without-signup nudge + heart pulse
+- **Last commit on main**: `df26fc2c`
+- **Last verified deploy**: `672b76e5` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_04 — Save without signup (localStorage favorites)
-
-**Goal**: Heart icon on each property card. Tap toggles favorite in
-localStorage. After 3 saves in a session, a small inline prompt offers to
-"Save these to your account" (links to existing signup), but never blocks
-saving.
-
-**Files touched**:
-- `js/cp-favorites.js` — NEW. Exposes `window.cpFavorites = { toggle, has, list, count }`.
-- `js/card-builder.js` — render the heart button on each card; call
-  `cpFavorites.toggle(propertyId)` on click; reflect state.
-- `css/cp-marketing.css` — heart button styles, prompt banner styles.
-- `index.html` — load `cp-favorites.js`; add `<!-- batch-marker: BATCH_04 -->`.
-
-**Acceptance**:
-- Tapping a heart toggles its filled state and persists across page reloads.
-- After the 3rd save in a session, an inline banner appears offering signup;
-  dismissible; never re-shown for that session after dismissal.
-- Existing card click-through behavior unchanged.
-
----
 
 ### BATCH_05 — Editorial typography pass
 
@@ -178,3 +156,4 @@ _(append-only; one line per completed batch — `BATCH_NN — name — <commit-s
 - BATCH_01 — Living Hero — `e5a7564e` — deploy `935c0474` — 2026-04-27
 - BATCH_02 — Sticky mobile search pill + sheet — `2115effc` — deploy `b7f36beb` — 2026-04-27
 - BATCH_03 — Featured listings snap-scroll on mobile — `8ad9213e` — deploy `8e6109da` — 2026-04-27
+- BATCH_04 — Save-without-signup nudge + heart pulse — `df26fc2c` — deploy `672b76e5` — 2026-04-27
