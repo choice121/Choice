@@ -1,18 +1,28 @@
 /**
  * send-email.ts
- * Dual-provider email helper: tries Resend first, falls back to GAS relay,
- * then falls back to Gmail via nodemailer.
- * Failure is non-fatal — callers should log errors but not crash.
  *
- * Also exports `gasSend()`: a dedicated helper for callers that already
- * know they want to hit the GAS relay directly with a named template
- * (send-inquiry, send-message). It centralises the HMAC signing introduced
- * in M-3 so every GAS call uses the same payload shape.
+ * Single-purpose email helper for the Supabase edge functions.
+ *
+ * Order of preference:
+ *   1. Google Apps Script relay (`GAS_EMAIL_URL` + `GAS_RELAY_SECRET`).
+ *      Every call is HMAC-signed (`ts` + `sig`) — see `gasSend()`.
+ *   2. Direct Gmail SMTP via `nodemailer` (transitional fallback).
+ *
+ * Resend was removed in Phase 14 — the project never had a `RESEND_API_KEY`
+ * provisioned, so the Resend branch was dead code that just delayed every
+ * send by one extra HTTP attempt.
+ *
+ * The Gmail SMTP fallback exists ONLY so email keeps flowing while
+ * `GAS_EMAIL_URL` is being provisioned on the Supabase side. Once GAS is
+ * live in production, this fallback (and the `GMAIL_*` secrets) should be
+ * removed; see issue tracker.
+ *
+ * Failure is non-fatal — callers should log errors but never crash.
  */
 
 import nodemailer from 'npm:nodemailer@6.9.16';
 
-// ── M-3: HMAC-SHA256 helper for the GAS-relay request signature ─────────────
+// ── HMAC-SHA256 helper for the GAS-relay request signature ──────────────────
 // Returns lowercase hex. WebCrypto is available in the Deno Edge runtime.
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const enc = new TextEncoder();
@@ -33,10 +43,9 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 }
 
 // ── gasSend: shared GAS-relay caller ────────────────────────────────────────
-// Resolves issue #25 — send-inquiry and send-message previously built the GAS
-// payload by hand and only sent the legacy `secret` field, so any GAS-side
-// rollout that drops legacy auth would break those two functions. Funnel
-// every GAS call through this helper so they all sign identically.
+// Every GAS call goes through this helper so they all sign identically (see
+// issue #25). The legacy `secret` field acceptance was removed on the relay
+// side in Apr 2026 (issue #24).
 export interface GasSendInput {
   template: string;                          // GAS template name (e.g. 'inquiry_reply')
   to: string;                                // recipient email
@@ -50,12 +59,6 @@ export interface GasSendResult {
   error?: string;
 }
 
-/**
- * POST a signed payload to the GAS email relay. Issue #24 (Apr 26 2026):
- * the legacy `secret` field has been removed — every call is now HMAC-signed
- * (`ts` + `sig`). The companion change in `GAS-EMAIL-RELAY.gs` removes the
- * legacy acceptance path on the relay side.
- */
 export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
   const gasSecret = Deno.env.get('GAS_RELAY_SECRET');
@@ -64,9 +67,6 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   }
 
   const ts = Math.floor(Date.now() / 1000);
-  // Signed mode only — no legacy `secret` field. The HMAC is computed over
-  // the EXACT body that gets serialised below so re-serialisation can never
-  // shift a byte and invalidate the signature.
   const inner = {
     ts,
     template: input.template,
@@ -105,33 +105,17 @@ export interface EmailPayload {
 
 export interface EmailResult {
   ok: boolean
-  provider: 'resend' | 'gas' | 'gmail' | 'none'
+  provider: 'gas' | 'gmail' | 'none'
   error?: string
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
-  const resendKey = Deno.env.get('RESEND_API_KEY');
   const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
   const gasSecret = Deno.env.get('GAS_RELAY_SECRET');
   const gmailUser = Deno.env.get('GMAIL_USER');
   const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD');
 
-  // ── 1. Try Resend ─────────────────────────────────────────────────────────
-  if (resendKey && payload.html) {
-    try {
-      const from = Deno.env.get('RESEND_FROM') || `Choice Properties <${gmailUser}>`;
-      const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
-        body: JSON.stringify({ from, to: payload.to, subject: payload.subject || 'Choice Properties', html: payload.html }),
-      });
-      const json = await r.json().catch(() => ({}));
-      if (r.ok && json.id) return { ok: true, provider: 'resend' };
-      console.warn('Resend failed:', r.status, JSON.stringify(json), '— trying next provider');
-    } catch (e) { console.warn('Resend threw:', (e as Error)?.message, '— trying next provider'); }
-  }
-
-  // ── 2. Try GAS relay (via shared signed helper) ───────────────────────────
+  // ── 1. Try GAS relay (preferred) ──────────────────────────────────────────
   if (gasUrl && gasSecret && (payload.template || payload.html)) {
     const template = payload.template || 'raw_html';
     const data = template === 'raw_html'
@@ -139,10 +123,10 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       : (payload.data ?? {});
     const res = await gasSend({ template, to: payload.to, cc: payload.cc ?? null, data });
     if (res.ok) return { ok: true, provider: 'gas' };
-    console.warn('GAS relay failed:', res.error, '— trying Gmail');
+    console.warn('GAS relay failed:', res.error, '— falling back to Gmail SMTP');
   }
 
-  // ── 3. Fall back to Gmail (nodemailer) ────────────────────────────────────
+  // ── 2. Gmail SMTP fallback (transitional — remove once GAS is live) ───────
   if (gmailUser && gmailPass && payload.html) {
     try {
       const transporter = nodemailer.createTransport({
@@ -158,7 +142,7 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       return { ok: true, provider: 'gmail' };
     } catch (e) {
       const msg = (e as Error)?.message || 'unknown error';
-      console.error('Gmail send failed:', msg);
+      console.error('Gmail SMTP send failed:', msg);
       return { ok: false, provider: 'gmail', error: msg };
     }
   }
