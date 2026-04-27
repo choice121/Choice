@@ -22,6 +22,7 @@ import { corsResponse } from '../_shared/cors.ts';
 import { getClientIp, jsonResponse } from '../_shared/utils.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
 import { gasSend } from '../_shared/send-email.ts';
+import { getTenantLoginUrl } from '../_shared/config.ts';
 
 // ── C-03: DB-backed rate limiting ─────────────────────────────
 // Max 5 new_inquiry requests per IP per 5 minutes.
@@ -138,11 +139,14 @@ Deno.serve(async (req) => {
     // Accepts only an email address. Looks up all matching applications
     // server-side, sends recovery emails for each, and NEVER returns
     // app IDs back to the browser — preventing information disclosure.
+    //
+    // SECURITY: dashboard_url is built server-side via getTenantLoginUrl().
+    // Any client-supplied dashboard_url is intentionally ignored — accepting
+    // it here would let an attacker send phishing emails through this domain
+    // with the victim's real app_id and an attacker-controlled link target.
     if (type === 'app_id_recovery_by_email') {
-      const { email, dashboard_url } = body
+      const { email } = body
       if (!email) throw new Error('email required')
-
-      const dashBase = (dashboard_url || '').replace(/\/+$/, '')
 
       const { data: appRows } = await supabase
         .from('applications')
@@ -154,7 +158,7 @@ Deno.serve(async (req) => {
       // Always return success to prevent email enumeration
       if (appRows && appRows.length > 0) {
         for (const row of appRows) {
-          const link = `${dashBase}?id=${row.app_id}`
+          const link = getTenantLoginUrl(row.app_id, email)
           const preferred_language = row.preferred_language || 'en'
           // Fire and forget; email_logs insert is best-effort.
           gasSend({
@@ -175,8 +179,9 @@ Deno.serve(async (req) => {
     }
 
     // ── App-ID Recovery ────────────────────────────────────
+    // SECURITY: dashboard_url is built server-side (see comment above).
     if (type === 'app_id_recovery') {
-      const { email, app_id, dashboard_url } = body
+      const { email, app_id } = body
       if (!email || !app_id) throw new Error('email and app_id required')
 
       const { data: appRow } = await supabase
@@ -185,6 +190,8 @@ Deno.serve(async (req) => {
         .eq('app_id', app_id)
         .maybeSingle()
       const preferred_language = appRow?.preferred_language || 'en'
+
+      const dashboard_url = getTenantLoginUrl(app_id, email)
 
       gasSend({
         template: 'app_id_recovery',
