@@ -877,9 +877,13 @@ body[data-portal="public"] .hero-title {
 body[data-portal="public"] .hero-headline em,
 body[data-portal="public"] .hero-title em {
   font-family: var(--m-font-display);
-  font-style: italic; font-weight: 400;
+  font-style: normal; font-weight: 700;
   color: #f4d27a;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  text-decoration: underline;
+  text-decoration-color: rgba(244, 210, 122, 0.45);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 2px;
 }
 body[data-portal="public"] .hero-title .line-indent { display: block; padding-left: clamp(16px, 3vw, 60px); }
 body[data-portal="public"] .hero-sub,
@@ -3042,6 +3046,7 @@ body[data-portal="public"] .mobile-cta-bar .mcta-ghost {
   --mv2-hairline:       #E8E2D6;   /* warm hairline (replaces cool grey) */
   --mv2-hairline-strong:#D6CDB9;
   --mv2-accent:         #D4A017;   /* gold — used SPARINGLY, one moment per section */
+  --mv2-gold:           #D4A017;   /* alias — matches --mv2-accent and --m-gold */
   --mv2-accent-pale:    #FAF3DD;
   --mv2-accent-strong:  #B8860B;
   --mv2-brand:          #006AFF;   /* reserved for primary buttons + links only */
@@ -3129,10 +3134,14 @@ body[data-portal="public"] .mv2-headline {
   text-wrap: balance;
 }
 body[data-portal="public"] .mv2-headline em {
-  font-style: italic;
-  font-weight: 500;
-  color: var(--mv2-accent-strong);
-  font-feature-settings: "ss01" 1;   /* Fraunces stylistic set */
+  font-style: normal;
+  font-weight: 700;
+  color: var(--mv2-gold);
+  font-feature-settings: "ss01" 1;
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 160, 23, 0.38);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
 }
 body[data-portal="public"] .mv2-headline--md { font-size: var(--mv2-fs-h2); }
 
@@ -3298,8 +3307,12 @@ body[data-portal="public"][data-page="home"] .mv2-hero .mv2-headline {
 }
 body[data-portal="public"][data-page="home"] .mv2-hero .mv2-headline em {
   color: #F4DD8A;
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(244, 221, 138, 0.45);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 2px;
 }
 
 /* ── Lede ────────────────────────────────────────────────────────── */
@@ -3716,8 +3729,8 @@ body[data-portal="public"][data-page="home"] .mv2-hiw__bubble {
 }
 body[data-portal="public"][data-page="home"] .mv2-hiw__bubble-num {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 700;
   font-size: clamp(0.95rem, 0.9rem + 0.3vw, 1.15rem);
   line-height: 1;
   position: absolute;
@@ -3756,8 +3769,8 @@ body[data-portal="public"][data-page="home"] .mv2-hiw__step.is-active .mv2-hiw__
 }
 body[data-portal="public"][data-page="home"] .mv2-hiw__step-title {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 600;
   font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
   line-height: 1.25;
   color: var(--mv2-ink);
@@ -3902,8 +3915,8 @@ body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-icon {
 }
 body[data-portal="public"][data-page="home"] .mv2-trustblock__pillar-title {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 600;
   font-size: clamp(1.125rem, 0.95rem + 0.5vw, 1.3rem);
   line-height: 1.25;
   color: var(--mv2-ink);
@@ -4048,8 +4061,8 @@ body[data-portal="public"][data-page="home"] .mv2-avatar {
   align-items: center;
   justify-content: center;
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: 0.01em;
   color: #5A4416;
@@ -4082,8 +4095,8 @@ body[data-portal="public"][data-page="home"] .mv2-testimonial__quote {
 }
 body[data-portal="public"][data-page="home"] .mv2-testimonial__quote--display {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 500;
   font-size: clamp(1.15rem, 0.95rem + 0.7vw, 1.45rem);
   line-height: 1.45;
   color: var(--mv2-ink);
@@ -4443,10 +4456,10 @@ body[data-portal="public"][data-page="listings"] .mv2-listings-header__title {
   color: var(--mv2-ink);
 }
 body[data-portal="public"][data-page="listings"] .mv2-listings-header__title em {
-  font-style: italic;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 700;
   color: var(--mv2-ink);
-  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.18) 65%);
+  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.28) 65%);
   padding: 0 0.05em;
 }
 body[data-portal="public"][data-page="listings"] .mv2-listings-header__subtitle {
@@ -4574,12 +4587,11 @@ body[data-portal="public"][data-page="listings"] .mv2-listings-heading {
   letter-spacing: -0.005em;
   color: var(--mv2-ink);
 }
-/* JS may set heading text like "23 results in Atlanta, GA" — italicize
-   anything inside <em> if present (post-9.8 future-proofing) */
+/* JS may highlight city/area text inside <em> in the listings heading */
 body[data-portal="public"][data-page="listings"] .mv2-listings-heading em {
-  font-style: italic;
-  font-weight: 400;
-  color: var(--mv2-ink);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--mv2-accent-strong);
 }
 /* ╚══════════════════════════════════════════════════════════════════╝ */
 
@@ -4649,8 +4661,8 @@ body[data-portal="public"][data-page="property"] .mv2-detail-header #detailPrice
 }
 body[data-portal="public"][data-page="property"] .mv2-detail-header #detailTitle {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 600;
   font-size: clamp(1.2rem, 1rem + 0.8vw, 1.7rem);
   line-height: 1.3;
   color: var(--mv2-ink);
@@ -4681,9 +4693,10 @@ body[data-portal="public"][data-page="property"] .mv2-section-title {
   letter-spacing: -0.005em;
 }
 body[data-portal="public"][data-page="property"] .mv2-section-title em {
-  font-style: italic;
-  font-weight: 400;
-  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.18) 65%);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--mv2-accent-strong);
+  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.22) 65%);
   padding: 0 0.05em;
 }
 
@@ -4744,8 +4757,8 @@ body[data-portal="public"][data-page="property"] .mv2-landlord-card {
 }
 body[data-portal="public"][data-page="property"] .mv2-landlord-card #landlordAvatar {
   font-family: var(--mv2-display);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 700;
   background: rgba(212, 160, 23, 0.16);
   color: #5A4416;
   border: 1px solid rgba(212, 160, 23, 0.28);
@@ -4841,10 +4854,10 @@ body[data-portal="public"][data-page="about"] .mv2-info-hero-title em,
 body[data-portal="public"][data-page="how-to-apply"] .mv2-info-hero-title em,
 body[data-portal="public"][data-page="how-it-works"] .mv2-info-hero-title em,
 body[data-portal="public"][data-page="faq"] .mv2-info-hero-title em {
-  font-style: italic;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 700;
   color: var(--mv2-ink);
-  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.20) 65%);
+  background: linear-gradient(180deg, transparent 65%, rgba(212, 160, 23, 0.30) 65%);
   padding: 0 0.05em;
 }
 
@@ -5528,8 +5541,8 @@ body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__header {
 }
 body[data-portal="public"][data-page="home"] .mv2-msearch-sheet__title {
   font-family: "Fraunces", "Inter", serif;
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 600;
   font-size: 1.35rem;
   color: var(--mv2-ink, #1f2937);
   margin: 0;
@@ -5833,14 +5846,18 @@ body[data-portal="public"][data-page="home"] .featured-title {
   margin-bottom: 6px;
 }
 
-/* Italic accent words (existing <em> in hero, future <em>s in section heads).
-   Use tabular alignment + a touch of weight so italics carry visual mass. */
+/* Gold accent words in home headlines — bold Fraunces + gold underline. */
 body[data-portal="public"][data-page="home"] .mv2-headline em,
 body[data-portal="public"][data-page="home"] .featured-title em {
-  font-style: italic;
-  font-weight: 500;
-  font-variation-settings: 'opsz' 96, 'SOFT' 50;
-  letter-spacing: -0.012em;
+  font-style: normal;
+  font-weight: 700;
+  font-variation-settings: 'opsz' 96, 'SOFT' 50, 'WONK' 0;
+  letter-spacing: -0.015em;
+  color: var(--mv2-gold);
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 160, 23, 0.40);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 2px;
 }
 
 /* ── Eyebrows: more tracking + slightly heavier; signals "editorial" ── */
