@@ -63,41 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_01 — Living Hero
-- **Last commit on main**: `e5a7564e4039ea6927b9254062138ef548dd07f0`
-- **Last verified deploy**: `935c0474` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_02 — Sticky mobile search pill + sheet
+- **Last commit on main**: `2115effc`
+- **Last verified deploy**: `b7f36beb` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_02 — Sticky mobile search pill + full-screen filter sheet
-
-**Goal**: On mobile, the hero's 4-field search collapses on scroll into a
-single rounded pill fixed to the top of the viewport. Tapping the pill opens a
-full-screen sheet (location, beds, max rent, submit) using the existing form
-IDs so `cp-ui.js` / `card-builder.js` bindings stay intact.
-
-**Files touched**:
-- `index.html` — add the sticky pill markup and the bottom sheet markup; add
-  `<!-- batch-marker: BATCH_02 -->`.
-- `css/cp-marketing.css` — pill, sheet, scroll-state, body-scroll-lock styles.
-- `js/cp-live-hero.js` (or new `js/cp-mobile-search.js`) — IntersectionObserver
-  on the original hero search, toggle pill visibility, sheet open/close, focus
-  trap, ESC-to-close, swipe-down-to-close.
-
-**Acceptance**:
-- On viewport ≤768px, after the hero search scrolls out of view, the pill
-  appears within 200ms.
-- Tapping the pill opens the sheet, focuses the location input, locks body
-  scroll. Submitting fires the existing `#searchBtn` click and navigates to
-  `/listings.html`.
-- ESC closes the sheet; swipe-down-from-top-of-sheet closes the sheet.
-- On viewports ≥769px, the pill never appears.
-- `<!-- batch-marker: BATCH_02 -->` is grep-able on the live URL.
-
----
 
 ### BATCH_03 — Featured listings: horizontal snap-scroll rail on mobile
 
@@ -222,3 +195,4 @@ existing card skeleton style.
 _(append-only; one line per completed batch — `BATCH_NN — name — <commit-sha> — <deploy-id> — <iso-timestamp>`)_
 
 - BATCH_01 — Living Hero — `e5a7564e` — deploy `935c0474` — 2026-04-27
+- BATCH_02 — Sticky mobile search pill + sheet — `2115effc` — deploy `b7f36beb` — 2026-04-27
