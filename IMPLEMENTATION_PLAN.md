@@ -63,48 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: _none_
-- **Last commit on main**: _will be filled in by Done log_
-- **Last verified deploy**: _will be filled in by Done log_
+- **Last completed batch**: BATCH_01 — Living Hero
+- **Last commit on main**: `e5a7564e4039ea6927b9254062138ef548dd07f0`
+- **Last verified deploy**: `935c0474` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_01 — Living Hero (Ken Burns + simulated live activity ticker)
-
-**Goal**: Make the hero feel alive without any backend calls. The background
-photo gets a slow Ken Burns pan; a small "LIVE" chip below the trust signals
-rotates through believable activity strings (applications today, new listings,
-people browsing, average decision time). Numbers are deterministic per-day
-(seeded by date) so they don't flicker between page loads. Fully respects
-`prefers-reduced-motion`.
-
-**Files touched**:
-- `index.html` — add `<div class="mv2-hero__live">` after `.mv2-hero__trust`,
-  add `<script defer src="/js/cp-live-hero.js?v=__BUILD_VERSION__"></script>`,
-  insert `<!-- batch-marker: BATCH_01 -->` somewhere in `<body>`.
-- `css/cp-marketing.css` — append a `Phase L1 — Living Hero` block at the very
-  end with the Ken Burns keyframes, `.mv2-hero__bg-img` animation rule (gated by
-  `prefers-reduced-motion`), and `.mv2-hero__live` chip styles.
-- `js/cp-live-hero.js` — NEW FILE, ~120 lines, no external dependencies, no
-  Supabase, no fetches. Pure DOM + setInterval. Self-contained IIFE.
-
-**Acceptance**:
-- Hero photo visibly drifts/zooms over ~28s, no jank on a mid-tier Android.
-- Live chip first paints with a calm "Loading live activity…" then within 2s
-  swaps to the first generated message; rotates every 9–14s with a 350ms
-  crossfade.
-- With `prefers-reduced-motion: reduce` set in the OS, both Ken Burns and chip
-  rotation are disabled — chip shows one static message for the session.
-- No console errors. Lighthouse mobile performance score does not drop more
-  than 2 points vs. the prior deploy.
-- `<!-- batch-marker: BATCH_01 -->` is grep-able on the live URL.
-
-**Rollback**: `git revert <sha>` on main; Cloudflare redeploys in ~2 min.
-
----
 
 ### BATCH_02 — Sticky mobile search pill + full-screen filter sheet
 
@@ -254,3 +220,5 @@ existing card skeleton style.
 ## Done log
 
 _(append-only; one line per completed batch — `BATCH_NN — name — <commit-sha> — <deploy-id> — <iso-timestamp>`)_
+
+- BATCH_01 — Living Hero — `e5a7564e` — deploy `935c0474` — 2026-04-27
