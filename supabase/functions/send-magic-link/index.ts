@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/send-email.ts";
+import { isDbRateLimited } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -20,17 +21,12 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// In-memory throttle (per warm instance): max 3 sends / email / 10 min.
-const sentLog = new Map<string, number[]>();
-function throttled(email: string): boolean {
-  const now = Date.now();
-  const window = 10 * 60 * 1000;
-  const arr = (sentLog.get(email) || []).filter((t) => now - t < window);
-  if (arr.length >= 3) return true;
-  arr.push(now);
-  sentLog.set(email, arr);
-  return false;
-}
+// Per-email send cap: 3 sends / 10 min. Backed by the shared rate_limit_log
+// table so the cap survives Edge Function cold starts and is consistent across
+// every isolate (the previous in-memory Map was per-instance and bypassable
+// under autoscaling, allowing email-bomb attacks against any address).
+const MAGIC_LINK_MAX_PER_WINDOW = 3;
+const MAGIC_LINK_WINDOW_MS      = 10 * 60 * 1000;
 
 function brandedHtml(actionLink: string, email: string): string {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -93,7 +89,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "invalid_email" }), { status: 400, headers: { ...CORS, "Content-Type": "application/json" } });
   }
 
-  if (throttled(email)) {
+  if (await isDbRateLimited('email:' + email, 'send-magic-link', MAGIC_LINK_MAX_PER_WINDOW, MAGIC_LINK_WINDOW_MS)) {
     return new Response(JSON.stringify({ error: "rate_limited", message: "Too many sign-in requests. Please wait a few minutes and try again." }), {
       status: 429, headers: { ...CORS, "Content-Type": "application/json" },
     });

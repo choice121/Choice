@@ -7,30 +7,17 @@
  * live token column on applications/lease_amendments so the link is
  * unusable from that instant on.
  */
-import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-);
-
-async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: string; error?: string }> {
-  const auth = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-  if (!auth) return { ok: false, error: 'Missing authorization header' };
-  const { data: { user }, error } = await supabase.auth.getUser(auth);
-  if (error || !user) return { ok: false, error: 'Invalid or expired token' };
-  const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).single();
-  if (!role) return { ok: false, error: 'Not an admin' };
-  return { ok: true, userEmail: user.email };
-}
+import { requireAdmin } from '../_shared/auth.ts';
 
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
-  const auth = await verifyAdmin(req);
-  if (!auth.ok) return jsonErr(401, auth.error!);
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
+  const actor = user.email || 'admin';
 
   let body: { token: string; reason?: string };
   try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
@@ -39,7 +26,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: revoked, error: rpcErr } = await supabase.rpc('revoke_signing_token', {
     p_token:  token,
-    p_by:     auth.userEmail || 'admin',
+    p_by:     actor,
     p_reason: (reason || 'admin_revoked').slice(0, 200),
   });
   if (rpcErr) return jsonErr(500, 'Revoke failed: ' + rpcErr.message);
@@ -58,7 +45,7 @@ Deno.serve(async (req: Request) => {
       target_type: 'application',
       target_id:   meta?.app_id || 'unknown',
       metadata:    {
-        actor:       auth.userEmail || 'admin',
+        actor,
         signer_role: meta?.signer_role || null,
         reason:      reason || 'admin_revoked',
       },

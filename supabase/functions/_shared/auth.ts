@@ -4,8 +4,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { cors } from './cors.ts';
 
+// The user shape exposed to callers. We surface only the fields callers
+// actually use (id + email) so we are not leaking the full Supabase User
+// object into the type system, but callers like revoke-signing-token can
+// log the actor's email without a misleading `as any` cast.
+export type AuthUser = { id: string; email?: string | null };
+
 export type AuthResult =
-  | { ok: true;  user: { id: string }; supabase: ReturnType<typeof createClient> }
+  | { ok: true;  user: AuthUser; supabase: ReturnType<typeof createClient> }
   | { ok: false; response: Response };
 
 // Returns a verified user + service-role supabase client,
