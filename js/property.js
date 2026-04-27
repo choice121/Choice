@@ -36,9 +36,25 @@ async function updateNav() {
 
 updateNav();
 
-const params     = new URLSearchParams(window.location.search);
-const propertyId = params.get('id');
-const isPreview  = params.get('preview') === 'true';
+const params    = new URLSearchParams(window.location.search);
+const isPreview = params.get('preview') === 'true';
+
+// Resolve the property id from either:
+//   1) the legacy ?id=PROP-XXXXXXXX query string, or
+//   2) the trailing prop-xxxxxxxx token of the canonical slug URL
+//      `/rent/<state>/<city>/<beds>-<type>-prop-xxxxxxxx/`
+//      (rendered by functions/rent/[state]/[city]/[slug].js).
+// Matching the same regex the edge function uses keeps the two
+// in lock-step. Without this fallback, every click on a card on
+// the live site shows "Property not found." and redirects to
+// /listings.html because the canonical URL has no ?id=.
+function resolvePropertyId() {
+  const fromQuery = (params.get('id') || '').trim();
+  if (fromQuery) return fromQuery;
+  const m = window.location.pathname.match(/(prop-[a-z0-9]{8})\/?$/i);
+  return m ? m[1].toUpperCase() : '';
+}
+const propertyId = resolvePropertyId();
 
 if (!propertyId && !isPreview) {
   // Show an error toast then redirect to the listings page
