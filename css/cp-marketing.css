@@ -3013,18 +3013,22 @@ body[data-portal="public"] .mobile-cta-bar .mcta-ghost {
 /* ╔══════════════════════════════════════════════════════════════════════╗
    ║  Phase 9 — mv2-* additive layer (Public Marketing Refresh v2)       ║
    ║  Added: 2026-04-26 (DESIGN_EXTENSION_PLAN.md §9.0, agent_issues #30) ║
+   ║  Pruned: 2026-04-27 — see batch-3 cleanup commit                    ║
    ║                                                                      ║
-   ║  Purpose: an additive token + utility namespace that lets phases     ║
-   ║  9.1 → 9.13 build a premium, mobile-first public-marketing surface  ║
-   ║  WITHOUT touching any existing class name, ID, or token.            ║
+   ║  Purpose: an additive token + utility namespace that built a        ║
+   ║  premium, mobile-first public-marketing surface WITHOUT touching    ║
+   ║  any existing class name, ID, or token.                             ║
    ║                                                                      ║
    ║  Design direction: Editorial / Boutique (warm off-white, restrained ║
    ║  gold accent, Fraunces italic emphasis, generous whitespace).       ║
    ║                                                                      ║
-   ║  Activation: a page opts in by adding the .mv2-section / .mv2-card  ║
-   ║  / .mv2-headline etc. classes. Tokens are always defined but only   ║
-   ║  consumed by these utilities — so this whole block is dormant       ║
-   ║  until a page chooses to use it. No visual change in 9.0 itself.    ║
+   ║  Status: phases 9.1–9.13 shipped what they needed. The dormant       ║
+   ║  generic primitives that were never opted into (.mv2-section,       ║
+   ║  .mv2-card, .mv2-pill, .mv2-container, .mv2-divider, .mv2-stat-*,   ║
+   ║  .mv2-snap-row, .mv2-cta-bar, .mv2-accent-rule, .mv2-btn--inverse,  ║
+   ║  .mv2-section--ink/--white, etc.) were removed in the batch-3       ║
+   ║  cleanup. Survivors are page-specific concrete components used by   ║
+   ║  index/listings/property/about/etc.                                 ║
    ╚══════════════════════════════════════════════════════════════════════╝ */
 
 :root {
@@ -3092,35 +3096,6 @@ body[data-portal="public"] .mobile-cta-bar .mcta-ghost {
   /* ── Sticky CTA bar height (used to pad page bottom on mobile) ── */
   --mv2-cta-bar-h:  64px;
 }
-
-/* ── Section ─────────────────────────────────────────────────────── */
-body[data-portal="public"] .mv2-section {
-  padding: var(--mv2-section-y-mobile) 0;
-  background: var(--mv2-bg-warm);
-  color: var(--mv2-ink);
-}
-@media (min-width: 769px) {
-  body[data-portal="public"] .mv2-section {
-    padding: var(--mv2-section-y-desktop) 0;
-  }
-}
-body[data-portal="public"] .mv2-section--white { background: #FFFFFF; }
-body[data-portal="public"] .mv2-section--ink {
-  background: linear-gradient(150deg, #04111F 0%, #0B1D38 50%, #0E2347 100%);
-  color: #F4F2EE;
-}
-body[data-portal="public"] .mv2-section--ink :where(h1,h2,h3) { color: #FFFFFF; }
-body[data-portal="public"] .mv2-section--ink .mv2-eyebrow { color: var(--mv2-accent); }
-
-body[data-portal="public"] .mv2-container {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 var(--mv2-container-x);
-}
-body[data-portal="public"] .mv2-container--prose {
-  max-width: var(--mv2-max-prose);
-}
-
 /* ── Eyebrow tag ─────────────────────────────────────────────────── */
 body[data-portal="public"] .mv2-eyebrow {
   font-family: var(--mv2-font-body);
@@ -3169,53 +3144,6 @@ body[data-portal="public"] .mv2-lede {
   margin: 0 0 var(--mv2-stack-5);
 }
 
-/* ── Card surface ────────────────────────────────────────────────── */
-body[data-portal="public"] .mv2-card {
-  background: #FFFFFF;
-  border-radius: var(--mv2-r-lg);
-  box-shadow: var(--mv2-shadow-hairline), var(--mv2-shadow-soft);
-  padding: var(--mv2-stack-5);
-  transition: box-shadow var(--mv2-dur) var(--mv2-ease),
-              transform var(--mv2-dur) var(--mv2-ease);
-}
-body[data-portal="public"] .mv2-card--lift:hover {
-  box-shadow: var(--mv2-shadow-hairline), var(--mv2-shadow-lift);
-  transform: translateY(-2px);
-}
-body[data-portal="public"] .mv2-card--accent {
-  box-shadow: var(--mv2-shadow-gold), var(--mv2-shadow-soft);
-}
-
-/* ── Pill / chip ─────────────────────────────────────────────────── */
-body[data-portal="public"] .mv2-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--mv2-r-pill);
-  font-size: 0.84rem;
-  font-weight: 500;
-  background: var(--mv2-bg-warm-2);
-  color: var(--mv2-ink-2);
-  border: 1px solid var(--mv2-hairline);
-  text-decoration: none;
-  min-height: 32px;
-  transition: background var(--mv2-dur) var(--mv2-ease),
-              color var(--mv2-dur) var(--mv2-ease);
-}
-body[data-portal="public"] a.mv2-pill:hover { background: #FFFFFF; color: var(--mv2-brand); }
-body[data-portal="public"] .mv2-pill--fresh {
-  background: rgba(4, 120, 87, 0.08);
-  color: var(--mv2-success);
-  border-color: rgba(4, 120, 87, 0.18);
-  font-weight: 600;
-}
-body[data-portal="public"] .mv2-pill--accent {
-  background: var(--mv2-accent-pale);
-  color: var(--mv2-accent-strong);
-  border-color: rgba(212,160,23,.30);
-}
-
 /* ── Button (primary / ghost) — uses brand blue, not gold ───────── */
 body[data-portal="public"] .mv2-btn {
   display: inline-flex;
@@ -3247,93 +3175,9 @@ body[data-portal="public"] .mv2-btn--ghost {
   border-color: var(--mv2-hairline-strong);
 }
 body[data-portal="public"] .mv2-btn--ghost:hover { background: #FFFFFF; border-color: var(--mv2-ink); }
-body[data-portal="public"] .mv2-btn--inverse {
-  background: #FFFFFF;
-  color: var(--mv2-ink);
-}
-
-/* ── Hairline divider + accent rule ──────────────────────────────── */
-body[data-portal="public"] .mv2-divider {
-  height: 1px;
-  background: var(--mv2-hairline);
-  border: 0;
-  margin: var(--mv2-stack-6) 0;
-}
-body[data-portal="public"] .mv2-accent-rule {
-  width: 56px;
-  height: 2px;
-  background: var(--mv2-accent);
-  border: 0;
-  margin: 0 0 var(--mv2-stack-3);
-}
-
-/* ── Stat (display number + small label) ─────────────────────────── */
-body[data-portal="public"] .mv2-stat-num {
-  font-family: var(--mv2-font-display);
-  font-weight: 500;
-  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
-  line-height: 1.1;
-  color: var(--mv2-ink);
-}
-body[data-portal="public"] .mv2-stat-num em {
-  font-style: italic;
-  color: var(--mv2-accent-strong);
-}
-body[data-portal="public"] .mv2-stat-label {
-  font-size: 0.82rem;
-  color: var(--mv2-muted);
-  letter-spacing: 0.02em;
-}
-
-/* ── Horizontal snap-row (used for mobile carousels in 9.2 / 9.5) ── */
-body[data-portal="public"] .mv2-snap-row {
-  display: flex;
-  gap: var(--mv2-stack-3);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: var(--mv2-container-x);
-  -webkit-overflow-scrolling: touch;
-  padding: var(--mv2-stack-2) var(--mv2-container-x) var(--mv2-stack-4);
-  margin: 0 calc(-1 * var(--mv2-container-x));
-  scrollbar-width: none;
-}
-body[data-portal="public"] .mv2-snap-row::-webkit-scrollbar { display: none; }
-body[data-portal="public"] .mv2-snap-row > * {
-  flex: 0 0 86%;
-  max-width: 360px;
-  scroll-snap-align: start;
+@media (min-width: 769px) {
 }
 @media (min-width: 769px) {
-  body[data-portal="public"] .mv2-snap-row {
-    overflow-x: visible;
-    scroll-snap-type: none;
-    flex-wrap: wrap;
-    margin: 0;
-    padding: 0;
-  }
-  body[data-portal="public"] .mv2-snap-row > * {
-    flex: 0 0 calc((100% - 2 * var(--mv2-stack-3)) / 3);
-  }
-}
-
-/* ── Sticky mobile CTA bar (consumed by 9.7) ─────────────────────── */
-body[data-portal="public"] .mv2-cta-bar {
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 60;
-  display: none;          /* shown via .is-visible class set by 9.7 JS */
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--mv2-stack-3);
-  padding: 10px 16px calc(10px + var(--mv2-safe-bot));
-  background: rgba(255,255,255, 0.96);
-  backdrop-filter: saturate(160%) blur(12px);
-  border-top: 1px solid var(--mv2-hairline);
-  box-shadow: 0 -4px 16px rgba(10,23,41,.06);
-}
-body[data-portal="public"] .mv2-cta-bar.is-visible { display: flex; }
-@media (min-width: 769px) {
-  body[data-portal="public"] .mv2-cta-bar.is-visible { display: none; }
 }
 
 /* ── Focus ring (consistent across all mv2-* interactives) ───────── */
@@ -5202,9 +5046,6 @@ body[data-portal="public"][data-page="faq"] .mv2-info-section strong {
   height: 2px;
   background: var(--mv2-gold);
   border-radius: 2px;
-}
-[data-portal="public"] .mv2-nav-link--track {
-  color: var(--mv2-muted);
 }
 [data-portal="public"] .mv2-nav-link--landlord {
   background: rgba(212, 160, 23, 0.10);
