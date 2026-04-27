@@ -63,35 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_06 — Backdrop-blur sticky nav (two-state)
-- **Last commit on main**: `39ab5de3`
-- **Last verified deploy**: `d5b711e7` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_07 — Warm dark mode (prefers-color-scheme)
+- **Last commit on main**: `68724b59`
+- **Last verified deploy**: `afdb0b88` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_07 — Warm dark mode (`prefers-color-scheme`)
-
-**Goal**: Respect OS dark-mode preference with a warm (not pure-black) dark
-theme. No user toggle in this batch — just system preference.
-
-**Files touched**:
-- `css/cp-design.css` — add `@media (prefers-color-scheme: dark)` overriding
-  CSS custom properties (`--mv2-bg-warm`, `--mv2-ink`, etc.) to a warm dark
-  palette (e.g. `#161311` background, `#F2EAD9` ink, `#3a3733` hairlines).
-- `css/cp-marketing.css` — review hero overlay opacity in dark mode (likely
-  needs to lift slightly).
-- `index.html` — `<meta name="theme-color">` add a `media="(prefers-color-scheme: dark)"`
-  variant; add `<!-- batch-marker: BATCH_07 -->`.
-
-**Acceptance**:
-- macOS / iOS / Android in dark mode renders the full homepage in the warm
-  dark palette with WCAG AA contrast on all text.
-- Light-mode users see no change.
-
----
 
 ### BATCH_08 — Skeleton-screen audit
 
@@ -120,3 +99,4 @@ _(append-only; one line per completed batch — `BATCH_NN — name — <commit-s
 - BATCH_04 — Save-without-signup nudge + heart pulse — `df26fc2c` — deploy `672b76e5` — 2026-04-27
 - BATCH_05 — Editorial typography pass — `7c391d13` — deploy `7633567c` — 2026-04-27
 - BATCH_06 — Backdrop-blur sticky nav (two-state) — `39ab5de3` — deploy `d5b711e7` — 2026-04-27
+- BATCH_07 — Warm dark mode (prefers-color-scheme) — `68724b59` — deploy `afdb0b88` — 2026-04-27
