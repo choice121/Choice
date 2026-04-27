@@ -177,6 +177,21 @@
     const url = new URL(location.href);
     _appId = url.searchParams.get('app_id');
     const queryLeaseId = url.searchParams.get('lease_id');
+    // Audit fix R-1 (2026-04-27): also accept legacy ?id=, which various
+    // dashboard / email-log / audit-log links still use. The value can be
+    // either an app_id (e.g. "APP-XXXXXX") or an applications.id UUID;
+    // we detect by shape and resolve to app_id.
+    const queryGenericId = url.searchParams.get('id');
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!_appId && queryGenericId) {
+      if (UUID_RE.test(queryGenericId)) {
+        const { data: ar } = await sb.from('applications').select('app_id').eq('id', queryGenericId).maybeSingle();
+        if (ar?.app_id) _appId = ar.app_id;
+      } else {
+        _appId = queryGenericId; // already an app_id
+      }
+    }
 
     // Phase 10 -- accept ?lease_id= and resolve to its app_id.
     // Lets admins deep-link directly to a specific lease (renewals etc).
@@ -187,7 +202,7 @@
 
     if (!_appId) {
       document.getElementById('lease-detail-root').innerHTML =
-        '<div class="empty"><h3>Missing app_id or lease_id</h3><p>Open a lease from the pipeline to view its detail.</p></div>';
+        '<div class="empty"><h3>Missing app_id, lease_id, or id</h3><p>Open a lease from the pipeline to view its detail.</p></div>';
       return;
     }
 
