@@ -119,12 +119,16 @@ Deno.serve(async (req) => {
 
     // 204 = success, 404 = already gone — both are acceptable (idempotent).
     if (!ikRes.ok && ikRes.status !== 404) {
+      // Generic message to client; full ImageKit response logged server-side
+      // (raw text could leak account internals).
       const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
-      return jsonResponse({ success: false, error: `ImageKit error: ${errText}` }, 502);
+      console.error('[imagekit-delete] ImageKit error:', errText);
+      return jsonResponse({ success: false, error: 'Image delete failed. Please try again.' }, 502);
     }
 
     return jsonResponse({ success: true });
   } catch (err: any) {
-    return jsonResponse({ success: false, error: err.message }, 500);
+    console.error('[imagekit-delete] handler error:', err);
+    return jsonResponse({ success: false, error: 'Failed to delete image' }, 500);
   }
 });

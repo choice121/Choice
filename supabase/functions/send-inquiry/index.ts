@@ -339,6 +339,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: true })
 
   } catch (err: any) {
-    return jsonResponse({ success: false, error: err.message }, 500)
+    console.error('[send-inquiry] handler error:', err)
+    return jsonResponse({ success: false, error: 'Failed to process inquiry' }, 500)
   }
 })

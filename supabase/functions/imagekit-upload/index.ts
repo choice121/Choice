@@ -102,9 +102,21 @@ Deno.serve(async (req) => {
     // CRITICAL: Decode base64 to binary before sending to ImageKit.
     const binaryData = Uint8Array.from(atob(base64Raw), c => c.charCodeAt(0));
 
+    // Derive MIME from the (already-whitelisted) extension. Previously the
+    // Blob was hard-coded to image/jpeg regardless of actual file type. Works
+    // today because ImageKit infers MIME from content, but is a latent bug
+    // if ImageKit ever tightens validation against the declared type.
+    const MIME_BY_EXT: Record<string, string> = {
+      jpg:  'image/jpeg',
+      jpeg: 'image/jpeg',
+      png:  'image/png',
+      webp: 'image/webp',
+    };
+    const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
+
     const credentials = btoa(`${IMAGEKIT_PRIVATE_KEY}:`);
     const formData = new FormData();
-    formData.append('file', new Blob([binaryData], { type: 'image/jpeg' }), safeFileName);
+    formData.append('file', new Blob([binaryData], { type: mime }), safeFileName);
     formData.append('fileName', safeFileName);
     if (folder) formData.append('folder', folder);
 
@@ -115,9 +127,11 @@ Deno.serve(async (req) => {
     });
 
     if (!ikRes.ok) {
+      // Log full ImageKit response server-side for debugging, return generic
+      // message to client (raw text could leak account internals or URLs).
       const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
       console.error('[imagekit-upload] ImageKit error:', errText);
-      return jsonResponse({ success: false, error: `ImageKit error: ${errText}` }, 502);
+      return jsonResponse({ success: false, error: 'Image upload failed. Please try again.' }, 502);
     }
 
     const ikData = await ikRes.json();
@@ -148,7 +162,7 @@ Deno.serve(async (req) => {
         }
         console.error('[imagekit-upload] add_property_photo failed:', rpcErr);
         return jsonResponse(
-          { success: false, error: `Photo metadata save failed: ${rpcErr.message}` },
+          { success: false, error: 'Photo metadata save failed' },
           500
         );
       }
@@ -160,6 +174,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: true, url, fileId, photoId });
   } catch (err: any) {
     console.error('[imagekit-upload] Exception:', { message: err.message, stack: err.stack });
-    return jsonResponse({ success: false, error: err.message }, 500);
+    return jsonResponse({ success: false, error: 'Image upload failed' }, 500);
   }
 });

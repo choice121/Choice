@@ -11,6 +11,14 @@ import { corsResponse } from '../_shared/cors.ts';
 import { requireAuth } from '../_shared/auth.ts';
 import { jsonResponse } from '../_shared/utils.ts';
 import { gasSend } from '../_shared/send-email.ts';
+import { isDbRateLimited } from '../_shared/rate-limit.ts';
+
+// Per-user message cap: 30 / 10 min. Generous for real conversations
+// (an admin replying to a batch of applications, or a landlord
+// answering several questions back-to-back) while capping any
+// compromised-account abuse against tenant inboxes + GAS quota.
+const MSG_MAX_PER_WINDOW = 30;
+const MSG_WINDOW_MS      = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse()
@@ -28,8 +36,13 @@ Deno.serve(async (req) => {
   if (!isAdmin && !isLandlord) return jsonResponse({ success: false, error: 'Forbidden' }, 403)
   // ── End auth check ────────────────────────────────────────
 
+  // ── Per-user rate limit (DB-backed, survives cold starts) ──
+  if (await isDbRateLimited('user:' + user.id, 'send-message', MSG_MAX_PER_WINDOW, MSG_WINDOW_MS)) {
+    return jsonResponse({ success: false, error: 'Too many messages. Please wait a few minutes and try again.' }, 429)
+  }
+
   try {
-    const { app_id, message, sender, sender_name } = await req.json()
+    const { app_id, message, sender: clientSender, sender_name: clientSenderName } = await req.json()
     if (!app_id || !message) throw new Error('app_id and message required')
 
     // ── I-056: Message length cap ─────────────────────────────
@@ -68,10 +81,50 @@ Deno.serve(async (req) => {
       if (!hasAccess) return jsonResponse({ success: false, error: 'Forbidden — not your property' }, 403)
     }
 
-    const { data: app, error: fetchErr } = await supabase.from('applications').select('email,first_name,preferred_language,landlord_id').eq('app_id', app_id).single()
-    if (fetchErr) throw new Error(fetchErr.message)
+    const { data: app, error: fetchErr } = await supabase.from('applications').select('email,first_name,preferred_language,landlord_id').eq('app_id', app_id).maybeSingle()
+    if (fetchErr) {
+      console.error('[send-message] applications fetch failed:', fetchErr)
+      return jsonResponse({ success: false, error: 'Failed to load application' }, 500)
+    }
+    if (!app) return jsonResponse({ success: false, error: 'Application not found' }, 404)
 
-    await supabase.from('messages').insert({ app_id, sender: sender || 'admin', sender_name: sender_name || 'Choice Properties', message })
+    // ── SECURITY: derive sender + sender_name from auth, not body ─
+    // Previously both came straight from the request body, so a landlord
+    // could send a message with sender:'admin' and sender_name:'Choice Properties
+    // Admin Team' — making fake-admin messages indistinguishable from real
+    // admin messages in the tenant's inbox + persisted DB row.
+    //
+    // Now:
+    //   • Landlords are forced to sender='landlord' with their own profile name.
+    //   • Admins may set sender='tenant' (legitimate "relay this tenant message
+    //     to the landlord" flow described at the bottom of this function) or
+    //     sender='admin' (default). Admin sender_name is honoured for branded
+    //     reply variations ("Choice Properties Support" etc).
+    let effectiveSender: 'admin' | 'landlord' | 'tenant'
+    let effectiveSenderName: string
+    if (isAdmin) {
+      effectiveSender = clientSender === 'tenant' ? 'tenant'
+                      : clientSender === 'landlord' ? 'landlord'
+                      : 'admin'
+      effectiveSenderName = (typeof clientSenderName === 'string' && clientSenderName.trim())
+        ? clientSenderName.trim().slice(0, 200)
+        : (effectiveSender === 'tenant' ? 'Tenant'
+           : effectiveSender === 'landlord' ? 'Landlord'
+           : 'Choice Properties')
+    } else {
+      // Landlord — forced identity. Look up the landlord's preferred display name.
+      effectiveSender = 'landlord'
+      const { data: landlordProfile } = await supabase
+        .from('landlords')
+        .select('business_name, contact_name')
+        .eq('id', landlordRow!.id)
+        .maybeSingle()
+      effectiveSenderName = landlordProfile?.business_name
+                         || landlordProfile?.contact_name
+                         || 'Landlord'
+    }
+
+    await supabase.from('messages').insert({ app_id, sender: effectiveSender, sender_name: effectiveSenderName, message })
 
     // P1-A: Graceful GAS relay check — if not configured, skip email but still return success
     const gasConfigured = !!Deno.env.get('GAS_EMAIL_URL') && !!Deno.env.get('GAS_RELAY_SECRET')
@@ -106,8 +159,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    // P1-A: new_message_tenant — notify tenant when admin or landlord sends a message
-    if (sender === 'admin' || sender === 'landlord' || !sender) {
+    // P1-A: new_message_tenant — notify tenant when admin or landlord sends a message.
+    // Routing keys off effectiveSender (what we actually wrote to DB), not the
+    // client-supplied value, so an impersonation attempt never affects routing.
+    if (effectiveSender === 'admin' || effectiveSender === 'landlord') {
       fireAndLog(
         'new_message_tenant',
         app.email,
@@ -116,11 +171,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // P1-B: new_message_landlord — notify landlord when a tenant message is forwarded by admin.
+    // P1-B: new_message_landlord — admin-only path: admin relays a tenant message.
     // Note: tenants cannot call this endpoint directly (auth guard enforces admin/landlord only).
     // For tenant-initiated replies, cp-api.js tenantReply() calls send-inquiry with type:'tenant_reply'
-    // after the DB RPC succeeds. This branch handles the case where an admin relays a tenant message.
-    if (sender === 'tenant') {
+    // after the DB RPC succeeds. Landlords cannot reach this branch even if they try
+    // (effectiveSender is forced to 'landlord' for non-admin callers).
+    if (effectiveSender === 'tenant') {
       if (app.landlord_id) {
         const { data: landlordData } = await supabase.from('landlords').select('email, contact_name, business_name').eq('id', app.landlord_id).maybeSingle()
         if (landlordData?.email) {
@@ -128,7 +184,7 @@ Deno.serve(async (req) => {
           fireAndLog(
             'new_message_landlord',
             landlordData.email,
-            { app_id, landlordName, tenantName: sender_name || 'Tenant', message },
+            { app_id, landlordName, tenantName: effectiveSenderName, message },
             { app_id },
           )
         }
@@ -137,6 +193,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ success: true })
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, 500)
+    console.error('[send-message] handler error:', err)
+    return jsonResponse({ success: false, error: 'Failed to send message' }, 500)
   }
 })
