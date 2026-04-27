@@ -63,33 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_04 — Save-without-signup nudge + heart pulse
-- **Last commit on main**: `df26fc2c`
-- **Last verified deploy**: `672b76e5` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_05 — Editorial typography pass
+- **Last commit on main**: `7c391d13`
+- **Last verified deploy**: `7633567c` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_05 — Editorial typography pass
-
-**Goal**: Lean fully into Fraunces (already loaded) for display headings.
-Tighten visual identity toward "Editorial / Architectural" lane.
-
-**Files touched**:
-- `css/cp-marketing.css` — `.mv2-headline`, `.mv2-headline--md`, section
-  headers, eyebrow tweaks. Increase letter-spacing in eyebrows, adjust line-height.
-- `css/cp-design.css` — review base typographic scale only if needed.
-- `index.html` — add `<!-- batch-marker: BATCH_05 -->`.
-
-**Acceptance**:
-- Hero headline + section headlines render in Fraunces with proper italic
-  treatment for the existing `<em>` accents.
-- Body copy stays in Inter.
-- No layout shift > 0.05 CLS introduced by font swap.
-
----
 
 ### BATCH_06 — Backdrop-blur sticky nav
 
@@ -157,3 +138,4 @@ _(append-only; one line per completed batch — `BATCH_NN — name — <commit-s
 - BATCH_02 — Sticky mobile search pill + sheet — `2115effc` — deploy `b7f36beb` — 2026-04-27
 - BATCH_03 — Featured listings snap-scroll on mobile — `8ad9213e` — deploy `8e6109da` — 2026-04-27
 - BATCH_04 — Save-without-signup nudge + heart pulse — `df26fc2c` — deploy `672b76e5` — 2026-04-27
+- BATCH_05 — Editorial typography pass — `7c391d13` — deploy `7633567c` — 2026-04-27
