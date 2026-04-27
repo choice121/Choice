@@ -179,18 +179,19 @@ begin
 end$$;
 
 -- (b) Admin / service-role-only functions
-revoke execute on function public.purge_old_logs()                         from public, anon, authenticated;
-revoke execute on function public.admin_list_landlords(integer, integer)   from public, anon;
-revoke execute on function public.dashboard_pulse()                        from public, anon;
-revoke execute on function public.publish_lease_template(uuid, text)       from public, anon, authenticated;
-revoke execute on function public.snapshot_lease_template_for_app(uuid, text) from public, anon, authenticated;
-revoke execute on function public.generate_lease_tokens(uuid)              from public, anon;
-revoke execute on function public.record_lease_pdf_integrity(uuid, text, text, integer, jsonb, text, integer)
-                                                                            from public, anon;
-revoke execute on function public.record_lease_pdf_version(uuid, text, text, integer, jsonb, text, integer, text, text)
-                                                                            from public, anon;
+revoke execute on function public.purge_old_logs()                                       from public, anon, authenticated;
+revoke execute on function public.admin_list_landlords(integer, integer)                 from public, anon;
+revoke execute on function public.dashboard_pulse(timestamptz, integer)                  from public, anon;
+revoke execute on function public.publish_lease_template(uuid, text, text, jsonb, text, boolean)
+                                                                                          from public, anon, authenticated;
+revoke execute on function public.snapshot_lease_template_for_app(text, uuid)            from public, anon, authenticated;
+revoke execute on function public.generate_lease_tokens(text)                            from public, anon;
+revoke execute on function public.record_lease_pdf_integrity(text, integer, text, boolean, text)
+                                                                                          from public, anon;
+revoke execute on function public.record_lease_pdf_version(text, text, text, integer, uuid, uuid, text)
+                                                                                          from public, anon;
 
 -- validate_lease_financials is a pure helper used by triggers / admin UI —
 -- not needed by anon.
 revoke execute on function public.validate_lease_financials(text, numeric, numeric, numeric, numeric, numeric, boolean)
-                                                                            from public, anon;
+                                                                                          from public, anon;
