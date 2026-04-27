@@ -108,7 +108,25 @@
           },
         };
       }
-      console.warn('[lease-render] pinned version_id missing/unreadable, falling through to active template:', error?.message);
+      // Fall-through is intentional but should never happen in steady-state:
+      // an application with a pinned lease_template_version_id always
+      // points at a real row. If we land here it usually means the row
+      // was deleted out from under us, the column has stale data, or RLS
+      // is hiding the row from this client. Log enough context that the
+      // operator can identify which application + which version_id is
+      // affected without grepping through every recent request.
+      console.warn(
+        '[lease-render] pinned version_id missing/unreadable — falling through to active template.',
+        {
+          app_id:                  app.app_id ?? null,
+          pinned_version_id:       app.lease_template_version_id,
+          pinned_row_returned:     Boolean(data),
+          pinned_body_present:     Boolean(data?.template_body),
+          fallback_state_code:     app.lease_state_code ?? null,
+          supabase_error_code:     error?.code  ?? null,
+          supabase_error_message:  error?.message ?? null,
+        },
+      );
       // fall through — we'll try the active template next
     }
 
