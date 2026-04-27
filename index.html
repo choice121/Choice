@@ -74,6 +74,7 @@
 <script defer src="/js/components.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/card-builder.js?v=__BUILD_VERSION__"></script>
 <script defer src="/js/cp-live-hero.js?v=__BUILD_VERSION__"></script>
+<script defer src="/js/cp-mobile-search.js?v=__BUILD_VERSION__"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -215,6 +216,72 @@
   </div>
 </section>
 <!-- batch-marker: BATCH_01 -->
+<!-- batch-marker: BATCH_02 -->
+
+<!-- Phase L2 — Mobile sticky search pill (BATCH_02). Hidden on desktop. -->
+<button type="button" class="mv2-msearch-pill" data-visible="false"
+        aria-label="Search rentals" aria-haspopup="dialog">
+  <span class="mv2-msearch-pill__icon" aria-hidden="true">
+    <i class="fas fa-search"></i>
+  </span>
+  <span class="mv2-msearch-pill__text">Search rentals…</span>
+  <span class="mv2-msearch-pill__filters" aria-hidden="true">
+    <i class="fas fa-sliders-h"></i>
+  </span>
+</button>
+
+<!-- Phase L2 — Backdrop + full-screen search sheet (BATCH_02). -->
+<div class="mv2-msearch-sheet-backdrop" data-open="false" aria-hidden="true"></div>
+<div class="mv2-msearch-sheet" data-open="false" role="dialog" aria-modal="true"
+     aria-hidden="true" aria-labelledby="msearch-sheet-title">
+  <div class="mv2-msearch-sheet__handle" aria-hidden="true"></div>
+  <div class="mv2-msearch-sheet__header">
+    <h2 id="msearch-sheet-title" class="mv2-msearch-sheet__title">Find your home.</h2>
+    <button type="button" class="mv2-msearch-sheet__close" aria-label="Close search">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+  </div>
+  <form class="mv2-msearch-sheet__form" role="search" aria-label="Search rentals">
+    <label class="mv2-msearch-sheet__field">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input type="text" id="m-searchInput"
+             placeholder="City, zip code, or neighborhood…"
+             autocomplete="off" aria-label="Search location">
+    </label>
+    <label class="mv2-msearch-sheet__field">
+      <i class="fas fa-bed" aria-hidden="true"></i>
+      <select id="m-bedroomsFilter" aria-label="Bedrooms">
+        <option value="">Any beds</option>
+        <option value="0">Studio</option>
+        <option value="1">1 Bed</option>
+        <option value="2">2 Beds</option>
+        <option value="3">3 Beds</option>
+        <option value="4">4+ Beds</option>
+      </select>
+    </label>
+    <label class="mv2-msearch-sheet__field">
+      <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+      <select id="m-maxRentFilter" aria-label="Max rent">
+        <option value="">Any price</option>
+        <option value="700">Up to $700</option>
+        <option value="900">Up to $900</option>
+        <option value="1100">Up to $1,100</option>
+        <option value="1400">Up to $1,400</option>
+        <option value="1700">Up to $1,700</option>
+        <option value="2200">Up to $2,200</option>
+        <option value="2500">Up to $2,500</option>
+        <option value="3000">Up to $3,000</option>
+        <option value="3500">Up to $3,500</option>
+        <option value="4000">Up to $4,000</option>
+        <option value="5000">Up to $5,000</option>
+      </select>
+    </label>
+    <button type="submit" class="mv2-btn mv2-btn--primary mv2-msearch-sheet__submit">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <span>Search rentals</span>
+    </button>
+  </form>
+</div>
 
 <!-- ── Trust Strip ── -->
 <div class="trust-strip" id="trust-section">
