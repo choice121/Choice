@@ -63,33 +63,14 @@ them — they are the only post-deploy proof that the batch actually shipped.
 ## Status
 
 - **In progress**: _none_
-- **Last completed batch**: BATCH_02 — Sticky mobile search pill + sheet
-- **Last commit on main**: `2115effc`
-- **Last verified deploy**: `b7f36beb` → https://choice-properties-site.pages.dev/
+- **Last completed batch**: BATCH_03 — Featured listings snap-scroll on mobile
+- **Last commit on main**: `8ad9213e`
+- **Last verified deploy**: `8e6109da` → https://choice-properties-site.pages.dev/
 - **Blocked**: _none_
 
 ---
 
 ## Backlog (high-impact → low-impact)
-
-### BATCH_03 — Featured listings: horizontal snap-scroll rail on mobile
-
-**Goal**: Replace the stacked grid on viewports ≤768px with a horizontal
-snap-scroll rail that peeks the next card. Desktop layout unchanged.
-
-**Files touched**:
-- `css/cp-marketing.css` — `@media (max-width: 768px)` block flipping
-  `.property-grid` to `display: flex; overflow-x: auto; scroll-snap-type: x mandatory;`
-  with `scroll-padding-inline` and `scroll-snap-align: start` on cards.
-- `index.html` — add `<!-- batch-marker: BATCH_03 -->`.
-
-**Acceptance**:
-- On mobile, featured listings scroll horizontally with snap behavior; next
-  card is partially visible (~16px peek).
-- On desktop (≥769px) the layout is unchanged.
-- No JS required.
-
----
 
 ### BATCH_04 — Save without signup (localStorage favorites)
 
@@ -196,3 +177,4 @@ _(append-only; one line per completed batch — `BATCH_NN — name — <commit-s
 
 - BATCH_01 — Living Hero — `e5a7564e` — deploy `935c0474` — 2026-04-27
 - BATCH_02 — Sticky mobile search pill + sheet — `2115effc` — deploy `b7f36beb` — 2026-04-27
+- BATCH_03 — Featured listings snap-scroll on mobile — `8ad9213e` — deploy `8e6109da` — 2026-04-27
