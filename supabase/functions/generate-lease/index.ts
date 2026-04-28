@@ -296,10 +296,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
       // 8. Persist addenda attachment rows BEFORE rendering the PDF so
       //    the lease_addenda_attached snapshots are available for sign-lease
       //    to record per-addendum acknowledgments later.
+      // application_pk is a BIGINT legacy column; applications.id is now UUID.
+      // Pass null — app_id (text) is the canonical reference key.
       const attachRes = await persistAttachedAddenda(
         supabase,
         app_id,
-        (appWithSnap as { id?: number } | null)?.id ?? null,
+        null,
         addenda.attached,
       );
       if (!attachRes.ok) return jsonErr(500, 'Addenda attachment failed: ' + attachRes.error);
