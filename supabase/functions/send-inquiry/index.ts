@@ -83,32 +83,44 @@ Deno.serve(async (req) => {
     }
 
     // Helper: fire-and-forget GAS send + email_logs insert.
-    // Mirrors the previous fetch().then().catch() pattern so the HTTP
-    // response is returned to the caller immediately and the email
+    // The HTTP response is returned to the caller immediately and the email
     // attempt is logged in the background.
+    //
+    // E-4 (2026-04-28): wrap the background promise in EdgeRuntime.waitUntil
+    // so Supabase Edge Runtime keeps the isolate alive until the GAS round-
+    // trip AND the email_logs insert finish. Without this, the runtime
+    // killed the worker the moment we returned jsonResponse(), so neither
+    // the email nor the log row ever materialised. (Falls back to a noop
+    // wrapper in environments where EdgeRuntime is undefined, e.g. tests.)
+    const keepAlive = (p: Promise<unknown>) => {
+      const er = (globalThis as any).EdgeRuntime
+      if (er && typeof er.waitUntil === 'function') er.waitUntil(p)
+    }
     const fireAndLog = (
       template: string,
       to: string,
       data: Record<string, unknown>,
       logExtra: Record<string, unknown> = {},
     ) => {
-      gasSend({ template, to, data }).then(async (res) => {
-        await supabase.from('email_logs').insert({
-          type: template,
-          recipient: to,
-          status: res.ok ? 'sent' : 'failed',
-          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-          ...logExtra,
-        }).catch(() => {})
-      }).catch(async (e) => {
-        await supabase.from('email_logs').insert({
-          type: template,
-          recipient: to,
-          status: 'failed',
-          error_msg: e?.message || 'Network error',
-          ...logExtra,
-        }).catch(() => {})
-      })
+      keepAlive(
+        gasSend({ template, to, data }).then(async (res) => {
+          await supabase.from('email_logs').insert({
+            type: template,
+            recipient: to,
+            status: res.ok ? 'sent' : 'failed',
+            error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+            ...logExtra,
+          }).catch(() => {})
+        }).catch(async (e) => {
+          await supabase.from('email_logs').insert({
+            type: template,
+            recipient: to,
+            status: 'failed',
+            error_msg: e?.message || 'Network error',
+            ...logExtra,
+          }).catch(() => {})
+        })
+      )
     }
 
     // ── Tenant Reply → Landlord Notification (P1-B, rate-limit exempt) ────
@@ -176,27 +188,31 @@ Deno.serve(async (req) => {
           // Previously we logged status:'sent' regardless of relay result,
           // which masked GAS secret-mismatch / quota / rate-limit failures
           // in the admin email-logs view.
-          gasSend({
-            template: 'app_id_recovery',
-            to: email,
-            data: { app_id: row.app_id, email, dashboard_url: link, preferred_language },
-          }).then(async (res) => {
-            await supabase.from('email_logs').insert({
-              type: 'app_id_recovery',
-              recipient: email,
-              status: res.ok ? 'sent' : 'failed',
-              error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-              app_id: row.app_id,
-            }).catch(() => {})
-          }).catch(async (e) => {
-            await supabase.from('email_logs').insert({
-              type: 'app_id_recovery',
-              recipient: email,
-              status: 'failed',
-              error_msg: e?.message || 'Network error',
-              app_id: row.app_id,
-            }).catch(() => {})
-          })
+          // E-4 (2026-04-28): wrapped in keepAlive() so the runtime keeps
+          // the isolate alive long enough for the GAS call AND log insert.
+          keepAlive(
+            gasSend({
+              template: 'app_id_recovery',
+              to: email,
+              data: { app_id: row.app_id, email, dashboard_url: link, preferred_language },
+            }).then(async (res) => {
+              await supabase.from('email_logs').insert({
+                type: 'app_id_recovery',
+                recipient: email,
+                status: res.ok ? 'sent' : 'failed',
+                error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+                app_id: row.app_id,
+              }).catch(() => {})
+            }).catch(async (e) => {
+              await supabase.from('email_logs').insert({
+                type: 'app_id_recovery',
+                recipient: email,
+                status: 'failed',
+                error_msg: e?.message || 'Network error',
+                app_id: row.app_id,
+              }).catch(() => {})
+            })
+          )
         }
       }
 
@@ -219,27 +235,31 @@ Deno.serve(async (req) => {
       const dashboard_url = getTenantLoginUrl(app_id, email)
 
       // Fire-and-forget; log the ACTUAL outcome (E-2, 2026-04-28).
-      gasSend({
-        template: 'app_id_recovery',
-        to: email,
-        data: { app_id, email, dashboard_url, preferred_language },
-      }).then(async (res) => {
-        await supabase.from('email_logs').insert({
-          type: 'app_id_recovery',
-          recipient: email,
-          status: res.ok ? 'sent' : 'failed',
-          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-          app_id,
-        }).catch(() => {})
-      }).catch(async (e) => {
-        await supabase.from('email_logs').insert({
-          type: 'app_id_recovery',
-          recipient: email,
-          status: 'failed',
-          error_msg: e?.message || 'Network error',
-          app_id,
-        }).catch(() => {})
-      })
+      // E-4 (2026-04-28): wrapped in keepAlive() so the isolate isn't killed
+      // before the GAS call resolves and the log row is written.
+      keepAlive(
+        gasSend({
+          template: 'app_id_recovery',
+          to: email,
+          data: { app_id, email, dashboard_url, preferred_language },
+        }).then(async (res) => {
+          await supabase.from('email_logs').insert({
+            type: 'app_id_recovery',
+            recipient: email,
+            status: res.ok ? 'sent' : 'failed',
+            error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+            app_id,
+          }).catch(() => {})
+        }).catch(async (e) => {
+          await supabase.from('email_logs').insert({
+            type: 'app_id_recovery',
+            recipient: email,
+            status: 'failed',
+            error_msg: e?.message || 'Network error',
+            app_id,
+          }).catch(() => {})
+        })
+      )
 
       return jsonResponse({ success: true }, 200, {}, req)
     }
