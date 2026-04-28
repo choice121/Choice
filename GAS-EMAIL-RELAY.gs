@@ -415,6 +415,19 @@ function hmacSha256Hex(secret, message) {
   return hex;
 }
 
+// E-4 (2026-04-28): ASCII-only JSON.stringify. Apps Script V8 and Deno V8
+// disagree on UTF-8 round-tripping inside e.postData.contents, which broke
+// the HMAC any time the payload contained a non-ASCII character (em-dash,
+// ✓, ✅, etc.). Escaping every non-ASCII codepoint to \uXXXX keeps the
+// canonical bytes identical on both runtimes. The matching helper exists
+// in supabase/functions/_shared/send-email.ts — both must escape identically.
+function jsonAscii(obj) {
+  return JSON.stringify(obj).replace(/[\u0080-\uffff]/g, function(c) {
+    var hex = c.charCodeAt(0).toString(16);
+    return '\\u' + ('0000' + hex).slice(-4);
+  });
+}
+
 function authorizeRequest(rawBody, body, cfg) {
   if (!cfg.secret) return { ok: false, error: 'Relay not configured' };
 
@@ -437,9 +450,10 @@ function authorizeRequest(rawBody, body, cfg) {
   // killed every email after the GAS-only cutover on 2026-04-27.
   // V8 preserves insertion order on JSON.parse, so the stripped object
   // re-serialises to exactly the same bytes Supabase signed over.
+  // E-4 (2026-04-28): use jsonAscii() — see comment above the helper.
   var bodyNoSig = {};
   for (var k in body) { if (body.hasOwnProperty(k) && k !== 'sig') bodyNoSig[k] = body[k]; }
-  var canonical = JSON.stringify(bodyNoSig);
+  var canonical = jsonAscii(bodyNoSig);
   var expected = hmacSha256Hex(cfg.secret, ts + '.' + canonical);
   if (!constantTimeEquals(String(body.sig).toLowerCase(), expected)) {
     return { ok: false, error: 'Bad signature' };
