@@ -1183,31 +1183,6 @@ body[data-portal="public"] .skeleton-line {
   background-size: 1200px 100%; animation: shimmer 1.4s infinite linear;
 }
 
-/* ── Mobile property-card refinements (≤540px) ──────────────
-   Goal: fit ~1.7 cards in the fold, declutter the photo overlays,
-   and lift save/share to a 44px touch target. */
-@media (max-width: 540px) {
-  /* 3:2 image fits more cards per scroll than the 4:3 default */
-  body[data-portal="public"] .property-card-img,
-  body[data-portal="public"] .skeleton-img {
-    aspect-ratio: 3 / 2;
-  }
-  /* Tighter body padding on phones */
-  body[data-portal="public"] .property-card-body {
-    padding: 12px 14px 14px;
-  }
-  /* Overlay declutter: the property-type chip duplicates the
-     in-body type label, so drop it on phones to free the image. */
-  body[data-portal="public"] .property-card-type-chip {
-    display: none;
-  }
-  /* 44px touch targets for save/share (Apple/Google guidance) */
-  body[data-portal="public"] .property-card-save,
-  body[data-portal="public"] .property-card-share {
-    width: 44px; height: 44px; font-size: 15px;
-  }
-}
-
 /* ── How it works section (dark strip in light page) ─────── */
 body[data-portal="public"] .hiw-section {
   background: var(--m-ink); padding: var(--m-s-16) 0 var(--m-s-12);
