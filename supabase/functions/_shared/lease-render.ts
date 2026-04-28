@@ -474,21 +474,29 @@
       return { ok: false, error: 'PDF upload failed: ' + upErr.message };
     }
 
-    // 7. Patch storage_path + size_bytes
-    await supabase.from('lease_pdf_versions')
-      .update({ storage_path: path, size_bytes: finalized.bytes.byteLength })
-      .eq('app_id', app_id).eq('version_number', versionNumber);
-
-    // 8. Pin integrity columns
-    const { error: intErr } = await supabase.rpc('record_lease_pdf_integrity', {
-      p_app_id:               app_id,
-      p_version_number:       versionNumber,
-      p_sha256:               finalized.sha256,
-      p_certificate_appended: finalized.certificate_appended,
-      p_qr_verify_token:      finalized.qr_verify_token,
-    });
-    if (intErr) {
-      console.warn('[finalizeAndStorePdf] integrity write failed (non-fatal):', intErr.message);
+    // 7+8. Patch storage_path + integrity columns in ONE atomic update.
+    //
+    // Why combined: the check constraint on lease_pdf_versions requires
+    //   sha256 IS NOT NULL OR legacy_pre_phase06 = true OR storage_path = ''
+    // Updating storage_path alone (step 7) leaves sha256=null, which
+    // violates the constraint. The update silently fails (Supabase JS
+    // client doesn't throw on constraint violations for .update()). The
+    // subsequent integrity-RPC (step 8) then sets sha256 with storage_path
+    // still ''. Fix: set both in one statement so the constraint is
+    // satisfied atomically.
+    const { error: patchErr } = await supabase.from('lease_pdf_versions')
+      .update({
+        storage_path:         path,
+        size_bytes:           finalized.bytes.byteLength,
+        sha256:               finalized.sha256,
+        certificate_appended: finalized.certificate_appended,
+        qr_verify_token:      finalized.qr_verify_token ?? null,
+      })
+      .eq('app_id', app_id)
+      .eq('version_number', versionNumber);
+    if (patchErr) {
+      await releaseReservedVersion('integrity-patch-failed');
+      return { ok: false, error: 'PDF version patch failed: ' + patchErr.message };
     }
 
     // 9. Update app pointer
