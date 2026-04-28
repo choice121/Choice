@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'Signature must be at least 5 characters. Please type your full legal name.');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'unknown';
   if (await isDbRateLimited(ip, 'sign-lease-co-applicant', 20, 60 * 60 * 1000)) {
     return jsonErr(429, 'Too many signing attempts from this network. Please wait an hour and try again.');
   }
