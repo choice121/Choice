@@ -74,6 +74,21 @@
 <!-- ── Site Navigation (hydrated from /components/nav.html by components.js) ── -->
 <div id="site-nav"></div>
 
+<!-- ── Admin action bar (rendered only for signed-in admins by js/property.js) ── -->
+<div id="adminPropBar" hidden style="max-width:1200px;margin:8px auto 0;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0a1628;color:#fff;border-radius:12px;box-shadow:0 4px 18px rgba(10,22,40,.18)">
+  <span style="display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.88rem">
+    <i class="fas fa-user-shield" aria-hidden="true"></i> Admin tools
+  </span>
+  <span style="opacity:.6;font-size:.82rem" id="adminPropStatus"></span>
+  <span style="flex:1"></span>
+  <a id="adminPropEdit" class="btn" style="background:#1f3656;color:#fff;border:1px solid rgba(255,255,255,.18);padding:7px 12px;border-radius:8px;font-weight:600;font-size:.82rem;text-decoration:none">
+    <i class="fas fa-pen" aria-hidden="true"></i> Edit
+  </a>
+  <button id="adminPropDelete" type="button" class="btn" style="background:#dc2626;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer">
+    <i class="fas fa-trash" aria-hidden="true"></i> Delete forever
+  </button>
+</div>
+
 <!-- ── Gallery Mosaic ── -->
 <div class="gallery-mosaic skeleton-loading" id="gallery">
   <!-- Main large panel -->
