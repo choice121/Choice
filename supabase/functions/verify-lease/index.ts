@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'Invalid verification token format');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'unknown';
   if (await isDbRateLimited(ip, 'verify-lease', 60, 60 * 60 * 1000)) {
     return jsonErr(429, 'Too many verification requests from this network. Please wait an hour and try again.');
   }
