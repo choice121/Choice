@@ -381,9 +381,15 @@ Deno.serve(async (req: Request) => {
   // ── Notification emails ───────────────────────────────────────────────────
   const propLabel = enforcedAddress || 'your chosen property';
 
-  const logEmail = async (type: string, recipient: string, status: string, provider: string) => {
+  const logEmail = async (
+    type: string,
+    recipient: string,
+    status: string,
+    provider: string,
+    errorMsg: string | null = null,
+  ) => {
     const { error } = await supabase.from('email_logs').insert({
-      app_id: appId, type, recipient, status, provider,
+      app_id: appId, type, recipient, status, provider, error_msg: errorMsg,
     });
     if (error) console.error('Email log insert failed:', error.message);
   };
@@ -393,20 +399,20 @@ Deno.serve(async (req: Request) => {
       to: email,
       subject: `Application Received — ${propLabel.split(',')[0]} | Choice Properties (Ref: ${appId})`,
       html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl),
-    }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider))
+    }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
       .catch(async err => {
         console.error('Confirmation email error:', err);
-        await logEmail('application_confirmation', email, 'failed', 'none');
+        await logEmail('application_confirmation', email, 'failed', 'none', err?.message || 'unknown error');
       }),
     ...ADMIN_EMAILS.map(adminEmail =>
       sendEmail({
         to: adminEmail,
         subject: `New Application — ${appId} | ${firstName} ${lastName}`,
         html: adminNotificationHtml(firstName, lastName, email, propLabel, appId, fields),
-      }).then(result => logEmail('admin_notification', adminEmail, result.ok ? 'sent' : 'failed', result.provider))
+      }).then(result => logEmail('admin_notification', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
         .catch(async err => {
           console.error('Admin notification error:', err);
-          await logEmail('admin_notification', adminEmail, 'failed', 'none');
+          await logEmail('admin_notification', adminEmail, 'failed', 'none', err?.message || 'unknown error');
         })
     ),
   ];

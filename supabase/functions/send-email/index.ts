@@ -32,7 +32,15 @@ async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: str
   return { ok: !!role, userEmail: user.email };
 }
 
-async function logEmail(appId: string, _appDbId: string, type: string, recipient: string, status: string, provider = 'unknown') {
+async function logEmail(
+  appId: string,
+  _appDbId: string,
+  type: string,
+  recipient: string,
+  status: string,
+  provider = 'unknown',
+  errorMsg: string | null = null,
+) {
   try {
     await supabase.from('email_logs').insert({
       app_id: appId,
@@ -40,6 +48,10 @@ async function logEmail(appId: string, _appDbId: string, type: string, recipient
       recipient,
       status,
       provider,
+      // Surface the underlying GAS / network error to the admin email-logs UI
+      // so secret-mismatch / quota / rate-limit failures are visible without
+      // having to scrape Edge Function logs. (E-2, 2026-04-28.)
+      error_msg: errorMsg,
     });
   } catch (_) {}
 }
@@ -270,12 +282,12 @@ Deno.serve(async (req: Request) => {
     if (sendToAdmin) {
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject, html });
-        await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed', result.provider);
+        await logEmail(app_id, app.id, type, adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed'));
         if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'send failed'}`);
       }
     } else {
       const result = await sendEmail({ to: app.email, subject, html });
-      await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed', result.provider);
+      await logEmail(app_id, app.id, type, app.email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed'));
       if (!result.ok) failures.push(`${app.email}: ${result.error || 'send failed'}`);
     }
 
@@ -283,7 +295,7 @@ Deno.serve(async (req: Request) => {
     if (sendAdminReview) {
       for (const adminEmail of ADMIN_EMAILS) {
         const result = await sendEmail({ to: adminEmail, subject: adminReviewSubject, html: adminReviewHtml });
-        await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed', result.provider);
+        await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'admin review send failed'));
         if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'admin review send failed'}`);
       }
     }

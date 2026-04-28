@@ -172,18 +172,31 @@ Deno.serve(async (req) => {
         for (const row of appRows) {
           const link = getTenantLoginUrl(row.app_id, email)
           const preferred_language = row.preferred_language || 'en'
-          // Fire and forget; email_logs insert is best-effort.
+          // Fire and forget; log the ACTUAL outcome (E-2, 2026-04-28).
+          // Previously we logged status:'sent' regardless of relay result,
+          // which masked GAS secret-mismatch / quota / rate-limit failures
+          // in the admin email-logs view.
           gasSend({
             template: 'app_id_recovery',
             to: email,
             data: { app_id: row.app_id, email, dashboard_url: link, preferred_language },
-          }).catch(() => {})
-          await supabase.from('email_logs').insert({
-            type: 'app_id_recovery',
-            recipient: email,
-            status: 'sent',
-            app_id: row.app_id,
-          }).catch(() => {})
+          }).then(async (res) => {
+            await supabase.from('email_logs').insert({
+              type: 'app_id_recovery',
+              recipient: email,
+              status: res.ok ? 'sent' : 'failed',
+              error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+              app_id: row.app_id,
+            }).catch(() => {})
+          }).catch(async (e) => {
+            await supabase.from('email_logs').insert({
+              type: 'app_id_recovery',
+              recipient: email,
+              status: 'failed',
+              error_msg: e?.message || 'Network error',
+              app_id: row.app_id,
+            }).catch(() => {})
+          })
         }
       }
 
@@ -205,17 +218,27 @@ Deno.serve(async (req) => {
 
       const dashboard_url = getTenantLoginUrl(app_id, email)
 
+      // Fire-and-forget; log the ACTUAL outcome (E-2, 2026-04-28).
       gasSend({
         template: 'app_id_recovery',
         to: email,
         data: { app_id, email, dashboard_url, preferred_language },
-      }).catch(() => {})
-
-      await supabase.from('email_logs').insert({
-        type: 'app_id_recovery',
-        recipient: email,
-        status: 'sent',
-        app_id,
+      }).then(async (res) => {
+        await supabase.from('email_logs').insert({
+          type: 'app_id_recovery',
+          recipient: email,
+          status: res.ok ? 'sent' : 'failed',
+          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+          app_id,
+        }).catch(() => {})
+      }).catch(async (e) => {
+        await supabase.from('email_logs').insert({
+          type: 'app_id_recovery',
+          recipient: email,
+          status: 'failed',
+          error_msg: e?.message || 'Network error',
+          app_id,
+        }).catch(() => {})
       })
 
       return jsonResponse({ success: true }, 200, {}, req)
