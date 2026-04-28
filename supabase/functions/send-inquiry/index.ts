@@ -93,8 +93,15 @@ Deno.serve(async (req) => {
     // the email nor the log row ever materialised. (Falls back to a noop
     // wrapper in environments where EdgeRuntime is undefined, e.g. tests.)
     const keepAlive = (p: Promise<unknown>) => {
-      const er = (globalThis as any).EdgeRuntime
-      if (er && typeof er.waitUntil === 'function') er.waitUntil(p)
+      // EdgeRuntime is a top-level binding injected by Supabase's deno_runtime
+      // (it is NOT attached to globalThis, so an `as any` cast through globalThis
+      // silently no-ops). Reference it directly with a typeof guard so local
+      // Deno / tests still work.
+      // @ts-ignore -- EdgeRuntime exists at runtime on Supabase Edge Functions
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(p)
+      }
     }
     const fireAndLog = (
       template: string,
