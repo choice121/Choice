@@ -9,9 +9,12 @@
  * History:
  *   - Resend was removed in Phase 14.
  *   - Gmail SMTP fallback was removed on 2026-04-27 (audit fix E-1).
- *   - 2026-04-28 (E-5): switched to URL-based signature over the raw
- *     request body. Eliminates the entire Apps-Script-V8 vs Deno-V8
- *     UTF-8 round-trip parity bug class. See gasSend() for details.
+ *   - 2026-04-28 (E-5a): briefly switched to URL-based sig but the
+ *     query parameters were not surviving the GAS web-app redirect in
+ *     practice, so we reverted to the in-body scheme. The new GAS
+ *     verifier accepts both canonicalisations (plain JSON.stringify
+ *     and the historical jsonAscii escape), so plain stringify is
+ *     enough — no separate jsonAscii helper is needed on this side.
  *
  * Failure is non-fatal — callers should log errors but never crash.
  */
@@ -37,24 +40,15 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 }
 
 // ── gasSend: shared GAS-relay caller ────────────────────────────────────────
-// Every GAS call goes through this helper so they all sign identically.
+// Wire format (in-body sig, the proven scheme):
+//   POST {GAS_EMAIL_URL}
+//   body: JSON.stringify({ ...inner, sig })
+//   inner = { ts, template, to, cc, data }
+//   sig   = HMAC-SHA256(RELAY_SECRET, ts + '.' + JSON.stringify(inner))  hex
 //
-// Wire format (E-5, 2026-04-28):
-//   POST {GAS_EMAIL_URL}?ts=<unix_seconds>&sig=<hex>
-//   body: JSON.stringify({ template, to, cc, data })
-//   sig = HMAC-SHA256(RELAY_SECRET, ts + '.' + bodyText)  (lowercase hex)
-//
-// Why URL params instead of in-body sig:
-//   The previous in-body scheme had to JSON.parse → strip sig →
-//   JSON.stringify on the GAS side to reconstruct the signed bytes.
-//   Apps Script V8 and Deno V8 disagreed on UTF-8 round-tripping in
-//   that re-stringify step, breaking HMAC parity for any payload with
-//   a non-ASCII char (em-dash, ✓, ✅, etc.). Putting the sig in the URL
-//   lets GAS verify against `e.postData.contents` directly — the exact
-//   UTF-8 bytes Deno sent, no re-encoding involved.
-//
-// The relay accepts BOTH the URL scheme and the legacy in-body scheme
-// during the deploy transition; once redeployed, both work.
+// The GAS verifier (authorizeRequest) re-canonicalises body-with-sig-stripped
+// using both jsonAscii and plain JSON.stringify and accepts whichever matches,
+// so we don't need a separate ASCII-escape pass on this side.
 
 export interface GasSendInput {
   template: string;                          // GAS template name (e.g. 'inquiry_reply')
@@ -77,25 +71,24 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   }
 
   const ts = Math.floor(Date.now() / 1000);
-  const bodyText = JSON.stringify({
+  const inner = {
     ts,
     template: input.template,
-    to: input.to,
-    cc: input.cc ?? null,
-    data: input.data ?? {},
-  });
-  const sig = await hmacSha256Hex(gasSecret, ts + '.' + bodyText);
-
-  const sep = gasUrl.includes('?') ? '&' : '?';
-  const url = `${gasUrl}${sep}ts=${ts}&sig=${sig}`;
+    to:       input.to,
+    cc:       input.cc ?? null,
+    data:     input.data ?? {},
+  };
+  const innerJson = JSON.stringify(inner);
+  const sig       = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
+  const fullBody  = JSON.stringify({ ...inner, sig });
 
   try {
-    const r = await fetch(url, {
+    const r = await fetch(gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: bodyText,
+      body:    fullBody,
     });
-    let json: any = {};
+    let json: { success?: boolean; error?: string } = {};
     try { json = await r.json(); } catch { /* relay sometimes returns text */ }
     const ok = r.ok && json.success !== false;
     return ok
