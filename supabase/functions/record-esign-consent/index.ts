@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'All three E-SIGN disclosures must be acknowledged before consent can be recorded.');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'unknown';
   if (await isDbRateLimited(ip, 'record-esign-consent', 30, 60 * 60 * 1000)) {
     return jsonErr(429, 'Too many consent attempts from this network. Please wait an hour and try again.');
   }
