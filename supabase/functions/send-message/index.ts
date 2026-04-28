@@ -148,24 +148,24 @@ Deno.serve(async (req) => {
       data: Record<string, unknown>,
       logExtra: Record<string, unknown> = {},
     ): Promise<void> => {
+      let status: 'sent' | 'failed' = 'failed'
+      let error_msg: string | null = null
       try {
         const res = await gasSend({ template, to, data })
-        await supabase.from('email_logs').insert({
-          type: template,
-          recipient: to,
-          status: res.ok ? 'sent' : 'failed',
-          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-          ...logExtra,
-        }).catch(() => {})
+        status = res.ok ? 'sent' : 'failed'
+        error_msg = res.ok ? null : (res.error || `HTTP ${res.status}`)
       } catch (e: any) {
+        error_msg = e?.message || 'Network error'
+      }
+      try {
         await supabase.from('email_logs').insert({
           type: template,
           recipient: to,
-          status: 'failed',
-          error_msg: e?.message || 'Network error',
+          status,
+          error_msg,
           ...logExtra,
-        }).catch(() => {})
-      }
+        })
+      } catch (_e) { /* swallow log insert errors */ }
     }
 
     // P1-A: new_message_tenant — notify tenant when admin or landlord sends a message.
