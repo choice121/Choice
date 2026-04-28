@@ -40,6 +40,19 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   return hex;
 }
 
+// ── ASCII-only JSON.stringify (E-4 fix, 2026-04-28) ────────────────────────
+// Apps Script V8 and Deno V8 disagree on UTF-8 round-tripping inside
+// `e.postData.contents`, which broke the HMAC any time a non-ASCII
+// character (em-dash, ✓, ✅, etc.) appeared in the email subject or HTML.
+// Escaping every non-ASCII codepoint to its \uXXXX form keeps the signed
+// canonical bytes identical on both runtimes. The matching helper exists
+// in GAS-EMAIL-RELAY.gs — both must escape identically.
+function jsonAscii(value: unknown): string {
+  return JSON.stringify(value).replace(/[\u0080-\uffff]/g, (c) =>
+    '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
+  );
+}
+
 // ── gasSend: shared GAS-relay caller ────────────────────────────────────────
 // Every GAS call goes through this helper so they all sign identically (see
 // issue #25). The legacy `secret` field acceptance was removed on the relay
@@ -72,14 +85,19 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
     cc: input.cc ?? null,
     data: input.data ?? {},
   };
-  const innerJson = JSON.stringify(inner);
+  // E-4 (2026-04-28): use ASCII-only JSON for both signing AND body so that
+  // GAS V8's `JSON.parse(rawBody)` -> `JSON.stringify(stripped)` produces
+  // exactly the same bytes we signed. Native UTF-8 round-tripping in
+  // Apps Script differs from Deno just enough to break HMAC parity for
+  // any payload containing non-ASCII characters (em-dash, ✓, ✅, etc.).
+  const innerJson = jsonAscii(inner);
   const sig = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
 
   try {
     const r = await fetch(gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...inner, sig }),
+      body: jsonAscii({ ...inner, sig }),
     });
     let json: any = {};
     try { json = await r.json(); } catch { /* relay sometimes returns text */ }
