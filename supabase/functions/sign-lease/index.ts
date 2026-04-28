@@ -109,7 +109,6 @@ Deno.serve(async (req: Request) => {
       initials:   null,
     });
     if (!ackRes.ok) console.warn('[sign-lease] addenda ack failed:', ackRes.error);
-    else console.log('[sign-lease] acknowledged ' + ackRes.updated + ' addenda for ' + preApp.app_id);
   } catch (e) {
     console.warn('[sign-lease] addenda ack threw:', (e as Error).message);
   }
