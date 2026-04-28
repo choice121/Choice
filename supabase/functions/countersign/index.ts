@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     const tmpl = await resolveLeaseTemplate(supabase, appWithMgmt);
     if (tmpl) {
       const attachedAddenda = await fetchAttachedAddenda(supabase, app_id);
-      const adminIp = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'admin-console';
+      const adminIp = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'admin-console';
       const adminUa = req.headers.get('user-agent') || '';
 
       // Pull co-applicant info if present so the cert lists every signer.
@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
   try {
     await supabase.from('sign_events').insert({
       app_id, signer_type: 'admin', signer_name, signer_email: auth.userEmail || null,
-      ip_address:    req.headers.get('x-forwarded-for') || 'admin-console',
+      ip_address:    (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'admin-console',
       user_agent:    req.headers.get('user-agent') || '',
       lease_pdf_path: app.lease_pdf_url,
     });
