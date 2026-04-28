@@ -451,14 +451,19 @@ function authorizeRequest(rawBody, body, cfg) {
   // V8 preserves insertion order on JSON.parse, so the stripped object
   // re-serialises to exactly the same bytes Supabase signed over.
   // E-4 (2026-04-28): use jsonAscii() — see comment above the helper.
+  // Also accept the legacy UTF-8 canonical for ASCII-only payloads so that
+  // a Supabase rollback to a pre-E-4 deploy stays compatible (the UTF-8 and
+  // ASCII canonicals are byte-identical when the payload has no non-ASCII).
   var bodyNoSig = {};
   for (var k in body) { if (body.hasOwnProperty(k) && k !== 'sig') bodyNoSig[k] = body[k]; }
-  var canonical = jsonAscii(bodyNoSig);
-  var expected = hmacSha256Hex(cfg.secret, ts + '.' + canonical);
-  if (!constantTimeEquals(String(body.sig).toLowerCase(), expected)) {
-    return { ok: false, error: 'Bad signature' };
-  }
-  return { ok: true, mode: 'signed' };
+  var sigLower  = String(body.sig).toLowerCase();
+  var canonicalA = jsonAscii(bodyNoSig);
+  var expectedA  = hmacSha256Hex(cfg.secret, ts + '.' + canonicalA);
+  if (constantTimeEquals(sigLower, expectedA)) return { ok: true, mode: 'signed' };
+  var canonicalU = JSON.stringify(bodyNoSig);
+  var expectedU  = hmacSha256Hex(cfg.secret, ts + '.' + canonicalU);
+  if (constantTimeEquals(sigLower, expectedU)) return { ok: true, mode: 'signed-legacy' };
+  return { ok: false, error: 'Bad signature' };
 }
 
 function doPost(e) {
