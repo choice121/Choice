@@ -429,8 +429,18 @@ function authorizeRequest(rawBody, body, cfg) {
   if (Math.abs(nowSec - ts) > SIG_WINDOW_SECONDS) {
     return { ok: false, error: 'Timestamp outside ±5 min window' };
   }
-  // Sign over the EXACT raw body so re-serialisation can't change a thing.
-  var expected = hmacSha256Hex(cfg.secret, ts + '.' + rawBody);
+  // E-3 (2026-04-28): Sign over the parsed body MINUS the sig field, then
+  // re-serialise. The previous approach signed `rawBody` verbatim — but
+  // `rawBody` includes the `sig` field itself, so it could never match
+  // what Supabase signs (Supabase signs the inner object before adding
+  // sig — see _shared/send-email.ts gasSend). This mismatch silently
+  // killed every email after the GAS-only cutover on 2026-04-27.
+  // V8 preserves insertion order on JSON.parse, so the stripped object
+  // re-serialises to exactly the same bytes Supabase signed over.
+  var bodyNoSig = {};
+  for (var k in body) { if (body.hasOwnProperty(k) && k !== 'sig') bodyNoSig[k] = body[k]; }
+  var canonical = JSON.stringify(bodyNoSig);
+  var expected = hmacSha256Hex(cfg.secret, ts + '.' + canonical);
   if (!constantTimeEquals(String(body.sig).toLowerCase(), expected)) {
     return { ok: false, error: 'Bad signature' };
   }
