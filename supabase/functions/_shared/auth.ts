@@ -1,7 +1,7 @@
 // Choice Properties — Shared: Auth helpers
 // Provides requireAuth() and requireAdmin() for Edge Functions.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { cors } from './cors.ts';
 
 // The user shape exposed to callers. We surface only the fields callers

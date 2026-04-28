@@ -17,7 +17,7 @@
 // every edge function. Previously this file built the payload by hand
 // with only the legacy `secret` field.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsResponse } from '../_shared/cors.ts';
 import { getClientIp, jsonResponse } from '../_shared/utils.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';

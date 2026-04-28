@@ -7,7 +7,7 @@
 //
 // CALLED PUBLICLY (verify_jwt = false). Rate-limited per email.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/send-email.ts";
 import { isDbRateLimited } from "../_shared/rate-limit.ts";

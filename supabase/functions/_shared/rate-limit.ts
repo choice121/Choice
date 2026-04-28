@@ -3,7 +3,7 @@
 // Uses rate_limit_log table (see SETUP.sql C-03 migration).
 // Requires service-role supabase client so it can bypass RLS.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 /**
  * Check whether `ip` has exceeded `maxRequests` within `windowMs` milliseconds
