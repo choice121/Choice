@@ -78,9 +78,20 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
     cc:       input.cc ?? null,
     data:     input.data ?? {},
   };
-  const innerJson = JSON.stringify(inner);
-  const sig       = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
-  const fullBody  = JSON.stringify({ ...inner, sig });
+  // E-4 (re-applied 2026-04-28): the GAS verifier canonicalises the body
+  // by JSON.parse → strip sig → JSON.stringify, and Apps Script's V8 mutates
+  // non-ASCII characters during that round-trip in a way Deno's V8 does not
+  // (em-dash, ✓, ✅, smart quotes etc.). To make the HMAC parity work for
+  // ANY codepoint, we ASCII-escape every non-ASCII char on this side as
+  // \uXXXX. The matching helper on the GAS side (jsonAscii) does the same
+  // on the verifier path. Plain JSON.stringify still works for ASCII-only
+  // payloads; the escape is a no-op there.
+  const innerJsonAscii = JSON.stringify(inner).replace(
+    /[\u0080-\uffff]/g,
+    (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
+  );
+  const sig      = await hmacSha256Hex(gasSecret, ts + '.' + innerJsonAscii);
+  const fullBody = JSON.stringify({ ...inner, sig });
 
   try {
     const r = await fetch(gasUrl, {
