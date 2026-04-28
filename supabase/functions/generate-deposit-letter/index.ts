@@ -119,7 +119,7 @@ function computeDepositHeld(app: any): number {
 Deno.serve(async (req) => {
   const cors = handleCors(req);
   if (cors) return cors;
-  if (req.method !== 'POST') return jsonErr('Method not allowed', 405, req);
+  if (req.method !== 'POST') return jsonErr(405, 'Method not allowed', req);
 
   // 1. Auth
   const auth = await requireAdmin(req);
@@ -128,10 +128,10 @@ Deno.serve(async (req) => {
   // 2. Parse + validate body
   let body: any;
   try { body = await req.json(); }
-  catch { return jsonErr('Invalid JSON body', 400, req); }
+  catch { return jsonErr(400, 'Invalid JSON body', req); }
 
   const app_id = body?.app_id;
-  if (!isUuid(app_id)) return jsonErr('app_id (UUID) is required', 400, req);
+  if (!isUuid(app_id)) return jsonErr(400, 'app_id (UUID) is required', req);
 
   const dry_run        = body.dry_run === true;
   const send_email     = body.send_email === true;
@@ -140,16 +140,16 @@ Deno.serve(async (req) => {
 
   let deductionsInput: DepositDeduction[] | null = null;
   if (Array.isArray(body.deductions)) {
-    if (body.deductions.length > 100) return jsonErr('Too many deductions (max 100)', 400, req);
+    if (body.deductions.length > 100) return jsonErr(400, 'Too many deductions (max 100)', req);
     deductionsInput = [];
     for (const [i, raw] of body.deductions.entries()) {
-      if (!raw || typeof raw !== 'object') return jsonErr(`deductions[${i}] is not an object`, 400, req);
+      if (!raw || typeof raw !== 'object') return jsonErr(400, `deductions[${i}] is not an object`, req);
       const cat  = String(raw.category || '');
       const desc = String(raw.description || '').trim();
       const amt  = num(raw.amount, NaN);
-      if (!VALID_CATEGORIES.has(cat))            return jsonErr(`deductions[${i}].category invalid`, 400, req);
-      if (!desc)                                 return jsonErr(`deductions[${i}].description required`, 400, req);
-      if (!Number.isFinite(amt) || amt < 0)      return jsonErr(`deductions[${i}].amount must be >= 0`, 400, req);
+      if (!VALID_CATEGORIES.has(cat))            return jsonErr(400, `deductions[${i}].category invalid`, req);
+      if (!desc)                                 return jsonErr(400, `deductions[${i}].description required`, req);
+      if (!Number.isFinite(amt) || amt < 0)      return jsonErr(400, `deductions[${i}].amount must be >= 0`, req);
       const photos = Array.isArray(raw.supporting_photo_paths) ? raw.supporting_photo_paths.map(String).slice(0, 20) : [];
       const receipts = Array.isArray(raw.receipt_paths) ? raw.receipt_paths.map(String).slice(0, 20) : [];
       deductionsInput.push({
@@ -175,22 +175,22 @@ Deno.serve(async (req) => {
              property_id`)
     .eq('id', app_id)
     .maybeSingle();
-  if (appErr || !app) return jsonErr(`Application not found: ${appErr?.message || 'no row'}`, 404, req);
+  if (appErr || !app) return jsonErr(404, `Application not found: ${appErr?.message || 'no row'}`, req);
   if (!app.move_out_date_actual) {
-    return jsonErr('applications.move_out_date_actual must be set before generating deposit accounting', 400, req);
+    return jsonErr(400, 'applications.move_out_date_actual must be set before generating deposit accounting', req);
   }
 
   // 4. Resolve state law (snapshot at generation time)
   const stateCode = (app.lease_state_code || app.state || '').toUpperCase();
   if (!/^[A-Z]{2}$/.test(stateCode)) {
-    return jsonErr(`Cannot determine state of premises (lease_state_code='${app.lease_state_code}', state='${app.state}')`, 400, req);
+    return jsonErr(400, `Cannot determine state of premises (lease_state_code='${app.lease_state_code}', state='${app.state}')`, req);
   }
   const { data: stateLaw, error: stateErr } = await supabase
     .from('state_lease_law')
     .select('state_code, security_deposit_return_days, statute_security_deposit, security_deposit_interest_required, notes')
     .eq('state_code', stateCode)
     .maybeSingle();
-  if (stateErr || !stateLaw) return jsonErr(`No state_lease_law row for state ${stateCode}`, 400, req);
+  if (stateErr || !stateLaw) return jsonErr(400, `No state_lease_law row for state ${stateCode}`, req);
 
   const returnDays   = stateLaw.security_deposit_return_days;
   const moveOutISO   = String(app.move_out_date_actual);
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     .eq('app_id', app_id)
     .is('lease_termination_id', null)
     .maybeSingle();
-  if (accErr) return jsonErr(`accounting lookup failed: ${accErr.message}`, 500, req);
+  if (accErr) return jsonErr(500, `accounting lookup failed: ${accErr.message}`, req);
 
   if (!accounting) {
     const { data: created, error: insErr } = await supabase
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
         admin_notes,
       })
       .select('*').single();
-    if (insErr || !created) return jsonErr(`accounting create failed: ${insErr?.message}`, 500, req);
+    if (insErr || !created) return jsonErr(500, `accounting create failed: ${insErr?.message}`, req);
     accounting = created;
   }
 
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     const { error: delErr } = await supabase
       .from('lease_deposit_deductions')
       .delete().eq('accounting_id', accounting.id);
-    if (delErr) return jsonErr(`deductions clear failed: ${delErr.message}`, 500, req);
+    if (delErr) return jsonErr(500, `deductions clear failed: ${delErr.message}`, req);
     if (deductionsInput.length) {
       const insertRows = deductionsInput.map(d => ({
         accounting_id:           accounting!.id,
@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
         sort_order:              d.sort_order ?? 0,
       }));
       const { error: insErr } = await supabase.from('lease_deposit_deductions').insert(insertRows);
-      if (insErr) return jsonErr(`deductions insert failed: ${insErr.message}`, 500, req);
+      if (insErr) return jsonErr(500, `deductions insert failed: ${insErr.message}`, req);
     }
   }
 
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
     .select('id, category, description, amount, inspection_id, supporting_photo_paths, receipt_paths, sort_order')
     .eq('accounting_id', accounting.id)
     .order('sort_order', { ascending: true });
-  if (dedErr) return jsonErr(`deductions reload failed: ${dedErr.message}`, 500, req);
+  if (dedErr) return jsonErr(500, `deductions reload failed: ${dedErr.message}`, req);
 
   // 8. Compute totals
   const totalDepositHeld = computeDepositHeld(app);
@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
     photos_failed   = result.photos_failed;
   } catch (e) {
     console.error('[generate-deposit-letter] render failed:', e);
-    return jsonErr(`PDF render failed: ${(e as Error).message}`, 500, req);
+    return jsonErr(500, `PDF render failed: ${(e as Error).message}`, req);
   }
 
   // 12. Hash + upload to lease-pdfs
@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
     .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: true });
   if (upErr) {
     console.error('[generate-deposit-letter] storage upload failed:', upErr);
-    return jsonErr(`Storage upload failed: ${upErr.message}`, 500, req);
+    return jsonErr(500, `Storage upload failed: ${upErr.message}`, req);
   }
 
   // 13. Persist artifact metadata back onto the accounting row
@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
     .eq('id', accounting.id);
   if (updErr) {
     console.error('[generate-deposit-letter] accounting update failed:', updErr);
-    return jsonErr(`Accounting update failed: ${updErr.message}`, 500, req);
+    return jsonErr(500, `Accounting update failed: ${updErr.message}`, req);
   }
 
   // 14. Mirror into lease_pdf_versions (Phase 06 audit trail)
