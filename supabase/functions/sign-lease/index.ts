@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     return jsonErr(400, 'Signature must be at least 5 characters. Please type your full legal name.');
   }
 
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'unknown';
 
   // Phase 05 -- per-IP rate limit (20/hr) AND per-token rate limit (5/hr)
   if (await isDbRateLimited(ip, 'sign-lease', 20, 60 * 60 * 1000)) {
