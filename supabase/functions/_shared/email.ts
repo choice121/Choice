@@ -1587,3 +1587,232 @@ export function renewalNudgeHtml(
 </body>
 </html>`;
 }
+
+// ─── Phase 11 — Rent Increase Notice (tenant-facing) ────────────────────────
+
+export function rentIncreaseNoticeHtml(
+  tenantName: string,
+  propertyAddress: string,
+  currentRent: number,
+  newRent: number,
+  effectiveDate: string,
+  noticeDaysRequired: number,
+  isLargeIncrease: boolean,
+  downloadUrl: string,
+  portalUrl: string,
+  appId: string,
+): string {
+  const fmt = (n: number) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const friendlyDate = new Date(effectiveDate + 'T00:00:00Z').toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  });
+  const pct = currentRent > 0 ? ((newRent - currentRent) / currentRent * 100) : 0;
+  const largeNotice = isLargeIncrease
+    ? `<div class="callout amber"><h4>Extended Notice Period Applied</h4><p style="margin:0">Because this increase exceeds your state's threshold, the extended ${noticeDaysRequired}-day notice period applies. The effective date above already accounts for this.</p></div>`
+    : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Notice of Rent Adjustment - Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Notice of Rent Adjustment', appId)}
+  <div class="email-body">
+    <p class="greeting">Dear ${tenantName},</p>
+    <p class="intro-text">This notice is being provided to inform you of an upcoming adjustment to the monthly rent for <strong>${propertyAddress}</strong>. A formal written notice has been generated and is attached to this email as a PDF for your records.</p>
+
+    <div class="section">
+      <div class="section-label">Adjustment Summary</div>
+      <table class="info-table">
+        <tr><td>Current monthly rent</td><td><strong>${fmt(currentRent)}</strong></td></tr>
+        <tr><td>New monthly rent</td><td><strong>${fmt(newRent)}</strong></td></tr>
+        <tr><td>Change</td><td><strong>${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</strong></td></tr>
+        <tr><td>Effective date</td><td><strong>${friendlyDate}</strong></td></tr>
+        <tr><td>Notice period</td><td>${noticeDaysRequired} days</td></tr>
+      </table>
+    </div>
+
+    ${largeNotice}
+
+    <div class="cta-wrap">
+      <a href="${downloadUrl}" class="cta-btn">Download formal notice (PDF)</a>
+      <div class="cta-note">The download link above is valid for 7 days.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Questions or Concerns</div>
+      <p>If you have questions about this adjustment, the underlying rent calculation, or your tenant rights under your state's rent-stabilization rules, please reach out to our team using the contact information below. You can also view this notice at any time from your tenant portal: <a href="${portalUrl}" style="color:#0f172a">${portalUrl}</a>.</p>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">Thank you for your continued tenancy.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 11 — Termination Notice (tenant-facing) ──────────────────────────
+
+export function terminationNoticeHtml(
+  tenantName: string,
+  propertyAddress: string,
+  noticeType: string,
+  effectiveDate: string,
+  noticeDaysRequired: number,
+  noticeStatute: string | null,
+  reasonText: string | null,
+  downloadUrl: string,
+  portalUrl: string,
+  appId: string,
+): string {
+  const friendlyDate = new Date(effectiveDate + 'T00:00:00Z').toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  });
+  const typeLabels: Record<string, string> = {
+    mutual: 'Mutual Termination',
+    tenant_no_renewal: 'Tenant Non-Renewal',
+    landlord_no_renewal: 'Landlord Non-Renewal',
+    for_cause: 'For-Cause Termination',
+  };
+  const typeLabel = typeLabels[noticeType] || 'Lease Termination';
+  const reasonBlock = reasonText
+    ? `<div class="section"><div class="section-label">Stated Reason</div><p>${reasonText}</p></div>`
+    : '';
+  const statuteBlock = noticeStatute
+    ? `<p style="font-size:13px;color:#64748b;margin-top:12px">Statutory authority: ${noticeStatute}</p>`
+    : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Notice of Lease Termination - Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Notice of Lease Termination', appId)}
+  <div class="email-body">
+    <p class="greeting">Dear ${tenantName},</p>
+    <p class="intro-text">A formal notice of termination has been issued for your tenancy at <strong>${propertyAddress}</strong>. The notice has been generated as a PDF and is available via the download link below; please retain a copy for your records.</p>
+
+    <div class="section">
+      <div class="section-label">Termination Summary</div>
+      <table class="info-table">
+        <tr><td>Notice type</td><td><strong>${typeLabel}</strong></td></tr>
+        <tr><td>Effective date</td><td><strong>${friendlyDate}</strong></td></tr>
+        <tr><td>Statutory notice period</td><td>${noticeDaysRequired} days</td></tr>
+      </table>
+      ${statuteBlock}
+    </div>
+
+    ${reasonBlock}
+
+    <div class="cta-wrap">
+      <a href="${downloadUrl}" class="cta-btn">Download formal notice (PDF)</a>
+      <div class="cta-note">The download link above is valid for 7 days.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">What Happens Next</div>
+      <p>Please review the attached PDF carefully. It contains the legal effective date, your obligations during the notice period, and information about move-out coordination, the move-out inspection, and the security-deposit return process.</p>
+      <p>You can revisit this notice at any time from your tenant portal: <a href="${portalUrl}" style="color:#0f172a">${portalUrl}</a>.</p>
+    </div>
+
+    ${CONTACT_ROW}
+
+    <div class="email-closing">
+      <p class="closing-text">If you have questions about the legal basis for this notice or your rights under your state's tenant-protection statute, please contact our office at the number above.</p>
+      <div class="sign-off">Choice Properties Leasing Team</div>
+      <div class="sign-company">support@choiceproperties.com</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
+// ─── Phase 09 — Deposit Dispute Filed (admin-facing) ────────────────────────
+
+export function depositDisputeAdminHtml(
+  tenantName: string,
+  tenantEmail: string,
+  propertyAddress: string,
+  appId: string,
+  accountingId: string,
+  disputeText: string,
+  isFirstDispute: boolean,
+  stateCode: string | null,
+  stateReturnDeadline: string | null,
+): string {
+  const safeDispute = disputeText
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  const titleText = isFirstDispute ? 'New Deposit Dispute Filed' : 'Deposit Dispute Updated';
+  const deadlineRow = stateReturnDeadline
+    ? `<tr><td>State return deadline</td><td>${stateReturnDeadline}</td></tr>`
+    : '';
+  const stateRow = stateCode ? `<tr><td>State</td><td>${stateCode}</td></tr>` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${titleText} - Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader(titleText, appId)}
+  <div class="status-line" style="background:#fef2f2;color:#991b1b;border-color:#fecaca">Action Required - Tenant Has Disputed the Deposit Accounting</div>
+  <div class="email-body">
+    <p class="greeting">Team,</p>
+    <p class="intro-text">${isFirstDispute ? 'A tenant has filed' : 'A tenant has updated'} a formal dispute against the security-deposit accounting on file. The disputed text is included below verbatim and has been persisted to <code>lease_deposit_accountings.tenant_dispute_text</code>.</p>
+
+    <div class="section">
+      <div class="section-label">Dispute Details</div>
+      <table class="info-table">
+        <tr><td>Tenant</td><td><strong>${tenantName}</strong></td></tr>
+        <tr><td>Tenant email</td><td>${tenantEmail}</td></tr>
+        <tr><td>Property</td><td>${propertyAddress}</td></tr>
+        <tr><td>Application ID</td><td><strong>${appId}</strong></td></tr>
+        <tr><td>Accounting ID</td><td><code>${accountingId}</code></td></tr>
+        ${stateRow}
+        ${deadlineRow}
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Tenant's Statement</div>
+      <div class="callout amber" style="white-space:pre-wrap">${safeDispute}</div>
+    </div>
+
+    <div class="callout">
+      <h4>Recommended Next Steps</h4>
+      <p style="margin-bottom:8px">1. Review the original itemized deductions in the admin dashboard.</p>
+      <p style="margin-bottom:8px">2. Respond to the tenant in writing within your state's statutory window${stateReturnDeadline ? ` (deadline on file: <strong>${stateReturnDeadline}</strong>)` : ''}.</p>
+      <p style="margin-bottom:0">3. If the dispute is resolved, document the outcome in the accounting record before issuing any partial refund.</p>
+    </div>
+
+    <div class="email-closing">
+      <div class="sign-off">Choice Properties System</div>
+      <div class="sign-company">Automated dispute notification</div>
+    </div>
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}

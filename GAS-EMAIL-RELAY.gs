@@ -428,32 +428,48 @@ function jsonAscii(obj) {
   });
 }
 
-function authorizeRequest(rawBody, body, cfg) {
+function authorizeRequest(rawBody, body, e, cfg) {
   if (!cfg.secret) return { ok: false, error: 'Relay not configured' };
 
-  // Signed mode is the only accepted path (issue #24, 2026-04-26).
+  var nowSec = Math.floor(Date.now() / 1000);
+
+  // E-5 (2026-04-28): preferred scheme — sig in URL query, signed over
+  // the raw request body bytes. This avoids the entire JSON-canonicalisation
+  // round-trip (jsonAscii / parse+stringify) that the old in-body scheme
+  // needed, and is therefore encoding-agnostic. Apps Script V8 and Deno V8
+  // disagreed on UTF-8 round-tripping inside e.postData.contents, which is
+  // what broke every admin email containing em-dashes / ✓ / ✅.
+  //
+  // Wire format (from supabase/functions/_shared/send-email.ts):
+  //   POST {GAS_EMAIL_URL}?ts=<unix>&sig=<hex>
+  //   body: JSON.stringify({ ts, template, to, cc, data })
+  //   sig = HMAC-SHA256(RELAY_SECRET, ts + '.' + bodyText)  (lowercase hex)
+  var qts  = e && e.parameter ? e.parameter.ts  : null;
+  var qsig = e && e.parameter ? e.parameter.sig : null;
+  if (qts && qsig) {
+    var tsU = Number(qts);
+    if (!isFinite(tsU) || tsU <= 0) return { ok: false, error: 'Invalid timestamp' };
+    if (Math.abs(nowSec - tsU) > SIG_WINDOW_SECONDS) {
+      return { ok: false, error: 'Timestamp outside ±5 min window' };
+    }
+    var expectedUrlSig = hmacSha256Hex(cfg.secret, tsU + '.' + (rawBody || ''));
+    if (constantTimeEquals(String(qsig).toLowerCase(), expectedUrlSig)) {
+      return { ok: true, mode: 'signed-url' };
+    }
+    return { ok: false, error: 'Bad signature' };
+  }
+
+  // Legacy in-body sig path. Kept so an old Supabase deploy still works
+  // while the new code rolls out. Safe to remove once the URL scheme has
+  // been live for a release cycle.
   if (!body || body.ts == null || !body.sig) {
     return { ok: false, error: 'Unauthorized: signed mode required (ts + sig)' };
   }
-
   var ts = Number(body.ts);
   if (!isFinite(ts) || ts <= 0) return { ok: false, error: 'Invalid timestamp' };
-  var nowSec = Math.floor(Date.now() / 1000);
   if (Math.abs(nowSec - ts) > SIG_WINDOW_SECONDS) {
     return { ok: false, error: 'Timestamp outside ±5 min window' };
   }
-  // E-3 (2026-04-28): Sign over the parsed body MINUS the sig field, then
-  // re-serialise. The previous approach signed `rawBody` verbatim — but
-  // `rawBody` includes the `sig` field itself, so it could never match
-  // what Supabase signs (Supabase signs the inner object before adding
-  // sig — see _shared/send-email.ts gasSend). This mismatch silently
-  // killed every email after the GAS-only cutover on 2026-04-27.
-  // V8 preserves insertion order on JSON.parse, so the stripped object
-  // re-serialises to exactly the same bytes Supabase signed over.
-  // E-4 (2026-04-28): use jsonAscii() — see comment above the helper.
-  // Also accept the legacy UTF-8 canonical for ASCII-only payloads so that
-  // a Supabase rollback to a pre-E-4 deploy stays compatible (the UTF-8 and
-  // ASCII canonicals are byte-identical when the payload has no non-ASCII).
   var bodyNoSig = {};
   for (var k in body) { if (body.hasOwnProperty(k) && k !== 'sig') bodyNoSig[k] = body[k]; }
   var sigLower  = String(body.sig).toLowerCase();
@@ -473,9 +489,11 @@ function doPost(e) {
   };
   try {
     var raw = (e && e.postData && e.postData.contents) || '';
-    var body = JSON.parse(raw);
-    var auth = authorizeRequest(raw, body, cfg);
+    var body = null;
+    try { body = raw ? JSON.parse(raw) : null; } catch (_jp) { body = null; }
+    var auth = authorizeRequest(raw, body, e, cfg);
     if (!auth.ok) return respond({ success: false, error: auth.error });
+    if (!body) return respond({ success: false, error: 'Body must be valid JSON' });
 
     var template = body.template, to = body.to, cc = body.cc, data = body.data;
     if (!template || !to) return respond({ success: false, error: 'Missing template or to field' });

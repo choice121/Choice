@@ -4,18 +4,14 @@
  * Single-purpose email helper for the Supabase edge functions.
  *
  * Sole transport: Google Apps Script relay (`GAS_EMAIL_URL` +
- * `GAS_RELAY_SECRET`). Every call is HMAC-signed (`ts` + `sig`) —
- * see `gasSend()`.
+ * `GAS_RELAY_SECRET`). Every call is HMAC-signed — see `gasSend()`.
  *
  * History:
- *   - Resend was removed in Phase 14 — the project never had a
- *     `RESEND_API_KEY` provisioned, so the Resend branch was dead
- *     code that just delayed every send by one extra HTTP attempt.
- *   - Gmail SMTP fallback was removed on 2026-04-27 (audit fix E-1)
- *     so that GAS-relay failures surface to `email_logs` and the
- *     admin dashboard immediately, rather than being masked by a
- *     silent SMTP retry. The `GMAIL_USER` / `GMAIL_APP_PASSWORD`
- *     secrets can now be deleted from the Supabase function env.
+ *   - Resend was removed in Phase 14.
+ *   - Gmail SMTP fallback was removed on 2026-04-27 (audit fix E-1).
+ *   - 2026-04-28 (E-5): switched to URL-based signature over the raw
+ *     request body. Eliminates the entire Apps-Script-V8 vs Deno-V8
+ *     UTF-8 round-trip parity bug class. See gasSend() for details.
  *
  * Failure is non-fatal — callers should log errors but never crash.
  */
@@ -40,23 +36,26 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   return hex;
 }
 
-// ── ASCII-only JSON.stringify (E-4 fix, 2026-04-28) ────────────────────────
-// Apps Script V8 and Deno V8 disagree on UTF-8 round-tripping inside
-// `e.postData.contents`, which broke the HMAC any time a non-ASCII
-// character (em-dash, ✓, ✅, etc.) appeared in the email subject or HTML.
-// Escaping every non-ASCII codepoint to its \uXXXX form keeps the signed
-// canonical bytes identical on both runtimes. The matching helper exists
-// in GAS-EMAIL-RELAY.gs — both must escape identically.
-function jsonAscii(value: unknown): string {
-  return JSON.stringify(value).replace(/[\u0080-\uffff]/g, (c) =>
-    '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
-  );
-}
-
 // ── gasSend: shared GAS-relay caller ────────────────────────────────────────
-// Every GAS call goes through this helper so they all sign identically (see
-// issue #25). The legacy `secret` field acceptance was removed on the relay
-// side in Apr 2026 (issue #24).
+// Every GAS call goes through this helper so they all sign identically.
+//
+// Wire format (E-5, 2026-04-28):
+//   POST {GAS_EMAIL_URL}?ts=<unix_seconds>&sig=<hex>
+//   body: JSON.stringify({ template, to, cc, data })
+//   sig = HMAC-SHA256(RELAY_SECRET, ts + '.' + bodyText)  (lowercase hex)
+//
+// Why URL params instead of in-body sig:
+//   The previous in-body scheme had to JSON.parse → strip sig →
+//   JSON.stringify on the GAS side to reconstruct the signed bytes.
+//   Apps Script V8 and Deno V8 disagreed on UTF-8 round-tripping in
+//   that re-stringify step, breaking HMAC parity for any payload with
+//   a non-ASCII char (em-dash, ✓, ✅, etc.). Putting the sig in the URL
+//   lets GAS verify against `e.postData.contents` directly — the exact
+//   UTF-8 bytes Deno sent, no re-encoding involved.
+//
+// The relay accepts BOTH the URL scheme and the legacy in-body scheme
+// during the deploy transition; once redeployed, both work.
+
 export interface GasSendInput {
   template: string;                          // GAS template name (e.g. 'inquiry_reply')
   to: string;                                // recipient email
@@ -78,26 +77,23 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   }
 
   const ts = Math.floor(Date.now() / 1000);
-  const inner = {
+  const bodyText = JSON.stringify({
     ts,
     template: input.template,
     to: input.to,
     cc: input.cc ?? null,
     data: input.data ?? {},
-  };
-  // E-4 (2026-04-28): use ASCII-only JSON for both signing AND body so that
-  // GAS V8's `JSON.parse(rawBody)` -> `JSON.stringify(stripped)` produces
-  // exactly the same bytes we signed. Native UTF-8 round-tripping in
-  // Apps Script differs from Deno just enough to break HMAC parity for
-  // any payload containing non-ASCII characters (em-dash, ✓, ✅, etc.).
-  const innerJson = jsonAscii(inner);
-  const sig = await hmacSha256Hex(gasSecret, ts + '.' + innerJson);
+  });
+  const sig = await hmacSha256Hex(gasSecret, ts + '.' + bodyText);
+
+  const sep = gasUrl.includes('?') ? '&' : '?';
+  const url = `${gasUrl}${sep}ts=${ts}&sig=${sig}`;
 
   try {
-    const r = await fetch(gasUrl, {
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: jsonAscii({ ...inner, sig }),
+      body: bodyText,
     });
     let json: any = {};
     try { json = await r.json(); } catch { /* relay sometimes returns text */ }
@@ -129,9 +125,6 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   const gasUrl    = Deno.env.get('GAS_EMAIL_URL');
   const gasSecret = Deno.env.get('GAS_RELAY_SECRET');
 
-  // GAS relay is the only transport. If it's not configured or the call
-  // fails we surface that explicitly so the failure shows up in
-  // email_logs and the admin can react. (Audit fix E-1, 2026-04-27.)
   if (!gasUrl || !gasSecret) {
     console.warn('sendEmail: GAS_EMAIL_URL / GAS_RELAY_SECRET not configured');
     return { ok: false, provider: 'none', error: 'GAS relay not configured' };

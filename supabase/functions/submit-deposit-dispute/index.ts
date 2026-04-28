@@ -145,6 +145,43 @@ Deno.serve(async (req: Request) => {
     });
   } catch (_) { /* non-fatal */ }
 
+  // 7. Notify admins (Phase 09, 2026-04-28). Best-effort — dispute is
+  //    already persisted by step 5, so an email failure is non-fatal.
+  let admin_notified = false;
+  try {
+    const { sendEmail }              = await import('../_shared/send-email.ts');
+    const { depositDisputeAdminHtml } = await import('../_shared/email.ts');
+    const adminEmails = (Deno.env.get('ADMIN_NOTIFICATION_EMAILS') || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    if (adminEmails.length) {
+      const tenantApp = accRow.applications as { first_name?: string; last_name?: string; email?: string } | null;
+      const tenantNm  = `${tenantApp?.first_name || ''} ${tenantApp?.last_name || ''}`.trim() || tenantEmail;
+      // Look up property label for the email body.
+      const { data: appRow } = await sb
+        .from('applications')
+        .select('property_address, city, lease_state_code')
+        .eq('app_id', accRow.app_id)
+        .maybeSingle();
+      const propLabel = `${appRow?.property_address || ''}${appRow?.city ? ', ' + appRow.city : ''}${appRow?.lease_state_code ? ', ' + appRow.lease_state_code : ''}`.trim() || '(property on file)';
+      const html = depositDisputeAdminHtml(
+        tenantNm, tenantEmail, propLabel,
+        accRow.app_id || '', accId, text, isFirstDispute,
+        accRow.state_code_snapshot || null,
+        accRow.state_return_deadline || null,
+      );
+      const subj = isFirstDispute
+        ? `[Action Required] Deposit dispute filed - ${tenantNm} (Ref: ${accRow.app_id || ''})`
+        : `[Update] Deposit dispute updated - ${tenantNm} (Ref: ${accRow.app_id || ''})`;
+      const r = await sendEmail({ to: adminEmails.join(','), subject: subj, html });
+      admin_notified = r.ok;
+      if (!r.ok) console.warn('[submit-deposit-dispute] admin notify failed:', r.error);
+    } else {
+      console.warn('[submit-deposit-dispute] ADMIN_NOTIFICATION_EMAILS not set — admins were NOT notified of dispute', accId);
+    }
+  } catch (e) {
+    console.error('[submit-deposit-dispute] admin notification error:', (e as Error)?.message);
+  }
+
   return jsonOk({
     success:               true,
     accounting_id:         accId,
@@ -153,5 +190,6 @@ Deno.serve(async (req: Request) => {
     dispute_text_length:   text.length,
     state_code:            accRow.state_code_snapshot,
     state_return_deadline: accRow.state_return_deadline,
+    admin_notified,
   });
 });

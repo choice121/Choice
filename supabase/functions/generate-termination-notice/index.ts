@@ -306,6 +306,39 @@ Deno.serve(async (req: Request) => {
     },
   });
 
+  // ── Email tenant the formal termination notice ─────────────────────────
+  // Phase 11 (2026-04-28): wire up the missing email send so the tenant
+  // is actually notified when a termination notice is generated.
+  let email_sent = false;
+  let email_error: string | null = null;
+  if (app?.email) {
+    try {
+      const { sendEmail }            = await import('../_shared/send-email.ts');
+      const { terminationNoticeHtml } = await import('../_shared/email.ts');
+      const { data: signedUrlData }  = await supabase.storage
+        .from('lease-pdfs')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+      const downloadUrl = signedUrlData?.signedUrl || '';
+      const portalUrl   = (Deno.env.get('SITE_URL') || 'https://choiceproperties.cc') + '/tenant/dashboard.html';
+      const propLabel   = `${app.property_address || ''}${app.city ? ', ' + app.city : ''}${stateCode ? ', ' + stateCode : ''}`.trim();
+      const html        = terminationNoticeHtml(
+        tenantName, propLabel, nt, effective_date, noticeDays,
+        noticeStatute || null, reason_text || null,
+        downloadUrl, portalUrl, lease.app_id || lease.id,
+      );
+      const result = await sendEmail({
+        to:      app.email,
+        subject: `Notice of Lease Termination - Effective ${effective_date} (Ref: ${lease.app_id || lease.id})`,
+        html,
+      });
+      email_sent  = result.ok;
+      email_error = result.error || null;
+    } catch (e) {
+      email_error = (e as Error)?.message || 'unknown';
+      console.error('[generate-termination-notice] email send failed:', email_error);
+    }
+  }
+
   return jsonOk({
     success: true,
     lifecycle_doc_id:     lifecycleDocId,
@@ -315,5 +348,7 @@ Deno.serve(async (req: Request) => {
     notice_statute:       noticeStatute || null,
     just_cause_jurisdiction: law?.just_cause_required ?? false,
     just_cause_warnings:  justCauseWarning,
+    email_sent,
+    email_error,
   }, req);
 });
