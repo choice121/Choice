@@ -133,56 +133,46 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, warning: 'Email relay not configured' }, 200, {}, req)
     }
 
-    // Fire-and-forget GAS send + email_logs insert helper.
+    // GAS send + email_logs insert helper.
     //
-    // E-4 (2026-04-28): wrap the background promise in EdgeRuntime.waitUntil
-    // so Supabase Edge Runtime keeps the isolate alive until the GAS round-
-    // trip AND the email_logs insert finish. Without this, the runtime
-    // killed the worker the moment we returned jsonResponse(), so neither
-    // the email nor the log row ever materialised.
-    const keepAlive = (p: Promise<unknown>) => {
-      // EdgeRuntime is a top-level binding injected by Supabase's deno_runtime
-      // (it is NOT attached to globalThis, so an `as any` cast through globalThis
-      // silently no-ops). Reference it directly with a typeof guard so local
-      // Deno / tests still work.
-      // @ts-ignore -- EdgeRuntime exists at runtime on Supabase Edge Functions
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(p)
-      }
-    }
-    const fireAndLog = (
+    // E-4 (2026-04-28): the original implementation used fire-and-forget,
+    // which Supabase Edge Runtime reaps the moment the handler returns.
+    // Tried EdgeRuntime.waitUntil() but the bare identifier triggers a
+    // BOOT_ERROR in Supabase's TypeScript stripping pipeline. Simplest
+    // correct fix: just await the chain in the handler. ~1-2s extra
+    // latency per email, but guarantees both the email and the log row
+    // land before we respond.
+    const sendAndLog = async (
       template: string,
       to: string,
       data: Record<string, unknown>,
       logExtra: Record<string, unknown> = {},
-    ) => {
-      keepAlive(
-        gasSend({ template, to, data }).then(async (res) => {
-          await supabase.from('email_logs').insert({
-            type: template,
-            recipient: to,
-            status: res.ok ? 'sent' : 'failed',
-            error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-            ...logExtra,
-          }).catch(() => {})
-        }).catch(async (e) => {
-          await supabase.from('email_logs').insert({
-            type: template,
-            recipient: to,
-            status: 'failed',
-            error_msg: e?.message || 'Network error',
-            ...logExtra,
-          }).catch(() => {})
-        })
-      )
+    ): Promise<void> => {
+      try {
+        const res = await gasSend({ template, to, data })
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: res.ok ? 'sent' : 'failed',
+          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+          ...logExtra,
+        }).catch(() => {})
+      } catch (e: any) {
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: 'failed',
+          error_msg: e?.message || 'Network error',
+          ...logExtra,
+        }).catch(() => {})
+      }
     }
 
     // P1-A: new_message_tenant — notify tenant when admin or landlord sends a message.
     // Routing keys off effectiveSender (what we actually wrote to DB), not the
     // client-supplied value, so an impersonation attempt never affects routing.
     if (effectiveSender === 'admin' || effectiveSender === 'landlord') {
-      fireAndLog(
+      await sendAndLog(
         'new_message_tenant',
         app.email,
         { app_id, first_name: app.first_name, message, preferred_language: app.preferred_language || 'en' },
@@ -200,7 +190,7 @@ Deno.serve(async (req) => {
         const { data: landlordData } = await supabase.from('landlords').select('email, contact_name, business_name').eq('id', app.landlord_id).maybeSingle()
         if (landlordData?.email) {
           const landlordName = landlordData.business_name || landlordData.contact_name || 'Landlord'
-          fireAndLog(
+          await sendAndLog(
             'new_message_landlord',
             landlordData.email,
             { app_id, landlordName, tenantName: effectiveSenderName, message },

@@ -82,52 +82,42 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, warning: 'Email relay not configured' }, 200, {}, req)
     }
 
-    // Helper: fire-and-forget GAS send + email_logs insert.
-    // The HTTP response is returned to the caller immediately and the email
-    // attempt is logged in the background.
+    // Helper: send via GAS relay AND write the outcome to email_logs.
     //
-    // E-4 (2026-04-28): wrap the background promise in EdgeRuntime.waitUntil
-    // so Supabase Edge Runtime keeps the isolate alive until the GAS round-
-    // trip AND the email_logs insert finish. Without this, the runtime
-    // killed the worker the moment we returned jsonResponse(), so neither
-    // the email nor the log row ever materialised. (Falls back to a noop
-    // wrapper in environments where EdgeRuntime is undefined, e.g. tests.)
-    const keepAlive = (p: Promise<unknown>) => {
-      // EdgeRuntime is a top-level binding injected by Supabase's deno_runtime
-      // (it is NOT attached to globalThis, so an `as any` cast through globalThis
-      // silently no-ops). Reference it directly with a typeof guard so local
-      // Deno / tests still work.
-      // @ts-ignore -- EdgeRuntime exists at runtime on Supabase Edge Functions
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(p)
-      }
-    }
-    const fireAndLog = (
+    // E-4 (2026-04-28): the original implementation used fire-and-forget
+    // (gasSend(...).then(insert)) and returned the HTTP response without
+    // awaiting. Supabase Edge Runtime reaps background promises the moment
+    // the handler returns, so neither the relay POST nor the log insert
+    // ever completed — every public inquiry / message email silently
+    // disappeared. Tried EdgeRuntime.waitUntil() but the bare identifier
+    // triggers a BOOT_ERROR in Supabase's TypeScript stripping pipeline.
+    // Simplest correct fix: just await the chain in the handler. Adds
+    // ~1-2s latency per email (acceptable for an inquiry submit) but
+    // guarantees both the email and the log row land before we respond.
+    const sendAndLog = async (
       template: string,
       to: string,
       data: Record<string, unknown>,
       logExtra: Record<string, unknown> = {},
-    ) => {
-      keepAlive(
-        gasSend({ template, to, data }).then(async (res) => {
-          await supabase.from('email_logs').insert({
-            type: template,
-            recipient: to,
-            status: res.ok ? 'sent' : 'failed',
-            error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-            ...logExtra,
-          }).catch(() => {})
-        }).catch(async (e) => {
-          await supabase.from('email_logs').insert({
-            type: template,
-            recipient: to,
-            status: 'failed',
-            error_msg: e?.message || 'Network error',
-            ...logExtra,
-          }).catch(() => {})
-        })
-      )
+    ): Promise<void> => {
+      try {
+        const res = await gasSend({ template, to, data })
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: res.ok ? 'sent' : 'failed',
+          error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
+          ...logExtra,
+        }).catch(() => {})
+      } catch (e: any) {
+        await supabase.from('email_logs').insert({
+          type: template,
+          recipient: to,
+          status: 'failed',
+          error_msg: e?.message || 'Network error',
+          ...logExtra,
+        }).catch(() => {})
+      }
     }
 
     // ── Tenant Reply → Landlord Notification (P1-B, rate-limit exempt) ────
@@ -154,7 +144,7 @@ Deno.serve(async (req) => {
         if (landlordRow?.email) {
           const landlordName  = landlordRow.business_name || landlordRow.contact_name || 'Landlord'
           const applicantName = tenant_name || `${appRow.first_name || ''} ${appRow.last_name || ''}`.trim() || 'Tenant'
-          fireAndLog(
+          await sendAndLog(
             'new_message_landlord',
             landlordRow.email,
             { app_id, landlordName, tenantName: applicantName, message },
@@ -191,34 +181,14 @@ Deno.serve(async (req) => {
         for (const row of appRows) {
           const link = getTenantLoginUrl(row.app_id, email)
           const preferred_language = row.preferred_language || 'en'
-          // Fire and forget; log the ACTUAL outcome (E-2, 2026-04-28).
-          // Previously we logged status:'sent' regardless of relay result,
-          // which masked GAS secret-mismatch / quota / rate-limit failures
-          // in the admin email-logs view.
-          // E-4 (2026-04-28): wrapped in keepAlive() so the runtime keeps
-          // the isolate alive long enough for the GAS call AND log insert.
-          keepAlive(
-            gasSend({
-              template: 'app_id_recovery',
-              to: email,
-              data: { app_id: row.app_id, email, dashboard_url: link, preferred_language },
-            }).then(async (res) => {
-              await supabase.from('email_logs').insert({
-                type: 'app_id_recovery',
-                recipient: email,
-                status: res.ok ? 'sent' : 'failed',
-                error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-                app_id: row.app_id,
-              }).catch(() => {})
-            }).catch(async (e) => {
-              await supabase.from('email_logs').insert({
-                type: 'app_id_recovery',
-                recipient: email,
-                status: 'failed',
-                error_msg: e?.message || 'Network error',
-                app_id: row.app_id,
-              }).catch(() => {})
-            })
+          // E-4 (2026-04-28): awaited so the relay POST + log insert finish
+          // before we respond. Replaces the previous fire-and-forget chain
+          // that was being reaped by Supabase Edge Runtime.
+          await sendAndLog(
+            'app_id_recovery',
+            email,
+            { app_id: row.app_id, email, dashboard_url: link, preferred_language },
+            { app_id: row.app_id },
           )
         }
       }
@@ -242,30 +212,13 @@ Deno.serve(async (req) => {
       const dashboard_url = getTenantLoginUrl(app_id, email)
 
       // Fire-and-forget; log the ACTUAL outcome (E-2, 2026-04-28).
-      // E-4 (2026-04-28): wrapped in keepAlive() so the isolate isn't killed
-      // before the GAS call resolves and the log row is written.
-      keepAlive(
-        gasSend({
-          template: 'app_id_recovery',
-          to: email,
-          data: { app_id, email, dashboard_url, preferred_language },
-        }).then(async (res) => {
-          await supabase.from('email_logs').insert({
-            type: 'app_id_recovery',
-            recipient: email,
-            status: res.ok ? 'sent' : 'failed',
-            error_msg: res.ok ? null : (res.error || `HTTP ${res.status}`),
-            app_id,
-          }).catch(() => {})
-        }).catch(async (e) => {
-          await supabase.from('email_logs').insert({
-            type: 'app_id_recovery',
-            recipient: email,
-            status: 'failed',
-            error_msg: e?.message || 'Network error',
-            app_id,
-          }).catch(() => {})
-        })
+      // E-4 (2026-04-28): awaited so the relay POST + log insert finish
+      // before we respond.
+      await sendAndLog(
+        'app_id_recovery',
+        email,
+        { app_id, email, dashboard_url, preferred_language },
+        { app_id },
       )
 
       return jsonResponse({ success: true }, 200, {}, req)
@@ -350,42 +303,47 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Tenant confirmation
-    fireAndLog(
-      'inquiry_reply',
-      tenant_email,
-      { name: tenant_name, message, property: propertyLabel, preferred_language: tenant_language || 'en' },
-    )
-
-    // Landlord notification
+    // Look up landlord up-front so we can fire both emails in parallel.
+    let landlordEmail: string | null = null
+    let landlordName  = 'Landlord'
     if (property_id) {
       const { data: prop } = await supabase
         .from('properties')
         .select('landlords(email, contact_name, business_name)')
         .eq('id', property_id)
         .single()
-
-      const landlordEmail = (prop as any)?.landlords?.email
-      if (landlordEmail) {
-        const landlordName =
-          (prop as any)?.landlords?.business_name ||
-          (prop as any)?.landlords?.contact_name ||
-          'Landlord'
-
-        fireAndLog(
-          'new_message_landlord',
-          landlordEmail,
-          {
-            landlordName,
-            tenantName: tenant_name,
-            tenantEmail: tenant_email,
-            message,
-            property: propertyLabel,
-            propertyId: property_id,
-          },
-        )
+      const ll = (prop as any)?.landlords
+      if (ll?.email) {
+        landlordEmail = ll.email
+        landlordName  = ll.business_name || ll.contact_name || 'Landlord'
       }
     }
+
+    // E-4 (2026-04-28): await both emails so the relay round-trip + log
+    // inserts complete before we respond. Run them in parallel via
+    // Promise.all so the user-facing latency is the slower of the two,
+    // not the sum.
+    const sends: Promise<void>[] = []
+    sends.push(sendAndLog(
+      'inquiry_reply',
+      tenant_email,
+      { name: tenant_name, message, property: propertyLabel, preferred_language: tenant_language || 'en' },
+    ))
+    if (landlordEmail) {
+      sends.push(sendAndLog(
+        'new_message_landlord',
+        landlordEmail,
+        {
+          landlordName,
+          tenantName: tenant_name,
+          tenantEmail: tenant_email,
+          message,
+          property: propertyLabel,
+          propertyId: property_id,
+        },
+      ))
+    }
+    await Promise.all(sends)
 
     return jsonResponse({ success: true }, 200, {}, req)
 
