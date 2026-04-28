@@ -151,8 +151,14 @@ Deno.serve(async (req: Request) => {
   try {
     const { sendEmail }              = await import('../_shared/send-email.ts');
     const { depositDisputeAdminHtml } = await import('../_shared/email.ts');
-    const adminEmails = (Deno.env.get('ADMIN_NOTIFICATION_EMAILS') || '')
-      .split(',').map(s => s.trim()).filter(Boolean);
+    // Use the canonical admin distribution list secret (ADMIN_EMAILS).
+    // Falls back to ADMIN_EMAIL (single) and COMPANY_EMAIL for legacy installs.
+    const adminEmails = (
+      Deno.env.get('ADMIN_EMAILS')
+      || Deno.env.get('ADMIN_EMAIL')
+      || Deno.env.get('COMPANY_EMAIL')
+      || ''
+    ).split(',').map(s => s.trim()).filter(Boolean);
     if (adminEmails.length) {
       const tenantApp = accRow.applications as { first_name?: string; last_name?: string; email?: string } | null;
       const tenantNm  = `${tenantApp?.first_name || ''} ${tenantApp?.last_name || ''}`.trim() || tenantEmail;
