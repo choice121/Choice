@@ -6284,4 +6284,13 @@ body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
     }
   }
   /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+  /* ── Homepage unification (April 29 2026) ─────────────────────────────
+     Replaces ad-hoc inline style="" from index.html with tokenized
+     utility + skeleton modifier classes. Public homepage stays on the
+     marketing token system (--m-*); empty-state, .btn .btn-primary, and
+     .why-cta-btn already exist above and use those tokens.
+  ─────────────────────────────────────────────────────────────────────── */
+  .ta-center { text-align: center; }
+  .property-card-body--skeleton { gap: 10px; padding: 20px; }
   

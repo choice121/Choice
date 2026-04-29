@@ -47,7 +47,7 @@
     body[data-portal="public"]{
       margin:0;
       font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-      background:#fff;color:#1f2937;line-height:1.6;font-size:15.5px;
+      background:#ffffff;color:#1f2937;line-height:1.6;font-size:15.5px;
     }
     /* Phase 9.1: warm hero base + LCP-photo paint zone */
     .mv2-hero{
@@ -56,14 +56,14 @@
       min-height:560px;
       padding:clamp(80px,14vw,140px) 0 clamp(56px,10vw,96px);
       display:flex;align-items:center;overflow:hidden;
-      background:#FAF8F5;
+      background:#faf8f5;
       color:#fff;
     }
     .mv2-hero__bg{position:absolute;inset:0;z-index:-1;overflow:hidden}
     .mv2-hero__bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%}
     .mv2-hero__bg-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,23,41,.78) 0%,rgba(10,23,41,.55) 45%,rgba(10,23,41,.30) 100%)}
     .property-grid{display:grid;grid-template-columns:1fr;gap:16px}
-    .property-card{overflow:hidden;background:#fff;border-radius:22px}
+    .property-card{overflow:hidden;background:#ffffff;border-radius:22px}
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
     #site-nav{min-height:64px}
   </style>
@@ -396,7 +396,7 @@
     <div class="property-grid mv2-featured__grid" id="featuredGrid">
       <div class="property-card property-card-skeleton">
         <div class="property-card-img skeleton-img skeleton"></div>
-        <div class="property-card-body" style="gap:10px;padding:20px">
+        <div class="property-card-body property-card-body--skeleton">
           <div class="skeleton-line w-40 skeleton"></div>
           <div class="skeleton-line w-80 skeleton"></div>
           <div class="skeleton-line w-60 skeleton"></div>
@@ -404,7 +404,7 @@
       </div>
       <div class="property-card property-card-skeleton">
         <div class="property-card-img skeleton-img skeleton"></div>
-        <div class="property-card-body" style="gap:10px;padding:20px">
+        <div class="property-card-body property-card-body--skeleton">
           <div class="skeleton-line w-40 skeleton"></div>
           <div class="skeleton-line w-80 skeleton"></div>
           <div class="skeleton-line w-60 skeleton"></div>
@@ -412,7 +412,7 @@
       </div>
       <div class="property-card property-card-skeleton">
         <div class="property-card-img skeleton-img skeleton"></div>
-        <div class="property-card-body" style="gap:10px;padding:20px">
+        <div class="property-card-body property-card-body--skeleton">
           <div class="skeleton-line w-40 skeleton"></div>
           <div class="skeleton-line w-80 skeleton"></div>
           <div class="skeleton-line w-60 skeleton"></div>
@@ -678,7 +678,7 @@
 <section class="why-section" id="why-section">
   <div class="why-bg"></div>
   <div class="container">
-    <div style="text-align:center">
+    <div class="ta-center">
       <div class="section-eyebrow">Why Choice Properties</div>
       <h2 class="section-title">Renting Made Simple,<br>Transparent &amp; Fast</h2>
     </div>
@@ -699,7 +699,7 @@
         <p>Our team is dedicated, responsive, and genuinely invested in helping you find the right home — not just closing a deal.</p>
       </div>
     </div>
-    <div style="text-align:center">
+    <div class="ta-center">
       <a href="/listings.html" class="btn btn-primary why-cta-btn">Browse Available Listings</a>
     </div>
   </div>
@@ -845,15 +845,11 @@ async function loadFeaturedListings() {
       // I-033: Show a warm empty state instead of hiding the section entirely.
       // An empty marketplace on launch day would look broken with no explanation.
       grid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:56px 24px 48px;color:#6b7280;">
-          <div style="font-size:40px;margin-bottom:16px;opacity:0.5;">🏡</div>
-          <h3 style="font-size:1.15rem;font-weight:600;color:#1f2937;margin:0 0 8px;">Listings Coming Soon</h3>
-          <p style="font-size:0.95rem;margin:0 0 24px;max-width:340px;margin-left:auto;margin-right:auto;line-height:1.5;">
-            We're just getting started — check back shortly for available properties in your area.
-          </p>
-          <a href="/listings.html" style="display:inline-block;padding:10px 22px;background:#006aff;color:#fff;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:500;">
-            Browse All Listings
-          </a>
+        <div class="empty-state">
+          <div class="empty-state-icon" aria-hidden="true">🏡</div>
+          <h3>Listings Coming Soon</h3>
+          <p>We're just getting started — check back shortly for available properties in your area.</p>
+          <a href="/listings.html" class="btn btn-primary why-cta-btn">Browse All Listings</a>
         </div>`;
       return;
     }
