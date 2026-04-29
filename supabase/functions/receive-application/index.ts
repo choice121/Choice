@@ -3,6 +3,7 @@ import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
 import { getAdminEmails, getTenantLoginUrl } from '../_shared/config.ts';
+import { generateMagicLoginUrl } from '../_shared/magic-login.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
 
 const supabase = createClient(
@@ -250,7 +251,11 @@ Deno.serve(async (req: Request) => {
 
   // ── Build the row (server-controlled fields override anything from client) ─
   const appId = generateAppId();
-  const portalUrl = getTenantLoginUrl(appId, email);
+  // Mint a one-click sign-in link so the success card and the confirmation
+  // email both drop the applicant straight into /tenant/portal.html — no need
+  // to retype their email and wait for a magic link. Falls back automatically
+  // to the legacy login URL if Supabase auth.admin.generateLink fails.
+  const portalUrl = await generateMagicLoginUrl(supabase, email, { appId });
 
   const application: Record<string, unknown> = {
     app_id: appId,
@@ -350,7 +355,7 @@ Deno.serve(async (req: Request) => {
         .from('applications').select('app_id')
         .eq('submission_uuid', submissionUuid).maybeSingle();
       if (dup?.app_id) {
-        return jsonOk({ success: true, appId: dup.app_id, message: 'Application already received.', deduped: true });
+        return jsonOk({ success: true, appId: dup.app_id, portal_login_url: portalUrl, message: 'Application already received.', deduped: true });
       }
     }
     console.error('Insert error:', JSON.stringify(insertErr));
@@ -417,5 +422,5 @@ Deno.serve(async (req: Request) => {
   // Suppress unused-import warning in environments without the helper
   void sha256Hex;
 
-  return jsonOk({ success: true, appId, message: 'Application received.' });
+  return jsonOk({ success: true, appId, portal_login_url: portalUrl, message: 'Application received.' });
 });

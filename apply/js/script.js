@@ -3295,7 +3295,7 @@ class RentalApplication {
                 await this.delay(500);
                 this.updateSubmissionProgress(4, t.complete);
                 await this.delay(500);
-                this.handleSubmissionSuccess(result.appId);
+                this.handleSubmissionSuccess(result.appId, result.portal_login_url);
             } else {
                 // GAS returns this error when the form was already submitted successfully
                 // but the original response was lost and the frontend retried. The App ID
@@ -3311,7 +3311,7 @@ class RentalApplication {
                     await this.delay(300);
                     this.updateSubmissionProgress(4, t.complete);
                     await this.delay(300);
-                    this.handleSubmissionSuccess(extractedId);
+                    this.handleSubmissionSuccess(extractedId, result.portal_login_url);
                     return;
                 }
                 throw new Error(errMsg || 'Submission failed');
@@ -3388,7 +3388,7 @@ class RentalApplication {
                         console.log('[CP] Auto-verify: confirmed — App ID:', data.appId);
                         if (this.retryTimeout) { clearTimeout(this.retryTimeout); this.retryTimeout = null; }
                         this._verifyStarted = false;
-                        this.handleSubmissionSuccess(data.appId);
+                        this.handleSubmissionSuccess(data.appId, data.portal_login_url);
                         return;
                     }
                 } catch (_netErr) {
@@ -3471,7 +3471,7 @@ class RentalApplication {
     }
 
     // ---------- handleSubmissionSuccess ----------
-    handleSubmissionSuccess(appId) {
+    handleSubmissionSuccess(appId, portalLoginUrl) {
         // Guard against being called twice (POST response + verify both succeed)
         if (this._successHandled) return;
         this._successHandled = true;
@@ -3480,8 +3480,19 @@ class RentalApplication {
         if (form) form.style.display = 'none';
         const backdrop = document.getElementById('modalBackdrop');
         if (backdrop) backdrop.style.display = 'none';
-        
-        this.showSuccessState(appId);
+
+        // Stash the one-click portal URL alongside the appId so the success
+        // card's "Open Tenant Portal" button (and any reload of this page)
+        // signs the applicant in straight away — no email re-entry needed.
+        try {
+            if (portalLoginUrl && /^https?:\/\//i.test(portalLoginUrl)) {
+                sessionStorage.setItem('lastSuccessPortalUrl', portalLoginUrl);
+            } else {
+                sessionStorage.removeItem('lastSuccessPortalUrl');
+            }
+        } catch (_) { /* storage disabled — fall back to legacy login URL */ }
+
+        this.showSuccessState(appId, portalLoginUrl);
         this.clearSavedProgress();
         sessionStorage.setItem('lastSuccessAppId', appId);
     }
@@ -3491,7 +3502,7 @@ class RentalApplication {
     }
 
     // ---------- showSuccessState ----------
-    showSuccessState(appId) {
+    showSuccessState(appId, portalLoginUrl) {
         const successState = document.getElementById('successState');
         if (!successState) return;
 
@@ -3512,7 +3523,16 @@ class RentalApplication {
         const secondaryPayment = document.getElementById('secondaryPayment')?.value;
         const thirdPayment = document.getElementById('thirdPayment')?.value;
         const email = document.getElementById('email')?.value?.trim() || '';
-        const trackUrl = '/tenant/login.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : '');
+        // Prefer the one-click magic-login URL minted server-side by
+        // receive-application; fall back to the legacy "enter your email"
+        // login page if the URL is missing or no longer in storage.
+        let savedPortalUrl = '';
+        try { savedPortalUrl = sessionStorage.getItem('lastSuccessPortalUrl') || ''; } catch (_) {}
+        const oneClickUrl = (portalLoginUrl && /^https?:\/\//i.test(portalLoginUrl))
+            ? portalLoginUrl
+            : (/^https?:\/\//i.test(savedPortalUrl) ? savedPortalUrl : '');
+        const trackUrl = oneClickUrl
+            || ('/tenant/login.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : ''));
 
         let paymentPrefs = primaryPayment ? primaryPayment : t.notSelected;
         if (secondaryPayment && secondaryPayment.trim()) {

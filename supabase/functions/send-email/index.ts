@@ -14,6 +14,7 @@ import {
   formatDate,
 } from '../_shared/email.ts';
 import { getAdminEmails, getTenantLoginUrl, getTenantPortalUrl, getSiteUrl } from '../_shared/config.ts';
+import { generateMagicLoginUrl } from '../_shared/magic-login.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 const TENANT_PORTAL_URL = getTenantPortalUrl();
@@ -98,7 +99,13 @@ Deno.serve(async (req: Request) => {
   const actor = auth.userEmail || 'admin';
   const now   = new Date().toISOString();
 
-  const portalLink = getTenantLoginUrl(app_id, app.email || undefined);
+  // One-click sign-in: every applicant-facing notification email's CTA drops
+  // the recipient straight into /tenant/portal.html via /auth/callback.html.
+  // Falls back automatically to the legacy login page if Supabase
+  // auth.admin.generateLink ever fails so emails are never broken.
+  const portalLink = app.email
+    ? await generateMagicLoginUrl(supabase, app.email, { appId: app_id })
+    : getTenantLoginUrl(app_id, undefined);
   // State code for e-sign legal text
   const stateCode = app.lease_state_code || 'MI';
 
