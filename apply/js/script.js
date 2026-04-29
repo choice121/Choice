@@ -509,43 +509,9 @@ class RentalApplication {
                   // NOTE: petsNoRadio is intentionally NOT disabled — it must stay enabled
                   // so its value ("No") is submitted with the form to GAS. Only the Yes option is locked.
                   if (petGroup)     { petGroup.style.display = 'none'; }
-                  // Show a clear policy notice so users understand why the option is locked
-                  const _petsFormGroup = petsNoRadio && petsNoRadio.closest('.form-group');
-                  if (_petsFormGroup && !_petsFormGroup.querySelector('.policy-lock-notice')) {
-                      const _notice = document.createElement('div');
-                      _notice.className = 'policy-lock-notice';
-                      _notice.style.cssText = 'margin-top:8px;padding:8px 12px;background:#fff3e0;border:1px solid #ffb74d;border-radius:6px;font-size:13px;color:#e65100;display:flex;align-items:center;gap:8px;';
-                      const _tPets = this.getTranslations();
-                      const noticeText = document.createElement('span');
-                      noticeText.setAttribute('data-i18n', 'noPetsPolicy');
-                      noticeText.textContent = _tPets.noPetsPolicy || 'This property does not allow pets.';
-                      _notice.replaceChildren(this._icon('fas fa-ban'), noticeText);
-                      _petsFormGroup.appendChild(_notice);
-                  }
               }
 
-              // ── Phase 1 fix 1.3: Enforce smoking policy from URL param ──
-              if (smoking && smoking.toLowerCase() !== 'true') {
-                  const smokeNoRadio  = document.getElementById('smokeNo');
-                  const smokeYesRadio = document.getElementById('smokeYes');
-                  if (smokeNoRadio)  { smokeNoRadio.checked = true; smokeNoRadio.dispatchEvent(new Event('change', { bubbles: true })); }
-                  if (smokeYesRadio) { smokeYesRadio.disabled = true; smokeYesRadio.parentElement.style.opacity = '0.45'; }
-                  // NOTE: smokeNoRadio is intentionally NOT disabled — it must stay enabled
-                  // so its value ("No") is submitted with the form to GAS. Only the Yes option is locked.
-                  // Show a clear policy notice
-                  const _smokeFormGroup = smokeNoRadio && smokeNoRadio.closest('.form-group');
-                  if (_smokeFormGroup && !_smokeFormGroup.querySelector('.policy-lock-notice')) {
-                      const _sNotice = document.createElement('div');
-                      _sNotice.className = 'policy-lock-notice';
-                      _sNotice.style.cssText = 'margin-top:8px;padding:8px 12px;background:#fce4ec;border:1px solid #ef9a9a;border-radius:6px;font-size:13px;color:#b71c1c;display:flex;align-items:center;gap:8px;';
-                      const _tSmoke = this.getTranslations();
-                      const smokeText = document.createElement('span');
-                      smokeText.setAttribute('data-i18n', 'noSmokingPolicy');
-                      smokeText.textContent = _tSmoke.noSmokingPolicy || 'This is a non-smoking property. Smoking is not permitted on the premises.';
-                      _sNotice.replaceChildren(this._icon('fas fa-smoking-ban'), smokeText);
-                      _smokeFormGroup.appendChild(_sNotice);
-                  }
-              }
+              // Smoking question is left flexible — applicants may answer Yes or No regardless of property policy.
 
 
               setHidden('hiddenUtilities',       utilities);
