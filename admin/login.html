@@ -246,9 +246,21 @@ loginForm.addEventListener('submit', async (e) => {
         auth: {
           persistSession:   true,
           autoRefreshToken: true,
+          // Match cp-api.js: PKCE flow returns a long-lived refresh token, so
+          // autoRefreshToken can keep the access JWT alive indefinitely. Without
+          // this, the implicit flow on hash callbacks issues no refresh token
+          // and the admin session silently expires after 1h — same root cause
+          // that used to drop landlord sessions before this was added there.
+          flowType: 'pkce',
+          // Login page handles any callback hash itself; the shared client
+          // (cp-api.js) used on dashboard pages also runs with this off, so
+          // session-storage layout stays identical across login and app pages.
+          detectSessionInUrl: false,
         }
       }
     );
+    // Quiet the SDK's background-refresh logging — same as cp-api.js does.
+    _sb.auth.onAuthStateChange(() => {});
 
     sessionNotice.classList.add('visible');
     formWrap.style.display = 'block';
