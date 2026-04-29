@@ -6238,3 +6238,50 @@ body[data-portal="public"][data-page="home"][data-mv2-scrolled="true"] .nav {
   }
 }
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+  /* ╔══════════════════════════════════════════════════════════════════════╗
+     ║  Featured listings: VERTICAL stack on the homepage (all breakpoints) ║
+     ║  Overrides: L1062/L1074/L1077 grid + L5636 mobile horizontal rail.   ║
+     ║  Scope: home page only (body[data-page="home"]) → listings.html and  ║
+     ║  property.html grids are unaffected.                                 ║
+     ╚══════════════════════════════════════════════════════════════════════╝ */
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid,
+  body[data-portal="public"][data-page="home"] .mv2-featured .property-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: var(--m-s-4, 16px);
+    overflow: visible !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    margin-inline: 0 !important;
+    padding: 0 !important;
+    scroll-padding-inline: 0 !important;
+    scroll-padding-left: 0 !important;
+  }
+  body[data-portal="public"][data-page="home"] .featured-section .property-grid > .property-card,
+  body[data-portal="public"][data-page="home"] .mv2-featured .property-grid > .property-card {
+    flex: initial !important;
+    width: 100% !important;
+    max-width: none !important;
+    scroll-snap-align: none !important;
+    scroll-snap-stop: normal !important;
+    opacity: 1;
+    transform: none;
+  }
+  @media (min-width: 540px) {
+    body[data-portal="public"][data-page="home"] .featured-section .property-grid,
+    body[data-portal="public"][data-page="home"] .mv2-featured .property-grid {
+      grid-template-columns: 1fr !important;
+      gap: var(--m-s-5, 24px);
+    }
+    body[data-portal="public"][data-page="home"] .featured-section .property-grid > .property-card,
+    body[data-portal="public"][data-page="home"] .mv2-featured .property-grid > .property-card {
+      /* Cap card width on wider screens so a single-column stack doesn't
+         stretch to ridiculous proportions on desktop. Centered in the column. */
+      max-width: 720px !important;
+      margin-inline: auto !important;
+    }
+  }
+  /* ╚══════════════════════════════════════════════════════════════════════╝ */
+  
