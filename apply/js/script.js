@@ -499,19 +499,7 @@ class RentalApplication {
               setHidden('hiddenPetDeposit',      petDeposit);
               setHidden('hiddenPetDetails',      petDetails);
               setHidden('hiddenSmokingAllowed',  smoking);
-              // ── Phase 1 fix 1.2: Enforce pet policy from URL param ──
-              if (pets && pets.toLowerCase() !== 'true') {
-                  const petsNoRadio  = document.getElementById('petsNo');
-                  const petsYesRadio = document.getElementById('petsYes');
-                  const petGroup     = document.getElementById('petDetailsGroup');
-                  if (petsNoRadio)  { petsNoRadio.checked = true; petsNoRadio.dispatchEvent(new Event('change', { bubbles: true })); }
-                  if (petsYesRadio) { petsYesRadio.disabled = true; petsYesRadio.parentElement.style.opacity = '0.45'; }
-                  // NOTE: petsNoRadio is intentionally NOT disabled — it must stay enabled
-                  // so its value ("No") is submitted with the form to GAS. Only the Yes option is locked.
-                  if (petGroup)     { petGroup.style.display = 'none'; }
-              }
-
-              // Smoking question is left flexible — applicants may answer Yes or No regardless of property policy.
+              // Pet and smoking questions are left flexible — applicants may answer Yes or No regardless of property policy.
 
 
               setHidden('hiddenUtilities',       utilities);
