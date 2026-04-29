@@ -1890,7 +1890,8 @@ class RentalApplication {
             // Server draft found — apply it to the form, then also mirror to
             // localStorage so subsequent auto-saves work normally.
             try {
-                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint', '_documents']);
+                // SSN and DOB are kept in the draft so applicants don't have to re-enter them on resume.
+                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
                 Object.keys(serverData).forEach(key => {
@@ -1960,7 +1961,8 @@ class RentalApplication {
                     return; // Different property — start completely fresh
                 }
 
-                const SKIP = new Set(['SSN', 'Co-Applicant SSN', 'Application ID', '_last_updated', '_language', 'DOB', 'Co-Applicant DOB', '_currentStep', '_propertyFingerprint', '_documents']);
+                // SSN and DOB are kept in the saved draft so applicants don't have to re-enter them on resume.
+                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
 
@@ -2079,7 +2081,11 @@ class RentalApplication {
 
     async saveProgress() {
         const data = this.getAllFormData();
-        const sensitiveKeys = ['SSN', 'Application ID', 'Co-Applicant SSN', 'DOB', 'Co-Applicant DOB'];
+        // Application ID is a server-issued identifier and must not be cached client-side.
+        // SSN (last-4) and DOB are intentionally retained so applicants don't have to re-enter
+        // them on resume; the draft is stored in the same browser/device localStorage and the
+        // same encrypted server draft slot used for every other applicant field.
+        const sensitiveKeys = ['Application ID'];
         sensitiveKeys.forEach(key => delete data[key]);
         data._last_updated = new Date().toISOString();
         data._language = this.state.language || 'en';
@@ -2451,8 +2457,6 @@ class RentalApplication {
                 startOverDesc: "All your entered information will be cleared and you'll return to Step 1.",
                 keepInfo: 'Keep My Information',
                 yesStartOver: 'Yes, Clear Everything',
-                noPetsPolicy: 'This property does not allow pets.',
-                noSmokingPolicy: 'This is a non-smoking property. Smoking is not permitted on the premises.',
                 minLeaseHintPre: 'Minimum lease term:',
                 minLeaseHintPost: 'months. Please select a qualifying term.'
             },
@@ -2759,8 +2763,6 @@ class RentalApplication {
                 startOverDesc: 'Toda la información ingresada será eliminada y regresará al Paso 1.',
                 keepInfo: 'Conservar Mi Información',
                 yesStartOver: 'Sí, Borrar Todo',
-                noPetsPolicy: 'Esta propiedad no permite mascotas.',
-                noSmokingPolicy: 'Esta es una propiedad libre de humo. No se permite fumar en las instalaciones.',
                 minLeaseHintPre: 'Plazo mínimo de arrendamiento:',
                 minLeaseHintPost: 'meses. Por favor seleccione un plazo que cumpla con el requisito.'
             }

@@ -444,11 +444,23 @@
 
   // ───── Status change ─────
   async function setStatus(dbId, appId, status){
+    const willEmail = ['approved','denied','waitlisted'].includes(status);
+    const labels = { approved:'Approve application?', denied:'Deny application?', waitlisted:'Move to waitlist?', pending:'Reset to pending?', new:'Reset to new?' };
+    const verbs  = { approved:'Approve', denied:'Deny', waitlisted:'Waitlist', pending:'Reset', new:'Reset' };
+    const proceed = await S.confirm({
+      title: labels[status] || ('Set status to ' + status + '?'),
+      message: willEmail
+        ? 'The applicant will be notified by email that their application is ' + status + '.'
+        : 'The application status will be changed to "' + status + '".',
+      ok: verbs[status] || 'Confirm',
+      danger: status === 'denied'
+    });
+    if(!proceed) return;
     const card = document.getElementById('card-' + dbId);
     if(card) card.style.opacity = '.55';
     const { ok, error } = await CP.Applications.updateStatus(dbId, status);
     if(!ok){ S.toast('Error: ' + error, 'error'); if(card) card.style.opacity = '1'; return; }
-    if(['approved','denied','waitlisted'].includes(status)) await autoSendEmail(appId, status);
+    if(willEmail) await autoSendEmail(appId, status);
     S.toast('Status updated to ' + status + '.');
     await loadApps();
   }
@@ -522,6 +534,13 @@
   }
 
   async function markUnpaid(dbId){
+    const proceed = await S.confirm({
+      title: 'Mark as unpaid?',
+      message: 'This reverses any recorded payment for this application. The applicant will not be notified.',
+      ok: 'Mark unpaid',
+      danger: true
+    });
+    if(!proceed) return;
     const { ok, error } = await CP.Applications.updatePayment(dbId, 'unpaid');
     if(!ok){ S.toast('Error: ' + error, 'error'); return; }
     S.toast('Marked as unpaid.');
