@@ -65,9 +65,92 @@
 
     .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(100,116,139,.25);border-top-color:#1d4ed8;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
     @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+  
+
+      /* ── Dark theme: dual trigger (status colors retuned for dark surfaces) ── */
+      html[data-theme="dark"] .header-mark {
+        background: linear-gradient(135deg, #4d9aff, #6db0ff);
+        box-shadow: 0 2px 8px rgba(77, 154, 255, 0.35);
+      }
+      html[data-theme="dark"] .verify-status.ok {
+        background: rgba(5, 150, 105, 0.12);
+        border-color: rgba(52, 211, 153, 0.40);
+      }
+      html[data-theme="dark"] .verify-status.ok .vs-icon { background: #34d399; color: #0a1f15; }
+      html[data-theme="dark"] .verify-status.fail {
+        background: rgba(220, 38, 38, 0.12);
+        border-color: rgba(248, 113, 113, 0.40);
+      }
+      html[data-theme="dark"] .verify-status.fail .vs-icon { background: #f87171; }
+      html[data-theme="dark"] .verify-status.pending {
+        background: rgba(100, 116, 139, 0.14);
+        border-color: rgba(148, 163, 184, 0.30);
+      }
+      html[data-theme="dark"] .verify-status.pending .vs-icon { background: #94a3b8; }
+      html[data-theme="dark"] .hash-block {
+        background: #050810;
+        color: #6ee7b7;
+      }
+      html[data-theme="dark"] .hash-block .h-label { color: #64748b; }
+      html[data-theme="dark"] .hash-block .h-mismatch { color: #fb7185; }
+      html[data-theme="dark"] .audit-note {
+        background: rgba(245, 158, 11, 0.10);
+        border-color: rgba(251, 191, 36, 0.35);
+        color: #fbbf24;
+      }
+      html[data-theme="dark"] .err-box {
+        background: rgba(220, 38, 38, 0.12);
+        border-color: rgba(248, 113, 113, 0.40);
+        color: #fca5a5;
+      }
+      html[data-theme="dark"] .footer-note a { color: #4d9aff; }
+      html[data-theme="dark"] .spin {
+        border-color: rgba(148, 163, 184, 0.20);
+        border-top-color: #4d9aff;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .header-mark {
+          background: linear-gradient(135deg, #4d9aff, #6db0ff);
+          box-shadow: 0 2px 8px rgba(77, 154, 255, 0.35);
+        }
+        .verify-status.ok {
+          background: rgba(5, 150, 105, 0.12);
+          border-color: rgba(52, 211, 153, 0.40);
+        }
+        .verify-status.ok .vs-icon { background: #34d399; color: #0a1f15; }
+        .verify-status.fail {
+          background: rgba(220, 38, 38, 0.12);
+          border-color: rgba(248, 113, 113, 0.40);
+        }
+        .verify-status.fail .vs-icon { background: #f87171; }
+        .verify-status.pending {
+          background: rgba(100, 116, 139, 0.14);
+          border-color: rgba(148, 163, 184, 0.30);
+        }
+        .verify-status.pending .vs-icon { background: #94a3b8; }
+        .hash-block { background: #050810; color: #6ee7b7; }
+        .hash-block .h-label { color: #64748b; }
+        .hash-block .h-mismatch { color: #fb7185; }
+        .audit-note {
+          background: rgba(245, 158, 11, 0.10);
+          border-color: rgba(251, 191, 36, 0.35);
+          color: #fbbf24;
+        }
+        .err-box {
+          background: rgba(220, 38, 38, 0.12);
+          border-color: rgba(248, 113, 113, 0.40);
+          color: #fca5a5;
+        }
+        .footer-note a { color: #4d9aff; }
+        .spin {
+          border-color: rgba(148, 163, 184, 0.20);
+          border-top-color: #4d9aff;
+        }
+      }
+    </style>
 </head>
-<body>
+<body data-portal="public" data-page="verify-lease">
   <header class="header">
     <div class="header-mark">CP</div>
     <div>

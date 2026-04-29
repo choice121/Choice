@@ -202,9 +202,78 @@
       text-decoration-color: var(--mv2-brand-dark);
       outline: none;
     }
-  </style>
+  
+
+      /* ── Dark theme: dual trigger (OS + explicit data-theme="dark") ── */
+      html[data-theme="dark"] {
+        --mv2-bg-warm: #0e0c08;
+        --mv2-ink: #f5f1e8;
+        --mv2-muted: #b8aea0;
+        --mv2-muted-2: #9b9183;
+        --mv2-hairline: rgba(245, 241, 232, 0.10);
+        --mv2-gold: #f4d27a;
+      }
+      html[data-theme="dark"] .nf-code {
+        background: linear-gradient(180deg, var(--mv2-ink) 0%, #f4d27a 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      html[data-theme="dark"] .nf-title em {
+        background: linear-gradient(180deg, transparent 65%, rgba(244, 210, 122, 0.28) 65%);
+      }
+      html[data-theme="dark"] .nf-btn--ghost {
+        background: rgba(31, 24, 18, 0.7);
+        color: var(--mv2-ink);
+        border-color: var(--mv2-hairline);
+      }
+      html[data-theme="dark"] .nf-btn--ghost:hover,
+      html[data-theme="dark"] .nf-btn--ghost:focus-visible {
+        background: rgba(42, 34, 27, 1);
+        border-color: rgba(245, 241, 232, 0.20);
+      }
+      html[data-theme="dark"] .nf-help a {
+        color: #4d9aff;
+        text-decoration-color: rgba(77, 154, 255, 0.40);
+      }
+      html[data-theme="dark"] .nf-help a:hover { text-decoration-color: #4d9aff; }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --mv2-bg-warm: #0e0c08;
+          --mv2-ink: #f5f1e8;
+          --mv2-muted: #b8aea0;
+          --mv2-muted-2: #9b9183;
+          --mv2-hairline: rgba(245, 241, 232, 0.10);
+          --mv2-gold: #f4d27a;
+        }
+        .nf-code {
+          background: linear-gradient(180deg, var(--mv2-ink) 0%, #f4d27a 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .nf-title em {
+          background: linear-gradient(180deg, transparent 65%, rgba(244, 210, 122, 0.28) 65%);
+        }
+        .nf-btn--ghost {
+          background: rgba(31, 24, 18, 0.7);
+          color: var(--mv2-ink);
+          border-color: var(--mv2-hairline);
+        }
+        .nf-btn--ghost:hover, .nf-btn--ghost:focus-visible {
+          background: rgba(42, 34, 27, 1);
+          border-color: rgba(245, 241, 232, 0.20);
+        }
+        .nf-help a {
+          color: #4d9aff;
+          text-decoration-color: rgba(77, 154, 255, 0.40);
+        }
+        .nf-help a:hover { text-decoration-color: #4d9aff; }
+      }
+    </style>
 </head>
-<body data-portal="public" data-page-title="Page Not Found">
+<body data-portal="public" data-page-title="Page Not Found" data-page="404">
   <main class="nf-wrap">
     <div class="nf-card">
       <a href="/index.html" class="nf-brand">

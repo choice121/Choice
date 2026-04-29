@@ -7482,3 +7482,402 @@ html[data-theme="dark"] body[data-portal="public"][data-page="property"] .skelet
   }
   
   
+
+  /* ════════════════════════════════════════════════════════════════════════════ *
+   *  PHASE 9.7 — Dark theme: all remaining public static content pages
+   * ────────────────────────────────────────────────────────────────────────────
+   *  Same dual-trigger approach (@media + html[data-theme="dark"]).
+   *
+   *  Uses ONE selector that catches every public page that doesn't already
+   *  have its own per-page dark scope:
+   *    body[data-portal="public"]:not([data-page="home"])
+   *                              :not([data-page="listings"])
+   *                              :not([data-page="property"])
+   *
+   *  This covers (verified at commit time):
+   *    about, faq, policies, terms, privacy,
+   *    application-credit-policy, fair-housing, holding-deposit-policy,
+   *    how-it-works, how-to-apply, landlord-platform-agreement,
+   *    policy-changelog, rental-application-policy,
+   *    404 (after data-page="404" added to body),
+   *    verify-lease (after data-portal="public" + data-page="verify-lease" added)
+   *
+   *  And any future public page that gets data-portal="public" plus a new
+   *  data-page value will also dark-adapt automatically without further CSS.
+   * ════════════════════════════════════════════════════════════════════════════ */
+  
+  /* ─── Token redef: all-other-public-pages (explicit data-theme="dark") ─── */
+  html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) {
+    color-scheme: dark;
+    /* legacy --m-* token system */
+    --m-bg:             #0e0c08;
+    --m-white:          #181410;
+    --m-surface:        #1f1812;
+    --m-surface-2:      #2a221b;
+    --m-border:         #2e261c;
+    --m-border-strong:  #3d3324;
+    --m-ink:            #f5f1e8;
+    --m-ink-2:          #e7e0d2;
+    --m-text:           #e0d8c8;
+    --m-muted:          #b8aea0;
+    --m-muted-2:        #9b9183;
+    --m-soft:           #6e6759;
+    --m-brand-pale:     #102239;
+    --m-gold-pale:      #2a221b;
+    --m-shadow-sm:      0 1px 2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.30);
+    --m-shadow-md:      0 6px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.30);
+    --m-shadow-lg:      0 18px 40px rgba(0,0,0,.55), 0 6px 14px rgba(0,0,0,.32);
+    /* modern --mv2-* token system */
+    --mv2-bg-warm:        #0e0c08;
+    --mv2-bg-warm-2:      #1a1610;
+    --mv2-ink:            #f5f1e8;
+    --mv2-ink-2:          #e7e0d2;
+    --mv2-muted:          #b8aea0;
+    --mv2-muted-2:        #9b9183;
+    --mv2-hairline:       #2e261c;
+    --mv2-hairline-strong:#3d3324;
+    --mv2-accent:         #f4d27a;
+    --mv2-accent-pale:    #2a221b;
+    --mv2-accent-strong:  #f4d27a;
+    --mv2-shadow-hairline:0 0 0 1px var(--mv2-hairline);
+    --mv2-shadow-soft:    0 1px 2px rgba(0,0,0,.50), 0 8px 24px rgba(0,0,0,.45);
+    --mv2-shadow-lift:    0 2px 4px rgba(0,0,0,.55), 0 18px 40px rgba(0,0,0,.55);
+    --mv2-overlay-ink:    rgba(0, 0, 0, 0.62);
+    /* page paint */
+    background: #0e0c08;
+    color: #e0d8c8;
+  }
+
+  /* ─── Token redef: all-other-public-pages (OS @media prefers-color-scheme: dark) ─── */
+  @media (prefers-color-scheme: dark) {
+    body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) {
+      color-scheme: dark;
+      /* legacy --m-* token system */
+      --m-bg:             #0e0c08;
+      --m-white:          #181410;
+      --m-surface:        #1f1812;
+      --m-surface-2:      #2a221b;
+      --m-border:         #2e261c;
+      --m-border-strong:  #3d3324;
+      --m-ink:            #f5f1e8;
+      --m-ink-2:          #e7e0d2;
+      --m-text:           #e0d8c8;
+      --m-muted:          #b8aea0;
+      --m-muted-2:        #9b9183;
+      --m-soft:           #6e6759;
+      --m-brand-pale:     #102239;
+      --m-gold-pale:      #2a221b;
+      --m-shadow-sm:      0 1px 2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.30);
+      --m-shadow-md:      0 6px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.30);
+      --m-shadow-lg:      0 18px 40px rgba(0,0,0,.55), 0 6px 14px rgba(0,0,0,.32);
+      /* modern --mv2-* token system */
+      --mv2-bg-warm:        #0e0c08;
+      --mv2-bg-warm-2:      #1a1610;
+      --mv2-ink:            #f5f1e8;
+      --mv2-ink-2:          #e7e0d2;
+      --mv2-muted:          #b8aea0;
+      --mv2-muted-2:        #9b9183;
+      --mv2-hairline:       #2e261c;
+      --mv2-hairline-strong:#3d3324;
+      --mv2-accent:         #f4d27a;
+      --mv2-accent-pale:    #2a221b;
+      --mv2-accent-strong:  #f4d27a;
+      --mv2-shadow-hairline:0 0 0 1px var(--mv2-hairline);
+      --mv2-shadow-soft:    0 1px 2px rgba(0,0,0,.50), 0 8px 24px rgba(0,0,0,.45);
+      --mv2-shadow-lift:    0 2px 4px rgba(0,0,0,.55), 0 18px 40px rgba(0,0,0,.55);
+      --mv2-overlay-ink:    rgba(0, 0, 0, 0.62);
+      /* page paint */
+      background: #0e0c08;
+      color: #e0d8c8;
+    }
+  }
+
+  /* ─── Element overrides: all-other-public-pages (explicit data-theme="dark") ─── */
+  html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header {
+  background: linear-gradient(180deg, var(--mv2-bg-warm) 0%, var(--mv2-bg-warm-2) 100%); color: var(--m-ink); border-bottom-color: var(--m-border);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero h1,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header h1,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header h1,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header h1 {
+  color: var(--m-ink);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero p,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header p,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header p,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header p {
+  color: var(--m-muted);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-body,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) main.content,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .content-wrap {
+  background: var(--m-bg); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body h2,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body h2,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body h2,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body h3,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body h3,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body h3 {
+  color: var(--m-ink);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body a,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body a,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body a {
+  color: var(--mv2-accent);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body a:hover,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body a:hover,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body a:hover {
+  color: #fbe49b;
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body hr,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body hr,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body hr {
+  border-color: var(--m-border);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body code,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body code,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body code {
+  background: var(--m-surface-2); color: var(--m-ink); border-color: var(--m-border);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body blockquote,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body blockquote,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body blockquote {
+  border-left-color: var(--mv2-accent); background: var(--m-surface); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-item,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-card {
+  background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-question,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-item summary {
+  color: var(--m-ink);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-answer {
+  color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc {
+  background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc h3 {
+  color: var(--m-muted);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc a {
+  color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc a:hover {
+  color: var(--mv2-accent);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-callout {
+  background: rgba(245, 158, 11, 0.08); border-left-color: var(--mv2-accent); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-callout strong {
+  color: var(--mv2-accent);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .arbitration-block {
+  background: rgba(220, 38, 38, 0.10); border-color: rgba(248, 113, 113, 0.50); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .arbitration-block h3 {
+  color: #fb7185;
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .version-block {
+  background: var(--m-surface); border-left-color: var(--mv2-accent); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .version-meta {
+  color: var(--m-muted-2);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .card,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .panel,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-card {
+  background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .card-header {
+  background: var(--m-surface-2); border-bottom-color: var(--m-border); color: var(--m-ink);
+}
+
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body ul li,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body ol li,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body ul li,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body ol li,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body ul li,
+html[data-theme="dark"] body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body ol li {
+  color: var(--m-text);
+}
+
+  /* ─── Element overrides: all-other-public-pages (OS @media prefers-color-scheme: dark) ─── */
+  @media (prefers-color-scheme: dark) {
+    body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header {
+    background: linear-gradient(180deg, var(--mv2-bg-warm) 0%, var(--mv2-bg-warm-2) 100%); color: var(--m-ink); border-bottom-color: var(--m-border);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero h1,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header h1,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header h1,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header h1 {
+    color: var(--m-ink);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-hero p,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-header p,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-header p,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-header p {
+    color: var(--m-muted);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .page-body,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) main.content,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .content-wrap {
+    background: var(--m-bg); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body h2,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body h2,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body h2,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body h3,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body h3,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body h3 {
+    color: var(--m-ink);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body a,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body a,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body a {
+    color: var(--mv2-accent);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body a:hover,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body a:hover,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body a:hover {
+    color: #fbe49b;
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body hr,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body hr,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body hr {
+    border-color: var(--m-border);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body code,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body code,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body code {
+    background: var(--m-surface-2); color: var(--m-ink); border-color: var(--m-border);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body blockquote,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body blockquote,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body blockquote {
+    border-left-color: var(--mv2-accent); background: var(--m-surface); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-item,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-card {
+    background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-question,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-item summary {
+    color: var(--m-ink);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .faq-answer {
+    color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc {
+    background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc h3 {
+    color: var(--m-muted);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc a {
+    color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-toc a:hover {
+    color: var(--mv2-accent);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-callout {
+    background: rgba(245, 158, 11, 0.08); border-left-color: var(--mv2-accent); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-callout strong {
+    color: var(--mv2-accent);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .arbitration-block {
+    background: rgba(220, 38, 38, 0.10); border-color: rgba(248, 113, 113, 0.50); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .arbitration-block h3 {
+    color: #fb7185;
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .version-block {
+    background: var(--m-surface); border-left-color: var(--mv2-accent); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .version-meta {
+    color: var(--m-muted-2);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .card,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .panel,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .info-card {
+    background: var(--m-surface); border-color: var(--m-border); color: var(--m-text);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .card-header {
+    background: var(--m-surface-2); border-bottom-color: var(--m-border); color: var(--m-ink);
+  }
+
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body ul li,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .doc-body ol li,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body ul li,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .legal-body ol li,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body ul li,
+  body[data-portal="public"]:not([data-page="home"]):not([data-page="listings"]):not([data-page="property"]) .policy-body ol li {
+    color: var(--m-text);
+  }
+  }
+  
+  
