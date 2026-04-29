@@ -210,15 +210,10 @@ Deno.serve(async (req: Request) => {
   const enforcedDeposit = typeof prop.security_deposit  === 'number' ? prop.security_deposit  : null;
   const enforcedAddress = prop.address || fv(fields['Property Address']) || null;
 
-  // Pets / smoking policy enforcement
-  const hasPetsSubmitted = fBool(fields['Has Pets']);
-  if (hasPetsSubmitted === true && prop.pets_allowed === false) {
-    return jsonErr(422, 'This property does not allow pets. Please contact us if you have questions.');
-  }
-  const smokerSubmitted = fBool(fields['Smoker']);
-  if (smokerSubmitted === true && prop.smoking_allowed === false) {
-    return jsonErr(422, 'This is a non-smoking property. Please contact us if you have questions.');
-  }
+  // Pets / smoking policy enforcement intentionally removed —
+  // applicants may submit any answer for pets and smoking regardless of
+  // the property's listed policy. Landlords review and decide on a
+  // per-application basis instead of having submissions auto-rejected.
 
   // ── Idempotency: use client-supplied submission_uuid if present ───────────
   const clientUuid = fv(fields['submission_uuid']);
