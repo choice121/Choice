@@ -667,8 +667,70 @@
   let _readyResolve;
   Shell.ready = new Promise(res => { _readyResolve = res; });
 
+  // ───────────────────────── Theme management (light / auto / dark) ─────────────────────────
+  // Mirrors the tenant portal toggle so admin and landlord shells get the same control.
+  // Saved key (`cp-theme`) is shared, so a tenant who picks dark also sees admin in dark.
+  const THEME_KEY = 'cp-theme';
+  function readTheme(){
+    try { return localStorage.getItem(THEME_KEY) || 'auto'; }
+    catch(_) { return 'auto'; }
+  }
+  function applyTheme(mode){
+    const root = document.documentElement;
+    let resolved = mode;
+    if(mode === 'auto'){
+      resolved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    // The CSS uses [data-theme="light"] to override the dark default, so an
+    // explicit `dark` resolves by removing the attribute (or setting it to "dark"
+    // which doesn't match any rule and falls through to :root).
+    root.setAttribute('data-theme', resolved);
+    document.querySelectorAll('.theme-toggle button').forEach(b => {
+      b.dataset.active = (b.dataset.themeMode === mode) ? '1' : '0';
+      b.setAttribute('aria-pressed', b.dataset.themeMode === mode ? 'true' : 'false');
+    });
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', resolved === 'dark' ? '#0a0f1e' : '#ffffff');
+    const scheme = document.querySelector('meta[name="color-scheme"]');
+    if(scheme) scheme.setAttribute('content', 'light dark');
+  }
+  function initTheme(){
+    if(!document.querySelector('.theme-toggle')){
+      const wrap = document.createElement('div');
+      wrap.className = 'theme-toggle';
+      wrap.setAttribute('role', 'group');
+      wrap.setAttribute('aria-label', 'Theme');
+      wrap.innerHTML =
+        '<button type="button" data-theme-mode="light" aria-label="Light mode" title="Light"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun"/></svg></button>' +
+        '<button type="button" data-theme-mode="auto"  aria-label="Auto theme" title="Auto"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg></button>' +
+        '<button type="button" data-theme-mode="dark"  aria-label="Dark mode" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>';
+      document.body.appendChild(wrap);
+      wrap.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => {
+          const m = b.dataset.themeMode;
+          try { localStorage.setItem(THEME_KEY, m); } catch(_) {}
+          applyTheme(m);
+        });
+      });
+    }
+    applyTheme(readTheme());
+    if(window.matchMedia){
+      try {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const onChange = () => { if(readTheme() === 'auto') applyTheme('auto'); };
+        mq.addEventListener ? mq.addEventListener('change', onChange) : mq.addListener(onChange);
+      } catch(_) {}
+    }
+    // Keep tabs in sync if the user changes the theme in another tab.
+    window.addEventListener('storage', (e) => {
+      if(e.key === THEME_KEY) applyTheme(readTheme());
+    });
+  }
+  Shell.applyTheme = applyTheme;
+
   // ───────────────────────── Boot ─────────────────────────
   function boot(){
+    initTheme();
     initActions();
     initActiveNav();
     initSwipeRows();
