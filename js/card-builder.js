@@ -102,20 +102,15 @@
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
 
-    // ── Badge — priority: featured > verified > availability ────
-    // Shows useful, data-driven info — no marketing-only labels.
-    var availNow = !p.available_date || new Date(p.available_date) <= new Date();
-    var badge = '';
-    if (p.featured) {
-      badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
-    } else if (p.landlords && p.landlords.verified) {
-      badge = '<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>';
-    } else if (availNow || !p.available_date) {
-      badge = '<div class="property-card-badge badge-available"><i class="fas fa-circle-check"></i> Available Now</div>';
-    } else {
-      var availLabel = new Date(p.available_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      badge = '<div class="property-card-badge badge-avail-date"><i class="fas fa-calendar-days"></i> Avail. ' + availLabel + '</div>';
-    }
+    // ── Badge — priority: featured > verified ────
+      // Availability badges ("Available Now" / "Avail. <date>") are intentionally
+      // not rendered on public cards per request — only marketing-relevant labels remain.
+      var badge = '';
+      if (p.featured) {
+        badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
+      } else if (p.landlords && p.landlords.verified) {
+        badge = '<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>';
+      }
 
     // ── Freshness chip (Phase 9.2) — stacks under the badge, top-left ──
     var freshText = freshnessLabel(p.created_at);
@@ -163,7 +158,7 @@
         // Not wrapped in <a>; card click-through is handled by event delegation.
         '<div class="property-card-img">' +
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
-          // Availability / status badge — top-left
+          // Featured / verified badge — top-left
           badge +
           // Freshness chip — top-left, stacks under badge (Phase 9.2)
           freshChipHtml +
