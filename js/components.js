@@ -61,6 +61,9 @@
     /* ── Hydrate CONFIG email/phone ── */
     hydrateConfig();
 
+    /* ── Wire theme toggle (sun/moon button + drawer entry) ── */
+    wireThemeToggle();
+
     /* ── Call updateNav once window.CP is ready ── */
     waitForCP(function () { window.CP.updateNav(); });
   }
@@ -214,4 +217,65 @@
     }, 50);
   }
 
+
+    /* ─────────────────────────────────────────────────────────────
+     * wireThemeToggle — sun/moon buttons that flip <html data-theme>
+     *
+     * - Reads/writes localStorage('cp-theme'). The pre-paint script
+     *   inlined in <head> of every page applies the stored value
+     *   before stylesheets render, preventing FOUC.
+     * - When the user has NOT made an explicit choice, the page
+     *   follows OS preference via @media (prefers-color-scheme),
+     *   and this function listens for OS changes to keep aria-pressed
+     *   on the button in sync.
+     * - Multiple buttons (desktop nav + mobile drawer) share state.
+     * ───────────────────────────────────────────────────────────── */
+    function wireThemeToggle() {
+      var btns = document.querySelectorAll('[data-theme-toggle]');
+      if (!btns.length) return;
+
+      function osPrefersDark() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
+      function currentEffectiveTheme() {
+        var attr = document.documentElement.getAttribute('data-theme');
+        if (attr === 'dark' || attr === 'light') return attr;
+        return osPrefersDark() ? 'dark' : 'light';
+      }
+      function syncBtnState(theme) {
+        btns.forEach(function (b) {
+          b.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+          var label = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
+          b.setAttribute('aria-label', label);
+          b.setAttribute('title', label);
+        });
+      }
+
+      // Initial sync (theme already applied by pre-paint script)
+      syncBtnState(currentEffectiveTheme());
+
+      btns.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          // Drawer entry is an <a href="#"> — don't navigate
+          if (btn.tagName === 'A') e.preventDefault();
+          var next = currentEffectiveTheme() === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('cp-theme', next); } catch (_) {}
+          syncBtnState(next);
+        });
+      });
+
+      // If the user hasn't made an explicit choice, follow OS changes
+      if (window.matchMedia) {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        var onChange = function (ev) {
+          try { if (localStorage.getItem('cp-theme')) return; } catch (_) {}
+          // No explicit choice stored → reflect OS state in aria
+          syncBtnState(ev.matches ? 'dark' : 'light');
+        };
+        if (mq.addEventListener) mq.addEventListener('change', onChange);
+        else if (mq.addListener) mq.addListener(onChange);
+      }
+    }
+  
 })();
