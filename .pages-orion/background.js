@@ -10,6 +10,15 @@ if (typeof browser !== 'undefined' && typeof chrome === 'undefined') {
   try { window.chrome = browser; } catch (_) {}
 }
 
+// Polyfill AbortSignal.timeout for older browsers (Orion/Safari)
+if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
+  AbortSignal.timeout = function (ms) {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), ms);
+    return controller.signal;
+  };
+}
+
 // Inline config (Orion doesn't reliably support importScripts)
 const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
 const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
