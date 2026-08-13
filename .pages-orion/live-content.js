@@ -65,7 +65,6 @@
 
     // Touch/click feedback for mobile
     var onDown = function(e) {
-      if (e.type === 'touchstart') e.preventDefault();
       btn.style.transform = 'scale(0.94)';
       btn.style.opacity = '0.85';
       if (navigator.vibrate) navigator.vibrate(8);
