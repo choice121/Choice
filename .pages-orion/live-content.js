@@ -25,7 +25,7 @@
   // ── Config ──────────────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '4.0.0-live';
+  var VERSION  = '4.1.0-live';
 
   // ── SPA navigation handling ─────────────────────────────────
   var lastUrl = location.href;
@@ -242,7 +242,7 @@
         available_date: extracted.available_date,
         pets_allowed: extracted.pets_allowed,
         original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
-        _import: 'browser-extension-v4.0.0-live',
+        _import: 'browser-extension-v4.1.0-live',
       };
 
       // ── Save property immediately ───────────────────────────
