@@ -203,11 +203,14 @@
     btn.disabled = true;
 
     try {
+      console.log('[CP] handleSave start', location.href);
       var extractor = window.CP_Extractors && window.CP_Extractors.detect(location.href);
-      if (!extractor) { setError('Unsupported page'); return; }
+      if (!extractor) { console.warn('[CP] No extractor for', location.href); setError('Unsupported page'); return; }
+      console.log('[CP] extractor:', extractor.id);
 
       var extracted = window.CP_Extractors.extract(location.href, document);
-      if (!extracted) { setError('Could not read listing'); return; }
+      if (!extracted) { console.warn('[CP] Extract returned null'); setError('Could not read listing'); return; }
+      console.log('[CP] extracted source:', extracted.source, 'id:', extracted.source_listing_id);
 
       // ── Extract photo URLs ──────────────────────────────────
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
@@ -253,7 +256,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      var resp = await saveRes.json();
+      console.log('[CP] save response status:', saveRes.status, saveRes.statusText);
+      var resp;
+      try {
+        resp = await saveRes.json();
+      } catch (parseErr) {
+        console.error('[CP] Failed to parse JSON response:', parseErr, 'status:', saveRes.status);
+        setError('Invalid server response (' + saveRes.status + ')');
+        return;
+      }
+      console.log('[CP] save response:', resp);
 
       if (resp && resp.ok) {
         var ikPhotos = resp.imagekit_photos || 0;
@@ -263,7 +275,7 @@
           // Photos were already uploaded (browser-side upload path)
           btn.textContent = 'Saved! ' + ikPhotos + ' photos ✓';
           btn.style.background = '#16a34a';
-          setTimeout(function () { btn.remove(); }, 3000);
+          setTimeout(function () { btn.remove(); }, 6000);
         } else {
           // v4.0: Property saved, photos uploading in background
           btn.textContent = 'Saved! ✓';
@@ -295,21 +307,22 @@
             hideProgressWidget();
           }
 
-          setTimeout(function () { btn.remove(); }, 3000);
+          setTimeout(function () { btn.remove(); }, 6000);
         }
       } else if (resp && resp.duplicate) {
         btn.textContent = 'Already in pipeline';
         btn.style.background = '#a16207';
-        setTimeout(function () { btn.remove(); }, 3000);
+        setTimeout(function () { btn.remove(); }, 6000);
       } else if (resp && resp.queued) {
         btn.textContent = 'Queued offline (' + resp.queueLength + ')';
         btn.style.background = '#d97706';
-        setTimeout(function () { btn.remove(); }, 3000);
+        setTimeout(function () { btn.remove(); }, 6000);
       } else {
+        console.warn('[CP] Save rejected:', resp);
         setError(resp && resp.error ? resp.error.slice(0, 40) : 'Server error');
       }
     } catch (e) {
-      console.error('[CP]', e);
+      console.error('[CP] handleSave exception:', e);
       setError('Network error');
     }
   }
