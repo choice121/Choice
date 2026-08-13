@@ -73,7 +73,7 @@
       btn.style.transform = '';
       btn.style.opacity = '';
     };
-    btn.addEventListener('touchstart', onDown, { passive: false });
+    btn.addEventListener('touchstart', onDown, { passive: true });
     btn.addEventListener('touchend', onUp);
     btn.addEventListener('touchcancel', onUp);
     btn.addEventListener('mousedown', onDown);
