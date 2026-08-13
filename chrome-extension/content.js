@@ -92,8 +92,9 @@
 
       // SPA navigation handling
       var lastUrl = location.href;
-      var PHOTO_BATCH_SIZE = 12;
-      var MAX_PHOTOS = 40;
+      var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
+      var MAX_PHOTOS = IS_MOBILE ? 20 : 40;
 
       function isSupportedPage(url) {
         return /zillow\.com\/homedetails\//i.test(url) ||
@@ -122,7 +123,26 @@
           fontFamily: '-apple-system, sans-serif', fontSize: '15px',
           fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 20px rgba(99,102,241,0.5)',
           touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
+          transition: 'transform 0.12s, opacity 0.12s',
         });
+
+        // Touch/click feedback for mobile
+        var onDown = function(e) {
+          if (e.type === 'touchstart') e.preventDefault();
+          btn.style.transform = 'scale(0.94)';
+          btn.style.opacity = '0.85';
+          if (navigator.vibrate) navigator.vibrate(8);
+        };
+        var onUp = function() {
+          btn.style.transform = '';
+          btn.style.opacity = '';
+        };
+        btn.addEventListener('touchstart', onDown, { passive: false });
+        btn.addEventListener('touchend', onUp);
+        btn.addEventListener('touchcancel', onUp);
+        btn.addEventListener('mousedown', onDown);
+        btn.addEventListener('mouseup', onUp);
+        btn.addEventListener('mouseleave', onUp);
 
         btn.addEventListener('click', handleSave);
         document.body.appendChild(btn);
@@ -374,15 +394,15 @@
           <style>\
             #cp-preview-modal { position:fixed; inset:0; z-index:2147483648; display:flex; align-items:flex-end; justify-content:center; }\
             #cp-preview-modal .cp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }\
-            #cp-preview-modal .cp-sheet { position:relative; width:100%; max-width:680px; background:#0a0f1e; color:#fff; border-radius:14px 14px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.5); padding:14px 14px 18px; max-height:88vh; overflow:auto; }\
+            #cp-preview-modal .cp-sheet { position:relative; width:100%; max-width:680px; background:#0a0f1e; color:#fff; border-radius:14px 14px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.5); padding:max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); max-height:88vh; overflow:auto; }\
             #cp-preview-modal .cp-hd { display:flex; align-items:center; gap:8px; }\
             #cp-preview-modal .cp-hd h3 { margin:0; font-size:16px; font-weight:700; }\
             #cp-preview-modal .cp-row { display:flex; gap:8px; margin-top:10px; }\
             #cp-preview-modal .cp-row .cp-field { flex:1; display:flex; flex-direction:column; }\
-            #cp-preview-modal input, #cp-preview-modal textarea { background:#0f1724; border:1px solid rgba(255,255,255,.06); color:#fff; padding:8px; border-radius:8px; font-size:14px; }\
+            #cp-preview-modal input, #cp-preview-modal textarea { background:#0f1724; border:1px solid rgba(255,255,255,.06); color:#fff; padding:10px 12px; border-radius:8px; font-size:15px; min-height:44px; }\
             #cp-preview-modal textarea { min-height:84px; resize:vertical; }\
             #cp-preview-modal .cp-actions { display:flex; gap:8px; margin-top:12px; }\
-            #cp-preview-modal .btn { padding:8px 12px; border-radius:8px; cursor:pointer; border:none }\
+            #cp-preview-modal .btn { padding:10px 16px; border-radius:10px; cursor:pointer; border:none; font-size:15px; min-height:44px; }\
             #cp-preview-modal .btn-primary { background:#6366f1; color:#fff }\
             #cp-preview-modal .btn-ghost { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.04) }\
           </style>\
@@ -411,6 +431,38 @@
           </div>`;
 
         document.body.appendChild(modal);
+
+        // Swipe-to-dismiss for mobile
+        var sheet = modal.querySelector('.cp-sheet');
+        var startY = 0;
+        var currentY = 0;
+        var isDragging = false;
+        sheet.addEventListener('touchstart', function(e) {
+          startY = e.touches[0].clientY;
+          isDragging = true;
+          sheet.style.transition = 'none';
+        }, { passive: true });
+        sheet.addEventListener('touchmove', function(e) {
+          if (!isDragging) return;
+          currentY = e.touches[0].clientY;
+          var dy = currentY - startY;
+          if (dy > 0) {
+            sheet.style.transform = 'translateY(' + dy + 'px)';
+            sheet.style.opacity = Math.max(0, 1 - dy / 300);
+          }
+        }, { passive: true });
+        sheet.addEventListener('touchend', function() {
+          if (!isDragging) return;
+          isDragging = false;
+          sheet.style.transition = 'transform 0.25s, opacity 0.25s';
+          var dy = currentY - startY;
+          if (dy > 120) {
+            closePreviewModal();
+          } else {
+            sheet.style.transform = '';
+            sheet.style.opacity = '';
+          }
+        });
 
         modal.querySelector('.cp-backdrop').addEventListener('click', closePreviewModal);
         modal.querySelector('#cp-preview-close').addEventListener('click', closePreviewModal);
