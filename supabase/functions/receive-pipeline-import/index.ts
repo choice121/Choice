@@ -363,6 +363,38 @@ Deno.serve(async (req) => {
   // ── Build record using shared builder ────────────────────────
   const record = buildPipelineRecord(body as unknown as Parameters<typeof buildPipelineRecord>[0]);
 
+  // ── Watermark domain filter — drop photos from known agent/brand CDNs ───────
+  try {
+    const rawEntries = parseImageEntries(record.original_image_urls);
+    if (rawEntries.length > 0) {
+      const WATERMARK_DOMAINS = new Set([
+        'agent.realtor.com','headshots.realtor.com','photos.cbkw.com',
+        'photos.remax.com','photos.c21.com','photos.kw.com',
+        'img.invitationhomes.com','img.invitationhome.com',
+        'cdn.firstkeyhomes.com','cdn.firstkeyhome.com',
+        'media.progressresidential.com','images.triconresidential.com',
+        'photos.compassrealty.com','images.sothebysrealty.com',
+        'photos.berkshirehathaway.com','images.howardhanna.com',
+        'photos.weichert.com','assets.exprealty.com',
+      ]);
+      const clean = rawEntries.filter((entry: ImageEntry) => {
+        const url = imageEntryUrl(entry);
+        if (typeof url !== 'string') return false;
+        try {
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          return !WATERMARK_DOMAINS.has(host);
+        } catch {
+          return true;
+        }
+      });
+      const removed = rawEntries.length - clean.length;
+      if (removed > 0) {
+        console.warn(`[receive-pipeline-import] Removed ${removed} watermark-domain photo(s)`);
+        record.original_image_urls = JSON.stringify(clean);
+      }
+    }
+  } catch { /* ignore */ }
+
   // Diagnostic telemetry: log low-quality imports for analysis
   try {
     if (typeof record.data_quality_score === 'number' && record.data_quality_score < 80) {

@@ -331,8 +331,9 @@ class PipelineOrchestrator:
       - Deposit = published rent (unless overridden by pricing_fn)
     """
 
-    def __init__(self, verbose: bool = True):
+    def __init__(self, verbose: bool = True, strict_watermarks: bool = False):
         self.verbose = verbose
+        self.strict_watermarks = strict_watermarks
         self._pipe_session = _make_pipeline_session()
         self._pub_session = _make_public_session()
         if IK_PRIVATE_KEY:
@@ -1020,14 +1021,38 @@ class PipelineOrchestrator:
                 dropped.append((addr, issues))
             else:
                 # Filter branded individual photos (keep listing, drop bad photos)
+                branded_removed = 0
                 if _ENRICH_OK:
+                    src_before = self._parse_image_urls(rec)
                     rec = filter_record_photos(rec)
-                    remaining = self._parse_image_urls(rec)
-                    if len(remaining) < MIN_PHOTOS:
+                    # Second pass: domain-level watermark deny-list
+                    if _ENRICH_OK:
+                        try:
+                            from enrichment import filter_photos_by_watermark_domain
+                            src_imgs2 = self._parse_image_urls(rec)
+                            if src_imgs2:
+                                filtered_imgs = filter_photos_by_watermark_domain(src_imgs2)
+                                removed_domain = len(src_imgs2) - len(filtered_imgs)
+                                if removed_domain:
+                                    addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
+                                    self._log("   [domain-filter] {} — removed {} domain-branded photo(s)".format(
+                                        addr, removed_domain))
+                                rec["original_image_urls"] = json.dumps(filtered_imgs)
+                        except Exception:
+                            pass
+                    src_after = self._parse_image_urls(rec)
+                    branded_removed = len(src_before) - len(src_after)
+                    if self.strict_watermarks and branded_removed > 0:
                         addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
-                        dropped.append((addr, ["too few clean photos after brand filter ({}/{})".format(
-                            len(remaining), MIN_PHOTOS)]))
+                        dropped.append((addr, ["strict-watermark: {} branded photo(s) detected".format(
+                            branded_removed)]))
                         continue
+                remaining = self._parse_image_urls(rec)
+                if len(remaining) < MIN_PHOTOS:
+                    addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
+                    dropped.append((addr, ["too few clean photos after brand filter ({}/{})".format(
+                        len(remaining), MIN_PHOTOS)]))
+                    continue
                 kept.append(rec)
         return kept, dropped
 

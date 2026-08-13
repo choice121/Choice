@@ -257,6 +257,37 @@ async function handleImport(
     _import: 'admin-url-import-v1',
   });
 
+  // ── Watermark domain filter — drop photos from known agent/brand CDNs ───────
+  try {
+    const rawUrls = JSON.parse((record.original_image_urls as string) || '[]');
+    if (Array.isArray(rawUrls) && rawUrls.length > 0) {
+      const WATERMARK_DOMAINS = new Set([
+        'agent.realtor.com','headshots.realtor.com','photos.cbkw.com',
+        'photos.remax.com','photos.c21.com','photos.kw.com',
+        'img.invitationhomes.com','img.invitationhome.com',
+        'cdn.firstkeyhomes.com','cdn.firstkeyhome.com',
+        'media.progressresidential.com','images.triconresidential.com',
+        'photos.compassrealty.com','images.sothebysrealty.com',
+        'photos.berkshirehathaway.com','images.howardhanna.com',
+        'photos.weichert.com','assets.exprealty.com',
+      ]);
+      const clean = rawUrls.filter((u: string) => {
+        if (typeof u !== 'string') return false;
+        try {
+          const host = new URL(u).hostname.replace(/^www\./, '');
+          return !WATERMARK_DOMAINS.has(host);
+        } catch {
+          return true;
+        }
+      });
+      const removed = rawUrls.length - clean.length;
+      if (removed > 0) {
+        console.warn(`[import-from-url] Removed ${removed} watermark-domain photo(s)`);
+        record.original_image_urls = JSON.stringify(clean);
+      }
+    }
+  } catch { /* ignore */ }
+
   // ── Insert ───────────────────────────────────────────────────────────────────
   const { error: insertErr } = await adminClient
     .schema('pipeline')
