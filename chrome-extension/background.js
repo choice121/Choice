@@ -1,16 +1,14 @@
 // ============================================================
-// Import to Choice Properties — Background Service Worker v4.0
-// Orion-compatible: no importScripts, no alarms dependency.
-//
-// v4.0: IMAGE OPTIMIZATION IN SERVICE WORKER
-//   Photos are downloaded, resized to max 1600px, and converted
-//   to WebP (or JPEG fallback) BEFORE returning to the content
-//   script for upload. This reduces payload size by 60-80%,
-//   making uploads dramatically faster.
-//
-//   Download timeout reduced to 8s for fast-fail on blocked images.
-//   High concurrency: content script sends up to 12 parallel requests.
+// Import to Choice Properties — Background Service Worker v4.1
+// Orion/Safari-compatible: session storage fallback, browser polyfill,
+// mobile-aware upload concurrency, retry with backoff.
 // ============================================================
+
+// Orion/Safari compatibility: some environments expose `browser` instead
+// of `chrome`, and `chrome.storage.session` is not available.
+if (typeof browser !== 'undefined' && typeof chrome === 'undefined') {
+  try { window.chrome = browser; } catch (_) {}
+}
 
 // Inline config (Orion doesn't reliably support importScripts)
 const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
@@ -18,15 +16,61 @@ const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP
 const MAX_QUEUE_ITEMS = 75;
 const MAX_IMAGE_WIDTH = 1600;
 const IMAGE_QUALITY = 0.82;
-const DOWNLOAD_TIMEOUT = 8000; // reduced from 20000ms for fast-fail
+const DOWNLOAD_TIMEOUT = 8000;
+
+// Mobile detection: reduce concurrency and caps on mobile networks
+const IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
+const MAX_PHOTOS = IS_MOBILE ? 20 : 40;
+const DOWNLOAD_RETRIES = 3;
+const DOWNLOAD_BACKOFF_BASE = 1000;
+
+// ── Session count storage with fallback ──────────────────────
+// chrome.storage.session is Chrome-only. On Orion/Safari we fall back
+// to chrome.storage.local with a date-keyed counter so the badge
+// resets each day.
+const _SESSION_KEY = '_cp_session_count';
+const _SESSION_DATE_KEY = '_cp_session_date';
+
+async function _getToday() {
+  try { return new Date().toDateString(); } catch (_) { return ''; }
+}
 
 async function getCount() {
   try {
-    const data = await chrome.storage.session.get({ sessionCount: 0 });
-    return data.sessionCount;
-  } catch (_) {
-    return 0;
-  }
+    if (chrome.storage && chrome.storage.session) {
+      const data = await chrome.storage.session.get({ sessionCount: 0 });
+      return data.sessionCount;
+    }
+  } catch (_) {}
+  try {
+    const today = await _getToday();
+    const data = await chrome.storage.local.get({ [_SESSION_KEY]: 0, [_SESSION_DATE_KEY]: '' });
+    if (data[_SESSION_DATE_KEY] !== today) {
+      await chrome.storage.local.set({ [_SESSION_KEY]: 0, [_SESSION_DATE_KEY]: today });
+      return 0;
+    }
+    return data[_SESSION_KEY] || 0;
+  } catch (_) {}
+  return 0;
+}
+
+async function incrementCount() {
+  try {
+    if (chrome.storage && chrome.storage.session) {
+      const n = (await getCount()) + 1;
+      await chrome.storage.session.set({ sessionCount: n });
+      return n;
+    }
+  } catch (_) {}
+  try {
+    const today = await _getToday();
+    const data = await chrome.storage.local.get({ [_SESSION_KEY]: 0, [_SESSION_DATE_KEY]: '' });
+    const n = (data[_SESSION_KEY] || 0) + 1;
+    await chrome.storage.local.set({ [_SESSION_KEY]: n, [_SESSION_DATE_KEY]: today });
+    return n;
+  } catch (_) {}
+  return 0;
 }
 
 async function getQueue() {
@@ -124,7 +168,9 @@ async function flushQueue() {
   } else {
     await setQueue([]);
     if (flushed > 0) {
-      await chrome.storage.session.set({ sessionCount: (await getCount()) + flushed });
+      for (let i = 0; i < flushed; i++) {
+        await incrementCount();
+      }
     }
   }
   await updateBadge();
@@ -180,73 +226,83 @@ async function optimizeImageBlob(blob, maxWidth, quality) {
   }
 }
 
-// ── Photo download helper (v4.0) ─────────────────────────────
+// ── Photo download helper (v4.1) ─────────────────────────────
 // The background service worker has host_permissions for
 // Zillow/Realtor/Apartments/Redfin CDNs, so it can fetch images
 // without CORS restrictions. Downloads, optimizes, and returns
 // the image as a base64 data URI.
+//
+// Retries transient failures with exponential backoff.
 async function downloadPhoto(url) {
-  try {
-    const parsedUrl = new URL(url);
-    const allowedHosts = /(^|\.)((zillowstatic\.com)|(rdcpix\.com)|(apartments\.com)|(redfin\.com))$/i;
-    if (parsedUrl.protocol !== 'https:' || !allowedHosts.test(parsedUrl.hostname)) {
-      console.warn('[CP] Refusing photo download from unsupported host:', parsedUrl.hostname);
-      return null;
-    }
-    // Try with a browser-like User-Agent and Referer
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-      'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    };
-
-    // Add Referer based on the URL host
-    try {
-      const u = new URL(url);
-      if (u.hostname.includes('zillow')) headers['Referer'] = 'https://www.zillow.com/';
-      else if (u.hostname.includes('realtor')) headers['Referer'] = 'https://www.realtor.com/';
-      else if (u.hostname.includes('apartments')) headers['Referer'] = 'https://www.apartments.com/';
-      else if (u.hostname.includes('redfin')) headers['Referer'] = 'https://www.redfin.com/';
-    } catch (_) {}
-
-    const res = await fetch(url, {
-      headers,
-      credentials: 'omit',
-      redirect: 'follow',
-      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
-    });
-
-    if (!res.ok) {
-      console.warn('[CP] Background photo fetch failed:', res.status, url.slice(0, 100));
-      return null;
-    }
-
-    let blob = await res.blob();
-    const originalContentType = blob.type || 'image/jpeg';
-
-    // Optimize image in the service worker (v4.0)
-    try {
-      const optimized = await optimizeImageBlob(blob, MAX_IMAGE_WIDTH, IMAGE_QUALITY);
-      if (optimized && optimized.size < blob.size) {
-        blob = optimized;
-      }
-    } catch (_) {}
-
-    const contentType = blob.type || originalContentType;
-    const ext = (contentType.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-
-    // Convert blob to base64 data URI
-    const base64 = await blobToBase64(blob);
-    return {
-      dataUri: base64,
-      contentType: contentType,
-      ext: ext,
-      size: blob.size,
-    };
-  } catch (err) {
-    console.warn('[CP] Background photo download error:', err.message, url.slice(0, 100));
+  const parsedUrl = new URL(url);
+  const allowedHosts = /(^|\.)((zillowstatic\.com)|(rdcpix\.com)|(apartments\.com)|(redfin\.com))$/i;
+  if (parsedUrl.protocol !== 'https:' || !allowedHosts.test(parsedUrl.hostname)) {
+    console.warn('[CP] Refusing photo download from unsupported host:', parsedUrl.hostname);
     return null;
   }
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('zillow')) headers['Referer'] = 'https://www.zillow.com/';
+    else if (u.hostname.includes('realtor')) headers['Referer'] = 'https://www.realtor.com/';
+    else if (u.hostname.includes('apartments')) headers['Referer'] = 'https://www.apartments.com/';
+    else if (u.hostname.includes('redfin')) headers['Referer'] = 'https://www.redfin.com/';
+  } catch (_) {}
+
+  let lastErr = null;
+  for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers,
+        credentials: 'omit',
+        redirect: 'follow',
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
+      });
+
+      if (!res.ok) {
+        lastErr = new Error('HTTP ' + res.status);
+        if (res.status === 403 || res.status === 429) break; // don't retry auth/rate-limit
+        if (attempt < DOWNLOAD_RETRIES) {
+          await new Promise(r => setTimeout(r, DOWNLOAD_BACKOFF_BASE * Math.pow(2, attempt - 1)));
+          continue;
+        }
+        break;
+      }
+
+      let blob = await res.blob();
+      const originalContentType = blob.type || 'image/jpeg';
+
+      try {
+        const optimized = await optimizeImageBlob(blob, MAX_IMAGE_WIDTH, IMAGE_QUALITY);
+        if (optimized && optimized.size < blob.size) {
+          blob = optimized;
+        }
+      } catch (_) {}
+
+      const contentType = blob.type || originalContentType;
+      const ext = (contentType.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const base64 = await blobToBase64(blob);
+      return {
+        dataUri: base64,
+        contentType: contentType,
+        ext: ext,
+        size: blob.size,
+      };
+    } catch (err) {
+      lastErr = err;
+      if (attempt < DOWNLOAD_RETRIES) {
+        await new Promise(r => setTimeout(r, DOWNLOAD_BACKOFF_BASE * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+
+  console.warn('[CP] Background photo download failed after ' + DOWNLOAD_RETRIES + ' attempts:', lastErr && lastErr.message, url.slice(0, 100));
+  return null;
 }
 
 function blobToBase64(blob) {
@@ -266,8 +322,7 @@ function blobToBase64(blob) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'SAVED') {
     (async () => {
-      const n = (await getCount()) + 1;
-      await chrome.storage.session.set({ sessionCount: n });
+      const n = await incrementCount();
       await updateBadge();
       sendResponse({ ok: true, count: n });
     })();

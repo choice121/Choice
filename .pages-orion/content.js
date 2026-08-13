@@ -123,7 +123,26 @@
           fontFamily: '-apple-system, sans-serif', fontSize: '15px',
           fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 20px rgba(99,102,241,0.5)',
           touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
+          transition: 'transform 0.12s, opacity 0.12s',
         });
+
+        // Touch/click feedback for mobile
+        var onDown = function(e) {
+          if (e.type === 'touchstart') e.preventDefault();
+          btn.style.transform = 'scale(0.94)';
+          btn.style.opacity = '0.85';
+          if (navigator.vibrate) navigator.vibrate(8);
+        };
+        var onUp = function() {
+          btn.style.transform = '';
+          btn.style.opacity = '';
+        };
+        btn.addEventListener('touchstart', onDown, { passive: false });
+        btn.addEventListener('touchend', onUp);
+        btn.addEventListener('touchcancel', onUp);
+        btn.addEventListener('mousedown', onDown);
+        btn.addEventListener('mouseup', onUp);
+        btn.addEventListener('mouseleave', onUp);
 
         btn.addEventListener('click', handleSave);
         document.body.appendChild(btn);

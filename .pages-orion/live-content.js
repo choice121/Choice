@@ -29,8 +29,9 @@
 
   // ── SPA navigation handling ─────────────────────────────────
   var lastUrl = location.href;
-  var PHOTO_BATCH_SIZE = 12; // increased from 5 for faster parallel uploads
-  var MAX_PHOTOS = 40;
+  var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
+  var MAX_PHOTOS = IS_MOBILE ? 20 : 40;
 
   function isSupportedPage(url) {
     return /zillow\.com\/homedetails\//i.test(url) ||
@@ -59,7 +60,26 @@
       fontFamily: '-apple-system, sans-serif', fontSize: '15px',
       fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 20px rgba(99,102,241,0.5)',
       touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
+      transition: 'transform 0.12s, opacity 0.12s',
     });
+
+    // Touch/click feedback for mobile
+    var onDown = function(e) {
+      if (e.type === 'touchstart') e.preventDefault();
+      btn.style.transform = 'scale(0.94)';
+      btn.style.opacity = '0.85';
+      if (navigator.vibrate) navigator.vibrate(8);
+    };
+    var onUp = function() {
+      btn.style.transform = '';
+      btn.style.opacity = '';
+    };
+    btn.addEventListener('touchstart', onDown, { passive: false });
+    btn.addEventListener('touchend', onUp);
+    btn.addEventListener('touchcancel', onUp);
+    btn.addEventListener('mousedown', onDown);
+    btn.addEventListener('mouseup', onUp);
+    btn.addEventListener('mouseleave', onUp);
 
     btn.addEventListener('click', handleSave);
     document.body.appendChild(btn);

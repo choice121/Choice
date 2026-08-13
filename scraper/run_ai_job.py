@@ -74,11 +74,32 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
 # ---------------------------------------------------------------------------
-# Path bootstrap
+# Path bootstrap + dotenv
 # ---------------------------------------------------------------------------
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+
+def _load_dotenv():
+    for candidate in [
+        ".env",
+        "../.env",
+        os.path.join(_SCRIPT_DIR, ".env"),
+        os.path.join(_SCRIPT_DIR, "../.env"),
+    ]:
+        if os.path.isfile(candidate):
+            with open(candidate) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, _, v = line.partition("=")
+                    k = k.strip()
+                    if k and k not in os.environ:
+                        os.environ[k] = v.strip().strip('"').strip("'")
+            break
+
+_load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Pre-flight checks
