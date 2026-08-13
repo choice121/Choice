@@ -65,7 +65,6 @@
 
     // Touch/click feedback for mobile
     var onDown = function(e) {
-      if (e.type === 'touchstart') e.preventDefault();
       btn.style.transform = 'scale(0.94)';
       btn.style.opacity = '0.85';
       if (navigator.vibrate) navigator.vibrate(8);
@@ -74,7 +73,7 @@
       btn.style.transform = '';
       btn.style.opacity = '';
     };
-    btn.addEventListener('touchstart', onDown, { passive: false });
+    btn.addEventListener('touchstart', onDown, { passive: true });
     btn.addEventListener('touchend', onUp);
     btn.addEventListener('touchcancel', onUp);
     btn.addEventListener('mousedown', onDown);
