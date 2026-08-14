@@ -11,22 +11,27 @@ const fs = require('fs');
 
 
 // Read from environment variables (set in your hosting platform's dashboard)
+let rawSupabaseUrl = process.env.SUPABASE_URL || '';
+if (!rawSupabaseUrl || rawSupabaseUrl.includes('your-project-ref')) {
+  rawSupabaseUrl = 'https://tlfmwetmhthpyrytrcfo.supabase.co';
+}
+
 const config = {
-  SUPABASE_URL:      process.env.SUPABASE_URL      || '',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+  SUPABASE_URL:      rawSupabaseUrl,
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
 
   // I-029: SITE_URL is used to rewrite sitemap.xml and robots.txt at build time.
   // Set this to your production domain in your hosting platform's env var dashboard.
   // Example: https://choiceproperties.com  (no trailing slash)
-  SITE_URL: (process.env.SITE_URL || '').replace(/\/$/, ''),
+  SITE_URL: (process.env.SITE_URL || 'https://choice-properties-site.pages.dev').replace(/\/$/, ''),
 
   // APPLY_FORM_URL: Internal application frontend route.
   // Apply Now buttons on all property listings route here.
   // Keep this as /apply unless the internal route changes.
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '/apply').replace(/\/$/, ''),
 
-  IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || '',
-  IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
+  IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || 'https://ik.imagekit.io/21rg7lvzo',
+  IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || 'public_...your-key',
 
   GEOAPIFY_API_KEY: process.env.GEOAPIFY_API_KEY || '',
 
