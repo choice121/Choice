@@ -49,6 +49,41 @@ t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.s
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('dispatch', () => { assert.strictEqual(api.extract(Z, ZD).source, 'zillow'); assert.strictEqual(api.extract('https://fb.com/', doc({})), null); });
 t('Zillow minimal', () => { const d = doc(cache({ zpid: 111, address: { streetAddress: '1 Empty St', city: 'Nowhere', state: 'TX' }, price: 1000 })); const p = api.extractZillow(d, Z); assert.ok(p); assert.strictEqual(p.monthly_rent, 1000); assert.strictEqual(p.bedrooms, null); assert.strictEqual(p.security_deposit, null); });
+t('Zillow rich facts and amenities', () => {
+  const d = doc(cache({
+    zpid: 222,
+    address: { streetAddress: '222 Willow Way', city: 'Austin', state: 'TX', zipcode: '78701' },
+    price: 2400,
+    homeType: 'SINGLE_FAMILY',
+    attrMap: {
+      'Parking': 'Garage - Attached',
+      'Heating': 'Forced Air',
+      'Cooling': 'Central',
+      'Laundry': 'Washer/Dryer Hookups',
+      'Appliances': 'Dishwasher, Microwave',
+      'Year built': '1998',
+      'Pet policy': 'Cats and dogs',
+      'Amenities': 'Pool, Fitness Center, Balcony'
+    },
+    amenityCategories: [
+      { name: 'Interior Features', amenities: ['Walk-In Closet', 'Washer/Dryer Hookups'] },
+      { name: 'Community', amenities: ['Pool', 'Fitness Center'] },
+      { name: 'Pets', amenities: ['Cats OK', 'Dogs OK'] }
+    ],
+    resoFacts: {}
+  }));
+  const p = api.extractZillow(d, Z);
+  const amenities = JSON.parse(p.amenities);
+  assert.ok(amenities.includes('Walk-In Closet'));
+  assert.ok(amenities.includes('Pool'));
+  assert.ok(amenities.some(v => /garage/i.test(v)));
+  assert.strictEqual(p.parking, 'Garage - Attached');
+  assert.strictEqual(p.heating_type, 'Forced Air');
+  assert.strictEqual(p.cooling_type, 'Central');
+  assert.strictEqual(p.laundry_type, 'Washer/Dryer Hookups');
+  assert.ok(JSON.parse(p.appliances).some(v => /dishwasher/i.test(v)));
+  assert.ok((p.pet_types_allowed || '').includes('cats'));
+});
 
 // --- Photo dedup ---
 const ZDUP = doc(cache({
