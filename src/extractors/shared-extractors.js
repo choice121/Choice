@@ -281,13 +281,24 @@
 
   function factPets(facts, current) {
     if (current != null) return current;
-    for (const k of ['pet friendly', 'pets allowed', 'pets', 'pet policy']) {
+    for (const k of ['pet friendly', 'pets allowed', 'pet types allowed', 'pets', 'pet policy']) {
       if (facts[k]) {
         const v = String(facts[k]).toLowerCase();
         return !(v === 'no' || v === 'false' || v === 'not allowed');
       }
     }
     return null;
+  }
+
+  function splitFactValues(value) {
+    if (value == null) return [];
+    if (Array.isArray(value)) {
+      return value.flatMap(item => splitFactValues(item));
+    }
+    const text = String(value).trim();
+    if (!text || text === 'null' || text === 'none' || text.toLowerCase() === 'n/a') return [];
+    const parts = text.split(/\s*[,;|]\s*/).map(s => s.trim()).filter(Boolean);
+    return parts.length ? parts : [text];
   }
 
   // ── Zillow ───────────────────────────────────────────────────
@@ -386,8 +397,19 @@
     if (rf.catsAllowed) petTypes.push('cats');
     if (rf.dogsAllowed) petTypes.push('dogs');
     if (!petTypes.length) {
-      const pv = (facts['pet types allowed'] || facts['pets']) || (pets ? 'dogs and cats' : '');
-      if (pv) [pv.match(/cat/i) && petTypes.push('cats'), pv.match(/dog/i) && petTypes.push('dogs')];
+      const pv = [
+        facts['pet policy'],
+        facts['pet types allowed'],
+        facts['pets'],
+        facts['pets allowed'],
+        facts['amenities'],
+        facts['features']
+      ].filter(Boolean).join(' ');
+      const normalized = String(pv || (pets ? 'dogs and cats' : '')).toLowerCase();
+      if (normalized) {
+        if (/cat/i.test(normalized)) petTypes.push('cats');
+        if (/dog/i.test(normalized)) petTypes.push('dogs');
+      }
     }
 
     let minLease = null;
@@ -411,10 +433,19 @@
     const appliances = (rf.appliances && rf.appliances.length ? rf.appliances : factList(facts, [], ['appliances']));
     const smoking = rf.smokingAllowed != null ? !!rf.smokingAllowed : factBool(facts, null, ['smoking']);
 
-    // Expand amenities from attrMap facts when resoFacts had none
-    if (!amenityMap.size || Object.keys(amenityMap).length < 4) {
-      const extra = factList(facts, [], ['amenities', 'features', 'interior features', 'exterior features']);
-      for (const a of extra) addA(a);
+    // Zillow often stores the richest feature data here, especially for
+    // parking, heating, cooling, laundry, pets, and amenity lists.
+    // Always merge these values so Orion imports keep the full feature set.
+    const keysToScan = [
+      'amenities', 'features', 'interior features', 'exterior features',
+      'community features', 'parking', 'laundry', 'heating', 'cooling',
+      'appliances', 'pet policy', 'pets', 'pet types allowed'
+    ];
+    for (const key of keysToScan) {
+      const value = facts[key];
+      if (value) {
+        for (const item of splitFactValues(value)) addA(item);
+      }
     }
 
     const secDeposit = safeI(rf.securityDeposit) || safeI(facts['security deposit']) || null;
