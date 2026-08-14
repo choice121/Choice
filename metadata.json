@@ -1,0 +1,6 @@
+{
+  "name": "Choice Properties",
+  "description": "Nationwide rental property marketplace — browse verified rental listings, apartments, houses, and condos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
