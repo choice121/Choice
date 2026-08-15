@@ -65,7 +65,7 @@ LISTING = {
     "security_deposit":   1400,
     "application_fee":    50,
     "pets_allowed":       True,
-    "smoking_allowed":    False,
+    "smoking_allowed":    None,
     "minimum_lease_months": 12,
     "garage_spaces":      2,
     "parking":            "Attached 2-Car Garage",

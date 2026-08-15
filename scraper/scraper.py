@@ -915,7 +915,7 @@ def _map_realtor_property(prop):
         "pet_types_allowed":     _jdumps(pet_types),
         "pet_weight_limit":      None,
         "pet_details":           None,
-        "smoking_allowed":       smoking_allowed,
+        "smoking_allowed":       None,
         "parking":               parking_final,
         "amenities":             _jdumps(sorted(amenity_set)) if amenity_set else "[]",
         "appliances":            _jdumps(appliance_items),

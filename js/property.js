@@ -460,7 +460,7 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
+  // Pets banner removed per requirements
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
@@ -499,7 +499,7 @@ function renderProperty(p) {
   }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
+  // Pets meta removed per requirements
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
@@ -516,12 +516,30 @@ function renderProperty(p) {
       </div>
     </div>`).join('');
 
+function cleanPropertyDescription(text) {
+  if (!text) return '';
+  return text
+    .replace(/Application Required Before Viewing\.?\s*/gi, '')
+    .replace(/This property operates on an application-first basis\.?\s*/gi, '')
+    .replace(/Viewings are arranged after an application has been submitted and approved\s*[—–-]?\s*not before\.?\s*/gi, '')
+    .replace(/Applications are reviewed and a decision is made before any property access is scheduled\.?\s*/gi, '')
+    .replace(/Applications are required before scheduling a property viewing\.?\s*/gi, '')
+    .replace(/Property viewings are arranged only after an application has been submitted and approved[^\n\r]*/gi, '')
+    .replace(/Applications are reviewed and a decision is made before[^\n\r]*/gi, '')
+    .replace(/This property operates on an application-first[^\n\r]*/gi, '')
+    .replace(/Viewings are arranged after an application[^\n\r]*/gi, '')
+    .replace(/Application Required Before Viewing:?[^\n\r]*/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
   const descEl = document.getElementById('detailDesc');
-  const descText = p.description || 'No additional description provided.';
+  const cleanedDesc = cleanPropertyDescription(p.description);
+  let descText = cleanedDesc || 'No additional description provided.';
   const descParas = descText.split(/\n+/).map(s => s.trim()).filter(Boolean);
   const bodyCopy = descParas.length
     ? descParas.map(s => `<p>${s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('')
-    : `<p>${esc('This property is presented with a clear, application-first experience and a straightforward leasing process.')}</p>`;
+    : `<p>${esc('This property is presented with a clear and straightforward leasing process.')}</p>`;
   descEl.innerHTML = bodyCopy;
   if (descText.length > 300) {
     descEl.classList.add('truncated');
@@ -534,16 +552,7 @@ function renderProperty(p) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
-  if (p.virtual_tour_url) {
-    const vtBtn = document.createElement('a');
-    vtBtn.href = /^https?:\/\//i.test(p.virtual_tour_url) ? p.virtual_tour_url : '#';
-    vtBtn.target = '_blank';
-    vtBtn.rel = 'noopener noreferrer';
-    vtBtn.className = 'btn btn-outline';
-    vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem';
-    vtBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> Virtual Tour';
-    descEl.closest('.detail-section').appendChild(vtBtn);
-  }
+  // Virtual tour removed completely per requirements
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
@@ -610,11 +619,7 @@ function renderProperty(p) {
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
-  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
-  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
-  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
-  if (p.smoking_allowed != null) leaseItems.push(`<div class="amenity-item"><i class="fas ${p.smoking_allowed ? 'fa-smoking icon-amber' : 'fa-ban icon-rose'}"></i>${p.smoking_allowed ? 'Smoking Permitted' : 'No Smoking'}</div>`);
+  // Pet & smoking items removed per requirements
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
   if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
@@ -2696,23 +2701,7 @@ function renderRenterRequirements(p) {
 
   const reqs = [];
 
-  if (p.pets_allowed != null) {
-    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
-    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
-    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
-    reqs.push({ icon: 'fa-paw',        label: 'Pets',
-      value: petVal,
-      color: p.pets_allowed ? '#10b981' : '#ef4444',
-      bg:    p.pets_allowed ? '#ecfdf5' : '#fef2f2',
-      bdr:   p.pets_allowed ? '#a7f3d0' : '#fecaca' });
-  }
-  if (p.smoking_allowed != null) {
-    reqs.push({ icon: p.smoking_allowed ? 'fa-smoking' : 'fa-ban', label: 'Smoking',
-      value: p.smoking_allowed ? 'Permitted' : 'Not permitted',
-      color: p.smoking_allowed ? '#f59e0b' : '#6b7280',
-      bg:    p.smoking_allowed ? '#fffbeb' : '#f9fafb',
-      bdr:   p.smoking_allowed ? '#fde68a' : '#e5e7eb' });
-  }
+  // Pets and smoking banners removed per requirements
   if (p.minimum_credit_score) {
     reqs.push({ icon: 'fa-chart-line', label: 'Min. credit score',
       value: Number(p.minimum_credit_score).toLocaleString() + '+',

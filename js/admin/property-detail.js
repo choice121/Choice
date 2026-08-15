@@ -518,7 +518,7 @@
       { label:'Laundry',        value: p.laundry_type || '—' },
       { label:'Heating',        value: p.heating_type || '—' },
       { label:'Cooling',        value: p.cooling_type || '—' },
-      { label:'Smoking',        value: p.smoking_allowed != null ? (p.smoking_allowed ? 'Allowed' : 'Not allowed') : '—' },
+      
       { label:'Garage spaces',  value: p.garage_spaces || '—' },
       { label:'Views',          value: p.views_count != null ? Number(p.views_count).toLocaleString() : '—' },
       { label:'Created',        value: fmt(p.created_at) },
@@ -572,7 +572,7 @@
     if (p.pet_types_allowed?.length) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
     if (p.pet_weight_limit) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Pet Weight Limit: ${esc(String(p.pet_weight_limit))} lbs max</div>`);
     if (p.pet_details) leaseItems.push(`<div class="pd-amenity-item" style="grid-column:1/-1">${ico('dot')}<span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
-    if (p.smoking_allowed != null) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}${p.smoking_allowed ? 'Smoking Permitted' : 'No Smoking'}</div>`);
+    if (false && p.smoking_allowed != null) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}${p.smoking_allowed ? 'Smoking Permitted' : 'No Smoking'}</div>`);
     if (p.minimum_income_multiplier) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
     if (p.minimum_credit_score) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Min. Credit Score: ${p.minimum_credit_score}</div>`);
     if (p.move_in_special) leaseItems.push(`<div class="pd-amenity-item" style="grid-column:1/-1">${ico('dot')}<strong>Move-in Special:</strong> ${esc(p.move_in_special)}</div>`);
@@ -684,7 +684,7 @@
     </div>`;
 
     // ── Virtual tour ──
-    const vtHtml = p.virtual_tour_url
+    const vtHtml = false && p.virtual_tour_url
       ? `<div class="pd-section">
           <div class="pd-section-title">Virtual Tour</div>
           <a href="${esc(p.virtual_tour_url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">

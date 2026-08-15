@@ -355,7 +355,7 @@ class ApifyService(ZillowScraperService):
             "total_units": raw.get("unitCount") or raw.get("numberOfUnitsTotal"),
             "has_basement": None,
             "has_central_air": None,
-            "virtual_tour_url": raw.get("virtualTourUrl") or raw.get("threeDimensionalTourUrl"),
+            "virtual_tour_url": None,
             "monthly_rent": price,
             "security_deposit": raw.get("securityDeposit"),
             "last_months_rent": None,

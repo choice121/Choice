@@ -187,13 +187,8 @@
     // ── Availability chip ─────────────────────────────────────
     var avail = availChipHtml(p);
 
-    // ── Pet policy chip — shown when pets are allowed ─────────
+    // ── Pet policy chip — completely removed per design requirement ─────────
     var petChip = '';
-    if (p.pets_allowed === true) {
-      petChip = '<span class="property-card-pet-chip"><i class="fas fa-paw"></i> Pets OK</span>';
-    } else if (p.pets_allowed === false) {
-      petChip = '<span class="property-card-pet-chip property-card-pet-chip--no"><i class="fas fa-ban"></i> No Pets</span>';
-    }
 
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
