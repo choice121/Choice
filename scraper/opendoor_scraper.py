@@ -1369,7 +1369,7 @@ def _parse_opendoor_html(html, url, verbose=False):
         "total_units": None,
         "has_basement": has_basement,
         "has_central_air": has_central_air,
-        "virtual_tour_url": None,
+        "virtual_tour_url": virtual_tour,
         "monthly_rent": monthly_rent,
         "security_deposit": None,       # Left blank — admin sets this after review
         "application_fee": None,        # Not applicable for Opendoor sale→rental conversions
@@ -1391,7 +1391,7 @@ def _parse_opendoor_html(html, url, verbose=False):
         "pet_types_allowed": "[]",
         "pet_weight_limit": None,
         "pet_details": None,
-        "smoking_allowed": None,   # standard for residential rentals
+        "smoking_allowed": False,   # standard for residential rentals
         "parking": parking,
         "amenities": json.dumps(amenities),
         "appliances": json.dumps(appliances),

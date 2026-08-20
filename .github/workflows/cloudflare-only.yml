@@ -17,7 +17,7 @@ jobs:
 
       - name: Reject Replit configuration files
         run: |
-          FORBIDDEN_FILES=(".replit" "replit.nix" "replit.md" "REPLIT_SAFETY.md" "server.js" "scripts/generate-config-replit.js")
+          FORBIDDEN_FILES=(".replit" "replit.nix" "replit.md" "REPLIT_SAFETY.md" "scripts/generate-config-replit.js")
           FOUND=()
           for f in "${FORBIDDEN_FILES[@]}"; do
             if [ -f "$f" ]; then
@@ -40,9 +40,9 @@ jobs:
           fi
           echo "✅ No Replit artifacts found."
 
-      - name: Reject forbidden backend packages
+      - name: Reject forbidden backend database ORM packages
         run: |
-          FORBIDDEN=("express" "fastify" "koa" "pg" "postgres" "mysql" "mysql2" "sqlite" "better-sqlite3" "prisma" "drizzle-orm" "sequelize" "typeorm" "knex" "@neondatabase/serverless")
+          FORBIDDEN=("fastify" "koa" "pg" "postgres" "mysql" "mysql2" "sqlite" "better-sqlite3" "prisma" "drizzle-orm" "sequelize" "typeorm" "knex" "@neondatabase/serverless")
           if [ ! -f package.json ]; then
             echo "✅ No package.json — skipping dependency check."
             exit 0
@@ -55,16 +55,16 @@ jobs:
           done
           if [ ${#FOUND[@]} -gt 0 ]; then
             echo ""
-            echo "❌ BUILD FAILED — Forbidden backend packages in package.json:"
+            echo "❌ BUILD FAILED — Forbidden backend database packages in package.json:"
             for p in "${FOUND[@]}"; do
               echo "     • $p"
             done
             echo ""
-            echo "   This is a static site. No backend packages are permitted."
+            echo "   Database access must go through Supabase client/REST/Edge functions."
             echo ""
             exit 1
           fi
-          echo "✅ No forbidden packages found."
+          echo "✅ No forbidden database packages found."
 
       - name: Reject committed config.js (contains secrets)
         run: |

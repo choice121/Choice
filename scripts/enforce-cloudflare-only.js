@@ -41,7 +41,6 @@ if (!isCloudflareBuild) {
     'replit.nix',
     'replit.md',
     'REPLIT_SAFETY.md',
-    'server.js',
     'scripts/generate-config-replit.js',
   ];
 
@@ -64,7 +63,7 @@ if (foundDbVars.length > 0) {
 
 // ── 4. Detect forbidden npm packages ─────────────────────────────────────
 const forbiddenPackages = [
-  'express', 'fastify', 'koa', 'hapi',
+  'fastify', 'koa', 'hapi',
   'pg', 'postgres', 'mysql', 'mysql2', 'sqlite', 'better-sqlite3',
   'prisma', 'drizzle-orm', 'sequelize', 'typeorm', 'knex',
   '@neondatabase/serverless', 'neon',

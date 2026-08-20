@@ -1804,6 +1804,17 @@ body[data-portal="public"] .property-card-badge.badge-featured  { background: #0
 body[data-portal="public"] .property-card-badge.badge-verified  { background: rgba(255,255,255,0.92); color: #006aff; }
 body[data-portal="public"] .property-card-badge.badge-available { background: rgba(5,150,105,0.90); color: #fff; }
 body[data-portal="public"] .property-card-badge.badge-avail-date { background: rgba(217,119,6,0.90); color: #fff; }
+body[data-portal="public"] .property-card-tour-chip {
+  position: absolute; bottom: 10px; left: 10px; z-index: 7;
+  background: rgba(2, 132, 199, 0.92); color: #fff;
+  border-radius: 100px; padding: 4px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; gap: 5px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.24);
+}
+body[data-portal="public"] .property-card-tour-chip i { font-size: 10px; }
 body[data-portal="public"] .property-card-type-chip {
   position: absolute; bottom: 10px; left: 10px; z-index: 7;
   background: rgba(0,0,0,0.54); color: rgba(255,255,255,0.95);

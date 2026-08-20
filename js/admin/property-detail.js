@@ -231,7 +231,7 @@
     }
     const main = `<div class="pd-mosaic">
       <div class="pd-mosaic-main" id="pd-mosaic-main" data-idx="0">
-        <img src="${esc(galleryPhotoUrl(urls[0]))}" alt="Photo 1" id="pd-main-img" loading="eager">
+        <img src="${esc(galleryPhotoUrl(urls[0]))}" alt="Photo 1" id="pd-main-img" loading="eager" referrerpolicy="no-referrer">
         ${urls.length > 1 ? '<button class="pd-mosaic-prev" id="pd-prev" aria-label="Previous">‹</button><button class="pd-mosaic-next" id="pd-next" aria-label="Next">›</button>' : ''}
         <div class="pd-photo-count" id="pd-photo-count">${urls.length > 1 ? '1 / ' + urls.length : ''}</div>
         <button class="pd-expand-btn" id="pd-expand-btn" title="View all photos">${ico('expand')} ${urls.length} photo${urls.length !== 1 ? 's' : ''}</button>
@@ -241,7 +241,7 @@
           const idx = i + 1;
           const isLast = i === Math.min(urls.length - 2, 3) && urls.length > 5;
           return `<div class="pd-mosaic-cell" data-idx="${idx}">
-            <img src="${esc(galleryPhotoUrl(u))}" alt="Photo ${idx + 1}" loading="lazy">
+            <img src="${esc(galleryPhotoUrl(u))}" alt="Photo ${idx + 1}" loading="lazy" referrerpolicy="no-referrer">
             ${isLast ? `<div class="pd-mosaic-overlay"><span>+${urls.length - 5} more</span></div>` : ''}
           </div>`;
         }).join('')}
@@ -251,7 +251,7 @@
     const strip = urls.length > 1
       ? `<div class="pd-gallery-strip" id="pd-gallery-strip">
           ${urls.map((u, i) => `<button class="pd-strip-thumb${i === 0 ? ' active' : ''}" data-idx="${i}" aria-label="Photo ${i+1}">
-            <img src="${esc(thumbUrl(u))}" alt="" loading="lazy">
+            <img src="${esc(thumbUrl(u))}" alt="" loading="lazy" referrerpolicy="no-referrer">
           </button>`).join('')}
         </div>`
       : '';
@@ -518,7 +518,6 @@
       { label:'Laundry',        value: p.laundry_type || '—' },
       { label:'Heating',        value: p.heating_type || '—' },
       { label:'Cooling',        value: p.cooling_type || '—' },
-      
       { label:'Garage spaces',  value: p.garage_spaces || '—' },
       { label:'Views',          value: p.views_count != null ? Number(p.views_count).toLocaleString() : '—' },
       { label:'Created',        value: fmt(p.created_at) },
@@ -572,7 +571,6 @@
     if (p.pet_types_allowed?.length) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
     if (p.pet_weight_limit) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Pet Weight Limit: ${esc(String(p.pet_weight_limit))} lbs max</div>`);
     if (p.pet_details) leaseItems.push(`<div class="pd-amenity-item" style="grid-column:1/-1">${ico('dot')}<span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
-    if (false && p.smoking_allowed != null) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}${p.smoking_allowed ? 'Smoking Permitted' : 'No Smoking'}</div>`);
     if (p.minimum_income_multiplier) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
     if (p.minimum_credit_score) leaseItems.push(`<div class="pd-amenity-item">${ico('dot')}Min. Credit Score: ${p.minimum_credit_score}</div>`);
     if (p.move_in_special) leaseItems.push(`<div class="pd-amenity-item" style="grid-column:1/-1">${ico('dot')}<strong>Move-in Special:</strong> ${esc(p.move_in_special)}</div>`);
@@ -684,7 +682,7 @@
     </div>`;
 
     // ── Virtual tour ──
-    const vtHtml = false && p.virtual_tour_url
+    const vtHtml = p.virtual_tour_url
       ? `<div class="pd-section">
           <div class="pd-section-title">Virtual Tour</div>
           <a href="${esc(p.virtual_tour_url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">

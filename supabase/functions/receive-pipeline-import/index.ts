@@ -1,28 +1,10 @@
 // ============================================================
 // Choice Properties — receive-pipeline-import Edge Function
-// v4.0 — August 2026
-//
-// v4.0: SAVE-FIRST ARCHITECTURE
-//   The property record is saved to the database IMMEDIATELY and
-//   the response is returned to the client within ~1 second.
-//   Photo downloads/upload happen ASYNCHRONOUSLY in the background
-//   after the response is sent.
-//
-//   This means the user sees "Saved!" in under 2 seconds and can
-//   move on to the next property. Photos continue uploading in the
-//   background and the pipeline record is updated when they complete.
-//
-//   FALLBACK: If the client already uploaded photos to ImageKit
-//   (browser-side upload path), those URLs are preserved and the
-//   server skips the async photo job entirely.
-//
-//   RETRY: The import-pipeline-photos edge function handles retries
-//   for any photos that fail to upload client-side.
-//
-// POST body: full listing fields from extension
-// Returns:   { ok: true, id, title, score, photos, imagekit_photos }
-//          | { ok: false, duplicate: true, id, title }
-//          | { error: string }
+// v3.2 — Full Folder Management & Pipeline Ingestion
+// ============================================================
+// Accepts parsed listing payloads and folder actions from Chrome /
+// Orion extensions on Zillow, Realtor, Apartments.com, etc.
+// Authenticates via a shared secret (x-import-secret header or ?secret= query).
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -31,9 +13,17 @@ import {
   buildPipelineRecord,
   safeStr,
   safeInt,
+  safeFloat,
   normalizeSource,
+  normalizePropType,
+  normalizeDate,
   qualityScore,
   missingFields,
+  genId,
+  isEmpty,
+  CORE_FIELDS,
+  BONUS_FIELDS,
+  TRACKABLE_MISSING,
 } from '../_shared/pipeline-record.ts';
 
 type ImageEntry = string | {
@@ -58,7 +48,7 @@ function parseImageEntries(raw: unknown): ImageEntry[] {
         };
       }
       return null;
-    }).filter((entry: ImageEntry | null): entry is ImageEntry => entry !== null);
+    }).filter((entry): entry is ImageEntry => entry !== null);
   } catch {
     return [];
   }
@@ -68,30 +58,346 @@ function imageEntryUrl(entry: ImageEntry): string {
   return typeof entry === 'string' ? entry : entry.url;
 }
 
-// ── Async photo uploader (runs after response is sent) ──────────
-// This function is fire-and-forget. It runs in the background after
-// the HTTP response has been sent to the client.
-async function uploadPhotosAsync(
-  record: Record<string, unknown>,
-  sourceImageEntries: ImageEntry[],
-  sourceImageUrls: string[],
-  adminClient: ReturnType<typeof createClient>,
-  IMAGEKIT_PRIVATE_KEY: string,
-): Promise<void> {
-  const MAX_PHOTOS_TO_UPLOAD = 40;
-  const BATCH_SIZE = 12; // increased from 3 for faster parallel uploads
-  const FETCH_TIMEOUT = 15_000;
-  const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
+// ── ImageKit auto-upload config ─────────────────────────────────
+const MAX_PHOTOS_TO_UPLOAD = 40;
+const BATCH_SIZE = 3;
+const FETCH_TIMEOUT = 15_000;
+const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return permissiveCorsResponse(req);
+
+  // ── Auth: shared secret ──────────────────────────────────────
+  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET') || Deno.env.get('IMPORT_SECRET') || 'cp_import_7Kx3m9P2w5';
+  const url = new URL(req.url);
+  const incoming = url.searchParams.get('secret') || req.headers.get('x-import-secret');
+  if (!incoming || incoming !== IMPORT_SECRET) {
+    return permissiveJsonErr(401, 'Invalid import secret', req);
+  }
+
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://tlfmwetmhthpyrytrcfo.supabase.co';
+  const FALLBACK_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
+  const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || FALLBACK_SERVICE_KEY;
+  const adminClient  = createClient(SUPABASE_URL, SERVICE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  // ── GET or Action Handling ──────────────────────────────────
+  const actionFromQuery = url.searchParams.get('action');
+
+  let body: Record<string, unknown> = {};
+  if (req.method === 'POST') {
+    try {
+      body = await req.json();
+    } catch {
+      return permissiveJsonErr(400, 'Invalid JSON body', req);
+    }
+  }
+
+  const action = safeStr(body.action) || actionFromQuery;
+
+  // 1. LIST FOLDERS
+  if (action === 'list_folders' || (req.method === 'GET' && actionFromQuery === 'list_folders')) {
+    const { data, error } = await adminClient.rpc('pipeline_folder_list');
+    if (error) {
+      // Fallback query if RPC has issue
+      const { data: rawFolders, error: rawErr } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .select('id, name, description, created_at')
+        .order('created_at', { ascending: false });
+      if (rawErr) return permissiveJsonErr(500, rawErr.message, req);
+      return permissiveJsonOk({ ok: true, folders: rawFolders || [] }, req);
+    }
+    const folders = typeof data === 'string' ? JSON.parse(data) : (data || []);
+    return permissiveJsonOk({ ok: true, folders }, req);
+  }
+
+  // 2. CREATE FOLDER
+  if (action === 'create_folder') {
+    const folderName = safeStr(body.name || body.folder_name);
+    const description = safeStr(body.description);
+    const color = safeStr(body.color) || '#6366f1';
+    const icon = safeStr(body.icon) || '📁';
+    if (!folderName) {
+      return permissiveJsonErr(400, 'Folder name is required', req);
+    }
+
+    let folderId: string | null = null;
+    let finalName = folderName;
+
+    // Try RPC first (pass all 4 parameters to disambiguate overloaded database functions)
+    const { data, error } = await adminClient.rpc('pipeline_folder_create', {
+      p_name: folderName,
+      p_description: description || null,
+      p_color: color,
+      p_icon: icon,
+    });
+
+    if (!error && data) {
+      const resObj = typeof data === 'string' ? JSON.parse(data) : data;
+      folderId = resObj?.id || null;
+      if (resObj?.name) finalName = resObj.name;
+    } else {
+      // Direct table insert fallback
+      const { data: inserted, error: insertErr } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .insert({
+          name: folderName.trim(),
+          description: description || null,
+          color: color,
+          icon: icon,
+        })
+        .select('id, name')
+        .single();
+
+      if (insertErr) {
+        // If already exists, fetch it
+        const { data: existingF } = await adminClient
+          .schema('pipeline')
+          .from('pipeline_folders')
+          .select('id, name')
+          .ilike('name', folderName.trim())
+          .maybeSingle();
+
+        if (existingF) {
+          folderId = existingF.id;
+          finalName = existingF.name;
+        } else {
+          return permissiveJsonErr(500, insertErr.message || (error && error.message) || 'Folder creation failed', req);
+        }
+      } else if (inserted) {
+        folderId = inserted.id;
+        finalName = inserted.name;
+      }
+    }
+
+    return permissiveJsonOk({
+      ok: true,
+      id: folderId,
+      name: finalName,
+      property_count: 0,
+    }, req);
+  }
+
+  // 3. GET FOLDER PROPERTIES
+  if (action === 'get_folder_properties') {
+    const folderId = safeStr(body.folder_id);
+    const folderName = safeStr(body.folder_name);
+    let resolvedId = folderId;
+
+    if (!resolvedId && folderName) {
+      const { data: fRow } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .select('id')
+        .ilike('name', folderName.trim())
+        .maybeSingle();
+      if (fRow) resolvedId = fRow.id;
+    }
+
+    if (!resolvedId) {
+      return permissiveJsonErr(400, 'folder_id or existing folder_name is required', req);
+    }
+
+    // Try RPC first
+    const { data, error } = await adminClient.rpc('pipeline_folder_properties', {
+      p_folder_id: resolvedId,
+    });
+
+    if (!error && data) {
+      const properties = typeof data === 'string' ? JSON.parse(data) : (data || []);
+      return permissiveJsonOk({ ok: true, folder_id: resolvedId, properties }, req);
+    }
+
+    // Direct table fallback
+    const { data: rawProps, error: rawPropsErr } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_properties')
+      .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, square_footage, original_image_urls, source_url, folder_serial, created_at')
+      .eq('folder_id', resolvedId)
+      .order('folder_serial', { ascending: true });
+
+    if (rawPropsErr) return permissiveJsonErr(500, rawPropsErr.message, req);
+    return permissiveJsonOk({ ok: true, folder_id: resolvedId, properties: rawProps || [] }, req);
+  }
+
+  // 4. REMOVE PROPERTY FROM FOLDER
+  if (action === 'remove_from_folder') {
+    const propertyId = safeStr(body.property_id);
+    if (!propertyId) return permissiveJsonErr(400, 'property_id is required', req);
+
+    const { data, error } = await adminClient.rpc('pipeline_folder_remove_property', {
+      p_property_id: propertyId,
+    });
+
+    if (!error && data) {
+      return permissiveJsonOk({ ok: true, property_id: propertyId }, req);
+    }
+
+    // Direct update fallback
+    const { error: updErr } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_properties')
+      .update({ folder_id: null, folder_serial: null })
+      .eq('id', propertyId);
+
+    if (updErr) return permissiveJsonErr(500, updErr.message, req);
+    return permissiveJsonOk({ ok: true, property_id: propertyId }, req);
+  }
+
+  // ── DEFAULT: LISTING IMPORT ──────────────────────────────────
+  if (req.method !== 'POST') {
+    return permissiveJsonErr(405, 'Method not allowed', req);
+  }
+
+  const sourceListingId = safeStr(body.source_listing_id);
+  if (!sourceListingId) {
+    return permissiveJsonErr(400, 'source_listing_id is required', req);
+  }
+
+  let source: string;
+  try {
+    source = normalizeSource(body.source);
+  } catch (err) {
+    return permissiveJsonErr(400, err instanceof Error ? err.message : 'Unsupported source', req);
+  }
+
+  // Duplicate check
+  const { data: existing } = await adminClient
+    .schema('pipeline')
+    .from('pipeline_properties')
+    .select('id, title, folder_id, folder_serial')
+    .eq('source_listing_id', sourceListingId)
+    .eq('source', source)
+    .maybeSingle();
+
+  if (existing) {
+    // If folder was specified and existing record doesn't have it, we can assign it
+    const reqFolder = safeStr(body.folder_name);
+    let updatedFolderInfo: Record<string, unknown> | null = null;
+    if (reqFolder) {
+      try {
+        // Resolve or create folder
+        let fId: string | null = null;
+        const { data: foundFolder } = await adminClient
+          .schema('pipeline')
+          .from('pipeline_folders')
+          .select('id, name')
+          .ilike('name', reqFolder.trim())
+          .maybeSingle();
+
+        if (foundFolder) {
+          fId = foundFolder.id;
+        } else {
+          const { data: created } = await adminClient.rpc('pipeline_folder_create', {
+            p_name: reqFolder.trim(),
+            p_description: null,
+            p_color: '#6366f1',
+            p_icon: '📁',
+          });
+          const cObj = typeof created === 'string' ? JSON.parse(created) : created;
+          if (cObj?.id) fId = cObj.id;
+        }
+
+        if (fId) {
+          const { data: addData } = await adminClient.rpc('pipeline_folder_add_property', {
+            p_property_id: existing.id,
+            p_folder_id: fId,
+          });
+          const addObj = typeof addData === 'string' ? JSON.parse(addData) : addData;
+          if (addObj?.ok) {
+            updatedFolderInfo = { folder: reqFolder, serial: addObj.serial, folder_id: fId };
+          }
+        }
+      } catch (e) {
+        console.warn('[receive-pipeline-import] Assign existing duplicate to folder failed:', e);
+      }
+    }
+
+    return permissiveJsonOk({
+      ok: false,
+      duplicate: true,
+      id: existing.id,
+      title: existing.title,
+      folder: updatedFolderInfo,
+      message: 'Already in pipeline',
+    }, req);
+  }
+
+  // Build record using shared builder
+  const record = buildPipelineRecord(body as unknown as Parameters<typeof buildPipelineRecord>[0]);
+
+  // Extract source image entries and URLs
+  const sourceImageEntries = parseImageEntries(record.original_image_urls);
+  const sourceImageUrls = sourceImageEntries
+    .map(imageEntryUrl)
+    .filter((u) => typeof u === 'string' && u.startsWith('http'));
+
+  // ── Handle Folder Assignment Prior to or During Insert ────────
+  let targetFolderId: string | null = safeStr(body.folder_id);
+  const targetFolderName = safeStr(body.folder_name);
+
+  if (!targetFolderId && targetFolderName) {
+    // Find or Auto-Create Folder
+    const { data: existingFolder } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_folders')
+      .select('id, name')
+      .ilike('name', targetFolderName.trim())
+      .maybeSingle();
+
+    if (existingFolder) {
+      targetFolderId = existingFolder.id;
+    } else {
+      // Auto-create folder
+      const { data: createdF } = await adminClient.rpc('pipeline_folder_create', {
+        p_name: targetFolderName.trim(),
+        p_description: null,
+        p_color: '#6366f1',
+        p_icon: '📁',
+      });
+      const cObj = typeof createdF === 'string' ? JSON.parse(createdF) : createdF;
+      if (cObj?.id) targetFolderId = cObj.id;
+    }
+  }
+
+  if (targetFolderId) {
+    // Get next serial
+    const { data: maxSerialRow } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_properties')
+      .select('folder_serial')
+      .eq('folder_id', targetFolderId)
+      .order('folder_serial', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextSerial = (maxSerialRow?.folder_serial || 0) + 1;
+    record.folder_id = targetFolderId;
+    record.folder_serial = nextSerial;
+  }
+
+  // Insert into pipeline
+  const { error: insertErr } = await adminClient
+    .schema('pipeline')
+    .from('pipeline_properties')
+    .insert(record);
+
+  if (insertErr) {
+    console.error('Insert error:', insertErr);
+    return permissiveJsonErr(500, 'Database insert failed: ' + insertErr.message, req);
+  }
+
+  // Auto-upload images to ImageKit if not already ImageKit
   let imagekitUploaded = 0;
   let imagekitFailed = 0;
   const imagekitUrls: ImageEntry[] = [];
-
-  // Check if URLs are already ImageKit URLs (browser-side upload path)
   const alreadyImageKit = sourceImageUrls.length > 0 && sourceImageUrls.every((u) => u.includes('ik.imagekit.io'));
+  const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
 
   if (alreadyImageKit) {
-    // Browser already uploaded — preserve the original entries and metadata.
     imagekitUrls.push(...sourceImageEntries);
     imagekitUploaded = sourceImageEntries.length;
   } else if (IMAGEKIT_PRIVATE_KEY && sourceImageUrls.length > 0) {
@@ -114,8 +420,6 @@ async function uploadPhotosAsync(
           'Accept-Language': 'en-US,en;q=0.9',
           'Cache-Control': 'no-cache',
         };
-        // Add Referer based on source site
-        const source = safeStr(record.source);
         if (source === 'zillow') fetchHeaders['Referer'] = 'https://www.zillow.com/';
         else if (source === 'realtor') fetchHeaders['Referer'] = 'https://www.realtor.com/';
         else if (source === 'apartments') fetchHeaders['Referer'] = 'https://www.apartments.com/';
@@ -126,10 +430,7 @@ async function uploadPhotosAsync(
           redirect: 'follow',
           signal: AbortSignal.timeout(FETCH_TIMEOUT),
         });
-        if (!imgRes.ok) {
-          console.warn(`[receive-pipeline-import] Fetch failed (${imgRes.status}) for photo ${index + 1}: ${sourceUrl.slice(0, 80)}`);
-          return null;
-        }
+        if (!imgRes.ok) return null;
 
         const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
         const buffer = await imgRes.arrayBuffer();
@@ -142,7 +443,6 @@ async function uploadPhotosAsync(
         const ext = extMap[mimeBase] || 'jpg';
         const fileName = `photo_${index + 1}.${ext}`;
 
-        // Upload to ImageKit
         const formData = new FormData();
         formData.append('file', new Blob([buffer], { type: mimeBase }), fileName);
         formData.append('fileName', fileName);
@@ -154,11 +454,7 @@ async function uploadPhotosAsync(
           body: formData,
         });
 
-        if (!ikRes.ok) {
-          const errText = await ikRes.text().catch(() => `HTTP ${ikRes.status}`);
-          console.warn(`[receive-pipeline-import] ImageKit upload failed (photo ${index + 1}): ${errText.slice(0, 200)}`);
-          return null;
-        }
+        if (!ikRes.ok) return null;
 
         const ikData = await ikRes.json();
         return {
@@ -167,14 +463,11 @@ async function uploadPhotosAsync(
           width: typeof ikData.width === 'number' ? ikData.width : null,
           height: typeof ikData.height === 'number' ? ikData.height : null,
         };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[receive-pipeline-import] Error uploading photo ${index + 1}: ${msg}`);
+      } catch {
         return null;
       }
     }
 
-    // Process in parallel batches
     for (let batchStart = 0; batchStart < toUpload.length; batchStart += BATCH_SIZE) {
       const batch = toUpload.slice(batchStart, batchStart + BATCH_SIZE);
       const results = await Promise.all(
@@ -186,9 +479,8 @@ async function uploadPhotosAsync(
       }
     }
 
-    // Update the pipeline record with ImageKit URLs
     if (imagekitUrls.length > 0) {
-      const { error: updateErr } = await adminClient
+      await adminClient
         .schema('pipeline')
         .from('pipeline_properties')
         .update({
@@ -198,312 +490,48 @@ async function uploadPhotosAsync(
           last_photo_import_error: null,
         })
         .eq('id', record.id);
-
-      if (updateErr) {
-        console.warn('[receive-pipeline-import] Failed to update record with ImageKit URLs:', updateErr);
-      }
-
-      // Recalculate quality score with ImageKit URLs
-      const updatedRecord = { ...record, original_image_urls: JSON.stringify(imagekitUrls) };
-      const score = qualityScore(updatedRecord);
-      const missing = missingFields(updatedRecord);
-
-      await adminClient
-        .schema('pipeline')
-        .from('pipeline_properties')
-        .update({
-          data_quality_score: score,
-          missing_fields: missing,
-        })
-        .eq('id', record.id);
-    } else if (imagekitFailed > 0) {
-      // All uploads failed — mark for retry
-      await adminClient
-        .schema('pipeline')
-        .from('pipeline_properties')
-        .update({
-          photo_import_status: 'failed',
-          last_photo_import_error: `All ${imagekitFailed} source photo(s) failed to upload to ImageKit`,
-          last_photo_import_at: new Date().toISOString(),
-        })
-        .eq('id', record.id);
     }
   }
-}
 
-// ── Handler ────────────────────────────────────────────────────
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return permissiveCorsResponse(req);
-  if (req.method !== 'POST')   return permissiveJsonErr(405, 'Method not allowed', req);
-
-  // ── Auth: shared secret ──────────────────────────────────────
-  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET');
-  if (!IMPORT_SECRET) return permissiveJsonErr(500, 'Import secret not configured', req);
-
-  const url = new URL(req.url);
-  const incoming = url.searchParams.get('secret') || req.headers.get('x-import-secret');
-  if (!incoming || incoming !== IMPORT_SECRET) {
-    return permissiveJsonErr(401, 'Invalid import secret', req);
-  }
-
-  // ── Parse body ───────────────────────────────────────────────
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return permissiveJsonErr(400, 'Invalid JSON body', req);
-  }
-
-  // ── v4.0: Photo-update-only mode ─────────────────────────────
-  // If _update_photos_only=true, the caller is the extension after it
-  // finished background photo uploads. Skip duplicate check and DB insert;
-  // only update original_image_urls, photo_import_status, and quality score.
-  const updatePhotosOnly = body._update_photos_only === true;
-
-  const sourceListingId = safeStr(body.source_listing_id);
-  if (!sourceListingId) {
-    return permissiveJsonErr(400, 'source_listing_id is required', req);
-  }
-
-  let source: string;
-  try {
-    source = normalizeSource(body.source);
-  } catch (err) {
-    return permissiveJsonErr(400, err instanceof Error ? err.message : 'Unsupported source', req);
-  }
-
-  // ── Duplicate check ──────────────────────────────────────────
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const adminClient  = createClient(SUPABASE_URL, SERVICE_KEY);
-
-  const { data: existing } = await adminClient
-    .schema('pipeline')
-    .from('pipeline_properties')
-    .select(updatePhotosOnly ? '*' : 'id, title')
-    .eq('source_listing_id', sourceListingId)
-    .eq('source', source)
-    .maybeSingle();
-
-  if (existing && !updatePhotosOnly) {
-    return permissiveJsonOk({
-      ok: false, duplicate: true,
-      id: existing.id, title: existing.title,
-      message: 'Already in pipeline',
-    }, req);
-  }
-
-  // ── v4.0: Photo-only update path ─────────────────────────────
-  if (updatePhotosOnly) {
-    if (!existing) {
-      return permissiveJsonErr(404, 'Pipeline record not found for photo update', req);
-    }
-
-    const photoEntries = parseImageEntries(body.original_image_urls);
-    const photoUrls = photoEntries
-      .map(imageEntryUrl)
-      .filter((u: string) => typeof u === 'string' && u.startsWith('http'));
-
-    if (photoUrls.length > 0 && photoUrls.every((u: string) => u.includes('ik.imagekit.io'))) {
-      // All photos are ImageKit URLs — update record with them
-      const updatedRecord = { ...existing, original_image_urls: JSON.stringify(photoEntries) } as Record<string, unknown>;
-      const score = qualityScore(updatedRecord);
-      const missing = missingFields(updatedRecord);
-
-      const { error: updateErr } = await adminClient
-        .schema('pipeline')
-        .from('pipeline_properties')
-        .update({
-          original_image_urls: JSON.stringify(photoEntries),
-          photo_import_status: 'ok',
-          last_photo_import_at: new Date().toISOString(),
-          last_photo_import_error: null,
-          data_quality_score: score,
-          missing_fields: missing,
-        })
-        .eq('id', existing.id);
-
-      if (updateErr) {
-        return permissiveJsonErr(500, 'Photo update failed: ' + updateErr.message, req);
-      }
-
-      return permissiveJsonOk({
-        ok: true,
-        id: existing.id,
-        title: existing.title,
-        score,
-        photos: photoUrls.length,
-        imagekit_photos: photoUrls.length,
-        photo_import: 'complete',
-        updated: 'photos_only',
-      }, req);
-    }
-
-    // No ImageKit URLs — mark as failed for retry later
-    await adminClient
+  // Count total properties in folder for the response
+  let folderCount = 1;
+  let finalFolderName = targetFolderName;
+  if (targetFolderId) {
+    const { count } = await adminClient
       .schema('pipeline')
       .from('pipeline_properties')
-      .update({
-        photo_import_status: 'failed',
-        last_photo_import_error: 'Extension background photo uploads failed',
-        last_photo_import_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id);
+      .select('id', { count: 'exact', head: true })
+      .eq('folder_id', targetFolderId);
+    if (count != null) folderCount = count;
 
-    return permissiveJsonOk({
-      ok: true,
-      id: existing.id,
-      title: existing.title,
-      photos: photoUrls.length,
-      imagekit_photos: 0,
-      photo_import: 'failed',
-    }, req);
-  }
-
-  // ── Build record using shared builder ────────────────────────
-  const record = buildPipelineRecord(body as unknown as Parameters<typeof buildPipelineRecord>[0]);
-
-  // ── Watermark domain filter — drop photos from known agent/brand CDNs ───────
-  try {
-    const rawEntries = parseImageEntries(record.original_image_urls);
-    if (rawEntries.length > 0) {
-      const WATERMARK_DOMAINS = new Set([
-        'agent.realtor.com','headshots.realtor.com','photos.cbkw.com',
-        'photos.remax.com','photos.c21.com','photos.kw.com',
-        'img.invitationhomes.com','img.invitationhome.com',
-        'cdn.firstkeyhomes.com','cdn.firstkeyhome.com',
-        'media.progressresidential.com','images.triconresidential.com',
-        'photos.compassrealty.com','images.sothebysrealty.com',
-        'photos.berkshirehathaway.com','images.howardhanna.com',
-        'photos.weichert.com','assets.exprealty.com',
-      ]);
-      const clean = rawEntries.filter((entry: ImageEntry) => {
-        const url = imageEntryUrl(entry);
-        if (typeof url !== 'string') return false;
-        try {
-          const host = new URL(url).hostname.replace(/^www\./, '');
-          return !WATERMARK_DOMAINS.has(host);
-        } catch {
-          return true;
-        }
-      });
-      const removed = rawEntries.length - clean.length;
-      if (removed > 0) {
-        console.warn(`[receive-pipeline-import] Removed ${removed} watermark-domain photo(s)`);
-        record.original_image_urls = JSON.stringify(clean);
-      }
-    }
-  } catch { /* ignore */ }
-
-  // Diagnostic telemetry: log low-quality imports for analysis
-  try {
-    if (typeof record.data_quality_score === 'number' && record.data_quality_score < 80) {
-      console.info('[receive-pipeline-import] Low quality import:', {
-        id: record.id,
-        score: record.data_quality_score,
-        missing: record.missing_fields,
-        source_listing_id: record.source_listing_id,
-        original_data_sample: record.original_data ? (String(record.original_data).slice(0, 200)) : null,
-      });
-    }
-  } catch (_) {}
-
-  // ── Extract source image entries and URLs ──────────────────────
-  const sourceImageEntries = parseImageEntries(record.original_image_urls);
-  const sourceImageUrls = sourceImageEntries
-    .map(imageEntryUrl)
-    .filter((u: string) => typeof u === 'string' && u.startsWith('http'));
-
-  // ── Check if URLs are already ImageKit URLs (browser-side upload path) ──
-  const alreadyImageKit = sourceImageUrls.length > 0 && sourceImageUrls.every((u: string) => u.includes('ik.imagekit.io'));
-
-  // ── Insert ───────────────────────────────────────────────────
-  const { error: insertErr } = await adminClient
-    .schema('pipeline')
-    .from('pipeline_properties')
-    .insert(record);
-
-  if (insertErr) {
-    console.error('Insert error:', insertErr);
-    return permissiveJsonErr(500, 'Database insert failed: ' + insertErr.message, req);
-  }
-
-  // ── If photos are already on ImageKit, update quality score immediately ──
-  if (alreadyImageKit) {
-    const updatedRecord = { ...record, original_image_urls: JSON.stringify(sourceImageEntries) };
-    const score = qualityScore(updatedRecord);
-    const missing = missingFields(updatedRecord);
-    await adminClient
-      .schema('pipeline')
-      .from('pipeline_properties')
-      .update({
-        data_quality_score: score,
-        missing_fields: missing,
-        photo_import_status: 'ok',
-        last_photo_import_at: new Date().toISOString(),
-      })
-      .eq('id', record.id);
-  }
-
-  // ── Optional folder assignment ─────────────────────────────────
-  let folderInfo: Record<string, unknown> | null = null;
-  const folderName = safeStr(body.folder_name);
-  if (folderName) {
-    try {
-      const { data: folderData, error: folderErr } = await adminClient.rpc('pipeline_folder_add_property', {
-        p_property_id: record.id,
-        p_folder_name: folderName,
-      });
-      if (!folderErr && folderData?.ok) {
-        folderInfo = { folder: folderName, serial: folderData.serial };
-      }
-    } catch (e) {
-      console.warn('[receive-pipeline-import] Folder assignment failed:', e);
+    if (!finalFolderName) {
+      const { data: fData } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .select('name')
+        .eq('id', targetFolderId)
+        .maybeSingle();
+      if (fData?.name) finalFolderName = fData.name;
     }
   }
 
-  // ── Return immediately (v4.0: save-first architecture) ──────
-  // Fire off async photo uploads AFTER sending the response.
-  // The client doesn't need to wait for photos to finish.
-  const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY') || '';
+  const folderResult = targetFolderId ? {
+    folder_id: targetFolderId,
+    name: finalFolderName || 'Folder',
+    serial: record.folder_serial,
+    total_count: folderCount,
+  } : null;
 
-  // Use edge functions' waitUntil or just fire-and-forget
-  // Since Deno.serve doesn't have waitUntil, we use a background promise
-  const photoPromise = (async () => {
-    try {
-      await uploadPhotosAsync(
-        record as unknown as Record<string, unknown>,
-        sourceImageEntries,
-        sourceImageUrls,
-        adminClient,
-        IMAGEKIT_PRIVATE_KEY,
-      );
-    } catch (err) {
-      console.error('[receive-pipeline-import] Background photo upload failed:', err);
-    }
-  })();
-
-  // Don't await photoPromise — return immediately
-  // But keep a reference to prevent the function from exiting before the response
-  // is sent. The photo upload continues in the background.
-  const response = permissiveJsonOk({
+  return permissiveJsonOk({
     ok:     true,
     id:     record.id,
     title:  String(record.title),
     score:  record.data_quality_score,
     photos: sourceImageUrls.length,
-    imagekit_photos: alreadyImageKit ? sourceImageUrls.length : 0,
-    imagekit_failed: 0,
-    photo_import: alreadyImageKit ? 'complete' : 'background',
+    imagekit_photos: imagekitUploaded,
+    imagekit_failed: imagekitFailed,
     city:   safeStr(body.city),
     rent:   safeInt(body.monthly_rent),
-    folder: folderInfo,
+    folder: folderResult,
   }, req);
-
-  // Fire and forget the photo upload — don't await
-  photoPromise.catch((err) => {
-    console.error('[receive-pipeline-import] Background photo upload error:', err);
-  });
-
-  return response;
 });

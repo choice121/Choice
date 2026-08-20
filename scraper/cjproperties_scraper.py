@@ -649,6 +649,60 @@ def _data_quality_score(record: Dict[str, Any]) -> int:
     return min(score, 100)
 
 
+def _extract_virtual_tour(text: str, html_block: str = "") -> Optional[str]:
+    combined = " ".join([text or "", html_block or ""])
+    # YouTube
+    yt_m = re.search(r'(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([a-zA-Z0-9_-]{11})', combined)
+    if yt_m:
+        return "https://www.youtube-nocookie.com/embed/" + yt_m.group(1)
+    # Vimeo
+    vm_m = re.search(r'(?:https?://)?(?:www\.)?vimeo\.com/(\d+)', combined)
+    if vm_m:
+        return "https://player.vimeo.com/video/" + vm_m.group(1)
+    # Matterport
+    mp_m = re.search(r'(?:https?://)?my\.matterport\.com/show/\?m=([a-zA-Z0-9]+)', combined)
+    if mp_m:
+        return "https://my.matterport.com/show/?m=" + mp_m.group(1)
+    # Direct mp4
+    mp4_m = re.search(r'https?://[^\s"\'<>]+\.mp4', combined)
+    if mp4_m:
+        return mp4_m.group(0)
+    return None
+
+
+def _extract_admin_fee(description: str) -> Optional[float]:
+    # Resident Benefits Package ($36/mo)
+    if re.search(r'resident benefits package|rbp|\$36(?:\.00)?(?:\s*/\s*mo|\s*month)', description or "", re.IGNORECASE):
+        return 36.00
+    m = re.search(r'admin(?:istrative)? fee(?:\s*of)?\s*\$?([\d,]+(?:\.\d{2})?)', description or "", re.IGNORECASE)
+    if m:
+        try:
+            return float(m.group(1).replace(",", ""))
+        except Exception:
+            pass
+    return 36.00  # CJ Properties standard mandatory package
+
+
+def _extract_application_fee(description: str) -> Optional[float]:
+    m = re.search(r'app(?:lication)? fee(?:\s*of)?\s*\$?([\d,]+(?:\.\d{2})?)', description or "", re.IGNORECASE)
+    if m:
+        try:
+            return float(m.group(1).replace(",", ""))
+        except Exception:
+            pass
+    return 50.00  # CJ Properties standard application fee per adult
+
+
+def _extract_security_deposit(description: str, rent: Optional[float]) -> Optional[float]:
+    m = re.search(r'security deposit(?:\s*of)?\s*\$?([\d,]+(?:\.\d{2})?)', description or "", re.IGNORECASE)
+    if m:
+        try:
+            return float(m.group(1).replace(",", ""))
+        except Exception:
+            pass
+    return rent  # standard security deposit equals 1 month rent
+
+
 # ---------------------------------------------------------------------------
 # Record builder
 # ---------------------------------------------------------------------------
@@ -668,6 +722,7 @@ def _build_record(
     description: str,
     image_urls: List[str],
     unit_url: str,
+    block_html: str = "",
 ) -> Dict[str, Any]:
     """Build a standard pipeline_properties record from extracted fields."""
     typ = _normalize_property_type(details.get("type"))
@@ -697,6 +752,10 @@ def _build_record(
     laundry = _parse_laundry(description)
     appliances = _parse_appliances(description)
     move_in_special = _parse_move_in_special(description, header)
+    virtual_tour_url = _extract_virtual_tour(description, block_html)
+    admin_fee = _extract_admin_fee(description)
+    application_fee = _extract_application_fee(description)
+    security_deposit = _extract_security_deposit(description, rent)
 
     # Source URL
     source_url = "https://cjproperties.org/unit-detail?unitID={}".format(unit_id)
@@ -735,12 +794,12 @@ def _build_record(
         "total_units": None,
         "has_basement": None,
         "has_central_air": None,
-        "virtual_tour_url": None,
+        "virtual_tour_url": virtual_tour_url,
         "monthly_rent": rent,
-        "security_deposit": None,
-        "application_fee": None,
+        "security_deposit": security_deposit,
+        "application_fee": application_fee,
         "pet_deposit": None,
-        "admin_fee": None,
+        "admin_fee": admin_fee,
         "move_in_special": move_in_special,
         "parking_fee": None,
         "hoa_fee": None,
@@ -777,6 +836,8 @@ def _build_record(
             "rent_manager_corpid": RM_CORP_ID,
             "photocount": len(image_urls),
             "source_detail_url": source_url,
+            "virtual_tour_url": virtual_tour_url,
+            "admin_fee": admin_fee,
             "_version": "v1",
         }, default=str),
         "edited_fields": "[]",
@@ -907,6 +968,9 @@ def scrape_cjproperties(
                 len(image_urls),
             ))
 
+        # Merge detail description/tours if available
+        combined_html = block_html + (" " + detail_html if detail_html else "")
+
         rec = _build_record(
             unit_id=unit_id,
             header=header,
@@ -915,6 +979,7 @@ def scrape_cjproperties(
             description=description,
             image_urls=image_urls,
             unit_url=unit_url,
+            block_html=combined_html,
         )
         if rec:
             records.append(rec)

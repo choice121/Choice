@@ -1016,14 +1016,35 @@ function setupGridDelegation() {
     window.location.href = href;
   });
 
-  // P1-D: Switch non-first slide images from lazy → eager on first hover
+  // P1-D: Switch non-first slide images from lazy → eager on first hover & highlight map pin
   grid.addEventListener('mouseover', e => {
     const card = e.target.closest('.property-card');
-    if (!card || card._preloaded) return;
-    card._preloaded = true;
-    card.querySelectorAll('.property-card-slide img[loading="lazy"]').forEach(img => {
-      img.loading = 'eager';
-    });
+    if (!card) return;
+    if (!card._preloaded) {
+      card._preloaded = true;
+      card.querySelectorAll('.property-card-slide img[loading="lazy"]').forEach(img => {
+        img.loading = 'eager';
+      });
+    }
+    const id = card.dataset.id;
+    if (id && mapMarkers.length) {
+      const marker = mapMarkers.find(m => m._propId === id);
+      if (marker && marker._icon) {
+        marker._icon.classList.add('map-marker-hover');
+      }
+    }
+  });
+
+  grid.addEventListener('mouseout', e => {
+    const card = e.target.closest('.property-card');
+    if (!card) return;
+    const id = card.dataset.id;
+    if (id && mapMarkers.length) {
+      const marker = mapMarkers.find(m => m._propId === id);
+      if (marker && marker._icon) {
+        marker._icon.classList.remove('map-marker-hover');
+      }
+    }
   });
 }
 
@@ -1109,15 +1130,25 @@ function initMap(props) {
       iconAnchor: [30, 16], iconSize: [60, 32],
     });
     const marker = L.marker([lat, lng], { icon }).addTo(mapInstance);
+    marker._propId = p.id;
+    marker.on('popupopen', () => {
+      const card = document.getElementById(`card-${p.id}`);
+      if (card) {
+        card.classList.add('property-card-highlighted');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(() => card.classList.remove('property-card-highlighted'), 2000);
+      }
+    });
     marker.bindPopup(`
       <a href="${popupHref}" class="map-popup-card">
-        <img class="map-popup-img" src="${safeImg}" alt="${safeTitle}" loading="lazy">
+        <img class="map-popup-img" src="${safeImg}" alt="${safeTitle}" loading="lazy" referrerpolicy="no-referrer">
         <div class="map-popup-body">
           <div class="map-popup-price">$${safeRent.toLocaleString()}<span>/mo</span></div>
           <div class="map-popup-title">${safeTitle}</div>
           <div class="map-popup-meta">
             ${p.bedrooms != null ? `<span>${p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' bd'}</span>` : ''}
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
+            ${p.virtual_tour_url ? `<span style="background:#0284c7;color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700"><i class="fas fa-cube"></i> 3D</span>` : ''}
           </div>
           <a href="${popupHref}" class="map-popup-apply">View Property →</a>
         </div>

@@ -51,6 +51,7 @@ for candidate in [os.path.join(_SCRIPT_DIR, ".env"), os.path.join(_SCRIPT_DIR, "
         break
 
 from cjproperties_scraper import scrape_cjproperties, list_states, estimate_rent_range
+from imagekit_upload import upload_images as ik_upload_images
 
 # ---------------------------------------------------------------------------
 # Config
@@ -368,35 +369,37 @@ def main():
             _cleanup_staged(staged_id)
             continue
 
-        # Activate
+        # Activate and set extracted metadata (virtual tour, admin fee, deposit, move-in special)
+        patch_payload = {"status": "active"}
+        if rec.get("virtual_tour_url"):
+            patch_payload["virtual_tour_url"] = rec["virtual_tour_url"]
+        if rec.get("admin_fee") is not None:
+            patch_payload["admin_fee"] = rec["admin_fee"]
+        if rec.get("application_fee") is not None:
+            patch_payload["application_fee"] = rec["application_fee"]
+        if rec.get("security_deposit") is not None:
+            patch_payload["security_deposit"] = rec["security_deposit"]
+        if rec.get("move_in_special"):
+            patch_payload["move_in_special"] = rec["move_in_special"]
+
         try:
             r = requests.patch(
                 "{}/rest/v1/properties?id=eq.{}".format(SUPABASE_URL, urllib.parse.quote(str(prop_id))),
                 headers=SB_HEADERS,
-                json={"status": "active"},
+                json=patch_payload,
                 timeout=15,
             )
             if r.ok:
-                print("    Activated")
+                print("    Activated (with updated tour/fees)")
             else:
                 print("    WARNING: activation failed: {}".format(r.text[:100]))
         except Exception as e:
             print("    WARNING: activation exception: {}".format(str(e)[:80]))
 
-        # Upload the full gallery to ImageKit and insert property_photos
-        ik_folder = "/properties/{}".format(prop_id)
+        # Upload the gallery via WebP optimized multi-account pool
         upload_candidates = src_urls[:50]
-        print("    Uploading {} photo(s) to ImageKit...".format(len(upload_candidates)))
-        uploaded_urls = []
-        with ThreadPoolExecutor(max_workers=min(4, max(1, len(upload_candidates)))) as ex:
-            futures = {ex.submit(_upload_photo, u, ik_folder, i): i for i, u in enumerate(upload_candidates)}
-            for fut in as_completed(futures):
-                i, url = fut.result()
-                if url:
-                    uploaded_urls.append((i, url))
-
-        uploaded_urls.sort(key=lambda x: x[0])
-        ik_urls = [u for _, u in uploaded_urls]
+        print("    Uploading {} photo(s) with WebP compression...".format(len(upload_candidates)))
+        ik_urls, failed_count = ik_upload_images(upload_candidates, listing_id=str(prop_id), verify=True, verbose=True)
 
         if ik_urls:
             photo_rows = []

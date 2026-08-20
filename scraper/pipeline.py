@@ -139,6 +139,12 @@ except Exception as _ee:
     print("WARNING: enrichment module unavailable: {}".format(_ee))
 
 try:
+    from imagekit_upload import compress_image_to_webp
+    _COMPRESS_OK = True
+except Exception:
+    _COMPRESS_OK = False
+
+try:
     from scraper import (
         _map_realtor_property,
         _enrich_realtor_batch,
@@ -331,9 +337,8 @@ class PipelineOrchestrator:
       - Deposit = published rent (unless overridden by pricing_fn)
     """
 
-    def __init__(self, verbose: bool = True, strict_watermarks: bool = False):
+    def __init__(self, verbose: bool = True):
         self.verbose = verbose
-        self.strict_watermarks = strict_watermarks
         self._pipe_session = _make_pipeline_session()
         self._pub_session = _make_public_session()
         if IK_PRIVATE_KEY:
@@ -1021,38 +1026,14 @@ class PipelineOrchestrator:
                 dropped.append((addr, issues))
             else:
                 # Filter branded individual photos (keep listing, drop bad photos)
-                branded_removed = 0
                 if _ENRICH_OK:
-                    src_before = self._parse_image_urls(rec)
                     rec = filter_record_photos(rec)
-                    # Second pass: domain-level watermark deny-list
-                    if _ENRICH_OK:
-                        try:
-                            from enrichment import filter_photos_by_watermark_domain
-                            src_imgs2 = self._parse_image_urls(rec)
-                            if src_imgs2:
-                                filtered_imgs = filter_photos_by_watermark_domain(src_imgs2)
-                                removed_domain = len(src_imgs2) - len(filtered_imgs)
-                                if removed_domain:
-                                    addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
-                                    self._log("   [domain-filter] {} — removed {} domain-branded photo(s)".format(
-                                        addr, removed_domain))
-                                rec["original_image_urls"] = json.dumps(filtered_imgs)
-                        except Exception:
-                            pass
-                    src_after = self._parse_image_urls(rec)
-                    branded_removed = len(src_before) - len(src_after)
-                    if self.strict_watermarks and branded_removed > 0:
+                    remaining = self._parse_image_urls(rec)
+                    if len(remaining) < MIN_PHOTOS:
                         addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
-                        dropped.append((addr, ["strict-watermark: {} branded photo(s) detected".format(
-                            branded_removed)]))
+                        dropped.append((addr, ["too few clean photos after brand filter ({}/{})".format(
+                            len(remaining), MIN_PHOTOS)]))
                         continue
-                remaining = self._parse_image_urls(rec)
-                if len(remaining) < MIN_PHOTOS:
-                    addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
-                    dropped.append((addr, ["too few clean photos after brand filter ({}/{})".format(
-                        len(remaining), MIN_PHOTOS)]))
-                    continue
                 kept.append(rec)
         return kept, dropped
 
@@ -1257,7 +1238,11 @@ class PipelineOrchestrator:
                     # FIX H2: Reject non-image responses (HTML error pages, PDFs, etc.)
                     if ct and not ct.lower().startswith("image/"):
                         return idx, None, None, "non-image content-type: {}".format(ct[:40])
-                    ext = "webp" if ("webp" in ct or ".webp" in url) else "jpg"
+                    
+                    if _COMPRESS_OK:
+                        data, ext = compress_image_to_webp(data)
+                    else:
+                        ext = "webp" if ("webp" in ct or ".webp" in url) else "jpg"
                 except Exception as e:
                     if attempt < IK_MAX_RETRIES:
                         time.sleep(RETRY_BACKOFF * attempt)
@@ -1306,6 +1291,7 @@ class PipelineOrchestrator:
             "Prefer": "return=minimal",
         }
 
+        saved_ik_photos = []
         for idx in sorted(results.keys()):
             ik_url, file_id = results[idx]
             try:
@@ -1324,6 +1310,7 @@ class PipelineOrchestrator:
                 )
                 if ri.status_code in (200, 201):
                     uploaded += 1
+                    saved_ik_photos.append({"url": ik_url, "fileId": file_id})
                     if self.verbose and idx == 0:
                         self._log("      OK hero -> {}".format(ik_url))
                 else:
@@ -1333,6 +1320,23 @@ class PipelineOrchestrator:
             except Exception as e:
                 failed += 1
                 self._log("      WARNING: db insert[{}] error: {}".format(idx, str(e)[:60]))
+
+        # Sync ImageKit URLs to pipeline table so pipeline records stay 100% unified ImageKit
+        if self._pipe_session and saved_ik_photos:
+            try:
+                self._pipe_session.patch(
+                    "{}/rest/v1/pipeline_properties?choice_property_id=eq.{}".format(SUPABASE_URL, prop_id),
+                    headers=sb_headers,
+                    json={
+                        "photo_import_status": "ok",
+                        "original_image_urls": json.dumps(saved_ik_photos),
+                        "last_photo_import_at": datetime.now(timezone.utc).isoformat(),
+                        "last_photo_import_error": None,
+                    },
+                    timeout=15,
+                )
+            except Exception as e:
+                self._log("      WARNING: pipeline sync error: {}".format(str(e)[:60]))
 
         return uploaded, failed
 

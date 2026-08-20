@@ -55,7 +55,7 @@ function imageEntryFileId(entry: ImageEntry): string | null {
 }
 
 const MAX_PHOTOS     = 40;
-const BATCH_SIZE     = 12;  // process this many photos concurrently (increased from 5)
+const BATCH_SIZE     = 5;   // process this many photos concurrently
 const FETCH_TIMEOUT  = 12_000; // ms per image fetch
 
 Deno.serve(async (req) => {
@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
 
       const ikData = await ikRes.json();
       const ikUrl   = ikData.url as string;
-      const ikFileId = (ikData.fileId ?? '') as string;
+      const fileId  = (ikData.fileId ?? '') as string;
 
       // Reject thumbnail-sized images (< 300px in either dimension).
       // Realtor.com mixes full-size and 120×80 thumbnails in the same URL list.
@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
       if ((imgW !== null && imgW < 300) || (imgH !== null && imgH < 300)) {
         console.log(`[import-pipeline-photos] Skipping thumbnail ${imgW}×${imgH} at photo ${index + 1}`);
         // Clean up the tiny file from ImageKit immediately
-        await fetch(`https://api.imagekit.io/v1/files/${ikFileId}`, {
+        await fetch(`https://api.imagekit.io/v1/files/${fileId}`, {
           method: 'DELETE',
           headers: { Authorization: `Basic ${credentials}` },
         }).catch(() => {});
@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
       const { error: rpcErr } = await adminClient.rpc('add_property_photo', {
         p_property_id:   property_id,
         p_url:           ikUrl,
-        p_file_id:       ikFileId,
+        p_file_id:       fileId,
         p_alt_text:      null,
         p_caption:       null,
         p_width:         ikData.width  ?? null,
@@ -322,14 +322,34 @@ Deno.serve(async (req) => {
       .eq('status', 'draft'); // don't clobber a status an admin already changed
 
     if (resolvedPipelineId) {
+      // Sync the confirmed ImageKit photo URLs back to the pipeline record
+      const { data: finalPhotos } = await adminClient
+        .from('property_photos')
+        .select('url,file_id,width,height')
+        .eq('property_id', property_id)
+        .order('display_order', { ascending: true });
+
+      const updatePayload: Record<string, unknown> = {
+        photo_import_status: 'ok',
+        last_photo_import_error: null,
+        last_photo_import_at: new Date().toISOString(),
+      };
+
+      if (Array.isArray(finalPhotos) && finalPhotos.length > 0) {
+        updatePayload.original_image_urls = JSON.stringify(
+          finalPhotos.map(p => ({
+            url: p.url,
+            fileId: p.file_id,
+            width: p.width,
+            height: p.height
+          }))
+        );
+      }
+
       await adminClient
         .schema('pipeline')
         .from('pipeline_properties')
-        .update({
-          photo_import_status: 'ok',
-          last_photo_import_error: null,
-          last_photo_import_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', resolvedPipelineId);
     }
   } else if (resolvedPipelineId) {

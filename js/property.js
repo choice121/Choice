@@ -460,7 +460,7 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  // Pets banner removed per requirements
+  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
@@ -468,9 +468,8 @@ function renderProperty(p) {
     const chipRow = document.createElement('div');
     chipRow.id = 'detailHeaderChips';
     chipRow.className = 'prop-req-list';
-    chipRow.style.marginTop = '10px';
     chipRow.innerHTML = headerChips.map(c => `
-      <div class="prop-req-item"><i class="fas ${c.icon}"></i>${esc(c.label)}</div>`).join('');
+      <div class="prop-req-item"><i class="fas ${c.icon}"></i><span>${esc(c.label)}</span></div>`).join('');
     document.getElementById('detailAddress').insertAdjacentElement('afterend', chipRow);
   }
 
@@ -499,7 +498,7 @@ function renderProperty(p) {
   }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  // Pets meta removed per requirements
+  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
@@ -516,30 +515,12 @@ function renderProperty(p) {
       </div>
     </div>`).join('');
 
-function cleanPropertyDescription(text) {
-  if (!text) return '';
-  return text
-    .replace(/Application Required Before Viewing\.?\s*/gi, '')
-    .replace(/This property operates on an application-first basis\.?\s*/gi, '')
-    .replace(/Viewings are arranged after an application has been submitted and approved\s*[—–-]?\s*not before\.?\s*/gi, '')
-    .replace(/Applications are reviewed and a decision is made before any property access is scheduled\.?\s*/gi, '')
-    .replace(/Applications are required before scheduling a property viewing\.?\s*/gi, '')
-    .replace(/Property viewings are arranged only after an application has been submitted and approved[^\n\r]*/gi, '')
-    .replace(/Applications are reviewed and a decision is made before[^\n\r]*/gi, '')
-    .replace(/This property operates on an application-first[^\n\r]*/gi, '')
-    .replace(/Viewings are arranged after an application[^\n\r]*/gi, '')
-    .replace(/Application Required Before Viewing:?[^\n\r]*/gi, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
   const descEl = document.getElementById('detailDesc');
-  const cleanedDesc = cleanPropertyDescription(p.description);
-  let descText = cleanedDesc || 'No additional description provided.';
+  const descText = p.description || 'No additional description provided.';
   const descParas = descText.split(/\n+/).map(s => s.trim()).filter(Boolean);
   const bodyCopy = descParas.length
     ? descParas.map(s => `<p>${s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('')
-    : `<p>${esc('This property is presented with a clear and straightforward leasing process.')}</p>`;
+    : `<p>${esc('This property is presented with a clear, application-first experience and a straightforward leasing process.')}</p>`;
   descEl.innerHTML = bodyCopy;
   if (descText.length > 300) {
     descEl.classList.add('truncated');
@@ -552,14 +533,32 @@ function cleanPropertyDescription(text) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
-  // Virtual tour removed completely per requirements
+  if (p.virtual_tour_url) {
+    const vtBtn = document.createElement('button');
+    vtBtn.type = 'button';
+    vtBtn.className = 'btn btn-outline';
+    vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem;cursor:pointer';
+    vtBtn.innerHTML = '<i class="fas fa-cube" style="color:#0284c7"></i> Explore 3D Virtual Tour';
+    vtBtn.addEventListener('click', () => openVirtualTourModal(p));
+    descEl.closest('.detail-section').appendChild(vtBtn);
+
+    // Also wire up hero mosaic tour button if present
+    const mosaicTourBtn = document.getElementById('mosaicTourBtn');
+    if (mosaicTourBtn) {
+      mosaicTourBtn.style.display = 'inline-flex';
+      mosaicTourBtn.onclick = (e) => {
+        e.stopPropagation();
+        openVirtualTourModal(p);
+      };
+    }
+  }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
@@ -572,7 +571,7 @@ function cleanPropertyDescription(text) {
     hasAmenities = true;
     document.getElementById('appliancesSection').style.display = '';
     document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
@@ -590,13 +589,14 @@ function cleanPropertyDescription(text) {
     }
     flooringDiv.style.display = '';
     document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()))
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
       .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
-  if (p.utilities_included?.length) utilRows.push(...p.utilities_included.map(u =>
-    `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
+  if (p.utilities_included?.length) utilRows.push(...p.utilities_included
+    .filter(u => u && !/smok/i.test(u))
+    .map(u => `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
   if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
   if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${esc(p.heating_type)}</div>`);
@@ -612,14 +612,20 @@ function cleanPropertyDescription(text) {
   }
 
   const leaseItems = [];
-  if (p.lease_terms?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${p.lease_terms.map(esc).join(', ')}</div>`);
+  if (p.lease_terms?.length) {
+    const terms = p.lease_terms.filter(t => t && !/smok/i.test(t));
+    if (terms.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${terms.map(esc).join(', ')}</div>`);
+  }
   if (p.minimum_lease_months) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-check"></i>Min. Lease: ${p.minimum_lease_months} month${p.minimum_lease_months !== 1 ? 's' : ''}</div>`);
   if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: $${Number(p.security_deposit).toLocaleString()}</div>`);
   if (!leaseItems.length && p.application_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${Number(p.application_fee).toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  // Pet & smoking items removed per requirements
+  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
+  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
+  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
+  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
   if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
@@ -696,13 +702,26 @@ function cleanPropertyDescription(text) {
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
 
   // Sidebar
-  document.getElementById('sidebarPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
+  const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
+  const priceHtml = `${rentStr}<span>/month</span>`;
+  const sbPrice = document.getElementById('sidebarPrice');
+  if (sbPrice) sbPrice.innerHTML = priceHtml;
+  const sbStickyPrice = document.getElementById('sidebarStickyPrice');
+  if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>/mo</span>`;
+
   const _availEl = document.getElementById('sidebarAvail');
+  const _availStickyEl = document.getElementById('sidebarStickyAvail');
+  const availText = availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date);
+  const availColor = availNow ? '#10b981' : '#d4a017';
   if (_availEl) {
-    _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availNow?'#10b981':'#d4a017'}"></i> ${availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date)}`;
+    _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
     _availEl.style.display = '';
   }
-  document.getElementById('sidebarRent').textContent    = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}`;
+  if (_availStickyEl) {
+    _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
+    _availStickyEl.style.display = '';
+  }
+  document.getElementById('sidebarRent').textContent    = rentStr;
   document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   // Flat $50 application fee is the platform standard. If a property has no
   // explicit fee, default to $50 rather than showing "Free" (which contradicts
@@ -756,34 +775,44 @@ function cleanPropertyDescription(text) {
 
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
-      const btn = document.getElementById(id);
-      if (!btn) return;
-      btn.href = applyURL;
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.location.href = applyURL;
-      });
-    };
-    _wireApply('applyBtn');
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.href = applyURL;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = applyURL;
+    });
+  };
+  _wireApply('applyBtn');
+  _wireApply('sidebarApplyBtn');
+  _wireApply('csCardApply');
 
-      // Wire "Track your application" link to internal application portal
-      const _trackLink = document.getElementById('trackAppLink');
-      if (_trackLink) {
-        const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
-          ? CONFIG.APPLY_FORM_URL
-          : '/apply';
-        _trackLink.href = _applyBase + '/?path=dashboard';
-      }
+  // Wire "Track your application" link to internal application portal
+  const _trackLink = document.getElementById('trackAppLink');
+  if (_trackLink) {
+    const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
+      ? CONFIG.APPLY_FORM_URL
+      : '/apply';
+    _trackLink.href = _applyBase + '/?path=dashboard';
+  }
 
   // Guard apply button for non-active listings
   if (p.status !== 'active') {
-    const applyBtn = document.getElementById('applyBtn');
-    applyBtn.removeAttribute('href');
-    applyBtn.style.pointerEvents = 'none';
-    applyBtn.style.opacity       = '0.5';
-    applyBtn.style.cursor        = 'not-allowed';
-    applyBtn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
-    document.getElementById('sidebarAvail').innerHTML = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
+    ['applyBtn', 'sidebarApplyBtn', 'csCardApply'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.removeAttribute('href');
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity       = '0.5';
+        btn.style.cursor        = 'not-allowed';
+        btn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
+      }
+    });
+    const unavailHtml = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
+    const _availEl = document.getElementById('sidebarAvail');
+    if (_availEl) _availEl.innerHTML = unavailHtml;
+    const _availStickyEl = document.getElementById('sidebarStickyAvail');
+    if (_availStickyEl) _availStickyEl.innerHTML = unavailHtml;
   }
 
   // Mobile sticky Apply bar — only for active listings
@@ -833,23 +862,98 @@ function loadLeaflet() {
   });
 }
 
+function openVirtualTourModal(p) {
+  const modal = document.getElementById('virtualTourModal');
+  const body = document.getElementById('vtModalBody');
+  const addrEl = document.getElementById('vtModalAddress');
+  const dialog = document.getElementById('vtModalDialog');
+  const fullscreenBtn = document.getElementById('vtFullscreenBtn');
+  const closeBtn = document.getElementById('vtCloseBtn');
+  const backdrop = document.getElementById('vtModalBackdrop');
+  if (!modal || !body || !p.virtual_tour_url) return;
+
+  const url = String(p.virtual_tour_url).trim();
+  if (addrEl) addrEl.textContent = `${p.address || ''}${p.city ? ', ' + p.city : ''}`;
+
+  let playerHtml = '';
+  // Check provider
+  if (/youtube\.com|youtu\.be/i.test(url)) {
+    const ytMatch = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*)/);
+    const ytId = (ytMatch && ytMatch[1]?.length === 11) ? ytMatch[1] : '';
+    playerHtml = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/vimeo\.com/i.test(url)) {
+    const vmMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/);
+    const vmId = vmMatch ? vmMatch[3] : '';
+    playerHtml = `<iframe src="https://player.vimeo.com/video/${vmId}?autoplay=1&title=0&byline=0&portrait=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+    playerHtml = `<video src="${esc(url)}" controls autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000"></video>`;
+  } else if (/matterport\.com/i.test(url)) {
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/insidemaps\.com/i.test(url)) {
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/zillow\.com\/(view-3d-home|view-imx)/i.test(url)) {
+    // Clean embed for Zillow 3D / IMX walkthroughs
+    let embedUrl = url;
+    if (!embedUrl.includes('hidePhotos=')) {
+      embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'hidePhotos=true&initialViewType=pano';
+    }
+    playerHtml = `<iframe src="${esc(embedUrl)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else {
+    // Generic secure iframe fallback
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  }
+
+  body.innerHTML = playerHtml;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  function closeModal() {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    body.innerHTML = '';
+    document.body.style.overflow = '';
+    if (dialog) dialog.classList.remove('fullscreen');
+  }
+
+  if (closeBtn) closeBtn.onclick = closeModal;
+  if (backdrop) backdrop.onclick = closeModal;
+  if (fullscreenBtn) {
+    fullscreenBtn.onclick = () => {
+      if (dialog) dialog.classList.toggle('fullscreen');
+    };
+  }
+
+  const keyHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', keyHandler);
+    }
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
 function _initLeafletMap(p) {
   const container = document.getElementById('mapContainer');
   const lat = parseFloat(p.lat);
   const lng = parseFloat(p.lng);
-  container.innerHTML = '<div id="propertyMiniMap"></div>';
-  const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
-  const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
-  L.tileLayer(`https://maps.geoapify.com/v1/tile/positron/{z}/{x}/{y}.png?apiKey=${_geoKey}`, {
-    attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> | &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
-    maxZoom: 20
+  if (isNaN(lat) || isNaN(lng)) return;
+
+  container.innerHTML = '<div id="propertyMiniMap" style="width:100%;height:100%"></div>';
+  const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false, touchZoom: true }).setView([lat, lng], 15);
+  
+  // Clean, high-performance Carto Light tiles (no API key required)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 19
   }).addTo(map);
+
   const icon = L.divIcon({
     className: '',
     html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
     iconAnchor: [45, 16], iconSize: [90, 32]
   });
-  L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${p.title}</b><br>${p.address}`);
+  L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${esc(p.title || p.address)}</b><br>${esc(p.address)}`);
 
   // Wire up "Open in Maps" button with OS-aware deep link
   const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`);
@@ -861,7 +965,8 @@ function _initLeafletMap(p) {
   const openBtn = document.getElementById('mapOpenBtn');
   if (openBtn) { openBtn.href = mapsUrl; openBtn.style.display = 'inline-flex'; }
 
-  // Neighbourhood reverse geocode → populate #mapNeighborhood label
+  // Reverse geocode neighbourhood
+  const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
   if (_geoKey) {
     fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${_geoKey}&format=json`)
       .then(r => r.json())
@@ -950,8 +1055,13 @@ function renderGallery(photos) {
   document.getElementById('gallery').classList.remove('skeleton-loading');
 
   // Hero image — LCP candidate, load at high priority with srcset for retina
-  mainImg.src    = CONFIG.img(photos[0], 'gallery');
-  mainImg.srcset = `${CONFIG.img(photos[0], 'card')} 600w, ${CONFIG.img(photos[0], 'gallery')} 1200w, ${CONFIG.img(photos[0], 'gallery_2x')} 2400w`;
+  const heroUrl = photos[0];
+  mainImg.src    = CONFIG.img(heroUrl, 'gallery');
+  if (CONFIG.IMAGEKIT_URL && heroUrl && heroUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
+    mainImg.srcset = `${CONFIG.img(heroUrl, 'card')} 600w, ${CONFIG.img(heroUrl, 'gallery')} 1200w, ${CONFIG.img(heroUrl, 'gallery_2x')} 2400w`;
+  } else {
+    mainImg.srcset = '';
+  }
   mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
   mainImg.alt    = 'Property photo 1';
   mainImg.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
@@ -987,6 +1097,7 @@ function renderGallery(photos) {
                alt="Property photo ${idx+1}"
                loading="${i === 0 ? 'eager' : 'lazy'}"
                ${i === 0 ? 'fetchpriority="high"' : ''}
+               referrerpolicy="no-referrer"
                decoding="async">
           ${isLast ? `
             <div class="mosaic-cell-overlay">
@@ -1029,8 +1140,13 @@ function renderGallery(photos) {
     document.getElementById('gallery').style.gridTemplateColumns = '1fr';
   }
 
-  expandBtn.innerHTML = `<i class="fas fa-th-large"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
-  expandBtn.addEventListener('click', () => openLightbox(0));
+  if (expandBtn) {
+    expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
+    expandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openLightbox(0, true);
+    });
+  }
 
   if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
   prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
@@ -1051,12 +1167,21 @@ function renderGallery(photos) {
     }
   }, { passive: true });
 
-  // Keyboard — lightbox arrows + escape
+  // Keyboard — lightbox arrows + escape + space + fullscreen
   document.addEventListener('keydown', e => {
-    if (document.getElementById('lightbox').classList.contains('open')) {
-      if (e.key === 'ArrowLeft')  lightboxNav(-1);
-      if (e.key === 'ArrowRight') lightboxNav(1);
-      if (e.key === 'Escape')     closeLightbox();
+    const lb = document.getElementById('lightbox');
+    if (lb && lb.classList.contains('open')) {
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); lightboxNav(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); lightboxNav(1); }
+      else if (e.key === ' ') { e.preventDefault(); lightboxNav(1); }
+      else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          lb.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      }
+      else if (e.key === 'Escape') closeLightbox();
     }
   });
 
@@ -1080,6 +1205,7 @@ function buildGalleryStrip(photos) {
            srcset="${CONFIG.img(url, 'strip')} 1x, ${CONFIG.img(url, 'thumb')} 2x"
            alt="Photo ${i + 1}"
            loading="${i < 5 ? 'eager' : 'lazy'}"
+           referrerpolicy="no-referrer"
            decoding="async">
     </button>`).join('');
 
@@ -1107,8 +1233,13 @@ function showPhoto(idx) {
   mainImg.style.opacity = '0';
   mainImg.style.transition = 'opacity 150ms';
   setTimeout(() => {
-    mainImg.src    = CONFIG.img(allPhotos[idx], 'gallery');
-    mainImg.srcset = `${CONFIG.img(allPhotos[idx], 'card')} 600w, ${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w`;
+    const curUrl = allPhotos[idx];
+    mainImg.src = CONFIG.img(curUrl, 'gallery');
+    if (CONFIG.IMAGEKIT_URL && curUrl && curUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
+      mainImg.srcset = `${CONFIG.img(curUrl, 'card')} 600w, ${CONFIG.img(curUrl, 'gallery')} 1200w, ${CONFIG.img(curUrl, 'gallery_2x')} 2400w`;
+    } else {
+      mainImg.srcset = '';
+    }
     mainImg.alt    = `Property photo ${idx + 1}`;
     mainImg.style.opacity = '1';
   }, 150);
@@ -1139,40 +1270,111 @@ function _lbFocusTrap(e) {
   }
 }
 
-function openLightbox(idx) {
+function openLightbox(idx, openInGridView = false) {
   _lbOpener = document.activeElement;
   const lb = document.getElementById('lightbox');
+  if (!lb) return;
   lb.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  // Set property title and address meta in header
+  if (currentProperty) {
+    const titleEl = document.getElementById('lightboxPropTitle');
+    const addrEl  = document.getElementById('lightboxPropAddr');
+    if (titleEl) titleEl.textContent = currentProperty.title || 'Property Photos';
+    if (addrEl)  addrEl.textContent  = `${currentProperty.address || ''}, ${currentProperty.city || ''}, ${currentProperty.state || ''}`;
+  }
+
   if (!lightboxThumbsBuilt) {
     buildLightboxThumbs();
+    buildLightboxGrid();
     lightboxThumbsBuilt = true;
   }
-  lightboxShow(idx);
+
+  if (openInGridView) {
+    setLightboxViewMode('grid');
+  } else {
+    setLightboxViewMode('stage');
+    lightboxShow(idx);
+  }
+
   document.addEventListener('keydown', _lbFocusTrap);
-  // Move keyboard focus into the lightbox for accessibility
-  requestAnimationFrame(() => document.getElementById('lightboxClose').focus());
+  requestAnimationFrame(() => document.getElementById('lightboxClose')?.focus());
 }
 
 function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.classList.remove('open');
   document.body.style.overflow = '';
   document.removeEventListener('keydown', _lbFocusTrap);
-  // Return focus to the element that triggered the lightbox
   if (_lbOpener && typeof _lbOpener.focus === 'function') _lbOpener.focus();
   _lbOpener = null;
+}
+
+let _lbViewMode = 'stage'; // 'stage' | 'grid'
+
+function setLightboxViewMode(mode) {
+  _lbViewMode = mode;
+  const stageEl   = document.getElementById('lightboxStage');
+  const thumbsEl  = document.getElementById('lightboxThumbs');
+  const gridEl    = document.getElementById('lightboxGridView');
+  const toggleBtn = document.getElementById('lbToggleGrid');
+  const toggleTxt = document.getElementById('lbToggleGridText');
+
+  if (mode === 'grid') {
+    if (stageEl)  stageEl.style.display  = 'none';
+    if (thumbsEl) thumbsEl.style.display = 'none';
+    if (gridEl)   gridEl.style.display   = 'block';
+    if (toggleTxt) toggleTxt.textContent = 'Single Photo';
+    if (toggleBtn) {
+      toggleBtn.classList.add('active');
+      toggleBtn.innerHTML = '<i class="fas fa-image"></i> <span id="lbToggleGridText">Single Photo</span>';
+    }
+  } else {
+    if (stageEl)  stageEl.style.display  = 'flex';
+    if (thumbsEl) thumbsEl.style.display = 'flex';
+    if (gridEl)   gridEl.style.display   = 'none';
+    if (toggleTxt) toggleTxt.textContent = 'All Photos';
+    if (toggleBtn) {
+      toggleBtn.classList.remove('active');
+      toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="lbToggleGridText">All Photos</span>';
+    }
+  }
 }
 
 function buildLightboxThumbs() {
   const thumbsEl = document.getElementById('lightboxThumbs');
   if (!thumbsEl || !allPhotos.length) return;
   thumbsEl.innerHTML = allPhotos.map((url, i) =>
-    `<button class="lb-thumb" data-idx="${i}" aria-label="View photo ${i + 1}">
-      <img src="${CONFIG.img(url, 'thumb')}" alt="" loading="lazy" decoding="async">
+    `<button type="button" class="lightbox-thumb" data-idx="${i}" aria-label="View photo ${i + 1}">
+      <img src="${CONFIG.img(url, 'thumb')}" alt="" loading="lazy" referrerpolicy="no-referrer" decoding="async">
     </button>`
   ).join('');
-  thumbsEl.querySelectorAll('.lb-thumb').forEach(btn => {
-    btn.addEventListener('click', () => lightboxShow(parseInt(btn.dataset.idx)));
+  thumbsEl.querySelectorAll('.lightbox-thumb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setLightboxViewMode('stage');
+      lightboxShow(parseInt(btn.dataset.idx));
+    });
+  });
+}
+
+function buildLightboxGrid() {
+  const container = document.getElementById('lightboxGridContainer');
+  if (!container || !allPhotos.length) return;
+  container.innerHTML = allPhotos.map((url, i) => `
+    <div class="lightbox-grid-item" data-idx="${i}">
+      <img src="${CONFIG.img(url, 'gallery')}" alt="Property photo ${i + 1}" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+      <div class="lightbox-grid-badge">${i + 1} of ${allPhotos.length}</div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.lightbox-grid-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const idx = parseInt(item.dataset.idx, 10);
+      setLightboxViewMode('stage');
+      lightboxShow(idx);
+    });
   });
 }
 
@@ -1185,8 +1387,10 @@ function lightboxShow(idx) {
   const spinner = document.getElementById('lbSpinner');
   const lqipBg  = document.getElementById('lbLqipBg');
 
+  if (!img) return;
+
   // Directional slide-out animation on previous image
-  if (_lbNavDir !== 0) {
+  if (_lbNavDir !== 0 && wrap) {
     const outClass = _lbNavDir > 0 ? 'slide-out-left' : 'slide-out-right';
     wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
     wrap.classList.add(outClass);
@@ -1209,25 +1413,25 @@ function lightboxShow(idx) {
   setTimeout(() => {
     // Hide image and show spinner while new src loads
     img.classList.add('loading');
-    spinner.classList.add('visible');
+    if (spinner) spinner.classList.add('visible');
 
-    wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+    if (wrap) wrap.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
 
     // Full-quality lightbox image with srcset for retina screens
     const newSrc = CONFIG.img(allPhotos[idx], 'lightbox');
     img.src    = newSrc;
-    img.srcset = `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w`;
+    const isIk = CONFIG.IMAGEKIT_URL && allPhotos[idx] && allPhotos[idx].startsWith(CONFIG.IMAGEKIT_URL);
+    img.srcset = isIk ? `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w` : '';
     img.sizes  = '100vw';
     img.alt    = `Property photo ${idx + 1}`;
 
     const reveal = () => {
       img.classList.remove('loading');
-      spinner.classList.remove('visible');
+      if (spinner) spinner.classList.remove('visible');
       // Fade out the LQIP once the real image has loaded
       if (lqipBg) { lqipBg.classList.add('faded'); }
-      if (slideInClass) {
+      if (slideInClass && wrap) {
         wrap.classList.add(slideInClass);
-        // Clean up animation class after it completes
         const cleanup = () => { wrap.classList.remove(slideInClass); wrap.removeEventListener('animationend', cleanup); };
         wrap.addEventListener('animationend', cleanup, { once: true });
       }
@@ -1239,7 +1443,6 @@ function lightboxShow(idx) {
       reveal();
     } else {
       img.addEventListener('load',  reveal, { once: true });
-      // FIX: on error, show placeholder instead of leaving a broken image in the lightbox.
       img.addEventListener('error', () => {
         img.src    = '/assets/placeholder-property.jpg';
         img.srcset = '';
@@ -1248,13 +1451,14 @@ function lightboxShow(idx) {
     }
   }, _lbNavDir !== 0 ? 120 : 0);
 
-  document.getElementById('lightboxCounter').textContent = `${idx + 1} / ${allPhotos.length}`;
+  const counterEl = document.getElementById('lightboxCounter');
+  if (counterEl) counterEl.textContent = `${idx + 1} / ${allPhotos.length}`;
 
   // Sync lightbox filmstrip
-  document.querySelectorAll('.lb-thumb').forEach((t, i) => {
+  document.querySelectorAll('.lightbox-thumb').forEach((t, i) => {
     t.classList.toggle('active', i === idx);
   });
-  const activeThumb = document.querySelector('.lb-thumb.active');
+  const activeThumb = document.querySelector('.lightbox-thumb.active');
   if (activeThumb) {
     activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
@@ -1264,6 +1468,9 @@ function lightboxShow(idx) {
 }
 
 function lightboxNav(dir) {
+  if (_lbViewMode === 'grid') {
+    setLightboxViewMode('stage');
+  }
   _lbNavDir = dir;
   lightboxShow((photoIndex + dir + allPhotos.length) % allPhotos.length);
   _lbNavDir = 0;
@@ -1273,11 +1480,14 @@ function lightboxNav(dir) {
 (function() {
   let lbTouchX = 0, lbTouchT = 0;
   const lb = document.getElementById('lightbox');
+  if (!lb) return;
   lb.addEventListener('touchstart', e => {
+    if (_lbViewMode === 'grid') return;
     lbTouchX = e.touches[0].clientX;
     lbTouchT = Date.now();
   }, { passive: true });
   lb.addEventListener('touchend', e => {
+    if (_lbViewMode === 'grid') return;
     const diff = lbTouchX - e.changedTouches[0].clientX;
     const dt   = Date.now() - lbTouchT;
     const vel  = Math.abs(diff) / dt; // px/ms
@@ -1285,10 +1495,13 @@ function lightboxNav(dir) {
   }, { passive: true });
 })();
 
-document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-document.getElementById('lightboxPrev').addEventListener('click', () => lightboxNav(-1));
-document.getElementById('lightboxNext').addEventListener('click', () => lightboxNav(1));
-document.getElementById('lightbox').addEventListener('click', e => {
+document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev')?.addEventListener('click', () => lightboxNav(-1));
+document.getElementById('lightboxNext')?.addEventListener('click', () => lightboxNav(1));
+document.getElementById('lbToggleGrid')?.addEventListener('click', () => {
+  setLightboxViewMode(_lbViewMode === 'grid' ? 'stage' : 'grid');
+});
+document.getElementById('lightbox')?.addEventListener('click', e => {
   if (e.target === document.getElementById('lightbox') ||
       e.target === document.getElementById('lightboxImgWrap')) closeLightbox();
 });
@@ -2624,13 +2837,66 @@ function injectEnrichmentStyles() {
   s.id = 'cp-enrichment-styles';
   s.textContent = `
     /* Renter requirement chips */
-    .req-chip { display:flex; align-items:center; gap:10px; padding:10px 14px;
-      border-radius:10px; flex:1; min-width:160px; border:1px solid; }
-    .req-chip-label { font-size:10px; font-weight:700; letter-spacing:.07em;
-      text-transform:uppercase; color:#9ca3af; line-height:1; }
-    .req-chip-value { font-size:13px; font-weight:600; color:#1f2937; margin-top:3px; line-height:1.3; }
-    html[data-theme="dark"] .req-chip { filter:brightness(.65) saturate(.8); }
-    html[data-theme="dark"] .req-chip-value { color:#f3f4f6; filter:brightness(2); }
+    .req-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      flex: 1;
+      min-width: 170px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      box-sizing: border-box;
+    }
+    .req-chip-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: #64748b;
+      line-height: 1.2;
+    }
+    .req-chip-value {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 3px;
+      line-height: 1.3;
+    }
+    .req-chip i { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    
+    .req-chip.req-emerald { border-color: #a7f3d0; background: #ecfdf5; }
+    .req-chip.req-emerald i { color: #059669; }
+    .req-chip.req-emerald .req-chip-label { color: #065f46; }
+    .req-chip.req-emerald .req-chip-value { color: #064e3b; }
+
+    .req-chip.req-rose { border-color: #fecaca; background: #fef2f2; }
+    .req-chip.req-rose i { color: #e11d48; }
+    .req-chip.req-rose .req-chip-label { color: #9f1239; }
+    .req-chip.req-rose .req-chip-value { color: #881337; }
+
+    .req-chip.req-blue { border-color: #bfdbfe; background: #eff6ff; }
+    .req-chip.req-blue i { color: #0284c7; }
+    .req-chip.req-blue .req-chip-label { color: #075985; }
+    .req-chip.req-blue .req-chip-value { color: #0c4a6e; }
+
+    .req-chip.req-amber { border-color: #fde68a; background: #fffbeb; }
+    .req-chip.req-amber i { color: #d97706; }
+    .req-chip.req-amber .req-chip-label { color: #92400e; }
+    .req-chip.req-amber .req-chip-value { color: #78350f; }
+
+    /* Dark mode chips: crystal clear contrast, zero WebKit brightness filter glitches */
+    html[data-theme="dark"] .req-chip {
+      background: #162032 !important;
+      border-color: rgba(255, 255, 255, 0.09) !important;
+    }
+    html[data-theme="dark"] .req-chip-label { color: #94a3b8 !important; }
+    html[data-theme="dark"] .req-chip-value { color: #f8fafc !important; }
+    html[data-theme="dark"] .req-chip.req-emerald i { color: #34d399 !important; }
+    html[data-theme="dark"] .req-chip.req-rose i { color: #fb7185 !important; }
+    html[data-theme="dark"] .req-chip.req-blue i { color: #38bdf8 !important; }
+    html[data-theme="dark"] .req-chip.req-amber i { color: #fbbf24 !important; }
 
     /* Property detail cards */
     .pf-card { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
@@ -2701,16 +2967,32 @@ function renderRenterRequirements(p) {
 
   const reqs = [];
 
-  // Pets and smoking banners removed per requirements
+  if (p.pets_allowed != null) {
+    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
+    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
+    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
+    reqs.push({
+      icon: 'fa-paw',
+      label: 'Pets',
+      value: petVal,
+      type: p.pets_allowed ? 'req-emerald' : 'req-rose'
+    });
+  }
   if (p.minimum_credit_score) {
-    reqs.push({ icon: 'fa-chart-line', label: 'Min. credit score',
+    reqs.push({
+      icon: 'fa-chart-line',
+      label: 'Min. credit score',
       value: Number(p.minimum_credit_score).toLocaleString() + '+',
-      color: '#2563eb', bg: '#eff6ff', bdr: '#bfdbfe' });
+      type: 'req-blue'
+    });
   }
   if (p.minimum_income_multiplier) {
-    reqs.push({ icon: 'fa-coins', label: 'Min. income',
+    reqs.push({
+      icon: 'fa-coins',
+      label: 'Min. income',
       value: p.minimum_income_multiplier + '× monthly rent',
-      color: '#c9a55c', bg: '#fffbeb', bdr: '#fde68a' });
+      type: 'req-amber'
+    });
   }
 
   if (!reqs.length) return;
@@ -2719,8 +3001,8 @@ function renderRenterRequirements(p) {
   section.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:10px">
       ${reqs.map(r => `
-        <div class="req-chip" style="background:${r.bg};border-color:${r.bdr}">
-          <i class="fas ${r.icon}" style="color:${r.color};font-size:15px;width:18px;text-align:center;flex-shrink:0"></i>
+        <div class="req-chip ${r.type}">
+          <i class="fas ${r.icon}"></i>
           <div>
             <div class="req-chip-label">${esc(r.label)}</div>
             <div class="req-chip-value">${esc(r.value)}</div>

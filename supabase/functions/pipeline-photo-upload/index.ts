@@ -1,18 +1,16 @@
 // ============================================================
 // Choice Properties — pipeline-photo-upload Edge Function
-// v2.0 — August 2026
+// v1.0 — August 2026
 //
-// Accepts an image from the Orion/Chrome extension and uploads
-// it to ImageKit. Uses the shared import secret for auth.
+// Accepts a base64-encoded image from the Orion/Chrome extension
+// and uploads it to ImageKit. Uses the shared import secret for
+// auth (no user session needed — the extension has none).
 //
-// v2.0: SUPPORTS BOTH BINARY FORM-DATA AND BASE64 JSON
-//   - FormData (multipart/form-data): { file: Blob, fileName, folder }
-//     This is the preferred path — 33% smaller payload than base64.
-//   - JSON: { fileData: string (base64), fileName, folder }
-//     Backward-compatible with older extension versions.
+// This is the browser-side photo upload path: the extension
+// downloads images in the browser (where Zillow/Realtor allow
+// access) and uploads them here to ImageKit.
 //
-// POST body (FormData): file (binary), fileName, folder?
-// POST body (JSON):     { fileData: string (base64), fileName, folder? }
+// POST body: { fileData: string (base64), fileName: string, folder?: string }
 // Returns:   { url: string, fileId: string }
 // ============================================================
 
@@ -34,58 +32,17 @@ Deno.serve(async (req) => {
     return permissiveJsonErr(401, 'Invalid import secret', req);
   }
 
-  // ── Parse body (FormData or JSON) ───────────────────────────
-  let fileName = '';
-  let folder: string | undefined;
-  let binaryData: Uint8Array | null = null;
-  let mime = 'application/octet-stream';
-
-  const contentType = req.headers.get('content-type') || '';
-
+  // ── Parse body ──────────────────────────────────────────────
+  let body: { fileData?: string; fileName?: string; folder?: string };
   try {
-    if (contentType.includes('multipart/form-data')) {
-      // ── Binary FormData path (v2.0) ────────────────────────
-      const formData = await req.formData();
-      const file = formData.get('file');
-      if (!(file instanceof Blob)) {
-        return permissiveJsonErr(400, 'file (Blob) is required in FormData', req);
-      }
-      const fileBytes = new Uint8Array(await file.arrayBuffer());
-      if (fileBytes.length === 0) {
-        return permissiveJsonErr(400, 'Empty file', req);
-      }
-      binaryData = fileBytes;
-      mime = file.type || 'application/octet-stream';
-      const formFileName = formData.get('fileName');
-      fileName = formFileName ? String(formFileName) : 'photo.jpg';
-      const folderVal = formData.get('folder');
-      if (folderVal) folder = String(folderVal);
-    } else {
-      // ── JSON base64 path (backward compatible) ─────────────
-      const body = await req.json();
-      const { fileData, fileName: fn, folder: f } = body as {
-        fileData?: string;
-        fileName?: string;
-        folder?: string;
-      };
-      if (!fileData || !fn) {
-        return permissiveJsonErr(400, 'fileData and fileName required', req);
-      }
-      fileName = fn;
-      folder = f;
-
-      // Strip data URI prefix if present
-      const base64Raw = fileData.includes(',') ? fileData.split(',')[1] : fileData;
-      binaryData = Uint8Array.from(atob(base64Raw), c => c.charCodeAt(0));
-      mime = 'application/octet-stream';
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return permissiveJsonErr(400, 'Invalid body: ' + msg, req);
+    body = await req.json();
+  } catch {
+    return permissiveJsonErr(400, 'Invalid JSON body', req);
   }
 
-  if (!binaryData || binaryData.length === 0) {
-    return permissiveJsonErr(400, 'No image data provided', req);
+  const { fileData, fileName, folder } = body;
+  if (!fileData || !fileName) {
+    return permissiveJsonErr(400, 'fileData and fileName required', req);
   }
 
   // ── Validate ────────────────────────────────────────────────
@@ -95,8 +52,8 @@ Deno.serve(async (req) => {
     return permissiveJsonErr(400, `File type .${ext} not allowed`, req);
   }
 
-  const MAX_BYTES = 20 * 1024 * 1024;
-  if (binaryData.length > MAX_BYTES) {
+  const MAX_BASE64_BYTES = 20 * 1024 * 1024;
+  if (fileData.length > MAX_BASE64_BYTES) {
     return permissiveJsonErr(413, 'File too large', req);
   }
 
@@ -107,19 +64,20 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Strip data URI prefix if present
+    const base64Raw = fileData.includes(',') ? fileData.split(',')[1] : fileData;
+    const binaryData = Uint8Array.from(atob(base64Raw), c => c.charCodeAt(0));
+
     const MIME_BY_EXT: Record<string, string> = {
       jpg: 'image/jpeg', jpeg: 'image/jpeg',
       png: 'image/png', webp: 'image/webp',
     };
-    if (mime === 'application/octet-stream') {
-      mime = MIME_BY_EXT[ext] || 'application/octet-stream';
-    }
+    const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
     const safeFileName = fileName.replace(/[\/\\?%*:|"<>]/g, '_');
 
     const credentials = btoa(`${IMAGEKIT_PRIVATE_KEY}:`);
     const formData = new FormData();
-    const blobPart = binaryData.buffer.slice(binaryData.byteOffset, binaryData.byteOffset + binaryData.byteLength) as ArrayBuffer;
-    formData.append('file', new Blob([blobPart], { type: mime }), safeFileName);
+    formData.append('file', new Blob([binaryData], { type: mime }), safeFileName);
     formData.append('fileName', safeFileName);
     if (folder) formData.append('folder', folder);
 

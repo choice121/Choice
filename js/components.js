@@ -270,10 +270,10 @@
         var mq = window.matchMedia('(prefers-color-scheme: dark)');
         var onChange = function (ev) {
           try { if (localStorage.getItem('cp-theme')) return; } catch (_) {}
-          // No explicit choice stored → reflect OS state in html data-theme and aria
-          var newTheme = ev.matches ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', newTheme);
-          syncBtnState(newTheme);
+          // No explicit choice stored → reflect OS state in document and aria
+          var nextTheme = ev.matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', nextTheme);
+          syncBtnState(nextTheme);
         };
         if (mq.addEventListener) mq.addEventListener('change', onChange);
         else if (mq.addListener) mq.addListener(onChange);

@@ -79,10 +79,12 @@ python3 scraper/run_ai_job.py \
      12. Upload photos to ImageKit
      13. Return live URLs
 
-5. YOU RETURN LIVE URLS
-   - Parse stdout for "Published URLs:" section
-   - Or use --json-output and parse the JSON
-   - Return the URLs to the user so they can view live listings
+5. YOU RETURN LIVE URLS IN THE MANDATORY CHAT FORMAT
+   - Format: `{n}. {Address}, {City}, {State} {Zip} (${Rent}/mo | {Beds} Bed / {Baths} Bath) — https://choice-properties-site.pages.dev/property.html?id={property_id}`
+   - Number each listing sequentially (1, 2, 3, etc.) according to properties published in the session.
+   - Example:
+     1. 5804 N Meadows Blvd, Columbus, OH 43229 ($1,199/mo | 2 Bed / 1 Bath) — https://choice-properties-site.pages.dev/property.html?id=c054a5e9-fe6a-4c2d-a1dd-08c15744bc07
+     2. 2609 Avalon Pl, Columbus, OH 43219 ($1,175/mo | 2 Bed / 1 Bath) — https://choice-properties-site.pages.dev/property.html?id=ba875845-a65c-4620-bd1c-105d4b8a0a1e
 ```
 
 ---
@@ -328,11 +330,9 @@ AI (you):
      }
   3. Run: python3 scraper/run_ai_job.py --instructions '<json>' --json-output
   4. Parse JSON output for published_urls
-  5. Return to user:
-     "Here are your 10 live listings:
-      - https://choice-properties-site.pages.dev/rent/tx/dallas/2br-single-family-abc123/
-      - https://choice-properties-site.pages.dev/rent/tx/dallas/2br-single-family-def456/
-      ..."
+  5. Return to user in chat (MANDATORY FORMAT):
+     1. 5804 N Meadows Blvd, Dallas, TX 75201 ($1,500/mo | 2 Bed / 1 Bath) — https://choice-properties-site.pages.dev/property.html?id=c054a5e9-fe6a-4c2d-a1dd-08c15744bc07
+     2. 2609 Avalon Pl, Dallas, TX 75202 ($1,480/mo | 2 Bed / 1.5 Bath) — https://choice-properties-site.pages.dev/property.html?id=ba875845-a65c-4620-bd1c-105d4b8a0a1e
 ```
 
 ---

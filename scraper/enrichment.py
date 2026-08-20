@@ -682,46 +682,21 @@ def watermark_reason(record):
 _BRANDED_PHOTO_URL_PATTERNS = [
     # ── Known corporate real-estate brand names in URLs ──────────────────────
     r"firstkeyhomes?",
-    r"firstkey",
     r"invitationhomes?",
-    r"invitation_homes",
     r"progressresidential",
     r"triconresidential",
-    r"tricon",
     r"mainstreet(?:renewal|homes?)",
     r"amhresidential",
-    r"amh",
     r"coldwellbanker",
-    r"coldwell_banker",
     r"century21",
-    r"century_21",
     r"kellerwilliams",
-    r"keller_williams",
     r"(?:re[_/-]?max|remax)",
     r"berkshirehathaway",
-    r"berkshire_hathaway",
     r"compassrealty",
     r"exprealty",
-    r"exp_realty",
     r"howardhanna",
     r"weichert",
     r"sothebysrealty",
-    r"sotheby",
-    # ── Additional corporate / institutional landlords ───────────────────────
-    r"americanhomes4rent",
-    r"american.homes.4.rent",
-    r"american_homes_4_rent",
-    r"rentpath",
-    r"rentpath\.com",
-    r"apartmentlist",
-    r"apartment_list",
-    r"zillowgroup",
-    r"zillow.group",
-    r"realtyonegroup",
-    r"realty.one.group",
-    r"homepartners",
-    r"home.partners",
-    r"invitation.homes",
     # ── Agent / brokerage photo paths (headshots, team shots, logos) ─────────
     r"/agent[_-](?:photo|image|headshot|portrait|pic)",
     r"/broker[_-](?:photo|image|headshot)",
@@ -737,104 +712,13 @@ _BRANDED_PHOTO_URL_PATTERNS = [
     r"[?&]type=agent",
     r"/logo\.",
     r"/watermark",
-    r"/watermarked",
     # ── Domains that serve only agent / listing-service branding ─────────────
     r"agent\.realtor\.com/",
     r"headshots\.realtor\.com/",
     r"photos\.cbkw\.com/",  # Coldwell Banker KW
-    r"photos\.remax\.com/",
-    r"photos\.c21\.com/",
-    r"photos\.kw\.com/",
-    r"img\.invitationhomes?\.com",
-    r"cdn\.firstkeyhomes?\.com",
-    r"media\.progressresidential\.com",
-    r"images\.triconresidential\.com",
-    r"photos\.compassrealty\.com",
-    r"images\.sothebysrealty\.com",
 ]
 
 _BRANDED_PHOTO_RE = [re.compile(p, re.IGNORECASE) for p in _BRANDED_PHOTO_URL_PATTERNS]
-
-
-# ── Domain-level watermark deny-list ──────────────────────────────────────
-# Domains that are known to serve only agent/brokerage branding, headshots,
-# logos, or watermarked property photos.  Checked against the full URL.
-_WATERMARK_DOMAIN_DENYLIST = frozenset({
-    "agent.realtor.com",
-    "headshots.realtor.com",
-    "photos.cbkw.com",
-    "photos.remax.com",
-    "photos.c21.com",
-    "photos.kw.com",
-    "img.invitationhomes.com",
-    "img.invitationhome.com",
-    "cdn.firstkeyhomes.com",
-    "cdn.firstkeyhome.com",
-    "media.progressresidential.com",
-    "images.triconresidential.com",
-    "photos.compassrealty.com",
-    "images.sothebysrealty.com",
-    "photos.berkshirehathaway.com",
-    "images.howardhanna.com",
-    "photos.weichert.com",
-    "assets.exprealty.com",
-    "photos.exitrealty.com",
-    "photos.realtyonegroup.com",
-    "photos.homepartners.com",
-    "cdn.rentpath.com",
-    "images.apartmentlist.com",
-    "photos.zillowgroup.com",
-})
-
-
-def _url_matches_watermark_domain(url: str) -> bool:
-    """Return True if the URL's domain is in the watermark deny-list."""
-    if not url or not isinstance(url, str):
-        return False
-    try:
-        host = urllib.parse.urlparse(url).hostname or ""
-        host = host.lower().strip()
-        if host.startswith("www."):
-            host = host[4:]
-        return host in _WATERMARK_DOMAIN_DENYLIST
-    except Exception:
-        return False
-
-
-def audit_photo_urls_for_watermarks(photo_urls):
-    """
-    Check a list of photo URLs against the watermark domain deny-list.
-
-    Returns:
-      (clean_urls, flagged_urls) where flagged_urls are URLs from known
-      watermark/agent CDN domains.
-    """
-    if not photo_urls:
-        return [], []
-
-    clean = []
-    flagged = []
-    for url in photo_urls:
-        if not url or not isinstance(url, str):
-            continue
-        if _url_matches_watermark_domain(url):
-            flagged.append(url)
-        else:
-            clean.append(url)
-
-    return clean, flagged
-
-
-def filter_photos_by_watermark_domain(photo_urls):
-    """
-    Remove photos served from known watermark/agent CDN domains.
-    Returns the filtered list.
-    """
-    clean, _ = audit_photo_urls_for_watermarks(photo_urls)
-    return clean
-
-
-import urllib.parse
 
 
 def filter_branded_photos(photo_urls):

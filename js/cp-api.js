@@ -759,9 +759,8 @@ const UI = {
   // Returns null if ImageKit is not configured (safe to ignore).
   lqipUrl(url) {
     if (!url || !window.CONFIG || !CONFIG.IMAGEKIT_URL || CONFIG.IMAGEKIT_URL === '') return null;
-    const base = url.startsWith(CONFIG.IMAGEKIT_URL)
-      ? url.replace(/\/tr:[^/]+/, '')
-      : CONFIG.IMAGEKIT_URL + '/' + encodeURIComponent(url);
+    if (!url.startsWith(CONFIG.IMAGEKIT_URL)) return null;
+    const base = url.replace(/\/tr:[^/]+/, '');
     return base.replace(CONFIG.IMAGEKIT_URL, CONFIG.IMAGEKIT_URL + '/tr:w-30,bl-20,q-20,f-webp');
   },
 

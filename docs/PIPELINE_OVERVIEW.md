@@ -8,14 +8,13 @@ This is the **single source of truth** for understanding how properties get into
 
 ## Property Intake Channels
 
-There are **4 active channels** that add properties to `pipeline_properties` in Supabase:
+There are **3 primary channels** that add properties to `pipeline_properties` in Supabase:
 
 | # | Channel | Platforms | Entry Point | When to Use |
 |---|---------|-----------|-------------|-------------|
-| 1 | **Python Bulk Scraper** | Realtor.com (via HomeHarvest), Zillow (direct HTML), Opendoor, CJ Properties | `scraper/pipeline.py` | Bulk city/market scraping — the primary method |
-| 2 | **Chrome Extension** | Zillow, Realtor.com, Apartments.com, Redfin | `chrome-extension/content.js` | One-off saves from desktop browser |
-| 3 | **Orion Extension** (iOS/macOS) | Same 4 sites | `.pages-orion/` (live-loaded from Cloudflare) | One-off saves from iPhone/iPad |
-| 4 | **Admin "Import URL" Button** | Zillow only | `js/admin/pipeline.js` → `supabase/functions/import-from-url/index.ts` | Desktop admin panel paste-URL import |
+| 1 | **Python Bulk Scraper** | Realtor.com (via HomeHarvest), Zillow, Opendoor, CJ Properties | `scraper/pipeline.py` | Bulk city/market scraping — the primary method |
+| 2 | **Chrome/Orion Extension** | Zillow, Realtor.com, Apartments.com, Redfin | `chrome-extension/content.js` | One-off saves from browser / mobile Orion |
+| 3 | **Admin "Import URL" Button** | Zillow | `js/admin/pipeline.js` → `supabase/functions/import-from-url/index.ts` | Desktop admin panel paste-URL import |
 
 ### Removed Channels (as of Aug 2026)
 

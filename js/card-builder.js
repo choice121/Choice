@@ -136,7 +136,9 @@
           ' sizes="' + imgSizes + '"' +
           ' loading="' + (i === 0 ? 'eager' : 'lazy') + '"' +
           (i === 0 ? ' fetchpriority="high"' : '') +
-          ' decoding="async">' +
+          ' referrerpolicy="no-referrer"' +
+          ' decoding="async"' +
+          ' onerror="this.onerror=null;this.srcset=\'\';this.src=\'/assets/placeholder-property.jpg\';">' +
         '</div>'
       );
     }).join('');
@@ -163,6 +165,10 @@
       ? '<div class="property-card-fresh-chip"><span class="property-card-fresh-dot"></span>' + freshLabel + '</div>'
       : '';
 
+    var tourChipHtml = p.virtual_tour_url
+      ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
+      : '';
+
     var listedLabel = listedDateLabel(p.listed_at);
 
     // Type chip removed from card — type is in the title and the filter bar.
@@ -187,15 +193,20 @@
     // ── Availability chip ─────────────────────────────────────
     var avail = availChipHtml(p);
 
-    // ── Pet policy chip — completely removed per design requirement ─────────
+    // ── Pet policy chip — shown when pets are allowed ─────────
     var petChip = '';
+    if (p.pets_allowed === true) {
+      petChip = '<span class="property-card-pet-chip"><i class="fas fa-paw"></i> Pets OK</span>';
+    } else if (p.pets_allowed === false) {
+      petChip = '<span class="property-card-pet-chip property-card-pet-chip--no"><i class="fas fa-ban"></i> No Pets</span>';
+    }
 
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
     var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
 
     return (
-      '<article class="property-card" data-id="' + id + '"' + (p.featured ? ' data-featured="1"' : '') + '>' +
+      '<article class="property-card" id="card-' + id + '" data-id="' + id + '"' + (p.featured ? ' data-featured="1"' : '') + '>' +
 
         // ── Image block ────────────────────────────────────────
         '<div class="property-card-img">' +
@@ -204,6 +215,8 @@
           badge +
           // Freshness chip — stacks under badge (Phase 9.2)
           freshChipHtml +
+          // 3D Tour badge
+          tourChipHtml +
           // Carousel position indicators — bottom-center
           dotsHtml +
           // Photo count — bottom-right (only when >6 photos)

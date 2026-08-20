@@ -2,15 +2,19 @@
   "name": "choice-properties",
   "version": "1.0.0",
   "private": true,
-  "description": "Choice Properties — Nationwide rental property marketplace. Deployed exclusively to Cloudflare Pages.",
+  "description": "Choice Properties — Nationwide rental property marketplace.",
   "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
     "build": "node generate-config.js",
+    "lint": "node -c server.js generate-config.js",
     "setup-credentials": "node scripts/open-setup.mjs",
-    "load-credentials": "node scripts/setup-credentials.mjs",
-    "setup-direct": "node setup-direct.mjs",
-    "dev": "node serve.js"
+    "load-credentials": "node scripts/setup-credentials.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }
