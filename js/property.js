@@ -2729,29 +2729,223 @@ function injectEnrichmentStyles() {
     html[data-theme="dark"] .score-card-title { color:#f1f5f9; }
     html[data-theme="dark"] .score-card-sub { color:#94a3b8; }
 
-    /* Similar listing cards */
-    .similar-card { display:flex; border:1.5px solid #e5e7eb; border-radius:12px;
-      overflow:hidden; text-decoration:none; color:inherit; background:#fff;
-      transition:border-color .15s; }
-    .similar-card:hover { border-color:#006aff; }
-    .similar-card-photo { width:96px; height:90px; flex-shrink:0;
-      background:#f3f4f6; overflow:hidden; }
-    .similar-card-photo img { width:100%; height:100%; object-fit:cover; display:block; }
-    .similar-card-body { padding:11px 14px; flex:1; min-width:0; }
-    .similar-card-price { font-size:15px; font-weight:800; color:#0a1628;
-      letter-spacing:-.02em; line-height:1.2; }
-    .similar-card-title { font-size:12.5px; font-weight:600; color:#1f2937; margin-top:3px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .similar-card-meta { font-size:11.5px; color:#6b7280; margin-top:2px; }
-    .similar-card-addr { font-size:11px; color:#9ca3af; margin-top:1px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    html[data-theme="dark"] .similar-card { background:#1e293b; border-color:#334155; }
-    html[data-theme="dark"] .similar-card:hover { border-color:#3b82f6; }
-    html[data-theme="dark"] .similar-card-photo { background:#0f172a; }
-    html[data-theme="dark"] .similar-card-price { color:#f1f5f9; }
-    html[data-theme="dark"] .similar-card-title { color:#e2e8f0; }
-    html[data-theme="dark"] .similar-card-meta { color:#94a3b8; }
-    html[data-theme="dark"] .similar-card-addr { color:#64748b; }
+    /* ── Similar Properties Grid & Cards (Modern Responsive Cards) ── */
+    .similar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+    @media (max-width: 600px) {
+      .similar-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+    }
+    .similar-card-v2 {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 14px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      position: relative;
+    }
+    .similar-card-v2:hover {
+      transform: translateY(-3px);
+      border-color: #006aff;
+      box-shadow: 0 10px 24px rgba(0, 106, 255, 0.08);
+    }
+    .similar-card-v2:active {
+      transform: scale(0.985);
+    }
+    .similar-card-media {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      overflow: hidden;
+    }
+    .similar-card-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .3s ease;
+    }
+    .similar-card-v2:hover .similar-card-media img {
+      transform: scale(1.04);
+    }
+    .similar-card-badge-row {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .similar-card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(0, 106, 255, 0.92);
+      color: #ffffff;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .similar-card-badge.verified {
+      background: rgba(255, 255, 255, 0.95);
+      color: #006aff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .similar-card-price-chip {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.88);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 4px 9px;
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      letter-spacing: -0.01em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .similar-card-price-chip span {
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+    .similar-card-content {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .similar-card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .similar-card-location {
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .similar-card-location i {
+      color: #006aff;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .similar-card-specs-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .similar-card-spec-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #334155;
+      background: #f1f5f9;
+      padding: 3px 7px;
+      border-radius: 6px;
+    }
+    .similar-card-spec-pill i {
+      font-size: 10px;
+      color: #64748b;
+    }
+    .similar-card-cta {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #006aff;
+    }
+    .similar-see-all-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: #eff6ff;
+      color: #006aff;
+      font-size: 13.5px;
+      font-weight: 700;
+      border-radius: 10px;
+      text-decoration: none;
+      border: 1px solid #bfdbfe;
+      transition: all .15s ease;
+    }
+    .similar-see-all-btn:hover {
+      background: #006aff;
+      color: #ffffff;
+      border-color: #006aff;
+    }
+    html[data-theme="dark"] .similar-card-v2 {
+      background: #1e293b;
+      border-color: #334155;
+    }
+    html[data-theme="dark"] .similar-card-v2:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+    }
+    html[data-theme="dark"] .similar-card-name {
+      color: #f1f5f9;
+    }
+    html[data-theme="dark"] .similar-card-location {
+      color: #94a3b8;
+    }
+    html[data-theme="dark"] .similar-card-spec-pill {
+      background: #334155;
+      color: #cbd5e1;
+    }
+    html[data-theme="dark"] .similar-card-spec-pill i {
+      color: #94a3b8;
+    }
+    html[data-theme="dark"] .similar-card-cta {
+      border-top-color: #334155;
+      color: #60a5fa;
+    }
+    html[data-theme="dark"] .similar-see-all-btn {
+      background: #1e3a8a;
+      color: #93c5fd;
+      border-color: #2563eb;
+    }
+    html[data-theme="dark"] .similar-see-all-btn:hover {
+      background: #2563eb;
+      color: #ffffff;
+    }
   `;
   document.head.appendChild(s);
 }
@@ -3385,11 +3579,11 @@ async function loadSimilarListings(p) {
   try {
     const { data } = await supabase
       .from('properties')
-      .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
+      .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, square_footage, property_type, featured, listed_at, available_date, property_photos(url, display_order, is_hero), landlords(id, verified)')
       .eq('status', 'active')
       .eq('city', p.city)
       .neq('id', p.id)
-      .limit(8);
+      .limit(6);
 
     if (!data?.length) return;
 
@@ -3407,23 +3601,44 @@ async function loadSimilarListings(p) {
       const photoUrl = rawUrl
         ? (window.CONFIG?.img ? CONFIG.img(rawUrl, 'card') : rawUrl)
         : '/assets/placeholder-property.jpg';
-      const beds = s.bedrooms === 0 ? 'Studio' : s.bedrooms != null ? s.bedrooms + ' bed' : '';
-      const baths = s.bathrooms ? s.bathrooms + ' bath' : '';
-      const meta  = [beds, baths].filter(Boolean).join(' · ') || fmtPropType(s.property_type) || 'Rental';
+
+      const beds = s.bedrooms === 0 ? 'Studio' : s.bedrooms != null ? s.bedrooms + ' Bed' + (s.bedrooms > 1 ? 's' : '') : '';
+      const baths = s.bathrooms ? s.bathrooms + ' Bath' + (s.bathrooms > 1 ? 's' : '') : '';
+      const sqft = s.square_footage ? Number(s.square_footage).toLocaleString() + ' sqft' : '';
+
+      const rentFormatted = s.monthly_rent != null && Number(s.monthly_rent) > 0
+        ? '$' + Number(s.monthly_rent).toLocaleString()
+        : 'Contact';
+
+      const isVerified = Boolean(s.landlords?.verified);
+      const isFeatured = Boolean(s.featured);
+      const addr = [s.address, s.city, s.state].filter(Boolean).join(', ');
+
       return `
-        <a href="/property.html?id=${esc(s.id)}" class="similar-card">
-          <div class="similar-card-photo">
-            <img src="${esc(photoUrl)}" alt="${esc(s.title || 'Listing')}" loading="lazy">
-          </div>
-          <div class="similar-card-body">
-            <div class="similar-card-price">
-              ${s.monthly_rent != null
-                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:#6b7280">/mo</span>'
-                : 'TBD'}
+        <a href="/property.html?id=${esc(s.id)}" class="similar-card-v2" aria-label="${esc(s.title || 'Rental in ' + s.city)}">
+          <div class="similar-card-media">
+            <img src="${esc(photoUrl)}" alt="${esc(s.title || 'Property')}" loading="lazy" decoding="async">
+            <div class="similar-card-badge-row">
+              ${isFeatured ? '<span class="similar-card-badge"><i class="fas fa-star"></i> Featured</span>' : isVerified ? '<span class="similar-card-badge verified"><i class="fas fa-shield-halved"></i> Verified</span>' : '<span></span>'}
             </div>
-            <div class="similar-card-title">${esc(s.title || 'Rental')}</div>
-            <div class="similar-card-meta">${esc(meta)}</div>
-            <div class="similar-card-addr">${esc([s.address, s.city, s.state].filter(Boolean).join(', '))}</div>
+            <div class="similar-card-price-chip">
+              ${esc(rentFormatted)}<span>/mo</span>
+            </div>
+          </div>
+          <div class="similar-card-content">
+            <div class="similar-card-name">${esc(s.title || 'Rental Property')}</div>
+            <div class="similar-card-location" title="${esc(addr)}">
+              <i class="fas fa-location-dot"></i> <span>${esc(addr)}</span>
+            </div>
+            <div class="similar-card-specs-row">
+              ${beds ? `<span class="similar-card-spec-pill"><i class="fas fa-bed"></i> ${esc(beds)}</span>` : ''}
+              ${baths ? `<span class="similar-card-spec-pill"><i class="fas fa-bath"></i> ${esc(baths)}</span>` : ''}
+              ${sqft ? `<span class="similar-card-spec-pill"><i class="fas fa-ruler-combined"></i> ${esc(sqft)}</span>` : ''}
+            </div>
+            <div class="similar-card-cta">
+              <span>View Property</span>
+              <i class="fas fa-arrow-right" style="font-size:10px"></i>
+            </div>
           </div>
         </a>`;
     }).join('');
@@ -3432,17 +3647,22 @@ async function loadSimilarListings(p) {
     if (divider) divider.style.display = '';
     section.innerHTML = `
       <div class="prop-section">
-        <div class="prop-section-eyebrow">Also available</div>
-        <div class="prop-section-head">More in <em>${esc(p.city)}</em>.</div>
-        <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
-        <a href="/listings.html" style="display:inline-flex;align-items:center;gap:6px;
-          margin-top:16px;font-size:13px;font-weight:600;color:#006aff;text-decoration:none">
-          See all rentals in ${esc(p.city)} <i class="fas fa-arrow-right" style="font-size:11px"></i>
-        </a>
+        <div class="prop-section-eyebrow">Similar Properties</div>
+        <div class="prop-section-head">More Rentals in <em>${esc(p.city)}</em></div>
+        <div class="similar-grid">${cards}</div>
+        <div style="margin-top:16px;text-align:center">
+          <a href="/listings.html?q=${encodeURIComponent(p.city || '')}" class="similar-see-all-btn">
+            See all rentals in ${esc(p.city)} <i class="fas fa-arrow-right" style="font-size:11px"></i>
+          </a>
+        </div>
       </div>`;
+
     // Wire onerror via JS — inline onerror attributes are blocked by CSP nonce policy
-    section.querySelectorAll('.similar-card-photo img').forEach(img => {
-      img.onerror = function() { this.onerror = null; this.src = '/assets/placeholder-property.jpg'; };
+    section.querySelectorAll('.similar-card-media img').forEach(img => {
+      img.onerror = function() {
+        this.onerror = null;
+        this.src = '/assets/placeholder-property.jpg';
+      };
     });
   } catch(e) {
     console.warn('[similar listings] failed:', e);
