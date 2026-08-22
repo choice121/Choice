@@ -136,7 +136,9 @@
           ' sizes="' + imgSizes + '"' +
           ' loading="' + (i === 0 ? 'eager' : 'lazy') + '"' +
           (i === 0 ? ' fetchpriority="high"' : '') +
-          ' decoding="async">' +
+          ' decoding="async"' +
+          ' referrerpolicy="no-referrer"' +
+          ' onerror="this.onerror=null;this.srcset=\'\';this.src=\'/assets/placeholder-property.jpg\'">' +
         '</div>'
       );
     }).join('');
