@@ -8,11 +8,13 @@ import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties 
 import { updateNav as _updateNav } from '/js/cp-api.js';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
-//   - esc:            HTML-escape, null-safe (CP.UI.esc)
+//   - esc:            HTML-escape, null-safe (CP.UI.esc fallback)
 //   - showToast:      legacy public-page toast, uses #toastContainer
 //   - setupScrollTop: scroll-to-top button wiring (not used on this page,
 //                     but available if needed)
-const esc = CP.UI.esc;
+const esc = (s) => (window.CP && window.CP.UI && typeof window.CP.UI.esc === 'function')
+  ? window.CP.UI.esc(s)
+  : String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const showToast = window.showToast;
 
 // Extended nav init — wires both navAuthLink and drawerAuthLink, populates contacts
@@ -3154,30 +3156,31 @@ function _renderFilteredSchools(filter) {
 }
 
 function renderScoresSection(p) {
-  const section = document.getElementById('scoresSection');
-  const divider = document.getElementById('dividerAfterScores');
-  if (!section) return;
-  injectEnrichmentStyles();
+  try {
+    const section = document.getElementById('scoresSection');
+    const divider = document.getElementById('dividerAfterScores');
+    if (!section || !p) return;
+    injectEnrichmentStyles();
 
-  const scores = calculatePropertyScores(p);
-  const lat = parseFloat(p.lat);
-  const lng = parseFloat(p.lng);
+    const scores = calculatePropertyScores(p);
+    const lat = parseFloat(p.lat);
+    const lng = parseFloat(p.lng);
 
-  const addrSlug = encodeURIComponent(`${p.address || ''} ${p.city || ''} ${p.state || ''}`);
-  const wsUrl = `https://www.walkscore.com/score/${addrSlug}`;
-  const gsUrl = p.zip
-    ? `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(p.zip)}&sortBy=distance`
-    : `https://www.greatschools.org/search/search.page?q=${encodeURIComponent((p.city || '') + ' ' + (p.state || ''))}&sortBy=distance`;
+    const addrSlug = encodeURIComponent(`${p.address || ''} ${p.city || ''} ${p.state || ''}`);
+    const wsUrl = `https://www.walkscore.com/score/${addrSlug}`;
+    const gsUrl = p.zip
+      ? `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(p.zip)}&sortBy=distance`
+      : `https://www.greatschools.org/search/search.page?q=${encodeURIComponent((p.city || '') + ' ' + (p.state || ''))}&sortBy=distance`;
 
-  const driveMins = Math.floor(10 + (scores.walk.score % 9));
-  const transitMins = Math.floor(20 + (scores.transit.score % 12));
-  const bikeMins = Math.floor(8 + (scores.bike.score % 8));
-  const groceryWalkMins = Math.floor(4 + ((100 - scores.walk.score) % 7));
+    const driveMins = Math.floor(10 + (scores.walk.score % 9));
+    const transitMins = Math.floor(20 + (scores.transit.score % 12));
+    const bikeMins = Math.floor(8 + (scores.bike.score % 8));
+    const groceryWalkMins = Math.floor(4 + ((100 - scores.walk.score) % 7));
 
-  section.style.display = '';
-  if (divider) divider.style.display = '';
+    section.style.display = '';
+    if (divider) divider.style.display = '';
 
-  section.innerHTML = `
+    section.innerHTML = `
     <div class="prop-section">
       <div class="prop-section-eyebrow">Neighborhood &amp; Lifestyle</div>
       <div class="prop-section-head">Walk, Transit Scores &amp; <em>Nearby Schools</em>.</div>
@@ -3355,18 +3358,21 @@ function renderScoresSection(p) {
       </div>
     </div>`;
 
-  // Wire filter tab clicks
-  const filterBtns = section.querySelectorAll('.school-tab-btn');
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _renderFilteredSchools(btn.dataset.filter);
+    // Wire filter tab clicks
+    const filterBtns = section.querySelectorAll('.school-tab-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _renderFilteredSchools(btn.dataset.filter);
+      });
     });
-  });
 
-  // Load schools dynamically
-  _loadNearbySchoolsList(p, lat, lng);
+    // Load schools dynamically
+    _loadNearbySchoolsList(p, lat, lng);
+  } catch (err) {
+    console.error('Error rendering scores section:', err);
+  }
 }
 
 /* ── Similar Listings (async) ────────────────────────────────────────────── */

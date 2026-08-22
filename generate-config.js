@@ -355,8 +355,8 @@ htmlFiles.forEach(function(file) {
   let src = fs.readFileSync(file, 'utf8');
   let modified = false;
 
-  // Step A: cache busting
-  const afterCB = src.replace(/\?v=__BUILD_VERSION__/g, '?v=' + BUILD_VERSION);
+  // Step A: cache busting (replaces __BUILD_VERSION__ and any previous numeric timestamp)
+  const afterCB = src.replace(/\?v=(?:__BUILD_VERSION__|\d+)/g, '?v=' + BUILD_VERSION);
   if (afterCB !== src) { src = afterCB; modified = true; }
 
   // Step B: convert CSS preload+onload to plain stylesheet links
