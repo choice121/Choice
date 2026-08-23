@@ -1,0 +1,9 @@
+services:
+  web:
+    image: node:22
+    working_dir: /app
+    command: node serve.js
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
