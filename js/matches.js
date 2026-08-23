@@ -80,7 +80,13 @@ async function loadMatches() {
     }));
     
     grid.innerHTML = htmls.join('');
-    grid.querySelectorAll('.property-card').forEach(window.initCardCarousel);
+    let delayIdx = 0;
+    grid.querySelectorAll('.property-card').forEach(c => {
+      c.style.setProperty('--cp-delay', Math.min(delayIdx * 55, 320) + 'ms');
+      window.initCardCarousel(c);
+      setTimeout(() => c.classList.add('cp-card-visible'), 50);
+      delayIdx++;
+    });
 
   } catch (err) {
     console.error('Error loading matches:', err); if(grid){grid.innerHTML='<pre style="color:red;padding:20px">'+String(err.stack || err)+'</pre>';}
