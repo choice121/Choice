@@ -9,7 +9,7 @@
     "setup-credentials": "node scripts/open-setup.mjs",
     "load-credentials": "node scripts/setup-credentials.mjs",
     "setup-direct": "node setup-direct.mjs",
-    "dev": "npm run build && node server.js"
+    "dev": "npm run build && node serve.js"
   },
   "engines": {
     "node": ">=18"

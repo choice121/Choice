@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787526471232"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choice Properties - Watermark Sniper Audit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Layout */
+    #app-container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    #grid-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background-color: #1a1a1a;
+    }
+
+    #sidebar {
+      width: 380px;
+      background-color: #242424;
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Masonry Grid Simulation using Flex/CSS Columns */
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    /* Image Cards */
+    .image-card {
+      position: relative;
+      cursor: pointer;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background: #333;
+    }
+    
+    .image-card img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      aspect-ratio: 4/3;
+      transition: opacity 0.2s ease;
+    }
+
+    .image-card:hover img {
+      opacity: 0.8;
+    }
+
+    /* Selected/Flagged State */
+    .image-card.flagged {
+      box-shadow: 0 0 0 4px #ef4444;
+      transform: scale(0.95);
+      opacity: 0.5;
+    }
+    .image-card.flagged::after {
+      content: 'FLAGGED';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ef4444;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Queue Items */
+    .queue-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid #333;
+      align-items: center;
+    }
+    .queue-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      color: white;
+      font-size: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading" class="loading-overlay">Loading live properties...</div>
+
+  <div id="app-container">
+    <!-- Main Global Grid -->
+    <div id="grid-panel">
+      <div class="mb-4 flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold">Global Watermark Sniper</h1>
+          <p class="text-sm text-gray-400">Click any image containing a watermark to stage the entire property for deletion.</p>
+        </div>
+        <div class="text-gray-400 text-sm">
+          Loaded <span id="stats-images">0</span> images from <span id="stats-props">0</span> properties
+        </div>
+      </div>
+      
+      <div class="image-grid" id="image-grid">
+        <!-- Images injected here -->
+      </div>
+    </div>
+
+    <!-- Sidebar Queue -->
+    <div id="sidebar">
+      <div class="p-4 border-b border-gray-700 bg-gray-800">
+        <h2 class="text-xl font-bold">Staging Queue</h2>
+        <p class="text-sm text-gray-400 mt-1"><span id="queue-count">0</span> properties flagged</p>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto" id="queue-list">
+        <div class="p-4 text-gray-500 text-center italic" id="empty-queue-msg">
+          Click an image in the grid to stage a property.
+        </div>
+        <!-- Queue items injected here -->
+      </div>
+      
+      <div class="p-4 border-t border-gray-700 bg-gray-800">
+        <button id="btn-delete-all" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          Delete Flagged Properties
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="__CSP_NONCE__">
+    document.addEventListener('DOMContentLoaded', async () => {
+      let sbClient = null;
+      
+      // Wait for config & supabase to load
+      let checks = 0;
+      while ((!window.CONFIG || !window.supabase) && checks < 20) {
+        await new Promise(r => setTimeout(r, 100));
+        checks++;
+      }
+      
+      if (!window.CONFIG || !window.supabase) {
+        document.getElementById('loading').textContent = 'Error: Failed to load config or Supabase client.';
+        return;
+      }
+      
+      // Initialize Supabase with the service_role key provided in CONFIG.SUPABASE_ANON_KEY
+      sbClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      
+      let allProperties = [];
+      let allImages = []; // Flattened list of { url, property_id, property_ref }
+      let queuedPropertyIds = new Set();
+      
+      // Elements
+      const gridEl = document.getElementById('image-grid');
+      const queueListEl = document.getElementById('queue-list');
+      const emptyMsgEl = document.getElementById('empty-queue-msg');
+      const deleteBtn = document.getElementById('btn-delete-all');
+      const countEl = document.getElementById('queue-count');
+      const loadingEl = document.getElementById('loading');
+
+      // 1. Fetch properties
+      async function loadData() {
+        try {
+          // Note: using simple select to get all active/published properties. 
+          // If there are thousands, pagination might be needed. We'll grab up to 5000.
+          const { data, error } = await sbClient
+            .from('properties')
+            .select('id, address, photos')
+            .limit(5000);
+            
+          if (error) throw error;
+          
+          allProperties = data;
+          
+          // Flatten images
+          allProperties.forEach(prop => {
+            if (prop.photos && Array.isArray(prop.photos)) {
+              prop.photos.forEach(photoUrl => {
+                allImages.push({
+                  url: photoUrl,
+                  property_id: prop.id,
+                  property: prop
+                });
+              });
+            }
+          });
+          
+          // Shuffle images so it's a true global grid (optional, but let's keep them grouped by property but randomized slightly, or just random)
+          // For a true audit, randomizing prevents skipping. But grouping by property is fine too. Let's shuffle.
+          allImages.sort(() => Math.random() - 0.5);
+
+          document.getElementById('stats-images').textContent = allImages.length;
+          document.getElementById('stats-props').textContent = allProperties.length;
+          
+          renderGrid();
+          loadingEl.style.display = 'none';
+        } catch (err) {
+          console.error(err);
+          loadingEl.textContent = 'Error loading data: ' + err.message;
+        }
+      }
+
+      // 2. Render Global Grid
+      function renderGrid() {
+        // Use document fragment for performance
+        const frag = document.createDocumentFragment();
+        
+        allImages.forEach((img, idx) => {
+          const div = document.createElement('div');
+          div.className = 'image-card';
+          div.dataset.pid = img.property_id;
+          div.dataset.idx = idx;
+          
+          const elImg = document.createElement('img');
+          // Use ImageKit optimization if it's an imagekit URL
+          let thumbUrl = img.url;
+          if (thumbUrl.includes('ik.imagekit.io')) {
+             thumbUrl += '?tr=w-300,h-225,fo-auto'; // Fast thumbnail
+          }
+          elImg.src = thumbUrl;
+          elImg.loading = 'lazy';
+          
+          div.appendChild(elImg);
+          
+          div.addEventListener('click', () => togglePropertySelection(img.property_id));
+          frag.appendChild(div);
+        });
+        
+        gridEl.appendChild(frag);
+      }
+
+      // 3. Handle Selection
+      function togglePropertySelection(propertyId) {
+        if (queuedPropertyIds.has(propertyId)) {
+          queuedPropertyIds.delete(propertyId);
+        } else {
+          queuedPropertyIds.add(propertyId);
+        }
+        
+        updateGridVisuals();
+        renderQueue();
+      }
+      
+      // Update the CSS classes in the grid based on queued set
+      function updateGridVisuals() {
+        const cards = gridEl.querySelectorAll('.image-card');
+        cards.forEach(card => {
+          if (queuedPropertyIds.has(card.dataset.pid)) {
+            card.classList.add('flagged');
+          } else {
+            card.classList.remove('flagged');
+          }
+        });
+      }
+
+      // 4. Render Sidebar Queue
+      function renderQueue() {
+        countEl.textContent = queuedPropertyIds.size;
+        
+        if (queuedPropertyIds.size === 0) {
+          emptyMsgEl.style.display = 'block';
+          deleteBtn.disabled = true;
+          // Clear items
+          Array.from(queueListEl.children).forEach(child => {
+            if (child.id !== 'empty-queue-msg') child.remove();
+          });
+          return;
+        }
+        
+        emptyMsgEl.style.display = 'none';
+        deleteBtn.disabled = false;
+        
+        // Clear items
+        Array.from(queueListEl.children).forEach(child => {
+          if (child.id !== 'empty-queue-msg') child.remove();
+        });
+        
+        queuedPropertyIds.forEach(pid => {
+          const prop = allProperties.find(p => p.id === pid);
+          if (!prop) return;
+          
+          const div = document.createElement('div');
+          div.className = 'queue-item';
+          
+          let coverUrl = prop.photos && prop.photos[0] ? prop.photos[0] : '';
+          if (coverUrl.includes('ik.imagekit.io')) {
+             coverUrl += '?tr=w-100,h-100,fo-auto';
+          }
+          
+          div.innerHTML = `
+            <img src="${coverUrl}" alt="Cover">
+            <div class="flex-1 overflow-hidden">
+              <div class="text-sm font-bold truncate">${prop.address || 'Unknown Address'}</div>
+              <div class="text-xs text-gray-400 mt-1">ID: ${prop.id.substring(0, 8)}...</div>
+              <a href="/property.html?id=${prop.id}" target="_blank" class="text-xs text-blue-400 hover:underline">View Live</a>
+            </div>
+            <button class="text-gray-400 hover:text-white p-2" title="Unflag">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          `;
+          
+          // Unflag button
+          div.querySelector('button').addEventListener('click', () => {
+            togglePropertySelection(pid);
+          });
+          
+          queueListEl.appendChild(div);
+        });
+      }
+
+      // 5. Execute Deletion
+      deleteBtn.addEventListener('click', async () => {
+        if (queuedPropertyIds.size === 0) return;
+        
+        const confirmMsg = `Are you absolutely sure you want to PERMANENTLY DELETE these ${queuedPropertyIds.size} properties from the database?`;
+        if (!confirm(confirmMsg)) return;
+        
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Deleting...';
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const pid of queuedPropertyIds) {
+          try {
+            const { error } = await sbClient
+              .from('properties')
+              .delete()
+              .eq('id', pid);
+              
+            if (error) throw error;
+            successCount++;
+            
+            // Remove from local state
+            allProperties = allProperties.filter(p => p.id !== pid);
+            allImages = allImages.filter(img => img.property_id !== pid);
+            
+          } catch (err) {
+            console.error(`Failed to delete ${pid}:`, err);
+            failCount++;
+          }
+        }
+        
+        alert(`Deletion complete.\nSuccess: ${successCount}\nFailed: ${failCount}`);
+        
+        // Reset state
+        queuedPropertyIds.clear();
+        
+        // Re-render grid (remove deleted elements)
+        gridEl.innerHTML = '';
+        renderGrid();
+        renderQueue();
+        
+        document.getElementById('stats-images').textContent = allImages.length;
+        document.getElementById('stats-props').textContent = allProperties.length;
+        
+        deleteBtn.textContent = 'Delete Flagged Properties';
+      });
+
+      // Start
+      loadData();
+    });
+  </script>
+</body>
+</html>
