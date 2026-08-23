@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1787526471232"></script>
+  <script src="/js/cp-error-reporter.js?v=1787527194692"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Choice Properties - Watermark Sniper Audit</title>
@@ -201,7 +201,7 @@
           // If there are thousands, pagination might be needed. We'll grab up to 5000.
           const { data, error } = await sbClient
             .from('properties')
-            .select('id, address, photos')
+            .select('id, address, photo_urls')
             .limit(5000);
             
           if (error) throw error;
@@ -210,8 +210,8 @@
           
           // Flatten images
           allProperties.forEach(prop => {
-            if (prop.photos && Array.isArray(prop.photos)) {
-              prop.photos.forEach(photoUrl => {
+            if (prop.photo_urls && Array.isArray(prop.photo_urls)) {
+              prop.photo_urls.forEach(photoUrl => {
                 allImages.push({
                   url: photoUrl,
                   property_id: prop.id,
@@ -318,7 +318,7 @@
           const div = document.createElement('div');
           div.className = 'queue-item';
           
-          let coverUrl = prop.photos && prop.photos[0] ? prop.photos[0] : '';
+          let coverUrl = prop.photo_urls && prop.photo_urls[0] ? prop.photo_urls[0] : '';
           if (coverUrl.includes('ik.imagekit.io')) {
              coverUrl += '?tr=w-100,h-100,fo-auto';
           }
