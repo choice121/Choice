@@ -1,0 +1,62 @@
+# Phase 14 — daily cron for lease renewal nudges.
+#
+# The check-renewals edge function scans lease_renewals_due (leases ending
+# in the next 0–70 days, with a 14-day per-lease dedupe window) and emails
+# each tenant a renewal nudge. The function authenticates either a valid
+# admin JWT or an x-cron-secret header that matches CRON_SECRET on the
+# Supabase side.  This workflow uses the header path so no admin session
+# is needed.
+
+name: Check lease renewals (daily)
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC daily (~04:00 ET / 01:00 PT)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (preview only, no emails)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  invoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      CRON_SECRET:          ${{ secrets.CRON_SECRET }}
+      DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+    steps:
+      - name: POST check-renewals
+        shell: bash
+        run: |
+          set -u
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF or CRON_SECRET not set; cannot invoke."
+            exit 1
+          fi
+          URL="https://${SUPABASE_PROJECT_REF}.functions.supabase.co/check-renewals"
+          BODY=$(printf '{"dry_run":%s}' "${DRY_RUN}")
+          echo "POST ${URL}  body=${BODY}"
+          HTTP_CODE=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
+            -X POST "${URL}" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            --data "${BODY}" || echo "000")
+          echo "HTTP ${HTTP_CODE}"
+          echo "--- response body ---"
+          cat /tmp/body.txt || true
+          echo
+          echo "--- end ---"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::check-renewals returned ${HTTP_CODE}"
+            exit 1
+          fi

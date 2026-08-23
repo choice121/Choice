@@ -1,0 +1,35 @@
+-- ============================================================
+-- 20260425000001_lease_pipeline_hotfixes.sql  (NO-OP — superseded)
+-- ============================================================
+-- This migration originally contained:
+--   H-01  CREATE OR REPLACE FUNCTION sign_lease_tenant(...) — fix solo
+--         applicants landing on lease_status='co_signed' instead of 'signed'.
+--   H-02  CREATE OR REPLACE FUNCTION sign_lease(text,text,text) — turn the
+--         legacy SETUP.sql function into a deprecation stub.
+-- And one stray statement:
+--   ALTER FUNCTION public.sign_lease_co_applicant(text,text,text,text)
+--     SET search_path = public, pg_temp;
+--
+-- That stray ALTER never matched a 4-arg signature on this project (the live
+-- function is the 5-arg variant), so the whole migration failed at HTTP 400
+-- on every CI run. Because Postgres rolled the failed migration back as one
+-- transaction, H-01 and H-02 also never landed from this file.
+--
+-- Both were subsequently re-implemented (correctly) by:
+--   * 20260425000003_lease_drawn_signatures_and_coapplicant.sql   (H-01 + new
+--     5-arg sign_lease_tenant + sign_lease_co_applicant with search_path set)
+--   * (sign_lease deprecation stub already lives in the production DB; see
+--     pg_proc.prosrc for sign_lease(text,text,text))
+--
+-- Verified live on 2026-04-25:
+--   sign_lease(text,text,text)                       → returns deprecation JSON
+--   sign_lease_tenant(text,text,text,text,text)      → sets 'signed' for solo
+--   sign_lease_co_applicant(text,text,text,text,text)→ sets 'co_signed'
+--   sign_lease_amendment(text,text,text,text,text)   → sets 'signed'
+--
+-- This file is intentionally a no-op so the CI migration runner can record
+-- it in _migration_history and stop failing on every push. Leaving it as a
+-- comment-only file would also work, but a SELECT keeps the runner's
+-- "did this query return ok?" check unambiguous.
+
+SELECT 'superseded-by-20260425000003'::text AS migration_status;

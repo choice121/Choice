@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Choice Admin">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin Login · Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+<script defer src="/config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+</head>
+<body data-portal="auth">
+
+<div class="auth-shell">
+  <div class="auth-shell-card">
+    <div class="auth-shell-brand">
+      <div class="name">Choice Properties</div>
+      <div class="sub">Administration Portal</div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- Shown while scripts load -->
+    <div class="auth-init" id="initOverlay">
+      <div class="spinner"></div>
+      <span>Initialising…</span>
+    </div>
+
+    <!-- Main form (hidden until scripts ready) -->
+    <div id="formWrap" style="display:none">
+      <p class="auth-shell-subtitle">Sign in to continue</p>
+
+      <div class="auth-alert info" id="sessionNotice">Checking existing session…</div>
+      <div class="auth-alert error"   id="alertError"></div>
+      <div class="auth-alert success" id="alertSuccess"></div>
+
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label class="field-label" for="email">Email Address</label>
+          <input class="field-input" type="email" id="email" name="email"
+                 placeholder="admin@example.com"
+                 autocomplete="username email"
+                 inputmode="email" required>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-input-wrap">
+            <input class="field-input has-suffix" type="password" id="password" name="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password" required>
+            <button type="button" class="field-suffix-btn" id="pwToggle"
+                    aria-label="Show password" title="Show/hide password">
+              <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnSubmit">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-spinner"></div>
+        </button>
+      </form>
+
+      <div class="auth-shell-links">
+        <button type="button" id="forgotBtn">Forgot password?</button>
+      </div>
+
+      <div class="auth-shell-foot">Admin access only. Unauthorised access is prohibited.</div>
+    </div>
+  </div>
+</div>
+
+<script nonce="__CSP_NONCE__">
+// ─── Wait for Supabase SDK + CONFIG to be available ───────────────────────
+function waitForDeps() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const max    = 100;
+    const id = setInterval(() => {
+      attempts++;
+      const ready =
+        typeof window.supabase !== 'undefined' &&
+        typeof window.CONFIG    !== 'undefined' &&
+        window.CONFIG.SUPABASE_URL;
+      if (ready) { clearInterval(id); resolve(); return; }
+      if (attempts >= max) {
+        clearInterval(id);
+        reject(new Error('Supabase or config failed to load. Please refresh the page.'));
+      }
+    }, 50);
+  });
+}
+
+let _sb = null;
+function sb() { return _sb; }
+
+const $ = id => document.getElementById(id);
+const initOverlay  = $('initOverlay');
+const formWrap     = $('formWrap');
+const loginForm    = $('loginForm');
+const emailInput   = $('email');
+const passInput    = $('password');
+const btnSubmit    = $('btnSubmit');
+const alertError   = $('alertError');
+const alertSuccess = $('alertSuccess');
+const sessionNotice= $('sessionNotice');
+const pwToggle     = $('pwToggle');
+const eyeOpen      = $('eyeOpen');
+const eyeClosed    = $('eyeClosed');
+const forgotBtn    = $('forgotBtn');
+
+function showError(msg) {
+  alertError.textContent = msg;
+  alertError.classList.add('visible');
+  alertSuccess.classList.remove('visible');
+}
+function showSuccess(msg) {
+  alertSuccess.textContent = msg;
+  alertSuccess.classList.add('visible');
+  alertError.classList.remove('visible');
+}
+function clearAlerts() {
+  alertError.classList.remove('visible');
+  alertSuccess.classList.remove('visible');
+}
+function setLoading(on) {
+  btnSubmit.disabled = on;
+  btnSubmit.classList.toggle('loading', on);
+}
+
+pwToggle.addEventListener('click', () => {
+  const show = passInput.type === 'password';
+  passInput.type = show ? 'text' : 'password';
+  eyeOpen  .style.display = show ? 'none' : '';
+  eyeClosed.style.display = show ? ''     : 'none';
+  pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  passInput.focus();
+});
+
+forgotBtn.addEventListener('click', async () => {
+  const email = emailInput.value.trim();
+  if (!email) {
+    showError('Enter your email address above first, then click "Forgot password?".');
+    emailInput.focus();
+    return;
+  }
+  clearAlerts();
+  forgotBtn.disabled = true;
+  forgotBtn.textContent = 'Sending…';
+  try {
+    const { error } = await sb().auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + '/admin/login.html'
+    });
+    if (error) { showError(error.message); }
+    else        { showSuccess('Password reset email sent! Check your inbox.'); }
+  } catch (e) {
+    showError('Could not send reset email. Please try again.');
+  } finally {
+    forgotBtn.disabled = false;
+    forgotBtn.textContent = 'Forgot password?';
+  }
+});
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAlerts();
+
+  const email = emailInput.value.trim();
+  const pass  = passInput.value;
+
+  if (!email || !pass) {
+    showError('Please enter your email and password.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { error: signInErr } = await sb().auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (signInErr) {
+      let msg = signInErr.message;
+      if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        msg = 'Incorrect email or password. Please check and try again.';
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        msg = 'Your email address has not been confirmed. Check your inbox.';
+      } else if (msg.toLowerCase().includes('too many requests')) {
+        msg = 'Too many login attempts. Please wait a moment and try again.';
+      }
+      showError(msg);
+      setLoading(false);
+      return;
+    }
+
+    const { data: { user } } = await sb().auth.getUser();
+    if (!user) {
+      showError('Authentication error. Please refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
+    const { data: adminRow } = await sb()
+      .from('admin_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!adminRow) {
+      await sb().auth.signOut();
+      showError('Access denied — this account does not have admin privileges.');
+      setLoading(false);
+      return;
+    }
+
+    location.href = 'dashboard.html';
+
+  } catch (err) {
+    console.error('[Login error]', err);
+    showError('An unexpected error occurred. Please refresh and try again.');
+    setLoading(false);
+  }
+});
+
+(async function init() {
+  try {
+    await waitForDeps();
+
+    _sb = window.supabase.createClient(
+      window.CONFIG.SUPABASE_URL,
+      window.CONFIG.SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession:   true,
+          autoRefreshToken: true,
+          // Match cp-api.js: PKCE flow returns a long-lived refresh token, so
+          // autoRefreshToken can keep the access JWT alive indefinitely. Without
+          // this, the implicit flow on hash callbacks issues no refresh token
+          // and the admin session silently expires after 1h — same root cause
+          // that used to drop landlord sessions before this was added there.
+          flowType: 'pkce',
+          // Login page handles any callback hash itself; the shared client
+          // (cp-api.js) used on dashboard pages also runs with this off, so
+          // session-storage layout stays identical across login and app pages.
+          detectSessionInUrl: false,
+        }
+      }
+    );
+    // Quiet the SDK's background-refresh logging — same as cp-api.js does.
+    _sb.auth.onAuthStateChange(() => {});
+
+    sessionNotice.classList.add('visible');
+    formWrap.style.display = 'block';
+    initOverlay.style.display = 'none';
+
+    const { data: { session } } = await sb().auth.getSession();
+    if (session?.user) {
+      const { data: adminRow } = await sb()
+        .from('admin_roles')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (adminRow) {
+        sessionNotice.textContent = 'Restoring session…';
+        location.href = 'dashboard.html';
+        return;
+      }
+    }
+
+    sessionNotice.classList.remove('visible');
+    emailInput.focus();
+
+  } catch (err) {
+    initOverlay.style.display = 'none';
+    formWrap.style.display = 'block';
+    sessionNotice.classList.remove('visible');
+    showError(err.message || 'Failed to initialise. Please refresh the page.');
+  }
+})();
+</script>
+</body>
+</html>

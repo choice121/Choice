@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Listings · Choice Properties Admin</title>
+<script nonce="__CSP_NONCE__">
+  // Listings has been merged into the unified Property Manager.
+  // Preserve any ?status= or ?landlord= query params in the redirect.
+  (function () {
+    var p = new URLSearchParams(location.search);
+    var next = '/listings.html';
+    var qs = p.toString();
+    if (qs) next += '?' + qs;
+    location.replace(next);
+  })();
+</script>
+</head>
+<body></body>
+</html>

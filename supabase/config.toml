@@ -1,0 +1,148 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "https://choice-properties-site.pages.dev"
+additional_redirect_urls = ["https://choice-properties-site.pages.dev"]
+jwt_expiry = 3600
+enable_signup = true
+
+# ============================================================
+# Edge function JWT verification policy (M-1 hardening)
+# ------------------------------------------------------------
+# • Truly admin-only writers + service-to-service callers MUST require a
+#   valid Supabase JWT at the gateway, in addition to in-code auth checks.
+#   This is defense in depth — one missed `requireAuth(...)` inside a
+#   function body cannot expose the endpoint.
+# • Functions that are intentionally callable without a session (token-
+#   gated public flows, magic-link issuance, public lease viewer, public
+#   inquiry/application receivers) keep verify_jwt = false.
+# ============================================================
+
+# --- Admin / authenticated-landlord workflows: enforce JWT at gateway ---
+[functions.generate-lease]
+verify_jwt = true
+
+[functions.create-amendment]
+verify_jwt = true
+
+[functions.sign-amendment]
+verify_jwt = true
+
+[functions.countersign]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.download-lease]
+verify_jwt = true
+
+# check-renewals does its own auth: it accepts EITHER a valid admin JWT
+# OR a matching x-cron-secret header (CRON_SECRET). The header path is
+# how the daily GitHub Actions cron invokes it without an admin session.
+# verify_jwt MUST be false here so Supabase's gateway lets the cron POST
+# through to the internal validator.
+[functions.check-renewals]
+verify_jwt = false
+
+[functions.imagekit-upload]
+verify_jwt = true
+
+[functions.imagekit-delete]
+verify_jwt = true
+
+[functions.backfill-pdf-integrity]
+verify_jwt = true
+
+[functions.send-message]
+verify_jwt = true
+
+# save-draft is called by anonymous applicants filling out /apply/ —
+# they have no Supabase session. Auth is enforced inside the function
+# via a high-entropy random token (TOKEN_RE) that the browser generates
+# locally and persists in sessionStorage.
+[functions.save-draft]
+verify_jwt = false
+
+[functions.request-upload-url]
+verify_jwt = true
+
+# --- Intentionally public / token-gated endpoints: keep open ---
+[functions.get-lease]
+verify_jwt = false
+
+[functions.get-amendment]
+verify_jwt = false
+
+[functions.sign-lease]
+verify_jwt = false
+
+[functions.sign-lease-co-applicant]
+verify_jwt = false
+
+[functions.receive-application]
+verify_jwt = false
+
+[functions.send-magic-link]
+verify_jwt = false
+
+[functions.send-inquiry]
+verify_jwt = false
+
+# Phase 14 — public QR-code lease verifier. Token-bound by qr_verify_token
+# in lease_pdf_versions; previously inherited the project default
+# (verify_jwt = true) which made the public verify page rely on the anon
+# JWT being attached on every request. Now explicitly public so /verify-lease
+# works for anyone scanning the QR on a printed lease.
+[functions.verify-lease]
+verify_jwt = false
+
+[functions.record-esign-consent]
+verify_jwt = false
+
+# proxy-image: fetches ImageKit CDN images server-side so the watermark-review
+# canvas can call getImageData() without a CORS SecurityError. Does its own
+# admin auth internally via ?token= (Supabase JWT), so the gateway must be open.
+[functions.proxy-image]
+verify_jwt = false
+
+# cleanup-expired-drafts: nightly cron via pg_cron + manual admin POST.
+# Accepts either x-cron-secret header OR a valid admin JWT internally.
+# verify_jwt must be false so the cron header path reaches the function.
+[functions.cleanup-expired-drafts]
+verify_jwt = false
+
+# nudge-expiring-drafts: daily cron + manual admin POST.
+# Same dual-auth pattern as cleanup-expired-drafts.
+[functions.nudge-expiring-drafts]
+verify_jwt = false
+
+# receive-pipeline-import: iOS Scriptable importer — no user session on the phone.
+# Auth is enforced inside the function via x-import-secret header (SHORTCUT_IMPORT_SECRET).
+# verify_jwt must be false so the phone can POST without a Supabase JWT.
+[functions.receive-pipeline-import]
+verify_jwt = false

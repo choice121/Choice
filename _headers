@@ -1,0 +1,56 @@
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-DNS-Prefetch-Control: off
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  # Content-Security-Policy is set per-request by functions/_middleware.js
+  # so each HTML response carries a fresh nonce. Do NOT add it back here —
+  # _headers wins on conflict and would defeat the rotation.
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/config.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/apply/config.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/tenant/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/auth/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/landlord/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/landlord/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/apply/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/apply/js/*
+  Cache-Control: public, max-age=31536000, immutable

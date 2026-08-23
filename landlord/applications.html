@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Choice Landlord">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Applications — Choice Properties Landlord</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=1787502213764"></script>
+  <script defer src="/js/cp-chrome.js?v=1787502213764"></script>
+  <script defer src="/js/cp-shell.js?v=1787502213764"></script>
+  <style>
+    /* Page-scoped styles for applications list — uses cp-design tokens. */
+    .filter-pills {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: var(--sp-3);
+    }
+    .filter-pill {
+      padding: 7px 14px; border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+      font: 600 .78rem/1 var(--font);
+      cursor: pointer; transition: all .15s var(--ease);
+    }
+    .filter-pill:hover:not(.active) { border-color: var(--brand); color: var(--brand); }
+    .filter-pill.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+    .search-bar { margin-bottom: var(--sp-4); position: relative; }
+    .search-bar svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none;
+    }
+    .search-bar .field-input { padding-left: 40px; margin: 0; }
+
+    .apps-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      transition: box-shadow .15s var(--ease), border-color .15s var(--ease);
+    }
+    .app-card:hover { box-shadow: var(--shadow-1); border-color: var(--brand); }
+    .app-card-header {
+      padding: var(--sp-3) var(--sp-4);
+      display: flex; align-items: flex-start; gap: var(--sp-3);
+      cursor: pointer;
+    }
+    .app-avatar {
+      width: 46px; height: 46px; border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 800; flex-shrink: 0; color: #fff;
+    }
+    .app-info { flex: 1; min-width: 0; }
+    .app-meta-top {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .app-id {
+      font: 600 .68rem/1 var(--font-mono, ui-monospace, monospace);
+      color: var(--muted); background: var(--surface-2);
+      padding: 3px 7px; border-radius: 5px; border: 1px solid var(--border);
+    }
+    .app-date { font-size: .68rem; color: var(--muted); }
+    .app-name { font-size: .97rem; font-weight: 700; color: var(--text); }
+    .app-prop {
+      font-size: .77rem; color: var(--muted); margin-top: 3px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .app-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+    .expand-icon {
+      flex-shrink: 0; color: var(--muted); align-self: center;
+      transition: transform .2s var(--ease);
+      width: 16px; height: 16px;
+    }
+    .expand-icon.open { transform: rotate(180deg); }
+
+    .detail-panel {
+      display: none; border-top: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .detail-panel.open { display: block; }
+    .detail-inner { padding: var(--sp-4); }
+    .detail-section { margin-bottom: var(--sp-4); }
+    .detail-section-title {
+      font-size: .65rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0;
+    }
+    .detail-row {
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key {
+      font-size: .62rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .detail-val { font-size: .82rem; color: var(--text); font-weight: 500; }
+
+    .contact-card {
+      background: var(--info-bg);
+      border: 1px solid var(--info-border, var(--border));
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-3);
+      display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center;
+    }
+    .contact-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .83rem; color: var(--brand); font-weight: 500;
+    }
+    .contact-item a { color: var(--brand); text-decoration: none; }
+    .contact-item a:hover { text-decoration: underline; }
+
+    .coapp-card {
+      background: var(--warning-bg, #fff7ed);
+      border: 1px solid var(--warning-border, rgba(194,65,12,.15));
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-3);
+    }
+    .coapp-title {
+      font-size: .72rem; font-weight: 700; color: #c2410c;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+    }
+
+    .notes-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--sp-4); margin-top: var(--sp-4);
+    }
+    .notes-title {
+      font-size: .72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .notes-area {
+      width: 100%; padding: 10px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text); font: 400 .85rem/1.5 var(--font);
+      resize: vertical; min-height: 72px; outline: none;
+    }
+    .notes-area:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px var(--ring, rgba(0,106,255,.15));
+    }
+  </style>
+</head>
+<body data-portal="landlord" data-page-title="Applications" data-page-sub="Tenant applications">
+
+<div class="app">
+  <main class="app-content">
+
+    <div class="greeting">
+      <div class="g-text">
+        <h1>My Applications</h1>
+        <p class="muted">Applications submitted to your properties.</p>
+      </div>
+    </div>
+
+    <!-- KPI strip (populated by JS) -->
+    <section>
+      <div class="kpi-strip" id="stats-row" style="display:none"></div>
+    </section>
+
+    <!-- Filters -->
+    <section>
+      <div class="filter-pills" id="filter-tabs">
+        <button class="filter-pill active" data-status="all">All</button>
+        <button class="filter-pill" data-status="pending">Pending</button>
+        <button class="filter-pill" data-status="approved">Approved</button>
+        <button class="filter-pill" data-status="waitlisted">Waitlisted</button>
+        <button class="filter-pill" data-status="denied">Denied</button>
+      </div>
+      <div class="search-bar">
+        <svg class="i i-sm"><use href="#i-search"/></svg>
+        <input class="field-input" id="search-input" type="text" placeholder="Search name, email, app ID…">
+      </div>
+    </section>
+
+    <!-- List -->
+    <section>
+      <div class="apps-list" id="apps-list">
+        <div class="empty"><h3>Loading applications…</h3></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script nonce="__CSP_NONCE__">
+'use strict';
+
+let _landlord = null;
+let _allApps  = [];
+let _status   = 'all';
+let _search   = '';
+let _debounce = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}}
+function fmtMoney(v){if(v==null||v==='')return '—';return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function showToast(msg, type='success'){
+  if (window.CP && CP.UI && typeof CP.UI.toast === 'function') return CP.UI.toast(msg, type);
+  // Fallback if cp-ui not loaded
+  console.log('[toast]', type, msg);
+}
+
+function avatar(app){
+  const initials=((app.first_name||'?')[0]+(app.last_name||'?')[0]).toUpperCase();
+  const colors=['#1d4ed8','#7c3aed','#0e7490','#15803d','#b45309','#be185d','#1e40af'];
+  const color=colors[(app.first_name||'').charCodeAt(0)%colors.length];
+  return `<div class="app-avatar" style="background:${color}">${initials}</div>`;
+}
+
+function statusPill(s){
+  const m={pending:'pill-warning',approved:'pill-success',denied:'pill-danger',waitlisted:'pill-info',withdrawn:'pill-muted'};
+  const l={pending:'Pending',approved:'Approved',denied:'Denied',waitlisted:'Waitlisted',withdrawn:'Withdrawn'};
+  return `<span class="pill ${m[s]||'pill-warning'}">${l[s]||s}</span>`;
+}
+function payPill(s){
+  const m={paid:'pill-success',unpaid:'pill-danger',waived:'pill-success',refunded:'pill-muted'};
+  const l={paid:'Fee Paid',unpaid:'Fee Unpaid',waived:'Fee Waived',refunded:'Refunded'};
+  return `<span class="pill ${m[s]||'pill-danger'}">${l[s]||s}</span>`;
+}
+function leasePill(s){
+  if(!s||s==='none')return '';
+  const l={sent:'Lease Sent',signed:'Lease Signed',co_signed:'Fully Executed',awaiting_co_sign:'Awaiting Co-Sign',voided:'Voided',expired:'Expired'};
+  return `<span class="pill pill-info">${l[s]||s}</span>`;
+}
+
+// ── Filter & render ──────────────────────────────────────────────────────────
+function applyFilters(){
+  let rows=_allApps;
+  if(_status!=='all')rows=rows.filter(r=>r.status===_status);
+  if(_search){
+    const q=_search.toLowerCase();
+    rows=rows.filter(r=>(r.first_name||'').toLowerCase().includes(q)
+      ||(r.last_name||'').toLowerCase().includes(q)
+      ||(r.email||'').toLowerCase().includes(q)
+      ||(r.app_id||'').toLowerCase().includes(q)
+      ||(r.property_address||'').toLowerCase().includes(q));
+  }
+  renderList(rows);
+}
+
+function renderList(rows){
+  const list=document.getElementById('apps-list');
+  if(!rows.length){
+    const msg = _status==='all'&&!_search
+      ? 'Applications for your properties will appear here.'
+      : 'No applications match these filters.';
+    list.innerHTML=`<div class="empty"><h3>No applications</h3><p>${msg}</p></div>`;
+    return;
+  }
+  list.innerHTML=rows.map(renderCard).join('');
+}
+
+function renderCard(app){
+  const name=esc(`${app.first_name||''} ${app.last_name||''}`.trim())||'(no name)';
+  const prop=esc(app.property_address||app.property_id||'—');
+  return `<div class="app-card" id="lcard-${app.id}">
+    <div class="app-card-header" onclick="toggleDetail('${app.id}')">
+      ${avatar(app)}
+      <div class="app-info">
+        <div class="app-meta-top">
+          <span class="app-id">${esc(app.app_id||app.id)}</span>
+          <span class="app-date">${fmtDate(app.created_at)}</span>
+          ${app.has_co_applicant?'<span class="pill pill-warning">Co-Applicant</span>':''}
+          ${app.has_pets?'<span class="pill pill-success">Pets</span>':''}
+        </div>
+        <div class="app-name">${name}</div>
+        <div class="app-prop">${prop}</div>
+        <div class="app-badges">
+          ${statusPill(app.status)}
+          ${payPill(app.payment_status)}
+          ${leasePill(app.lease_status)}
+        </div>
+      </div>
+      <svg class="expand-icon" id="lchev-${app.id}"><use href="#i-chevron-down"/></svg>
+    </div>
+    <div class="detail-panel" id="ldetail-${app.id}">
+      <div class="detail-inner" id="ldetail-inner-${app.id}">
+        <div class="muted text-sm">Loading…</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function toggleDetail(id){
+  const panel=document.getElementById('ldetail-'+id);
+  const chev=document.getElementById('lchev-'+id);
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){panel.classList.remove('open');if(chev)chev.classList.remove('open');return;}
+  panel.classList.add('open');if(chev)chev.classList.add('open');
+  if(panel.dataset.loaded)return;
+  panel.dataset.loaded='1';
+  const app=_allApps.find(a=>a.id===id);
+  if(!app)return;
+  let coapp=null;
+  if(app.has_co_applicant){
+    try{const {data}=await CP.sb().from('co_applicants').select('*').eq('app_id',app.app_id).maybeSingle();coapp=data;}catch(_){}
+  }
+  document.getElementById('ldetail-inner-'+id).innerHTML=renderDetailInner(app,coapp);
+}
+
+function renderDetailInner(app,coapp){
+  function row(k,v){return `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(String(v||'—'))}</span></div>`;}
+  const coappHtml=coapp?`<div class="coapp-card">
+    <div class="coapp-title">Co-Applicant</div>
+    <div class="detail-grid">
+      ${row('Name',(coapp.first_name||'')+' '+(coapp.last_name||''))}
+      ${row('Email',coapp.email)}
+      ${row('Phone',coapp.phone)}
+      ${row('Role',coapp.role)}
+      ${row('Employer',coapp.employer)}
+      ${row('Job Title',coapp.job_title)}
+      ${row('Income/mo',coapp.monthly_income)}
+      ${row('Employment',coapp.employment_duration)}
+    </div>
+  </div>`:(app.has_co_applicant?'<div class="coapp-card"><div class="coapp-title">Co-Applicant (details not submitted yet)</div></div>':'');
+
+  return `
+    <div class="contact-card">
+      <div class="contact-item"><a href="mailto:${esc(app.email||'')}">${esc(app.email||'—')}</a></div>
+      <div class="contact-item"><a href="tel:${esc(app.phone||'')}">${esc(app.phone||'—')}</a></div>
+      ${app.requested_move_in_date?`<div class="contact-item">Move-in: ${esc(app.requested_move_in_date)}</div>`:''}
+    </div>
+    ${coappHtml}
+    <div class="detail-section" style="margin-top:var(--sp-4)">
+      <div class="detail-section-title">Personal</div>
+      <div class="detail-grid">
+        ${row('DOB',app.dob)}
+        ${row('Desired Lease Term',app.desired_lease_term)}
+        ${row('Total Occupants',app.total_occupants)}
+        ${row('Smoker',app.smoker?'Yes':'No')}
+        ${row('Pets',app.has_pets?(app.pet_details||'Yes'):'No')}
+        ${row('Ever Evicted',app.ever_evicted?'Yes':'No')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Employment & Income</div>
+      <div class="detail-grid">
+        ${row('Status',app.employment_status)}
+        ${row('Employer',app.employer)}
+        ${row('Job Title',app.job_title)}
+        ${row('Monthly Income',app.monthly_income)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Background</div>
+      <div class="detail-grid">
+        ${row('Bankruptcy',app.has_bankruptcy?'Yes':'No')}
+        ${row('Criminal History',app.has_criminal_history?'Yes':'No')}
+        ${row('Ever Evicted',app.ever_evicted?'Yes':'No')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Financials</div>
+      <div class="detail-grid">
+        ${row('Application Fee',fmtMoney(app.application_fee))}
+        ${row('Payment Status',app.payment_status||'—')}
+        ${row('Monthly Rent',fmtMoney(app.monthly_rent))}
+        ${row('Lease Status',app.lease_status||'none')}
+      </div>
+    </div>
+    <div class="notes-section">
+      <div class="notes-title">My Notes <span style="color:var(--muted);font-weight:400;font-size:.68rem;text-transform:none">(visible to admin only)</span></div>
+      <textarea class="notes-area" id="lnotes-${app.id}" placeholder="Add notes about this applicant…">${esc(app.admin_notes||'')}</textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveNotes('${app.id}')">Save Notes</button>
+    </div>`;
+}
+
+async function saveNotes(id){
+  const ta=document.getElementById('lnotes-'+id);
+  if(!ta)return;
+  const {error}=await CP.sb().from('applications').update({admin_notes:ta.value,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){showToast('Error saving notes','error');return;}
+  showToast('Notes saved.','success');
+}
+
+function updateStats(rows){
+  const sr=document.getElementById('stats-row');
+  if(!sr)return;
+  sr.style.display='';
+  const c={total:rows.length,pending:0,approved:0,waitlisted:0,denied:0};
+  rows.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++;});
+  sr.innerHTML=`
+    <div class="kpi-chip"><div class="k-label">Total</div><div class="k-value">${c.total}</div><div class="k-sub">All applications</div></div>
+    <div class="kpi-chip"><div class="k-label">Pending</div><div class="k-value">${c.pending}</div><div class="k-sub"><span class="pill pill-warning">Awaiting review</span></div></div>
+    <div class="kpi-chip"><div class="k-label">Approved</div><div class="k-value">${c.approved}</div><div class="k-sub"><span class="pill pill-success">Accepted</span></div></div>
+    <div class="kpi-chip"><div class="k-label">Waitlisted</div><div class="k-value">${c.waitlisted}</div><div class="k-sub"><span class="pill pill-info">Held</span></div></div>
+    <div class="kpi-chip"><div class="k-label">Denied</div><div class="k-value">${c.denied}</div><div class="k-sub"><span class="pill pill-danger">Rejected</span></div></div>`;
+}
+
+async function loadApplications(){
+  const list=document.getElementById('apps-list');
+  list.innerHTML='<div class="empty"><h3>Loading…</h3></div>';
+
+  const {data:props,error:propErr}=await CP.sb()
+    .from('properties')
+    .select('id')
+    .eq('landlord_id',_landlord.id);
+
+  if(propErr){list.innerHTML='<div class="empty"><h3>Error loading properties</h3></div>';return;}
+
+  const propertyIds=(props||[]).map(p=>p.id);
+
+  const FIELDS='id,app_id,created_at,status,payment_status,payment_date,application_fee,'+
+    'property_id,property_address,'+
+    'first_name,last_name,email,phone,dob,'+
+    'requested_move_in_date,desired_lease_term,'+
+    'employment_status,employer,job_title,monthly_income,'+
+    'has_bankruptcy,has_criminal_history,ever_evicted,smoker,'+
+    'has_pets,pet_details,total_occupants,'+
+    'has_co_applicant,admin_notes,'+
+    'lease_status,monthly_rent,move_in_status,move_in_date_actual';
+
+  // Primary query by landlord_id. For any legacy apps where landlord_id was not
+  // set at creation time, a secondary .in('property_id') query picks them up.
+  // Using two clean queries instead of a fragile string-template .or() call.
+  const [{data:primaryApps},{data:legacyApps}]=await Promise.all([
+    CP.sb().from('applications').select(FIELDS)
+      .eq('landlord_id',_landlord.id).order('created_at',{ascending:false}),
+    propertyIds.length
+      ? CP.sb().from('applications').select(FIELDS)
+          .in('property_id',propertyIds).is('landlord_id',null)
+          .order('created_at',{ascending:false})
+      : Promise.resolve({data:[]}),
+  ]);
+  const apps=[...(primaryApps||[]),...(legacyApps||[])];
+
+  _allApps=apps;
+  updateStats(_allApps);
+  applyFilters();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',async()=>{
+  await new Promise(r=>{const t=setInterval(()=>{if(window.CP&&window.supabase&&typeof CONFIG!=='undefined'&&CONFIG.SUPABASE_URL){clearInterval(t);r();}},100);setTimeout(()=>{clearInterval(t);r();},8000);});
+
+  const landlord=await CP.Auth.requireLandlord('/landlord/login.html');
+  if(!landlord)return;
+  _landlord=landlord;
+
+  // Wire chrome's sign-out delegated handler
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="sign-out"]');
+    if (btn) { e.preventDefault(); CP.sb().auth.signOut().then(()=>location.href='/landlord/login.html'); }
+  });
+
+  // Populate sidebar user info once chrome mounts
+  const user=await CP.Auth.getUser();
+  const email=user?.email||'';
+  whenSidebarReady(() => {
+    const nameEl = document.getElementById('admin-name');
+    if (nameEl) {
+      const display = landlord.business_name || landlord.contact_name || '';
+      nameEl.textContent = display + (email ? ' · ' + email : '');
+    }
+  });
+
+  // Filter pills
+  document.getElementById('filter-tabs').addEventListener('click',e=>{
+    const btn=e.target.closest('.filter-pill');
+    if(!btn)return;
+    document.querySelectorAll('#filter-tabs .filter-pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _status=btn.dataset.status;
+    applyFilters();
+  });
+
+  // Search
+  document.getElementById('search-input').addEventListener('input',e=>{
+    _search=e.target.value;
+    clearTimeout(_debounce);
+    _debounce=setTimeout(applyFilters,300);
+  });
+
+  await loadApplications();
+});
+
+function whenSidebarReady(cb, tries = 0) {
+  if (document.getElementById('admin-name')) return cb();
+  if (tries > 50) return;
+  setTimeout(() => whenSidebarReady(cb, tries + 1), 40);
+}
+</script>
+</body>
+</html>

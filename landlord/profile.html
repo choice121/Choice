@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <title>Landlord Profile — Choice Properties</title>
+  <meta name="description" id="metaDesc" content="Landlord Profile — Choice Properties Nationwide">
+  <meta property="og:type"        content="profile">
+  <meta property="og:site_name"   content="Choice Properties">
+  <meta property="og:title"       id="ogTitle"       content="Landlord Profile — Choice Properties">
+  <meta property="og:description" id="ogDescription" content="View rental listings from this landlord on Choice Properties.">
+  <meta property="og:url"         id="ogUrl"         content="">
+  <meta property="og:image"       id="ogImage"       content="">
+  <meta name="twitter:card"        content="summary">
+  <meta name="twitter:title"       id="twTitle"       content="Landlord Profile">
+  <meta name="twitter:description" id="twDescription" content="View rental listings on Choice Properties.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=1787502213764"></script>
+  <script defer src="/js/cp-chrome.js?v=1787502213764"></script>
+  <script defer src="/js/cp-shell.js?v=1787502213764"></script>
+  <style>
+    /* ── Profile hero (dark themed) ── */
+    .profile-hero {
+      background: var(--ink, #0e0e0f);
+      padding: var(--sp-6) 0 0;
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+    }
+    .profile-hero-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 80% at 10% 50%, rgba(0,106,255,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 90% 20%, rgba(37,71,133,0.5) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .profile-hero-inner {
+      position: relative; z-index: 1;
+      max-width: 900px; margin: 0 auto;
+      padding: 0 var(--sp-4);
+    }
+    .profile-card {
+      display: flex; align-items: flex-end; gap: var(--sp-5);
+    }
+    .profile-avatar-wrap { position: relative; flex-shrink: 0; }
+    .profile-avatar,
+    .profile-avatar-fallback {
+      width: 140px; height: 140px; border-radius: 50%;
+      border: 4px solid var(--brand);
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(0,0,0,0.4));
+      display: flex; align-items: center; justify-content: center;
+      font: 700 52px/1 var(--font);
+      color: var(--brand);
+      object-fit: cover; flex-shrink: 0;
+    }
+    .profile-verified-badge {
+      position: absolute; bottom: 4px; right: 4px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--brand); border: 3px solid var(--ink, #0e0e0f);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 13px;
+    }
+    .profile-info { padding-bottom: var(--sp-5); flex: 1; min-width: 0; }
+    .profile-name {
+      font: 700 38px/1.1 var(--font);
+      color: #fff; margin-bottom: 6px;
+    }
+    .profile-tagline {
+      font-size: 16px; color: var(--brand);
+      margin-bottom: var(--sp-2); font-style: italic;
+    }
+    .profile-contact-row {
+      display: flex; flex-wrap: wrap;
+      gap: var(--sp-3); margin-top: var(--sp-3);
+    }
+    .profile-contact-item {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 14px; color: rgba(255,255,255,0.7);
+      text-decoration: none; transition: color .15s var(--ease);
+    }
+    .profile-contact-item:hover { color: var(--brand); }
+
+    .profile-stats-bar {
+      background: rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin-top: var(--sp-5);
+    }
+    .profile-stats-inner {
+      max-width: 900px; margin: 0 auto;
+      padding: 0 var(--sp-4);
+      display: flex; gap: 0;
+    }
+    .profile-stat {
+      flex: 1; padding: var(--sp-4) var(--sp-3);
+      text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .profile-stat:last-child { border-right: none; }
+    .profile-stat-value {
+      font: 700 26px/1 var(--font);
+      color: var(--brand); margin-bottom: 4px;
+    }
+    .profile-stat-label {
+      font-size: 12px; color: rgba(255,255,255,0.55);
+      font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+    }
+
+    /* ── Profile body (light) ── */
+    .profile-body {
+      max-width: 900px; margin: 0 auto;
+      padding: var(--sp-6) var(--sp-4);
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: var(--sp-6);
+      align-items: start;
+    }
+    .profile-section { margin-bottom: var(--sp-5); }
+    .profile-section-title {
+      font: 600 22px/1.2 var(--font);
+      color: var(--text);
+      margin-bottom: var(--sp-3);
+      padding-bottom: var(--sp-2);
+      border-bottom: 2px solid var(--border);
+    }
+    .profile-bio { font-size: 15px; color: var(--text); line-height: 1.75; }
+    .profile-specialties {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-2);
+    }
+    .specialty-tag {
+      padding: 6px 14px;
+      background: var(--info-bg);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px; font-weight: 500; color: var(--text);
+    }
+
+    .profile-info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-1);
+      position: sticky;
+      top: var(--sp-5);
+    }
+    .profile-info-card-header {
+      background: var(--ink, #0e0e0f);
+      padding: var(--sp-3) var(--sp-4);
+      color: #fff; font-weight: 600; font-size: 14px;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .profile-info-row {
+      display: flex; align-items: center; gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .profile-info-row:last-of-type { border-bottom: none; }
+    .profile-info-row-label { color: var(--muted); font-size: 12px; }
+    .profile-info-row-val { font-weight: 500; color: var(--text); }
+    .profile-social-row {
+      display: flex; gap: var(--sp-2);
+      padding: var(--sp-3) var(--sp-4);
+    }
+    .profile-social-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; text-decoration: none;
+      transition: all .15s var(--ease);
+    }
+    .profile-social-btn.facebook  { background: #e7f0fd; color: #1877f2; }
+    .profile-social-btn.instagram { background: #fde7f3; color: #e1306c; }
+    .profile-social-btn.linkedin  { background: #e7f3fd; color: #0a66c2; }
+    .profile-social-btn.website   { background: var(--info-bg); color: var(--brand); }
+    .profile-social-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); }
+
+    .profile-tabs {
+      max-width: 900px; margin: 0 auto;
+      padding: 0 var(--sp-4);
+    }
+    .profile-tabs-inner {
+      display: flex; gap: 0;
+      border-bottom: 2px solid var(--border);
+      padding-top: var(--sp-3);
+    }
+    .profile-tab {
+      padding: 10px 22px; font-size: 14px; font-weight: 600;
+      color: var(--muted); text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: color .15s var(--ease);
+    }
+    .profile-tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
+    .profile-tab:hover:not(.active) { color: var(--text); }
+
+    .profile-listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--sp-4);
+    }
+
+    /* When public visitor — chrome is hidden, restore full-width content */
+    body.public-view .app > .sidebar,
+    body.public-view .app > .topbar,
+    body.public-view .app > .tabbar { display: none !important; }
+    body.public-view .app > .app-content { margin-left: 0 !important; padding: 0 !important; max-width: none !important; }
+
+    /* Make this page's main content full-bleed (so dark hero spans edge-to-edge) */
+    .app-content.full-bleed { padding: 0 !important; max-width: none !important; }
+
+    @media (max-width: 768px) {
+      .profile-card { flex-direction: column; align-items: center; text-align: center; padding-bottom: var(--sp-4); }
+      .profile-avatar, .profile-avatar-fallback { width: 110px; height: 110px; font-size: 40px; }
+      .profile-name { font-size: 28px; }
+      .profile-contact-row { justify-content: center; }
+      .profile-stats-inner { flex-wrap: wrap; }
+      .profile-stat { flex: 1 1 50%; }
+      .profile-body { grid-template-columns: 1fr; }
+      .profile-info-card { position: static; }
+      .profile-listings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-portal="landlord" data-page-title="Profile" data-page-sub="Public landlord profile">
+
+<div class="app">
+  <main class="app-content full-bleed">
+
+    <!-- Hero -->
+    <div class="profile-hero">
+      <div class="profile-hero-bg"></div>
+      <div class="profile-hero-inner">
+        <div class="profile-card">
+          <div class="profile-avatar-wrap">
+            <div id="avatarEl" class="profile-avatar-fallback">?</div>
+            <div class="profile-verified-badge" id="verifiedBadge" style="display:none">✓</div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-name" id="profileName">Loading…</div>
+            <div id="accountTypeBadge" style="display:none;margin:6px 0 4px"></div>
+            <div class="profile-tagline" id="profileTagline" style="display:none"></div>
+            <div class="profile-contact-row" id="profileContactRow"></div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-stats-bar">
+        <div class="profile-stats-inner">
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statListings">—</div>
+            <div class="profile-stat-label">Active Listings</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statViews">—</div>
+            <div class="profile-stat-label">Total Views</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statYears">—</div>
+            <div class="profile-stat-label">Years Active</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statApps">—</div>
+            <div class="profile-stat-label">Applications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs (only shown to logged-in landlord viewing their own profile, but kept here for parity) -->
+    <div class="profile-tabs">
+      <div class="profile-tabs-inner">
+        <a href="/landlord/settings.html" class="profile-tab">Settings</a>
+        <a href="#" id="tabProfileSelf" class="profile-tab active">My Profile</a>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="profile-body">
+      <div class="profile-main-col">
+        <div class="profile-section" id="bioSection" style="display:none">
+          <div class="profile-section-title">About</div>
+          <div class="profile-bio" id="profileBio"></div>
+        </div>
+        <div class="profile-section" id="specSection" style="display:none">
+          <div class="profile-section-title">Specialties</div>
+          <div class="profile-specialties" id="profileSpecs"></div>
+        </div>
+        <div class="profile-section">
+          <div class="profile-section-title">Active Listings</div>
+          <div class="profile-listings-grid" id="listingsGrid">
+            <div class="empty" style="grid-column:1/-1"><h3>Loading listings…</h3></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="profile-info-card">
+          <div class="profile-info-card-header">Contact Information</div>
+          <div id="infoRows"></div>
+          <div id="socialRow" class="profile-social-row" style="display:none"></div>
+          <a href="#" class="btn btn-primary" id="contactBtn"
+             style="display:none;margin:0 var(--sp-4) var(--sp-4)">
+            Send Message
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module" nonce="__CSP_NONCE__">
+  import { supabase, buildApplyURL } from '../js/cp-api.js';
+
+  // CSP-safe image error handling.
+  document.addEventListener('error', function(e) {
+    const t = e.target;
+    if (t.tagName !== 'IMG') return;
+    if (t.src !== location.origin + '/assets/placeholder-property.jpg') {
+      t.src = '/assets/placeholder-property.jpg';
+    }
+  }, true);
+
+  // Sign-out for landlord chrome (delegated)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="sign-out"]');
+    if (btn) {
+      e.preventDefault();
+      supabase.auth.signOut().then(() => location.href = '/landlord/login.html');
+    }
+  });
+
+  const params     = new URLSearchParams(window.location.search);
+  const landlordId = params.get('id');
+
+  const tabProfileSelf = document.getElementById('tabProfileSelf');
+  if (tabProfileSelf && landlordId) tabProfileSelf.href = `/landlord/profile.html?id=${landlordId}`;
+
+  if (!landlordId) { window.location.href = '/index.html'; }
+  else { loadProfile(landlordId); }
+
+  // Determine viewer auth and decide chrome visibility
+  (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Public visitor — hide landlord chrome
+      document.body.classList.add('public-view');
+      return;
+    }
+    // SECURITY DEFINER RPC — direct .select() on email/contact_name would
+    // 401 once authenticated SELECT is column-restricted (000013).
+    const { data: profile } = await supabase.rpc('get_my_landlord_profile');
+    if (profile) {
+      // If landlord viewing their OWN profile, redirect to settings
+      if (profile.id === landlordId) {
+        window.location.replace('/landlord/settings.html?tab=profile');
+        return;
+      }
+      whenSidebarReady(() => {
+        const nameEl = document.getElementById('admin-name');
+        if (nameEl) {
+          const display = profile.business_name || profile.contact_name || '';
+          nameEl.textContent = display + (profile.email ? ' · ' + profile.email : '');
+        }
+      });
+    } else {
+      // Authenticated user but not a landlord — treat as public
+      document.body.classList.add('public-view');
+    }
+  })();
+
+  async function loadProfile(id) {
+    const { data: landlord, error } = await supabase
+      .from('public_landlord_profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !landlord) {
+      CP.UI.toast('Profile not found.', 'error');
+      setTimeout(() => window.location.href = '/index.html', 2000);
+      return;
+    }
+
+    renderProfile(landlord);
+
+    const { data: listings } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('landlord_id', id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    renderStats(landlord, listings || []);
+    renderListings(listings || []);
+  }
+
+  function renderProfile(l) {
+    const displayName = l.business_name || l.contact_name;
+    document.title = `${displayName} — Choice Properties`;
+
+    const setMetaId  = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+    const setMetaSel = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+    const ogDesc = `${displayName} — Landlord on Choice Properties. Browse their rental listings in Nationwide.`;
+    const ogImg  = (window.CONFIG && CONFIG.img) ? (CONFIG.img(l.avatar_url || '', 'og') || '/assets/placeholder-property.jpg') : '/assets/placeholder-property.jpg';
+    setMetaSel('meta[name="description"]', 'content', ogDesc);
+    setMetaId('ogTitle',       'content', `${displayName} — Choice Properties`);
+    setMetaId('ogDescription', 'content', ogDesc);
+    setMetaId('ogUrl',         'content', window.location.href);
+    setMetaId('ogImage',       'content', ogImg);
+    setMetaId('twTitle',       'content', displayName);
+    setMetaId('twDescription', 'content', ogDesc);
+
+    // Avatar
+    const avatarEl = document.getElementById('avatarEl');
+    if (l.avatar_url && window.CONFIG && CONFIG.img) {
+      avatarEl.outerHTML = `<img id="avatarEl" class="profile-avatar" src="${CONFIG.img(l.avatar_url,'avatar_lg')}" alt="${displayName}" loading="lazy">`;
+    } else {
+      avatarEl.textContent = displayName.charAt(0).toUpperCase();
+    }
+
+    if (l.verified) document.getElementById('verifiedBadge').style.display = 'flex';
+
+    document.getElementById('profileName').textContent = displayName;
+
+    if (l.account_type) {
+      const typeLabels = {
+        landlord: 'Landlord',
+        property_owner: 'Property Owner',
+        realtor: 'Realtor',
+        brokerage: 'Brokerage',
+        agency: 'Agency',
+        llc: 'LLC',
+        property_management: 'Property Management',
+      };
+      const label = typeLabels[l.account_type] || l.account_type;
+      const badgeEl = document.getElementById('accountTypeBadge');
+      if (badgeEl) {
+        badgeEl.innerHTML = `<span class="pill pill-info">${label}</span>`;
+        badgeEl.style.display = '';
+      }
+    }
+
+    if (l.tagline) {
+      const tEl = document.getElementById('profileTagline');
+      tEl.textContent = l.tagline;
+      tEl.style.display = '';
+    }
+
+    const contacts = [];
+    if (l.website) contacts.push(`<a href="${l.website}" target="_blank" class="profile-contact-item">${l.website.replace(/^https?:\/\//, '')}</a>`);
+    document.getElementById('profileContactRow').innerHTML = contacts.join('');
+
+    if (l.bio) {
+      document.getElementById('bioSection').style.display = '';
+      document.getElementById('profileBio').textContent = l.bio;
+    }
+
+    if (l.specialties?.length) {
+      document.getElementById('specSection').style.display = '';
+      document.getElementById('profileSpecs').innerHTML =
+        l.specialties.map(s => `<span class="specialty-tag">${s}</span>`).join('');
+    }
+
+    const rows = [];
+    if (l.contact_name && l.business_name) rows.push({ label:'Contact',     val: l.contact_name });
+    if (l.license_number)                  rows.push({ label:'License #',   val: l.license_number });
+    if (l.years_experience)                rows.push({ label:'Experience',  val: `${l.years_experience} years` });
+    rows.push({ label:'Member Since', val: new Date(l.created_at).getFullYear() });
+
+    document.getElementById('infoRows').innerHTML = rows.map(r => `
+      <div class="profile-info-row">
+        <div>
+          <div class="profile-info-row-label">${r.label}</div>
+          <div class="profile-info-row-val">${r.val}</div>
+        </div>
+      </div>`).join('');
+
+    const socials = [];
+    if (l.social_facebook)  socials.push(`<a href="${l.social_facebook}"  target="_blank" class="profile-social-btn facebook">f</a>`);
+    if (l.social_instagram) socials.push(`<a href="${l.social_instagram}" target="_blank" class="profile-social-btn instagram">IG</a>`);
+    if (l.social_linkedin)  socials.push(`<a href="${l.social_linkedin}"  target="_blank" class="profile-social-btn linkedin">in</a>`);
+    if (l.website)          socials.push(`<a href="${l.website}"          target="_blank" class="profile-social-btn website">🌐</a>`);
+
+    if (socials.length) {
+      const sr = document.getElementById('socialRow');
+      sr.innerHTML = socials.join('');
+      sr.style.display = 'flex';
+    }
+  }
+
+  function renderStats(l, listings) {
+    const totalViews = listings.reduce((s, p) => s + (p.views_count || 0), 0);
+    const totalApps  = listings.reduce((s, p) => s + (p.applications_count || 0), 0);
+    const yearsActive = l.years_experience || (new Date().getFullYear() - new Date(l.created_at).getFullYear()) || 1;
+
+    document.getElementById('statListings').textContent = listings.length;
+    document.getElementById('statViews').textContent    = totalViews > 999 ? (totalViews/1000).toFixed(1)+'k' : totalViews;
+    document.getElementById('statYears').textContent    = yearsActive;
+    document.getElementById('statApps').textContent     = totalApps;
+  }
+
+  function renderListings(listings) {
+    const grid = document.getElementById('listingsGrid');
+    if (!listings.length) {
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <h3>No active listings</h3>
+        <p>Check back soon.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = listings.map(p => {
+      const photo    = p.photo_urls?.[0] || '/assets/placeholder-property.jpg';
+      const availNow = !p.available_date || new Date(p.available_date) <= new Date();
+      return `
+        <article class="card">
+          <a href="/property.html?id=${p.id}" style="display:block">
+            <div style="aspect-ratio:16/10;overflow:hidden;border-radius:var(--r-md) var(--r-md) 0 0;position:relative;background:var(--surface-2)">
+              <img src="${photo}" alt="${esc(p.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;top:10px;left:10px">
+                <span class="pill pill-warning">${capitalize(p.property_type || 'Property')}</span>
+              </div>
+            </div>
+          </a>
+          <div class="card-body">
+            <div style="font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px">$${p.monthly_rent.toLocaleString()}<span style="font-size:.75rem;font-weight:500;color:var(--muted)">/mo</span></div>
+            <a href="/property.html?id=${p.id}" style="text-decoration:none;color:inherit">
+              <div style="font-weight:600;font-size:.95rem;color:var(--text);margin-bottom:6px">${esc(p.title)}</div>
+            </a>
+            <div class="text-sm muted" style="margin-bottom:8px">${esc(p.address)}, ${esc(p.city)}</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-bottom:10px">
+              ${p.bedrooms != null ? `<span>${p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed'}</span>` : ''}
+              ${p.bathrooms ? `<span>${p.bathrooms} Bath</span>` : ''}
+              ${p.square_footage ? `<span>${p.square_footage.toLocaleString()} sqft</span>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px">
+              <span class="text-xs ${availNow ? '' : 'muted'}" style="color:${availNow ? 'var(--success, #1a7f5a)' : 'var(--muted)'}">
+                ${availNow ? '● Available Now' : '● Available ' + new Date(p.available_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+              </span>
+              <a href="/property.html?id=${p.id}" class="btn btn-ghost btn-sm">View →</a>
+            </div>
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+  function whenSidebarReady(cb, tries = 0) {
+    if (document.getElementById('admin-name')) return cb();
+    if (tries > 50) return;
+    setTimeout(() => whenSidebarReady(cb, tries + 1), 40);
+  }
+</script>
+
+</body>
+</html>

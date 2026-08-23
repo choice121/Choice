@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Choice Landlord">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Edit your rental property listing on Choice Properties.">
+  <title>Edit Listing — Choice Properties</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=1787502213764"></script>
+  <script defer src="/js/cp-chrome.js?v=1787502213764"></script>
+  <script defer src="/js/cp-shell.js?v=1787502213764"></script>
+  <style>
+    /* Form controls */
+    .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-3); }
+    .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--sp-3); }
+    @media (max-width: 640px){ .form-grid-2,.form-grid-3 { grid-template-columns:1fr; } }
+    .form-group { display:block; margin-bottom:var(--sp-3); }
+    .form-label {
+      display:block; font:600 .8rem/1.2 var(--font);
+      color:var(--text); margin-bottom:6px;
+    }
+    .form-input, .form-select, .form-textarea {
+      display:block; width:100%;
+      padding:10px 12px;
+      font:400 .9rem/1.4 var(--font);
+      color:var(--text);
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--r-sm);
+      outline:none;
+      transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color:var(--brand);
+      box-shadow:0 0 0 3px var(--ring, rgba(0,106,255,.15));
+    }
+    .form-textarea { resize:vertical; min-height:100px; }
+    .form-hint { font-size:.75rem; color:var(--muted); margin-top:6px; }
+
+    .checkbox-group { display:flex; flex-wrap:wrap; gap:8px; }
+    .checkbox-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 14px; border-radius:999px;
+      border:1px solid var(--border); background:var(--surface);
+      color:var(--muted); font:600 .78rem/1 var(--font);
+      cursor:pointer; transition:all .15s var(--ease);
+    }
+    .checkbox-pill input { accent-color:var(--brand); }
+    .checkbox-pill:has(input:checked) {
+      background:var(--info-bg); color:var(--brand); border-color:var(--brand);
+    }
+
+    .form-section { background:var(--surface); }
+    .form-section-title {
+      font:700 1.4rem/1.2 var(--font);
+      color:var(--text);
+      margin-bottom:var(--sp-3);
+    }
+    .listing-form-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--r-md);
+      padding:var(--sp-5);
+    }
+
+    .form-nav {
+      display:flex; justify-content:space-between; align-items:center;
+      gap:var(--sp-3); flex-wrap:wrap;
+    }
+
+    /* Photos */
+    .existing-photos-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));
+      gap:var(--sp-2);
+      margin-bottom:var(--sp-3);
+    }
+    .existing-photo-item {
+      position:relative; padding-top:75%;
+      border-radius:var(--r-sm); overflow:hidden;
+      background:var(--surface-2);
+      border:2px solid transparent;
+      transition:border-color .15s var(--ease);
+    }
+    .existing-photo-item.is-cover { border-color:var(--brand); }
+    .existing-photo-item img {
+      position:absolute; inset:0;
+      width:100%; height:100%; object-fit:cover;
+    }
+    .photo-action-bar {
+      position:absolute; bottom:0; left:0; right:0;
+      background:linear-gradient(transparent, rgba(0,0,0,0.75));
+      padding:20px 6px 6px;
+      display:flex; gap:4px; justify-content:flex-end;
+    }
+    .photo-action-btn {
+      width:28px; height:28px; border-radius:50%;
+      border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:700;
+      transition:transform .15s var(--ease);
+    }
+    .photo-action-btn:hover { transform:scale(1.15); }
+    .photo-action-btn.cover-btn  { background:var(--brand); color:#fff; }
+    .photo-action-btn.delete-btn { background:rgba(192,57,43,.9); color:#fff; }
+    .cover-label {
+      position:absolute; top:6px; left:6px;
+      background:var(--brand); color:#fff;
+      font-size:10px; font-weight:700;
+      border-radius:4px; padding:2px 7px;
+      letter-spacing:.04em;
+    }
+    .photo-count-hint {
+      font-size:.82rem; color:var(--muted);
+      margin-bottom:var(--sp-3);
+    }
+
+    .photo-dropzone {
+      border:2px dashed var(--border);
+      border-radius:var(--r-md);
+      padding:var(--sp-5);
+      text-align:center;
+      cursor:pointer;
+      background:var(--surface-2);
+      transition:border-color .15s var(--ease), background .15s var(--ease);
+      position:relative;
+    }
+    .photo-dropzone:hover, .photo-dropzone.drag-over {
+      border-color:var(--brand);
+      background:var(--info-bg);
+    }
+    .photo-dropzone h4 { font-size:1rem; font-weight:600; color:var(--text); margin:0 0 4px; }
+    .photo-dropzone p { font-size:.82rem; color:var(--muted); margin:0; }
+
+    .photo-preview-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));
+      gap:var(--sp-2);
+      margin-top:var(--sp-3);
+    }
+    .photo-preview-item {
+      position:relative; padding-top:75%;
+      border-radius:var(--r-sm); overflow:hidden;
+      background:var(--surface-2);
+      border:1px solid var(--border);
+    }
+    .photo-preview-item img {
+      position:absolute; inset:0;
+      width:100%; height:100%; object-fit:cover;
+    }
+    .photo-remove-btn {
+      position:absolute; top:6px; right:6px;
+      width:24px; height:24px; border-radius:50%;
+      border:none; background:rgba(0,0,0,.7); color:#fff;
+      cursor:pointer; font-weight:700;
+    }
+
+    .photo-upload-progress {
+      height:6px; background:var(--border);
+      border-radius:3px; overflow:hidden;
+    }
+    .photo-upload-bar {
+      height:100%; background:var(--brand);
+      transition:width 200ms;
+    }
+
+    /* Danger zone */
+    .danger-zone {
+      margin-top:var(--sp-5);
+      padding:var(--sp-4);
+      border:1px solid #fecaca;
+      border-radius:var(--r-md);
+      background:#fef2f2;
+    }
+    .danger-zone-title {
+      font-size:1rem; font-weight:600; color:#b91c1c;
+      margin-bottom:var(--sp-2);
+    }
+    .danger-zone-desc {
+      font-size:.85rem; color:var(--muted);
+      margin-bottom:var(--sp-3);
+    }
+    .btn-danger {
+      background:#dc2626; color:#fff; border:1px solid #dc2626;
+    }
+    .btn-danger:hover { background:#b91c1c; border-color:#b91c1c; }
+
+    /* Modal */
+    .modal-backdrop {
+      position:fixed; inset:0;
+      background:rgba(15,31,61,0.6);
+      z-index:999;
+      align-items:center; justify-content:center;
+      padding:var(--sp-4);
+      display:none;
+    }
+    .modal-backdrop.is-open { display:flex; }
+    .modal-card {
+      background:var(--surface);
+      border-radius:var(--r-lg);
+      padding:var(--sp-5);
+      max-width:440px; width:100%;
+      box-shadow:0 24px 60px -10px rgba(0,0,0,.3);
+    }
+  </style>
+</head>
+<body data-portal="landlord" data-page-title="Edit Listing" data-page-sub="Update property details">
+
+<div class="app">
+  <main class="app-content">
+
+    <div class="greeting">
+      <div class="g-text">
+        <h1 id="pageTitle">Loading…</h1>
+        <p class="muted">Edit your property listing details below.</p>
+      </div>
+      <a href="#" id="viewPropBtn" target="_blank" class="btn btn-ghost btn-sm">View Listing →</a>
+    </div>
+
+    <div class="listing-form-card" id="formCard">
+      <div style="text-align:center;padding:60px;color:var(--muted)">
+        Loading property data…
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="deleteModal" class="modal-backdrop">
+  <div class="modal-card">
+    <h3 style="font-weight:700;font-size:1.3rem;color:var(--text);text-align:center;margin-bottom:var(--sp-3)">Delete this listing?</h3>
+    <p style="font-size:.85rem;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:var(--sp-3)">
+      This will permanently remove the listing and all its photos from Choice Properties. This action cannot be undone.
+    </p>
+    <div id="deleteWarning" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;font-size:.78rem;color:#991b1b;text-align:center;line-height:1.5;margin-bottom:var(--sp-3)"></div>
+    <div style="display:flex;gap:var(--sp-2)">
+      <button class="btn btn-ghost" id="cancelDeleteBtn" style="flex:1">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" style="flex:1">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/js/landlord/edit-listing.js?v=1787502213764"></script>
+
+</body>
+</html>

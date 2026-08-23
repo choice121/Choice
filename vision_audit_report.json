@@ -1,0 +1,1224 @@
+{
+  "generated_at": "2026-08-23T04:04:52.969Z",
+  "properties_count": 6,
+  "properties": {
+    "4e775516-becd-4aaf-81a3-66056c0c18bb": {
+      "id": "4e775516-becd-4aaf-81a3-66056c0c18bb",
+      "address": "2641 Bulen Ave, Columbus, OH 43207",
+      "monthly_rent": 1545,
+      "bedrooms": 4,
+      "bathrooms": 2,
+      "total_photos": 15,
+      "clean_photos": 15,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "aa1e62d3-7cd5-496c-9e2f-3101cbfc17d3",
+          "url": "https://photos.zillowstatic.com/fp/8babb166a041794b2805367cc291f959-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "091d56de-eb69-4ee5-8023-889f809d988e",
+          "url": "https://photos.zillowstatic.com/fp/8ab273b36dc89c7cd82a43842644e1e6-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "6a90cd8d-d0e5-49e3-a383-bf0dabe03207",
+          "url": "https://photos.zillowstatic.com/fp/5d485679404a6c81ec89c2039956a2ae-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "3c6a20d3-1341-4f44-9f04-e17c31f9f3f4",
+          "url": "https://photos.zillowstatic.com/fp/5ecaef55c24ca89cd2b1cd0b59464b09-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e02bcd19-6182-40be-a9f2-7dc1689b86b1",
+          "url": "https://photos.zillowstatic.com/fp/faad359e337195297f4e6c82984b04aa-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a63ba5d4-48b4-4154-9b8e-d100e638f4fb",
+          "url": "https://photos.zillowstatic.com/fp/3bfbb0c76307d7e5f8f8085955b898bf-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "44f4a405-8ba0-4e99-861f-ec6628070da7",
+          "url": "https://photos.zillowstatic.com/fp/794ee405a00cefebfa3e847f1a09c1bf-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "20fcb2f6-edf3-43cd-af29-aecd738f70fa",
+          "url": "https://photos.zillowstatic.com/fp/2aea5147530772a90d4ffc89c7566609-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f6989769-8ddd-4f6c-b2af-30f54e6e2b4b",
+          "url": "https://photos.zillowstatic.com/fp/0a6bdae7bb3e90c1537c32542c14566d-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a76c2705-6c56-4cc1-aa82-9a3f95d9b032",
+          "url": "https://photos.zillowstatic.com/fp/ec4bb1dfde9ded7c15bad7bddd9caad5-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f4c35e4f-0712-4317-8436-10dd9f6b8967",
+          "url": "https://photos.zillowstatic.com/fp/b2e5eecb874aa7ce454abfbee0598bbc-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1d981a82-7be6-4f24-98a7-c5d209845d62",
+          "url": "https://photos.zillowstatic.com/fp/e854d37a325d9eefa6f8715de358c432-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e0865756-354e-42c6-880c-1c740169fa09",
+          "url": "https://photos.zillowstatic.com/fp/32321042f1f883c8858d1d030264cccd-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "6937a5ef-953e-4a10-8787-a834aaae4604",
+          "url": "https://photos.zillowstatic.com/fp/ce49cb9d81caa4ecb1bf9a3d80834306-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "4f465f06-e7ba-464e-b2d3-caa2d01bea24",
+          "url": "https://photos.zillowstatic.com/fp/f1051007fdc2c3bf4579495263e7dc50-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    },
+    "b0c3be03-23d1-4852-9235-d91128cd3e8b": {
+      "id": "b0c3be03-23d1-4852-9235-d91128cd3e8b",
+      "address": "561 Kimball Pl, Columbus, OH 43205",
+      "monthly_rent": 1600,
+      "bedrooms": 3,
+      "bathrooms": 1,
+      "total_photos": 35,
+      "clean_photos": 35,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "04d5ad41-2f4a-4abb-8031-117dd2fc50e3",
+          "url": "https://photos.zillowstatic.com/fp/4d11973bda80e9b970e3a732841494b7-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "46032864-43de-4de6-a961-e9fa607b91d4",
+          "url": "https://photos.zillowstatic.com/fp/b8d334ac7788192ae7060f29c0402f02-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "99e4e463-1eab-4e23-b250-da99bc96f502",
+          "url": "https://photos.zillowstatic.com/fp/1eba33137296234a01c8bc3b1597a040-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "34b1b550-5592-4a8d-9990-6c93c91a6843",
+          "url": "https://photos.zillowstatic.com/fp/2cd02f2acff76663e7f53225834b51a9-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "fa354123-6767-4f7d-89d9-d9d9d96524cf",
+          "url": "https://photos.zillowstatic.com/fp/789f4fccb8357999c94921cd8b21296c-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "c955cd8f-dacb-4626-b982-3f8a3acb1ac1",
+          "url": "https://photos.zillowstatic.com/fp/992d42d9f992d00faf8bba2f85879312-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "9fa18aa8-91f8-4770-8d33-cfb3d2a4d6be",
+          "url": "https://photos.zillowstatic.com/fp/d995635fdf4caa10829b1e9700840863-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "45ea51d9-70c3-4b59-8a2b-d3ff7c49463d",
+          "url": "https://photos.zillowstatic.com/fp/b7f07b5b126c1b361763e94163687277-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "c20dea6e-16d8-4957-9f7d-aea9593f7167",
+          "url": "https://photos.zillowstatic.com/fp/3788791f75b8b702a04621da40a30e05-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "50b2bb74-808c-4e77-9426-008de8ae187f",
+          "url": "https://photos.zillowstatic.com/fp/83229842b1d977b6fddfe17763aa7990-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "8df9210e-1cd9-4621-99f1-91fdba64f8b0",
+          "url": "https://photos.zillowstatic.com/fp/4fa4a8e36c84581da676625591646cdf-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "cb29e7fd-0ab4-4f71-9557-269a59791f6b",
+          "url": "https://photos.zillowstatic.com/fp/bb02696dc8bce62b5f92b8edb7cb8eba-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "aeac6e68-b476-470b-9059-c7773cda9548",
+          "url": "https://photos.zillowstatic.com/fp/41899f8106d365fb278ab2e422aa6db4-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1af44f77-2734-4f72-90c7-de936bc4404c",
+          "url": "https://photos.zillowstatic.com/fp/c192c991e1124c320eb166b7096b9f17-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "c095c753-1f93-48a6-ad60-485da132b061",
+          "url": "https://photos.zillowstatic.com/fp/ccaa8efdfc92f9cf12b3f6c2ec21b6a1-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ee20e474-b415-43ac-b71f-bd6da3b9e186",
+          "url": "https://photos.zillowstatic.com/fp/742dcc26dfc380265fa3e6da1f1bde2b-p_e.jpg",
+          "display_order": 15,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "0363ed1b-f623-4bb0-b754-9c68557fabb7",
+          "url": "https://photos.zillowstatic.com/fp/092dce952c3c86546f238d76b27e7040-p_e.jpg",
+          "display_order": 16,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "822ba9c6-ed1e-4cd1-9d12-989e466ed4dc",
+          "url": "https://photos.zillowstatic.com/fp/c65535e17e96af828a603ac29a3e64a7-p_e.jpg",
+          "display_order": 17,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "c8f94967-7a2a-4f83-a7bf-da1e40cc036c",
+          "url": "https://photos.zillowstatic.com/fp/02d915445f3bc1d1d2b39ef5d91c9907-p_e.jpg",
+          "display_order": 18,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "26883194-fb46-4fef-b341-1ddeb0d070f7",
+          "url": "https://photos.zillowstatic.com/fp/25805a6d1372dfa27200096261ccb49b-p_e.jpg",
+          "display_order": 19,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a039b053-7a9a-4880-8291-a0514372761e",
+          "url": "https://photos.zillowstatic.com/fp/a68e9a88ff449f283e961235e94d7c06-p_e.jpg",
+          "display_order": 20,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f4e81a4c-e7a7-4df1-96a2-19cab42a67f5",
+          "url": "https://photos.zillowstatic.com/fp/e93ecd9ed8a569abbc671a016af57cf9-p_e.jpg",
+          "display_order": 21,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f685edc3-63fd-4aeb-b655-1f3c8d5b91fd",
+          "url": "https://photos.zillowstatic.com/fp/c7a7907a52cfe8f1f302158ff6d3e5c2-p_e.jpg",
+          "display_order": 22,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "810412ae-7aab-4f46-9dc9-444ff70f00b3",
+          "url": "https://photos.zillowstatic.com/fp/fac770b651443021d6e9585ba63ceb44-p_e.jpg",
+          "display_order": 23,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "660b85e3-f259-4685-8297-6484e2463b45",
+          "url": "https://photos.zillowstatic.com/fp/f7dd3ee6956569b280e6af7b945165a4-p_e.jpg",
+          "display_order": 24,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "daea3288-7c8b-4cb7-89d5-4fa7688f55e8",
+          "url": "https://photos.zillowstatic.com/fp/e615f96273322f570f29f6335c4fdb6f-p_e.jpg",
+          "display_order": 25,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "069afb6a-650a-495a-9f33-33eb582577f2",
+          "url": "https://photos.zillowstatic.com/fp/f00a3a320c44ff9213256952434a0ee9-p_e.jpg",
+          "display_order": 26,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "5b5c4897-0bf1-4706-9287-7e04267ab420",
+          "url": "https://photos.zillowstatic.com/fp/5639b1b542df71865db59adea2a163b2-p_e.jpg",
+          "display_order": 27,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "d747a686-bba7-47b2-84fa-4e55337270db",
+          "url": "https://photos.zillowstatic.com/fp/5842587cbb90c76809ba0615ccbb3615-p_e.jpg",
+          "display_order": 28,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "439c4b43-931e-4468-8787-ceb528fc31e5",
+          "url": "https://photos.zillowstatic.com/fp/d769b8fd5e11fbe25c5854126e3e1efe-p_e.jpg",
+          "display_order": 29,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "038138f2-1614-4378-841d-2f6b3bcd76e5",
+          "url": "https://photos.zillowstatic.com/fp/0226642aa79ca56ce0c9c6a076e37a4c-p_e.jpg",
+          "display_order": 30,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "96061a65-61fb-40fc-b549-0114dc8a5156",
+          "url": "https://photos.zillowstatic.com/fp/b6c9205cc21a41b3d1570850f8728b0c-p_e.jpg",
+          "display_order": 31,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "0b00677e-c3de-48f6-8251-35ebfa49806c",
+          "url": "https://photos.zillowstatic.com/fp/f0d7bb7781294eff7f0938679e6a3e6e-p_e.jpg",
+          "display_order": 32,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "afb9170f-b9a4-4a9b-ad8e-d0127f77339e",
+          "url": "https://photos.zillowstatic.com/fp/2c6937032211803bd9aaf2543c621b60-p_e.jpg",
+          "display_order": 33,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "0b75b06a-cc89-4db8-a588-7230398e226e",
+          "url": "https://photos.zillowstatic.com/fp/ea96bf2741b39a3f6e4b750f8ee4ddc4-p_e.jpg",
+          "display_order": 34,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    },
+    "5de1d434-b4f8-42ba-aebb-5be33fb67ea1": {
+      "id": "5de1d434-b4f8-42ba-aebb-5be33fb67ea1",
+      "address": "731 Malvern Ave, Columbus, OH 43219",
+      "monthly_rent": 1545,
+      "bedrooms": 4,
+      "bathrooms": 1,
+      "total_photos": 15,
+      "clean_photos": 15,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "17335f16-bacf-494a-8970-8f90a3bdf79e",
+          "url": "https://photos.zillowstatic.com/fp/82be4417543c8e9cac8fe39b25e8a9e2-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "92fe14a1-e06b-4567-ac10-5997a06873ae",
+          "url": "https://photos.zillowstatic.com/fp/4e0134edcebf24c31e368b8f77bb2603-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "8c91d3d2-eaae-4dce-a7a2-166052511af8",
+          "url": "https://photos.zillowstatic.com/fp/787a18ac341d442d8f70441b1692003e-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "97b1e697-af03-4b49-ae81-43acfcc30e55",
+          "url": "https://photos.zillowstatic.com/fp/c94bd853de33fcb1ae2375fc7bb01054-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "02986c9d-78e6-408b-86cc-362da44acc94",
+          "url": "https://photos.zillowstatic.com/fp/0a61d90db79be3865771f3c5df5a060d-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "d260cf62-906a-491b-9f61-b41e080b27fc",
+          "url": "https://photos.zillowstatic.com/fp/f0b5bda0194b546d00834709e2f02bc4-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "258e0370-7181-4a43-836e-b5505ae23a11",
+          "url": "https://photos.zillowstatic.com/fp/780549dd8d8b60647fb1962d51f86cb0-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f7a1e54a-64e7-4d9c-add7-4a3523f0c708",
+          "url": "https://photos.zillowstatic.com/fp/65936c70c713d7bcc42e4f41f30014aa-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f485ef56-45fc-45ff-ab79-f78b0814ffce",
+          "url": "https://photos.zillowstatic.com/fp/fc330e136eb733dcf08b86c723366038-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "c31fa911-8893-4194-a59c-fbd6c7d87d3d",
+          "url": "https://photos.zillowstatic.com/fp/b683be5841742109d60c51b0513adc3b-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "fa96d8ac-8975-4383-bbe4-6e3fc5b24a2f",
+          "url": "https://photos.zillowstatic.com/fp/0acebce9a96610349fa7101e18da284f-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "5264193d-cfac-4739-95ae-0d4102f9ffae",
+          "url": "https://photos.zillowstatic.com/fp/ff61113a2ae42202383c14b06236ae7a-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e361d5b7-060e-48cd-9d09-9960b5257157",
+          "url": "https://photos.zillowstatic.com/fp/682fda3c09561e56564bfc4e5fa4ef26-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "05ea1db5-208c-4ffa-95a9-008481ba5315",
+          "url": "https://photos.zillowstatic.com/fp/11a5331ad10a7de154f26a45453a0f68-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "15f90f48-84bb-4c45-8f20-ee52a3770a47",
+          "url": "https://photos.zillowstatic.com/fp/ed15e829ef31ed14da93b84ec8bbbd82-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    },
+    "f41142da-0a3b-49b1-afc9-bb46baefae68": {
+      "id": "f41142da-0a3b-49b1-afc9-bb46baefae68",
+      "address": "5322 Newport Rd, Columbus, OH 43232",
+      "monthly_rent": 1600,
+      "bedrooms": 3,
+      "bathrooms": 1,
+      "total_photos": 30,
+      "clean_photos": 30,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "8cfa5fdd-0e42-4c42-9391-03ec93a3b1b5",
+          "url": "https://photos.zillowstatic.com/fp/debf0e68eead90a392bee4abc926ed24-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "594e9821-213c-4705-8934-6f66ce3d7338",
+          "url": "https://photos.zillowstatic.com/fp/9b162610281ac0a9902c40f056ed0ecd-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f79066ac-2ad1-4778-aec5-23f3bf863ddf",
+          "url": "https://photos.zillowstatic.com/fp/50e33c614402eb65e014d8ed27541def-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "5de9fbdc-2924-4b07-84e4-6123ec854dfa",
+          "url": "https://photos.zillowstatic.com/fp/f0590b384cb7fe704a93e6c26f6baada-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "587ae0c6-1609-44ea-a9ba-8a689ef29d07",
+          "url": "https://photos.zillowstatic.com/fp/94b80a8ab1b8538e475e637feba1fc62-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "9c30e76d-f955-4c57-9c0d-c23044f15cfd",
+          "url": "https://photos.zillowstatic.com/fp/caf9b114935b1fb915bd47bd27a56ca6-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "824e90fb-1b81-4f47-ae10-d86e538dbb29",
+          "url": "https://photos.zillowstatic.com/fp/750ee828c2e9c689756101a5b1a9990d-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ed4064f4-d10f-4dbf-8b41-033334d14555",
+          "url": "https://photos.zillowstatic.com/fp/2528c95392e6594f1c64a6b8b36b7676-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e5656f87-237e-481c-b6fb-30b7267280c5",
+          "url": "https://photos.zillowstatic.com/fp/5bdd74510a48cebce67add927d376a89-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "d6702a1e-00df-4149-ab39-0206104a182b",
+          "url": "https://photos.zillowstatic.com/fp/bc431df19d704ab35b9e184bb7515d8e-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1c49fbc5-d6ad-4f55-99e4-02be2e4ff814",
+          "url": "https://photos.zillowstatic.com/fp/a8cfcb0dcf30180fc7f0855b0eaba725-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1e1ce9d6-fbd9-4e04-a11f-4c3133d572ee",
+          "url": "https://photos.zillowstatic.com/fp/af4f365056462bd2926d8891d745bd59-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a3df8619-d9d2-41df-947c-06643ad6dee7",
+          "url": "https://photos.zillowstatic.com/fp/08f188f520009173fcb37ee6b0eb0be3-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "43edfe74-7b1d-4c0f-bb23-15b0211f31ef",
+          "url": "https://photos.zillowstatic.com/fp/7eee1255fa82f5ebbea3e7594985fc5a-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "b6d33a63-475e-4615-b114-7465128f958a",
+          "url": "https://photos.zillowstatic.com/fp/455f20436e6b41e0c820c71a8149ea33-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "752d5fc9-a776-4b12-bd17-7f8a07a73378",
+          "url": "https://photos.zillowstatic.com/fp/61ab0452020ca0c842fc7e3d3bc8471c-p_e.jpg",
+          "display_order": 15,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a652881a-1866-4d24-b4e7-189c3c624d6e",
+          "url": "https://photos.zillowstatic.com/fp/300f0d1e8131d4207e961682228f82d5-p_e.jpg",
+          "display_order": 16,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "10801d0b-3de1-40af-8dcd-bc6dca713316",
+          "url": "https://photos.zillowstatic.com/fp/703c944928f50e834ec5b1f2bea66a14-p_e.jpg",
+          "display_order": 17,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "088a5e32-a9e4-443e-9fd4-52bde407bda1",
+          "url": "https://photos.zillowstatic.com/fp/857a34fad3e12d9ff7e0ac69d492125e-p_e.jpg",
+          "display_order": 18,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "444f8cd9-8e58-470e-adc1-74d3037f42d1",
+          "url": "https://photos.zillowstatic.com/fp/7c40bcf9c9059e69ee5c3a92b267580e-p_e.jpg",
+          "display_order": 19,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "04dc5d22-ecf0-445b-9458-79d1beb6946a",
+          "url": "https://photos.zillowstatic.com/fp/8b50249ef16a4181bbab66b6851b3647-p_e.jpg",
+          "display_order": 20,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1e329279-4a8f-4d8c-ac8b-90f59d68275b",
+          "url": "https://photos.zillowstatic.com/fp/6c7ce9db9316afb7737c7fadc7a8320e-p_e.jpg",
+          "display_order": 21,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ebc709d4-d8a7-41ad-b10e-72eba24f3467",
+          "url": "https://photos.zillowstatic.com/fp/7ba4af4d60ce093e4a80e99683609752-p_e.jpg",
+          "display_order": 22,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "415ed19e-14e6-46cb-abb5-44abea167d29",
+          "url": "https://photos.zillowstatic.com/fp/136e1cb277941a59abf236065fcaf513-p_e.jpg",
+          "display_order": 23,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ec5b1d10-0800-4b0e-bcd1-d27a67805cf2",
+          "url": "https://photos.zillowstatic.com/fp/2f74862e252dae854154f09132f5d3ac-p_e.jpg",
+          "display_order": 24,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "41d7ddc5-9637-4ef3-aac3-4ed4646634b3",
+          "url": "https://photos.zillowstatic.com/fp/4f2d83436647c991a6482898aba02baa-p_e.jpg",
+          "display_order": 25,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "57047809-ea70-415d-955c-0a9c34259f6f",
+          "url": "https://photos.zillowstatic.com/fp/f4cfabdbf1d93bfa410e1ee3f54dca89-p_e.jpg",
+          "display_order": 26,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "85b66bbc-98d0-4b25-9e7c-f383682e96a6",
+          "url": "https://photos.zillowstatic.com/fp/0d7d8b513d45ec526b3e769fcb13709e-p_e.jpg",
+          "display_order": 27,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "f7bfac42-b077-4142-a10b-2ec8691f6773",
+          "url": "https://photos.zillowstatic.com/fp/1b53e53f6404b87534693400a1dfcf0c-p_e.jpg",
+          "display_order": 28,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "7624f9ef-826d-4da0-9de3-8b639483f728",
+          "url": "https://photos.zillowstatic.com/fp/7ce72b01d6961fddf70b1a9d78521d16-p_e.jpg",
+          "display_order": 29,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    },
+    "f4c40e75-2131-458c-98a5-4680dcede876": {
+      "id": "f4c40e75-2131-458c-98a5-4680dcede876",
+      "address": "3685 Shoreline Dr, Columbus, OH 43232",
+      "monthly_rent": 1495,
+      "bedrooms": 3,
+      "bathrooms": 1,
+      "total_photos": 15,
+      "clean_photos": 15,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "fd84ae94-d869-4ee4-ba08-278b4fa7fabc",
+          "url": "https://photos.zillowstatic.com/fp/503bc6920d55b34c4154874916231c52-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ba8c3b2d-95a1-495d-a29c-8d7fc2127dd2",
+          "url": "https://photos.zillowstatic.com/fp/376d25eab6ec41e03c43f2f089277f0d-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "d97036a4-092c-46f1-a7f4-b2a9cda97d2e",
+          "url": "https://photos.zillowstatic.com/fp/af87581257e6def6a5f8a7d861d9fba1-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a668c713-48c1-462c-862e-e8197c09e2b6",
+          "url": "https://photos.zillowstatic.com/fp/018074b0a4a21c65e96adab63d964dc1-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "57255530-1367-4cab-8686-7b1a69a9fd40",
+          "url": "https://photos.zillowstatic.com/fp/9bc70248039120ec2f884ceddd41fd22-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "9e1062cc-da28-4a63-bfbe-3565ddde3d77",
+          "url": "https://photos.zillowstatic.com/fp/2cbaaa78fd0cb279d957064501a402df-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "329a7ffd-f1b6-4f4a-ac29-04aae7ffd325",
+          "url": "https://photos.zillowstatic.com/fp/a9c36bc5fa5d24188b55f855be49a442-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "fa74283a-7bb5-499c-9c81-507892e27d2d",
+          "url": "https://photos.zillowstatic.com/fp/598230f796f88dc02b736ff8a1f0b8b5-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "07cb1bf8-7a08-4293-aaf1-faec1942cb7f",
+          "url": "https://photos.zillowstatic.com/fp/ae7a7e3032aae0948388018309f113b1-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "87f877bf-fa2a-4fdf-8563-ecb6bb59a15d",
+          "url": "https://photos.zillowstatic.com/fp/2febc96358b6fbc5f478be76428279a5-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "99cb2821-8147-4704-8fdb-79908a43507b",
+          "url": "https://photos.zillowstatic.com/fp/d45f74029475a35eb241496842585206-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1b06571d-3e9d-45cb-9575-90f314c6d6e9",
+          "url": "https://photos.zillowstatic.com/fp/39aced1fea30f412255f148100184211-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "fcf004c3-5e8d-4ce6-bff8-22a973694604",
+          "url": "https://photos.zillowstatic.com/fp/da30463b25bb6d3a318e375952752080-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "87dc6ebf-7f7f-4741-8970-c94896bd1c6f",
+          "url": "https://photos.zillowstatic.com/fp/c6fa17092bf2231aacc3184989fb7233-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "08c68f38-55f3-40c2-9df4-99143ba89ec6",
+          "url": "https://photos.zillowstatic.com/fp/93396b9658836653aa53dd102b5bad9f-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    },
+    "572eb06e-e395-43a2-913d-32d75c4dd240": {
+      "id": "572eb06e-e395-43a2-913d-32d75c4dd240",
+      "address": "4006 Carlton Ave, Columbus, OH 43227",
+      "monthly_rent": 1600,
+      "bedrooms": 3,
+      "bathrooms": 1,
+      "total_photos": 16,
+      "clean_photos": 16,
+      "harmful_photos": 0,
+      "would_unpublish": false,
+      "status": "APPROVED_PUBLISHED",
+      "photos": [
+        {
+          "id": "7147ed14-6e91-4ff1-b8bf-84a3ab328232",
+          "url": "https://photos.zillowstatic.com/fp/3b517a1602f0244495d56204df73ece6-p_e.jpg",
+          "display_order": 0,
+          "is_hero": true,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "675c5152-0bd2-4474-8560-2314b0e070f0",
+          "url": "https://photos.zillowstatic.com/fp/e0f5f84c916021adb17e2612d99ae9dc-p_e.jpg",
+          "display_order": 1,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "78f18c5d-d859-48b1-b2c3-2bf9990198db",
+          "url": "https://photos.zillowstatic.com/fp/282dc2cc4592ca3138cf143a3849caed-p_e.jpg",
+          "display_order": 2,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "7a6d0c64-0373-424c-9f28-f9ff1f2523a7",
+          "url": "https://photos.zillowstatic.com/fp/440e2c6ac768d3eabd3f91fa44bd56ed-p_e.jpg",
+          "display_order": 3,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "1de2f06e-bcab-4b38-9008-71bec98f42d0",
+          "url": "https://photos.zillowstatic.com/fp/94adda2000b8ddd7c360b63680f00ad9-p_e.jpg",
+          "display_order": 4,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "a2ed348a-9a9a-4e51-85f7-b56c25eaa8e8",
+          "url": "https://photos.zillowstatic.com/fp/d4f28f38a2b88ad8e3df7b33d1159fbb-p_e.jpg",
+          "display_order": 5,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "dd2fce97-6477-43d0-afe2-63b1e951cdf4",
+          "url": "https://photos.zillowstatic.com/fp/fd5852a5d1050667b6c65be302e6634d-p_e.jpg",
+          "display_order": 6,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "b75c37c1-769f-4cd4-9162-1553e214da51",
+          "url": "https://photos.zillowstatic.com/fp/eff556966f76ab9144f0767d9090258d-p_e.jpg",
+          "display_order": 7,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e305a889-13ff-4cdc-9c46-f1757fbbaeab",
+          "url": "https://photos.zillowstatic.com/fp/dc49b91d7a800accc8ea66103768dc01-p_e.jpg",
+          "display_order": 8,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e07b53c6-19fe-4376-a23c-614d9afa46f8",
+          "url": "https://photos.zillowstatic.com/fp/575f18a9ab4fb0ebacc3cc836334c1b7-p_e.jpg",
+          "display_order": 9,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "ddbd3d26-defc-418b-a480-53a398651805",
+          "url": "https://photos.zillowstatic.com/fp/cec490fad8ac097dc6b9eec8b559a99d-p_e.jpg",
+          "display_order": 10,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "18566d6b-cd11-4811-be9f-66da564c4227",
+          "url": "https://photos.zillowstatic.com/fp/5086d94889d1f195f1a5cd5db4327085-p_e.jpg",
+          "display_order": 11,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "32a3073d-bf25-42c2-aaa5-41ac34d34744",
+          "url": "https://photos.zillowstatic.com/fp/7ff883c94ef043b935394d6db3f820ab-p_e.jpg",
+          "display_order": 12,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "6439c4f4-a1e2-4f60-916f-7e2bbeceaa23",
+          "url": "https://photos.zillowstatic.com/fp/00a92fe97564f4a6ab49476219e6339b-p_e.jpg",
+          "display_order": 13,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "e0adba32-2ff1-4107-b342-134c6f7d7c0e",
+          "url": "https://photos.zillowstatic.com/fp/823bbd4bfaaff103e2934bb4fbbdbe6b-p_e.jpg",
+          "display_order": 14,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        },
+        {
+          "id": "b1975391-5f09-4a47-9f1c-6ea3e542cacb",
+          "url": "https://photos.zillowstatic.com/fp/55e319829fe21bb6af144fc17c8362a0-p_e.jpg",
+          "display_order": 15,
+          "is_hero": false,
+          "is_harmful": false,
+          "category": "clean",
+          "reason": "Verified genuine property photograph with no prohibited watermarks or promotional overlays."
+        }
+      ]
+    }
+  }
+}

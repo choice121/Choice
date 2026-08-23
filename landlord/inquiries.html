@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Choice Landlord">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Inquiries — Choice Properties</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=1787502213764"></script>
+  <script defer src="/js/cp-chrome.js?v=1787502213764"></script>
+  <script defer src="/js/cp-shell.js?v=1787502213764"></script>
+  <style>
+    /* Page-scoped inquiry card styles — uses cp-design tokens. */
+    .inquiry-card {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--border-strong);
+      border-radius: var(--r-md);
+      padding: var(--sp-4);
+      margin-bottom: var(--sp-3);
+      background: var(--surface);
+      transition: border-color .2s var(--ease);
+    }
+    .inquiry-card.unread {
+      border-left-color: var(--brand);
+      background: var(--info-bg);
+    }
+    .inquiry-card:hover { border-color: var(--brand); }
+    .inquiry-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: var(--sp-3);
+    }
+    .inquiry-name {
+      font-weight: 700; font-size: 1rem; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .inquiry-unread-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand); flex-shrink: 0; display: inline-block;
+    }
+    .inquiry-when { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .inquiry-prop-link {
+      font-size: .8rem; color: var(--brand); text-decoration: none; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .inquiry-meta {
+      display: flex; flex-wrap: wrap; gap: var(--sp-3);
+      font-size: .8rem; color: var(--muted);
+      margin: var(--sp-3) 0;
+    }
+    .inquiry-meta a { color: inherit; text-decoration: none; }
+    .inquiry-meta a:hover { color: var(--brand); }
+    .inquiry-message {
+      font-size: .85rem; color: var(--text); line-height: 1.6;
+      background: var(--surface-2);
+      border-radius: var(--r-md);
+      padding: var(--sp-3);
+      margin: var(--sp-3) 0;
+      border-left: 3px solid var(--border-strong);
+      white-space: pre-wrap;
+    }
+    .inquiry-actions {
+      display: flex; gap: var(--sp-2); flex-wrap: wrap;
+      align-items: center; margin-top: var(--sp-3);
+    }
+    .inquiry-actions .read-tag {
+      font-size: .72rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px;
+    }
+
+    .filter-bar {
+      display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center;
+      padding: var(--sp-3) var(--sp-4);
+    }
+    .filter-bar .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .filter-bar .search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none;
+    }
+    .filter-bar .search-wrap .field-input { padding-left: 40px; margin: 0; }
+    .filter-bar .field-select { margin: 0; min-width: 160px; }
+  </style>
+</head>
+<body data-portal="landlord" data-page-title="Inquiries" data-page-sub="Tenant messages">
+
+<div class="app">
+  <main class="app-content">
+
+    <!-- Header -->
+    <div class="greeting">
+      <div class="g-text">
+        <h1>Inquiries</h1>
+        <p class="muted">Messages sent by tenants from your property listings.</p>
+      </div>
+      <button class="btn btn-ghost" id="markAllReadBtn">
+        <svg class="i i-sm"><use href="#i-check"/></svg> Mark All as Read
+      </button>
+    </div>
+
+    <!-- KPI strip -->
+    <section>
+      <div class="kpi-strip">
+        <div class="kpi-chip">
+          <div class="k-label">Total Inquiries</div>
+          <div class="k-value" id="statTotal">—</div>
+          <div class="k-sub">All time</div>
+        </div>
+        <div class="kpi-chip">
+          <div class="k-label">Unread</div>
+          <div class="k-value" id="statUnread">—</div>
+          <div class="k-sub"><span id="unreadBadge" class="pill pill-warning" style="display:none">0</span></div>
+        </div>
+        <div class="kpi-chip">
+          <div class="k-label">This Week</div>
+          <div class="k-value" id="statWeek">—</div>
+          <div class="k-sub">Last 7 days</div>
+        </div>
+        <div class="kpi-chip">
+          <div class="k-label">Properties w/ Inquiries</div>
+          <div class="k-value" id="statProps">—</div>
+          <div class="k-sub">Active threads</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter bar -->
+    <section class="card">
+      <div class="card-body" style="padding:0">
+        <div class="filter-bar">
+          <div class="search-wrap">
+            <svg class="i i-sm"><use href="#i-search"/></svg>
+            <input type="text" class="field-input" id="searchInput" placeholder="Search by name, email, or message…">
+          </div>
+          <select class="field-select" id="readFilter">
+            <option value="">All Messages</option>
+            <option value="unread">Unread Only</option>
+            <option value="read">Read Only</option>
+          </select>
+          <select class="field-select" id="propFilter">
+            <option value="">All Properties</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Inquiries list -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">All Messages</span>
+        <span id="resultCount" class="text-xs muted"></span>
+      </div>
+      <div class="card-body" id="inquiriesContainer">
+        <div class="empty"><h3>Loading inquiries…</h3></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" nonce="__CSP_NONCE__">
+  import { supabase, requireAuth, getLandlordProfile, signOut } from '../js/cp-api.js';
+
+  const session = await requireAuth('/landlord/login.html');
+  if (!session) throw new Error('No session');
+  const profile = await getLandlordProfile();
+  if (!profile) { window.location.href = '/landlord/login.html'; throw new Error('No profile'); }
+
+  // Wire chrome's sign-out button.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="sign-out"]');
+    if (btn) { e.preventDefault(); signOut(); }
+  });
+
+  // Populate sidebar footer with user info once chrome is mounted.
+  whenSidebarReady(() => {
+    const nameEl = document.getElementById('admin-name');
+    if (nameEl) {
+      const display = profile.business_name || profile.contact_name || '';
+      nameEl.textContent = display + (profile.email ? ' · ' + profile.email : '');
+    }
+  });
+
+  let allInquiries = [];
+  let properties   = [];
+
+  const { ok, data: fetchedInquiries } = await CP.Inquiries.getForLandlord(profile.id);
+
+  if (!ok) {
+    document.getElementById('inquiriesContainer').innerHTML = CP.UI.errorState('Failed to load inquiries. Please refresh.');
+  } else {
+    allInquiries = fetchedInquiries || [];
+
+    const seenIds = new Set();
+    allInquiries.forEach(inq => {
+      if (inq.properties && !seenIds.has(inq.properties.id)) {
+        seenIds.add(inq.properties.id);
+        properties.push(inq.properties);
+      }
+    });
+
+    const propFilter = document.getElementById('propFilter');
+    properties.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title || `${p.address}, ${p.city}`;
+      propFilter.appendChild(opt);
+    });
+
+    if (!allInquiries.length) {
+      renderEmpty();
+    } else {
+      renderStats(allInquiries);
+      renderInquiries(allInquiries);
+    }
+  }
+
+  function renderStats(inqs) {
+    const now     = new Date();
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const unread  = inqs.filter(i => !i.read).length;
+
+    setText('statTotal',  inqs.length);
+    setText('statUnread', unread);
+    setText('statWeek',   inqs.filter(i => new Date(i.created_at) > weekAgo).length);
+    setText('statProps',  new Set(inqs.map(i => i.property_id)).size);
+
+    const badge = document.getElementById('unreadBadge');
+    if (badge) {
+      if (unread > 0) { badge.textContent = unread + ' unread'; badge.style.display = 'inline-flex'; }
+      else { badge.style.display = 'none'; }
+    }
+  }
+
+  function renderInquiries(inqs) {
+    document.getElementById('resultCount').textContent = `${inqs.length} message${inqs.length !== 1 ? 's' : ''}`;
+    const c = document.getElementById('inquiriesContainer');
+
+    if (!inqs.length) {
+      c.innerHTML = CP.UI.emptyState('No inquiries match your filters.', '✉️');
+      return;
+    }
+
+    const propMap = {};
+    properties.forEach(p => { propMap[p.id] = p; });
+
+    c.innerHTML = inqs.map(inq => {
+      const prop  = inq.properties || propMap[inq.property_id];
+      const date  = new Date(inq.created_at);
+      const dateStr = date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      const timeStr = date.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      const safeName  = CP_esc(inq.tenant_name);
+      const safeEmail = CP_esc(inq.tenant_email);
+      const safePhone = CP_esc(inq.tenant_phone);
+      const safeMsg   = CP_esc(inq.message) || '(no message)';
+      const mailSubject = encodeURIComponent('Re: Your inquiry about ' + (prop?.title || 'the property'));
+      return `
+        <div class="inquiry-card ${inq.read ? '' : 'unread'}" id="inq-${inq.id}">
+          <div class="inquiry-head">
+            <div>
+              <div class="inquiry-name">
+                ${inq.read ? '' : '<span class="inquiry-unread-dot"></span>'}
+                ${safeName}
+              </div>
+              <div class="inquiry-when">${dateStr} at ${timeStr}</div>
+            </div>
+            ${prop ? `<a href="/property.html?id=${prop.id}" target="_blank" class="inquiry-prop-link">
+              <svg class="i i-sm"><use href="#i-home"/></svg>${CP_esc(prop.title || prop.address)}
+            </a>` : ''}
+          </div>
+          <div class="inquiry-meta">
+            ${inq.tenant_email ? `<span><svg class="i i-sm"><use href="#i-mail"/></svg><a href="mailto:${safeEmail}">${safeEmail}</a></span>` : ''}
+            ${inq.tenant_phone ? `<span><a href="tel:${inq.tenant_phone.replace(/\D/g,'')}">${safePhone}</a></span>` : ''}
+          </div>
+          <div class="inquiry-message">${safeMsg}</div>
+          <div class="inquiry-actions">
+            ${inq.tenant_email ? `
+              <a href="mailto:${safeEmail}?subject=${mailSubject}" class="btn btn-primary btn-sm">
+                <svg class="i i-sm"><use href="#i-mail"/></svg> Reply by Email
+              </a>` : ''}
+            ${inq.tenant_phone ? `
+              <a href="tel:${inq.tenant_phone.replace(/\D/g,'')}" class="btn btn-ghost btn-sm">
+                Call
+              </a>` : ''}
+            ${!inq.read ? `
+              <button class="btn btn-ghost btn-sm" onclick="markRead('${inq.id}')">
+                <svg class="i i-sm"><use href="#i-check"/></svg> Mark as Read
+              </button>` : `<span class="read-tag"><svg class="i i-sm"><use href="#i-check"/></svg> Read</span>`}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderEmpty() {
+    setText('statTotal',  0);
+    setText('statUnread', 0);
+    setText('statWeek',   0);
+    setText('statProps',  0);
+    document.getElementById('inquiriesContainer').innerHTML = CP.UI.emptyState(
+      'No listings yet. Add a listing first, then tenants can send you messages.<br><a href="/landlord/new-listing.html" class="btn btn-primary" style="margin-top:var(--sp-4)">Add Listing</a>',
+      '🏠'
+    );
+  }
+
+  // Mark single inquiry as read
+  window.markRead = async (id) => {
+    await supabase.from('inquiries').update({ read: true }).eq('id', id);
+    const inq = allInquiries.find(i => i.id === id);
+    if (inq) inq.read = true;
+    const card = document.getElementById(`inq-${id}`);
+    if (card) {
+      card.classList.remove('unread');
+      const dot = card.querySelector('.inquiry-unread-dot');
+      if (dot) dot.remove();
+      renderInquiries(applyFilters());
+      renderStats(allInquiries);
+    }
+  };
+
+  // Mark all as read
+  document.getElementById('markAllReadBtn').addEventListener('click', async () => {
+    const ids = [...new Set(allInquiries.map(i => i.property_id))];
+    if (!ids.length) return;
+    await supabase.from('inquiries').update({ read: true }).in('property_id', ids);
+    allInquiries.forEach(i => i.read = true);
+    renderStats(allInquiries);
+    renderInquiries(applyFilters());
+    CP.UI.toast('All marked as read.', 'success');
+  });
+
+  // Filters
+  function applyFilters() {
+    const q    = document.getElementById('searchInput').value.toLowerCase();
+    const read = document.getElementById('readFilter').value;
+    const prop = document.getElementById('propFilter').value;
+    let f = [...allInquiries];
+    if (read === 'unread') f = f.filter(i => !i.read);
+    if (read === 'read')   f = f.filter(i => i.read);
+    if (prop)              f = f.filter(i => i.property_id === prop);
+    if (q) f = f.filter(i =>
+      ((i.tenant_name||'') + (i.tenant_email||'') + (i.message||'')).toLowerCase().includes(q));
+    return f;
+  }
+
+  ['searchInput','readFilter','propFilter'].forEach(id => {
+    document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', () => {
+      renderInquiries(applyFilters());
+    });
+  });
+
+  // ── Helpers ───────────────────────────────────────────────
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function whenSidebarReady(cb, tries = 0) {
+    if (document.getElementById('admin-name')) return cb();
+    if (tries > 50) return;
+    setTimeout(() => whenSidebarReady(cb, tries + 1), 40);
+  }
+</script>
+
+</body>
+</html>

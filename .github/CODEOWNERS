@@ -1,0 +1,18 @@
+# CODEOWNERS — Choice Properties website
+  # Changes to files matching these patterns require review from the listed users.
+
+  # Supabase migrations affect production data — all changes need review
+  /supabase/migrations/          @choice121
+
+  # Pipeline schema migrations are especially sensitive — the pipeline project depends on these
+  # Any migration touching the pipeline schema must be coordinated with the pipeline team
+  /supabase/migrations/*pipeline* @choice121
+
+  # Ecosystem documentation — keep in sync with property-pipeline repo
+  /ECOSYSTEM.md                  @choice121
+
+  # Deployment and CI configuration
+  /.github/                      @choice121
+  /wrangler.toml                 @choice121
+  /cloudflare*.json              @choice121
+  

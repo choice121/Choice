@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Landlord Login — Choice Properties</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
+  <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/supabase.min.js"></script>
+  <script type="module" src="/js/cp-api.js"></script>
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-shell-card">
+    <div class="auth-shell-brand">
+      <div class="name">Choice Properties</div>
+      <div class="sub">Landlord Portal</div>
+      <div class="divider"></div>
+    </div>
+
+    <div class="auth-form-inner">
+      <p class="auth-shell-subtitle">
+        Sign in to manage your listings.
+        <a href="/landlord/register.html">Create an account →</a>
+      </p>
+
+      <div class="auth-alert error" id="errorBox">
+        <span id="errorMsg"></span>
+      </div>
+
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label class="field-label" for="emailInput">Email Address</label>
+          <input class="field-input" type="email" id="emailInput"
+                 placeholder="you@example.com"
+                 autocomplete="username email" inputmode="email" required>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="passwordInput">Password</label>
+          <div class="field-input-wrap">
+            <input class="field-input has-suffix" type="password" id="passwordInput"
+                   placeholder="Your password" autocomplete="current-password" required>
+            <button type="button" class="field-suffix-btn" id="togglePw" aria-label="Show password">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="loginBtn">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-spinner"></div>
+        </button>
+      </form>
+
+      <div class="auth-shell-links">
+        <a href="#" id="forgotLink">Forgot password?</a>
+      </div>
+
+      <div class="auth-shell-foot">
+        Your account is secured with industry-standard encryption.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" nonce="__CSP_NONCE__">
+  import { signIn, resetPassword, getSession } from '../js/cp-api.js';
+
+  // ── Password Recovery Handler ─────────────────────────────────────────────
+  // Supabase appends #access_token=...&type=recovery to the redirectTo URL.
+  // We parse that hash here and swap the form for a "set new password" UI.
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if (hashParams.get('type') === 'recovery') {
+    const accessToken = hashParams.get('access_token');
+    document.querySelector('.auth-form-inner').innerHTML = `
+      <p class="auth-shell-subtitle">Choose a new password for your account.</p>
+
+      <div class="auth-alert error" id="resetErrorBox"><span id="resetErrorMsg"></span></div>
+
+      <div class="field">
+        <label class="field-label" for="newPwInput">New Password</label>
+        <div class="field-input-wrap">
+          <input class="field-input has-suffix" type="password" id="newPwInput"
+                 placeholder="At least 8 characters" autocomplete="new-password">
+          <button type="button" class="field-suffix-btn" id="toggleNewPw" aria-label="Show password">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="confirmPwInput">Confirm New Password</label>
+        <div class="field-input-wrap">
+          <input class="field-input has-suffix" type="password" id="confirmPwInput"
+                 placeholder="Re-enter new password" autocomplete="new-password">
+          <button type="button" class="field-suffix-btn" id="toggleConfirmPw" aria-label="Show password">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-auth" id="setPasswordBtn">
+        <span class="btn-text">Set New Password</span>
+        <div class="btn-spinner"></div>
+      </button>
+
+      <div class="auth-shell-links">
+        <a href="/landlord/login.html">← Back to sign in</a>
+      </div>
+    `;
+
+    function makeToggle(btnId, inputId) {
+      document.getElementById(btnId)?.addEventListener('click', () => {
+        const inp = document.getElementById(inputId);
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+      });
+    }
+    makeToggle('toggleNewPw', 'newPwInput');
+    makeToggle('toggleConfirmPw', 'confirmPwInput');
+
+    function showResetMsg(msg, type = 'error') {
+      const box = document.getElementById('resetErrorBox');
+      box.classList.remove('error', 'success');
+      box.classList.add(type);
+      box.classList.add('visible');
+      document.getElementById('resetErrorMsg').textContent = msg;
+    }
+
+    document.getElementById('setPasswordBtn').addEventListener('click', async () => {
+      const pw  = document.getElementById('newPwInput').value;
+      const pw2 = document.getElementById('confirmPwInput').value;
+      if (!pw || pw.length < 8)  return showResetMsg('Password must be at least 8 characters.');
+      if (pw !== pw2)             return showResetMsg('Passwords do not match.');
+
+      const btn = document.getElementById('setPasswordBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+
+      try {
+        const supabase = CP.sb();
+        const refreshToken = hashParams.get('refresh_token') || '';
+        // Supabase requires both tokens to set a session. Recovery links that
+        // came through our /auth/callback.html now always include a refresh
+        // token; legacy direct-from-Supabase recovery links may not. If there
+        // is no refresh token, fall back to verifyOtp on the access_token —
+        // it still authenticates the user just for this password change.
+        if (refreshToken) {
+          const { error: sessionErr } = await supabase.auth.setSession({
+            access_token:  accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionErr) throw sessionErr;
+        } else {
+          // No refresh token in the URL — tell the user to use the new flow.
+          throw new Error('This recovery link is in an old format. Please request a new password reset email.');
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: pw });
+        if (error) throw error;
+
+        showResetMsg('Password updated! Redirecting to sign in…', 'success');
+        setTimeout(() => { window.location.href = '/landlord/login.html'; }, 2000);
+      } catch (err) {
+        showResetMsg(err.message || 'Failed to update password. The link may have expired.');
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    throw new Error('Recovery mode — login script halted intentionally.');
+  }
+
+  // ── Normal Login Flow ─────────────────────────────────────────────────────
+  getSession().then(session => {
+    if (session) window.location.href = '/landlord/dashboard.html';
+  });
+
+  document.getElementById('togglePw').addEventListener('click', () => {
+    const input = document.getElementById('passwordInput');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email    = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    if (!email || !password) return showError('Please enter your email and password.');
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    try {
+      await signIn(email, password);
+      window.location.href = '/landlord/dashboard.html';
+    } catch (err) {
+      showError(err.message || 'Invalid email or password. Please try again.');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  });
+
+  document.getElementById('forgotLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email) return showError('Enter your email address first.');
+    try {
+      await resetPassword(email);
+      showMessage('Password reset email sent! Check your inbox.', 'success');
+    } catch (err) {
+      showError(err.message || 'Failed to send reset email.');
+    }
+  });
+
+  function showError(msg)   { showMessage(msg, 'error'); }
+  function showMessage(msg, type) {
+    const box = document.getElementById('errorBox');
+    box.classList.remove('error', 'success');
+    box.classList.add(type);
+    box.classList.add('visible');
+    document.getElementById('errorMsg').textContent = msg;
+  }
+</script>
+
+</body>
+</html>

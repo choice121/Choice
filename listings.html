@@ -1,0 +1,500 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  STATIC SITE — AI AGENTS AND TOOLS: READ BEFORE ANY ACTION  ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  DO NOT: run npm install, start a server, create config.js  ║
+  ║  DO NOT: connect to any local database or run migrations     ║
+  ║  DO NOT: configure workflows, runtimes, or environments      ║
+  ║                                                              ║
+  ║  DEPLOY PATH ONLY: edit → push to GitHub → Cloudflare Pages ║
+  ║  FULL RULES: .agents/instructions.md                        ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="/manifest.json">
+  <title>Browse Rentals — Choice Properties</title>
+  <meta name="description" content="Browse verified rental listings across the United States. Filter by price, bedrooms, and more. Apply online in minutes.">
+  <link rel="canonical" href="https://choice-properties-site.pages.dev/listings.html">
+  <meta property="og:title" content="Browse Rentals — Choice Properties">
+  <meta property="og:description" content="Verified rental listings nationwide. Apartments, houses, condos — apply in 15 minutes.">
+  <meta property="og:image" content="/assets/og-cover.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://choice-properties-site.pages.dev/listings.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Browse Rentals — Choice Properties">
+  <meta name="twitter:description" content="Verified rental listings nationwide. Apply online in minutes.">
+  <meta name="twitter:image" content="/assets/og-cover.jpg">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/assets/fontawesome.css">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1787502213764">
+  <style>
+    /* ── CRITICAL CSS — above-fold paint for listings.html ───────────────────
+       Minimal subset of cp-marketing.css needed for: nav slot reservation,
+       page header background, sticky filter bar baseline, card grid skeleton.
+    ─────────────────────────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body[data-portal="public"]{
+      margin:0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:#f7f9fc;color:#1f2937;line-height:1.6;font-size:15.5px;
+    }
+    #site-nav{min-height:64px;display:block}
+    .listings-page-header{background:#fff;border-bottom:1px solid #e4e8ef;padding:28px 0 20px;margin-top:64px}
+    .filter-bar{background:#fff;border-bottom:1px solid #e4e8ef}
+    .property-grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .property-card{display:flex;flex-direction:row;overflow:hidden;background:#fff;border-radius:18px}
+    .property-card-img{position:relative;width:280px;flex-shrink:0;height:210px;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%);border-radius:18px 0 0 18px}
+    @media(max-width:599px){
+      .property-card{flex-direction:column}
+      .property-card-img{width:100%;height:auto;aspect-ratio:3/2;border-radius:18px 18px 0 0}
+    }
+  </style>
+<script defer src="/config.js?v=1787502213764"></script>
+<script defer src="/js/supabase.min.js"></script>
+<script defer src="/js/cp-ui.js?v=1787502213764"></script>
+<script type="module" src="/js/cp-api.js?v=1787502213764"></script>
+<script defer src="/js/components.js?v=1787502213764"></script>
+<script defer src="/js/card-builder.js?v=1787502213764"></script>
+
+  <!-- I-060: CollectionPage structured data for listings page -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Rental Listings — Choice Properties",
+    "description": "Browse verified rental listings across the United States. Filter by price, bedrooms, and more.",
+    "url": "https://choice-properties-site.pages.dev/listings.html",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Choice Properties",
+      "url": "https://choice-properties-site.pages.dev/"
+    }
+  }
+  </script>
+<script nonce="__CSP_NONCE__">window.__INITIAL_LISTINGS__={"rows":[{"id":"cdcf9399-41b1-4990-b3dc-b561820f6424","title":"3BR/2.5BA Single-Family Home in Pickerington – $2,425/mo","address":"35 Gayle Dr","city":"Pickerington","state":"OH","zip":"43147","bedrooms":3,"bathrooms":2,"square_footage":1893,"monthly_rent":2425,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.884357,"lng":-82.77433,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/996215/01-Hero_20260124184250/01-Hero_20260124184250-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/06-LivingRoom_20260124184245/06-LivingRoom_20260124184245-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/05-FrontView_20260124184250/05-FrontView_20260124184250-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/07-LivingRoom_20260124184249/07-LivingRoom_20260124184249-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/08-DiningRoom_20260124184245/08-DiningRoom_20260124184245-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/09-BreakfastNook_20260124184248/09-BreakfastNook_20260124184248-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/10-Kitchen_20260124184246/10-Kitchen_20260124184246-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/11-Kitchen_20260124184247/11-Kitchen_20260124184247-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/12-MainBedroom_20260124184244/12-MainBedroom_20260124184244-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/13-MainBathroom_20260124184243/13-MainBathroom_20260124184243-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/14-Bedroom_20260124184241/14-Bedroom_20260124184241-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/15-Bedroom_20260124184243/15-Bedroom_20260124184243-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/16-Bathroom_20260124184242/16-Bathroom_20260124184242-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/17-Basement_20260124184249/17-Basement_20260124184249-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/996215/18-RearView_20260124184241/18-RearView_20260124184241-lg.jpg"]},{"id":"66ac8bda-5ec3-46be-a320-c1ce45248d18","title":"4BR/2.5BA Single-Family Home in Grove City – $2,570/mo","address":"3963 Genteel Dr","city":"Grove City","state":"OH","zip":"43123","bedrooms":4,"bathrooms":2,"square_footage":2034,"monthly_rent":2570,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.910275,"lng":-83.101845,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/994412/01-Hero_20221229055958/01-Hero_20221229055958-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/04-LivingRoom_20221229060002/04-LivingRoom_20221229060002-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/05-LivingRoom_20221229060003/05-LivingRoom_20221229060003-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/06-Kitchen_20221229060005/06-Kitchen_20221229060005-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/07-FamilyRoom_20221229060006/07-FamilyRoom_20221229060006-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/08-MainBedroom_20221229060001/08-MainBedroom_20221229060001-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/09-MainBedroom_20221229060001/09-MainBedroom_20221229060001-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/10-MainBathroom_20221229060000/10-MainBathroom_20221229060000-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/11-MainBathroom_20221229060000/11-MainBathroom_20221229060000-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/12-Bedroom_20221229055959/12-Bedroom_20221229055959-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/13-Bedroom_20221229060007/13-Bedroom_20221229060007-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/14-Bedroom_20221229060008/14-Bedroom_20221229060008-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/15-LaundryRoom_20221229060004/15-LaundryRoom_20221229060004-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/16-Bathroom_20221229055959/16-Bathroom_20221229055959-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/994412/17-PowderRoom_20221229060005/17-PowderRoom_20221229060005-lg.jpg"]},{"id":"afc16d57-eaad-4992-b9f0-2065c5b4608c","title":"3BR/3.5BA Single-Family Home in Pickerington – $2,780/mo","address":"433 Furman St","city":"Pickerington","state":"OH","zip":"43147","bedrooms":3,"bathrooms":3,"square_footage":2474,"monthly_rent":2780,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.867748,"lng":-82.763985,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/985380/01-Hero_20230119011920/01-Hero_20230119011920-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/05-LivingRoom_20230119011925/05-LivingRoom_20230119011925-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/06-LivingRoom_20230119011926/06-LivingRoom_20230119011926-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/07-DiningRoom_20230119011927/07-DiningRoom_20230119011927-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/08-Kitchen_20230119011926/08-Kitchen_20230119011926-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/09-FamilyRoom_20230119024124/09-FamilyRoom_20230119024124-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/10-MainBedroom_20230119011923/10-MainBedroom_20230119011923-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/11-MainBedroom_20230119011924/11-MainBedroom_20230119011924-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/12-MainBathroom_20230119011922/12-MainBathroom_20230119011922-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/13-Bedroom_20230119011930/13-Bedroom_20230119011930-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/14-Bedroom_20230119024125/14-Bedroom_20230119024125-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/15-Hallway_20230119011921/15-Hallway_20230119011921-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/16-Bathroom_20230119011929/16-Bathroom_20230119011929-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/17-Bathroom_20230119024125/17-Bathroom_20230119024125-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/985380/18-RearView_20230119011924/18-RearView_20230119011924-lg.jpg"]},{"id":"24165e05-5c0f-4f18-bf30-3df1c9ccbb92","title":"4BR/2.5BA Single-Family Home in Pickerington – $2,730/mo","address":"11582 Eddington Ave","city":"Pickerington","state":"OH","zip":"43147","bedrooms":4,"bathrooms":2,"square_footage":2386,"monthly_rent":2730,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.918091,"lng":-82.773788,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/993824/01-Hero_20241122203752/01-Hero_20241122203752-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/05-LivingRoom_20241122203758/05-LivingRoom_20241122203758-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/04-FrontView_20241122203757/04-FrontView_20241122203757-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/06-LivingRoom_20241122203758/06-LivingRoom_20241122203758-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/07-DiningRoom_20241122203759/07-DiningRoom_20241122203759-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/08-BreakfastNook_20241122203800/08-BreakfastNook_20241122203800-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/09-Kitchen_20241122203800/09-Kitchen_20241122203800-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/10-FamilyRoom_20241122203801/10-FamilyRoom_20241122203801-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/11-FamilyRoom_20241122203802/11-FamilyRoom_20241122203802-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/12-Office_20241122203754/12-Office_20241122203754-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/13-MainBedroom_20241122203755/13-MainBedroom_20241122203755-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/14-MainBedroom_20241122203756/14-MainBedroom_20241122203756-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/15-MainBathroom_20241122203754/15-MainBathroom_20241122203754-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/16-MainBathroom_20241122203756/16-MainBathroom_20241122203756-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/993824/17-RearView_20241122203753/17-RearView_20241122203753-lg.jpg"]},{"id":"46f846f4-8e09-4855-8bd8-7c672b012a68","title":"4BR/2.5BA Single-Family Home in Columbus – $2,344/mo","address":"5931 Rainwater Way","city":"Columbus","state":"OH","zip":"43228","bedrooms":4,"bathrooms":2,"square_footage":1702,"monthly_rent":2344,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.965931,"lng":-83.159798,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/980361/01-Hero_20221210230253/01-Hero_20221210230253-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/06-LivingRoom_20221210230241/06-LivingRoom_20221210230241-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/05-FrontView_20221210230254/05-FrontView_20221210230254-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/07-DiningRoom_20221210230256/07-DiningRoom_20221210230256-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/08-Kitchen_20221210230242/08-Kitchen_20221210230242-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/09-Kitchen_20221210230242/09-Kitchen_20221210230242-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/10-MainBedroom_20221210230245/10-MainBedroom_20221210230245-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/11-MainBedroom_20221210230247/11-MainBedroom_20221210230247-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/12-MainBathroom_20221210230246/12-MainBathroom_20221210230246-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/13-Bedroom_20221210230244/13-Bedroom_20221210230244-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/14-Bedroom_20221210230245/14-Bedroom_20221210230245-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/15-Bathroom_20221210230248/15-Bathroom_20221210230248-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/16-Basement_20221210230244/16-Basement_20221210230244-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/17-Garage_20221210230243/17-Garage_20221210230243-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/980361/18-RearView_20221210230255/18-RearView_20221210230255-lg.jpg"]},{"id":"de4d0db7-8d11-4e1f-b31a-ce3e35a431cb","title":"4BR/2BA Single-Family Home in Reynoldsburg – $2,119/mo","address":"7319 Foxfield Dr","city":"Reynoldsburg","state":"OH","zip":"43068","bedrooms":4,"bathrooms":2,"square_footage":1880,"monthly_rent":2119,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.975056,"lng":-82.806236,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/983247/01-Hero_20221222181547/01-Hero_20221222181547-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/05-LivingRoom_20221222181555/05-LivingRoom_20221222181555-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/04-FrontView_20221222181552/04-FrontView_20221222181552-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/06-LivingRoom_20221222181555/06-LivingRoom_20221222181555-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/07-DiningRoom_20221222181548/07-DiningRoom_20221222181548-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/08-DiningRoom_20221222181556/08-DiningRoom_20221222181556-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/09-Kitchen_20221222181548/09-Kitchen_20221222181548-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/10-Kitchen_20221222181549/10-Kitchen_20221222181549-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/11-FamilyRoom_20221222181553/11-FamilyRoom_20221222181553-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/12-FamilyRoom_20221222181553/12-FamilyRoom_20221222181553-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/13-MainBedroom_20221222181551/13-MainBedroom_20221222181551-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/14-MainBathroom_20221222181554/14-MainBathroom_20221222181554-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/15-Bedroom_20221222181550/15-Bedroom_20221222181550-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/16-Bathroom_20221222181550/16-Bathroom_20221222181550-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/983247/17-RearView_20221222181552/17-RearView_20221222181552-lg.jpg"]},{"id":"d31e40da-2189-46ba-b7c5-0aa3628e1c37","title":"3BR/2.5BA Single-Family Home in Grove City – $2,195/mo","address":"2219 Lockamy Ct","city":"Grove City","state":"OH","zip":"43123","bedrooms":3,"bathrooms":2,"square_footage":1706,"monthly_rent":2195,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.906132,"lng":-83.054916,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/977829/01-Hero_20260317100420/01-Hero_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/04-Misc_20260317100420/04-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/05-Misc_20260317100420/05-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/06-Misc_20260317100420/06-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/07-Misc_20260317100420/07-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/08-Misc_20260317100420/08-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/09-Misc_20260317100420/09-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/10-Misc_20260317100420/10-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/11-Misc_20260317100420/11-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/12-Misc_20260317100420/12-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/13-Misc_20260317100420/13-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/14-Misc_20260317100420/14-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/15-Misc_20260317100420/15-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/16-Misc_20260317100420/16-Misc_20260317100420-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/977829/17-Misc_20260317100420/17-Misc_20260317100420-lg.jpg"]},{"id":"cfcead4a-ca9a-4a99-bd23-7eee8ba5da8d","title":"3BR/2.5BA Single-Family Home in Columbus – $1,819/mo","address":"3531 Rocky Rd","city":"Columbus","state":"OH","zip":"43223","bedrooms":3,"bathrooms":2,"square_footage":1314,"monthly_rent":1819,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.922802,"lng":-83.088661,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/971922/01-Hero_20221221075552/01-Hero_20221221075552-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/05-LivingRoom_20221221075553/05-LivingRoom_20221221075553-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/04-FrontView_20221221075551/04-FrontView_20221221075551-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/06-LivingRoom_20221221075550/06-LivingRoom_20221221075550-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/07-DiningRoom_20221221075554/07-DiningRoom_20221221075554-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/08-Kitchen_20221221075555/08-Kitchen_20221221075555-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/09-FamilyRoom_20221221075549/09-FamilyRoom_20221221075549-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/10-MainBedroom_20221221093559/10-MainBedroom_20221221093559-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/11-MainBedroom_20221221075557/11-MainBedroom_20221221075557-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/12-MainBathroom_20221221093558/12-MainBathroom_20221221093558-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/13-Bedroom_20221221075546/13-Bedroom_20221221075546-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/14-Bedroom_20221221075547/14-Bedroom_20221221075547-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/15-Bedroom_20221221075548/15-Bedroom_20221221075548-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/16-Bathroom_20221221093558/16-Bathroom_20221221093558-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971922/17-Garage_20221221075549/17-Garage_20221221075549-lg.jpg"]},{"id":"75845822-14e6-4382-90d5-e0b2596e497b","title":"4BR/2.5BA Single-Family Home in Galloway – $2,680/mo","address":"6248 Pritchard Dr","city":"Galloway","state":"OH","zip":"43119","bedrooms":4,"bathrooms":2,"square_footage":1824,"monthly_rent":2680,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.930923,"lng":-83.164017,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/972868/01-Hero_20230103081047/01-Hero_20230103081047-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/04-FrontView_20230103081051/04-FrontView_20230103081051-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/05-DiningRoom_20230103081051/05-DiningRoom_20230103081051-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/06-Kitchen_20230103081052/06-Kitchen_20230103081052-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/07-Kitchen_20230103081052/07-Kitchen_20230103081052-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/08-FamilyRoom_20230103081048/08-FamilyRoom_20230103081048-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/09-MainBedroom_20230103081054/09-MainBedroom_20230103081054-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/10-MainBathroom_20230103081054/10-MainBathroom_20230103081054-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/11-Bedroom_20230103081049/11-Bedroom_20230103081049-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/12-Bedroom_20230103081052/12-Bedroom_20230103081052-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/13-Bedroom_20230103081053/13-Bedroom_20230103081053-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/14-Bathroom_20230103081048/14-Bathroom_20230103081048-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/15-Bathroom_20230103081049/15-Bathroom_20230103081049-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/16-Deck_20230103081050/16-Deck_20230103081050-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/972868/17-RearView_20230103081050/17-RearView_20230103081050-lg.jpg"]},{"id":"e5383a23-bd61-4686-9b57-5650a89c65de","title":"3BR/2BA Single-Family Home in Columbus – $2,105/mo","address":"2599 Millview Dr","city":"Columbus","state":"OH","zip":"43207","bedrooms":3,"bathrooms":2,"square_footage":1420,"monthly_rent":2105,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.884338,"lng":-82.925919,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/968986/01-Hero_20250411150436/01-Hero_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/03-Misc_20250411150436/03-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/05-Misc_20250411150436/05-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/06-Misc_20250411150436/06-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/07-Misc_20250411150436/07-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/08-Misc_20250411150436/08-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/09-Misc_20250411150436/09-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/11-Misc_20250411150436/11-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/12-Misc_20250411150436/12-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/13-Misc_20250411150436/13-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/15-Misc_20250411150436/15-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/16-Misc_20250411150436/16-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/17-Misc_20250411150436/17-Misc_20250411150436-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/968986/18-Misc_20250411150436/18-Misc_20250411150436-lg.jpg"]},{"id":"cd57c6df-07b2-4cd3-8aac-140b5da33e52","title":"3BR/3BA Single-Family Home in Etna – $2,004/mo","address":"13 W Fieldstone","city":"Etna","state":"OH","zip":"43062","bedrooms":3,"bathrooms":3,"square_footage":1660,"monthly_rent":2004,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.954372,"lng":-82.68924,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/971726/01-Hero_20230106194631/01-Hero_20230106194631-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/04-LivingRoom_20230106194640/04-LivingRoom_20230106194640-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/05-LivingRoom_20230106194640/05-LivingRoom_20230106194640-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/06-DiningRoom_20230106194637/06-DiningRoom_20230106194637-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/07-Kitchen_20230106194638/07-Kitchen_20230106194638-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/08-Kitchen_20230106194639/08-Kitchen_20230106194639-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/09-FamilyRoom_20230106194635/09-FamilyRoom_20230106194635-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/10-MainBedroom_20230106194632/10-MainBedroom_20230106194632-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/11-MainBedroom_20230106194633/11-MainBedroom_20230106194633-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/12-MainBathroom_20230106194634/12-MainBathroom_20230106194634-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/13-Bedroom_20230106194633/13-Bedroom_20230106194633-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/14-Bathroom_20230106194632/14-Bathroom_20230106194632-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/15-Bathroom_20230106194641/15-Bathroom_20230106194641-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/16-RearView_20230106194635/16-RearView_20230106194635-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/971726/17-RearView_20230106194636/17-RearView_20230106194636-lg.jpg"]},{"id":"2aed0252-420b-4bef-811f-082bf95ff780","title":"4BR/2.5BA Single-Family Home in Canal Winchester – $2,409/mo","address":"6801 Fallon Ln","city":"Canal Winchester","state":"OH","zip":"43110","bedrooms":4,"bathrooms":2,"square_footage":2267,"monthly_rent":2409,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.864155,"lng":-82.818817,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/969776/01-Hero_20221210061905/01-Hero_20221210061905-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/05-LivingRoom_20221210061853/05-LivingRoom_20221210061853-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/06-DiningRoom_20221210061907/06-DiningRoom_20221210061907-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/07-BreakfastNook_20221210061908/07-BreakfastNook_20221210061908-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/08-Kitchen_20221210061851/08-Kitchen_20221210061851-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/09-Kitchen_20221210061851/09-Kitchen_20221210061851-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/10-Kitchen_20221210061853/10-Kitchen_20221210061853-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/11-FamilyRoom_20221210061852/11-FamilyRoom_20221210061852-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/12-FamilyRoom_20221210061859/12-FamilyRoom_20221210061859-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/13-MainBedroom_20221210061856/13-MainBedroom_20221210061856-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/14-MainBathroom_20221210061854/14-MainBathroom_20221210061854-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/15-Bedroom_20221210061855/15-Bedroom_20221210061855-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/16-Bedroom_20221210061856/16-Bedroom_20221210061856-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/17-Bathroom_20221210061857/17-Bathroom_20221210061857-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/969776/18-RearView_20221210061906/18-RearView_20221210061906-lg.jpg"]},{"id":"3e64896b-1ecc-4ae0-9bb8-378da0581b64","title":"4BR/2.5BA Single-Family Home in Lockbourne – $2,460/mo","address":"346 Constance St","city":"Lockbourne","state":"OH","zip":"43137","bedrooms":4,"bathrooms":2,"square_footage":2400,"monthly_rent":2460,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.86121,"lng":-82.994545,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/966833/01-Hero_20221129020151/01-Hero_20221129020151-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/05-LivingRoom_20221129013600/05-LivingRoom_20221129013600-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/04-FrontView_20221129020152/04-FrontView_20221129020152-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/06-DiningRoom_20221129013547/06-DiningRoom_20221129013547-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/07-Kitchen_20221129013548/07-Kitchen_20221129013548-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/08-Kitchen_20221129013549/08-Kitchen_20221129013549-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/09-MainBedroom_20221129013551/09-MainBedroom_20221129013551-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/10-MainBedroom_20221129013550/10-MainBedroom_20221129013550-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/11-MainBathroom_20221129013552/11-MainBathroom_20221129013552-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/12-Bedroom_20221129013553/12-Bedroom_20221129013553-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/13-Bedroom_20221129013553/13-Bedroom_20221129013553-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/14-Bedroom_20221129013555/14-Bedroom_20221129013555-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/15-Bathroom_20221129013551/15-Bathroom_20221129013551-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/16-Garage_20221129013549/16-Garage_20221129013549-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/966833/17-RearView_20221129020153/17-RearView_20221129020153-lg.jpg"]},{"id":"00f78673-dc85-47ce-a19e-4a63f1397a61","title":"4BR/2.5BA Single-Family Home in Canal Winchester – $2,510/mo","address":"7868 Edgewater Dr","city":"Canal Winchester","state":"OH","zip":"43110","bedrooms":4,"bathrooms":2,"square_footage":1808,"monthly_rent":2510,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.821709,"lng":-82.817451,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/964561/01-Hero_20221103193536/01-Hero_20221103193536-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/05-LivingRoom_20221103193537/05-LivingRoom_20221103193537-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/06-LivingRoom_20221103193541/06-LivingRoom_20221103193541-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/07-LivingRoom_20221103193542/07-LivingRoom_20221103193542-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/08-LivingRoom_20221103193547/08-LivingRoom_20221103193547-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/09-DiningRoom_20221103193543/09-DiningRoom_20221103193543-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/10-Kitchen_20221103193544/10-Kitchen_20221103193544-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/11-Kitchen_20221103193545/11-Kitchen_20221103193545-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/12-Kitchen_20221103193546/12-Kitchen_20221103193546-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/13-MainBedroom_20221103193538/13-MainBedroom_20221103193538-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/14-MainBedroom_20221103193539/14-MainBedroom_20221103193539-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/15-MainBathroom_20221103193539/15-MainBathroom_20221103193539-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/16-Bedroom_20221103193540/16-Bedroom_20221103193540-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/17-Bathroom_20221103193538/17-Bathroom_20221103193538-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964561/18-RearView_20221103193540/18-RearView_20221103193540-lg.jpg"]},{"id":"b2c67fe3-3d5e-4378-9bbe-6c47a9c2d465","title":"4BR/2.5BA Single-Family Home in Canal Winchester – $2,124/mo","address":"5425 Englecrest Dr","city":"Canal Winchester","state":"OH","zip":"43110","bedrooms":4,"bathrooms":2,"square_footage":2312,"monthly_rent":2124,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.870567,"lng":-82.805176,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/964562/01-Hero_20221213185542/01-Hero_20221213185542-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/04-LivingRoom_20221213185549/04-LivingRoom_20221213185549-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/05-LivingRoom_20221213185551/05-LivingRoom_20221213185551-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/06-Kitchen_20221213205918/06-Kitchen_20221213205918-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/07-Kitchen_20221213205919/07-Kitchen_20221213205919-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/08-Kitchen_20221213185554/08-Kitchen_20221213185554-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/09-MainBedroom_20221213185557/09-MainBedroom_20221213185557-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/10-MainBathroom_20221213185542/10-MainBathroom_20221213185542-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/11-Bedroom_20221213185543/11-Bedroom_20221213185543-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/12-Bedroom_20221213185544/12-Bedroom_20221213185544-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/13-Bedroom_20221213185545/13-Bedroom_20221213185545-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/14-Bedroom_20221213185554/14-Bedroom_20221213185554-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/15-Bathroom_20221213185544/15-Bathroom_20221213185544-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/16-PowderRoom_20221213185555/16-PowderRoom_20221213185555-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/964562/17-RearView_20221213185545/17-RearView_20221213185545-lg.jpg"]},{"id":"f496b460-fa11-4b72-94b3-463d44dae6ae","title":"3BR/2BA Single-Family Home in Canal Winchester – $2,245/mo","address":"6693 Laburnum Dr","city":"Canal Winchester","state":"OH","zip":"43110","bedrooms":3,"bathrooms":2,"square_footage":1298,"monthly_rent":2245,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.873417,"lng":-82.825935,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/962033/01-Hero_20230420002946/01-Hero_20230420002946-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/05-LivingRoom_20230420002953/05-LivingRoom_20230420002953-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/04-Foyer_20230420002950/04-Foyer_20230420002950-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/06-LivingRoom_20230420002954/06-LivingRoom_20230420002954-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/07-Kitchen_20230420002955/07-Kitchen_20230420002955-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/08-Kitchen_20230420002956/08-Kitchen_20230420002956-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/09-MainBedroom_20230420002946/09-MainBedroom_20230420002946-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/10-MainBedroom_20230420002947/10-MainBedroom_20230420002947-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/11-MainBathroom_20230420002948/11-MainBathroom_20230420002948-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/12-Bedroom_20230420002951/12-Bedroom_20230420002951-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/13-Bedroom_20230420002953/13-Bedroom_20230420002953-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/14-Bathroom_20230420002952/14-Bathroom_20230420002952-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/15-Basement_20230420002948/15-Basement_20230420002948-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/16-RearView_20230420002950/16-RearView_20230420002950-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962033/17-Exterior_20230420002949/17-Exterior_20230420002949-lg.jpg"]},{"id":"644cb4f5-0f31-48e0-9f74-26cc3935d651","title":"3BR/2.5BA Single-Family Home in Delaware – $2,344/mo","address":"286 Brandie Dr","city":"Delaware","state":"OH","zip":"43015","bedrooms":3,"bathrooms":2,"square_footage":1832,"monthly_rent":2344,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":40.321075,"lng":-83.113724,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/962097/01-Hero_20221120204829/01-Hero_20221120204829-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/05-LivingRoom_20221120204837/05-LivingRoom_20221120204837-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/06-LivingRoom_20221120204838/06-LivingRoom_20221120204838-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/07-LivingRoom_20221120204839/07-LivingRoom_20221120204839-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/08-DiningRoom_20221120204837/08-DiningRoom_20221120204837-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/09-BreakfastNook_20221120204834/09-BreakfastNook_20221120204834-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/10-Kitchen_20221120204835/10-Kitchen_20221120204835-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/11-Kitchen_20221120204836/11-Kitchen_20221120204836-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/12-Loft_20221120204830/12-Loft_20221120204830-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/13-MainBedroom_20221120204831/13-MainBedroom_20221120204831-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/14-MainBedroom_20221120204832/14-MainBedroom_20221120204832-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/15-MainBathroom_20221120204832/15-MainBathroom_20221120204832-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/16-Bedroom_20221120204833/16-Bedroom_20221120204833-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/17-Bathroom_20221120204831/17-Bathroom_20221120204831-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/962097/18-RearView_20221120204834/18-RearView_20221120204834-lg.jpg"]},{"id":"9ee6a2b5-1760-451b-846d-a6dbdd6bf650","title":"4BR/2.5BA Single-Family Home in Reynoldsburg – $2,625/mo","address":"8939 Coral Canyon Cir","city":"Reynoldsburg","state":"OH","zip":"43068","bedrooms":4,"bathrooms":2,"square_footage":1841,"monthly_rent":2625,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.972538,"lng":-82.762627,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/961795/05-Misc_20260409111708/05-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/06-Misc_20260409111708/06-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/07-Misc_20260409111708/07-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/08-Misc_20260409111708/08-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/09-Misc_20260409111708/09-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/10-Misc_20260409111708/10-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/11-Misc_20260409111708/11-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/12-Misc_20260409111708/12-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/13-Misc_20260409111708/13-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/14-Misc_20260409111708/14-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/15-Misc_20260409111708/15-Misc_20260409111708-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961795/16-Misc_20260409111708/16-Misc_20260409111708-lg.jpg"]},{"id":"939bbb92-0210-4d3d-b0c9-85a79a5e1b15","title":"3BR/2.5BA Single-Family Home in Delaware – $1,940/mo","address":"712 Swanson St","city":"Delaware","state":"OH","zip":"43015","bedrooms":3,"bathrooms":2,"square_footage":1660,"monthly_rent":1940,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":40.30201,"lng":-83.102928,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/960902/01-Hero_20250828004917/01-Hero_20250828004917-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/05-LivingRoom_20250828004919/05-LivingRoom_20250828004919-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/02-FrontView_20250828004912/02-FrontView_20250828004912-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/06-LivingRoom_20250828004920/06-LivingRoom_20250828004920-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/07-DiningRoom_20250828004921/07-DiningRoom_20250828004921-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/08-DiningRoom_20250828004922/08-DiningRoom_20250828004922-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/09-Kitchen_20250828004912/09-Kitchen_20250828004912-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/10-Kitchen_20250828004922/10-Kitchen_20250828004922-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/11-MainBedroom_20250828004915/11-MainBedroom_20250828004915-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/12-MainBedroom_20250828004916/12-MainBedroom_20250828004916-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/13-MainBathroom_20250828004914/13-MainBathroom_20250828004914-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/14-MainBathroom_20250828004915/14-MainBathroom_20250828004915-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/15-Bathroom_20250828004913/15-Bathroom_20250828004913-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/16-RearView_20250828004918/16-RearView_20250828004918-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960902/17-Garage_20250828004917/17-Garage_20250828004917-lg.jpg"]},{"id":"efd968a5-165c-41a7-a968-cd944b86cd25","title":"3BR/2.5BA Single-Family Home in Lithopolis – $2,385/mo","address":"718 Orwell St","city":"Lithopolis","state":"OH","zip":"43136","bedrooms":3,"bathrooms":2,"square_footage":2038,"monthly_rent":2385,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.814857,"lng":-82.817444,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/961346/01-Hero_20221120204956/01-Hero_20221120204956-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/05-LivingRoom_20221120205002/05-LivingRoom_20221120205002-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/06-LivingRoom_20221120205002/06-LivingRoom_20221120205002-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/07-LivingRoom_20221120205003/07-LivingRoom_20221120205003-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/08-LivingRoom_20221120205004/08-LivingRoom_20221120205004-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/09-DiningRoom_20221120205005/09-DiningRoom_20221120205005-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/10-Kitchen_20221120205005/10-Kitchen_20221120205005-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/11-Kitchen_20221120205006/11-Kitchen_20221120205006-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/12-MainBedroom_20221120204957/12-MainBedroom_20221120204957-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/13-MainBedroom_20221120204957/13-MainBedroom_20221120204957-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/14-MainBedroom_20221120204958/14-MainBedroom_20221120204958-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/15-MainBathroom_20221120204959/15-MainBathroom_20221120204959-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/16-Bedroom_20221120205000/16-Bedroom_20221120205000-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/17-Bathroom_20221120204959/17-Bathroom_20221120204959-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/961346/18-RearView_20221120205001/18-RearView_20221120205001-lg.jpg"]},{"id":"5b7777ab-4e4c-4068-befa-b6ea198a1832","title":"3BR/2BA Single-Family Home in Columbus – $2,030/mo","address":"4440 Habersack Ave","city":"Columbus","state":"OH","zip":"43207","bedrooms":3,"bathrooms":2,"square_footage":1351,"monthly_rent":2030,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.875046,"lng":-82.967995,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/960643/01-Hero_20251222074940/01-Hero_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/04-Misc_20251222074940/04-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/05-Misc_20251222074940/05-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/06-Misc_20251222074940/06-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/07-Misc_20251222074940/07-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/08-Misc_20251222074940/08-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/09-Misc_20251222074940/09-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/10-Misc_20251222074940/10-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/11-Misc_20251222074940/11-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/12-Misc_20251222074940/12-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/13-Misc_20251222074940/13-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/14-Misc_20251222074940/14-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/15-Misc_20251222074940/15-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/16-Misc_20251222074940/16-Misc_20251222074940-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960643/17-Misc_20251222074940/17-Misc_20251222074940-lg.jpg"]},{"id":"e92cd8de-aae8-4555-abca-c3aa5af85f80","title":"4BR/2.5BA Single-Family Home in Orient – $2,260/mo","address":"5347 Dietrich Ave","city":"Orient","state":"OH","zip":"43146","bedrooms":4,"bathrooms":2,"square_footage":2138,"monthly_rent":2260,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.798717,"lng":-83.037926,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/960074/01-Hero_20221105030541/01-Hero_20221105030541-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/06-LivingRoom_20221105012901/06-LivingRoom_20221105012901-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/05-Foyer_20221105012859/05-Foyer_20221105012859-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/07-DiningRoom_20221105012902/07-DiningRoom_20221105012902-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/08-Kitchen_20221105012902/08-Kitchen_20221105012902-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/09-MainBedroom_20221105012857/09-MainBedroom_20221105012857-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/10-MainBedroom_20221105012858/10-MainBedroom_20221105012858-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/11-MainBathroom_20221105012859/11-MainBathroom_20221105012859-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/12-Bedroom_20221105012856/12-Bedroom_20221105012856-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/13-Bedroom_20221105012856/13-Bedroom_20221105012856-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/14-Bedroom_20221105012900/14-Bedroom_20221105012900-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/15-Bedroom_20221105012900/15-Bedroom_20221105012900-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/16-Bedroom_20221105012903/16-Bedroom_20221105012903-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/17-Bathroom_20221105012857/17-Bathroom_20221105012857-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/960074/18-Bathroom_20221105012904/18-Bathroom_20221105012904-lg.jpg"]},{"id":"b0eefc85-427a-4d7f-9f0c-3052cac9b7ed","title":"3BR/2BA Single-Family Home in Columbus – $1,779/mo","address":"1891 Brandigen Ln","city":"Columbus","state":"OH","zip":"43228","bedrooms":3,"bathrooms":2,"square_footage":1332,"monthly_rent":1779,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.914227,"lng":-83.123108,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/954010/01-Hero_20221011210051/01-Hero_20221011210051-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/04-LivingRoom_20221011210056/04-LivingRoom_20221011210056-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/05-LivingRoom_20221011210056/05-LivingRoom_20221011210056-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/06-LivingRoom_20221011210057/06-LivingRoom_20221011210057-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/07-LivingRoom_20221011210058/07-LivingRoom_20221011210058-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/08-Kitchen_20221011210058/08-Kitchen_20221011210058-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/09-Kitchen_20221011210059/09-Kitchen_20221011210059-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/10-Kitchen_20221011210100/10-Kitchen_20221011210100-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/11-MainBedroom_20221011210052/11-MainBedroom_20221011210052-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/12-MainBedroom_20221011210053/12-MainBedroom_20221011210053-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/13-MainBedroom_20221011210054/13-MainBedroom_20221011210054-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/14-MainBathroom_20221011210052/14-MainBathroom_20221011210052-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/15-Bedroom_20221011210054/15-Bedroom_20221011210054-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/16-Bathroom_20221011210051/16-Bathroom_20221011210051-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/954010/17-RearView_20221011210055/17-RearView_20221011210055-lg.jpg"]},{"id":"0c3b1c03-df84-46bf-9986-d83861c2ac0f","title":"3BR/2.5BA Single-Family Home in Grove City – $1,874/mo","address":"1923 Beauregard Blvd","city":"Grove City","state":"OH","zip":"43123","bedrooms":3,"bathrooms":2,"square_footage":1428,"monthly_rent":1874,"property_type":"SINGLE_FAMILY","parking":"Dedicated Parking","pets_allowed":true,"available_date":"2026-08-23","utilities_included":null,"lat":39.914791,"lng":-83.074783,"status":"active","listed_at":"2026-08-23","landlords":{"verified":false},"photo_urls":["https://photos.rentprogress.com/WebPhotos/Columbus/955528/01-Hero_20221212075356/01-Hero_20221212075356-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/05-LivingRoom_20221212071443/05-LivingRoom_20221212071443-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/04-FrontView_20221212075355/04-FrontView_20221212075355-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/06-LivingRoom_20221212071452/06-LivingRoom_20221212071452-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/07-Kitchen_20221212071437/07-Kitchen_20221212071437-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/08-Kitchen_20221212071453/08-Kitchen_20221212071453-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/09-FamilyRoom_20221212071441/09-FamilyRoom_20221212071441-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/10-FamilyRoom_20221212071442/10-FamilyRoom_20221212071442-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/11-MainBedroom_20221212071439/11-MainBedroom_20221212071439-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/12-MainBedroom_20221212071446/12-MainBedroom_20221212071446-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/13-MainBedroom_20221212071440/13-MainBedroom_20221212071440-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/14-MainBathroom_20221212071441/14-MainBathroom_20221212071441-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/15-Bedroom_20221212071439/15-Bedroom_20221212071439-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/16-Bedroom_20221212071444/16-Bedroom_20221212071444-lg.jpg","https://photos.rentprogress.com/WebPhotos/Columbus/955528/17-Bathroom_20221212071438/17-Bathroom_20221212071438-lg.jpg"]}],"total":6252,"page":1,"per_page":24,"total_pages":261};window.__INITIAL_LISTINGS_TS__=1787502214292;</script>
+</head>
+<body data-portal="public" data-page="listings">
+
+<!-- Nav slot — hydrated by /js/components.js (components/nav.html) -->
+<div id="site-nav" data-server-injected="1"><div class="nav-drawer-overlay" id="drawerOverlay"></div>
+
+<!-- ── Mobile Drawer ── -->
+<nav class="nav-drawer mv2-nav-drawer" id="navDrawer">
+  <div class="nav-drawer-header mv2-nav-drawer-header">
+    <a href="/index.html" class="nav-logo mv2-nav-logo">
+      <div class="nav-logo-emblem">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text-wrap">
+        <div class="nav-logo-name mv2-nav-logo-name">Choice Properties</div>
+        <div class="nav-logo-tagline mv2-nav-logo-tagline">Rental Marketplace</div>
+      </div>
+    </a>
+    <button class="nav-drawer-close" id="drawerClose" aria-label="Close menu">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="nav-drawer-body mv2-nav-drawer-body">
+    <a href="/listings.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings.html"><i class="fas fa-home"></i> Browse Listings</a>
+    <a href="/listings/" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings/"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
+    <a href="/how-to-apply.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
+    <a href="/faq.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
+    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>    <a href="/landlord/register.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
+    <div class="nav-drawer-divider"></div>
+    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
+    <a href="/about.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
+    <a href="#" class="nav-drawer-link mv2-nav-drawer-link nav-drawer-theme-toggle" data-theme-toggle role="button" aria-pressed="false">
+        <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
+        <i class="fas fa-sun theme-toggle__icon theme-toggle__icon--sun"></i>
+        <span class="nav-drawer-theme-toggle__label">Toggle dark mode</span>
+      </a>
+  
+  </div>
+  <div class="nav-drawer-cta">
+    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
+  </div>
+  <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="mailto:support@choiceproperties.com">support@choiceproperties.com</a></div>
+</nav>
+
+<!-- ── Main Navigation ── -->
+<nav class="nav mv2-nav" id="mainNav">
+  <div class="nav-inner mv2-nav-inner">
+    <a href="/index.html" class="nav-logo mv2-nav-logo">
+      <div class="nav-logo-emblem">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text-wrap">
+        <div class="nav-logo-name mv2-nav-logo-name">Choice Properties</div>
+        <div class="nav-logo-tagline mv2-nav-logo-tagline">Rental Marketplace</div>
+      </div>
+    </a>
+
+    <div class="nav-links mv2-nav-links">
+      <a href="/listings.html" class="nav-link mv2-nav-link" data-nav-path="/listings.html">Browse Listings</a>
+      <a href="/how-to-apply.html" class="nav-link mv2-nav-link" data-nav-path="/how-to-apply.html">How to Apply</a>
+      <a href="/faq.html" class="nav-link mv2-nav-link" data-nav-path="/faq.html">FAQ</a>
+      <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
+        <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
+      </a>
+      <a href="/landlord/register.html" class="nav-link mv2-nav-link nav-link--landlord mv2-nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
+    </div>
+      <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
+          <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"></i>
+          <i class="fas fa-sun theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true"></i>
+          <span class="visually-hidden">Toggle theme</span>
+        </button>
+  
+
+    <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navDrawer">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</nav>
+</div>
+<!-- ── Page Header (Phase 9.8 mv2 refresh) ── -->
+<div class="listings-page-header mv2-listings-header">
+  <div class="mv2-listings-header__bg" aria-hidden="true"></div>
+  <div class="container mv2-listings-header__inner">
+    <p class="mv2-eyebrow mv2-listings-header__eyebrow">Browse our listings</p>
+    <h1 class="listings-page-title mv2-listings-header__title">
+      Find your <em>next place</em>.
+    </h1>
+    <p class="mv2-listings-header__subtitle">
+      Verified homes from real landlords. Filter by what matters,
+      apply in about fifteen minutes.
+    </p>
+    <div class="listings-search-row mv2-search-row">
+      <div class="search-field sf-text mv2-search-field mv2-search-field--text">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput"
+          placeholder="City, zip code, or neighborhood…"
+          autocomplete="off" aria-label="Search listings">
+      </div>
+      <div class="search-field sf-select mv2-search-field mv2-search-field--select">
+        <i class="fas fa-bed"></i>
+        <select id="bedroomsFilter" aria-label="Bedrooms">
+          <option value="">Any beds</option>
+          <option value="0">Studio</option>
+          <option value="1">1 Bed</option>
+          <option value="2">2 Beds</option>
+          <option value="3">3 Beds</option>
+          <option value="4">4+ Beds</option>
+        </select>
+      </div>
+      
+      <div class="search-field sf-select mv2-search-field mv2-search-field--select">
+          <i class="fas fa-dollar-sign"></i>
+          <select id="maxRentFilter" aria-label="Max Rent">
+            <option value="">Any price</option>
+            <option value="800">Under $800</option>
+            <option value="1000">Under $1,000</option>
+            <option value="1500">Under $1,500</option>
+            <option value="2000">Under $2,000</option>
+            <option value="2500">Under $2,500</option>
+            <option value="3000">Under $3,000</option>
+            <option value="4000">Under $4,000</option>
+          </select>
+        </div>
+        <button class="listings-search-btn mv2-search-btn" id="searchBtn" aria-label="Search">
+        <i class="fas fa-search"></i> Search
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter Bar (Phase 9.8 mv2 polish) ── -->
+<div class="filter-bar mv2-filter-bar">
+  <div class="filter-bar-inner">
+    <!-- Mobile-only Filters button (Fix 2) -->
+      <button class="mobile-filters-btn" id="mobileFiltersBtn">
+        <i class="fas fa-sliders-h"></i> Filters
+        <span class="mobile-filters-badge" id="mobileFiltersBadge" style="display:none"></span>
+      </button>
+      <!-- Clear All pill — desktop, shown when filters active (Fix 3) -->
+      <button class="filter-pill filter-pill-clear" id="clearAllPill" style="display:none">
+        <i class="fas fa-times-circle"></i> Clear all
+      </button>
+      <button class="filter-pill active" data-filter="all"><i class="fas fa-th"></i> All</button>
+    <button class="filter-pill" data-filter="apartment"><i class="fas fa-building"></i> Apartments</button>
+    <button class="filter-pill" data-filter="house"><i class="fas fa-home"></i> Houses</button>
+    <button class="filter-pill" data-filter="condo"><i class="fas fa-city"></i> Condos</button>
+    <button class="filter-pill" data-filter="townhouse"><i class="fas fa-house-user"></i> Townhomes</button>
+    <div class="filter-divider"></div>
+    <button class="filter-pill" data-filter="pets"><i class="fas fa-paw"></i> Pet Friendly</button>
+    <button class="filter-pill" data-filter="available"><i class="fas fa-calendar-check"></i> Move-in Ready</button>
+    <button class="filter-pill" data-filter="parking"><i class="fas fa-car"></i> Parking</button>
+
+    <div class="filter-dropdown-wrap" id="moreFiltersWrap">
+      <button class="filter-pill" id="moreFiltersBtn">
+        <i class="fas fa-sliders-h"></i> More Filters
+        <span class="filter-active-badge" id="filterActiveBadge" style="display:none"></span>
+      </button>
+      <div class="filter-dropdown" id="moreFiltersDropdown">
+        <div class="filter-dropdown-mobile-header">
+            <span class="filter-dropdown-title">Advanced Filters</span>
+            <button class="filter-dropdown-clear-all" id="clearAllMobile">
+              <i class="fas fa-times-circle"></i> Clear all
+            </button>
+          </div>
+        <div class="filter-dropdown-row">
+          <label>Min Bedrooms</label>
+          <select id="advMinBeds">
+            <option value="">Any</option>
+            <option value="0">Studio</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Min Bathrooms</label>
+          <select id="advMinBaths">
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="1.5">1.5+</option>
+            <option value="2">2+</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Min Price</label>
+          <input type="number" id="advMinRent" placeholder="e.g. 800" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Max Price</label>
+          <input type="number" id="advMaxRent" placeholder="e.g. 1500" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Laundry</label>
+          <select id="advLaundryFilter">
+            <option value="">Any</option>
+            <option value="in-unit">In-Unit W/D</option>
+            <option value="hookups">W/D Hookups</option>
+            <option value="shared">Shared Laundry</option>
+            <option value="laundromat">Laundromat Nearby</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Heating</label>
+          <select id="advHeatingFilter">
+            <option value="">Any</option>
+            <option value="gas-forced-air">Gas Forced Air</option>
+            <option value="electric">Electric</option>
+            <option value="baseboard">Baseboard</option>
+            <option value="radiant">Radiant</option>
+            <option value="heat-pump">Heat Pump</option>
+            <option value="boiler">Boiler</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Pet Type</label>
+          <select id="advPetTypeFilter">
+            <option value="">Any</option>
+            <option value="Dogs">Dogs</option>
+            <option value="Cats">Cats</option>
+            <option value="Birds">Birds</option>
+            <option value="Small Animals">Small Animals</option>
+            <option value="Reptiles">Reptiles</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-actions">
+          <button class="filter-btn-clear" id="clearAdvFilters">Clear</button>
+          <button class="filter-btn-apply" id="applyAdvFilters">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-count" id="filterCount"></div>
+  </div>
+</div>
+
+<!-- ── Listings (Phase 9.8 mv2 polish) ── -->
+<section class="listings-section mv2-listings-section" id="listings">
+  <div class="container">
+    <div class="listings-header">
+      <div class="listings-header-left">
+        <h2 class="listings-heading mv2-listings-heading" id="listingsHeading">Results</h2>
+      </div>
+      <div class="listings-controls">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="btnListView" aria-label="Grid view">
+            <i class="fas fa-th-large"></i> Grid
+          </button>
+          <button class="view-toggle-btn" id="btnMapView" aria-label="Map view">
+            <i class="fas fa-map"></i> Map
+          </button>
+        </div>
+        <div class="listings-sort">
+          <select id="sortSelect" aria-label="Sort by">
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
+            <option value="beds_desc">Most Beds</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid View -->
+    <div id="listPanel">
+      <div class="property-grid property-list-view" id="propertyGrid">
+        <!-- Skeleton loaders -->
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:35%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
+            <div class="skeleton skeleton-line" style="width:55%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:40%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:38%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
+            <div class="skeleton skeleton-line" style="width:60%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:45%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:32%"></div>
+            <div class="skeleton skeleton-line" style="width:85%"></div>
+            <div class="skeleton skeleton-line" style="width:50%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:42%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:40%"></div>
+            <div class="skeleton skeleton-line" style="width:78%"></div>
+            <div class="skeleton skeleton-line" style="width:58%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:38%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:36%"></div>
+            <div class="skeleton skeleton-line" style="width:82%"></div>
+            <div class="skeleton skeleton-line" style="width:52%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:43%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:34%"></div>
+            <div class="skeleton skeleton-line" style="width:76%"></div>
+            <div class="skeleton skeleton-line" style="width:62%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:46%;margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="mapPanel">
+      <div id="listingsMap"></div>
+      <div id="mapLoadingSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; align-items: center; justify-content: center; flex-direction: column; gap: 12px;">
+        <div class="spinner" style="width: 40px; height: 40px;"></div>
+        <p style="color: var(--color-text-muted); font-size: 13px; margin: 0;">Loading map...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="paginationBar" style="margin: 32px 0 8px; display:flex; justify-content:center;"></div>
+  </div>
+</section>
+
+<!-- Footer slot — hydrated by /js/components.js (components/footer.html) -->
+<div id="site-footer" data-server-injected="1"><footer class="footer mv2-footer">
+    <div class="container">
+      <div class="footer-grid mv2-footer-grid">
+        <div>
+          <div class="footer-logo mv2-footer-logo">
+            <div class="footer-logo-mark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.92"/>
+                <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.9)"/>
+              </svg>
+            </div>
+            <div class="footer-logo-text mv2-footer-logo-text">Choice Properties</div>
+          </div>
+          <p class="footer-desc mv2-footer-desc">A clear, structured rental marketplace. Connecting quality tenants with verified landlords — expanding nationwide with active listings in select markets.</p>
+          <a href="mailto:support@choiceproperties.com" class="footer-link mv2-footer-link" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:6px" data-cfg-email><i class="fas fa-envelope"></i> support@choiceproperties.com</a>
+          <a href="tel:7077063137" class="footer-link mv2-footer-link" style="display:inline-flex;align-items:center;gap:6px" data-cfg-phone><i class="fas fa-phone"></i> 707-706-3137</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Renters</div>
+          <a href="/listings.html" class="footer-link mv2-footer-link">Browse Listings</a>
+          <a href="/listings/" class="footer-link mv2-footer-link">Browse by City</a>
+          <a href="/how-to-apply.html" class="footer-link mv2-footer-link">How to Apply</a>
+          <a href="/faq.html" class="footer-link mv2-footer-link">FAQ</a>
+          <a href="/tenant/portal.html" class="footer-link mv2-footer-link" target="_blank" rel="noopener noreferrer">Track Application</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Landlords</div>
+          <a href="/landlord/register.html" class="footer-link mv2-footer-link">List a Property</a>
+          <a href="/landlord/login.html" class="footer-link mv2-footer-link">Landlord Login</a>
+          <a href="/how-it-works.html" class="footer-link mv2-footer-link">How It Works</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Company</div>
+          <a href="/about.html" class="footer-link mv2-footer-link">About Us</a>
+          <a href="/privacy.html" class="footer-link mv2-footer-link">Privacy Policy</a>
+          <a href="/terms.html" class="footer-link mv2-footer-link">Terms of Service</a>
+          <a href="mailto:support@choiceproperties.com" class="footer-link mv2-footer-link" data-cfg-email>Contact</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Legal &amp; Policies</div>
+          <a href="/policies.html" class="footer-link mv2-footer-link"><strong>Complete Policy Framework</strong></a>
+          <a href="/rental-application-policy.html" class="footer-link mv2-footer-link">Rental Application Policy</a>
+          <a href="/application-credit-policy.html" class="footer-link mv2-footer-link">Application Credit Policy</a>
+          <a href="/holding-deposit-policy.html" class="footer-link mv2-footer-link">Holding Deposit Policy</a>
+          <a href="/fair-housing.html" class="footer-link mv2-footer-link">Fair Housing Policy</a>
+          <a href="/policy-changelog.html" class="footer-link mv2-footer-link">Policy Changelog</a>
+        </div>
+      </div>
+      <div class="footer-bottom mv2-footer-bottom">
+        <span class="footer-legal mv2-footer-legal">&copy; 2026 Choice Properties. All rights reserved.</span>
+        <span class="footer-eq mv2-footer-eq"><i class="fas fa-home" aria-hidden="true"></i> Equal Housing Opportunity</span>
+        <div class="footer-bottom-links mv2-footer-bottom-links">
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="/fair-housing.html">Fair Housing</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  </div>
+
+<div class="toast-container" id="toastContainer"></div>
+<button class="scroll-top" id="scrollTopBtn" aria-label="Back to top"><i class="fas fa-chevron-up"></i></button>
+
+<!-- Leaflet loaded lazily when user switches to Map View -->
+
+<script type="module" src="/js/listings.js?v=1787502213764"></script>
+</body>
+</html>

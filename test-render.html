@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+<script nonce="__CSP_NONCE__">
+window.CP = { sb: () => ({ from: () => ({ select: () => ({ in: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { client_name: 'Test', property_ids: ['abc'] } }), then: (cb) => cb({ data: [{ id: 'abc', monthly_rent: 1000 }] }) }) }) }) }) }) };
+window.buildPropertyCard = function(p) { return 'CARD ' + p.id; };
+window.initCardCarousel = function() {};
+</script>
+<script src="js/matches.js" type="module"></script>
+</head><body>
+<div id="matchHeaderContainer"></div>
+<div id="propertyGrid"></div>
+</body></html>

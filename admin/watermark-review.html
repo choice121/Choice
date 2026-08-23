@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1787502213764"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<title>Watermark Review · Choice Properties Admin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=1787502213764">
+<script defer src="/config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+<script defer src="/js/cp-api.js" type="module"></script>
+<script defer src="/js/cp-chrome.js?v=1787502213764"></script>
+<script defer src="/js/cp-shell.js?v=1787502213764"></script>
+<link rel="stylesheet" href="/css/admin/watermark-review.css?v=1787502213764">
+</head>
+<body data-page-title="Watermark Review" data-page-sub="Loading…">
+<div class="app">
+  <main class="app-content">
+
+    <div class="row-flex between" style="margin-bottom:8px;flex-wrap:wrap;gap:10px">
+      <div class="text-strong">Property images</div>
+      <div class="row-flex gap-2">
+        <button class="btn btn-ghost btn-sm" id="btn-scan-all"><svg class="i i-sm"><use href="#i-image"/></svg> Scan all</button>
+        <button class="btn btn-ghost btn-sm" id="btn-save-all" disabled>All saved</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;font-weight:600">
+          <input type="checkbox" id="select-all" style="margin-right:6px;vertical-align:-2px"> Select all
+        </label>
+        <button class="btn btn-danger btn-sm" id="btn-delete-sel" disabled>Delete (<span id="sel-count">0</span>)</button>
+      </div>
+    </div>
+
+    <div class="chip-row" id="filter-tabs" role="tablist" aria-label="Filter">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="all-watermarked">Fully watermarked</button>
+      <button class="chip" data-filter="some-watermarked">Any flagged</button>
+      <button class="chip" data-filter="clean">Clean</button>
+    </div>
+
+    <div class="summary" id="summary-bar">
+      <span class="all"   id="sum-all">0 fully watermarked</span>
+      <span class="some"  id="sum-some">0 partially flagged</span>
+      <span class="clean" id="sum-clean">0 clean</span>
+      <span class="total" id="sum-total">0 total</span>
+    </div>
+
+    <div class="scan-bar" id="scan-bar">
+      <div class="pbar"><div class="pfill" id="scan-fill"></div></div>
+      <div class="ptxt" id="scan-text">Scanning…</div>
+    </div>
+
+    <div id="props-list">
+      <div class="wm-grid">
+        <div class="skeleton sk-line lg" style="height:240px"></div>
+        <div class="skeleton sk-line lg" style="height:240px"></div>
+        <div class="skeleton sk-line lg" style="height:240px"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <img id="lightbox-img" alt="">
+  <div class="lightbox-cap" id="lightbox-caption"></div>
+  <button class="btn btn-ghost btn-sm" id="lightbox-close">Close</button>
+</div>
+
+<script defer src="/js/admin/watermark-review.js?v=1787502213764"></script>
+
+</body>
+</html>
