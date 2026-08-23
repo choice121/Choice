@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1787527804725"></script>
+  <script src="/js/cp-error-reporter.js?v=1787528056412"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Choice Properties - Watermark Sniper Audit</title>
@@ -25,20 +25,38 @@
       height: 100vh;
     }
     
-    #grid-panel {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      background-color: #1a1a1a;
-    }
-
     #sidebar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       width: 100%;
-      height: 40vh;
+      height: 74px; /* Collapsed height */
       background-color: #242424;
       border-top: 1px solid #333;
       display: flex;
       flex-direction: column;
+      z-index: 40;
+      transition: height 0.3s ease;
+      overflow: hidden;
+    }
+    #sidebar.expanded {
+      height: 60vh;
+    }
+    
+    #grid-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      padding-bottom: 80px;
+      background-color: #1a1a1a;
+    }
+    
+    .mobile-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
     }
 
     /* Grid */
@@ -53,11 +71,21 @@
       #app-container {
         flex-direction: row;
       }
+      #grid-panel {
+        padding-bottom: 1rem;
+      }
       #sidebar {
+        position: static;
         width: 380px;
         height: 100vh;
         border-top: none;
         border-left: 1px solid #333;
+      }
+      .mobile-toggle {
+        cursor: default;
+      }
+      .mobile-toggle .toggle-icon {
+        display: none;
       }
       .image-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -161,9 +189,14 @@
 
     <!-- Sidebar Queue -->
     <div id="sidebar">
-      <div class="p-4 border-b border-gray-700 bg-gray-800">
-        <h2 class="text-xl font-bold">Staging Queue</h2>
-        <p class="text-sm text-gray-400 mt-1"><span id="queue-count">0</span> properties flagged</p>
+      <div class="p-4 border-b border-gray-700 bg-gray-800 mobile-toggle" id="sidebar-header">
+        <div>
+          <h2 class="text-xl font-bold">Staging Queue</h2>
+          <p class="text-sm text-gray-400 mt-1"><span id="queue-count">0</span> properties flagged</p>
+        </div>
+        <div class="toggle-icon text-gray-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </div>
       </div>
       
       <div class="flex-1 overflow-y-auto" id="queue-list">
@@ -211,6 +244,19 @@
       const deleteBtn = document.getElementById('btn-delete-all');
       const countEl = document.getElementById('queue-count');
       const loadingEl = document.getElementById('loading');
+      
+      // Mobile Toggle
+      document.getElementById('sidebar-header').addEventListener('click', () => {
+        if (window.innerWidth < 768) {
+          document.getElementById('sidebar').classList.toggle('expanded');
+          const svg = document.querySelector('.toggle-icon svg');
+          if (document.getElementById('sidebar').classList.contains('expanded')) {
+            svg.innerHTML = '<path d="m6 9 6 6 6-6"/>';
+          } else {
+            svg.innerHTML = '<path d="m18 15-6-6-6 6"/>';
+          }
+        }
+      });
 
       // 1. Fetch properties
       async function loadData() {
