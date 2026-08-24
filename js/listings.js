@@ -49,7 +49,6 @@ const PER_PAGE     = 24;
 
 // ── Admin mode state ───────────────────────────────────────────────────────
 let isAdminMode       = false;
-let isAdminSelectMode = false;
 let adminStatusFilter = 'all';
 let adminLandlordId   = null;
 let adminLandlordName = null;
@@ -251,10 +250,6 @@ function injectAdminToolbar() {
     <button id="bulkFeatureBtn" style="background:transparent;border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">⭐ Feature</button>
     <button id="bulkUnfeatureBtn" style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Unfeature</button>
     <span style="width:1px;background:#374151;align-self:stretch;margin:0 2px"></span>
-    <button id="bulkDeleteBtn" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(239,68,68,0.35)">
-      <i class="fas fa-trash-alt"></i> Delete Selected (<span id="bulkDelCount">0</span>)
-    </button>
-    <span style="width:1px;background:#374151;align-self:stretch;margin:0 2px"></span>
     <button id="bulkClearBtn" style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Clear</button>
     <button id="bulkSelAllBtn" style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Select all on page</button>`;
   toolbar.insertAdjacentElement('afterend', bulkBar);
@@ -285,11 +280,9 @@ function injectAdminToolbar() {
   document.getElementById('bulkMatchBtn')?.addEventListener('click', _bulkCreateMatch);
   document.getElementById('bulkFeatureBtn')?.addEventListener('click', () => _bulkSetFeatured(true));
   document.getElementById('bulkUnfeatureBtn')?.addEventListener('click', () => _bulkSetFeatured(false));
-  document.getElementById('bulkDeleteBtn')?.addEventListener('click', _bulkDeleteProperties);
   document.getElementById('bulkClearBtn')?.addEventListener('click', () => {
     _adminSelected.clear();
     document.querySelectorAll('[data-admin-id]').forEach(c => { c.checked = false; });
-    document.querySelectorAll('.property-card.admin-selected').forEach(c => c.classList.remove('admin-selected'));
     _updateBulkBar();
   });
   document.getElementById('bulkSelAllBtn')?.addEventListener('click', () => {
@@ -297,7 +290,6 @@ function injectAdminToolbar() {
       c.checked = true;
       _adminSelected.add(c.dataset.adminId);
     });
-    document.querySelectorAll('.property-card[data-id]').forEach(c => c.classList.add('admin-selected'));
     _updateBulkBar();
   });
 
@@ -477,58 +469,25 @@ function applyAdminCardOverlays(grid, props) {
     // Bulk-select checkbox (top-left corner)
     const chkWrap = document.createElement('label');
     chkWrap.title = 'Select for bulk action';
-    chkWrap.style.cssText = 'position:absolute;top:8px;left:8px;z-index:10;cursor:pointer;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.9);border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3)';
+    chkWrap.style.cssText = 'position:absolute;top:8px;left:8px;z-index:10;cursor:pointer;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.85);border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,.25)';
     const chk = document.createElement('input');
     chk.type = 'checkbox';
     chk.dataset.adminId = id;
     chk.checked = _adminSelected.has(id);
-    chk.style.cssText = 'width:17px;height:17px;cursor:pointer;accent-color:#006aff';
+    chk.style.cssText = 'width:15px;height:15px;cursor:pointer;accent-color:#006aff';
     chk.addEventListener('change', () => {
-      if (chk.checked) {
-        _adminSelected.add(id);
-        card.classList.add('admin-selected');
-      } else {
-        _adminSelected.delete(id);
-        card.classList.remove('admin-selected');
-      }
+      if (chk.checked) _adminSelected.add(id);
+      else _adminSelected.delete(id);
       _updateBulkBar();
     });
     chk.addEventListener('click', e => e.stopPropagation());
     chkWrap.appendChild(chk);
     imgEl.appendChild(chkWrap);
 
-    // Synchronize initial selection state
-    if (_adminSelected.has(id)) {
-      card.classList.add('admin-selected');
-    }
-
-    // Tap/click card anywhere to select (unless clicking edit link, arrows, or dots)
-    card.style.cursor = 'pointer';
-    card.addEventListener('click', (e) => {
-      // Don't intercept specialized buttons
-      if (e.target.closest('a[href*="admin/property-detail"], .property-card-arrow, .property-card-dot, .property-card-save, .prop-city-badge, input[type=checkbox]')) {
-        return;
-      }
-      // Toggle selection on card tap/click
-      e.preventDefault();
-      e.stopPropagation();
-      const isSelected = _adminSelected.has(id);
-      if (isSelected) {
-        _adminSelected.delete(id);
-        chk.checked = false;
-        card.classList.remove('admin-selected');
-      } else {
-        _adminSelected.add(id);
-        chk.checked = true;
-        card.classList.add('admin-selected');
-      }
-      _updateBulkBar();
-    });
-
     // Status badge (shifted right to not overlap checkbox)
     const badge = document.createElement('div');
     const col = STATUS_COLORS[prop.status] || '#6b7280';
-    badge.style.cssText = `position:absolute;top:10px;left:42px;background:${col};color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;text-transform:uppercase;letter-spacing:.05em;z-index:5;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
+    badge.style.cssText = `position:absolute;top:10px;left:40px;background:${col};color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;text-transform:uppercase;letter-spacing:.05em;z-index:5;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
     badge.textContent = prop.status || 'unknown';
     imgEl.appendChild(badge);
 
@@ -563,54 +522,6 @@ function _updateBulkBar() {
   bar.style.display = 'flex';
   const label = bar.querySelector('#bulkSelLabel');
   if (label) label.textContent = n + ' propert' + (n === 1 ? 'y' : 'ies') + ' selected';
-  const delNum = bar.querySelector('#bulkDelCount');
-  if (delNum) delNum.textContent = String(n);
-}
-
-async function _bulkDeleteProperties() {
-  const ids = [..._adminSelected];
-  if (!ids.length) return;
-  const confirmed = window.confirm(
-    `Permanently delete ${ids.length} selected propert${ids.length === 1 ? 'y' : 'ies'}?\n\nThis will remove all photos, listings data, and related database records. This action cannot be undone.`
-  );
-  if (!confirmed) return;
-
-  const btn = document.getElementById('bulkDeleteBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting…'; }
-
-  let userId = null;
-  try {
-    const session = await window.CP.Auth.getSession();
-    userId = session?.user?.id || null;
-  } catch (_) {}
-
-  try {
-    const res = await window.CP.Properties.deleteBulk(ids);
-    if (res && res.ok !== false) {
-      if (userId) {
-        await window.CP.sb().from('admin_actions').insert({
-          action: 'property.bulk_delete',
-          target_type: 'property',
-          metadata: { ids, count: ids.length, source: 'listings_admin' },
-          user_id: userId,
-        }).catch(() => {});
-      }
-      window.showToast?.(`${ids.length} propert${ids.length === 1 ? 'y' : 'ies'} deleted successfully.`, 'success');
-      _adminSelected.clear();
-      _updateBulkBar();
-      await fetchAndRender();
-    } else {
-      throw new Error(res?.error || 'Failed to delete properties');
-    }
-  } catch (err) {
-    console.error('Bulk delete error:', err);
-    window.showToast?.('Delete failed: ' + (err.message || err), 'error');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<i class="fas fa-trash-alt"></i> Delete Selected (<span id="bulkDelCount">${_adminSelected.size}</span>)`;
-    }
-  }
 }
 
 async function _bulkStatusChange() {

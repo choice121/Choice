@@ -76,7 +76,6 @@
       <div class="scan-bar" id="scan-bar">
         <div class="pbar"><div class="pfill" id="scan-fill"></div></div>
         <div class="ptxt" id="scan-text">Scanning…</div>
-        <button class="btn btn-ghost btn-sm" id="btn-scan-stop" style="color:#ef4444;margin-left:8px">Stop</button>
       </div>
     </div>
 
@@ -90,46 +89,6 @@
     </div>
 
   </main>
-</div>
-
-<!-- Similar Photos Finder Modal -->
-<div class="wm-similar-modal" id="wm-similar-modal" role="dialog" aria-modal="true" aria-label="Similar Photos Finder">
-  <div class="wm-similar-overlay" id="wm-similar-overlay"></div>
-  <div class="wm-similar-content">
-    <div class="wm-similar-header">
-      <div>
-        <div class="text-strong" style="font-size:1.05rem;color:#f1f5f9">Similar Photos Finder</div>
-        <div style="font-size:0.75rem;color:var(--muted)">Matched visually similar photos across catalog using perceptual fingerprinting</div>
-      </div>
-      <button class="btn btn-ghost btn-sm wm-similar-close" id="wm-similar-close">✕</button>
-    </div>
-
-    <div class="wm-similar-target-row">
-      <div class="wm-similar-target-thumb">
-        <img id="wm-target-img" src="" alt="Target reference photo">
-      </div>
-      <div class="wm-similar-target-info">
-        <div class="text-strong" id="wm-target-title" style="font-size:0.88rem;color:#f1f5f9">Reference Photo</div>
-        <div id="wm-target-addr" style="font-size:0.75rem;color:var(--muted)">Loading…</div>
-        <div style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <span class="chip chip-amber" id="wm-target-flag" style="font-size:0.65rem">Target Image</span>
-          <button class="btn btn-secondary btn-sm" id="wm-btn-flag-all-sim" style="font-size:0.72rem;padding:3px 8px">
-            Flag all similar as watermarked
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="wm-similar-body">
-      <div class="row-flex between" style="margin-bottom:10px">
-        <span style="font-size:0.78rem;font-weight:700;color:var(--text)" id="wm-similar-matches-count">0 matches found</span>
-        <button class="btn btn-ghost btn-sm" id="wm-btn-select-all-sim" style="font-size:0.72rem">Select all matching properties</button>
-      </div>
-      <div class="wm-similar-grid" id="wm-similar-grid">
-        <!-- Dynamically injected matches -->
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Floating Bulk Action Bar (Slides up when properties are selected) -->

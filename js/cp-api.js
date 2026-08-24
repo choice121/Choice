@@ -528,39 +528,7 @@ const Properties = {
     const { data, error } = await sb().from('properties').update(payload).eq('id', id).select().single();
     return _ok(data, error);
   },
-  async delete(id) {
-    if (!id) return { ok: false, error: 'Property ID required' };
-    try {
-      const { data, error } = await sb().rpc('delete_property_cascade', { p_id: String(id) });
-      if (!error && data && data.ok !== false) return { ok: true, deleted: data.deleted ?? 1 };
-    } catch (_) {}
-    // Fallback: multi-table delete sequence
-    try {
-      await sb().from('property_photos').delete().eq('property_id', id).catch(() => {});
-      await sb().from('saved_properties').delete().eq('property_id', id).catch(() => {});
-      const { error } = await sb().from('properties').delete().eq('id', id);
-      return _ok({ id }, error);
-    } catch (err) {
-      return { ok: false, error: err.message || err };
-    }
-  },
-  async deleteBulk(ids) {
-    if (!ids || !ids.length) return { ok: true, deleted: 0 };
-    const strIds = ids.map(String);
-    try {
-      const { data, error } = await sb().rpc('delete_properties_cascade', { p_ids: strIds });
-      if (!error && data && data.ok !== false) return { ok: true, deleted: data.deleted ?? strIds.length };
-    } catch (_) {}
-    // Fallback
-    try {
-      await sb().from('property_photos').delete().in('property_id', strIds).catch(() => {});
-      await sb().from('saved_properties').delete().in('property_id', strIds).catch(() => {});
-      const { error } = await sb().from('properties').delete().in('id', strIds);
-      return _ok({ count: strIds.length }, error);
-    } catch (err) {
-      return { ok: false, error: err.message || err };
-    }
-  },
+  async delete(id)        { return sb().from('properties').delete().eq('id', id); },
   async incrementView(id) { return sb().rpc('increment_counter', { p_table: 'properties', p_id: id, p_column: 'views_count' }); },
 };
 
