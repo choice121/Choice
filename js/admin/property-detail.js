@@ -607,7 +607,7 @@
           ${wmPhotos.length > 0
             ? (flagged > 0 ? `<span class="pill pill-warning">${flagged} photo${flagged===1?'':'s'} flagged</span>` : '<span class="pill pill-success">All clear</span>')
             : '<span class="pill pill-muted">Not scanned yet</span>'}
-          <a class="btn btn-ghost btn-sm" href="/admin/watermark-review.html?property_id=${esc(propId)}" style="font-size:.72rem">Scan &amp; review</a>
+          <a class="btn btn-ghost btn-sm" href="/admin/watermark-sniper.html?property_id=${esc(propId)}" style="font-size:.72rem">Watermark Sniper</a>
           <button class="btn btn-ghost btn-sm" id="pd-btn-apply-wm" style="font-size:.72rem" title="Apply watermark to all photos via ImageKit">
             ${ico('drop')} Apply watermark
           </button>

@@ -1,130 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1787572561621"></script>
+  <script src="/js/cp-error-reporter.js?v=1787573018214"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0f1e">
-<meta name="color-scheme" content="dark">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="robots" content="noindex, nofollow">
-<title>Watermark Review · Choice Properties Admin</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1787572561621">
-<script defer src="/config.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-<script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=1787572561621"></script>
-<script defer src="/js/cp-shell.js?v=1787572561621"></script>
-<link rel="stylesheet" href="/css/admin/watermark-review.css?v=1787572561621">
+<meta http-equiv="refresh" content="0; url=/admin/watermark-sniper.html">
+<title>Redirecting to Watermark Sniper…</title>
+<script nonce="__CSP_NONCE__">
+  // Preserve any query string such as ?property_id=
+  window.location.replace('/admin/watermark-sniper.html' + window.location.search);
+</script>
 </head>
-<body data-page-title="Watermark Review" data-page-sub="Loading…">
-<div class="app">
-  <main class="app-content wm-page-content">
-
-    <!-- Sticky Toolbar Container -->
-    <div class="wm-sticky-header">
-      <div class="row-flex between wm-top-row">
-        <div class="wm-heading-wrap">
-          <div class="text-strong wm-title-text">Watermark Sniper</div>
-          <span class="wm-count-badge" id="wm-total-badge">0 properties</span>
-        </div>
-        <div class="row-flex gap-2 wm-top-actions">
-          <button class="btn btn-ghost btn-sm" id="btn-scan-all" title="Scan all visible properties">
-            <svg class="i i-sm"><use href="#i-image"/></svg> Scan all
-          </button>
-          <button class="btn btn-ghost btn-sm" id="btn-save-all" disabled>All saved</button>
-          <label class="btn btn-ghost btn-sm wm-select-all-btn" style="cursor:pointer;font-weight:600">
-            <input type="checkbox" id="select-all" style="margin-right:6px;vertical-align:-2px"> Select all
-          </label>
-          <button class="btn btn-danger btn-sm" id="btn-delete-sel" disabled>
-            <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-            Delete (<span id="sel-count">0</span>)
-          </button>
-        </div>
-      </div>
-
-      <!-- Search & Filters Row -->
-      <div class="wm-controls-row">
-        <div class="chip-row wm-filter-chips" id="filter-tabs" role="tablist" aria-label="Filter">
-          <button class="chip active" data-filter="all">All <span class="chip-count" id="chip-cnt-all">0</span></button>
-          <button class="chip" data-filter="all-watermarked">Fully watermarked <span class="chip-count" id="chip-cnt-all-wm">0</span></button>
-          <button class="chip" data-filter="some-watermarked">Any flagged <span class="chip-count" id="chip-cnt-some-wm">0</span></button>
-          <button class="chip" data-filter="clean">Clean <span class="chip-count" id="chip-cnt-clean">0</span></button>
-        </div>
-
-        <div class="wm-search-wrap">
-          <svg class="wm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="wm-search-input" type="search" placeholder="Search address, title, city…" autocomplete="off" aria-label="Search properties">
-          <button class="wm-search-clear" id="wm-search-clear" aria-label="Clear search" style="display:none">✕</button>
-        </div>
-      </div>
-
-      <div class="summary" id="summary-bar">
-        <span class="all"   id="sum-all">0 fully watermarked</span>
-        <span class="some"  id="sum-some">0 partially flagged</span>
-        <span class="clean" id="sum-clean">0 clean</span>
-        <span class="total" id="sum-total">0 total</span>
-        <span class="wm-showing-count" id="sum-showing" style="margin-left:auto;font-weight:600;color:var(--muted)"></span>
-      </div>
-
-      <div class="scan-bar" id="scan-bar">
-        <div class="pbar"><div class="pfill" id="scan-fill"></div></div>
-        <div class="ptxt" id="scan-text">Scanning…</div>
-        <button class="btn btn-ghost btn-sm" id="btn-scan-stop" style="color:#ef4444;margin-left:auto;font-weight:700">Stop</button>
-      </div>
-    </div>
-
-    <!-- Properties Grid Container -->
-    <div id="props-list" class="wm-props-container">
-      <div class="wm-grid">
-        <div class="skeleton sk-line lg" style="height:240px"></div>
-        <div class="skeleton sk-line lg" style="height:240px"></div>
-        <div class="skeleton sk-line lg" style="height:240px"></div>
-      </div>
-    </div>
-
-  </main>
-</div>
-
-<!-- Floating Bulk Action Bar (Slides up when properties are selected) -->
-<div class="wm-bulk-bar" id="wm-bulk-bar" role="toolbar" aria-label="Bulk selection actions">
-  <div class="wm-bulk-bar-inner">
-    <label class="wm-bulk-select-wrap">
-      <input type="checkbox" id="wm-bulk-select-all" class="wm-bulk-cb">
-      <span id="wm-bulk-count" class="wm-bulk-count-text">0 selected</span>
-    </label>
-    <div class="wm-bulk-actions">
-      <button class="btn btn-ghost btn-sm wm-btn-bulk-clear" id="wm-bulk-clear">Clear</button>
-      <button class="btn btn-ghost btn-sm" id="wm-bulk-scan-sel">
-        <svg class="i i-sm"><use href="#i-image"/></svg> Scan selected
-      </button>
-      <button class="btn btn-danger btn-sm wm-btn-bulk-del" id="wm-bulk-delete">
-        <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-        Delete Selected (<span id="wm-bulk-del-num">0</span>)
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Scroll to top floating button -->
-<button class="wm-scroll-top" id="btn-scroll-top" aria-label="Scroll to top" title="Scroll to top">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="18 15 12 9 6 15"/></svg>
-</button>
-
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox">
-  <img id="lightbox-img" alt="">
-  <div class="lightbox-cap" id="lightbox-caption"></div>
-  <button class="btn btn-ghost btn-sm" id="lightbox-close">Close</button>
-</div>
-
-<script defer src="/js/admin/watermark-review.js?v=1787572561621"></script>
-
+<body style="background:#0a0f1e;color:#94a3b8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <p>Redirecting to <a href="/admin/watermark-sniper.html" style="color:#006aff">Watermark Sniper</a>…</p>
 </body>
 </html>
