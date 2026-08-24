@@ -380,29 +380,6 @@
       });
     }
 
-    // Dynamic Smart Priority Sorting:
-    // 1. Flagged Images (score = 1.0) come first
-    // 2. Images with High Similarity to flagged text/watermarks (score >= 0.40) in descending score order
-    // 3. Remaining unflagged images
-    if(similarityPrioritized && queuedPropertyIds.size > 0 && currentFilter !== 'flagged'){
-      const sorted = images.slice().sort((a, b) => {
-        const aFlagged = queuedPropertyIds.has(a.propertyId) ? 1 : 0;
-        const bFlagged = queuedPropertyIds.has(b.propertyId) ? 1 : 0;
-
-        if(aFlagged !== bFlagged) return bFlagged - aFlagged;
-
-        const aScore = a.similarityScore || 0;
-        const bScore = b.similarityScore || 0;
-
-        if(Math.abs(aScore - bScore) > 0.05){
-          return bScore - aScore;
-        }
-
-        return 0; // Maintain natural stability
-      });
-      return sorted;
-    }
-
     return images;
   }
 
@@ -427,21 +404,18 @@
 
     slice.forEach((item, index) => {
       const isFlagged = queuedPropertyIds.has(item.propertyId);
-      const isSimilar = !isFlagged && (item.similarityScore >= 0.40) && similarityPrioritized && queuedPropertyIds.size > 0;
 
       const card = document.createElement('div');
-      card.className = 'sniper-card' + (isFlagged ? ' flagged' : '') + (isSimilar ? ' similar' : '');
+      card.className = 'sniper-card' + (isFlagged ? ' flagged' : '');
       card.dataset.pid = item.propertyId;
       card.dataset.idx = index;
 
       const thumbUrl = getThumbUrl(item.url);
       const addr = item.property.address || item.property.title || 'Property';
-      const pct = Math.round((item.similarityScore || 0) * 100);
 
       card.innerHTML = `
         <img src="${S.esc(thumbUrl)}" alt="${S.esc(addr)}" loading="lazy" width="280" height="210">
         <span class="sniper-flag-badge">Flagged</span>
-        ${isSimilar ? `<span class="sniper-similar-badge">⚡ Similar Pattern (${pct}%)</span>` : ''}
         <div class="sniper-card-caption">${S.esc(addr)}</div>
       `;
 
@@ -487,12 +461,18 @@
       queuedPropertyIds.add(propertyId);
     }
 
-    // Instantly recalibrate similarity scores across entire catalog
-    recalculateSimilarities();
+    // Direct DOM update instead of full re-render for extreme speed
+    const card = document.querySelector(\`.sniper-card[data-pid="\${propertyId}"]\`);
+    if (card) {
+      if (queuedPropertyIds.has(propertyId)) {
+        card.classList.add('flagged');
+      } else {
+        card.classList.remove('flagged');
+      }
+    }
 
-    // Dynamically re-render queue and re-order grid to float similar photos to the front
+    // Just update the queue sidebar
     renderQueue();
-    renderGrid();
   }
 
   function stageAllMatchingProperties(){
