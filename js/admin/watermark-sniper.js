@@ -254,14 +254,26 @@
     if(loadingEl) loadingEl.style.display = 'flex';
 
     try {
-      const { data, error } = await CP.sb()
-        .from('properties')
-        .select('id,title,address,city,state,zip,status,landlord_id,created_at,property_photos(id,url,display_order,file_id)')
-        .order('created_at', { ascending: false });
+      let allData = [];
+      let page = 0;
+      const pageSize = 1000;
+      
+      while (true) {
+        const { data, error } = await CP.sb()
+          .from('properties')
+          .select('id,title,address,city,state,zip,status,landlord_id,created_at,property_photos(id,url,display_order,file_id)')
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if(error) throw error;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allData = allData.concat(data);
+        if (data.length < pageSize) break;
+        page++;
+      }
 
-      allProperties = data || [];
+      allProperties = allData;
       allImages = [];
 
       allProperties.forEach(p => {
