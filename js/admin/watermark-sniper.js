@@ -23,6 +23,77 @@
   let currentFilter = 'all';     // 'all' | 'flagged'
   let displayLimit = 120;         // Initial batch size for ultra-responsive DOM
 
+  // ─── Interior Photo Selection Helper ───────────────────────────────────────
+  // Scraper/MLS ingestion standard:
+  // - Photo 0 (display_order 0) is almost universally the front exterior / facade of the building.
+  // - Photos 1, 2, 3... are interior rooms (living room, kitchen, bedroom, bathroom).
+  // This helper selects exactly 1 representative interior photo per property, avoiding outside/exterior views.
+  const EXTERIOR_KEYWORDS = [
+    'exterior', 'front', 'facade', 'curb', 'street', 'building', 'outside',
+    'aerial', 'drone', 'roof', 'yard', 'backyard', 'porch', 'driveway',
+    'elevation', 'landscape', 'patio', 'deck', 'siding', 'lawn', 'garage_front'
+  ];
+
+  const INTERIOR_KEYWORDS = [
+    'interior', 'kitchen', 'living', 'bath', 'bedroom', 'dining', 'room',
+    'family', 'hall', 'foyer', 'den', 'office', 'closet', 'laundry',
+    'suite', 'cabinet', 'appliance', 'sink', 'stove', 'floor', 'carpet',
+    'hardwood', 'ceiling', 'stair', 'window', 'wall', 'oven', 'fridge',
+    'refrigerator', 'tile', 'fireplace', 'counter', 'island'
+  ];
+
+  function selectInteriorPhoto(photos){
+    if(!photos || !photos.length) return null;
+    if(photos.length === 1) return photos[0];
+
+    // Score each photo to find the most definitive interior photograph
+    let bestPhoto = null;
+    let bestScore = -9999;
+
+    photos.forEach((ph, index) => {
+      const urlLower = (ph.url || '').toLowerCase();
+      let score = 0;
+
+      // 1. Position-based scoring:
+      // Index 0 is the front exterior hero shot across MLS/Zillow -> heavy penalty
+      if(index === 0) {
+        score -= 50;
+      } else if(index === 1) {
+        // Photo 1 is almost universally the primary interior living room or open kitchen
+        score += 30;
+      } else if(index === 2) {
+        // Photo 2 is typically the kitchen or main living space
+        score += 25;
+      } else if(index === 3) {
+        score += 20;
+      } else {
+        score += 10;
+      }
+
+      // 2. Keyword detection in URL/file path:
+      for(const kw of INTERIOR_KEYWORDS){
+        if(urlLower.includes(kw)){
+          score += 40;
+          break;
+        }
+      }
+
+      for(const kw of EXTERIOR_KEYWORDS){
+        if(urlLower.includes(kw)){
+          score -= 60;
+          break;
+        }
+      }
+
+      if(score > bestScore){
+        bestScore = score;
+        bestPhoto = ph;
+      }
+    });
+
+    return bestPhoto || photos[1] || photos[0];
+  }
+
   // ─── Image URL Helper (Fast & Micro-Data) ──────────────────────────────────
   function getThumbUrl(rawUrl){
     if(!rawUrl) return '';
@@ -161,7 +232,7 @@
     if(similarCount > 0 && queuedPropertyIds.size > 0 && similarityPrioritized){
       banner.style.display = 'flex';
       if(prioCountEl){
-        prioCountEl.textContent = `${similarCount} matching photo${similarCount === 1 ? '' : 's'} (${propCount} propert${propCount === 1 ? 'y' : 'ies'})`;
+        prioCountEl.textContent = `${propCount} matching propert${propCount === 1 ? 'y' : 'ies'}`;
       }
       if(matchCountEl){
         matchCountEl.textContent = propCount;
@@ -202,17 +273,20 @@
         p.coverUrl = validPhotos[0]?.url || '';
         p.tokenSet = tokenizeProperty(p);
 
-        validPhotos.forEach((photo) => {
+        // Select exactly ONE interior photo per property (avoiding front exterior facade)
+        const interiorPhoto = selectInteriorPhoto(validPhotos);
+        if(interiorPhoto){
+          p.interiorPhoto = interiorPhoto;
           allImages.push({
-            id: photo.id,
-            url: photo.url,
-            file_id: photo.file_id || null,
+            id: interiorPhoto.id,
+            url: interiorPhoto.url,
+            file_id: interiorPhoto.file_id || null,
             propertyId: p.id,
             property: p,
-            urlSignature: extractUrlSignature(photo.url),
+            urlSignature: extractUrlSignature(interiorPhoto.url),
             similarityScore: 0
           });
-        });
+        }
       });
 
       // Update header statistics
