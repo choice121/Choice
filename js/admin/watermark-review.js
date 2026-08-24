@@ -20,19 +20,15 @@
   let searchQuery   = '';
   let scanning      = false;
   let scanCancelled = false;
-  let _displayLimit = 24;  // Default 24 items for ultra-lean mobile performance
+  let _displayLimit = 50;
 
   // Cache for perceptual hashes to prevent re-hashing images
   const _photoHashCache = new Map();
   let _currentSimilarMatches = [];
 
-  // ─── Ultra-Lightweight Image URL helpers ────────────────────────────────────
+  // ─── Lightweight Image URL helpers ────────────────────────────────────────
   function getThumb(url, mode='thumb'){
     if(!url) return '';
-    if(url.includes('ik.imagekit.io')){
-      const clean = url.replace(/\?tr=[^&]+/, '').split('?')[0];
-      return clean + '?tr=w-240,h-160,c-maintain_ratio,q-50,f-webp';
-    }
     if(window.CONFIG && typeof CONFIG.img === 'function'){
       return CONFIG.img(url, mode);
     }
@@ -41,20 +37,12 @@
 
   function getScanUrl(rawUrl){
     if(!rawUrl) return '';
-    // Downscale to lightweight WebP 160px for canvas analysis
+    // If ImageKit URL, downscale to lightweight WebP 320px for analysis
     if(rawUrl.includes('ik.imagekit.io')){
-      const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
-      return clean + '?tr=w-160,q-50,f-webp';
-    }
-    return rawUrl;
-  }
-
-  function getHashScanUrl(rawUrl){
-    if(!rawUrl) return '';
-    // Micro 32x32 WebP image (~300 bytes) for instant gradient fingerprinting
-    if(rawUrl.includes('ik.imagekit.io')){
-      const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
-      return clean + '?tr=w-32,h-32,q-40,f-webp';
+      if(rawUrl.includes('?tr=')){
+        return rawUrl.replace(/\?tr=[^&]+/, '?tr=w-320,q-60,f-webp');
+      }
+      return rawUrl + '?tr=w-320,q-60,f-webp';
     }
     return rawUrl;
   }
@@ -77,7 +65,7 @@
     if(!okAuth) return;
     const { data, error } = await CP.sb()
       .from('properties')
-      .select('id,title,address,status,created_at,property_photos(id,url,file_id,display_order,watermark_status,perceptual_hash)')
+      .select('id,title,address,status,created_at,property_photos(id,url,file_id,display_order,watermark_status)')
       .order('created_at',{ ascending:false });
     if(error){
       document.getElementById('props-list').innerHTML =
@@ -88,10 +76,7 @@
       const photos = Array.isArray(p.property_photos) ? p.property_photos : [];
       const sorted = photos.slice().sort((a,b) => (a.display_order||0)-(b.display_order||0));
       const validPhotos = sorted.filter(x => x.url);
-      validPhotos.forEach(ph => {
-        if(ph.perceptual_hash) _photoHashCache.set(ph.url, ph.perceptual_hash);
-      });
-      return { ...p, photos: validPhotos, images: validPhotos.map(x => ({ url: x.url, id: x.id, perceptual_hash: x.perceptual_hash })) };
+      return { ...p, photos: validPhotos, images: validPhotos.map(x => ({ url: x.url, id: x.id })) };
     });
 
     // Pre-populate scanResults from previously saved watermark_status values
@@ -477,11 +462,11 @@
   }
 
   // ─── Perceptual Hashing (dHash) & Similar Photo Finder ────────────────────
-  async function getPhotoHash(url, photoId=null){
+  async function getPhotoHash(url){
     if(!url) return null;
     if(_photoHashCache.has(url)) return _photoHashCache.get(url);
     try {
-      const scanUrl = getHashScanUrl(url);
+      const scanUrl = getScanUrl(url);
       const px = await proxyUrl(scanUrl);
       const resp = await fetch(px);
       if(!resp.ok) return null;
@@ -489,13 +474,7 @@
       const objectUrl = URL.createObjectURL(blob);
       const hash = await computeDHashFromBlob(objectUrl);
       URL.revokeObjectURL(objectUrl);
-      if(hash) {
-        _photoHashCache.set(url, hash);
-        if(photoId){
-          // Asynchronously persist to Supabase so it's instant next time
-          CP.sb().from('property_photos').update({ perceptual_hash: hash }).eq('id', photoId).then(()=>{});
-        }
-      }
+      if(hash) _photoHashCache.set(url, hash);
       return hash;
     } catch(e) {
       return null;
@@ -532,7 +511,7 @@
       };
       img.onerror = () => resolve(null);
       img.src = blobUrl;
-      setTimeout(() => resolve(null), 6000);
+      setTimeout(() => resolve(null), 8000);
     });
   }
 
@@ -558,13 +537,12 @@
     targetImg.src = getThumb(targetPhotoUrl, 'thumb');
     targetTitle.textContent = prop?.title || 'Selected Photo';
     targetAddr.textContent = prop?.address || '—';
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:28px;text-align:center;color:var(--muted)">Analyzing perceptual hash & matching across catalog…</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:28px;text-align:center;color:var(--muted)">Analyzing perceptual hash & matching across all properties…</div>';
     countEl.textContent = 'Searching catalog…';
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
 
-    const targetPhotoObj = prop?.photos?.find(x => x.url === targetPhotoUrl);
-    const targetHash = await getPhotoHash(targetPhotoUrl, targetPhotoObj?.id);
+    const targetHash = await getPhotoHash(targetPhotoUrl);
     if(!targetHash){
       grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:#ef4444">Could not generate visual signature for this photo.</div>';
       countEl.textContent = '0 matches';
@@ -572,16 +550,10 @@
     }
 
     const matches = [];
-    let checkedCount = 0;
     for(const p of allProperties){
       for(const ph of p.photos){
         if(ph.url === targetPhotoUrl && p.id === targetPropId) continue;
-        const hash = await getPhotoHash(ph.url, ph.id);
-        checkedCount++;
-        if(checkedCount % 12 === 0) {
-          // Yield to main thread every 12 checks to keep mobile fluid
-          await new Promise(r => setTimeout(r, 8));
-        }
+        const hash = await getPhotoHash(ph.url);
         if(!hash) continue;
         const dist = hammingDistance(targetHash, hash);
         // Distance <= 15 out of 64 bits = >= 76% visual similarity

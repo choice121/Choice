@@ -100,7 +100,7 @@
         ]},
         { sect: 'Admin',          items: [
           { href: 'audit-log.html',             icon: 'i-history',  label: 'Audit Log' },
-          { href: 'watermark-review.html',      icon: 'i-image',    label: 'Watermark Sniper' },
+          { href: 'watermark-review.html',      icon: 'i-image',    label: 'Watermark Review' },
           { href: 'deposit-accounting.html',    icon: 'i-card',     label: 'Deposit Accounting' },
           { href: 'state-law.html',             icon: 'i-list',     label: 'State Law Reference' },
           { href: 'location-notifications.html',icon: 'i-listings', label: 'New Locations' }
@@ -120,7 +120,7 @@
         { href: 'messages.html',          icon: 'i-message', label: 'Messages' },
         { href: 'email-logs.html',        icon: 'i-mail',    label: 'Email logs' },
         { href: 'audit-log.html',         icon: 'i-history', label: 'Audit log' },
-        { href: 'watermark-review.html',      icon: 'i-image',    label: 'Watermark Sniper' },
+        { href: 'watermark-review.html',      icon: 'i-image',    label: 'Watermark review' },
         { href: 'deposit-accounting.html',    icon: 'i-card',     label: 'Deposit accounting' },
         { href: 'state-law.html',             icon: 'i-list',     label: 'State law reference' },
         { href: 'location-notifications.html',icon: 'i-listings', label: 'New Locations' }

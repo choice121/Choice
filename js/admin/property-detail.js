@@ -602,12 +602,12 @@
     if (_photos.length) {
       const flagged = wmPhotos.filter(ph => ph.watermark_status === 'watermark' || ph.watermark_status === 'branding').length;
       wmHtml = `<div class="pd-section">
-        <div class="pd-section-title">Watermark Sniper</div>
+        <div class="pd-section-title">Watermark scan</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           ${wmPhotos.length > 0
             ? (flagged > 0 ? `<span class="pill pill-warning">${flagged} photo${flagged===1?'':'s'} flagged</span>` : '<span class="pill pill-success">All clear</span>')
             : '<span class="pill pill-muted">Not scanned yet</span>'}
-          <a class="btn btn-ghost btn-sm" href="/admin/watermark-review.html?property_id=${esc(propId)}" style="font-size:.72rem"><svg class="i i-sm" style="margin-right:4px"><use href="#i-image"/></svg> Open in Watermark Sniper</a>
+          <a class="btn btn-ghost btn-sm" href="/admin/watermark-review.html?property_id=${esc(propId)}" style="font-size:.72rem">Scan &amp; review</a>
           <button class="btn btn-ghost btn-sm" id="pd-btn-apply-wm" style="font-size:.72rem" title="Apply watermark to all photos via ImageKit">
             ${ico('drop')} Apply watermark
           </button>
