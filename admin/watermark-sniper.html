@@ -32,29 +32,38 @@
       <!-- Main Photo Grid Panel -->
       <section class="sniper-main">
         <header class="sniper-header">
-          <div class="sniper-header-top">
-            <div class="sniper-title-group">
-              <h1>Watermark Sniper</h1>
-              <p>Review 1 representative interior photo per property. Click any photo with a watermark, logo, or flyer text to stage the property for deletion.</p>
+          <div class="sniper-controls" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div class="sniper-title-group" style="display: flex; align-items: center; gap: 12px;">
+              <h1 style="font-size: 1.1rem; margin: 0;">Watermark Sniper</h1>
+              <div class="sniper-stats" style="margin: 0;">
+                <span><strong class="sniper-stats-num" id="stats-props">0</strong> properties</span>
+                <span>•</span>
+                <span style="color:#60a5fa;font-weight:600">1 Interior Photo / Listing</span>
+              </div>
             </div>
-            <div class="sniper-stats">
-              <span><strong class="sniper-stats-num" id="stats-props">0</strong> properties</span>
-              <span>•</span>
-              <span style="color:#60a5fa;font-weight:600">1 Interior Photo / Listing</span>
+
+            <div class="sniper-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <div class="sniper-search">
+                <svg class="sniper-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="sniper-search-input" type="search" placeholder="Filter by address, city, ID…" autocomplete="off" aria-label="Search listings">
+                <button class="sniper-search-clear" id="sniper-search-clear" aria-label="Clear search" style="display:none">✕</button>
+              </div>
+
+              <div class="sniper-city-filter">
+                <select id="sniper-city-select" aria-label="Filter by city" style="background: var(--surface-2, #1a2235); border: 1px solid var(--border, rgba(255,255,255,.07)); border-radius: var(--r-sm, 8px); color: var(--text, #f1f5f9); font-size: 0.875rem; padding: 7px 12px; outline: none; height: 34px;">
+                  <option value="">All Cities</option>
+                </select>
+              </div>
+
+              <div class="sniper-filter-tabs" role="tablist" aria-label="Filter photos">
+                <button class="sniper-filter-tab active" id="tab-filter-all" role="tab" aria-selected="true" style="padding: 6px 10px;">All</button>
+                <button class="sniper-filter-tab" id="tab-filter-flagged" role="tab" aria-selected="false" style="padding: 6px 10px;">Flagged</button>
+              </div>
             </div>
           </div>
 
-          <div class="sniper-controls">
-            <div class="sniper-search">
-              <svg class="sniper-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input id="sniper-search-input" type="search" placeholder="Filter by address, city, ID…" autocomplete="off" aria-label="Search listings">
-              <button class="sniper-search-clear" id="sniper-search-clear" aria-label="Clear search" style="display:none">✕</button>
-            </div>
-
-            <div class="sniper-filter-tabs" role="tablist" aria-label="Filter photos">
-              <button class="sniper-filter-tab active" id="tab-filter-all" role="tab" aria-selected="true">All Photos</button>
-              <button class="sniper-filter-tab" id="tab-filter-flagged" role="tab" aria-selected="false">Flagged Only</button>
-            </div>
+          <div style="font-size: 0.8125rem; color: var(--muted, #94a3b8); margin-top: -4px;">
+             Review 1 representative interior photo per property. Click any photo with a watermark, logo, or flyer text to stage the property for deletion.
           </div>
 
           <!-- Dynamic Similarity Priority Banner -->

@@ -289,6 +289,28 @@
         }
       });
 
+      // Populate cities dropdown
+      const cities = new Set();
+      allImages.forEach(img => {
+        if(img.property.city) {
+          cities.add(img.property.city.trim());
+        }
+      });
+      const citySelect = document.getElementById('sniper-city-select');
+      if(citySelect) {
+        const firstOption = citySelect.options[0];
+        citySelect.innerHTML = '';
+        if(firstOption) citySelect.appendChild(firstOption);
+        else citySelect.innerHTML = '<option value="">All Cities</option>';
+
+        Array.from(cities).sort().forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          citySelect.appendChild(opt);
+        });
+      }
+
       // Update header statistics
       updateStats();
 
@@ -327,6 +349,12 @@
 
     if(currentFilter === 'flagged'){
       images = images.filter(img => queuedPropertyIds.has(img.propertyId));
+    }
+
+    const citySelect = document.getElementById('sniper-city-select');
+    if(citySelect && citySelect.value) {
+      const selectedCity = citySelect.value.toLowerCase();
+      images = images.filter(img => img.property.city && img.property.city.trim().toLowerCase() === selectedCity);
     }
 
     if(searchQuery.trim()){
@@ -780,6 +808,14 @@
         tabFlagged.classList.add('active');
         tabAll.classList.remove('active');
         currentFilter = 'flagged';
+        displayLimit = 120;
+        renderGrid();
+      });
+    }
+
+    const citySelect = document.getElementById('sniper-city-select');
+    if(citySelect) {
+      citySelect.addEventListener('change', () => {
         displayLimit = 120;
         renderGrid();
       });
