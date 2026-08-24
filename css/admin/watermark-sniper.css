@@ -87,6 +87,92 @@
   flex-wrap: wrap;
 }
 
+/* ─── Dynamic Similarity Banner ────────────────────────────────────────── */
+.sniper-priority-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(0, 106, 255, 0.16) 0%, rgba(239, 68, 68, 0.12) 100%);
+  border: 1px solid rgba(0, 106, 255, 0.4);
+  border-radius: var(--r-sm, 8px);
+  padding: 10px 14px;
+  animation: sniper-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 106, 255, 0.08);
+}
+
+@keyframes sniper-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sniper-priority-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+  color: var(--text, #f1f5f9);
+}
+
+.sniper-priority-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brand, #006aff);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.sniper-priority-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-btn-stage-matches {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--r-sm, 6px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sniper-btn-stage-matches:hover {
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.sniper-btn-reset-prio {
+  background: transparent;
+  border: 1px solid var(--border, rgba(255,255,255,.15));
+  color: var(--muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--r-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sniper-btn-reset-prio:hover {
+  color: var(--text, #f1f5f9);
+  border-color: var(--border-strong, rgba(255,255,255,.3));
+}
+
 .sniper-search {
   position: relative;
   flex: 1;
@@ -241,6 +327,40 @@
 .sniper-card.flagged img {
   opacity: 0.45;
   filter: grayscale(40%);
+}
+
+/* Similar / Prioritized State */
+.sniper-card.similar {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5);
+  animation: sniper-card-pulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes sniper-card-pulse {
+  0% { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4); }
+  100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.7); }
+}
+
+.sniper-similar-badge {
+  display: none;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(245, 158, 11, 0.92);
+  color: #0f172a;
+  padding: 3px 7px;
+  border-radius: var(--r-sm, 6px);
+  font-weight: 800;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+}
+
+.sniper-card.similar .sniper-similar-badge {
+  display: block;
 }
 
 .sniper-flag-badge {

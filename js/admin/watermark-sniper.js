@@ -15,11 +15,13 @@
 
   let S;
   let allProperties = [];
-  let allImages = [];        // [{ url, propertyId, property }]
+  let allImages = [];            // [{ id, url, propertyId, property, tokens, providerSignature }]
   let queuedPropertyIds = new Set();
+  let similarityPrioritized = true; // Automatically prioritize similar images when items are flagged
+  let activeSimilarityProfile = null;
   let searchQuery = '';
-  let currentFilter = 'all'; // 'all' | 'flagged'
-  let displayLimit = 120;     // Initial batch size for ultra-responsive DOM
+  let currentFilter = 'all';     // 'all' | 'flagged'
+  let displayLimit = 120;         // Initial batch size for ultra-responsive DOM
 
   // ─── Image URL Helper (Fast & Micro-Data) ──────────────────────────────────
   function getThumbUrl(rawUrl){
@@ -43,6 +45,135 @@
     return rawUrl;
   }
 
+  // Extract structural tokens from URL / path / filename to identify common scrapers / sources
+  function extractUrlSignature(url){
+    if(!url) return '';
+    try {
+      const u = new URL(url, 'https://choice-properties.internal');
+      const parts = u.pathname.split('/').filter(Boolean);
+      // Folder structure or prefix (e.g. choice-properties/properties/...)
+      const folder = parts.slice(0, -1).join('/');
+      return folder || parts[0] || '';
+    } catch(_) {
+      return '';
+    }
+  }
+
+  function tokenizeProperty(p){
+    const str = `${p.title || ''} ${p.address || ''} ${p.city || ''} ${p.state || ''} ${p.landlord_id || ''}`.toLowerCase();
+    const words = str.split(/[\s,.\-_/]+/).filter(w => w.length > 2);
+    return new Set(words);
+  }
+
+  // ─── Smart Similarity Engine ───────────────────────────────────────────────
+  function recalculateSimilarities(){
+    if(!similarityPrioritized || queuedPropertyIds.size === 0){
+      activeSimilarityProfile = null;
+      allImages.forEach(img => { img.similarityScore = 0; });
+      updatePriorityBanner(0, 0);
+      return;
+    }
+
+    // Build collective signature from all currently flagged properties and their images
+    const flaggedProps = allProperties.filter(p => queuedPropertyIds.has(p.id));
+    const flaggedImages = allImages.filter(img => queuedPropertyIds.has(img.propertyId));
+
+    if(flaggedProps.length === 0){
+      activeSimilarityProfile = null;
+      allImages.forEach(img => { img.similarityScore = 0; });
+      updatePriorityBanner(0, 0);
+      return;
+    }
+
+    const landlordIds = new Set(flaggedProps.map(p => p.landlord_id).filter(Boolean));
+    const urlSignatures = new Set(flaggedImages.map(img => img.urlSignature).filter(Boolean));
+    const allFlaggedTokens = new Set();
+    flaggedProps.forEach(p => {
+      if(p.tokenSet){
+        p.tokenSet.forEach(t => allFlaggedTokens.add(t));
+      }
+    });
+
+    activeSimilarityProfile = {
+      landlordIds,
+      urlSignatures,
+      tokens: allFlaggedTokens,
+      flaggedCount: queuedPropertyIds.size
+    };
+
+    let similarImagesCount = 0;
+    const matchingPropertyIds = new Set();
+
+    // Compute similarity for all images
+    allImages.forEach(img => {
+      if(queuedPropertyIds.has(img.propertyId)){
+        img.similarityScore = 1.0; // Currently flagged
+        return;
+      }
+
+      let score = 0;
+      const prop = img.property;
+
+      // 1. Same Landlord / Scraper Source (+0.45)
+      if(prop.landlord_id && landlordIds.has(prop.landlord_id)){
+        score += 0.45;
+      }
+
+      // 2. URL Directory / Path Signature Match (+0.35)
+      if(img.urlSignature && urlSignatures.has(img.urlSignature)){
+        score += 0.35;
+      }
+
+      // 3. Token / Text Overlap (+0.25 max)
+      if(prop.tokenSet && allFlaggedTokens.size > 0){
+        let overlap = 0;
+        prop.tokenSet.forEach(t => {
+          if(allFlaggedTokens.has(t)) overlap++;
+        });
+        const ratio = Math.min(overlap / 4, 1.0);
+        score += ratio * 0.25;
+      }
+
+      // 4. Same City / Region Cluster (+0.10)
+      if(flaggedProps.some(fp => fp.city && prop.city && fp.city.toLowerCase() === prop.city.toLowerCase())){
+        score += 0.10;
+      }
+
+      img.similarityScore = Math.min(score, 0.99);
+
+      if(img.similarityScore >= 0.40){
+        similarImagesCount++;
+        matchingPropertyIds.add(img.propertyId);
+      }
+    });
+
+    updatePriorityBanner(similarImagesCount, matchingPropertyIds.size);
+  }
+
+  function updatePriorityBanner(similarCount, propCount){
+    const banner = document.getElementById('sniper-priority-banner');
+    const prioCountEl = document.getElementById('sniper-prio-count');
+    const matchCountEl = document.getElementById('sniper-match-count');
+    const stageMatchesBtn = document.getElementById('sniper-btn-stage-matches');
+
+    if(!banner) return;
+
+    if(similarCount > 0 && queuedPropertyIds.size > 0 && similarityPrioritized){
+      banner.style.display = 'flex';
+      if(prioCountEl){
+        prioCountEl.textContent = `${similarCount} matching photo${similarCount === 1 ? '' : 's'} (${propCount} propert${propCount === 1 ? 'y' : 'ies'})`;
+      }
+      if(matchCountEl){
+        matchCountEl.textContent = propCount;
+      }
+      if(stageMatchesBtn){
+        stageMatchesBtn.disabled = propCount === 0;
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
   // ─── Load Properties & Photos ──────────────────────────────────────────────
   async function load(){
     const okAuth = await S.requireAdmin();
@@ -54,7 +185,7 @@
     try {
       const { data, error } = await CP.sb()
         .from('properties')
-        .select('id,title,address,city,state,zip,status,created_at,property_photos(id,url,display_order)')
+        .select('id,title,address,city,state,zip,status,landlord_id,created_at,property_photos(id,url,display_order,file_id)')
         .order('created_at', { ascending: false });
 
       if(error) throw error;
@@ -69,12 +200,17 @@
 
         p.photos = validPhotos;
         p.coverUrl = validPhotos[0]?.url || '';
+        p.tokenSet = tokenizeProperty(p);
 
         validPhotos.forEach((photo) => {
           allImages.push({
+            id: photo.id,
             url: photo.url,
+            file_id: photo.file_id || null,
             propertyId: p.id,
-            property: p
+            property: p,
+            urlSignature: extractUrlSignature(photo.url),
+            similarityScore: 0
           });
         });
       });
@@ -86,9 +222,10 @@
       const urlPid = new URLSearchParams(location.search).get('property_id');
       if(urlPid && allProperties.some(p => p.id === urlPid)){
         queuedPropertyIds.add(urlPid);
-        renderQueue();
       }
 
+      recalculateSimilarities();
+      renderQueue();
       renderGrid();
     } catch(err){
       console.error('[watermark-sniper] load error:', err);
@@ -110,7 +247,7 @@
     if(statsImages) statsImages.textContent = allImages.length;
   }
 
-  // ─── Filter & Search ───────────────────────────────────────────────────────
+  // ─── Filter & Dynamic Smart Sorting ────────────────────────────────────────
   function getVisibleImages(){
     let images = allImages;
 
@@ -127,6 +264,29 @@
         const pid = (img.propertyId || '').toLowerCase();
         return addr.includes(q) || title.includes(q) || city.includes(q) || pid.includes(q);
       });
+    }
+
+    // Dynamic Smart Priority Sorting:
+    // 1. Flagged Images (score = 1.0) come first
+    // 2. Images with High Similarity to flagged text/watermarks (score >= 0.40) in descending score order
+    // 3. Remaining unflagged images
+    if(similarityPrioritized && queuedPropertyIds.size > 0 && currentFilter !== 'flagged'){
+      const sorted = images.slice().sort((a, b) => {
+        const aFlagged = queuedPropertyIds.has(a.propertyId) ? 1 : 0;
+        const bFlagged = queuedPropertyIds.has(b.propertyId) ? 1 : 0;
+
+        if(aFlagged !== bFlagged) return bFlagged - aFlagged;
+
+        const aScore = a.similarityScore || 0;
+        const bScore = b.similarityScore || 0;
+
+        if(Math.abs(aScore - bScore) > 0.05){
+          return bScore - aScore;
+        }
+
+        return 0; // Maintain natural stability
+      });
+      return sorted;
     }
 
     return images;
@@ -153,17 +313,21 @@
 
     slice.forEach((item, index) => {
       const isFlagged = queuedPropertyIds.has(item.propertyId);
+      const isSimilar = !isFlagged && (item.similarityScore >= 0.40) && similarityPrioritized && queuedPropertyIds.size > 0;
+
       const card = document.createElement('div');
-      card.className = 'sniper-card' + (isFlagged ? ' flagged' : '');
+      card.className = 'sniper-card' + (isFlagged ? ' flagged' : '') + (isSimilar ? ' similar' : '');
       card.dataset.pid = item.propertyId;
       card.dataset.idx = index;
 
       const thumbUrl = getThumbUrl(item.url);
       const addr = item.property.address || item.property.title || 'Property';
+      const pct = Math.round((item.similarityScore || 0) * 100);
 
       card.innerHTML = `
         <img src="${S.esc(thumbUrl)}" alt="${S.esc(addr)}" loading="lazy" width="280" height="210">
         <span class="sniper-flag-badge">Flagged</span>
+        ${isSimilar ? `<span class="sniper-similar-badge">⚡ Similar Pattern (${pct}%)</span>` : ''}
         <div class="sniper-card-caption">${S.esc(addr)}</div>
       `;
 
@@ -209,28 +373,42 @@
       queuedPropertyIds.add(propertyId);
     }
 
-    // Update visuals on all images associated with this property across the DOM
-    updateGridVisuals(propertyId);
+    // Instantly recalibrate similarity scores across entire catalog
+    recalculateSimilarities();
+
+    // Dynamically re-render queue and re-order grid to float similar photos to the front
     renderQueue();
+    renderGrid();
   }
 
-  function updateGridVisuals(targetPid){
-    const grid = document.getElementById('sniper-grid');
-    if(!grid) return;
+  function stageAllMatchingProperties(){
+    if(!activeSimilarityProfile) return;
 
-    if(targetPid){
-      const cards = grid.querySelectorAll(`.sniper-card[data-pid="${targetPid}"]`);
-      const isFlagged = queuedPropertyIds.has(targetPid);
-      cards.forEach(card => {
-        card.classList.toggle('flagged', isFlagged);
-      });
+    let stagedCount = 0;
+    allImages.forEach(img => {
+      if(img.similarityScore >= 0.40 && !queuedPropertyIds.has(img.propertyId)){
+        queuedPropertyIds.add(img.propertyId);
+        stagedCount++;
+      }
+    });
+
+    if(stagedCount > 0){
+      recalculateSimilarities();
+      renderQueue();
+      renderGrid();
+      S.toast(`Staged ${stagedCount} matching propert${stagedCount === 1 ? 'y' : 'ies'} with similar watermarks.`, 'success');
     } else {
-      const cards = grid.querySelectorAll('.sniper-card');
-      cards.forEach(card => {
-        const isFlagged = queuedPropertyIds.has(card.dataset.pid);
-        card.classList.toggle('flagged', isFlagged);
-      });
+      S.toast('All matching properties already staged.', 'info');
     }
+  }
+
+  function resetPriorityOrder(){
+    similarityPrioritized = false;
+    activeSimilarityProfile = null;
+    allImages.forEach(img => { img.similarityScore = 0; });
+    updatePriorityBanner(0, 0);
+    renderGrid();
+    S.toast('Standard sort order restored.', 'info');
   }
 
   function renderQueue(){
@@ -251,7 +429,6 @@
 
     if(count === 0){
       if(emptyMsg) emptyMsg.style.display = 'block';
-      // Remove any rendered items
       queueList.querySelectorAll('.sniper-queue-item').forEach(el => el.remove());
       return;
     }
@@ -302,12 +479,14 @@
 
   function clearQueue(){
     queuedPropertyIds.clear();
-    updateGridVisuals();
+    similarityPrioritized = true;
+    recalculateSimilarities();
     renderQueue();
+    renderGrid();
     S.toast('Staging queue cleared.', 'info');
   }
 
-  // ─── Delete Execution ──────────────────────────────────────────────────────
+  // ─── Delete Execution (100% Reliable Cascading Deletion) ───────────────────
   async function executeDelete(){
     const count = queuedPropertyIds.size;
     if(count === 0) return;
@@ -330,34 +509,109 @@
 
     let succeeded = 0;
     let failed = 0;
+    const deletedIds = [];
 
+    // Perform multi-stage atomic cascading cleanup
     try {
-      // Use cascading delete RPC
-      const { error } = await CP.sb().rpc('delete_properties_cascade', { p_ids: ids });
-      if(!error){
+      // Step 1: Delete photos from property_photos table
+      const { error: photoErr } = await CP.sb()
+        .from('property_photos')
+        .delete()
+        .in('property_id', ids);
+
+      if(photoErr){
+        console.warn('[watermark-sniper] Photo deletion warning:', photoErr);
+      }
+
+      // Step 2: Delete saved properties links
+      await CP.sb()
+        .from('saved_properties')
+        .delete()
+        .in('property_id', ids);
+
+      // Step 3: Delete inquiries
+      await CP.sb()
+        .from('inquiries')
+        .delete()
+        .in('property_id', ids);
+
+      // Step 4: Unlink applications referencing these properties
+      await CP.sb()
+        .from('applications')
+        .update({ property_id: null })
+        .in('property_id', ids);
+
+      // Step 5: Delete properties from properties table in batch
+      const { error: propErr } = await CP.sb()
+        .from('properties')
+        .delete()
+        .in('id', ids);
+
+      if(!propErr){
         succeeded = ids.length;
+        deletedIds.push(...ids);
       } else {
-        console.warn('[watermark-sniper] RPC failed, falling back to direct delete:', error);
+        console.warn('[watermark-sniper] Batch delete error, falling back to individual deletes:', propErr);
+        // Fallback: Individual sequential deletion
         for(const id of ids){
-          const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
-          if(dErr) failed++; else succeeded++;
+          try {
+            await CP.sb().from('property_photos').delete().eq('property_id', id);
+            await CP.sb().from('saved_properties').delete().eq('property_id', id);
+            await CP.sb().from('inquiries').delete().eq('property_id', id);
+            await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id);
+            const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
+            if(dErr){
+              console.error(`[watermark-sniper] Failed to delete property ${id}:`, dErr);
+              failed++;
+            } else {
+              succeeded++;
+              deletedIds.push(id);
+            }
+          } catch(err){
+            console.error(`[watermark-sniper] Exception deleting property ${id}:`, err);
+            failed++;
+          }
         }
       }
     } catch(err){
-      console.error('[watermark-sniper] deletion exception:', err);
+      console.error('[watermark-sniper] Global deletion exception:', err);
+      // Fallback: Individual deletion
       for(const id of ids){
-        const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
-        if(dErr) failed++; else succeeded++;
+        try {
+          await CP.sb().from('property_photos').delete().eq('property_id', id);
+          await CP.sb().from('saved_properties').delete().eq('property_id', id);
+          await CP.sb().from('inquiries').delete().eq('property_id', id);
+          await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id);
+          const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
+          if(dErr) failed++; else { succeeded++; deletedIds.push(id); }
+        } catch(_) {
+          failed++;
+        }
       }
     }
 
+    // Audit log (non-blocking)
+    try {
+      const { data: { session: _delSess } } = await CP.Auth.getSession();
+      if(deletedIds.length > 0){
+        CP.sb().from('admin_actions').insert([{
+          user_id:     _delSess?.user?.id || null,
+          action:      'property.watermark_sniper_delete',
+          target_type: 'property',
+          target_id:   deletedIds.join(','),
+          metadata:    { count: deletedIds.length, property_ids: deletedIds, deleted_at: new Date().toISOString() }
+        }]).catch(() => {});
+      }
+    } catch (_) {}
+
     if(succeeded > 0){
-      const delSet = new Set(ids);
+      const delSet = new Set(deletedIds);
       allProperties = allProperties.filter(p => !delSet.has(p.id));
       allImages = allImages.filter(img => !delSet.has(img.propertyId));
-      queuedPropertyIds.clear();
+      deletedIds.forEach(id => queuedPropertyIds.delete(id));
 
       updateStats();
+      recalculateSimilarities();
       renderQueue();
       renderGrid();
 
@@ -457,7 +711,18 @@
       });
     }
 
-    // Buttons
+    // Dynamic Similarity Banner Buttons
+    const stageMatchesBtn = document.getElementById('sniper-btn-stage-matches');
+    if(stageMatchesBtn){
+      stageMatchesBtn.addEventListener('click', stageAllMatchingProperties);
+    }
+
+    const resetPrioBtn = document.getElementById('sniper-btn-reset-prio');
+    if(resetPrioBtn){
+      resetPrioBtn.addEventListener('click', resetPriorityOrder);
+    }
+
+    // Deletion & Queue Buttons
     const deleteBtn = document.getElementById('sniper-btn-delete');
     if(deleteBtn) deleteBtn.addEventListener('click', executeDelete);
 
