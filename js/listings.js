@@ -206,7 +206,11 @@ function injectAdminToolbar() {
           <span style="color:#e2e8f0;font-size:13px;font-weight:500">All Properties</span>
           <span style="color:#64748b;font-size:12px" id="adminPropCount">Loading…</span>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <a href="/admin/watermark-review.html" id="adminSniperBtn"
+            style="background:rgba(0,106,255,0.2);border:1px solid #006aff;color:#38bdf8;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px">
+            <i class="fas fa-crosshairs"></i> Watermark Sniper
+          </a>
           <button id="adminCsvExportBtn"
             style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
             <i class="fas fa-download"></i> Export CSV
