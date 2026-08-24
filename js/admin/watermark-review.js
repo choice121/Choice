@@ -17,6 +17,7 @@
   let scanResults   = {};  // { [propId]: { overallFlag, perImage:[{url,flag,score}], saved } }
   let selectedIds   = new Set();
   let currentFilter = 'all';
+  let searchQuery   = '';
   let scanning      = false;
   let _displayLimit = 50;
 
@@ -74,6 +75,9 @@
 
     document.querySelector('.appbar-sub').textContent =
       allProperties.length + ' propert' + (allProperties.length===1?'y':'ies');
+    const totalBadge = document.getElementById('wm-total-badge');
+    if(totalBadge) totalBadge.textContent = allProperties.length + ' propert' + (allProperties.length===1?'y':'ies');
+    updateTabCounts();
     renderCards();
     updateSaveBtn();
   }
@@ -122,14 +126,43 @@
     btn.textContent = unsaved ? `Save results (${unsaved})` : 'All saved';
   }
 
+  function updateTabCounts(){
+    const allCnt = allProperties.length;
+    const allWmCnt = allProperties.filter(p => scanResults[p.id]?.overallFlag === 'all').length;
+    const someWmCnt = allProperties.filter(p => ['all','some'].includes(scanResults[p.id]?.overallFlag)).length;
+    const cleanCnt = allProperties.filter(p => scanResults[p.id]?.overallFlag === 'clean').length;
+
+    const elAll = document.getElementById('chip-cnt-all');
+    const elAllWm = document.getElementById('chip-cnt-all-wm');
+    const elSomeWm = document.getElementById('chip-cnt-some-wm');
+    const elClean = document.getElementById('chip-cnt-clean');
+
+    if(elAll) elAll.textContent = allCnt;
+    if(elAllWm) elAllWm.textContent = allWmCnt;
+    if(elSomeWm) elSomeWm.textContent = someWmCnt;
+    if(elClean) elClean.textContent = cleanCnt;
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
   function renderCards(){
     const allVisible = getVisibleProperties();
     const visible = allVisible.slice(0, _displayLimit);
     const list = document.getElementById('props-list');
+
+    const sumShowing = document.getElementById('sum-showing');
+    if(sumShowing){
+      if(allVisible.length === allProperties.length){
+        sumShowing.textContent = `Showing ${allVisible.length} properties`;
+      } else {
+        sumShowing.textContent = `Showing ${allVisible.length} of ${allProperties.length}`;
+      }
+    }
+
     if(!visible.length){
-      list.innerHTML = '<div class="empty"><svg class="i"><use href="#i-image"/></svg><h3>No properties</h3><p>Nothing matches this filter.</p></div>';
+      const isSearch = !!searchQuery.trim();
+      list.innerHTML = `<div class="empty"><svg class="i"><use href="#i-image"/></svg><h3>No properties found</h3><p>${isSearch ? 'No properties match "'+S.esc(searchQuery)+'".' : 'Nothing matches this filter.'}</p></div>`;
       updateSummary();
+      updateTabCounts();
       return;
     }
     let html = '<div class="wm-grid">' + visible.map(cardHtml).join('') + '</div>';
@@ -142,6 +175,7 @@
     }
     list.innerHTML = html;
     updateSummary();
+    updateTabCounts();
   }
 
   function cardHtml(p){
@@ -396,7 +430,8 @@
     if(card) card.classList.toggle('selected', checked);
   }
   function toggleSelectAll(checked){
-    getVisibleProperties().forEach(p => {
+    const visible = getVisibleProperties();
+    visible.forEach(p => {
       if(checked) selectedIds.add(p.id); else selectedIds.delete(p.id);
       const card = document.getElementById('card-' + p.id);
       if(card){
@@ -407,20 +442,105 @@
     });
     updateSelCount();
   }
+  function clearSelection(){
+    selectedIds.clear();
+    document.querySelectorAll('.wm-card.selected').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.wm-check input[type=checkbox]').forEach(chk => chk.checked = false);
+    const topChk = document.getElementById('select-all');
+    if(topChk) topChk.checked = false;
+    const bulkChk = document.getElementById('wm-bulk-select-all');
+    if(bulkChk) bulkChk.checked = false;
+    updateSelCount();
+  }
+
   function updateSelCount(){
-    document.getElementById('sel-count').textContent = selectedIds.size;
-    document.getElementById('btn-delete-sel').disabled = selectedIds.size === 0;
+    const count = selectedIds.size;
+    // Top header delete button
+    const selCountEl = document.getElementById('sel-count');
+    if(selCountEl) selCountEl.textContent = count;
+    const btnDelSel = document.getElementById('btn-delete-sel');
+    if(btnDelSel) btnDelSel.disabled = count === 0;
+
+    // Floating bulk action bar
+    const bulkBar = document.getElementById('wm-bulk-bar');
+    const bulkCount = document.getElementById('wm-bulk-count');
+    const bulkDelNum = document.getElementById('wm-bulk-del-num');
+    const topSelectAll = document.getElementById('select-all');
+    const bulkSelectAll = document.getElementById('wm-bulk-select-all');
+
+    if(bulkBar){
+      if(count > 0){
+        bulkBar.classList.add('visible');
+      } else {
+        bulkBar.classList.remove('visible');
+      }
+    }
+    if(bulkCount) bulkCount.textContent = count === 1 ? '1 property selected' : `${count} properties selected`;
+    if(bulkDelNum) bulkDelNum.textContent = count;
+
+    const visible = getVisibleProperties();
+    const allSelected = visible.length > 0 && visible.every(p => selectedIds.has(p.id));
+    if(topSelectAll) topSelectAll.checked = allSelected;
+    if(bulkSelectAll) bulkSelectAll.checked = allSelected;
   }
 
   function getVisibleProperties(){
-    if(currentFilter === 'all') return allProperties;
-    if(currentFilter === 'all-watermarked')
-      return allProperties.filter(p => scanResults[p.id]?.overallFlag === 'all');
-    if(currentFilter === 'some-watermarked')
-      return allProperties.filter(p => ['all','some'].includes(scanResults[p.id]?.overallFlag));
-    if(currentFilter === 'clean')
-      return allProperties.filter(p => scanResults[p.id]?.overallFlag === 'clean');
-    return allProperties;
+    let props = allProperties;
+    if(currentFilter === 'all-watermarked'){
+      props = props.filter(p => scanResults[p.id]?.overallFlag === 'all');
+    } else if(currentFilter === 'some-watermarked'){
+      props = props.filter(p => ['all','some'].includes(scanResults[p.id]?.overallFlag));
+    } else if(currentFilter === 'clean'){
+      props = props.filter(p => scanResults[p.id]?.overallFlag === 'clean');
+    }
+
+    if(searchQuery && searchQuery.trim()){
+      const q = searchQuery.trim().toLowerCase();
+      props = props.filter(p => {
+        const title = (p.title || '').toLowerCase();
+        const addr = (p.address || '').toLowerCase();
+        const id = (p.id || '').toLowerCase();
+        return title.includes(q) || addr.includes(q) || id.includes(q);
+      });
+    }
+
+    return props;
+  }
+
+  // ─── Scan Selected ────────────────────────────────────────────────────────
+  async function scanSelected(){
+    if(!selectedIds.size || scanning) return;
+    scanning = true;
+    const ids = [...selectedIds];
+    const targets = allProperties.filter(p => ids.includes(p.id));
+    if(!targets.length){ scanning = false; return; }
+
+    const bar  = document.getElementById('scan-bar');
+    const fill = document.getElementById('scan-fill');
+    const txt  = document.getElementById('scan-text');
+    bar.style.display = 'flex';
+    fill.style.width  = '0%';
+
+    let done = 0;
+    for(const p of targets){
+      txt.textContent = `Scanning selected ${done+1} / ${targets.length} — ${S.esc(p.title||p.id)}`;
+      await scanProperty(p);
+      await saveScanResult(p);
+      done++;
+      fill.style.width = Math.round(done / targets.length * 100) + '%';
+      const card = document.getElementById('card-' + p.id);
+      if(card){
+        const tmp = document.createElement('div');
+        tmp.innerHTML = cardHtml(p);
+        card.replaceWith(tmp.firstElementChild);
+      }
+    }
+    txt.textContent = `Done — ${targets.length} propert${targets.length===1?'y':'ies'} scanned`;
+    setTimeout(() => { bar.style.display = 'none'; }, 1800);
+    renderCards();
+    updateSaveBtn();
+    scanning = false;
+    S.toast(`${targets.length} propert${targets.length===1?'y':'ies'} scanned and saved.`, 'success');
   }
 
   // ─── Delete ───────────────────────────────────────────────────────────────
@@ -550,6 +670,59 @@
     document.getElementById('btn-save-all').addEventListener('click',  () => saveAllUnsaved());
     document.getElementById('btn-delete-sel').addEventListener('click', () => deleteSelected());
     document.getElementById('select-all').addEventListener('change', e => toggleSelectAll(e.target.checked));
+
+    // Floating Bulk Action Bar bindings
+    const bulkSelectAll = document.getElementById('wm-bulk-select-all');
+    if(bulkSelectAll) bulkSelectAll.addEventListener('change', e => toggleSelectAll(e.target.checked));
+    const bulkClear = document.getElementById('wm-bulk-clear');
+    if(bulkClear) bulkClear.addEventListener('click', () => clearSelection());
+    const bulkScanSel = document.getElementById('wm-bulk-scan-sel');
+    if(bulkScanSel) bulkScanSel.addEventListener('click', () => scanSelected());
+    const bulkDelete = document.getElementById('wm-bulk-delete');
+    if(bulkDelete) bulkDelete.addEventListener('click', () => deleteSelected());
+
+    // Search input bindings
+    const searchInput = document.getElementById('wm-search-input');
+    const searchClear = document.getElementById('wm-search-clear');
+    let searchDebounce = null;
+    if(searchInput){
+      searchInput.addEventListener('input', e => {
+        const val = e.target.value;
+        if(searchClear) searchClear.style.display = val ? 'flex' : 'none';
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => {
+          searchQuery = val;
+          _displayLimit = 50;
+          renderCards();
+        }, 120);
+      });
+    }
+    if(searchClear){
+      searchClear.addEventListener('click', () => {
+        if(searchInput) searchInput.value = '';
+        searchClear.style.display = 'none';
+        searchQuery = '';
+        _displayLimit = 50;
+        renderCards();
+        if(searchInput) searchInput.focus();
+      });
+    }
+
+    // Scroll to top floating button
+    const btnScrollTop = document.getElementById('btn-scroll-top');
+    if(btnScrollTop){
+      window.addEventListener('scroll', () => {
+        if(window.scrollY > 250){
+          btnScrollTop.classList.add('visible');
+        } else {
+          btnScrollTop.classList.remove('visible');
+        }
+      }, { passive: true });
+      btnScrollTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
     document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
     document.getElementById('lightbox').addEventListener('click', e => { if(e.target.id==='lightbox') closeLightbox(); });
     document.addEventListener('keydown', e => { if(e.key==='Escape') closeLightbox(); });

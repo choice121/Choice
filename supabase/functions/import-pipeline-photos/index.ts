@@ -175,29 +175,9 @@ Deno.serve(async (req) => {
   // Per-photo transfer: fetch from CDN → upload to ImageKit → save to DB.
   // Returns true on success, false on any failure.
   async function transferPhoto(entry: ImageEntry, index: number): Promise<boolean> {
-    const url = imageEntryUrl(entry);
-    const fileId = imageEntryFileId(entry);
-
-    const insertFallbackPhoto = async () => {
-      const { error: rpcErr } = await adminClient.rpc('add_property_photo', {
-        p_property_id:   property_id,
-        p_url:           url,
-        p_file_id:       typeof entry !== 'string' ? entry.fileId ?? null : null,
-        p_alt_text:      null,
-        p_caption:       null,
-        p_width:         typeof entry !== 'string' ? entry.width ?? null : null,
-        p_height:        typeof entry !== 'string' ? entry.height ?? null : null,
-        p_display_order: nextDisplayOrder + index,
-        p_is_hero:       nextDisplayOrder + index === 0,
-      });
-      if (rpcErr) {
-        console.error(`[import-pipeline-photos] fallback add_property_photo failed (photo ${index + 1}):`, rpcErr);
-        return false;
-      }
-      return true;
-    };
-
     try {
+      const url = imageEntryUrl(entry);
+      const fileId = imageEntryFileId(entry);
       // Orion/Chrome can upload source photos to ImageKit before the listing
       // reaches the pipeline. Those URLs are already durable and must not be
       // fetched again from the browser/CDN path (which is commonly blocked by
@@ -242,10 +222,7 @@ Deno.serve(async (req) => {
         redirect: 'follow',
         signal: AbortSignal.timeout(FETCH_TIMEOUT),
       });
-      if (!imgRes.ok) {
-        console.warn(`[import-pipeline-photos] Fetch failed for ${url}, falling back to direct hotlink (photo ${index + 1})`);
-        return await insertFallbackPhoto();
-      }
+      if (!imgRes.ok) return false;
 
       const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
       const buffer = await imgRes.arrayBuffer();
@@ -314,7 +291,7 @@ Deno.serve(async (req) => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[import-pipeline-photos] Error processing photo ${index + 1}:`, msg);
-      return await insertFallbackPhoto();
+      return false;
     }
   }
 

@@ -80,16 +80,10 @@ async function loadMatches() {
     }));
     
     grid.innerHTML = htmls.join('');
-    let delayIdx = 0;
-    grid.querySelectorAll('.property-card').forEach(c => {
-      c.style.setProperty('--cp-delay', Math.min(delayIdx * 55, 320) + 'ms');
-      window.initCardCarousel(c);
-      setTimeout(() => c.classList.add('cp-card-visible'), 50);
-      delayIdx++;
-    });
+    grid.querySelectorAll('.property-card').forEach(window.initCardCarousel);
 
   } catch (err) {
-    console.error('Error loading matches:', err); if(grid){grid.innerHTML='<pre style="color:red;padding:20px">'+String(err.stack || err)+'</pre>';}
+    console.error('Error loading matches:', err);
     headerContainer.innerHTML = `
       <div class="match-header">
         <h1>Collection Not Found</h1>

@@ -1287,16 +1287,14 @@ class PipelineOrchestrator:
         results: Dict[int, Tuple[str, str]] = {}
 
         with ThreadPoolExecutor(max_workers=IK_MAX_WORKERS) as ex:
-            futs = {ex.submit(_upload_one, i, u): (i, u) for i, u in tasks}
+            futs = {ex.submit(_upload_one, i, u): i for i, u in tasks}
             for fut in as_completed(futs):
-                orig_i, orig_u = futs[fut]
                 idx, ik_url, file_id, err = fut.result()
                 if ik_url:
                     results[idx] = (ik_url, file_id or "")
                 else:
                     if self.verbose and err:
-                        self._log("      WARNING: photo[{}] upload failed, falling back to source URL: {}".format(idx, err))
-                    results[idx] = (orig_u, "")
+                        self._log("      WARNING: photo[{}]: {}".format(idx, err))
 
         uploaded = 0
         failed = len(photo_urls) - len(results)

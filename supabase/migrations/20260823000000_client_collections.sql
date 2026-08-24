@@ -14,7 +14,4 @@ CREATE POLICY "Anyone can read client collections"
 
 CREATE POLICY "Admins can manage client collections"
   ON public.client_collections FOR ALL
-  USING (
-    (auth.uid() IN (SELECT user_id FROM landlords WHERE verified = true)) OR
-    (auth.uid() IN (SELECT user_id FROM admin_roles))
-  );
+  USING (auth.uid() IN (SELECT user_id FROM landlords WHERE verified = true));

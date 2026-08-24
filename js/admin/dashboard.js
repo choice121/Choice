@@ -151,73 +151,25 @@
   // ── New location notifications ─────────────────────────────────────────────
   // Calls get_location_notifications() RPC; surfaces action card when any
   // undismissed city+state combos are waiting for review.
-
-  async function loadClientLinks(){
+  async function loadLocationNotifications(queue){
     try {
-      const section = document.getElementById('client-links-section');
-      const list = document.getElementById('client-links-list');
-      const countLabel = document.getElementById('client-links-count');
-      
-      const { data, error } = await CP.sb()
-        .from('client_collections')
-        .select('id, client_name, created_at, expires_at, property_ids')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        section.style.display = '';
-        countLabel.textContent = '';
-        list.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-size:14px;">No active links. <a href="/listings.html" style="color:#006aff;text-decoration:underline;">Go to Listings</a> and select properties to create one.</div>`;
-        return;
+      const { data, error } = await CP.sb().rpc('get_location_notifications');
+      if(error || !data) return;
+      const rows = Array.isArray(data) ? data : [];
+      if(rows.length > 0){
+        queue.push(actionCard({
+          icon:  'i-listings',
+          tone:  'info',
+          count: rows.length,
+          label: rows.length === 1 ? 'New location detected — review location page' : 'New locations detected — review location pages',
+          cta:   'Review',
+          href:  'location-notifications.html',
+        }));
       }
-      
-      section.style.display = '';
-      countLabel.textContent = data.length + ' active link' + (data.length > 1 ? 's' : '');
-      
-      list.innerHTML = data.map(col => {
-        const pCount = (col.property_ids || []).length;
-        const expires = col.expires_at ? new Date(col.expires_at) : null;
-        let expiresStr = 'Never expires';
-        if (expires) {
-          const days = Math.ceil((expires - new Date()) / (1000 * 60 * 60 * 24));
-          if (days < 0) expiresStr = 'Expired';
-          else if (days === 0) expiresStr = 'Expires today';
-          else expiresStr = `Expires in ${days} day${days !== 1 ? 's' : ''}`;
-        }
-        
-        const linkUrl = `${window.location.origin}/matches.html?id=${col.id}`;
-        
-        return `<div class="list-row" style="padding:12px 16px; align-items:center;">
-          <div class="row-body" style="flex:1;">
-            <div class="row-title" style="font-weight:600; margin-bottom:2px;">${S.esc(col.client_name)}</div>
-            <div class="row-sub muted text-xs">${pCount} propert${pCount === 1 ? 'y' : 'ies'} · ${expiresStr}</div>
-          </div>
-          <div class="row-actions" style="display:flex; gap:8px;">
-            <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${linkUrl}').then(()=>window.CPShell.toast('Link copied','success'))">
-              <svg class="i i-sm"><use href="#i-listings"/></svg> Copy URL
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="revokeClientLink('${col.id}')">Revoke</button>
-          </div>
-        </div>`;
-      }).join('');
     } catch(e) {
-      console.warn('[dashboard] loadClientLinks failed:', e);
+      // Non-fatal — don't break dashboard if RPC not deployed yet
     }
   }
-
-  // Make revoke globally accessible for the inline onclick handlers
-  window.revokeClientLink = async function(id) {
-    if (!window.confirm("Are you sure you want to revoke this link? Anyone with the URL will no longer be able to view it.")) return;
-    try {
-      const { error } = await CP.sb().from('client_collections').delete().eq('id', id);
-      if (error) throw error;
-      S.toast('Link revoked successfully', 'success');
-      loadClientLinks();
-    } catch (e) {
-      S.toast('Failed to revoke link: ' + e.message, 'error');
-    }
-  };
 
   async function load(){
     const stamp = document.getElementById('greeting-stamp');
@@ -246,9 +198,9 @@
 
     // Load pipeline stats; it appends its own action card to queue.
     await loadPipelineStats(queue);
-    
-    // Load active client links (appears as a section)
-    await loadClientLinks();
+
+    // Load new location notifications; appends action card if any pending.
+    await loadLocationNotifications(queue);
 
     document.getElementById('action-queue').innerHTML = queue.length
       ? queue.join('')

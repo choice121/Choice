@@ -9,13 +9,12 @@
     "setup-credentials": "node scripts/open-setup.mjs",
     "load-credentials": "node scripts/setup-credentials.mjs",
     "setup-direct": "node setup-direct.mjs",
-    "dev": "npm run build && node serve.js"
+    "dev": "node serve.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "jsdom": "^30.0.1"
+    "apify-client": "^2.25.0"
   }
 }

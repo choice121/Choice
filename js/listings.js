@@ -585,7 +585,7 @@ async function _bulkCreateMatch() {
   const ids = [..._adminSelected];
   if (!ids.length) return;
   
-  const clientName = window.prompt(`Create a link with ${ids.length} propert${ids.length === 1 ? 'y' : 'ies'}.\n\nThis link will automatically expire in 14 days.\n\nEnter the client's name (e.g. "The Smith Family"):`);
+  const clientName = window.prompt(`Create a link with ${ids.length} propert${ids.length === 1 ? 'y' : 'ies'}.\n\nEnter the client's name (e.g. "The Smith Family"):`);
   if (!clientName || !clientName.trim()) return;
 
   try {
