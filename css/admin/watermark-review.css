@@ -563,6 +563,140 @@
   text-align: center;
 }
 
+/* ── Similar Photos Finder Modal ──────────────────────────── */
+.wm-similar-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.wm-similar-modal.open {
+  display: flex;
+}
+.wm-similar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.wm-similar-content {
+  position: relative;
+  z-index: 2;
+  background: var(--surface, #111827);
+  border: 1px solid var(--border-strong, rgba(255,255,255,.14));
+  border-radius: var(--r-lg, 16px);
+  max-width: 840px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+.wm-similar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wm-similar-target-row {
+  padding: 12px 20px;
+  background: var(--surface-2, #1a2235);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.wm-similar-target-thumb {
+  width: 72px;
+  height: 54px;
+  border-radius: var(--r-sm, 8px);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #000;
+  border: 1px solid var(--border-strong, rgba(255,255,255,.2));
+}
+.wm-similar-target-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wm-similar-target-info {
+  flex: 1;
+  min-width: 0;
+}
+.wm-similar-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.wm-similar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.wm-sim-card {
+  background: var(--surface-2, #1a2235);
+  border: 1px solid var(--border, rgba(255,255,255,.07));
+  border-radius: var(--r-md, 10px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.wm-sim-card:hover {
+  border-color: var(--brand, #006aff);
+  transform: translateY(-2px);
+}
+.wm-sim-thumb {
+  aspect-ratio: 4/3;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+.wm-sim-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wm-sim-pct {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.75);
+  color: #38bdf8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 99px;
+}
+.wm-sim-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wm-sim-addr {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text, #f1f5f9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wm-sim-btn-group {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+}
+
 /* ── Responsive tweaks ────────────────────────────────────── */
 @media (max-width: 640px) {
   .wm-top-row {
@@ -597,4 +731,5 @@
     flex: 1;
   }
 }
+
 

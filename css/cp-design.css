@@ -1086,3 +1086,35 @@ body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item.active{ color:#006aff;
   body[data-shell="admin"] .theme-toggle,
   body[data-portal="admin"] .theme-toggle{top:14px;right:18px}
 }
+
+/* ── Admin Property Card Selection ────────────────────────── */
+.property-card.admin-selected {
+  outline: 3px solid #006aff !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 106, 255, 0.28), 0 12px 28px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-2px);
+  border-color: #006aff !important;
+}
+html[data-theme="dark"] .property-card.admin-selected {
+  background: #111e33 !important;
+}
+.property-card.admin-selected::after {
+  content: '✓';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #006aff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0, 106, 255, 0.5);
+  pointer-events: none;
+}
+
