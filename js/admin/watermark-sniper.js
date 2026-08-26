@@ -1,14 +1,20 @@
 (function(){
   'use strict';
 
-  function readyDeps(){ return window.AdminShell && window.CP && CP.sb && CP.Auth; }
+  function readyDeps(){
+    return (window.AdminShell || window.CPShell) && window.CP && CP.sb && CP.Auth;
+  }
+
   function waitReady(ms){
-    return new Promise((res,rej)=>{
-      const start=Date.now();
+    return new Promise((res)=>{
+      const start = Date.now();
       (function tick(){
         if(readyDeps()) return res();
-        if(Date.now()-start>ms) return rej(new Error('Admin tools failed to load.'));
-        setTimeout(tick,80);
+        if(Date.now() - start > ms) {
+          console.warn('[watermark-sniper] Dependencies took longer than expected, proceeding with available globals.');
+          return res();
+        }
+        setTimeout(tick, 60);
       })();
     });
   }
@@ -51,7 +57,8 @@
     let bestScore = -9999;
 
     photos.forEach((ph, index) => {
-      const urlLower = (ph.url || '').toLowerCase();
+      if(!ph || !ph.url) return;
+      const urlLower = String(ph.url || '').toLowerCase();
       let score = 0;
 
       // 1. Position-based scoring:
@@ -96,7 +103,7 @@
 
   // ─── Image URL Helper (Fast & Micro-Data) ──────────────────────────────────
   function getThumbUrl(rawUrl){
-    if(!rawUrl) return '';
+    if(!rawUrl || typeof rawUrl !== 'string') return '';
     if(rawUrl.includes('ik.imagekit.io')){
       const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
       return clean + '?tr=w-280,h-210,c-maintain_ratio,q-50,f-webp';
@@ -108,7 +115,7 @@
   }
 
   function getCoverUrl(rawUrl){
-    if(!rawUrl) return '';
+    if(!rawUrl || typeof rawUrl !== 'string') return '';
     if(rawUrl.includes('ik.imagekit.io')){
       const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
       return clean + '?tr=w-120,h-120,c-maintain_ratio,q-50,f-webp';
@@ -118,7 +125,7 @@
 
   // Extract structural tokens from URL / path / filename to identify common scrapers / sources
   function extractUrlSignature(url){
-    if(!url) return '';
+    if(!url || typeof url !== 'string') return '';
     try {
       const u = new URL(url, 'https://choice-properties.internal');
       const parts = u.pathname.split('/').filter(Boolean);
@@ -134,6 +141,24 @@
     const str = `${p.title || ''} ${p.address || ''} ${p.city || ''} ${p.state || ''} ${p.landlord_id || ''}`.toLowerCase();
     const words = str.split(/[\s,.\-_/]+/).filter(w => w.length > 2);
     return new Set(words);
+  }
+
+  function escSafe(str){
+    if(S && typeof S.esc === 'function') return S.esc(str);
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function toastSafe(msg, type = 'info', duration = 3000){
+    if(S && typeof S.toast === 'function'){
+      S.toast(msg, type, duration);
+    } else {
+      console.log(`[toast:${type}]`, msg);
+    }
   }
 
   // ─── Smart Similarity Engine ───────────────────────────────────────────────
@@ -206,7 +231,7 @@
       }
 
       // 4. Same City / Region Cluster (+0.10)
-      if(flaggedProps.some(fp => fp.city && prop.city && fp.city.toLowerCase() === prop.city.toLowerCase())){
+      if(flaggedProps.some(fp => fp.city && prop.city && String(fp.city).toLowerCase() === String(prop.city).toLowerCase())){
         score += 0.10;
       }
 
@@ -247,8 +272,10 @@
 
   // ─── Load Properties & Photos ──────────────────────────────────────────────
   async function load(){
-    const okAuth = await S.requireAdmin();
-    if(!okAuth) return;
+    if(S && typeof S.requireAdmin === 'function'){
+      const okAuth = await S.requireAdmin().catch(() => false);
+      if(!okAuth) return;
+    }
 
     const loadingEl = document.getElementById('sniper-loading');
     if(loadingEl) loadingEl.style.display = 'flex';
@@ -265,7 +292,11 @@
           .order('created_at', { ascending: false })
           .range(page * pageSize, (page + 1) * pageSize - 1);
 
-        if (error) throw error;
+        if (error) {
+          console.error('[watermark-sniper] Paginated load error:', error);
+          if(page === 0) throw error;
+          break;
+        }
         if (!data || data.length === 0) break;
         
         allData = allData.concat(data);
@@ -279,7 +310,7 @@
       allProperties.forEach(p => {
         const rawPhotos = Array.isArray(p.property_photos) ? p.property_photos : [];
         const sorted = rawPhotos.slice().sort((a,b) => (a.display_order||0) - (b.display_order||0));
-        const validPhotos = sorted.filter(x => x.url);
+        const validPhotos = sorted.filter(x => x && x.url);
 
         p.photos = validPhotos;
         p.coverUrl = validPhotos[0]?.url || '';
@@ -301,24 +332,23 @@
         }
       });
 
-      // Populate cities dropdown
+      // Populate cities dropdown safely
       const cities = new Set();
       allImages.forEach(img => {
-        if(img.property.city) {
-          cities.add(img.property.city.trim());
+        if(img.property && img.property.city) {
+          cities.add(String(img.property.city).trim());
         }
       });
       const citySelect = document.getElementById('sniper-city-select');
       if(citySelect) {
-        const firstOption = citySelect.options[0];
-        citySelect.innerHTML = '';
-        if(firstOption) citySelect.appendChild(firstOption);
-        else citySelect.innerHTML = '<option value="">All Cities</option>';
-
+        const currentVal = citySelect.value || '';
+        citySelect.innerHTML = '<option value="">All Cities</option>';
         Array.from(cities).sort().forEach(c => {
+          if(!c) return;
           const opt = document.createElement('option');
           opt.value = c;
           opt.textContent = c;
+          if(c === currentVal) opt.selected = true;
           citySelect.appendChild(opt);
         });
       }
@@ -337,11 +367,11 @@
       renderGrid();
     } catch(err){
       console.error('[watermark-sniper] load error:', err);
-      S.toast('Failed to load properties: ' + err.message, 'error');
+      toastSafe('Failed to load properties: ' + (err.message || 'Network error'), 'error');
       const grid = document.getElementById('sniper-grid');
       if(grid){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--danger)">'
-          + '<h3>Failed to load properties</h3><p>'+S.esc(err.message)+'</p></div>';
+          + '<h3>Failed to load properties</h3><p>'+escSafe(err.message || 'Unknown error')+'</p></div>';
       }
     } finally {
       if(loadingEl) loadingEl.style.display = 'none';
@@ -366,16 +396,16 @@
     const citySelect = document.getElementById('sniper-city-select');
     if(citySelect && citySelect.value) {
       const selectedCity = citySelect.value.toLowerCase();
-      images = images.filter(img => img.property.city && img.property.city.trim().toLowerCase() === selectedCity);
+      images = images.filter(img => img.property && img.property.city && String(img.property.city).trim().toLowerCase() === selectedCity);
     }
 
     if(searchQuery.trim()){
       const q = searchQuery.trim().toLowerCase();
       images = images.filter(img => {
-        const addr = (img.property.address || '').toLowerCase();
-        const title = (img.property.title || '').toLowerCase();
-        const city = (img.property.city || '').toLowerCase();
-        const pid = (img.propertyId || '').toLowerCase();
+        const addr = String(img.property.address || '').toLowerCase();
+        const title = String(img.property.title || '').toLowerCase();
+        const city = String(img.property.city || '').toLowerCase();
+        const pid = String(img.propertyId || '').toLowerCase();
         return addr.includes(q) || title.includes(q) || city.includes(q) || pid.includes(q);
       });
     }
@@ -395,7 +425,7 @@
       grid.innerHTML = `<div style="grid-column:1/-1;padding:60px 20px;text-align:center;color:var(--muted)">
         <svg style="width:48px;height:48px;margin:0 auto 12px;opacity:.4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <h3 style="font-size:1.1rem;font-weight:700;color:var(--text);margin:0 0 6px">No photos found</h3>
-        <p style="font-size:.875rem;margin:0">${searchQuery ? 'No listings match "'+S.esc(searchQuery)+'".' : 'No photos to display.'}</p>
+        <p style="font-size:.875rem;margin:0">${searchQuery ? 'No listings match "'+escSafe(searchQuery)+'".' : 'No photos to display.'}</p>
       </div>`;
       return;
     }
@@ -414,9 +444,9 @@
       const addr = item.property.address || item.property.title || 'Property';
 
       card.innerHTML = `
-        <img src="${S.esc(thumbUrl)}" alt="${S.esc(addr)}" loading="lazy" width="280" height="210">
+        <img src="${escSafe(thumbUrl)}" alt="${escSafe(addr)}" loading="lazy" width="280" height="210">
         <span class="sniper-flag-badge">Flagged</span>
-        <div class="sniper-card-caption">${S.esc(addr)}</div>
+        <div class="sniper-card-caption">${escSafe(addr)}</div>
       `;
 
       card.addEventListener('click', (e) => {
@@ -455,6 +485,7 @@
 
   // ─── Selection & Staging Queue ─────────────────────────────────────────────
   function toggleProperty(propertyId){
+    if(!propertyId) return;
     if(queuedPropertyIds.has(propertyId)){
       queuedPropertyIds.delete(propertyId);
     } else {
@@ -462,16 +493,19 @@
     }
 
     // Direct DOM update instead of full re-render for extreme speed
-    const card = document.querySelector(\`.sniper-card[data-pid="\${propertyId}"]\`);
-    if (card) {
-      if (queuedPropertyIds.has(propertyId)) {
-        card.classList.add('flagged');
-      } else {
-        card.classList.remove('flagged');
+    try {
+      const safePid = (window.CSS && typeof CSS.escape === 'function') ? CSS.escape(propertyId) : propertyId.replace(/"/g, '\\"');
+      const card = document.querySelector(`.sniper-card[data-pid="${safePid}"]`);
+      if (card) {
+        if (queuedPropertyIds.has(propertyId)) {
+          card.classList.add('flagged');
+        } else {
+          card.classList.remove('flagged');
+        }
       }
-    }
+    } catch (_) {}
 
-    // Just update the queue sidebar
+    // Update the queue sidebar
     renderQueue();
   }
 
@@ -490,9 +524,9 @@
       recalculateSimilarities();
       renderQueue();
       renderGrid();
-      S.toast(`Staged ${stagedCount} matching propert${stagedCount === 1 ? 'y' : 'ies'} with similar watermarks.`, 'success');
+      toastSafe(`Staged ${stagedCount} matching propert${stagedCount === 1 ? 'y' : 'ies'} with similar watermarks.`, 'success');
     } else {
-      S.toast('All matching properties already staged.', 'info');
+      toastSafe('All matching properties already staged.', 'info');
     }
   }
 
@@ -502,7 +536,7 @@
     allImages.forEach(img => { img.similarityScore = 0; });
     updatePriorityBanner(0, 0);
     renderGrid();
-    S.toast('Standard sort order restored.', 'info');
+    toastSafe('Standard sort order restored.', 'info');
   }
 
   function renderQueue(){
@@ -546,11 +580,11 @@
       const cityState = [prop.city, prop.state].filter(Boolean).join(', ');
 
       item.innerHTML = `
-        <img class="sniper-queue-thumb" src="${S.esc(coverUrl)}" alt="Cover" loading="lazy" width="54" height="54">
+        <img class="sniper-queue-thumb" src="${escSafe(coverUrl)}" alt="Cover" loading="lazy" width="54" height="54">
         <div class="sniper-queue-info">
-          <div class="sniper-queue-addr" title="${S.esc(addr)}">${S.esc(addr)}</div>
+          <div class="sniper-queue-addr" title="${escSafe(addr)}">${escSafe(addr)}</div>
           <div class="sniper-queue-meta">
-            <span>${S.esc(cityState || 'ID: ' + prop.id.slice(0,8))}</span>
+            <span>${escSafe(cityState || 'ID: ' + prop.id.slice(0,8))}</span>
             <span>•</span>
             <a class="sniper-queue-link" href="/property.html?id=${encodeURIComponent(prop.id)}" target="_blank" rel="noopener">View Live ↗</a>
           </div>
@@ -577,7 +611,7 @@
     recalculateSimilarities();
     renderQueue();
     renderGrid();
-    S.toast('Staging queue cleared.', 'info');
+    toastSafe('Staging queue cleared.', 'info');
   }
 
   // ─── Delete Execution (100% Reliable Cascading Deletion) ───────────────────
@@ -586,12 +620,17 @@
     if(count === 0) return;
 
     const ids = Array.from(queuedPropertyIds);
-    const confirmed = await S.confirm({
-      title: `Permanently Delete ${count} Propert${count === 1 ? 'y' : 'ies'}?`,
-      message: `You are about to permanently delete ${count} flagged listings and all of their photos from the database. This action cannot be undone.`,
-      ok: `Delete ${count} Propert${count === 1 ? 'y' : 'ies'}`,
-      danger: true
-    });
+    let confirmed = false;
+    if(S && typeof S.confirm === 'function'){
+      confirmed = await S.confirm({
+        title: `Permanently Delete ${count} Propert${count === 1 ? 'y' : 'ies'}?`,
+        message: `You are about to permanently delete ${count} flagged listings and all of their photos from the database. This action cannot be undone.`,
+        ok: `Delete ${count} Propert${count === 1 ? 'y' : 'ies'}`,
+        danger: true
+      }).catch(() => false);
+    } else {
+      confirmed = window.confirm(`Permanently delete ${count} flagged properties and all associated photos?`);
+    }
 
     if(!confirmed) return;
 
@@ -621,19 +660,22 @@
       await CP.sb()
         .from('saved_properties')
         .delete()
-        .in('property_id', ids);
+        .in('property_id', ids)
+        .catch(() => {});
 
       // Step 3: Delete inquiries
       await CP.sb()
         .from('inquiries')
         .delete()
-        .in('property_id', ids);
+        .in('property_id', ids)
+        .catch(() => {});
 
       // Step 4: Unlink applications referencing these properties
       await CP.sb()
         .from('applications')
         .update({ property_id: null })
-        .in('property_id', ids);
+        .in('property_id', ids)
+        .catch(() => {});
 
       // Step 5: Delete properties from properties table in batch
       const { error: propErr } = await CP.sb()
@@ -649,10 +691,10 @@
         // Fallback: Individual sequential deletion
         for(const id of ids){
           try {
-            await CP.sb().from('property_photos').delete().eq('property_id', id);
-            await CP.sb().from('saved_properties').delete().eq('property_id', id);
-            await CP.sb().from('inquiries').delete().eq('property_id', id);
-            await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id);
+            await CP.sb().from('property_photos').delete().eq('property_id', id).catch(() => {});
+            await CP.sb().from('saved_properties').delete().eq('property_id', id).catch(() => {});
+            await CP.sb().from('inquiries').delete().eq('property_id', id).catch(() => {});
+            await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id).catch(() => {});
             const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
             if(dErr){
               console.error(`[watermark-sniper] Failed to delete property ${id}:`, dErr);
@@ -672,10 +714,10 @@
       // Fallback: Individual deletion
       for(const id of ids){
         try {
-          await CP.sb().from('property_photos').delete().eq('property_id', id);
-          await CP.sb().from('saved_properties').delete().eq('property_id', id);
-          await CP.sb().from('inquiries').delete().eq('property_id', id);
-          await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id);
+          await CP.sb().from('property_photos').delete().eq('property_id', id).catch(() => {});
+          await CP.sb().from('saved_properties').delete().eq('property_id', id).catch(() => {});
+          await CP.sb().from('inquiries').delete().eq('property_id', id).catch(() => {});
+          await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id).catch(() => {});
           const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
           if(dErr) failed++; else { succeeded++; deletedIds.push(id); }
         } catch(_) {
@@ -686,10 +728,11 @@
 
     // Audit log (non-blocking)
     try {
-      const { data: { session: _delSess } } = await CP.Auth.getSession();
+      const sess = await CP.Auth.getSession().catch(() => null);
+      const userId = sess?.user?.id || null;
       if(deletedIds.length > 0){
-        CP.sb().from('admin_actions').insert([{
-          user_id:     _delSess?.user?.id || null,
+        await CP.sb().from('admin_actions').insert([{
+          user_id:     userId,
           action:      'property.watermark_sniper_delete',
           target_type: 'property',
           target_id:   deletedIds.join(','),
@@ -709,11 +752,11 @@
       renderQueue();
       renderGrid();
 
-      S.toast(`${succeeded} flagged propert${succeeded === 1 ? 'y' : 'ies'} permanently deleted.`, 'success');
+      toastSafe(`${succeeded} flagged propert${succeeded === 1 ? 'y' : 'ies'} permanently deleted.`, 'success');
     }
 
     if(failed > 0){
-      S.toast(`${failed} propert${failed === 1 ? 'y' : 'ies'} failed to delete.`, 'error');
+      toastSafe(`${failed} propert${failed === 1 ? 'y' : 'ies'} failed to delete.`, 'error');
     }
 
     if(deleteBtn){
@@ -723,19 +766,7 @@
   }
 
   // ─── Boot & Event Bindings ─────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', async () => {
-    try { await waitReady(8000); }
-    catch(e){
-      const grid = document.getElementById('sniper-grid');
-      if(grid){
-        grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--danger)">'
-          + '<h3>Could not load admin shell</h3><p>'+e.message+'</p></div>';
-      }
-      return;
-    }
-
-    S = window.AdminShell;
-
+  function initUI(){
     // Mobile Drawer Header Toggle
     const sidebar = document.getElementById('sniper-sidebar');
     const sidebarHeader = document.getElementById('sniper-sidebar-header');
@@ -830,8 +861,19 @@
 
     const clearBtn = document.getElementById('sniper-btn-clear');
     if(clearBtn) clearBtn.addEventListener('click', clearQueue);
+  }
 
+  async function boot(){
+    await waitReady(15000);
+    S = window.AdminShell || window.CPShell;
+    initUI();
     await load();
-  });
+  }
+
+  if(document.readyState !== 'loading'){
+    boot();
+  } else {
+    document.addEventListener('DOMContentLoaded', boot);
+  }
 
 })();
