@@ -1,6 +1,6 @@
 [
   {
-    "id": "449eec7c-faae-4a5e-9c92-b10a2ecee4cc",
+    "id": "1da8fc5d-f030-4a13-a852-aaed1cc542e1",
     "address": "806 Arlington Dr",
     "city": "Yukon",
     "state": "OK",
@@ -11,10 +11,10 @@
     "sqft": 1398,
     "property_type": "SINGLE_FAMILY",
     "photos_count": 16,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=449eec7c-faae-4a5e-9c92-b10a2ecee4cc"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=1da8fc5d-f030-4a13-a852-aaed1cc542e1"
   },
   {
-    "id": "6bee3e23-fceb-441a-9d10-e9466117ac80",
+    "id": "3258c1df-13fa-407e-88ef-8a39eef062da",
     "address": "10705 NW 23rd Ter",
     "city": "Yukon",
     "state": "OK",
@@ -24,11 +24,11 @@
     "baths": 2.0,
     "sqft": 1431,
     "property_type": "SINGLE_FAMILY",
-    "photos_count": 15,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=6bee3e23-fceb-441a-9d10-e9466117ac80"
+    "photos_count": 9,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3258c1df-13fa-407e-88ef-8a39eef062da"
   },
   {
-    "id": "eba17364-64b0-4837-bb0b-d038db713621",
+    "id": "548c2610-123c-42ab-ba6a-bf2bafb0146b",
     "address": "800 Firefork Ave",
     "city": "Yukon",
     "state": "OK",
@@ -39,10 +39,10 @@
     "sqft": 2205,
     "property_type": "SINGLE_FAMILY",
     "photos_count": 20,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=eba17364-64b0-4837-bb0b-d038db713621"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=548c2610-123c-42ab-ba6a-bf2bafb0146b"
   },
   {
-    "id": "348f99d2-b505-4caa-be0a-ec82b4a5c21a",
+    "id": "ef56a9b4-4f89-40c2-9578-b784e55bc28e",
     "address": "1503 Tahoe Ln",
     "city": "Yukon",
     "state": "OK",
@@ -53,10 +53,10 @@
     "sqft": 1340,
     "property_type": "SINGLE_FAMILY",
     "photos_count": 20,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=348f99d2-b505-4caa-be0a-ec82b4a5c21a"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=ef56a9b4-4f89-40c2-9578-b784e55bc28e"
   },
   {
-    "id": "355f2b1b-d293-4f87-af9a-04e1d6c8c44a",
+    "id": "f2c76acb-d3f7-441d-aaa0-ed4ebed5ac23",
     "address": "10809 NW 23rd Ter",
     "city": "Yukon",
     "state": "OK",
@@ -67,10 +67,10 @@
     "sqft": 1431,
     "property_type": "SINGLE_FAMILY",
     "photos_count": 20,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=355f2b1b-d293-4f87-af9a-04e1d6c8c44a"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=f2c76acb-d3f7-441d-aaa0-ed4ebed5ac23"
   },
   {
-    "id": "cc7e91f8-bc06-4ce2-8eb8-b4f7f5fdf2e6",
+    "id": "097f7fec-178e-4e05-8122-f8dd723fdb72",
     "address": "306 Liam Dr",
     "city": "Yukon",
     "state": "OK",
@@ -81,10 +81,10 @@
     "sqft": 1145,
     "property_type": "TOWNHOMES",
     "photos_count": 20,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=cc7e91f8-bc06-4ce2-8eb8-b4f7f5fdf2e6"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=097f7fec-178e-4e05-8122-f8dd723fdb72"
   },
   {
-    "id": "347c0479-e9b6-45d2-8122-0a5275cf9074",
+    "id": "fc3d14b0-17ea-4667-b57b-dcb0c3c33a3e",
     "address": "3605 Galatian Way",
     "city": "Yukon",
     "state": "OK",
@@ -95,10 +95,10 @@
     "sqft": 1384,
     "property_type": "TOWNHOMES",
     "photos_count": 15,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=347c0479-e9b6-45d2-8122-0a5275cf9074"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=fc3d14b0-17ea-4667-b57b-dcb0c3c33a3e"
   },
   {
-    "id": "c4c13e71-70a0-4441-a47e-7a3469373368",
+    "id": "8c4c6e1b-2b30-4762-8575-b1124608bbb2",
     "address": "211 Mason Ct",
     "city": "Yukon",
     "state": "OK",
@@ -109,6 +109,6 @@
     "sqft": 1186,
     "property_type": "TOWNHOMES",
     "photos_count": 20,
-    "url": "https://choice-properties-site.pages.dev/property.html?id=c4c13e71-70a0-4441-a47e-7a3469373368"
+    "url": "https://choice-properties-site.pages.dev/property.html?id=8c4c6e1b-2b30-4762-8575-b1124608bbb2"
   }
 ]
