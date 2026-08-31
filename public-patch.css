@@ -1,0 +1,56 @@
+/* ── PUBLIC PAGES CHROME (Nav & Footer) ── */
+.nav.mv2-nav { position: sticky; top: 0; z-index: 100; background: var(--bg); border-bottom: 1px solid var(--border); }
+.nav-inner.mv2-nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 20px; }
+.nav-logo-emblem { width: 32px; height: 32px; flex-shrink: 0; background: var(--brand); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.nav-logo-emblem svg { width: 24px; height: 24px; }
+.nav-logo.mv2-nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+.nav-logo-name.mv2-nav-logo-name { font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+.nav-logo-tagline.mv2-nav-logo-tagline { font-size: 0.75rem; color: var(--muted); line-height: 1.2; }
+.nav-links.mv2-nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-link.mv2-nav-link { font-weight: 600; font-size: 0.9rem; color: var(--text); text-decoration: none; transition: color 0.15s; }
+.nav-link.mv2-nav-link:hover { color: var(--brand); }
+.nav-link--track, .nav-link--landlord { border: 1px solid var(--border); padding: 6px 12px; border-radius: 99px; font-size: 0.85rem; }
+.nav-mobile-toggle { display: none; background: transparent; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; }
+
+/* Drawer */
+.nav-drawer { position: fixed; top: 65px; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 99; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; display: flex; flex-direction: column; padding: 20px; }
+.nav-drawer.open { transform: translateX(0); }
+.nav-drawer-link { display: flex; align-items: center; gap: 12px; padding: 12px 0; font-size: 1.1rem; font-weight: 600; color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
+.nav-drawer-link i { width: 24px; color: var(--muted); }
+.nav-drawer-divider { height: 16px; }
+
+/* Footer */
+.footer.mv2-footer { background: var(--surface-2); padding: 60px 20px 30px; border-top: 1px solid var(--border); margin-top: 60px; }
+.footer-grid.mv2-footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; }
+.footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.footer-logo-mark { width: 24px; height: 24px; background: var(--brand); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.footer-logo-text { font-weight: 700; color: var(--text); font-size: 1.1rem; }
+.footer-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px; }
+.footer-col-title { font-weight: 700; color: var(--text); margin-bottom: 16px; font-size: 0.95rem; }
+.footer-link { display: block; color: var(--muted); text-decoration: none; font-size: 0.9rem; margin-bottom: 10px; transition: color 0.15s; }
+.footer-link:hover { color: var(--brand); }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; gap: 16px; }
+.footer-bottom-links { display: flex; gap: 16px; }
+.footer-bottom-links a { color: var(--muted); text-decoration: none; }
+
+@media (max-width: 900px) {
+  .nav-links.mv2-nav-links { display: none; }
+  .nav-mobile-toggle { display: block; }
+  .footer-grid.mv2-footer-grid { grid-template-columns: 1fr; gap: 32px; }
+}
+
+/* ── PROPERTY CARDS (Premium Style ported to cp-design) ── */
+.property-card { border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--border); transition: transform 0.15s, border-color 0.15s; display: flex; flex-direction: column; text-decoration: none; color: var(--text); }
+.property-card:hover { transform: translateY(-4px); border-color: var(--brand); }
+.property-card-img { position: relative; aspect-ratio: 16/10; overflow: hidden; background: var(--surface-2); }
+.property-card-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.property-card-badge { position: absolute; left: 10px; top: 10px; padding: 4px 8px; border-radius: var(--r-sm); font-weight: 700; background: var(--surface); color: var(--brand); font-size: 0.75rem; border: 1px solid var(--border); }
+.property-card-photo-count { position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+.property-card-body { padding: 14px; display: flex; flex-direction: column; flex-grow: 1; }
+.property-card-price { font-weight: 800; font-size: 1.25rem; color: var(--text); margin-bottom: 4px; }
+.property-card-price-unit { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.property-card-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.property-card-addr { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.property-card-specs { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; display: flex; gap: 12px; }
+.property-card-pet-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 99px; background: var(--surface-2); color: var(--text); }
+.property-card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
