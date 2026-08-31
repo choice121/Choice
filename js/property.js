@@ -81,10 +81,10 @@ if (isPreview) {
     // Inject preview banner
     const banner = document.createElement('div');
     banner.id = 'previewBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#0a1628;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.2);font-family:"Inter",sans-serif;font-size:14px;font-weight:600';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--warning-strong);color:#0a1628;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.2);font-family:"Inter",sans-serif;font-size:14px;font-weight:600';
     banner.innerHTML = `
       <span><i class="fas fa-eye" style="margin-right:6px"></i>Preview Mode — This listing has not been published yet.</span>
-      <button id="previewBannerBack" style="background:#0a1628;color:#f59e0b;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">← Back to Editor</button>`;
+      <button id="previewBannerBack" style="background:#0a1628;color:var(--warning-strong);border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">← Back to Editor</button>`;
     document.body.prepend(banner);
     banner.querySelector('#previewBannerBack').addEventListener('click', () => history.back());
     document.body.style.paddingTop = '48px';
@@ -199,7 +199,7 @@ async function loadProperty(id) {
       const saveBtn = document.getElementById('savePropBtn');
       if (saveBtn) {
         if (savedIds.has(prop.id)) {
-          saveBtn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
+          saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--danger-strong)"></i> Saved';
         } else {
           saveBtn.innerHTML = '<i class="far fa-heart"></i> Save';
         }
@@ -442,7 +442,7 @@ function renderProperty(p) {
     if (!_existingBanner) {
       const _banner = document.createElement('div');
       _banner.id = 'moveInSpecialBanner';
-      _banner.style.cssText = 'background:linear-gradient(90deg,#065f46,#059669);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:.875rem;font-weight:600;margin:0;';
+      _banner.style.cssText = 'background:linear-gradient(90deg,var(--success-strong),#059669);color:var(--m-white);padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:.875rem;font-weight:600;margin:0;';
       _banner.innerHTML = `<i class="fas fa-tag" style="font-size:1rem;opacity:.9"></i><span>Move-in Special: ${esc(p.move_in_special)}</span>`;
       // Insert move-in banner before the About section in the content column
       const _aboutSection = document.getElementById('aboutSection');
@@ -479,11 +479,11 @@ function renderProperty(p) {
   // Neighborhood / location context — shown below the address/attribution
   if (p.neighborhood || p.location_context) {
     const nbrEl = document.createElement('div');
-    nbrEl.style.cssText = 'font-size:13px;color:#64748b;margin-top:5px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;align-items:center';
+    nbrEl.style.cssText = 'font-size:13px;color:var(--m-muted);margin-top:5px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;align-items:center';
     const parts = [];
-    if (p.neighborhood)     parts.push(`<span><i class="fas fa-location-dot" style="color:#c9a55c;margin-right:3px;font-size:11px"></i>${esc(p.neighborhood)}</span>`);
+    if (p.neighborhood)     parts.push(`<span><i class="fas fa-location-dot" style="color:var(--gold);margin-right:3px;font-size:11px"></i>${esc(p.neighborhood)}</span>`);
     if (p.location_context) parts.push(`<span>${esc(p.location_context)}</span>`);
-    nbrEl.innerHTML = parts.join('<span style="color:#cbd5e1;margin:0 2px">·</span>');
+    nbrEl.innerHTML = parts.join('<span style="color:var(--m-border-strong);margin:0 2px">·</span>');
     const _listedBy = document.querySelector('.detail-listed-by');
     (_listedBy || document.getElementById('detailAddress')).insertAdjacentElement('afterend', nbrEl);
   }
@@ -539,7 +539,7 @@ function renderProperty(p) {
     vtBtn.type = 'button';
     vtBtn.className = 'btn btn-outline';
     vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem;cursor:pointer';
-    vtBtn.innerHTML = '<i class="fas fa-cube" style="color:#0284c7"></i> Explore 3D Virtual Tour';
+    vtBtn.innerHTML = '<i class="fas fa-cube" style="color:var(--m-brand)"></i> Explore 3D Virtual Tour';
     vtBtn.addEventListener('click', () => openVirtualTourModal(p));
     descEl.closest('.detail-section').appendChild(vtBtn);
 
@@ -713,7 +713,7 @@ function renderProperty(p) {
   const _availEl = document.getElementById('sidebarAvail');
   const _availStickyEl = document.getElementById('sidebarStickyAvail');
   const availText = availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date);
-  const availColor = availNow ? '#10b981' : '#d4a017';
+  const availColor = availNow ? 'var(--m-brand)' : 'var(--gold)';
   if (_availEl) {
     _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
     _availEl.style.display = '';
@@ -809,7 +809,7 @@ function renderProperty(p) {
         btn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
       }
     });
-    const unavailHtml = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
+    const unavailHtml = `<i class="fas fa-circle" style="color:var(--danger-strong)"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
     const _availEl = document.getElementById('sidebarAvail');
     if (_availEl) _availEl.innerHTML = unavailHtml;
     const _availStickyEl = document.getElementById('sidebarStickyAvail');
@@ -826,7 +826,7 @@ function renderProperty(p) {
 
   // Save button state
   const saveBtn = document.getElementById('savePropBtn');
-  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
+  if (savedIds.has(p.id)) saveBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--danger-strong)"></i> Saved';
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 
   // ── Enrichment sections ──
@@ -951,7 +951,7 @@ function _initLeafletMap(p) {
 
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
+    html: `<div style="background:#0e0e0f;color: var(--m-white);padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
     iconAnchor: [45, 16], iconSize: [90, 32]
   });
   L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${esc(p.title || p.address)}</b><br>${esc(p.address)}`);
@@ -988,16 +988,16 @@ function _initLeafletMap(p) {
 
 function _mapAddressCard(p, addr) {
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;background:var(--surface-2,#f8f9fa);padding:32px 20px;text-align:center">
-      <div style="width:52px;height:52px;background:#e8f0fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#1a73e8">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;background:var(--surface-2,var(--m-surface-2));padding:32px 20px;text-align:center">
+      <div style="width:52px;height:52px;background:var(--m-brand-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--m-brand)">
         <i class="fas fa-map-marker-alt"></i>
       </div>
       <div>
         <div style="font-weight:700;font-size:1rem;color:var(--text,#1a1a2e);margin-bottom:4px">${esc(p.address)}</div>
-        <div style="color:var(--muted,#6b7280);font-size:.875rem">${esc(p.city)}, ${esc(p.state)} ${esc(p.zip||'')}</div>
+        <div style="color:var(--muted,var(--m-muted));font-size:.875rem">${esc(p.city)}, ${esc(p.state)} ${esc(p.zip||'')}</div>
       </div>
       <a href="https://maps.google.com/maps?q=${addr}" target="_blank" rel="noopener noreferrer"
-         style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1a73e8;color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none">
+         style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:var(--m-brand);color:var(--m-white);border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none">
         <i class="fas fa-map"></i> Open in Google Maps
       </a>
     </div>`;
@@ -1774,7 +1774,7 @@ async function toggleSave(id, btn) {
     const { saved } = await SavedProperties.toggle(id);
     if (saved) {
       savedIds.add(id);
-      btn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
+      btn.innerHTML = '<i class="fas fa-heart" style="color:var(--danger-strong)"></i> Saved';
       showToast('Property saved!', 'success');
     } else {
       savedIds.delete(id);
@@ -1785,7 +1785,7 @@ async function toggleSave(id, btn) {
     if (savedIds.has(id)) {
       savedIds.delete(id); btn.innerHTML = '<i class="far fa-heart"></i> Save';
     } else {
-      savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:#dc2626"></i> Saved';
+      savedIds.add(id); btn.innerHTML = '<i class="fas fa-heart" style="color:var(--danger-strong)"></i> Saved';
       showToast('Property saved!', 'success');
     }
     localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
@@ -1813,75 +1813,75 @@ function initAdminPropertyPanel(prop) {
     style.textContent = `
       #adminEditOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9990;display:none}
       #adminEditOverlay.open{display:block}
-      #adminEditDrawer{position:fixed;right:0;top:0;bottom:0;width:min(580px,100%);background:#fff;z-index:9995;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.25);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+      #adminEditDrawer{position:fixed;right:0;top:0;bottom:0;width:min(580px,100%);background:var(--m-white);z-index:9995;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.25);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
       #adminEditDrawer.open{transform:translateX(0)}
-      .adw-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #1e293b;background:#0a1628;flex-shrink:0}
-      .adw-header h3{margin:0;font-size:15px;font-weight:700;color:#e2e8f0;display:flex;align-items:center;gap:8px}
-      .adw-close{background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
-      .adw-close:hover{background:rgba(255,255,255,.1);color:#fff}
+      .adw-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid var(--m-ink-2);background:#0a1628;flex-shrink:0}
+      .adw-header h3{margin:0;font-size:15px;font-weight:700;color:var(--m-border);display:flex;align-items:center;gap:8px}
+      .adw-close{background:none;border:none;color:var(--m-soft);font-size:20px;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+      .adw-close:hover{background:rgba(255,255,255,.1);color:var(--m-white)}
       .adw-body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
-      .adw-dirty-bar{background:#f59e0b;color:#0a1628;text-align:center;font-size:11px;font-weight:800;padding:5px 8px;letter-spacing:.04em;display:none;flex-shrink:0}
+      .adw-dirty-bar{background:var(--warning-strong);color:#0a1628;text-align:center;font-size:11px;font-weight:800;padding:5px 8px;letter-spacing:.04em;display:none;flex-shrink:0}
       .adw-dirty-bar.show{display:block}
-      .adw-section{padding:18px 20px;border-bottom:1px solid #f1f5f9}
-      .adw-section-title{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+      .adw-section{padding:18px 20px;border-bottom:1px solid var(--m-surface-2)}
+      .adw-section-title{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-soft);margin-bottom:12px;display:flex;align-items:center;gap:6px}
       .adw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
       .adw-row.c1{grid-template-columns:1fr;margin-bottom:10px}
       .adw-row.c3{grid-template-columns:1fr 1fr 1fr}
       .adw-row:last-child{margin-bottom:0}
       .adw-field{display:flex;flex-direction:column;gap:4px}
       .adw-label{font-size:11px;font-weight:700;color:#374151;letter-spacing:.02em}
-      .adw-input{border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:border-color 150ms;width:100%;box-sizing:border-box}
-      .adw-input:focus{border-color:#006aff;box-shadow:0 0 0 3px rgba(0,106,255,.1)}
+      .adw-input{border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--m-ink-2);background:var(--m-white);outline:none;transition:border-color 150ms;width:100%;box-sizing:border-box}
+      .adw-input:focus{border-color:var(--m-brand);box-shadow:0 0 0 3px rgba(0,106,255,.1)}
       textarea.adw-input{resize:none;overflow:hidden;line-height:1.65;min-height:120px}
       select.adw-input{cursor:pointer}
       /* ── Description box ── */
-      .adw-desc-ta{resize:none;overflow:hidden;min-height:160px;line-height:1.7;font-size:14px;padding:14px 16px;border-width:2px;background:#fafcff;border-color:#c7d7f5;border-radius:10px;letter-spacing:.01em;color:#1a2133;caret-color:#006aff;-webkit-text-size-adjust:100%}
-      .adw-desc-ta:focus{border-color:#006aff;background:#fff;box-shadow:0 0 0 4px rgba(0,106,255,.08)}
+      .adw-desc-ta{resize:none;overflow:hidden;min-height:160px;line-height:1.7;font-size:14px;padding:14px 16px;border-width:2px;background:#fafcff;border-color:#c7d7f5;border-radius:10px;letter-spacing:.01em;color:#1a2133;caret-color:var(--m-brand);-webkit-text-size-adjust:100%}
+      .adw-desc-ta:focus{border-color:var(--m-brand);background:var(--m-white);box-shadow:0 0 0 4px rgba(0,106,255,.08)}
       .adw-desc-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px}
-      .adw-desc-bar-wrap{flex:1;height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden}
-      .adw-desc-bar{height:100%;width:0%;background:#006aff;border-radius:2px;transition:width 120ms,background 120ms}
-      .adw-desc-bar.warn{background:#f59e0b}
+      .adw-desc-bar-wrap{flex:1;height:3px;background:var(--m-border);border-radius:2px;overflow:hidden}
+      .adw-desc-bar{height:100%;width:0%;background:var(--m-brand);border-radius:2px;transition:width 120ms,background 120ms}
+      .adw-desc-bar.warn{background:var(--warning-strong)}
       .adw-desc-bar.over{background:#ef4444}
-      .adw-desc-count{font-size:11px;color:#94a3b8;white-space:nowrap;flex-shrink:0}
-      .adw-desc-draft{font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);display:none}
+      .adw-desc-count{font-size:11px;color:var(--m-soft);white-space:nowrap;flex-shrink:0}
+      .adw-desc-draft{font-size:10px;font-weight:700;color:var(--warning-strong);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);display:none}
       .adw-desc-draft.show{display:inline-block}
       @media(max-width:600px){.adw-desc-ta{font-size:16px;min-height:200px;padding:14px}}
       .adw-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:4px}
-      .adw-photo-item{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;background:#f8fafc}
+      .adw-photo-item{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:2px solid var(--m-border);background:var(--m-surface)}
       .adw-photo-item img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-      .adw-photo-order{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;pointer-events:none}
-      .adw-photo-cover{position:absolute;top:4px;left:4px;background:rgba(16,185,129,.9);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;pointer-events:none}
-      .adw-photo-del{position:absolute;top:4px;right:4px;background:rgba(220,38,38,.9);color:#fff;border:none;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;z-index:2}
+      .adw-photo-order{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:var(--m-white);font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;pointer-events:none}
+      .adw-photo-cover{position:absolute;top:4px;left:4px;background:rgba(16,185,129,.9);color:var(--m-white);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;pointer-events:none}
+      .adw-photo-del{position:absolute;top:4px;right:4px;background:rgba(220,38,38,.9);color:var(--m-white);border:none;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;z-index:2}
       .adw-photo-del:hover{background:#b91c1c}
       .adw-photo-arrows{position:absolute;bottom:4px;right:4px;display:flex;gap:2px;z-index:2}
-      .adw-photo-arr{background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;padding:0}
+      .adw-photo-arr{background:rgba(0,0,0,.6);color:var(--m-white);border:none;border-radius:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;padding:0}
       .adw-photo-arr:hover{background:rgba(0,106,255,.85)}
-      .adw-upload-zone{border:2px dashed #cbd5e1;border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color 150ms,background 150ms;margin-top:10px;background:#f8fafc}
-      .adw-upload-zone:hover,.adw-upload-zone.drag-over{border-color:#006aff;background:#eff6ff}
-      .adw-upload-zone-icon{font-size:22px;color:#94a3b8;pointer-events:none}
-      .adw-upload-zone-text{font-size:12px;color:#64748b;margin:5px 0 0;pointer-events:none;line-height:1.5}
+      .adw-upload-zone{border:2px dashed var(--m-border-strong);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color 150ms,background 150ms;margin-top:10px;background:var(--m-surface)}
+      .adw-upload-zone:hover,.adw-upload-zone.drag-over{border-color:var(--m-brand);background:var(--m-brand-pale)}
+      .adw-upload-zone-icon{font-size:22px;color:var(--m-soft);pointer-events:none}
+      .adw-upload-zone-text{font-size:12px;color:var(--m-muted);margin:5px 0 0;pointer-events:none;line-height:1.5}
       .adw-pending-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;margin-top:8px}
-      .adw-pending-item{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:2px solid #e2e8f0;background:#1e293b}
+      .adw-pending-item{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:2px solid var(--m-border);background:var(--m-ink-2)}
       .adw-pending-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.38;pointer-events:none}
       .adw-pending-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
-      .adw-upload-prog{display:none;background:#f1f5f9;border-radius:8px;padding:10px 12px;margin-top:8px;border:1px solid #e2e8f0}
-      .adw-upload-prog-bar-wrap{height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin:5px 0 3px}
-      .adw-upload-prog-bar{height:100%;background:#006aff;width:0;transition:width 250ms;border-radius:3px}
+      .adw-upload-prog{display:none;background:var(--m-surface-2);border-radius:8px;padding:10px 12px;margin-top:8px;border:1px solid var(--m-border)}
+      .adw-upload-prog-bar-wrap{height:5px;background:var(--m-border);border-radius:3px;overflow:hidden;margin:5px 0 3px}
+      .adw-upload-prog-bar{height:100%;background:var(--m-brand);width:0;transition:width 250ms;border-radius:3px}
       .adw-upload-prog-row{font-size:11px;color:#475569;display:flex;justify-content:space-between}
-      .adw-footer{display:flex;gap:8px;padding:14px 20px;border-top:2px solid #e2e8f0;flex-shrink:0;background:#f8fafc;align-items:center}
-      .adw-save-btn{background:#006aff;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;flex:1}
+      .adw-footer{display:flex;gap:8px;padding:14px 20px;border-top:2px solid var(--m-border);flex-shrink:0;background:var(--m-surface);align-items:center}
+      .adw-save-btn{background:var(--m-brand);color:var(--m-white);border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;flex:1}
       .adw-save-btn:disabled{opacity:.6;cursor:not-allowed}
-      .adw-save-btn:hover:not(:disabled){background:#0054cc}
-      .adw-cancel-btn{background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+      .adw-save-btn:hover:not(:disabled){background:var(--m-brand-dark)}
+      .adw-cancel-btn{background:var(--m-white);color:#374151;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
       .adw-cancel-btn:hover{border-color:#9ca3af}
-      .adw-full-link{background:#fff;color:#006aff;border:1.5px solid #006aff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap}
-      .adw-full-link:hover{background:#eff6ff}
+      .adw-full-link{background:var(--m-white);color:var(--m-brand);border:1.5px solid var(--m-brand);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap}
+      .adw-full-link:hover{background:var(--m-brand-pale)}
       .adw-toggle-wrap{display:flex;align-items:center;gap:10px;padding:6px 0}
       .adw-toggle{position:relative;width:40px;height:22px;flex-shrink:0}
       .adw-toggle input{opacity:0;width:0;height:0;position:absolute}
       .adw-slider{position:absolute;inset:0;background:#d1d5db;border-radius:22px;cursor:pointer;transition:background .2s}
-      .adw-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-      .adw-toggle input:checked+.adw-slider{background:#006aff}
+      .adw-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:var(--m-white);border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+      .adw-toggle input:checked+.adw-slider{background:var(--m-brand)}
       .adw-toggle input:checked+.adw-slider::before{transform:translateX(18px)}
       @media(max-width:480px){
         #adminEditDrawer{width:100%}
@@ -1900,29 +1900,29 @@ function initAdminPropertyPanel(prop) {
   // ── Admin banner ──
   const banner = document.createElement('div');
   banner.id = 'adminPropBanner';
-  banner.style.cssText = 'background:#0a1628;color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:3px solid #006aff;z-index:90;position:relative';
+  banner.style.cssText = 'background:#0a1628;color:var(--m-border);padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:3px solid var(--m-brand);z-index:90;position:relative';
   banner.innerHTML = `
-    <span style="background:#006aff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em;flex-shrink:0">ADMIN</span>
+    <span style="background:var(--m-brand);color:var(--m-white);font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em;flex-shrink:0">ADMIN</span>
     <span id="adminBannerTitle" style="font-size:13px;font-weight:600;flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(prop.title||'')}">${esc(prop.title||'Untitled')}</span>
     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-      <span style="font-size:11px;color:#64748b">Status:</span>
-      <select id="adminStatusSelect" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer">
+      <span style="font-size:11px;color:var(--m-muted)">Status:</span>
+      <select id="adminStatusSelect" style="background:var(--m-ink-2);color:var(--m-border);border:1px solid #374151;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer">
         ${STATUSES.map(s => `<option value="${s}"${s===prop.status?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
       </select>
-      <button id="adminStatusSaveBtn" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;display:none">Save</button>
-      <span id="adminStatusSpinner" style="color:#64748b;font-size:12px;display:none"><i class="fas fa-spinner fa-spin"></i></span>
+      <button id="adminStatusSaveBtn" style="background:var(--m-brand);color:var(--m-white);border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;display:none">Save</button>
+      <span id="adminStatusSpinner" style="color:var(--m-muted);font-size:12px;display:none"><i class="fas fa-spinner fa-spin"></i></span>
     </div>
     <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
-      <button id="adminQuickEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+      <button id="adminQuickEditBtn" style="background:var(--m-brand);color:var(--m-white);border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
         <i class="fas fa-pen"></i> Edit
       </button>
-      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="background:var(--m-ink-2);color:var(--m-border);border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
         <i class="fas fa-arrow-up-right-from-square"></i> Full Edit
       </a>
-      <a href="/admin/applications.html?property=${esc(prop.id)}" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+      <a href="/admin/applications.html?property=${esc(prop.id)}" style="background:var(--m-ink-2);color:var(--m-border);border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
         <i class="fas fa-file-alt"></i> Apps
       </a>
-      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="background:var(--m-ink-2);color:var(--m-border);border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
         <i class="fas fa-history"></i> Log
       </a>
     </div>`;
@@ -1974,30 +1974,30 @@ function initAdminPropertyPanel(prop) {
   // ── Admin info section ──
   const section = document.createElement('div');
   section.id = 'adminPropSection';
-  section.style.cssText = 'background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;margin:24px 0';
+  section.style.cssText = 'background:var(--m-surface);border:2px solid var(--m-border);border-radius:12px;padding:20px;margin:24px 0';
   section.innerHTML = `
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span><i class="fas fa-shield-halved" style="color:#006aff"></i> Admin Info</span>
-      <button id="adminSectionEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="fas fa-shield-halved" style="color:var(--m-brand)"></i> Admin Info</span>
+      <button id="adminSectionEditBtn" style="background:var(--m-brand);color:var(--m-white);border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
         <i class="fas fa-pen"></i> Edit Property
       </button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:20px">
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.views_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Views</div>
+      <div style="background:var(--m-white);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink-2)">${prop.views_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Views</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.applications_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Applications</div>
+      <div style="background:var(--m-white);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink-2)">${prop.applications_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Applications</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.saves_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Saves</div>
+      <div style="background:var(--m-white);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink-2)">${prop.saves_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Saves</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div id="adminInqCountVal" style="font-size:20px;font-weight:700;color:#1e293b">—</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Inquiries</div>
+      <div style="background:var(--m-white);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div id="adminInqCountVal" style="font-size:20px;font-weight:700;color:var(--m-ink-2)">—</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Inquiries</div>
       </div>
     </div>
     <div>
@@ -2005,20 +2005,20 @@ function initAdminPropertyPanel(prop) {
         <i class="fas fa-sticky-note"></i> Admin Notes (internal)
       </label>
       <textarea id="adminNotesField" rows="3" maxlength="2000"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:border-color 150ms"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;font-family:inherit;color:var(--m-ink-2);background:var(--m-white);outline:none;transition:border-color 150ms"
         placeholder="Private admin notes — not visible to landlords or tenants…"
-        onfocus="this.style.borderColor='#006aff'" onblur="this.style.borderColor='#d1d5db'">${esc(prop.admin_notes||'')}</textarea>
+        onfocus="this.style.borderColor='var(--m-brand)'" onblur="this.style.borderColor='#d1d5db'">${esc(prop.admin_notes||'')}</textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-        <span style="font-size:11px;color:#94a3b8">Not visible to landlords or tenants</span>
-        <button id="adminNotesSaveBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Save Notes</button>
+        <span style="font-size:11px;color:var(--m-soft)">Not visible to landlords or tenants</span>
+        <button id="adminNotesSaveBtn" style="background:var(--m-brand);color:var(--m-white);border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Save Notes</button>
       </div>
     </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--m-border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
       <span style="color:#d1d5db">·</span>
-      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>
+      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>
       <span style="color:#d1d5db">·</span>
-      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-arrow-up-right-from-square"></i> Full Edit</a>
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-arrow-up-right-from-square"></i> Full Edit</a>
     </div>`;
 
   const detailMain = document.getElementById('detailMain');
@@ -2082,7 +2082,7 @@ function buildAdminEditDrawer(prop) {
   }
 
   function renderPhotoGrid() {
-    if (!_photos.length) return '<p style="color:#94a3b8;font-size:13px;margin:0">No photos yet. Use Full Edit to upload photos.</p>';
+    if (!_photos.length) return '<p style="color:var(--m-soft);font-size:13px;margin:0">No photos yet. Use Full Edit to upload photos.</p>';
     return _photos.map((ph, i) => `
       <div class="adw-photo-item">
         <img src="${esc(imgThumb(ph.url))}" alt="Photo ${i+1}" loading="lazy">
@@ -2113,7 +2113,7 @@ function buildAdminEditDrawer(prop) {
 
   drawer.innerHTML = `
     <div class="adw-header">
-      <h3><i class="fas fa-pen" style="color:#006aff"></i> Edit Property</h3>
+      <h3><i class="fas fa-pen" style="color:var(--m-brand)"></i> Edit Property</h3>
       <button class="adw-close" id="adwCloseBtn" type="button" aria-label="Close">✕</button>
     </div>
     <div class="adw-dirty-bar" id="adwDirtyBar">⚠ Unsaved changes</div>
@@ -2263,7 +2263,7 @@ function buildAdminEditDrawer(prop) {
         <div class="adw-photo-grid" id="adwPhotoGrid">${renderPhotoGrid()}</div>
         <div class="adw-upload-zone" id="adwUploadZone" role="button" tabindex="0" aria-label="Upload photos">
           <div class="adw-upload-zone-icon"><i class="fas fa-cloud-arrow-up"></i></div>
-          <div class="adw-upload-zone-text">Drop photos here or <strong>click to browse</strong><br><span style="font-size:10.5px;color:#94a3b8">JPG, PNG, WebP · max 10 MB each</span></div>
+          <div class="adw-upload-zone-text">Drop photos here or <strong>click to browse</strong><br><span style="font-size:10.5px;color:var(--m-soft)">JPG, PNG, WebP · max 10 MB each</span></div>
           <input type="file" id="adwFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none">
         </div>
         <div class="adw-pending-grid" id="adwPendingGrid"></div>
@@ -2556,8 +2556,8 @@ function buildAdminEditDrawer(prop) {
     const shortName = file.name.length > 18 ? file.name.slice(0, 15) + '…' : file.name;
     item.innerHTML = `<div class="adw-pending-overlay" id="adw-ovl-${sid}">
       <i class="fas fa-clock" style="color:rgba(255,255,255,.8);font-size:13px"></i>
-      <span style="color:#fff;font-size:.62rem;text-align:center;word-break:break-word;max-width:76px">${esc(shortName)}</span>
-      <button data-rm-pending="${sid}" type="button" style="padding:1px 6px;border-radius:3px;font-size:.6rem;background:rgba(220,38,38,.85);color:#fff;border:none;cursor:pointer;margin-top:1px">✕ Remove</button>
+      <span style="color:var(--m-white);font-size:.62rem;text-align:center;word-break:break-word;max-width:76px">${esc(shortName)}</span>
+      <button data-rm-pending="${sid}" type="button" style="padding:1px 6px;border-radius:3px;font-size:.6rem;background:rgba(220,38,38,.85);color:var(--m-white);border:none;cursor:pointer;margin-top:1px">✕ Remove</button>
     </div>`;
     const reader = new FileReader();
     reader.onload = ev => {
@@ -2672,7 +2672,7 @@ function buildAdminEditDrawer(prop) {
           const ovlEl  = document.getElementById(`adw-ovl-${sid}`);
           const itemEl = document.querySelector(`[data-pending-id="${sid}"]`);
           sb.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${idx + 1}/${total}…`;
-          if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#60a5fa;font-size:13px"></i>';
+          if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--m-brand);font-size:13px"></i>';
 
           const pctBase = Math.round((idx / total) * 100);
           if (uploadBar)  uploadBar.style.width  = pctBase + '%';
@@ -2696,11 +2696,11 @@ function buildAdminEditDrawer(prop) {
             if (insErr) throw new Error(insErr.message);
             successCnt++;
             _pendingMap.delete(sid);
-            if (ovlEl)  ovlEl.innerHTML = '<i class="fas fa-check-circle" style="color:#4ade80;font-size:15px"></i>';
+            if (ovlEl)  ovlEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);font-size:15px"></i>';
             if (itemEl) itemEl.style.borderColor = 'rgba(34,197,94,.7)';
           } catch (err) {
             const msg = String(err?.message || err).slice(0, 70);
-            if (ovlEl)  ovlEl.innerHTML = `<i class="fas fa-times-circle" style="color:#f87171;font-size:13px"></i><span style="color:#f87171;font-size:.6rem;text-align:center;word-break:break-word;max-width:76px">${esc(msg)}</span>`;
+            if (ovlEl)  ovlEl.innerHTML = `<i class="fas fa-times-circle" style="color:var(--danger);font-size:13px"></i><span style="color:var(--danger);font-size:.6rem;text-align:center;word-break:break-word;max-width:76px">${esc(msg)}</span>`;
             if (itemEl) itemEl.style.borderColor = 'rgba(239,68,68,.6)';
           }
           if (idx < total - 1) await new Promise(r => setTimeout(r, 400));
@@ -2846,8 +2846,8 @@ function injectEnrichmentStyles() {
       border-radius: 12px;
       flex: 1;
       min-width: 170px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      background: var(--m-surface);
+      border: 1px solid var(--m-border);
       box-sizing: border-box;
     }
     .req-chip-label {
@@ -2855,107 +2855,107 @@ function injectEnrichmentStyles() {
       font-weight: 700;
       letter-spacing: .05em;
       text-transform: uppercase;
-      color: #64748b;
+      color: var(--m-muted);
       line-height: 1.2;
     }
     .req-chip-value {
       font-size: 13.5px;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--m-ink);
       margin-top: 3px;
       line-height: 1.3;
     }
     .req-chip i { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
     
-    .req-chip.req-emerald { border-color: #a7f3d0; background: #ecfdf5; }
+    .req-chip.req-emerald { border-color: var(--success); background: var(--success-bg); }
     .req-chip.req-emerald i { color: #059669; }
-    .req-chip.req-emerald .req-chip-label { color: #065f46; }
+    .req-chip.req-emerald .req-chip-label { color: var(--success-strong); }
     .req-chip.req-emerald .req-chip-value { color: #064e3b; }
 
-    .req-chip.req-rose { border-color: #fecaca; background: #fef2f2; }
+    .req-chip.req-rose { border-color: var(--danger); background: var(--danger-bg); }
     .req-chip.req-rose i { color: #e11d48; }
     .req-chip.req-rose .req-chip-label { color: #9f1239; }
     .req-chip.req-rose .req-chip-value { color: #881337; }
 
-    .req-chip.req-blue { border-color: #bfdbfe; background: #eff6ff; }
-    .req-chip.req-blue i { color: #0284c7; }
+    .req-chip.req-blue { border-color: var(--m-brand-pale); background: var(--m-brand-pale); }
+    .req-chip.req-blue i { color: var(--m-brand); }
     .req-chip.req-blue .req-chip-label { color: #075985; }
-    .req-chip.req-blue .req-chip-value { color: #0c4a6e; }
+    .req-chip.req-blue .req-chip-value { color: var(--m-surface-2); }
 
-    .req-chip.req-amber { border-color: #fde68a; background: #fffbeb; }
+    .req-chip.req-amber { border-color: var(--warning); background: var(--warning-bg); }
     .req-chip.req-amber i { color: #d97706; }
     .req-chip.req-amber .req-chip-label { color: #92400e; }
     .req-chip.req-amber .req-chip-value { color: #78350f; }
 
     /* Dark mode chips: crystal clear contrast, zero WebKit brightness filter glitches */
     html[data-theme="dark"] .req-chip {
-      background: #162032 !important;
+      background: var(--m-surface-2) !important;
       border-color: rgba(255, 255, 255, 0.09) !important;
     }
-    html[data-theme="dark"] .req-chip-label { color: #94a3b8 !important; }
-    html[data-theme="dark"] .req-chip-value { color: #f8fafc !important; }
+    html[data-theme="dark"] .req-chip-label { color: var(--m-soft) !important; }
+    html[data-theme="dark"] .req-chip-value { color: var(--m-surface) !important; }
     html[data-theme="dark"] .req-chip.req-emerald i { color: #34d399 !important; }
     html[data-theme="dark"] .req-chip.req-rose i { color: #fb7185 !important; }
     html[data-theme="dark"] .req-chip.req-blue i { color: #38bdf8 !important; }
     html[data-theme="dark"] .req-chip.req-amber i { color: #fbbf24 !important; }
 
     /* Property detail cards */
-    .pf-card { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
-      margin-bottom:10px; background:#fff; }
-    .pf-card-head { background:#f8f9fa; border-bottom:1px solid #e5e7eb;
+    .pf-card { border:1px solid var(--m-border); border-radius:12px; overflow:hidden;
+      margin-bottom:10px; background:var(--m-white); }
+    .pf-card-head { background:var(--m-surface-2); border-bottom:1px solid var(--m-border);
       padding:9px 14px; display:flex; align-items:center; gap:7px; }
     .pf-card-head-text { font-size:10.5px; font-weight:700; letter-spacing:.08em;
-      text-transform:uppercase; color:#6b7280; }
+      text-transform:uppercase; color:var(--m-muted); }
     .pf-card-body { padding:0 14px; }
     .pf-row { display:flex; justify-content:space-between; align-items:center;
       padding:10px 0; border-bottom:1px solid #f0f1f3; gap:8px; }
     .pf-row-last { border-bottom:none; }
-    .pf-row-label { font-size:13px; color:#6b7280; flex-shrink:0; }
+    .pf-row-label { font-size:13px; color:var(--m-muted); flex-shrink:0; }
     .pf-row-value { font-size:13px; font-weight:600; color:#111827;
       text-align:right; word-break:break-word; max-width:58%; }
-    html[data-theme="dark"] .pf-card { background:#1e293b; border-color:#334155; }
-    html[data-theme="dark"] .pf-card-head { background:#0f172a; border-bottom-color:#334155; }
-    html[data-theme="dark"] .pf-card-head-text { color:#94a3b8; }
+    html[data-theme="dark"] .pf-card { background:var(--m-ink-2); border-color:var(--m-text); }
+    html[data-theme="dark"] .pf-card-head { background:var(--m-ink); border-bottom-color:var(--m-text); }
+    html[data-theme="dark"] .pf-card-head-text { color:var(--m-soft); }
     html[data-theme="dark"] .pf-row { border-bottom-color:#2d3748; }
     html[data-theme="dark"] .pf-row-label { color:#9ca3af; }
-    html[data-theme="dark"] .pf-row-value { color:#f3f4f6; }
+    html[data-theme="dark"] .pf-row-value { color:var(--m-surface-2); }
 
     /* Walk Score / Schools cards */
     .score-card { display:flex; align-items:center; gap:14px; padding:16px;
-      border:1.5px solid #e5e7eb; border-radius:12px; text-decoration:none;
-      color:inherit; background:#fafafa; transition:border-color .15s; }
-    .score-card:hover { border-color:#006aff; }
-    .score-card-title { font-weight:700; font-size:14px; color:#1f2937; }
-    .score-card-sub { font-size:12px; color:#6b7280; margin-top:2px; }
-    .score-card-cta { font-size:11.5px; color:#006aff; margin-top:5px; font-weight:600; }
-    html[data-theme="dark"] .score-card { background:#1e293b; border-color:#334155; }
+      border:1.5px solid var(--m-border); border-radius:12px; text-decoration:none;
+      color:inherit; background:var(--m-surface-2); transition:border-color .15s; }
+    .score-card:hover { border-color:var(--m-brand); }
+    .score-card-title { font-weight:700; font-size:14px; color:var(--m-text); }
+    .score-card-sub { font-size:12px; color:var(--m-muted); margin-top:2px; }
+    .score-card-cta { font-size:11.5px; color:var(--m-brand); margin-top:5px; font-weight:600; }
+    html[data-theme="dark"] .score-card { background:var(--m-ink-2); border-color:var(--m-text); }
     html[data-theme="dark"] .score-card:hover { border-color:#3b82f6; }
-    html[data-theme="dark"] .score-card-title { color:#f1f5f9; }
-    html[data-theme="dark"] .score-card-sub { color:#94a3b8; }
+    html[data-theme="dark"] .score-card-title { color:var(--m-surface-2); }
+    html[data-theme="dark"] .score-card-sub { color:var(--m-soft); }
 
     /* Similar listing cards */
-    .similar-card { display:flex; border:1.5px solid #e5e7eb; border-radius:12px;
-      overflow:hidden; text-decoration:none; color:inherit; background:#fff;
+    .similar-card { display:flex; border:1.5px solid var(--m-border); border-radius:12px;
+      overflow:hidden; text-decoration:none; color:inherit; background:var(--m-white);
       transition:border-color .15s; }
-    .similar-card:hover { border-color:#006aff; }
+    .similar-card:hover { border-color:var(--m-brand); }
     .similar-card-photo { width:96px; height:90px; flex-shrink:0;
-      background:#f3f4f6; overflow:hidden; }
+      background:var(--m-surface-2); overflow:hidden; }
     .similar-card-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .similar-card-body { padding:11px 14px; flex:1; min-width:0; }
     .similar-card-price { font-size:15px; font-weight:800; color:#0a1628;
       letter-spacing:-.02em; line-height:1.2; }
-    .similar-card-title { font-size:12.5px; font-weight:600; color:#1f2937; margin-top:3px;
+    .similar-card-title { font-size:12.5px; font-weight:600; color:var(--m-text); margin-top:3px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .similar-card-meta { font-size:11.5px; color:#6b7280; margin-top:2px; }
+    .similar-card-meta { font-size:11.5px; color:var(--m-muted); margin-top:2px; }
     .similar-card-addr { font-size:11px; color:#9ca3af; margin-top:1px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    html[data-theme="dark"] .similar-card { background:#1e293b; border-color:#334155; }
+    html[data-theme="dark"] .similar-card { background:var(--m-ink-2); border-color:var(--m-text); }
     html[data-theme="dark"] .similar-card:hover { border-color:#3b82f6; }
-    html[data-theme="dark"] .similar-card-photo { background:#0f172a; }
-    html[data-theme="dark"] .similar-card-price { color:#f1f5f9; }
-    html[data-theme="dark"] .similar-card-title { color:#e2e8f0; }
-    html[data-theme="dark"] .similar-card-meta { color:#94a3b8; }
-    html[data-theme="dark"] .similar-card-addr { color:#64748b; }
+    html[data-theme="dark"] .similar-card-photo { background:var(--m-ink); }
+    html[data-theme="dark"] .similar-card-price { color:var(--m-surface-2); }
+    html[data-theme="dark"] .similar-card-title { color:var(--m-border); }
+    html[data-theme="dark"] .similar-card-meta { color:var(--m-soft); }
+    html[data-theme="dark"] .similar-card-addr { color:var(--m-muted); }
 
     /* Neighborhood & Community Intelligence Styles */
     .intel-container { display:flex; flex-direction:column; gap:16px; margin-top:10px; }
@@ -2963,22 +2963,22 @@ function injectEnrichmentStyles() {
     .intel-nav-strip::-webkit-scrollbar { display:none; }
     .intel-tab-btn {
       display:inline-flex; align-items:center; gap:7px; padding:8px 14px;
-      border-radius:10px; font-size:12.5px; font-weight:700; border:1px solid #e2e8f0;
-      background:#fff; color:#475569; cursor:pointer; white-space:nowrap; transition:all .15s;
+      border-radius:10px; font-size:12.5px; font-weight:700; border:1px solid var(--m-border);
+      background:var(--m-white); color:#475569; cursor:pointer; white-space:nowrap; transition:all .15s;
     }
-    .intel-tab-btn:hover { background:#f1f5f9; color:#0f172a; border-color:#cbd5e1; }
+    .intel-tab-btn:hover { background:var(--m-surface-2); color:var(--m-ink); border-color:var(--m-border-strong); }
     .intel-tab-btn.active {
-      background:#006aff; color:#fff; border-color:#006aff;
+      background:var(--m-brand); color:var(--m-white); border-color:var(--m-brand);
       box-shadow:0 2px 6px rgba(0,106,255,.25);
     }
     html[data-theme="dark"] .intel-tab-btn {
-      background:#1e293b; color:#94a3b8; border-color:#334155;
+      background:var(--m-ink-2); color:var(--m-soft); border-color:var(--m-text);
     }
     html[data-theme="dark"] .intel-tab-btn:hover {
-      background:#334155; color:#f8fafc;
+      background:var(--m-text); color:var(--m-surface);
     }
     html[data-theme="dark"] .intel-tab-btn.active {
-      background:#2563eb; color:#fff; border-color:#2563eb;
+      background:var(--m-brand); color:var(--m-white); border-color:var(--m-brand);
     }
 
     .intel-tab-content { display:none; flex-direction:column; gap:12px; }
@@ -2987,63 +2987,63 @@ function injectEnrichmentStyles() {
     .intel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
     .intel-item-card {
       display:flex; flex-direction:column; padding:14px 16px; border-radius:12px;
-      background:#fff; border:1px solid #e2e8f0; text-decoration:none; color:inherit;
+      background:var(--m-white); border:1px solid var(--m-border); text-decoration:none; color:inherit;
       transition:transform .12s, border-color .15s, box-shadow .15s;
     }
     .intel-item-card:hover {
-      border-color:#006aff; transform:translateY(-1px);
+      border-color:var(--m-brand); transform:translateY(-1px);
       box-shadow:0 4px 12px rgba(0,0,0,.04);
     }
     html[data-theme="dark"] .intel-item-card {
-      background:#1e293b; border-color:#334155;
+      background:var(--m-ink-2); border-color:var(--m-text);
     }
     html[data-theme="dark"] .intel-item-card:hover {
       border-color:#3b82f6; box-shadow:0 4px 12px rgba(0,0,0,.2);
     }
 
     .intel-item-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
-    .intel-item-title { font-weight:700; font-size:13.5px; color:#0f172a; line-height:1.3; }
+    .intel-item-title { font-weight:700; font-size:13.5px; color:var(--m-ink); line-height:1.3; }
     .intel-item-badge {
       font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;
-      background:#eff6ff; color:#0284c7; flex-shrink:0;
+      background:var(--m-brand-pale); color:var(--m-brand); flex-shrink:0;
     }
-    .intel-item-desc { font-size:12px; color:#64748b; line-height:1.4; margin-bottom:8px; }
+    .intel-item-desc { font-size:12px; color:var(--m-muted); line-height:1.4; margin-bottom:8px; }
     .intel-item-meta {
       display:flex; align-items:center; gap:12px; font-size:11.5px;
       color:#475569; font-weight:600; margin-top:auto; padding-top:6px;
-      border-top:1px solid #f1f5f9;
+      border-top:1px solid var(--m-surface-2);
     }
-    html[data-theme="dark"] .intel-item-title { color:#f8fafc; }
-    html[data-theme="dark"] .intel-item-desc { color:#94a3b8; }
-    html[data-theme="dark"] .intel-item-meta { color:#cbd5e1; border-top-color:#334155; }
-    html[data-theme="dark"] .intel-item-badge { background:#1e3a5f; color:#7dd3fc; }
+    html[data-theme="dark"] .intel-item-title { color:var(--m-surface); }
+    html[data-theme="dark"] .intel-item-desc { color:var(--m-soft); }
+    html[data-theme="dark"] .intel-item-meta { color:var(--m-border-strong); border-top-color:var(--m-text); }
+    html[data-theme="dark"] .intel-item-badge { background:var(--m-surface-2); color:var(--m-brand); }
 
     /* Interactive Commute Form */
     .commute-calc-box {
       display:flex; flex-direction:column; gap:10px; padding:16px; border-radius:12px;
-      background:#f8fafc; border:1px solid #e2e8f0;
+      background:var(--m-surface); border:1px solid var(--m-border);
     }
-    html[data-theme="dark"] .commute-calc-box { background:#162032; border-color:#334155; }
+    html[data-theme="dark"] .commute-calc-box { background:var(--m-surface-2); border-color:var(--m-text); }
     .commute-calc-row { display:flex; gap:8px; flex-wrap:wrap; }
     .commute-calc-input {
       flex:1; min-width:200px; padding:9px 12px; border-radius:8px;
-      border:1px solid #cbd5e1; font-size:13px; background:#fff; color:#0f172a; outline:none;
+      border:1px solid var(--m-border-strong); font-size:13px; background:var(--m-white); color:var(--m-ink); outline:none;
     }
-    .commute-calc-input:focus { border-color:#006aff; ring:2px rgba(0,106,255,.2); }
+    .commute-calc-input:focus { border-color:var(--m-brand); ring:2px rgba(0,106,255,.2); }
     html[data-theme="dark"] .commute-calc-input {
-      background:#1e293b; border-color:#475569; color:#f8fafc;
+      background:var(--m-ink-2); border-color:#475569; color:var(--m-surface);
     }
     .commute-calc-btn {
       display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
-      border-radius:8px; font-size:12.5px; font-weight:700; background:#006aff;
-      color:#fff; border:none; cursor:pointer; transition:background .15s;
+      border-radius:8px; font-size:12.5px; font-weight:700; background:var(--m-brand);
+      color:var(--m-white); border:none; cursor:pointer; transition:background .15s;
     }
-    .commute-calc-btn:hover { background:#0053cc; }
+    .commute-calc-btn:hover { background:var(--m-brand-dark); }
     .commute-calc-result {
       font-size:12.5px; font-weight:600; color:#0369a1; padding:8px 12px;
-      border-radius:6px; background:#e0f2fe; display:none;
+      border-radius:6px; background:var(--m-brand-pale); display:none;
     }
-    html[data-theme="dark"] .commute-calc-result { background:#0c4a6e; color:#bae6fd; }
+    html[data-theme="dark"] .commute-calc-result { background:var(--m-surface-2); color:var(--m-brand); }
   `;
   document.head.appendChild(s);
 }
@@ -3123,7 +3123,7 @@ function renderPropFacts(p) {
     return `
       <div class="pf-card">
         <div class="pf-card-head">
-          <i class="fas ${icon}" style="color:#c9a55c;font-size:10px"></i>
+          <i class="fas ${icon}" style="color:var(--gold);font-size:10px"></i>
           <span class="pf-card-head-text">${heading}</span>
         </div>
         <div class="pf-card-body">${rows.join('')}</div>
@@ -3402,13 +3402,13 @@ function renderNeighborhoodIntelligence(p) {
             ${commutes.map(c => `
               <a href="https://maps.google.com/maps?saddr=${encodeURIComponent(fullAddr)}&daddr=${encodeURIComponent(c.dest)}" target="_blank" rel="noopener noreferrer" class="intel-item-card">
                 <div class="intel-item-head">
-                  <span class="intel-item-title"><i class="fas ${c.icon}" style="color:#006aff;margin-right:6px"></i> ${esc(c.name)}</span>
+                  <span class="intel-item-title"><i class="fas ${c.icon}" style="color:var(--m-brand);margin-right:6px"></i> ${esc(c.name)}</span>
                   <span class="intel-item-badge">${c.drive}</span>
                 </div>
                 <div class="intel-item-desc">Estimated drive time from property doorstep</div>
                 <div class="intel-item-meta">
-                  <span><i class="fas fa-route" style="color:#64748b;margin-right:4px"></i> ${c.dist} distance</span>
-                  <span style="margin-left:auto;color:#006aff;font-size:11px">Directions &rarr;</span>
+                  <span><i class="fas fa-route" style="color:var(--m-muted);margin-right:4px"></i> ${c.dist} distance</span>
+                  <span style="margin-left:auto;color:var(--m-brand);font-size:11px">Directions &rarr;</span>
                 </div>
               </a>
             `).join('')}
@@ -3416,8 +3416,8 @@ function renderNeighborhoodIntelligence(p) {
 
           <!-- Interactive Custom Commute Calculator -->
           <div class="commute-calc-box">
-            <div style="font-weight:700;font-size:13px;color:var(--text,#0f172a);display:flex;align-items:center;gap:6px">
-              <i class="fas fa-location-crosshairs" style="color:#006aff"></i> Calculate Commute to Your Workplace
+            <div style="font-weight:700;font-size:13px;color:var(--text,var(--m-ink));display:flex;align-items:center;gap:6px">
+              <i class="fas fa-location-crosshairs" style="color:var(--m-brand)"></i> Calculate Commute to Your Workplace
             </div>
             <div class="commute-calc-row">
               <input type="text" class="commute-calc-input" id="customCommuteInput" placeholder="Enter work address, employer or landmark..." />
@@ -3429,7 +3429,7 @@ function renderNeighborhoodIntelligence(p) {
 
         <!-- Tab 2: Pet-Friendly Hub -->
         <div class="intel-tab-content" id="intelTab-pets">
-          <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#065f46;display:flex;align-items:center;gap:8px">
+          <div style="background:var(--success-bg);border:1px solid var(--success);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--success-strong);display:flex;align-items:center;gap:8px">
             <i class="fas fa-shield-heart" style="color:#059669;font-size:15px"></i>
             <span><strong>Pet Friendly Community:</strong> Welcome dogs &amp; cats with local greenways and verified veterinary care nearby.</span>
           </div>
@@ -3438,11 +3438,11 @@ function renderNeighborhoodIntelligence(p) {
               <a href="https://maps.google.com/maps?q=${encodeURIComponent(p.query)}" target="_blank" rel="noopener noreferrer" class="intel-item-card">
                 <div class="intel-item-head">
                   <span class="intel-item-title"><i class="fas ${p.icon}" style="color:#059669;margin-right:6px"></i> ${esc(p.title)}</span>
-                  <span class="intel-item-badge" style="background:#ecfdf5;color:#065f46">${esc(p.badge)}</span>
+                  <span class="intel-item-badge" style="background:var(--success-bg);color:var(--success-strong)">${esc(p.badge)}</span>
                 </div>
                 <div class="intel-item-desc">${esc(p.sub)}</div>
                 <div class="intel-item-meta">
-                  <span><i class="fas fa-location-dot" style="color:#64748b;margin-right:4px"></i> ~${p.dist} (${p.drive})</span>
+                  <span><i class="fas fa-location-dot" style="color:var(--m-muted);margin-right:4px"></i> ~${p.dist} (${p.drive})</span>
                   <span style="margin-left:auto;color:#059669;font-size:11px">Find Nearby &rarr;</span>
                 </div>
               </a>
@@ -3456,7 +3456,7 @@ function renderNeighborhoodIntelligence(p) {
             ${utilities.map(u => `
               <div class="intel-item-card">
                 <div class="intel-item-head">
-                  <span class="intel-item-title"><i class="fas ${u.icon}" style="color:#006aff;margin-right:6px"></i> ${esc(u.title)}</span>
+                  <span class="intel-item-title"><i class="fas ${u.icon}" style="color:var(--m-brand);margin-right:6px"></i> ${esc(u.title)}</span>
                   <span class="intel-item-badge">${esc(u.badge)}</span>
                 </div>
                 <div class="intel-item-desc">${esc(u.sub)}</div>
@@ -3472,7 +3472,7 @@ function renderNeighborhoodIntelligence(p) {
         <div class="intel-tab-content" id="intelTab-scores">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
             <a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
-              <div style="width:44px;height:44px;border-radius:10px;background:#e8f0fe;display:flex;
+              <div style="width:44px;height:44px;border-radius:10px;background:var(--m-brand-pale);display:flex;
                 align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚶</div>
               <div>
                 <div class="score-card-title">Walk &amp; Transit Scores</div>
@@ -3481,7 +3481,7 @@ function renderNeighborhoodIntelligence(p) {
               </div>
             </a>
             <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
-              <div style="width:44px;height:44px;border-radius:10px;background:#ecfdf5;display:flex;
+              <div style="width:44px;height:44px;border-radius:10px;background:var(--success-bg);display:flex;
                 align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏫</div>
               <div>
                 <div class="score-card-title">Nearby Schools</div>
@@ -3498,13 +3498,13 @@ function renderNeighborhoodIntelligence(p) {
             ${conveniences.map(c => `
               <a href="https://maps.google.com/maps?q=${encodeURIComponent(c.query)}" target="_blank" rel="noopener noreferrer" class="intel-item-card">
                 <div class="intel-item-head">
-                  <span class="intel-item-title"><i class="fas ${c.icon}" style="color:#006aff;margin-right:6px"></i> ${esc(c.title)}</span>
+                  <span class="intel-item-title"><i class="fas ${c.icon}" style="color:var(--m-brand);margin-right:6px"></i> ${esc(c.title)}</span>
                   <span class="intel-item-badge">${esc(c.badge)}</span>
                 </div>
                 <div class="intel-item-desc">${esc(c.sub)}</div>
                 <div class="intel-item-meta">
-                  <span><i class="fas fa-location-dot" style="color:#64748b;margin-right:4px"></i> ~${c.dist} (${c.drive})</span>
-                  <span style="margin-left:auto;color:#006aff;font-size:11px">Explore &rarr;</span>
+                  <span><i class="fas fa-location-dot" style="color:var(--m-muted);margin-right:4px"></i> ~${c.dist} (${c.drive})</span>
+                  <span style="margin-left:auto;color:var(--m-brand);font-size:11px">Explore &rarr;</span>
                 </div>
               </a>
             `).join('')}
@@ -3543,8 +3543,8 @@ function renderNeighborhoodIntelligence(p) {
       commuteRes.style.display = 'block';
       commuteRes.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <span><i class="fas fa-check-circle" style="color:#0284c7;margin-right:4px"></i> Direct commute route mapped to <strong>${esc(dest)}</strong></span>
-          <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#006aff;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+          <span><i class="fas fa-check-circle" style="color:var(--m-brand);margin-right:4px"></i> Direct commute route mapped to <strong>${esc(dest)}</strong></span>
+          <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:var(--m-brand);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
             Open Live Navigation <i class="fas fa-arrow-up-right-from-square" style="font-size:10px"></i>
           </a>
         </div>
@@ -3601,7 +3601,7 @@ async function loadSimilarListings(p) {
           <div class="similar-card-body">
             <div class="similar-card-price">
               ${s.monthly_rent != null
-                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:#6b7280">/mo</span>'
+                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
                 : 'TBD'}
             </div>
             <div class="similar-card-title">${esc(s.title || 'Rental')}</div>
@@ -3619,7 +3619,7 @@ async function loadSimilarListings(p) {
         <div class="prop-section-head">More in <em>${esc(p.city)}</em>.</div>
         <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
         <a href="/listings.html" style="display:inline-flex;align-items:center;gap:6px;
-          margin-top:16px;font-size:13px;font-weight:600;color:#006aff;text-decoration:none">
+          margin-top:16px;font-size:13px;font-weight:600;color:var(--m-brand);text-decoration:none">
           See all rentals in ${esc(p.city)} <i class="fas fa-arrow-right" style="font-size:11px"></i>
         </a>
       </div>`;

@@ -31,7 +31,7 @@
     })();
   </script>
   <meta charset="UTF-8">
-  <meta name="theme-color" content="#006aff">
+  <meta name="theme-color" content="var(--m-brand)">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
   <title>Property — Choice Properties</title>
@@ -64,21 +64,21 @@
     html{-webkit-text-size-adjust:100%;transition:background-color .2s ease,color .2s ease}
 
     :root {
-      --m-bg: #ffffff;
-      --m-surface: #f8fafc;
-      --m-surface-2: #f1f5f9;
-      --m-white: #ffffff;
-      --m-border: #e2e8f0;
-      --m-border-strong: #cbd5e1;
-      --m-ink: #0f172a;
-      --m-ink-2: #1e293b;
-      --m-text: #334155;
-      --m-muted: #64748b;
-      --m-muted-2: #64748b;
-      --m-soft: #94a3b8;
-      --m-brand: #006aff;
+      --m-bg: var(--m-white);
+      --m-surface: var(--m-surface);
+      --m-surface-2: var(--m-surface-2);
+      --m-white: var(--m-white);
+      --m-border: var(--m-border);
+      --m-border-strong: var(--m-border-strong);
+      --m-ink: var(--m-ink);
+      --m-ink-2: var(--m-ink-2);
+      --m-text: var(--m-text);
+      --m-muted: var(--m-muted);
+      --m-muted-2: var(--m-muted);
+      --m-soft: var(--m-soft);
+      --m-brand: var(--m-brand);
       --m-brand-dark: #0052cc;
-      --m-brand-pale: #eff6ff;
+      --m-brand-pale: var(--m-brand-pale);
     }
 
     html[data-theme="dark"] {
@@ -88,14 +88,14 @@
       --m-white: #131d31;
       --m-border: #1e2d4d;
       --m-border-strong: #2e4168;
-      --m-ink: #f8fafc;
-      --m-ink-2: #f1f5f9;
-      --m-text: #e2e8f0;
-      --m-muted: #94a3b8;
-      --m-muted-2: #94a3b8;
-      --m-soft: #64748b;
-      --m-brand: #3b82f6;
-      --m-brand-dark: #2563eb;
+      --m-ink: var(--m-surface);
+      --m-ink-2: var(--m-surface-2);
+      --m-text: var(--m-border);
+      --m-muted: var(--m-soft);
+      --m-muted-2: var(--m-soft);
+      --m-soft: var(--m-muted);
+      --m-brand: var(--m-brand);
+      --m-brand-dark: var(--m-brand);
       --m-brand-pale: rgba(59, 130, 246, 0.16);
     }
 
@@ -107,14 +107,14 @@
         --m-white: #131d31;
         --m-border: #1e2d4d;
         --m-border-strong: #2e4168;
-        --m-ink: #f8fafc;
-        --m-ink-2: #f1f5f9;
-        --m-text: #e2e8f0;
-        --m-muted: #94a3b8;
-        --m-muted-2: #94a3b8;
-        --m-soft: #64748b;
-        --m-brand: #3b82f6;
-        --m-brand-dark: #2563eb;
+        --m-ink: var(--m-surface);
+        --m-ink-2: var(--m-surface-2);
+        --m-text: var(--m-border);
+        --m-muted: var(--m-soft);
+        --m-muted-2: var(--m-soft);
+        --m-soft: var(--m-muted);
+        --m-brand: var(--m-brand);
+        --m-brand-dark: var(--m-brand);
         --m-brand-pale: rgba(59, 130, 246, 0.16);
       }
     }
@@ -138,7 +138,7 @@
     #mobile-apply-bar .mob-price strong{display:block;font-size:1.15rem;font-weight:800;color:var(--m-ink);letter-spacing:-.02em}
     #mobile-apply-bar .mob-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
     #mobile-apply-bar .mob-msg-btn{width:44px;height:44px;border-radius:9px;border:1.5px solid var(--m-border);background:transparent;color:var(--m-muted);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-    #mobile-apply-bar .mob-btn{background:var(--m-brand);color:#fff;border:none;border-radius:9px;padding:12px 22px;font-size:.875rem;font-weight:800;text-decoration:none;white-space:nowrap;cursor:pointer;box-shadow:0 4px 16px rgba(0,106,255,.35)}
+    #mobile-apply-bar .mob-btn{background:var(--m-brand);color:var(--m-white);border:none;border-radius:9px;padding:12px 22px;font-size:.875rem;font-weight:800;text-decoration:none;white-space:nowrap;cursor:pointer;box-shadow:0 4px 16px rgba(0,106,255,.35)}
     @media(max-width:900px){#mobile-apply-bar.active{display:flex}body.mob-bar-active{padding-bottom:calc(72px + env(safe-area-inset-bottom))}}
 
     /* ── High-Contrast Description & Typography ───────────────────────────── */
@@ -180,7 +180,7 @@
       transition: all .15s ease;
     }
     .detail-read-more:hover {
-      color: #fff;
+      color: var(--m-white);
       background: var(--m-brand);
       border-color: var(--m-brand);
     }
@@ -192,16 +192,16 @@
     .prop-process-step{display:flex;align-items:flex-start;gap:14px;position:relative;padding-bottom:22px}
     .prop-process-step:last-child{padding-bottom:0}
     .prop-process-step:not(:last-child)::before{content:'';position:absolute;left:15px;top:33px;bottom:0;width:2px;background:var(--m-border)}
-    .prop-step-num{width:32px;height:32px;border-radius:50%;background:var(--m-brand);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,106,255,.25);position:relative;z-index:1}
-    .prop-step-num.done{background:#10b981}
+    .prop-step-num{width:32px;height:32px;border-radius:50%;background:var(--m-brand);color:var(--m-white);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,106,255,.25);position:relative;z-index:1}
+    .prop-step-num.done{background:var(--m-brand)}
     .prop-step-body{padding-top:4px;flex:1;min-width:0}
     .prop-step-title{font-size:14px;font-weight:700;color:var(--m-ink);margin-bottom:3px}
     .prop-step-desc{font-size:13px;color:var(--m-muted);line-height:1.6}
     .prop-step-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-top:6px;line-height:1.6}
-    .prop-step-badge.free{background:#dcfce7;color:#166534}
-    .prop-step-badge.paid{background:#fee2e2;color:#991b1b}
-    .prop-step-badge.credited{background:#dbeafe;color:#1e40af}
-    .prop-step-badge.done{background:#f0fdf4;color:#15803d}
+    .prop-step-badge.free{background:var(--success-bg);color:var(--success-strong)}
+    .prop-step-badge.paid{background:var(--danger-bg);color:var(--danger-strong)}
+    .prop-step-badge.credited{background:var(--m-brand-pale);color:var(--m-brand-dark)}
+    .prop-step-badge.done{background:var(--success-bg);color:var(--success-strong)}
     .prop-fee-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
     @media(max-width:540px){.prop-fee-cards{grid-template-columns:1fr}}
     .prop-fee-card{background:var(--m-surface);border:1.5px solid var(--m-border);border-radius:12px;padding:14px 16px}
@@ -275,8 +275,8 @@
     .similar-card-v2 {
       display: flex;
       flex-direction: column;
-      background: #ffffff;
-      border: 1.5px solid #e5e7eb;
+      background: var(--m-white);
+      border: 1.5px solid var(--m-border);
       border-radius: 14px;
       overflow: hidden;
       text-decoration: none;
@@ -286,7 +286,7 @@
     }
     .similar-card-v2:hover {
       transform: translateY(-3px);
-      border-color: #006aff;
+      border-color: var(--m-brand);
       box-shadow: 0 10px 24px rgba(0, 106, 255, 0.08);
     }
     .similar-card-v2:active {
@@ -296,7 +296,7 @@
       position: relative;
       width: 100%;
       aspect-ratio: 16 / 10;
-      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      background: linear-gradient(135deg, var(--m-border) 0%, var(--m-border-strong) 100%);
       overflow: hidden;
     }
     .similar-card-media img {
@@ -328,13 +328,13 @@
       padding: 4px 8px;
       border-radius: 6px;
       background: rgba(0, 106, 255, 0.92);
-      color: #ffffff;
+      color: var(--m-white);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
     }
     .similar-card-badge.verified {
       background: rgba(255, 255, 255, 0.95);
-      color: #006aff;
+      color: var(--m-brand);
       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
     }
     .similar-card-price-chip {
@@ -342,7 +342,7 @@
       bottom: 10px;
       left: 10px;
       background: rgba(15, 23, 42, 0.88);
-      color: #ffffff;
+      color: var(--m-white);
       font-size: 14px;
       font-weight: 800;
       padding: 4px 9px;
@@ -367,7 +367,7 @@
     .similar-card-name {
       font-size: 14px;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--m-ink);
       line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 1;
@@ -376,7 +376,7 @@
     }
     .similar-card-location {
       font-size: 12px;
-      color: #64748b;
+      color: var(--m-muted);
       display: flex;
       align-items: center;
       gap: 5px;
@@ -385,7 +385,7 @@
       text-overflow: ellipsis;
     }
     .similar-card-location i {
-      color: #006aff;
+      color: var(--m-brand);
       font-size: 11px;
       flex-shrink: 0;
     }
@@ -402,25 +402,25 @@
       gap: 4px;
       font-size: 11.5px;
       font-weight: 600;
-      color: #334155;
-      background: #f1f5f9;
+      color: var(--m-text);
+      background: var(--m-surface-2);
       padding: 3px 7px;
       border-radius: 6px;
     }
     .similar-card-spec-pill i {
       font-size: 10px;
-      color: #64748b;
+      color: var(--m-muted);
     }
     .similar-card-cta {
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px dashed #e2e8f0;
+      border-top: 1px dashed var(--m-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 12px;
       font-weight: 600;
-      color: #006aff;
+      color: var(--m-brand);
     }
     .similar-see-all-btn {
       display: inline-flex;
@@ -428,53 +428,53 @@
       justify-content: center;
       gap: 8px;
       padding: 10px 20px;
-      background: #eff6ff;
-      color: #006aff;
+      background: var(--m-brand-pale);
+      color: var(--m-brand);
       font-size: 13.5px;
       font-weight: 700;
       border-radius: 10px;
       text-decoration: none;
-      border: 1px solid #bfdbfe;
+      border: 1px solid var(--m-brand-pale);
       transition: all .15s ease;
     }
     .similar-see-all-btn:hover {
-      background: #006aff;
-      color: #ffffff;
-      border-color: #006aff;
+      background: var(--m-brand);
+      color: var(--m-white);
+      border-color: var(--m-brand);
     }
     html[data-theme="dark"] .similar-card-v2 {
-      background: #1e293b;
-      border-color: #334155;
+      background: var(--m-ink-2);
+      border-color: var(--m-text);
     }
     html[data-theme="dark"] .similar-card-v2:hover {
-      border-color: #3b82f6;
+      border-color: var(--m-brand);
       box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
     }
     html[data-theme="dark"] .similar-card-name {
-      color: #f1f5f9;
+      color: var(--m-surface-2);
     }
     html[data-theme="dark"] .similar-card-location {
-      color: #94a3b8;
+      color: var(--m-soft);
     }
     html[data-theme="dark"] .similar-card-spec-pill {
-      background: #334155;
-      color: #cbd5e1;
+      background: var(--m-text);
+      color: var(--m-border-strong);
     }
     html[data-theme="dark"] .similar-card-spec-pill i {
-      color: #94a3b8;
+      color: var(--m-soft);
     }
     html[data-theme="dark"] .similar-card-cta {
-      border-top-color: #334155;
-      color: #60a5fa;
+      border-top-color: var(--m-text);
+      color: var(--m-brand);
     }
     html[data-theme="dark"] .similar-see-all-btn {
-      background: #1e3a8a;
-      color: #93c5fd;
-      border-color: #2563eb;
+      background: var(--m-brand-dark);
+      color: var(--m-brand-pale);
+      border-color: var(--m-brand);
     }
     html[data-theme="dark"] .similar-see-all-btn:hover {
-      background: #2563eb;
-      color: #ffffff;
+      background: var(--m-brand);
+      color: var(--m-white);
     }
 
     /* ════════════════════════════════════════════════════════════════════
@@ -483,7 +483,7 @@
     @media (max-width: 900px) {
 
       /* ── Page background ── */
-      body[data-portal="public"] { background: #f1f5f9 !important; }
+      body[data-portal="public"] { background: var(--m-surface-2) !important; }
 
       /* ── Split → single column ── */
       .prop-split {
@@ -541,8 +541,8 @@
         position: absolute !important;
         top: 12px !important; right: 12px !important;
         bottom: auto !important; left: auto !important;
-        background: rgba(255,255,255,.95) !important;
-        color: #0a1729 !important;
+        background: var(--m-bg) !important;
+        color: var(--m-ink) !important;
         font-size: 12px !important;
         font-weight: 600 !important;
         padding: 5px 12px !important;
@@ -552,8 +552,8 @@
         box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
       }
       .mosaic-nav-btn {
-        background: rgba(255,255,255,.9) !important;
-        color: #0a1729 !important;
+        background: var(--m-bg) !important;
+        color: var(--m-ink) !important;
         border-radius: 50% !important;
         width: 36px !important; height: 36px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,.15) !important;
@@ -564,9 +564,9 @@
 
       /* ── Price card wrapper (mobile) ── */
       .cs-price-card {
-        background: white !important;
+        background: var(--m-bg) !important;
         border-radius: 16px !important;
-        border: 1px solid #e4e8ef !important;
+        border: 1px solid var(--m-border) !important;
         box-shadow: 0 1px 4px rgba(15,23,42,.07) !important;
         margin: 12px 16px 0 !important;
         padding: 20px !important;
@@ -585,7 +585,7 @@
       .prop-share-btn {
         width: 36px !important; height: 36px !important;
         border-radius: 50% !important;
-        border: 1.5px solid #e4e8ef !important;
+        border: 1.5px solid var(--m-border) !important;
         background: transparent !important;
         display: inline-flex !important;
         align-items: center !important;
@@ -593,14 +593,14 @@
         font-size: 13px !important;
         padding: 0 !important;
         cursor: pointer !important;
-        color: #6b7280 !important;
+        color: var(--m-muted) !important;
       }
       .prop-share-btn > span { display: none !important; }
       /* Price */
       .prop-price, #detailPrice {
         font-size: 28px !important;
         font-weight: 800 !important;
-        color: #0a1729 !important;
+        color: var(--m-ink) !important;
         letter-spacing: -.03em !important;
         margin-bottom: 2px !important;
         line-height: 1.1 !important;
@@ -609,7 +609,7 @@
       .prop-title, #detailTitle {
         font-size: 18px !important;
         font-weight: 700 !important;
-        color: #0a1729 !important;
+        color: var(--m-ink) !important;
         margin-bottom: 3px !important;
         font-family: inherit !important;
         font-style: normal !important;
@@ -617,7 +617,7 @@
       /* Address */
       .prop-address, #detailAddress {
         font-size: 13px !important;
-        color: #6b7280 !important;
+        color: var(--m-muted) !important;
         margin-bottom: 14px !important;
       }
       /* ── Stat cards: 3-column grid, value + label stacked vertically ── */
@@ -651,13 +651,13 @@
         flex-shrink: 0 !important;
       }
       .prop-meta-grid .detail-meta-item .detail-meta-icon i {
-        color: #006aff !important;
+        color: var(--m-brand) !important;
         font-size: 10px !important;
       }
       .prop-meta-grid .detail-meta-value {
         font-size: 15px !important;
         font-weight: 700 !important;
-        color: var(--m-ink, #fff) !important;
+        color: var(--m-ink, var(--m-white)) !important;
         line-height: 1.1 !important;
         word-break: break-word !important;
       }
@@ -675,8 +675,8 @@
         margin: 0 0 14px !important;
         padding: 10px 12px !important;
         border-radius: 10px !important;
-        background: #f8fafc !important;
-        border: 1px solid #e4e8ef !important;
+        background: var(--m-surface) !important;
+        border: 1px solid var(--m-border) !important;
         box-shadow: none !important;
       }
       /* Mobile Apply button inside price card */
@@ -686,8 +686,8 @@
         align-items: center !important;
         justify-content: center !important;
         gap: 8px !important;
-        background: #006aff !important;
-        color: #fff !important;
+        background: var(--m-brand) !important;
+        color: var(--m-white) !important;
         font-weight: 700 !important;
         font-size: 15px !important;
         border-radius: 12px !important;
@@ -695,13 +695,13 @@
         text-decoration: none !important;
         box-shadow: 0 4px 12px rgba(0,106,255,.3) !important;
       }
-      .cs-card-apply-btn:hover { background: #0056d6 !important; color: #fff !important; }
+      .cs-card-apply-btn:hover { background: var(--m-brand-dark) !important; color: var(--m-white) !important; }
 
       /* ── Section labels: eyebrow becomes card title, section head hides ── */
       .prop-section-eyebrow {
         font-size: 15px !important;
         font-weight: 700 !important;
-        color: #0a1729 !important;
+        color: var(--m-ink) !important;
         letter-spacing: 0 !important;
         text-transform: none !important;
         margin-bottom: 14px !important;
@@ -713,9 +713,9 @@
       /* ── All content sections → white cards ── */
       .prop-split-content .prop-section,
       .prop-split-content .detail-tabs-wrap {
-        background: white !important;
+        background: var(--m-bg) !important;
         border-radius: 16px !important;
-        border: 1px solid #e4e8ef !important;
+        border: 1px solid var(--m-border) !important;
         box-shadow: 0 1px 4px rgba(15,23,42,.07) !important;
         margin: 12px 16px 0 !important;
         padding: 20px !important;
@@ -724,18 +724,18 @@
       /* ── Cost table → dashed-separator list ── */
       .prop-cost-table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 16px !important; }
       .prop-cost-table td { padding: 10px 0 !important; font-size: 13.5px !important; border: none !important; }
-      .prop-cost-table tr { border-bottom: 1px dashed #e4e8ef !important; }
+      .prop-cost-table tr { border-bottom: 1px dashed var(--m-border) !important; }
       .prop-cost-table tr:last-child { border-bottom: none !important; }
-      .prop-cost-table td:first-child { color: #6b7280 !important; font-weight: 500 !important; }
-      .prop-cost-table td:last-child  { font-weight: 700 !important; color: #0a1729 !important; text-align: right !important; }
+      .prop-cost-table td:first-child { color: var(--m-muted) !important; font-weight: 500 !important; }
+      .prop-cost-table td:last-child  { font-weight: 700 !important; color: var(--m-ink) !important; text-align: right !important; }
       /* Apply strip in costs section */
       .prop-apply-strip {
         flex-direction: column !important;
         gap: 10px !important;
         padding: 16px !important;
         border-radius: 12px !important;
-        background: #f8fafc !important;
-        border: 1.5px solid #e4e8ef !important;
+        background: var(--m-surface) !important;
+        border: 1.5px solid var(--m-border) !important;
         margin-top: 4px !important;
       }
       .prop-apply-btn { width: 100% !important; text-align: center !important; border-radius: 10px !important; justify-content: center !important; }
@@ -777,9 +777,9 @@
       /* ── Renter reqs — shown as a compact chip row in the card stack ── */
       #renterReqsSection {
         margin: 0 16px !important;
-        background: white !important;
+        background: var(--m-bg) !important;
         border-radius: 16px !important;
-        border: 1px solid #e4e8ef !important;
+        border: 1px solid var(--m-border) !important;
         box-shadow: 0 1px 4px rgba(15,23,42,.07) !important;
         padding: 16px 20px !important;
       }
@@ -816,12 +816,12 @@
 
       /* ── Sticky bottom bar → CardStack style ── */
       #mobile-apply-bar {
-        background: white !important;
-        border-top: 2px solid #e4e8ef !important;
+        background: var(--m-bg) !important;
+        border-top: 2px solid var(--m-border) !important;
         box-shadow: 0 -4px 20px rgba(0,0,0,.08) !important;
       }
-      #mobile-apply-bar .mob-price { color: #6b7280 !important; font-size: .7rem !important; }
-      #mobile-apply-bar .mob-price strong { font-size: 1.2rem !important; font-weight: 800 !important; color: #0a1729 !important; }
+      #mobile-apply-bar .mob-price { color: var(--m-muted) !important; font-size: .7rem !important; }
+      #mobile-apply-bar .mob-price strong { font-size: 1.2rem !important; font-weight: 800 !important; color: var(--m-ink) !important; }
       #mobile-apply-bar .mob-btn {
         border-radius: 10px !important;
         padding: 13px 28px !important;
@@ -1040,7 +1040,7 @@
           <tr id="sidebarMoveInRow" style="display:none"><td>Available From</td><td id="sidebarMoveIn">—</td></tr>
           <tr id="sidebarLastMonthRow" style="display:none"><td>Last Month's Rent</td><td id="sidebarLastMonth">—</td></tr>
           <tr id="sidebarAdminFeeRow" style="display:none"><td>Admin / Move-in Fee</td><td id="sidebarAdminFee">—</td></tr>
-          <tr id="sidebarMoveInSpecialRow" style="display:none"><td>Move-in Special</td><td id="sidebarMoveInSpecial" style="color:#10b981">—</td></tr>
+          <tr id="sidebarMoveInSpecialRow" style="display:none"><td>Move-in Special</td><td id="sidebarMoveInSpecial" style="color:var(--m-brand)">—</td></tr>
         </tbody>
       </table>
 
@@ -1051,7 +1051,7 @@
             <div class="skeleton" style="height:26px;width:130px;border-radius:6px;display:inline-block"></div>
           </div>
           <div class="prop-apply-strip-sub">
-            <i class="fas fa-lock" style="color:#d4a017;font-size:10px"></i>
+            <i class="fas fa-lock" style="color:var(--gold);font-size:10px"></i>
             Submit <span id="applyFeeAmt">a free application</span> — we contact you within 24 hrs.
           </div>
         </div>
@@ -1060,8 +1060,8 @@
         </a>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-        <p style="font-size:11.5px;color:#6b7280;line-height:1.55;display:flex;align-items:flex-start;gap:6px">
-          <i class="fas fa-clock" style="color:#1d4ed8;margin-top:2px;font-size:11px;flex-shrink:0"></i>
+        <p style="font-size:11.5px;color:var(--m-muted);line-height:1.55;display:flex;align-items:flex-start;gap:6px">
+          <i class="fas fa-clock" style="color:var(--m-brand-dark);margin-top:2px;font-size:11px;flex-shrink:0"></i>
           <span>Decisions are typically made within 24–72 hours of payment. Applicants who respond promptly are often prioritized.</span>
         </p>
         <a id="trackAppLink" href="/apply/?path=dashboard" class="prop-track-link">
@@ -1239,7 +1239,7 @@
         You automatically receive <strong>2 application credits</strong> — valid for 45 days — that fully waive the application fee on your next two applications, regardless of the fee amount. A denial doesn't cost you your ability to keep looking.
       </div>
 
-      <div class="prop-denied-box" style="background:#eff6ff;border-color:#93c5fd;color:#1e40af;margin-bottom:24px">
+      <div class="prop-denied-box" style="background:var(--m-brand-pale);border-color:var(--m-brand-pale);color:var(--m-brand-dark);margin-bottom:24px">
         <strong><i class="fas fa-file-circle-check" style="margin-right:6px"></i>Tenant Protection Guarantee</strong><br>
         Your protection is tiered based on where you are in the process:<br><br>
         <strong>Before lease signing —</strong> if the property materially differs from the listing (wrong photos, incorrect size, missing amenities, or unavailable unit), you may be eligible for a refund of applicable fees paid to Choice Properties. Submit the discrepancy in writing and it is reviewed promptly.<br><br>
@@ -1248,7 +1248,7 @@
       </div>
 
       <!-- Policy Links -->
-      <div style="font-size:12px;color:#8892a2;margin-bottom:8px">Full policy details — opens in a new tab:</div>
+      <div style="font-size:12px;color:var(--m-soft);margin-bottom:8px">Full policy details — opens in a new tab:</div>
       <div class="prop-policy-row">
         <a href="/rental-application-policy.html" class="prop-policy-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-file-alt"></i> Application Policy</a>
         <a href="/holding-deposit-policy.html" class="prop-policy-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-hand-holding-dollar"></i> Holding Deposit</a>
@@ -1267,13 +1267,13 @@
       <div class="prop-section-eyebrow">Location</div>
       <div class="prop-section-head">Where it <em>sits</em>.</div>
       <div class="map-container" id="mapContainer">
-        <div id="mapFallback" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#8892a2">
-          <i class="fas fa-map-marker-alt" style="font-size:32px;color:#2563eb"></i>
+        <div id="mapFallback" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--m-soft)">
+          <i class="fas fa-map-marker-alt" style="font-size:32px;color:var(--m-brand)"></i>
           <span id="mapAddressLabel" style="font-size:14px"></span>
         </div>
       </div>
-      <p id="mapNeighborhood" style="font-size:13px;color:#8892a2;margin-top:8px;display:none">
-        <i class="fas fa-info-circle" style="color:#c9a55c"></i>
+      <p id="mapNeighborhood" style="font-size:13px;color:var(--m-soft);margin-top:8px;display:none">
+        <i class="fas fa-info-circle" style="color:var(--gold)"></i>
         <span id="mapNeighborhoodText"></span>
       </p>
       <a href="#" class="map-open-btn" id="mapOpenBtn" target="_blank" rel="noopener noreferrer" style="display:none">
@@ -1321,13 +1321,13 @@
         <div class="contact-form-group">
           <label class="form-label">Message</label>
           <textarea class="form-textarea" id="inqMessage" rows="3" maxlength="1500" placeholder="I'm interested in this property and have a few questions…"></textarea>
-          <div style="text-align:right;font-size:11px;color:#8892a2;margin-top:4px"><span id="inqCharCount">0</span> / 1500</div>
-          <div style="font-size:11px;color:#8892a2;margin-top:2px">Plain text only — no links or URLs.</div>
+          <div style="text-align:right;font-size:11px;color:var(--m-soft);margin-top:4px"><span id="inqCharCount">0</span> / 1500</div>
+          <div style="font-size:11px;color:var(--m-soft);margin-top:2px">Plain text only — no links or URLs.</div>
         </div>
         <button class="btn btn-primary btn-full" id="sendInquiryBtn">
           <i class="fas fa-paper-plane"></i> Send Message
         </button>
-        <p style="font-size:12px;color:#8892a2;margin:10px 0 0;line-height:1.5;text-align:center">Submitting an inquiry does not reserve this property or start an application.</p>
+        <p style="font-size:12px;color:var(--m-soft);margin:10px 0 0;line-height:1.5;text-align:center">Submitting an inquiry does not reserve this property or start an application.</p>
       </div>
     </div>
 
