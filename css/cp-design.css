@@ -93,7 +93,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
 body{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility; min-height:100vh;
+  text-rendering:optimizeLegibility; min-height:100dvh;
   /* Prevent iOS overscroll bounce showing white */
   overscroll-behavior-y:none;
 }
@@ -113,7 +113,7 @@ img,svg{display:block;max-width:100%}
 /* App shell — mobile-first                                               */
 /* ===================================================================== */
 .app{
-  min-height:100vh;
+  min-height:100dvh;
   padding-top:calc(var(--appbar-h) + var(--safe-top));
   padding-bottom:calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
 }
@@ -444,7 +444,7 @@ img,svg{display:block;max-width:100%}
   background:var(--surface);
   border-top-left-radius:var(--r-xl);border-top-right-radius:var(--r-xl);
   z-index:calc(var(--z-sheet) + 1);
-  max-height:90vh; overflow:hidden;
+  max-height:90dvh; overflow:hidden;
   transform:translateY(100%);
   transition:transform .3s var(--ease);
   display:flex;flex-direction:column;
@@ -456,7 +456,7 @@ img,svg{display:block;max-width:100%}
 .sheet-title{font-weight:700;font-size:1rem}
 .sheet-body{padding:var(--sp-4);overflow-y:auto;flex:1}
 @media (min-width:768px){
-  .sheet{left:auto;right:24px;bottom:24px;width:480px;max-height:80vh;border-radius:var(--r-lg);transform:translateY(120%)}
+  .sheet{left:auto;right:24px;bottom:24px;width:480px;max-height:80dvh;border-radius:var(--r-lg);transform:translateY(120%)}
   .sheet.open{transform:translateY(0)}
 }
 
@@ -683,7 +683,7 @@ textarea.form-input{min-height:80px;resize:vertical}
    Used with <body data-theme="light"> (or "dark") and NO chrome scripts.
    --------------------------------------------------------------------- */
 .auth-shell {
-  min-height: 100vh; min-height: 100dvh;
+  min-height: 100dvh; min-height: 100dvh;
   display: flex; align-items: center; justify-content: center;
   padding: var(--sp-5);
   padding-bottom: calc(var(--sp-5) + var(--safe-bottom));
@@ -1265,7 +1265,7 @@ body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item.active{ color:#006aff;
 .property-list-view { display: flex; flex-direction: column; gap: 16px; }
 
 /* 404 Page Fix */
-.nf-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg); text-align: center; }
+.nf-wrap { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg); text-align: center; }
 .nf-card { background: var(--surface); padding: 40px; border-radius: var(--r-lg); border: 1px solid var(--border); max-width: 500px; width: 100%; }
 .nf-code { font-size: 4rem; font-weight: 900; color: var(--brand); margin: 0 0 16px; line-height: 1; }
 .nf-title { font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 16px; }
@@ -1364,7 +1364,7 @@ body:not([data-theme="dark"]) .cp-bottom-tabs .cp-bt-item.active{ color:#006aff;
 }
 .mv2-msearch-sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(4px); }
 .mv2-msearch-sheet-backdrop[data-open="true"] { opacity: 1; pointer-events: auto; }
-.mv2-msearch-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); z-index: 101; border-radius: 24px 24px 0 0; padding: 24px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; }
+.mv2-msearch-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); z-index: 101; border-radius: 24px 24px 0 0; padding: 24px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90dvh; overflow-y: auto; }
 .mv2-msearch-sheet[data-open="true"] { transform: translateY(0); }
 .mv2-msearch-sheet__handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 20px; }
 .mv2-msearch-sheet__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }

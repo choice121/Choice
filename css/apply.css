@@ -37,7 +37,7 @@ body {
     background: var(--color-surface-page);
     color: var(--color-text-primary);
     line-height: var(--leading-normal);
-    min-height: 100vh; min-height: 100dvh;
+    min-height: 100dvh; min-height: 100dvh;
     padding: 0;
     -webkit-font-smoothing: antialiased;
 }

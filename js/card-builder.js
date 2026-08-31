@@ -278,7 +278,7 @@
 
     function goTo(n) {
       idx = (n + total) % total;
-      slides.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      slides.scrollTo({ left: slides.offsetWidth * idx, behavior: 'smooth' });
       // P2-B: Update active dot (buttons are focusable + clickable)
       dots.forEach(function(dot, i) {
         var active = i === idx;
@@ -292,14 +292,21 @@
       dot.addEventListener('click', function (e) { e.stopPropagation(); goTo(parseInt(this.dataset.idx, 10)); });
     });
 
-    // Touch swipe
-    var touchX = 0;
-    slides.addEventListener('touchstart', function (e) { touchX = e.touches[0].clientX; }, { passive: true });
-    slides.addEventListener('touchend', function (e) {
-      var diff = touchX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) > 40) goTo(idx + (diff > 0 ? 1 : -1));
+    
+    // Native scroll sync for dots
+    slides.addEventListener('scroll', function() {
+      if (dots.length === 0) return;
+      var newIdx = Math.round(slides.scrollLeft / slides.offsetWidth);
+      if (newIdx !== idx && newIdx >= 0 && newIdx < total) {
+        idx = newIdx;
+        dots.forEach(function(dot, i) {
+          var active = i === idx;
+          dot.classList.toggle('active', active);
+          dot.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+      }
     }, { passive: true });
-
+    
     // Desktop arrow buttons
     var prevBtn = card.querySelector('.property-card-arrow--prev');
     var nextBtn = card.querySelector('.property-card-arrow--next');
