@@ -1,5 +1,32 @@
 ﻿import { useMemo, useState } from 'react'
 
+type FormState = {
+  propertyAddress: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  dob: string
+  ssnLast4: string
+  currentAddress: string
+  monthlyRent: string
+  landlord: string
+  employmentStatus: string
+  monthlyIncome: string
+  employer: string
+  referenceName: string
+  referencePhone: string
+  referenceRelation: string
+  emergencyName: string
+  emergencyPhone: string
+  moveInDate: string
+  consent: boolean
+}
+
+type FormErrors = Partial<Record<keyof FormState, string>>
+
+type StepKey = 'property' | 'residency' | 'employment' | 'references' | 'review'
+
 const protectedFlow = [
   'Property selection',
   'Application start',
@@ -28,31 +55,12 @@ const contractGuardrails = [
   'Use route-by-route fallback so legacy pages remain available',
 ]
 
-const appFormSnapshot = [
-  'First name / last name',
-  'DOB + phone + email',
-  'Current address + landlord history',
-  'Employment + income details',
-  'References + emergency contact',
-  'Consent + application submission',
-]
-
 const statusStates = [
   { label: 'Pending', tone: 'bg-amber-500/15 text-amber-200 border-amber-500/40' },
   { label: 'Under review', tone: 'bg-cyan-500/15 text-cyan-200 border-cyan-500/40' },
   { label: 'Approved', tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40' },
   { label: 'Denied', tone: 'bg-rose-500/15 text-rose-200 border-rose-500/40' },
   { label: 'Lease in progress', tone: 'bg-violet-500/15 text-violet-200 border-violet-500/40' },
-]
-
-const regressionMatrix = [
-  { step: 'Property selection', backend: 'Properties + property detail payload', mustPreserve: 'Verified' },
-  { step: 'Application start', backend: 'Application intake route + validation', mustPreserve: 'Verified' },
-  { step: 'Applicant info', backend: 'Applications table + consent checks', mustPreserve: 'Verified' },
-  { step: 'Submission', backend: 'receive-application edge function', mustPreserve: 'Verified' },
-  { step: 'Review', backend: 'Admin review / status transitions', mustPreserve: 'Verified' },
-  { step: 'Approval / denial', backend: 'Approval logic + notifications', mustPreserve: 'Verified' },
-  { step: 'Lease workflow', backend: 'Lease + documents + signing', mustPreserve: 'Verified' },
 ]
 
 const routeMigrationMap = [
@@ -73,33 +81,251 @@ const authProtections = [
   'Supabase remains the only system of record for auth and business data',
 ]
 
-type FormState = {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  dob: string
-  consent: boolean
+const regressionMatrix = [
+  { step: 'Property selection', backend: 'Properties + property detail payload', mustPreserve: 'Verified' },
+  { step: 'Application start', backend: 'Application intake route + validation', mustPreserve: 'Verified' },
+  { step: 'Applicant info', backend: 'Applications table + consent checks', mustPreserve: 'Verified' },
+  { step: 'Submission', backend: 'receive-application edge function', mustPreserve: 'Verified' },
+  { step: 'Review', backend: 'Admin review / status transitions', mustPreserve: 'Verified' },
+  { step: 'Approval / denial', backend: 'Approval logic + notifications', mustPreserve: 'Verified' },
+  { step: 'Lease workflow', backend: 'Lease + documents + signing', mustPreserve: 'Verified' },
+]
+
+const stepLabels: Record<StepKey, string> = {
+  property: 'Property & applicant',
+  residency: 'Residency & occupancy',
+  employment: 'Employment & income',
+  references: 'References & contacts',
+  review: 'Review & submit',
 }
 
-const initialFormState: FormState = {
+const initialState: FormState = {
+  propertyAddress: '2457 Maple Creek Dr, Columbus, OH 43219',
   firstName: 'Jordan',
   lastName: 'Smith',
-  email: 'jordan@example.com',
+  email: 'jordan.smith@example.com',
   phone: '(555) 201-1042',
   dob: '1992-04-15',
+  ssnLast4: '1042',
+  currentAddress: '2145 Lakeview Ave, Columbus, OH 43230',
+  monthlyRent: '$1,950',
+  landlord: 'Northwind Realty',
+  employmentStatus: 'Full-time',
+  monthlyIncome: '$6,400',
+  employer: 'NorthStar Health Systems',
+  referenceName: 'Alicia Morgan',
+  referencePhone: '(555) 873-9202',
+  referenceRelation: 'Former roommate',
+  emergencyName: 'Marcus Smith',
+  emergencyPhone: '(555) 420-7720',
+  moveInDate: '2026-09-15',
   consent: true,
 }
 
-function App() {
-  const [step, setStep] = useState(1)
-  const [form, setForm] = useState<FormState>(initialFormState)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+const fieldsByStep: Record<StepKey, (keyof FormState)[]> = {
+  property: ['propertyAddress', 'firstName', 'lastName', 'email', 'phone', 'dob', 'ssnLast4'],
+  residency: ['currentAddress', 'monthlyRent', 'landlord', 'moveInDate'],
+  employment: ['employmentStatus', 'monthlyIncome', 'employer'],
+  references: ['referenceName', 'referencePhone', 'referenceRelation', 'emergencyName', 'emergencyPhone'],
+  review: ['consent'],
+}
 
-  const progress = useMemo(() => (step / 3) * 100, [step])
+const stepOrder: StepKey[] = ['property', 'residency', 'employment', 'references', 'review']
+
+function App() {
+  const [form, setForm] = useState<FormState>(initialState)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [submitted, setSubmitted] = useState(false)
+
+  const currentStep = stepOrder[stepIndex]
+  const progress = useMemo(() => ((stepIndex + 1) / stepOrder.length) * 100, [stepIndex])
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: undefined }))
+  }
+
+  const validateCurrentStep = () => {
+    const requiredKeys = fieldsByStep[currentStep]
+    const nextErrors: FormErrors = {}
+
+    for (const key of requiredKeys) {
+      const value = form[key]
+      const isEmpty = typeof value === 'string' ? value.trim() === '' : !value
+      if (isEmpty) {
+        nextErrors[key] = 'This field is required.'
+      }
+    }
+
+    if (currentStep === 'review' && !form.consent) {
+      nextErrors.consent = 'Consent is required to submit.'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const goNext = () => {
+    if (!validateCurrentStep()) return
+    if (stepIndex < stepOrder.length - 1) setStepIndex((current) => current + 1)
+  }
+
+  const goBack = () => {
+    if (stepIndex > 0) setStepIndex((current) => current - 1)
+  }
+
+  const handleSubmit = () => {
+    if (!validateCurrentStep()) return
+    setSubmitted(true)
+  }
+
+  const renderField = (
+    key: keyof FormState,
+    label: string,
+    type: 'text' | 'email' | 'tel' | 'date' | 'checkbox' = 'text',
+    placeholder?: string,
+  ) => {
+    const error = errors[key]
+    const value = form[key]
+
+    if (type === 'checkbox') {
+      return (
+        <label className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-200">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(event) => updateField(key, event.target.checked as never)}
+            className="mt-1 h-4 w-4 accent-cyan-500"
+          />
+          <span>
+            I acknowledge the application requirements and consent to review, approval, and status updates associated with this rental application.
+          </span>
+        </label>
+      )
+    }
+
+    return (
+      <label className="block">
+        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
+        <input
+          type={type}
+          value={String(value ?? '')}
+          placeholder={placeholder}
+          onChange={(event) => updateField(key, event.target.value as never)}
+          className={`w-full rounded-xl border bg-slate-950 px-3 py-2.5 text-slate-50 outline-none transition focus:border-cyan-400 ${error ? 'border-rose-500/70' : 'border-slate-700'}`}
+        />
+        {error && <span className="mt-1 block text-xs text-rose-300">{error}</span>}
+      </label>
+    )
+  }
+
+  const renderStepContent = () => {
+    if (submitted) {
+      return (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-emerald-100">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Application submitted</p>
+          <h3 className="mt-3 text-2xl font-semibold text-white">Application received</h3>
+          <p className="mt-2 text-sm text-emerald-100/90">
+            This state mirrors the legacy flow where an application ID is returned, payment coordination is arranged, and the application enters active review.
+          </p>
+          <div className="mt-5 rounded-xl border border-emerald-400/30 bg-slate-950/50 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Application ID</p>
+            <p className="mt-2 font-mono text-lg text-white">CP-20260830-7J2K4A</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(false)
+              setStepIndex(0)
+            }}
+            className="mt-5 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/20"
+          >
+            Review form again
+          </button>
+        </div>
+      )
+    }
+
+    switch (currentStep) {
+      case 'property':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Property context</p>
+              {renderField('propertyAddress', 'Property address applying for', 'text', 'Street, city, state, ZIP')}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('firstName', 'First name', 'text', 'First name')}
+              {renderField('lastName', 'Last name', 'text', 'Last name')}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('email', 'Email', 'email', 'email@example.com')}
+              {renderField('phone', 'Phone', 'tel', '(555) 000-0000')}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('dob', 'Date of birth', 'date')}
+              {renderField('ssnLast4', 'SSN last 4', 'text', '1234')}
+            </div>
+          </div>
+        )
+      case 'residency':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Current residence</p>
+              {renderField('currentAddress', 'Current address', 'text', 'Street, unit, city, state, ZIP')}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('monthlyRent', 'Current monthly rent', 'text', '$1,950')}
+              {renderField('landlord', 'Current landlord / property manager', 'text', 'Landlord name')}
+            </div>
+            {renderField('moveInDate', 'Desired move-in date', 'date')}
+          </div>
+        )
+      case 'employment':
+        return (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('employmentStatus', 'Employment status', 'text', 'Full-time')}
+              {renderField('monthlyIncome', 'Monthly income', 'text', '$6,400')}
+            </div>
+            {renderField('employer', 'Employer name', 'text', 'Employer')}
+          </div>
+        )
+      case 'references':
+        return (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('referenceName', 'Reference name', 'text', 'Reference full name')}
+              {renderField('referencePhone', 'Reference phone', 'tel', '(555) 000-0000')}
+            </div>
+            {renderField('referenceRelation', 'Reference relationship', 'text', 'Former roommate, employer, friend')}
+            <div className="grid gap-4 md:grid-cols-2">
+              {renderField('emergencyName', 'Emergency contact name', 'text', 'Emergency contact')}
+              {renderField('emergencyPhone', 'Emergency contact phone', 'tel', '(555) 000-0000')}
+            </div>
+          </div>
+        )
+      case 'review':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Review summary</p>
+              <div className="grid gap-3 md:grid-cols-2 text-sm text-slate-200">
+                <div><span className="text-slate-400">Applicant:</span> {form.firstName} {form.lastName}</div>
+                <div><span className="text-slate-400">Property:</span> {form.propertyAddress}</div>
+                <div><span className="text-slate-400">Income:</span> {form.monthlyIncome}</div>
+                <div><span className="text-slate-400">Move-in:</span> {form.moveInDate}</div>
+              </div>
+            </div>
+            {renderField('consent', 'Consent', 'checkbox')}
+            {errors.consent && <span className="block text-xs text-rose-300">{errors.consent}</span>}
+          </div>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -141,10 +367,10 @@ function App() {
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Protected flow</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Application intake migration shell</h2>
+                <h2 className="mt-2 text-xl font-semibold text-white">Application intake migration slice</h2>
               </div>
               <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                Step {step} / 3
+                {stepIndex + 1} / {stepOrder.length}
               </span>
             </div>
 
@@ -152,175 +378,53 @@ function App() {
               <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
 
-            {isSubmitted ? (
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-emerald-100">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Submission status</p>
-                <h3 className="mt-3 text-2xl font-semibold text-white">Application received</h3>
-                <p className="mt-2 text-sm text-emerald-100/90">
-                  This demonstrates the success state that must remain compatible with the current backend submission contract.
-                </p>
+            <div className="mb-5 flex flex-wrap gap-2">
+              {stepOrder.map((step, index) => (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => setStepIndex(index)}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                    index === stepIndex
+                      ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                      : 'border-slate-700 bg-slate-950 text-slate-300'
+                  }`}
+                >
+                  {stepLabels[step]}
+                </button>
+              ))}
+            </div>
+
+            {renderStepContent()}
+
+            {!submitted && (
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-800 pt-5">
                 <button
                   type="button"
-                  onClick={() => setIsSubmitted(false)}
-                  className="mt-5 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/20"
+                  onClick={goBack}
+                  disabled={stepIndex === 0}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Review form again
+                  Back
                 </button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {step === 1 && (
-                  <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">First name</span>
-                        <input
-                          value={form.firstName}
-                          onChange={(event) => updateField('firstName', event.target.value)}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none transition focus:border-cyan-400"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Last name</span>
-                        <input
-                          value={form.lastName}
-                          onChange={(event) => updateField('lastName', event.target.value)}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none transition focus:border-cyan-400"
-                        />
-                      </label>
-                    </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Email</span>
-                        <input
-                          type="email"
-                          value={form.email}
-                          onChange={(event) => updateField('email', event.target.value)}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none transition focus:border-cyan-400"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Phone</span>
-                        <input
-                          value={form.phone}
-                          onChange={(event) => updateField('phone', event.target.value)}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none transition focus:border-cyan-400"
-                        />
-                      </label>
-                    </div>
-
-                    <label className="block">
-                      <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Date of birth</span>
-                      <input
-                        type="date"
-                        value={form.dob}
-                        onChange={(event) => updateField('dob', event.target.value)}
-                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none transition focus:border-cyan-400"
-                      />
-                    </label>
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Current housing history</p>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <label className="block md:col-span-2">
-                          <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Current address</span>
-                          <input
-                            value="2145 Lakeview Ave"
-                            readOnly
-                            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Monthly rent</span>
-                          <input value="$1,950" readOnly className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none" />
-                        </label>
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Landlord name</span>
-                          <input value="Northwind Realty" readOnly className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none" />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Employment & income</p>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Employment status</span>
-                          <input value="Full-time" readOnly className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none" />
-                        </label>
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">Monthly income</span>
-                          <input value="$6,400" readOnly className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none" />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {step === 3 && (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Consent & submission</p>
-                      <label className="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={form.consent}
-                          onChange={(event) => updateField('consent', event.target.checked)}
-                          className="mt-1 h-4 w-4 accent-cyan-500"
-                        />
-                        <span>
-                          I acknowledge the application requirements and consent to the review and status updates associated with this rental application.
-                        </span>
-                      </label>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Protected backend contract</p>
-                      <ul className="space-y-2 text-sm text-slate-200">
-                        {appFormSnapshot.map((item) => (
-                          <li key={item} className="flex items-center gap-2">
-                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-5">
+                {stepIndex < stepOrder.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => setStep((current) => Math.max(1, current - 1))}
-                    disabled={step === 1}
-                    className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={goNext}
+                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
                   >
-                    Back
+                    Continue
                   </button>
-
-                  {step < 3 ? (
-                    <button
-                      type="button"
-                      onClick={() => setStep((current) => Math.min(3, current + 1))}
-                      className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
-                    >
-                      Continue
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsSubmitted(true)}
-                      className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
-                    >
-                      Submit application
-                    </button>
-                  )}
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
+                  >
+                    Submit application
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -369,6 +473,50 @@ function App() {
           </aside>
         </section>
 
+        <section className="mt-8 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Route map</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Legacy route → migration target</h3>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800">
+              <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
+                <thead className="bg-slate-950/80 text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Route</th>
+                    <th className="px-3 py-2 font-medium">Target</th>
+                    <th className="px-3 py-2 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900">
+                  {routeMigrationMap.map((item) => (
+                    <tr key={item.route}>
+                      <td className="px-3 py-2 text-slate-100">{item.route}</td>
+                      <td className="px-3 py-2 text-slate-300">{item.target}</td>
+                      <td className="px-3 py-2">
+                        <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth/session compatibility</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Protected session contract</h3>
+            <ul className="mt-5 space-y-3">
+              {authProtections.map((item) => (
+                <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">
+                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Protected flow</p>
@@ -412,50 +560,6 @@ function App() {
                 </tbody>
               </table>
             </div>
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Route map</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Legacy route → migration target</h3>
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800">
-              <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
-                <thead className="bg-slate-950/80 text-slate-300">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Route</th>
-                    <th className="px-3 py-2 font-medium">Target</th>
-                    <th className="px-3 py-2 font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 bg-slate-900">
-                  {routeMigrationMap.map((item) => (
-                    <tr key={item.route}>
-                      <td className="px-3 py-2 text-slate-100">{item.route}</td>
-                      <td className="px-3 py-2 text-slate-300">{item.target}</td>
-                      <td className="px-3 py-2">
-                        <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth/session compatibility</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Protected session contract</h3>
-            <ul className="mt-5 space-y-3">
-              {authProtections.map((item) => (
-                <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">
-                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
       </div>
