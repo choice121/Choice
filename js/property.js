@@ -1794,18 +1794,1037 @@ async function toggleSave(id, btn) {
   }
 }
 
-/* ── Admin property panel (Floating Edit Button) ────────────────────────── */
+/* ── Admin property panel ─────────────────────────────────────────────────
+   Injected immediately after renderProperty() when _isAdminViewer is true.
+   Provides:
+   • Sticky admin banner: status inline toggle, "Edit" button → slide-in
+     quick-edit drawer, "Full Edit ↗" → admin/property-detail.html (new tab)
+   • Admin info section: metrics + admin notes
+   • Quick-edit drawer: all core fields, photo reorder/delete, save + audit log
+   ──────────────────────────────────────────────────────────────────────── */
 function initAdminPropertyPanel(prop) {
-  if (document.getElementById('adminFloatingBtn')) return;
-  const btn = document.createElement('a');
-  btn.id = 'adminFloatingBtn';
-  btn.href = '/admin/property-detail.html?id=' + prop.id;
-  btn.target = '_blank';
-  btn.innerHTML = '<i class="fas fa-pen"></i> Edit in Admin';
-  btn.style.cssText = 'position:fixed;bottom:24px;left:24px;background:#0a1628;color:#fff;padding:14px 20px;border-radius:99px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 8px 24px rgba(10,22,40,0.3);z-index:9999;display:flex;align-items:center;gap:8px;font-family:"Inter",sans-serif;transition:transform 0.2s,box-shadow 0.2s;border:1px solid rgba(255,255,255,0.1)';
-  btn.onmouseover = () => { btn.style.transform = 'translateY(-4px)'; btn.style.boxShadow = '0 12px 32px rgba(10,22,40,0.4)'; };
-  btn.onmouseout = () => { btn.style.transform = 'none'; btn.style.boxShadow = '0 8px 24px rgba(10,22,40,0.3)'; };
-  document.body.appendChild(btn);
+  const STATUSES = ['active','rented','inactive','maintenance','draft','paused','archived'];
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // ── Inject drawer CSS once ──
+  if (!document.getElementById('adminDrawerCSS')) {
+    const style = document.createElement('style');
+    style.id = 'adminDrawerCSS';
+    style.textContent = `
+      #adminEditOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9990;display:none}
+      #adminEditOverlay.open{display:block}
+      #adminEditDrawer{position:fixed;right:0;top:0;bottom:0;width:min(580px,100%);background:#fff;z-index:9995;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.25);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+      #adminEditDrawer.open{transform:translateX(0)}
+      .adw-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #1e293b;background:#0a1628;flex-shrink:0}
+      .adw-header h3{margin:0;font-size:15px;font-weight:700;color:#e2e8f0;display:flex;align-items:center;gap:8px}
+      .adw-close{background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+      .adw-close:hover{background:rgba(255,255,255,.1);color:#fff}
+      .adw-body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+      .adw-dirty-bar{background:#f59e0b;color:#0a1628;text-align:center;font-size:11px;font-weight:800;padding:5px 8px;letter-spacing:.04em;display:none;flex-shrink:0}
+      .adw-dirty-bar.show{display:block}
+      .adw-section{padding:18px 20px;border-bottom:1px solid #f1f5f9}
+      .adw-section-title{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+      .adw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+      .adw-row.c1{grid-template-columns:1fr;margin-bottom:10px}
+      .adw-row.c3{grid-template-columns:1fr 1fr 1fr}
+      .adw-row:last-child{margin-bottom:0}
+      .adw-field{display:flex;flex-direction:column;gap:4px}
+      .adw-label{font-size:11px;font-weight:700;color:#374151;letter-spacing:.02em}
+      .adw-input{border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:border-color 150ms;width:100%;box-sizing:border-box}
+      .adw-input:focus{border-color:#006aff;box-shadow:0 0 0 3px rgba(0,106,255,.1)}
+      textarea.adw-input{resize:none;overflow:hidden;line-height:1.65;min-height:120px}
+      select.adw-input{cursor:pointer}
+      /* ── Description box ── */
+      .adw-desc-ta{resize:none;overflow:hidden;min-height:160px;line-height:1.7;font-size:14px;padding:14px 16px;border-width:2px;background:#fafcff;border-color:#c7d7f5;border-radius:10px;letter-spacing:.01em;color:#1a2133;caret-color:#006aff;-webkit-text-size-adjust:100%}
+      .adw-desc-ta:focus{border-color:#006aff;background:#fff;box-shadow:0 0 0 4px rgba(0,106,255,.08)}
+      .adw-desc-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px}
+      .adw-desc-bar-wrap{flex:1;height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden}
+      .adw-desc-bar{height:100%;width:0%;background:#006aff;border-radius:2px;transition:width 120ms,background 120ms}
+      .adw-desc-bar.warn{background:#f59e0b}
+      .adw-desc-bar.over{background:#ef4444}
+      .adw-desc-count{font-size:11px;color:#94a3b8;white-space:nowrap;flex-shrink:0}
+      .adw-desc-draft{font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);display:none}
+      .adw-desc-draft.show{display:inline-block}
+      @media(max-width:600px){.adw-desc-ta{font-size:16px;min-height:200px;padding:14px}}
+      .adw-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:4px}
+      .adw-photo-item{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;background:#f8fafc}
+      .adw-photo-item img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+      .adw-photo-order{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;pointer-events:none}
+      .adw-photo-cover{position:absolute;top:4px;left:4px;background:rgba(16,185,129,.9);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;pointer-events:none}
+      .adw-photo-del{position:absolute;top:4px;right:4px;background:rgba(220,38,38,.9);color:#fff;border:none;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;z-index:2}
+      .adw-photo-del:hover{background:#b91c1c}
+      .adw-photo-arrows{position:absolute;bottom:4px;right:4px;display:flex;gap:2px;z-index:2}
+      .adw-photo-arr{background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;padding:0}
+      .adw-photo-arr:hover{background:rgba(0,106,255,.85)}
+      .adw-upload-zone{border:2px dashed #cbd5e1;border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color 150ms,background 150ms;margin-top:10px;background:#f8fafc}
+      .adw-upload-zone:hover,.adw-upload-zone.drag-over{border-color:#006aff;background:#eff6ff}
+      .adw-upload-zone-icon{font-size:22px;color:#94a3b8;pointer-events:none}
+      .adw-upload-zone-text{font-size:12px;color:#64748b;margin:5px 0 0;pointer-events:none;line-height:1.5}
+      .adw-pending-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;margin-top:8px}
+      .adw-pending-item{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:2px solid #e2e8f0;background:#1e293b}
+      .adw-pending-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.38;pointer-events:none}
+      .adw-pending-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+      .adw-upload-prog{display:none;background:#f1f5f9;border-radius:8px;padding:10px 12px;margin-top:8px;border:1px solid #e2e8f0}
+      .adw-upload-prog-bar-wrap{height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin:5px 0 3px}
+      .adw-upload-prog-bar{height:100%;background:#006aff;width:0;transition:width 250ms;border-radius:3px}
+      .adw-upload-prog-row{font-size:11px;color:#475569;display:flex;justify-content:space-between}
+      .adw-footer{display:flex;gap:8px;padding:14px 20px;border-top:2px solid #e2e8f0;flex-shrink:0;background:#f8fafc;align-items:center}
+      .adw-save-btn{background:#006aff;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;flex:1}
+      .adw-save-btn:disabled{opacity:.6;cursor:not-allowed}
+      .adw-save-btn:hover:not(:disabled){background:#0054cc}
+      .adw-cancel-btn{background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+      .adw-cancel-btn:hover{border-color:#9ca3af}
+      .adw-full-link{background:#fff;color:#006aff;border:1.5px solid #006aff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap}
+      .adw-full-link:hover{background:#eff6ff}
+      .adw-toggle-wrap{display:flex;align-items:center;gap:10px;padding:6px 0}
+      .adw-toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+      .adw-toggle input{opacity:0;width:0;height:0;position:absolute}
+      .adw-slider{position:absolute;inset:0;background:#d1d5db;border-radius:22px;cursor:pointer;transition:background .2s}
+      .adw-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+      .adw-toggle input:checked+.adw-slider{background:#006aff}
+      .adw-toggle input:checked+.adw-slider::before{transform:translateX(18px)}
+      @media(max-width:480px){
+        #adminEditDrawer{width:100%}
+        .adw-row.c3{grid-template-columns:1fr 1fr}
+        .adw-footer{flex-wrap:wrap;gap:8px}
+        .adw-save-btn{order:-1;width:100%;flex:unset;padding:13px 0;font-size:14px}
+        .adw-cancel-btn,.adw-full-link{flex:1}
+        .adw-input{font-size:16px}
+        .adw-section{padding:14px 16px}
+        .adw-label{font-size:12px}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ── Admin banner ──
+  const banner = document.createElement('div');
+  banner.id = 'adminPropBanner';
+  banner.style.cssText = 'background:#0a1628;color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:3px solid #006aff;z-index:90;position:relative';
+  banner.innerHTML = `
+    <span style="background:#006aff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em;flex-shrink:0">ADMIN</span>
+    <span id="adminBannerTitle" style="font-size:13px;font-weight:600;flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(prop.title||'')}">${esc(prop.title||'Untitled')}</span>
+    <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+      <span style="font-size:11px;color:#64748b">Status:</span>
+      <select id="adminStatusSelect" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer">
+        ${STATUSES.map(s => `<option value="${s}"${s===prop.status?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+      </select>
+      <button id="adminStatusSaveBtn" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;display:none">Save</button>
+      <span id="adminStatusSpinner" style="color:#64748b;font-size:12px;display:none"><i class="fas fa-spinner fa-spin"></i></span>
+    </div>
+    <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+      <button id="adminQuickEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-pen"></i> Edit
+      </button>
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-arrow-up-right-from-square"></i> Full Edit
+      </a>
+      <a href="/admin/applications.html?property=${esc(prop.id)}" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-file-alt"></i> Apps
+      </a>
+      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-history"></i> Log
+      </a>
+    </div>`;
+
+  // Insert admin banner before the split container (not inside the sticky photo column)
+  const split = document.getElementById('propSplit');
+  if (split) split.parentNode.insertBefore(banner, split);
+  else document.body.prepend(banner);
+
+  // ── Status inline save ──
+  const sel = document.getElementById('adminStatusSelect');
+  const saveBtn = document.getElementById('adminStatusSaveBtn');
+  const spinner = document.getElementById('adminStatusSpinner');
+  let originalStatus = prop.status;
+
+  sel?.addEventListener('change', () => {
+    if (saveBtn) saveBtn.style.display = sel.value !== originalStatus ? '' : 'none';
+  });
+  saveBtn?.addEventListener('click', async () => {
+    const newStatus = sel.value;
+    saveBtn.disabled = true;
+    if (spinner) spinner.style.display = '';
+    try {
+      const res = await window.CP.Properties.update(prop.id, { status: newStatus });
+      if (!res.ok) throw new Error(res.error || 'Update failed');
+      try {
+        const session = await window.CP.Auth.getSession();
+        if (session?.user?.id) {
+          await window.CP.sb().from('admin_actions').insert({
+            action:'property.status_change', target_type:'property', target_id:prop.id,
+            metadata:{from:originalStatus, to:newStatus}, user_id:session.user.id,
+          });
+        }
+      } catch(e) {}
+      originalStatus = newStatus;
+      prop.status = newStatus;
+      saveBtn.style.display = 'none';
+      if (typeof showToast === 'function') showToast(`Status → ${newStatus}`, 'success');
+    } catch(e) {
+      if (typeof showToast === 'function') showToast('Failed: ' + e.message, 'error');
+      sel.value = originalStatus;
+      saveBtn.style.display = 'none';
+    } finally {
+      saveBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  });
+
+  // ── Admin info section ──
+  const section = document.createElement('div');
+  section.id = 'adminPropSection';
+  section.style.cssText = 'background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;margin:24px 0';
+  section.innerHTML = `
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="fas fa-shield-halved" style="color:#006aff"></i> Admin Info</span>
+      <button id="adminSectionEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-pen"></i> Edit Property
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:20px">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.views_count??0}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">Views</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.applications_count??0}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">Applications</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.saves_count??0}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">Saves</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+        <div id="adminInqCountVal" style="font-size:20px;font-weight:700;color:#1e293b">—</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">Inquiries</div>
+      </div>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">
+        <i class="fas fa-sticky-note"></i> Admin Notes (internal)
+      </label>
+      <textarea id="adminNotesField" rows="3" maxlength="2000"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:border-color 150ms"
+        placeholder="Private admin notes — not visible to landlords or tenants…"
+        onfocus="this.style.borderColor='#006aff'" onblur="this.style.borderColor='#d1d5db'">${esc(prop.admin_notes||'')}</textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span style="font-size:11px;color:#94a3b8">Not visible to landlords or tenants</span>
+        <button id="adminNotesSaveBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Save Notes</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
+      <span style="color:#d1d5db">·</span>
+      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>
+      <span style="color:#d1d5db">·</span>
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-arrow-up-right-from-square"></i> Full Edit</a>
+    </div>`;
+
+  const detailMain = document.getElementById('detailMain');
+  const breadcrumb = detailMain?.querySelector('.detail-breadcrumb');
+  if (breadcrumb) breadcrumb.parentNode.insertBefore(section, breadcrumb.nextSibling);
+  else if (detailMain) detailMain.prepend(section);
+
+  // Fetch real inquiries count — inquiries_count column doesn't exist on properties table
+  (async () => {
+    try {
+      const { count } = await window.CP.sb()
+        .from('inquiries')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_id', prop.id);
+      const el = document.getElementById('adminInqCountVal');
+      if (el) el.textContent = count ?? 0;
+    } catch(e) { /* non-fatal — leave placeholder dash */ }
+  })();
+
+  // Admin notes standalone save
+  document.getElementById('adminNotesSaveBtn')?.addEventListener('click', async () => {
+    const f = document.getElementById('adminNotesField');
+    const b = document.getElementById('adminNotesSaveBtn');
+    if (!f || !b) return;
+    b.disabled = true; b.textContent = 'Saving…';
+    try {
+      const res = await window.CP.Properties.update(prop.id, { admin_notes: f.value });
+      if (!res.ok) throw new Error(res.error || 'Save failed');
+      prop.admin_notes = f.value;
+      if (typeof showToast === 'function') showToast('Admin notes saved', 'success');
+    } catch(e) {
+      if (typeof showToast === 'function') showToast('Save failed: ' + e.message, 'error');
+    } finally { b.disabled = false; b.textContent = 'Save Notes'; }
+  });
+
+  // ── Wire quick-edit drawer ──
+  const { open: openDrawer } = buildAdminEditDrawer(prop);
+  document.getElementById('adminQuickEditBtn')?.addEventListener('click', openDrawer);
+  document.getElementById('adminSectionEditBtn')?.addEventListener('click', openDrawer);
+}
+
+/* ── Quick-edit drawer (slide-in from right, wired by initAdminPropertyPanel) ── */
+function buildAdminEditDrawer(prop) {
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','loft','mobile_home','commercial','other'];
+  const STATUSES   = ['active','rented','inactive','maintenance','draft','paused','archived'];
+  const LAUNDRY    = ['','In-unit','Washer/Dryer Hookups','Shared (On-site)','Laundromat Nearby','None'];
+  const HEATING    = ['','Central','Forced Air','Baseboard','Radiant','Heat Pump','Wall Unit','None'];
+  const COOLING    = ['','Central AC','Window Units','Mini-Split','None'];
+
+  // Working photo array (sorted by display_order)
+  let _photos = Array.isArray(prop.property_photos)
+    ? prop.property_photos.slice().sort((a,b) => (a.display_order??0)-(b.display_order??0))
+    : [];
+  let _dirty = false;
+
+  function imgThumb(url) {
+    if (!url) return '/assets/placeholder-property.jpg';
+    return window.CONFIG?.img ? window.CONFIG.img(url, 'strip') : url;
+  }
+
+  function renderPhotoGrid() {
+    if (!_photos.length) return '<p style="color:#94a3b8;font-size:13px;margin:0">No photos yet. Use Full Edit to upload photos.</p>';
+    return _photos.map((ph, i) => `
+      <div class="adw-photo-item">
+        <img src="${esc(imgThumb(ph.url))}" alt="Photo ${i+1}" loading="lazy">
+        ${i===0 ? '<div class="adw-photo-cover">Cover</div>' : ''}
+        <div class="adw-photo-order">${i+1}</div>
+        <button class="adw-photo-del" data-del="${i}" title="Delete photo" type="button">✕</button>
+        <div class="adw-photo-arrows">
+          ${i>0 ? `<button class="adw-photo-arr" data-mv="${i}" data-dir="-1" type="button" title="Move earlier">↑</button>` : ''}
+          ${i<_photos.length-1 ? `<button class="adw-photo-arr" data-mv="${i}" data-dir="1" type="button" title="Move later">↓</button>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Build DOM ──
+  const overlay = document.createElement('div');
+  overlay.id = 'adminEditOverlay';
+  const drawer = document.createElement('div');
+  drawer.id = 'adminEditDrawer';
+
+  const p = prop;
+  const stateOpts   = ['<option value="">— State —</option>',...US_STATES.map(s => `<option value="${s}"${p.state===s?' selected':''}>${s}</option>`)].join('');
+  const typeOpts    = PROP_TYPES.map(t => `<option value="${t}"${p.property_type===t?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1).replace(/_/g,' ')}</option>`).join('');
+  const statusOpts  = STATUSES.map(s => `<option value="${s}"${p.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('');
+  const laundryOpts = LAUNDRY.map(v => `<option value="${v}"${p.laundry_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
+  const heatingOpts = HEATING.map(v => `<option value="${v}"${p.heating_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
+  const coolingOpts = COOLING.map(v => `<option value="${v}"${p.cooling_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
+  const availDate   = p.available_date ? p.available_date.split('T')[0] : '';
+
+  drawer.innerHTML = `
+    <div class="adw-header">
+      <h3><i class="fas fa-pen" style="color:#006aff"></i> Edit Property</h3>
+      <button class="adw-close" id="adwCloseBtn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="adw-dirty-bar" id="adwDirtyBar">⚠ Unsaved changes</div>
+    <div class="adw-body">
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-tag"></i> Basic Info</div>
+        <div class="adw-row c1">
+          <div class="adw-field">
+            <label class="adw-label" for="adwTitle">Title</label>
+            <input class="adw-input" id="adwTitle" type="text" value="${esc(p.title||'')}" maxlength="200" placeholder="Property title">
+          </div>
+        </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwStatus">Status</label>
+            <select class="adw-input" id="adwStatus">${statusOpts}</select>
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwPropType">Property Type</label>
+            <select class="adw-input" id="adwPropType">${typeOpts}</select>
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-dollar-sign"></i> Pricing</div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwRent">Monthly Rent ($)</label>
+            <input class="adw-input" id="adwRent" type="number" min="0" value="${p.monthly_rent??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwDeposit">Security Deposit ($)</label>
+            <input class="adw-input" id="adwDeposit" type="number" min="0" value="${p.security_deposit??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwAppFee">App Fee ($)</label>
+            <input class="adw-input" id="adwAppFee" type="number" min="0" value="${p.application_fee??''}">
+          </div>
+        </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwAvailDate">Available Date</label>
+            <input class="adw-input" id="adwAvailDate" type="date" value="${esc(availDate)}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwMinLease">Min Lease (months)</label>
+            <input class="adw-input" id="adwMinLease" type="number" min="1" value="${p.minimum_lease_months??''}">
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-bed"></i> Specs</div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwBeds">Bedrooms</label>
+            <input class="adw-input" id="adwBeds" type="number" min="0" value="${p.bedrooms??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwBaths">Bathrooms</label>
+            <input class="adw-input" id="adwBaths" type="number" min="0" step="0.5" value="${p.bathrooms??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwHalfBaths">Half Baths</label>
+            <input class="adw-input" id="adwHalfBaths" type="number" min="0" value="${p.half_bathrooms??''}">
+          </div>
+        </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwSqft">Sq Footage</label>
+            <input class="adw-input" id="adwSqft" type="number" min="0" value="${p.square_footage??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwYearBuilt">Year Built</label>
+            <input class="adw-input" id="adwYearBuilt" type="number" min="1800" max="2030" value="${p.year_built??''}">
+          </div>
+        </div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwLaundry">Laundry</label>
+            <select class="adw-input" id="adwLaundry">${laundryOpts}</select>
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwHeating">Heating</label>
+            <select class="adw-input" id="adwHeating">${heatingOpts}</select>
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwCooling">Cooling</label>
+            <select class="adw-input" id="adwCooling">${coolingOpts}</select>
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-location-dot"></i> Address</div>
+        <div class="adw-row c1">
+          <div class="adw-field">
+            <label class="adw-label" for="adwAddress">Street Address</label>
+            <input class="adw-input" id="adwAddress" type="text" value="${esc(p.address||'')}" placeholder="123 Main St">
+          </div>
+        </div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwCity">City</label>
+            <input class="adw-input" id="adwCity" type="text" value="${esc(p.city||'')}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwState">State</label>
+            <select class="adw-input" id="adwState">${stateOpts}</select>
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwZip">ZIP</label>
+            <input class="adw-input" id="adwZip" type="text" value="${esc(p.zip||'')}" maxlength="10">
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title" style="justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <span><i class="fas fa-align-left"></i> Description</span>
+          <span class="adw-desc-draft" id="adwDescDraft">Draft restored</span>
+        </div>
+        <div class="adw-field">
+          <textarea class="adw-input adw-desc-ta" id="adwDesc" maxlength="5000" placeholder="Describe the property…">${esc(p.description||'')}</textarea>
+          <div class="adw-desc-meta">
+            <div class="adw-desc-bar-wrap"><div class="adw-desc-bar" id="adwDescBar"></div></div>
+            <span class="adw-desc-count"><span id="adwDescCount">${(p.description||'').length}</span> / 5000</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-sliders"></i> Options</div>
+        <div class="adw-toggle-wrap">
+          <label class="adw-toggle">
+            <input type="checkbox" id="adwFeatured"${p.featured?' checked':''}>
+            <span class="adw-slider"></span>
+          </label>
+          <span style="font-size:13px;color:#374151;font-weight:500">Featured listing</span>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-images"></i> Photos (<span id="adwPhotoCount">${_photos.length}</span>)</div>
+        <div class="adw-photo-grid" id="adwPhotoGrid">${renderPhotoGrid()}</div>
+        <div class="adw-upload-zone" id="adwUploadZone" role="button" tabindex="0" aria-label="Upload photos">
+          <div class="adw-upload-zone-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+          <div class="adw-upload-zone-text">Drop photos here or <strong>click to browse</strong><br><span style="font-size:10.5px;color:#94a3b8">JPG, PNG, WebP · max 10 MB each</span></div>
+          <input type="file" id="adwFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none">
+        </div>
+        <div class="adw-pending-grid" id="adwPendingGrid"></div>
+        <div class="adw-upload-prog" id="adwUploadProg">
+          <div class="adw-upload-prog-row"><span id="adwUploadText">Uploading…</span><span id="adwUploadPct">0%</span></div>
+          <div class="adw-upload-prog-bar-wrap"><div class="adw-upload-prog-bar" id="adwUploadBar"></div></div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-sticky-note"></i> Admin Notes (internal only)</div>
+        <div class="adw-field">
+          <textarea class="adw-input" id="adwAdminNotes" rows="3" maxlength="2000" placeholder="Private admin notes…">${esc(p.admin_notes||'')}</textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="adw-footer">
+      <button class="adw-cancel-btn" id="adwCancelBtn" type="button">Cancel</button>
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" class="adw-full-link">
+        <i class="fas fa-arrow-up-right-from-square"></i> Full Edit
+      </a>
+      <button class="adw-save-btn" id="adwSaveBtn" type="button">
+        <i class="fas fa-floppy-disk"></i> Save Changes
+      </button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(drawer);
+
+  // ── Draft backup key (per-property, sessionStorage only) ──
+  const _DRAFT_KEY = `adw_desc_${prop.id}`;
+
+  // ── Auto-grow textarea ──
+  function _autoGrow(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(ta.scrollHeight, 160) + 'px';
+  }
+
+  // ── Open / close ──
+  function openDrawer() {
+    overlay.classList.add('open');
+    drawer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // Restore sessionStorage draft (only if DB version hasn't changed since draft was saved)
+    const ta = document.getElementById('adwDesc');
+    const draftEl = document.getElementById('adwDescDraft');
+    if (ta) {
+      try {
+        const saved = sessionStorage.getItem(_DRAFT_KEY);
+        if (saved && saved !== ta.value) {
+          ta.value = saved;
+          if (draftEl) draftEl.classList.add('show');
+          _syncDescMeta(ta);
+          markDirty();
+        }
+      } catch(e) {}
+      _autoGrow(ta);
+    }
+    setTimeout(() => document.getElementById('adwTitle')?.focus(), 320);
+  }
+  function closeDrawer() {
+    if (_dirty && !confirm('You have unsaved changes. Close without saving?')) return;
+    overlay.classList.remove('open');
+    drawer.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  overlay.addEventListener('click', closeDrawer);
+  document.getElementById('adwCloseBtn').addEventListener('click', closeDrawer);
+  document.getElementById('adwCancelBtn').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+  });
+
+  // ── Dirty tracking ──
+  const dirtyBar = document.getElementById('adwDirtyBar');
+  const markDirty = () => { _dirty = true; dirtyBar?.classList.add('show'); };
+  drawer.querySelectorAll('.adw-input').forEach(el => {
+    el.addEventListener('input', markDirty);
+    el.addEventListener('change', markDirty);
+  });
+  document.getElementById('adwFeatured')?.addEventListener('change', markDirty);
+
+  // ── Description — auto-grow + counter bar + draft backup ──
+  function _syncDescMeta(ta) {
+    const len = ta.value.length;
+    const pct = Math.min(100, (len / 5000) * 100);
+    const countEl = document.getElementById('adwDescCount');
+    const barEl   = document.getElementById('adwDescBar');
+    if (countEl) countEl.textContent = len;
+    if (barEl) {
+      barEl.style.width = pct + '%';
+      barEl.classList.toggle('warn', pct >= 70 && pct < 90);
+      barEl.classList.toggle('over', pct >= 90);
+    }
+    _autoGrow(ta);
+  }
+
+  let _draftTimer = null;
+  const descTA = document.getElementById('adwDesc');
+  if (descTA) {
+    // Initial size + bar state
+    _syncDescMeta(descTA);
+    descTA.addEventListener('input', () => {
+      _syncDescMeta(descTA);
+      markDirty();
+      // Debounced draft save
+      clearTimeout(_draftTimer);
+      _draftTimer = setTimeout(() => {
+        try { sessionStorage.setItem(_DRAFT_KEY, descTA.value); } catch(e) {}
+      }, 800);
+    });
+    // On mobile: scroll field into view when keyboard opens
+    descTA.addEventListener('focus', () => {
+      setTimeout(() => descTA.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 350);
+    });
+  }
+
+  // ── Photo management ──
+  const photoGrid = document.getElementById('adwPhotoGrid');
+
+  function refreshPhotos(markDirtyState = true) {
+    if (photoGrid) photoGrid.innerHTML = renderPhotoGrid();
+    const countEl = document.getElementById('adwPhotoCount');
+    if (countEl) countEl.textContent = _photos.length;
+    bindPhotos();
+    if (markDirtyState) markDirty();
+  }
+  function bindPhotos() {
+    photoGrid?.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.del);
+        const ph  = _photos[idx];
+        if (!ph) return;
+        if (!confirm(`Delete photo ${idx+1}? This cannot be undone.`)) return;
+        if (!ph.id) {
+          _photos.splice(idx, 1);
+          refreshPhotos(false);
+          return;
+        }
+
+        // Quick-edit photo removal is immediate. Previously this only queued
+        // the ID in memory, so tapping X appeared to do nothing unless the
+        // user also found and pressed Save Changes.
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+          const { data, error } = await window.CP.sb()
+            .from('property_photos')
+            .delete()
+            .eq('id', ph.id)
+            .select('id');
+          if (error) throw new Error(error.message || 'Photo deletion failed');
+          if (!Array.isArray(data) || data.length !== 1) {
+            throw new Error('Photo could not be deleted. It may already be gone or you may not have permission.');
+          }
+
+          _photos.splice(idx, 1);
+          refreshPhotos(false);
+
+          // Keep display_order contiguous after an immediate deletion.
+          const orderResults = await Promise.all(_photos.map((photo, order) =>
+            window.CP.sb().from('property_photos')
+              .update({ display_order: order })
+              .eq('id', photo.id)
+          ));
+          const orderError = orderResults.find(result => result.error)?.error;
+          if (orderError && typeof showToast === 'function') {
+            showToast('Photo deleted, but gallery order could not be refreshed.', 'error');
+          }
+
+          // Best-effort ImageKit cleanup; the database row is already gone.
+          if (ph.file_id && window.CONFIG?.SUPABASE_URL && window.CONFIG?.SUPABASE_ANON_KEY) {
+            window.CP.Auth.getSession().then(session => {
+              if (!session?.access_token) return;
+              fetch(`${window.CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': window.CONFIG.SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ fileId: ph.file_id }),
+              }).catch(() => {});
+            }).catch(() => {});
+          }
+
+          if (typeof showToast === 'function') showToast('Photo deleted.', 'success');
+        } catch (error) {
+          btn.disabled = false;
+          btn.textContent = '✕';
+          if (typeof showToast === 'function') {
+            showToast('Photo deletion failed: ' + (error.message || error), 'error');
+          }
+        }
+      });
+    });
+    photoGrid?.querySelectorAll('[data-mv]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.mv);
+        const dir = parseInt(btn.dataset.dir);
+        const ni  = idx + dir;
+        if (ni < 0 || ni >= _photos.length) return;
+        [_photos[idx], _photos[ni]] = [_photos[ni], _photos[idx]];
+        refreshPhotos();
+      });
+    });
+  }
+  bindPhotos();
+
+  // ── Photo upload helpers ──────────────────────────────────────────────────
+  const _pendingMap = new Map();
+  let _uploading = false;
+
+  async function _adwCompress(file, maxPx = 2048, quality = 0.92) {
+    let bmp;
+    try { bmp = await createImageBitmap(file); } catch {
+      if (file.size > 4 * 1024 * 1024) throw new Error(`"${file.name}" is too large (${(file.size / 1048576).toFixed(1)} MB). Use a smaller image.`);
+      return file;
+    }
+    const scale = Math.min(1, maxPx / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(bmp.width  * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close?.();
+    return new Promise((res, rej) =>
+      canvas.toBlob(b => b ? res(b) : rej(new Error('Compression failed')), 'image/jpeg', quality)
+    );
+  }
+
+  function _adwToBase64(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload  = () => res(r.result);
+      r.onerror = () => rej(new Error('Failed to read file'));
+      r.readAsDataURL(blob);
+    });
+  }
+
+  async function _adwUploadPhoto(file, onProgress) {
+    if (!window.CONFIG?.SUPABASE_URL || !window.CONFIG?.SUPABASE_ANON_KEY)
+      throw new Error('Upload service not configured');
+    const { data: { session } } = await window.CP.sb().auth.getSession();
+    if (!session?.access_token) throw new Error('Session expired — please log back in');
+    onProgress?.(5);
+    const compressed = await _adwCompress(file);
+    onProgress?.(20);
+    const base64 = await _adwToBase64(compressed);
+    onProgress?.(35);
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const folder   = `/properties/${prop.id}`;
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) onProgress?.(40 + Math.round((e.loaded / e.total) * 45));
+      };
+      xhr.onload = () => {
+        onProgress?.(100);
+        let d; try { d = JSON.parse(xhr.responseText); } catch { d = {}; }
+        if (d.success) resolve({ url: d.url, fileId: d.fileId ?? null });
+        else reject(new Error(d.error || `Upload failed (HTTP ${xhr.status})`));
+      };
+      xhr.onerror   = () => reject(new Error('Network error — check connection'));
+      xhr.ontimeout = () => reject(new Error('Upload timed out'));
+      xhr.timeout   = 55_000;
+      xhr.open('POST', `${window.CONFIG.SUPABASE_URL}/functions/v1/imagekit-upload`);
+      xhr.setRequestHeader('apikey',        window.CONFIG.SUPABASE_ANON_KEY);
+      xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+      xhr.setRequestHeader('Content-Type',  'application/json');
+      xhr.send(JSON.stringify({ fileData: base64, fileName: safeName, folder }));
+    });
+  }
+
+  function _adwAddPending(file) {
+    if (['image/heic', 'image/heif'].includes(file.type.toLowerCase()) || /\.heic$/i.test(file.name)) {
+      if (typeof showToast === 'function') showToast(`"${file.name}" is HEIC. Convert to JPG first.`, 'error'); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      if (typeof showToast === 'function') showToast(`"${file.name}" exceeds the 10 MB limit.`, 'error'); return;
+    }
+    for (const f of _pendingMap.values()) { if (f.name === file.name && f.size === file.size) return; }
+    const sid  = `adwp${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+    _pendingMap.set(sid, file);
+
+    const item = document.createElement('div');
+    item.className = 'adw-pending-item';
+    item.dataset.pendingId = sid;
+    const shortName = file.name.length > 18 ? file.name.slice(0, 15) + '…' : file.name;
+    item.innerHTML = `<div class="adw-pending-overlay" id="adw-ovl-${sid}">
+      <i class="fas fa-clock" style="color:rgba(255,255,255,.8);font-size:13px"></i>
+      <span style="color:#fff;font-size:.62rem;text-align:center;word-break:break-word;max-width:76px">${esc(shortName)}</span>
+      <button data-rm-pending="${sid}" type="button" style="padding:1px 6px;border-radius:3px;font-size:.6rem;background:rgba(220,38,38,.85);color:#fff;border:none;cursor:pointer;margin-top:1px">✕ Remove</button>
+    </div>`;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = document.createElement('img'); img.src = ev.target.result; img.alt = '';
+      item.insertBefore(img, item.firstChild);
+    };
+    reader.readAsDataURL(file);
+    document.getElementById('adwPendingGrid')?.appendChild(item);
+    markDirty();
+  }
+
+  // Pending grid — remove a queued file
+  document.getElementById('adwPendingGrid')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-rm-pending]');
+    if (!btn || _uploading) return;
+    const sid = btn.dataset.rmPending;
+    _pendingMap.delete(sid);
+    document.querySelector(`[data-pending-id="${sid}"]`)?.remove();
+  });
+
+  // File input
+  const adwFileInput = document.getElementById('adwFileInput');
+  adwFileInput?.addEventListener('change', e => {
+    [...e.target.files].forEach(_adwAddPending);
+    adwFileInput.value = '';
+  });
+
+  // Upload zone — click to browse
+  const adwUploadZone = document.getElementById('adwUploadZone');
+  adwUploadZone?.addEventListener('click', e => {
+    if (!e.target.closest('[data-rm-pending]')) adwFileInput?.click();
+  });
+  adwUploadZone?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); adwFileInput?.click(); }
+  });
+  adwUploadZone?.addEventListener('dragover',  e => { e.preventDefault(); adwUploadZone.classList.add('drag-over'); });
+  adwUploadZone?.addEventListener('dragleave', () => adwUploadZone.classList.remove('drag-over'));
+  adwUploadZone?.addEventListener('drop', e => {
+    e.preventDefault(); adwUploadZone.classList.remove('drag-over');
+    [...e.dataTransfer.files].forEach(_adwAddPending);
+  });
+
+  // ── Save ──
+  document.getElementById('adwSaveBtn').addEventListener('click', async () => {
+    const sb = document.getElementById('adwSaveBtn');
+    sb.disabled = true;
+    sb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+    const num = (id) => {
+      const v = document.getElementById(id)?.value;
+      return v !== '' && v != null ? parseFloat(v) : null;
+    };
+    const int = (id) => {
+      const v = document.getElementById(id)?.value;
+      return v !== '' && v != null ? parseInt(v) : null;
+    };
+    const str = (id) => document.getElementById(id)?.value.trim() || null;
+
+    const payload = {
+      title:                str('adwTitle'),
+      status:               document.getElementById('adwStatus')?.value || prop.status,
+      property_type:        document.getElementById('adwPropType')?.value || null,
+      monthly_rent:         num('adwRent'),
+      security_deposit:     num('adwDeposit'),
+      application_fee:      num('adwAppFee'),
+      bedrooms:             int('adwBeds'),
+      bathrooms:            num('adwBaths'),
+      half_bathrooms:       int('adwHalfBaths'),
+      square_footage:       int('adwSqft'),
+      year_built:           int('adwYearBuilt'),
+      minimum_lease_months: int('adwMinLease'),
+      laundry_type:         document.getElementById('adwLaundry')?.value || null,
+      heating_type:         document.getElementById('adwHeating')?.value || null,
+      cooling_type:         document.getElementById('adwCooling')?.value || null,
+      address:              str('adwAddress'),
+      city:                 str('adwCity'),
+      state:                document.getElementById('adwState')?.value || null,
+      zip:                  str('adwZip'),
+      available_date:       document.getElementById('adwAvailDate')?.value || null,
+      description:          str('adwDesc'),
+      admin_notes:          str('adwAdminNotes'),
+      featured:             document.getElementById('adwFeatured')?.checked ?? false,
+      updated_at:           new Date().toISOString(),
+    };
+
+    try {
+      // 1. Save core property fields
+      const res = await window.CP.Properties.update(prop.id, payload);
+      if (!res.ok) throw new Error(res.error || 'Property update failed');
+
+      // 2. Persist photo order. Photo deletions are applied immediately when
+      // the X button is tapped, so Save Changes only needs to preserve order.
+      await Promise.all(_photos.map((ph, i) =>
+        window.CP.sb().from('property_photos').update({ display_order: i }).eq('id', ph.id)
+      ));
+
+      // 3. Upload pending new photos
+      if (_pendingMap.size > 0) {
+        _uploading = true;
+        const uploadProg = document.getElementById('adwUploadProg');
+        const uploadBar  = document.getElementById('adwUploadBar');
+        const uploadText = document.getElementById('adwUploadText');
+        const uploadPct  = document.getElementById('adwUploadPct');
+        if (uploadProg) uploadProg.style.display = '';
+
+        const entries    = [..._pendingMap.entries()];
+        const total      = entries.length;
+        let   successCnt = 0;
+
+        for (let idx = 0; idx < total; idx++) {
+          const [sid, file] = entries[idx];
+          const ovlEl  = document.getElementById(`adw-ovl-${sid}`);
+          const itemEl = document.querySelector(`[data-pending-id="${sid}"]`);
+          sb.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${idx + 1}/${total}…`;
+          if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#60a5fa;font-size:13px"></i>';
+
+          const pctBase = Math.round((idx / total) * 100);
+          if (uploadBar)  uploadBar.style.width  = pctBase + '%';
+          if (uploadPct)  uploadPct.textContent  = pctBase + '%';
+          if (uploadText) uploadText.textContent = `Uploading ${idx + 1} of ${total}…`;
+
+          try {
+            const result = await _adwUploadPhoto(file, (pct) => {
+              const overall = Math.round(((idx + pct / 100) / total) * 100);
+              if (uploadBar) uploadBar.style.width = overall + '%';
+              if (uploadPct) uploadPct.textContent = overall + '%';
+            });
+            const { error: insErr } = await window.CP.sb()
+              .rpc('add_property_photo', {
+                p_property_id:  prop.id,
+                p_url:          result.url,
+                p_file_id:      result.fileId || null,
+                p_display_order: null,
+                p_is_hero:      false,
+              });
+            if (insErr) throw new Error(insErr.message);
+            successCnt++;
+            _pendingMap.delete(sid);
+            if (ovlEl)  ovlEl.innerHTML = '<i class="fas fa-check-circle" style="color:#4ade80;font-size:15px"></i>';
+            if (itemEl) itemEl.style.borderColor = 'rgba(34,197,94,.7)';
+          } catch (err) {
+            const msg = String(err?.message || err).slice(0, 70);
+            if (ovlEl)  ovlEl.innerHTML = `<i class="fas fa-times-circle" style="color:#f87171;font-size:13px"></i><span style="color:#f87171;font-size:.6rem;text-align:center;word-break:break-word;max-width:76px">${esc(msg)}</span>`;
+            if (itemEl) itemEl.style.borderColor = 'rgba(239,68,68,.6)';
+          }
+          if (idx < total - 1) await new Promise(r => setTimeout(r, 400));
+        }
+
+        if (uploadBar)  uploadBar.style.width  = '100%';
+        if (uploadPct)  uploadPct.textContent  = '100%';
+        _uploading = false;
+
+        if (successCnt > 0) {
+          if (typeof showToast === 'function') showToast(`${successCnt} photo${successCnt > 1 ? 's' : ''} uploaded!`, 'success');
+          // Audit log for uploads (non-blocking)
+          try {
+            const session = await window.CP.Auth.getSession();
+            if (session?.user?.id) {
+              await window.CP.sb().from('admin_actions').insert({
+                action: 'property.photo_upload', target_type: 'property',
+                target_id: prop.id, metadata: { count: successCnt },
+                user_id: session.user.id,
+              });
+            }
+          } catch(e) {}
+        } else {
+          if (typeof showToast === 'function') showToast('Photo uploads failed — see errors above.', 'error');
+        }
+
+        // Fade out progress bar after a moment
+        setTimeout(() => { if (uploadProg) uploadProg.style.display = 'none'; }, 1500);
+      }
+
+      // 4. Audit log for property edit
+      try {
+        const session = await window.CP.Auth.getSession();
+        if (session?.user?.id) {
+          await window.CP.sb().from('admin_actions').insert({
+            action:'property.edit', target_type:'property', target_id:prop.id,
+            metadata:{ edited_fields: Object.keys(payload).filter(k => payload[k] !== null && k !== 'updated_at') },
+            user_id: session.user.id,
+          });
+        }
+      } catch(e) {}
+
+      // 5. Sync in-memory prop + visible UI
+      Object.assign(prop, payload);
+
+      // ── Admin chrome ──
+      const bannerTitle = document.getElementById('adminBannerTitle');
+      if (bannerTitle && payload.title) { bannerTitle.textContent = payload.title; bannerTitle.title = payload.title; }
+      const bannerSel = document.getElementById('adminStatusSelect');
+      if (bannerSel && payload.status) bannerSel.value = payload.status;
+      const notesField = document.getElementById('adminNotesField');
+      if (notesField) notesField.value = payload.admin_notes || '';
+
+      // ── Live property page DOM patch (no refresh needed) ──
+      const _esc2 = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // Title
+      if (payload.title) {
+        const el = document.getElementById('detailTitle');
+        if (el) el.textContent = payload.title;
+        document.title = payload.title + ' — Choice Properties';
+      }
+      // Price — every occurrence on the page
+      if (payload.monthly_rent != null) {
+        const rentFmt = '$' + Number(payload.monthly_rent).toLocaleString();
+        const dp = document.getElementById('detailPrice');
+        if (dp) dp.innerHTML = rentFmt + '<span>/month</span>';
+        const sp = document.getElementById('sidebarPrice');
+        if (sp) sp.innerHTML = rentFmt + '<span>/month</span>';
+        const sr = document.getElementById('sidebarRent');
+        if (sr) sr.textContent = rentFmt;
+        const mb = document.getElementById('mobBarRent');
+        if (mb) mb.textContent = rentFmt + '/mo';
+      }
+      // Address
+      if (payload.address || payload.city || payload.state || payload.zip) {
+        const ae = document.getElementById('detailAddress');
+        if (ae) ae.innerHTML = '<i class="fas fa-map-marker-alt"></i> '
+          + _esc2(payload.address||prop.address||'') + ', '
+          + _esc2(payload.city||prop.city||'') + ', '
+          + _esc2(payload.state||prop.state||'') + ' '
+          + _esc2(payload.zip||prop.zip||'');
+      }
+      // Description — re-render paragraphs + truncation
+      if (payload.description != null) {
+        const de = document.getElementById('detailDesc');
+        if (de) {
+          const nxt = de.nextElementSibling;
+          if (nxt?.classList.contains('detail-read-more')) nxt.remove();
+          de.classList.remove('truncated');
+          const paras = (payload.description||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+          de.innerHTML = paras.length
+            ? paras.map(s=>`<p>${_esc2(s)}</p>`).join('')
+            : '<p>No additional description provided.</p>';
+          if ((payload.description||'').length > 300) {
+            de.classList.add('truncated');
+            const rm = document.createElement('button');
+            rm.className = 'detail-read-more';
+            rm.innerHTML = '<i class="fas fa-chevron-down" style="font-size:11px"></i> Read more';
+            rm.addEventListener('click', () => { de.classList.remove('truncated'); rm.remove(); });
+            de.insertAdjacentElement('afterend', rm);
+          }
+        }
+      }
+
+      // Clear sessionStorage draft on successful save
+      try { sessionStorage.removeItem(_DRAFT_KEY); } catch(e) {}
+      const draftEl2 = document.getElementById('adwDescDraft');
+      if (draftEl2) draftEl2.classList.remove('show');
+
+      _dirty = false;
+      dirtyBar?.classList.remove('show');
+      if (typeof showToast === 'function') showToast('Saved — page updated ✓', 'success');
+      setTimeout(closeDrawer, 700);
+
+    } catch(e) {
+      _uploading = false;
+      if (typeof showToast === 'function') showToast('Save failed: ' + e.message, 'error');
+    } finally {
+      sb.disabled = false;
+      sb.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Changes';
+    }
+  });
+
+  return { open: openDrawer, close: closeDrawer };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
