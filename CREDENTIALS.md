@@ -12,7 +12,7 @@ This file covers everything a new developer or AI assistant needs to get fully o
 | **Chrome Extension** | `chrome-extension/` | Secondary tool. Adds a "Save to Pipeline" button on open listing pages in your browser. |
 | **Live site** | Cloudflare Pages | https://choice-properties-site.pages.dev — NOT hosted on Replit. Replit only runs the scraper. |
 
-> **AI assistants:** Read `replit.md` first. It has the full project overview, architecture diagram, and scraping instructions. Do not treat this as a Chrome extension project.
+> **AI assistants and developers:** Read [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) first. It has the project overview, architecture, deployment, and credential boundaries. This is not a Replit-hosted project.
 
 ---
 
@@ -36,7 +36,7 @@ All credentials are in `scraper/.env` — already committed, nothing to configur
 
 Need to scrape a new city? Copy any existing batch script and update the locations/criteria. See `scraper/PIPELINE_USAGE.md` for the full template.
 
-**For AI-assisted scraping jobs:** use `SCRAPING_PROMPT.md` as the copy-paste prompt template.
+**For AI-assisted scraping jobs:** use [docs/SCRAPING_GUIDE.md](docs/SCRAPING_GUIDE.md) as the copy-paste workflow and prompt template.
 
 ---
 
@@ -99,8 +99,8 @@ Scripts that run on Replit use the Supabase service role key, which is NOT commi
 
 | File | What it covers |
 |---|---|
-| `replit.md` | Full project overview, architecture, how to run scraping jobs, file map |
-| `SCRAPING_PROMPT.md` | Copy-paste prompt for AI-assisted scraping jobs |
+| `docs/PROJECT_GUIDE.md` | Full project overview, architecture, deployment, and credential boundaries |
+| `docs/SCRAPING_GUIDE.md` | Copy-paste workflow for AI-assisted scraping jobs |
 | `scraper/PIPELINE_USAGE.md` | `PipelineOrchestrator` API, `BatchCriteria` reference, new-city template |
 | `scraper/PLATFORM_RULES.md` | Mandatory rules enforced automatically by `enrichment.py` |
 | `scraper/SEARCH_PREFERENCES.md` | Active markets and their criteria |

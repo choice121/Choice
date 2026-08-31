@@ -6,7 +6,6 @@
       "name": "choice-properties",
       "dependencies": {
         "apify-client": "^2.25.0",
-        "express": "^5.2.1",
       },
     },
   },

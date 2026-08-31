@@ -1,10 +1,11 @@
-const express = require('express');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const app = express();
 const PORT = 3000;
 const ROOT = __dirname;
+const distPath = path.join(ROOT, 'dist');
+const staticRoot = fs.existsSync(distPath) ? distPath : ROOT;
 
 let visionAuditor = null;
 try {
@@ -13,58 +14,84 @@ try {
   console.warn('⚠️ Could not load vision auditor module:', e.message);
 }
 
-// Handle Vision Audit API endpoints
-app.get('/api/vision-audit/report', async (req, res) => {
+function sendJson(res, statusCode, body) {
+  const payload = JSON.stringify(body);
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+  });
+  res.end(payload);
+}
+
+async function handleVisionAudit(req, res) {
   const reportPath = path.join(ROOT, 'vision_audit_report.json');
   if (fs.existsSync(reportPath)) {
     try {
       const data = fs.readFileSync(reportPath, 'utf8');
-      return res.status(200).set('Access-Control-Allow-Origin', '*').json(JSON.parse(data));
+      return sendJson(res, 200, JSON.parse(data));
     } catch (err) {
-      // Fall through
+      console.warn('⚠️ Could not read the vision audit report:', err.message);
     }
   }
   if (visionAuditor && visionAuditor.auditProperties) {
     try {
-      const report = await visionAuditor.auditProperties(6);
-      return res.status(200).set('Access-Control-Allow-Origin', '*').json(report);
+      const report = await visionAuditor.auditProperties(req.url.endsWith('/run') ? 8 : 6);
+      return sendJson(res, 200, report);
     } catch (e) {
-      return res.status(500).set('Access-Control-Allow-Origin', '*').json({ error: e.message });
+      return sendJson(res, 500, { error: e.message });
     }
   }
-  res.status(404).json({ error: 'Not found' });
-});
-
-app.all('/api/vision-audit/run', async (req, res) => {
-  if (req.method === 'POST' || req.method === 'GET') {
-    if (visionAuditor && visionAuditor.auditProperties) {
-      try {
-        const report = await visionAuditor.auditProperties(8);
-        return res.status(200).set('Access-Control-Allow-Origin', '*').json(report);
-      } catch (e) {
-        return res.status(500).set('Access-Control-Allow-Origin', '*').json({ error: e.message });
-      }
-    }
-    return res.status(404).json({ error: 'Not found' });
-  }
-  return res.status(405).json({ error: 'Method not allowed' });
-});
-
-// For all other requests, serve the static files.
-// Use 'dist' if it exists, otherwise serve ROOT.
-const distPath = path.join(ROOT, 'dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-} else {
-  app.use(express.static(ROOT));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(ROOT, 'index.html'));
-  });
+  return sendJson(res, 404, { error: 'Not found' });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+function contentType(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  const types = {
+    '.css': 'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.woff2': 'font/woff2',
+  };
+  return types[extension] || 'application/octet-stream';
+}
+
+function safePath(requestPath) {
+  const decoded = decodeURIComponent(requestPath.split('?')[0]);
+  const relative = decoded === '/' ? 'index.html' : decoded.replace(/^[/\\]+/, '');
+  const resolved = path.resolve(staticRoot, relative);
+  return resolved.startsWith(path.resolve(staticRoot) + path.sep) ? resolved : null;
+}
+
+const server = http.createServer(async (req, res) => {
+  const requestPath = req.url || '/';
+  if (requestPath.startsWith('/api/vision-audit/')) {
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+    return handleVisionAudit(req, res);
+  }
+
+  let filePath;
+  try {
+    filePath = safePath(requestPath);
+  } catch (error) {
+    return sendJson(res, 400, { error: 'Invalid path' });
+  }
+  if (!filePath) return sendJson(res, 400, { error: 'Invalid path' });
+
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    filePath = path.join(staticRoot, 'index.html');
+  }
+  res.writeHead(200, { 'Content-Type': contentType(filePath) });
+  fs.createReadStream(filePath).pipe(res);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Choice Properties dev server running at http://0.0.0.0:${PORT}`);
 });

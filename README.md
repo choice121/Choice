@@ -2,7 +2,7 @@
 
 A rental property marketing platform and automated listing pipeline.
 
-> **AI assistants:** Read `replit.md` first — it has the full project overview, scraping instructions, and credential locations. Do not treat this as a Chrome extension project.
+> **AI assistants and developers:** Read [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) first. This is a Cloudflare Pages/Supabase project, not a Replit-hosted application.
 
 ---
 
@@ -35,7 +35,7 @@ python3 scraper/charleston_sc_batch.py --target 10
 
 To run a job for a new city, create a batch script following the template in `scraper/PIPELINE_USAGE.md`.
 
-For the standard scraping prompt format used with AI assistants, see `SCRAPING_PROMPT.md`.
+For the standard scraping workflow and prompt format, see [docs/SCRAPING_GUIDE.md](docs/SCRAPING_GUIDE.md).
 
 ---
 
@@ -61,7 +61,7 @@ All platform rules (watermark detection, ImageKit upload, description cleaning, 
 
 ## Credentials
 
-All credentials are in `scraper/.env` — already committed, no setup required.
+Credentials must be supplied through local environment variables, GitHub Actions secrets, Cloudflare Pages variables, or the secure scraper environment. Never commit credential values.
 
 ---
 
@@ -69,8 +69,8 @@ All credentials are in `scraper/.env` — already committed, no setup required.
 
 | File | What it covers |
 |---|---|
-| `replit.md` | Full project overview, how to run scraping jobs, credential map, file map |
-| `SCRAPING_PROMPT.md` | Copy-paste prompt template for AI-assisted scraping jobs |
+| `docs/PROJECT_GUIDE.md` | Project architecture, deployment, credentials, and validation |
+| `docs/SCRAPING_GUIDE.md` | Copy-paste workflow for AI-assisted scraping jobs |
 | `scraper/PIPELINE_USAGE.md` | `PipelineOrchestrator` API, `BatchCriteria` reference, new-city template |
 | `scraper/PLATFORM_RULES.md` | Mandatory platform rules enforced by `enrichment.py` |
 | `scraper/SEARCH_PREFERENCES.md` | Active markets and content rules |

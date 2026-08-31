@@ -15,7 +15,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "apify-client": "^2.25.0",
-    "express": "^5.2.1"
+    "apify-client": "^2.25.0"
   }
 }
