@@ -55,6 +55,24 @@ const regressionMatrix = [
   { step: 'Lease workflow', backend: 'Lease + documents + signing', mustPreserve: 'Verified' },
 ]
 
+const routeMigrationMap = [
+  { route: '/index.html', target: 'Public home / listing discovery', status: 'Keep', risk: 'Low' },
+  { route: '/property.html', target: 'Property detail + application CTA', status: 'Refactor', risk: 'Medium' },
+  { route: '/apply/index.html', target: 'Protected application intake', status: 'Migrate', risk: 'High' },
+  { route: '/tenant/login.html', target: 'Tenant auth shell', status: 'Migrate', risk: 'High' },
+  { route: '/landlord/login.html', target: 'Landlord auth shell', status: 'Migrate', risk: 'High' },
+  { route: '/admin/login.html', target: 'Admin auth shell', status: 'Migrate', risk: 'Medium' },
+  { route: '/lease-sign.html', target: 'Lease and signature workflow', status: 'Protect', risk: 'High' },
+]
+
+const authProtections = [
+  'Dual storage session persistence in localStorage + cookie fallback',
+  'PKCE auth flow with refresh-token rotation safety',
+  'Access-token freshness gate before refresh',
+  'Legacy fallback route remains available during migration',
+  'Supabase remains the only system of record for auth and business data',
+]
+
 type FormState = {
   firstName: string
   lastName: string
@@ -394,6 +412,50 @@ function App() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Route map</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Legacy route → migration target</h3>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800">
+              <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
+                <thead className="bg-slate-950/80 text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Route</th>
+                    <th className="px-3 py-2 font-medium">Target</th>
+                    <th className="px-3 py-2 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900">
+                  {routeMigrationMap.map((item) => (
+                    <tr key={item.route}>
+                      <td className="px-3 py-2 text-slate-100">{item.route}</td>
+                      <td className="px-3 py-2 text-slate-300">{item.target}</td>
+                      <td className="px-3 py-2">
+                        <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth/session compatibility</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Protected session contract</h3>
+            <ul className="mt-5 space-y-3">
+              {authProtections.map((item) => (
+                <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">
+                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       </div>
