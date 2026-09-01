@@ -37,12 +37,12 @@ if (fs.existsSync(reactIndexSrc)) {
   console.log('✅ Copied React index.html to dist/index.html');
 }
 
-// Copy React's assets
+// Copy React's assets directly to dist/assets/ (matching the paths in index.html)
 const reactAssetsSrc = path.join(REACT_DIST_DIR, 'assets');
-const reactAssetsDest = path.join(DIST_DIR, 'assets', 'react');
+const reactAssetsDest = path.join(DIST_DIR, 'assets');
 if (fs.existsSync(reactAssetsSrc)) {
   copyRecursive(reactAssetsSrc, reactAssetsDest);
-  console.log('✅ Copied React assets to dist/assets/react/');
+  console.log('✅ Copied React assets to dist/assets/');
 }
 
 // Create alternative routes for property.html and listings.html that serve React index
