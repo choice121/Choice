@@ -1,4 +1,6 @@
 ﻿import { useMemo, useState } from 'react'
+import { useAuth } from './hooks/useAuth'
+import { useProperties } from './hooks/useProperties'
 
 type FormState = {
   propertyAddress: string
@@ -46,21 +48,6 @@ const migrationPhases = [
   { name: 'Phase 3', detail: 'Protected application slice' },
   { name: 'Phase 4', detail: 'Review, approval, and lease flow' },
   { name: 'Phase 5', detail: 'Regression validation + cutover' },
-]
-
-const contractGuardrails = [
-  'Keep Supabase as the system of record',
-  'Preserve edge-function validation exactly',
-  'Never rewrite core business logic during UI modernization',
-  'Use route-by-route fallback so legacy pages remain available',
-]
-
-const statusStates = [
-  { label: 'Pending', tone: 'bg-amber-500/15 text-amber-200 border-amber-500/40' },
-  { label: 'Under review', tone: 'bg-cyan-500/15 text-cyan-200 border-cyan-500/40' },
-  { label: 'Approved', tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40' },
-  { label: 'Denied', tone: 'bg-rose-500/15 text-rose-200 border-rose-500/40' },
-  { label: 'Lease in progress', tone: 'bg-violet-500/15 text-violet-200 border-violet-500/40' },
 ]
 
 const routeMigrationMap = [
@@ -138,6 +125,10 @@ function App() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitted, setSubmitted] = useState(false)
 
+  // Real Supabase integration
+  const { user, loading: authLoading, error: authError, isAuthenticated } = useAuth()
+  const { properties: realProperties, loading: propsLoading, error: propsError } = useProperties(6)
+
   const currentStep = stepOrder[stepIndex]
   const progress = useMemo(() => ((stepIndex + 1) / stepOrder.length) * 100, [stepIndex])
 
@@ -178,6 +169,18 @@ function App() {
   const handleSubmit = () => {
     if (!validateCurrentStep()) return
     setSubmitted(true)
+  }
+
+  const getPropsStatusClass = () => {
+    if (propsLoading) return 'rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
+    if (propsError) return 'rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-200'
+    return 'rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200'
+  }
+
+  const getAuthStatusClass = () => {
+    if (authLoading) return 'rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
+    if (isAuthenticated) return 'rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200'
+    return 'rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300'
   }
 
   const renderField = (
@@ -431,27 +434,65 @@ function App() {
 
           <aside className="space-y-6">
             <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Guardrails</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Protected business rules</h3>
-              <ul className="mt-5 space-y-3">
-                {contractGuardrails.map((item) => (
-                  <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">
-                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Real Supabase integration</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Live properties feed</h3>
+              <div className="mt-5 space-y-4">
+                <div className={getPropsStatusClass()}>
+                  {propsLoading ? 'Fetching...' : propsError ? 'Error' : 'Connected'}
+                </div>
+                {propsError && (
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
+                    Could not fetch properties. Backend not configured. The legacy fallback remains active.
+                  </div>
+                )}
+                {propsLoading && (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse h-16 rounded-xl border border-slate-800 bg-slate-950/50" />
+                    ))}
+                  </div>
+                )}
+                {!propsLoading && realProperties.length > 0 && (
+                  <div className="space-y-2">
+                    {realProperties.slice(0, 3).map((prop) => (
+                      <div key={prop.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm">
+                        <p className="font-semibold text-white">{prop.title}</p>
+                        <p className="mt-1 text-slate-400">${prop.rent_monthly}/mo • {prop.city}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!propsLoading && realProperties.length === 0 && !propsError && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-sm text-slate-400">
+                    No properties available
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Lifecycle</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Status progression</h3>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {statusStates.map((state) => (
-                  <span key={state.label} className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${state.tone}`}>
-                    {state.label}
-                  </span>
-                ))}
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth state</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Session validation</h3>
+              <div className="mt-5 space-y-4">
+                <div className={getAuthStatusClass()}>
+                  {authLoading ? 'Checking...' : isAuthenticated ? 'Authenticated' : 'Anonymous'}
+                </div>
+                {authError && (
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
+                    {authError}
+                  </div>
+                )}
+                {isAuthenticated && user && (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                    <p className="font-mono">{user.id}</p>
+                    {user.email && <p className="mt-1">{user.email}</p>}
+                  </div>
+                )}
+                {!authLoading && !isAuthenticated && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-sm text-slate-400">
+                    Not logged in. Use legacy login pages.
+                  </div>
+                )}
               </div>
             </div>
 

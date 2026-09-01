@@ -55,7 +55,12 @@ dirsToCopy.forEach((dir) => {
 
 // 2. Copy root files
 const filesToCopy = [
-  'index.html',
+  // React will provide these via SPA routing:
+  // 'index.html',     // Provided by React SPA entry
+  // 'property.html',  // Served by React /property route
+  // 'listings.html',  // Served by React /listings route
+  
+  // Keep these legacy files and configs
   'config.js',
   'manifest.json',
   'robots.txt',
@@ -72,11 +77,9 @@ const filesToCopy = [
   'how-to-apply.html',
   'landlord-platform-agreement.html',
   'lease-sign.html',
-  'listings.html',
   'policies.html',
   'policy-changelog.html',
   'privacy.html',
-  'property.html',
   'rental-application-policy.html',
   'terms.html',
   'verify-lease.html',

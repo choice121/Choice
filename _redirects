@@ -1,27 +1,56 @@
 # _redirects — Cloudflare Pages
+# Hybrid routing: React SPA for public pages, legacy HTML for protected flows
+
+# ============================================================================
+# PROTECTED FLOWS (Legacy HTML)
+# ============================================================================
+
+# Admin dashboard (legacy)
 /admin                      /admin/dashboard.html                        302
 /admin/                    /admin/dashboard.html                        302
-#
-# Format: /source-path   destination   status-code
-# External redirects (to a different domain) are fully supported.
-#
+/admin/*                    /admin/dashboard.html                        200
+
+# Application flow (legacy)
 /apply.html                 /apply/                                      302
 /apply/login.html           /apply/?path=dashboard                       302
 /apply/dashboard.html       /apply/?path=dashboard                       302
 /apply/success.html         /apply/?path=dashboard                       302
 /apply/lease.html           /apply/                                      302
 /apply/*                    /apply/index.html                            200
-# Legacy landlord routes
+
+# Tenant dashboard (legacy)
+/tenant/*                   /tenant/index.html                           200
+
+# Legacy landlord routes (legacy)
 /landlord/properties.html   /landlord/dashboard.html                      302
 /landlord/properties        /landlord/dashboard.html                      302
 /landlord/listings.html     /landlord/dashboard.html                      302
 /landlord/listings          /landlord/dashboard.html                      302
 /landlord/messages.html     /landlord/inquiries.html                     302
 /landlord/messages          /landlord/inquiries.html                     302
-# --- Block source / config / docs from being served on the CDN -----------
+/landlord/*                 /landlord/index.html                         200
+
+# Auth flows (legacy)
+/auth/*                     /auth/callback.html                          200
+
+# Lease and verification flows (legacy)
+/lease-sign.html            /lease-sign.html                             200
+/verify-lease.html          /verify-lease.html                           200
+
+# ============================================================================
+# PUBLIC PAGES (React SPA)
+# ============================================================================
+# React handles routing internally: /, /listings, /property, etc.
+# All public routes default to index.html for SPA routing
+
+# ============================================================================
+# BLOCKED PATHS (Security & Privacy)
+# ============================================================================
+# Block source / config / docs from being served on the CDN
 # (Cloudflare Pages serves static files before _redirects is consulted
 #  only for exact file matches; wildcard rules below override static serving
 #  for anything we explicitly don't want public.)
+
 /SETUP.sql                  /404.html                                    404
 /MIGRATION_SCHEMA.sql       /404.html                                    404
 /MISSING_SCHEMA.sql         /404.html                                    404
@@ -38,6 +67,7 @@
 /docs/*                     /404.html                                    404
 /lease-phases/*             /404.html                                    404
 /components/*               /404.html                                    404
+
 # Developer / planning docs — blocked from public access
 /ARCHITECTURE.md            /404.html                                    404
 /CONTRIBUTING.md            /404.html                                    404
@@ -52,14 +82,16 @@
 /README.md                  /404.html                                    404
 /REPLIT.md                  /404.html                                    404
 /SECURITY.md                /404.html                                    404
-/SETUP.md                   /404.html                                    404
+/SETUP.md                    /404.html                                    404
 /SUPABASE_CHANGES.md        /404.html                                    404
-
-# Property detail pages (UUID-based routes served by property.html SPA)
-/property/*                 /property.html                               200
+/REACT_MIGRATION_REPORT.md  /404.html                                    404
 
 # Orion extension live loader files (served publicly for auto-updates)
 /.pages-orion/*             /.pages-orion/:splat                           200
 
-# Catch-all 404
-/*                          /404.html                                    404
+# ============================================================================
+# CATCH-ALL FOR REACT SPA
+# ============================================================================
+# Any route not matched above → React index.html for SPA routing
+# React Router handles: /, /listings, /property?id=..., etc.
+/*                          /index.html                                  200
