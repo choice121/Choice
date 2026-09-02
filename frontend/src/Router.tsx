@@ -7,8 +7,10 @@ export function Router() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/index.html" element={<App />} />
+        <Route path="/" element={<ListingsPage />} />
+        <Route path="/index.html" element={<ListingsPage />} />
+        <Route path="/migration" element={<App />} />
+        <Route path="/migration.html" element={<App />} />
         <Route path="/property" element={<PropertyDetailPage />} />
         <Route path="/property.html" element={<PropertyDetailPage />} />
         <Route path="/property-react.html" element={<PropertyDetailPage />} />
