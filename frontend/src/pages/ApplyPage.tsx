@@ -11,11 +11,23 @@ interface FormState {
   propertyCity: string
   propertyState: string
   propertyZip: string
+  requestedMoveInDate: string
+  desiredLeaseTerm: string
 
   // Step 1: Applicant Identity
   hasCoApplicant: 'yes' | 'no'
-  coApplicantName: string
+  additionalPersonRole: 'Co-applicant' | 'Guarantor'
+  coApplicantFirstName: string
+  coApplicantLastName: string
   coApplicantEmail: string
+  coApplicantPhone: string
+  coApplicantDob: string
+  coApplicantSsn: string
+  coApplicantEmployer: string
+  coApplicantJobTitle: string
+  coApplicantMonthlyIncome: string
+  coApplicantEmploymentDuration: string
+  coApplicantConsent: boolean
   firstName: string
   lastName: string
   email: string
@@ -25,21 +37,33 @@ interface FormState {
 
   // Step 2: Residency & Occupancy
   hasVehicles: 'yes' | 'no'
-  vehicleDetails: string
+  vehicleMake: string
+  vehicleModel: string
+  vehicleYear: string
+  vehicleLicensePlate: string
   documents: any[]
   currentAddress: string
   residencyDuration: string
   currentRent: string
+  reasonForLeaving: string
   currentLandlordName: string
   currentLandlordPhone: string
   totalOccupants: string
+  additionalOccupants: string
   hasPets: 'yes' | 'no'
   petDetails: string
+  everEvicted: 'yes' | 'no'
+  smoker: 'yes' | 'no'
 
   // Step 3: Employment & Income
   employmentStatus: string
   employerName: string
+  employerAddress: string
   jobTitle: string
+  employmentStartDate: string
+  employmentDuration: string
+  supervisorName: string
+  supervisorPhone: string
   monthlyIncome: string
   incomeSource: string
 
@@ -47,10 +71,25 @@ interface FormState {
   referenceName: string
   referencePhone: string
   referenceRelationship: string
+  reference2Name: string
+  reference2Phone: string
+  reference2Relationship: string
   emergencyContactName: string
   emergencyContactPhone: string
+  emergencyContactRelationship: string
 
-  // Step 5: Disclosures & Consents
+  // Step 5: Payment & Contact Preferences
+  primaryPaymentMethod: string
+  primaryPaymentMethodOther: string
+  alternativePaymentMethod: string
+  alternativePaymentMethodOther: string
+  thirdChoicePaymentMethod: string
+  thirdChoicePaymentMethodOther: string
+  preferredContactMethod: string[]
+  preferredTime: string[]
+  preferredTimeSpecific: string
+
+  // Step 6: Disclosures & Consents
   certifyAccurate: boolean
   authorizeScreening: boolean
   acknowledgeFee: boolean
@@ -58,17 +97,21 @@ interface FormState {
   smsConsent: boolean
 }
 
-type StepKey = 'identity' | 'residency' | 'employment' | 'references' | 'review'
+type StepKey = 'identity' | 'residency' | 'employment' | 'references' | 'preferences' | 'review'
 
-const STEP_ORDER: StepKey[] = ['identity', 'residency', 'employment', 'references', 'review']
+const STEP_ORDER: StepKey[] = ['identity', 'residency', 'employment', 'references', 'preferences', 'review']
 
 const STEP_TITLES: Record<StepKey, string> = {
   identity: '1. Applicant Info',
   residency: '2. Residency & Pets',
   employment: '3. Employment & Income',
   references: '4. References',
-  review: '5. Review & Submit',
+  preferences: '5. Payment & Contact',
+  review: '6. Review & Submit',
 }
+
+const PAYMENT_METHODS = ['Venmo', 'PayPal', 'Cash App', 'Apple Pay', 'Zelle', 'Chime', 'Credit / Debit Card', 'Other']
+const PREFERRED_TIMES = ['Morning (8am-11am)', 'Midday (11am-2pm)', 'Afternoon (2pm-5pm)', 'Early Evening (5pm-8pm)', 'Late Evening (8pm-10pm)', 'Weekend', 'Anytime']
 
 export function ApplyPage() {
   const [searchParams] = useSearchParams()
@@ -96,10 +139,22 @@ export function ApplyPage() {
     propertyCity: initialCity,
     propertyState: initialStateVal,
     propertyZip: initialZip,
+    requestedMoveInDate: '',
+    desiredLeaseTerm: '',
 
     hasCoApplicant: 'no',
-    coApplicantName: '',
+    additionalPersonRole: 'Co-applicant',
+    coApplicantFirstName: '',
+    coApplicantLastName: '',
     coApplicantEmail: '',
+    coApplicantPhone: '',
+    coApplicantDob: '',
+    coApplicantSsn: '',
+    coApplicantEmployer: '',
+    coApplicantJobTitle: '',
+    coApplicantMonthlyIncome: '',
+    coApplicantEmploymentDuration: '',
+    coApplicantConsent: false,
     firstName: '',
     lastName: '',
     email: '',
@@ -108,28 +163,54 @@ export function ApplyPage() {
     ssnLast4: '',
 
     hasVehicles: 'no',
-    vehicleDetails: '',
+    vehicleMake: '',
+    vehicleModel: '',
+    vehicleYear: '',
+    vehicleLicensePlate: '',
     documents: [],
     currentAddress: '',
     residencyDuration: '',
     currentRent: '',
+    reasonForLeaving: '',
     currentLandlordName: '',
     currentLandlordPhone: '',
     totalOccupants: '1',
+    additionalOccupants: '',
     hasPets: 'no',
     petDetails: '',
+    everEvicted: 'no',
+    smoker: 'no',
 
     employmentStatus: 'Full-time',
     employerName: '',
+    employerAddress: '',
     jobTitle: '',
+    employmentStartDate: '',
+    employmentDuration: '',
+    supervisorName: '',
+    supervisorPhone: '',
     monthlyIncome: '',
     incomeSource: 'Employment',
 
     referenceName: '',
     referencePhone: '',
     referenceRelationship: '',
+    reference2Name: '',
+    reference2Phone: '',
+    reference2Relationship: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
+    emergencyContactRelationship: '',
+
+    primaryPaymentMethod: '',
+    primaryPaymentMethodOther: '',
+    alternativePaymentMethod: '',
+    alternativePaymentMethodOther: '',
+    thirdChoicePaymentMethod: '',
+    thirdChoicePaymentMethodOther: '',
+    preferredContactMethod: [],
+    preferredTime: [],
+    preferredTimeSpecific: '',
 
     certifyAccurate: false,
     authorizeScreening: false,
@@ -165,6 +246,18 @@ export function ApplyPage() {
     })
   }
 
+  const toggleArrayField = (key: 'preferredContactMethod' | 'preferredTime', value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: prev[key].includes(value) ? prev[key].filter((item) => item !== value) : [...prev[key], value],
+    }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   const validateStep = (step: StepKey): boolean => {
     const nextErrors: Record<string, string> = {}
 
@@ -176,10 +269,16 @@ export function ApplyPage() {
       if (!form.phone.trim()) nextErrors.phone = 'Phone number is required'
       if (!form.dob.trim()) nextErrors.dob = 'Date of birth is required'
       if (!form.ssnLast4.trim() || form.ssnLast4.length !== 4) nextErrors.ssnLast4 = 'Last 4 digits of SSN required'
+      if (form.hasCoApplicant === 'yes') {
+        if (!form.coApplicantFirstName.trim()) nextErrors.coApplicantFirstName = 'Co-applicant first name is required'
+        if (!form.coApplicantLastName.trim()) nextErrors.coApplicantLastName = 'Co-applicant last name is required'
+        if (!form.coApplicantConsent) nextErrors.coApplicantConsent = 'Co-applicant consent is required'
+      }
     } else if (step === 'residency') {
       if (!form.currentAddress.trim()) nextErrors.currentAddress = 'Current address is required'
       if (!form.residencyDuration.trim()) nextErrors.residencyDuration = 'Duration at current address required'
       if (!form.currentRent.trim()) nextErrors.currentRent = 'Current rent/mortgage required'
+      if (!form.reasonForLeaving.trim()) nextErrors.reasonForLeaving = 'Reason for leaving is required'
       if (!form.currentLandlordName.trim()) nextErrors.currentLandlordName = 'Current landlord name required'
       if (!form.currentLandlordPhone.trim()) nextErrors.currentLandlordPhone = 'Landlord phone required'
     } else if (step === 'employment') {
@@ -189,8 +288,15 @@ export function ApplyPage() {
     } else if (step === 'references') {
       if (!form.referenceName.trim()) nextErrors.referenceName = 'Reference name is required'
       if (!form.referencePhone.trim()) nextErrors.referencePhone = 'Reference phone is required'
+      if (!form.referenceRelationship.trim()) nextErrors.referenceRelationship = 'Reference relationship is required'
       if (!form.emergencyContactName.trim()) nextErrors.emergencyContactName = 'Emergency contact required'
       if (!form.emergencyContactPhone.trim()) nextErrors.emergencyContactPhone = 'Emergency phone required'
+    } else if (step === 'preferences') {
+      if (!form.requestedMoveInDate) nextErrors.requestedMoveInDate = 'Requested move-in date is required'
+      if (!form.desiredLeaseTerm) nextErrors.desiredLeaseTerm = 'Desired lease term is required'
+      if (!form.primaryPaymentMethod) nextErrors.primaryPaymentMethod = 'Primary payment method is required'
+      if (form.preferredContactMethod.length === 0) nextErrors.preferredContactMethod = 'Select at least one contact method'
+      if (form.preferredTime.length === 0) nextErrors.preferredTime = 'Select at least one preferred time'
     } else if (step === 'review') {
       if (!form.certifyAccurate) nextErrors.certifyAccurate = 'You must certify accuracy'
       if (!form.authorizeScreening) nextErrors.authorizeScreening = 'You must authorize screening'
@@ -240,6 +346,8 @@ export function ApplyPage() {
       formData.append('Listed Rent', form.propertyRent)
       formData.append('Application Fee', '50')
       formData.append('Security Deposit', form.propertyRent)
+      formData.append('Requested Move-in Date', form.requestedMoveInDate)
+      formData.append('Desired Lease Term', form.desiredLeaseTerm)
       formData.append('First Name', form.firstName)
       formData.append('Last Name', form.lastName)
       formData.append('Email', form.email)
@@ -248,29 +356,66 @@ export function ApplyPage() {
       formData.append('SSN', form.ssnLast4)
       formData.append('Has Co-Applicant', form.hasCoApplicant)
       if (form.hasCoApplicant === 'yes') {
-        formData.append('Co-Applicant Name', form.coApplicantName)
+        formData.append('Additional Person Role', form.additionalPersonRole)
+        formData.append('Co-Applicant First Name', form.coApplicantFirstName)
+        formData.append('Co-Applicant Last Name', form.coApplicantLastName)
         formData.append('Co-Applicant Email', form.coApplicantEmail)
+        formData.append('Co-Applicant Phone', form.coApplicantPhone)
+        formData.append('Co-Applicant DOB', form.coApplicantDob)
+        formData.append('Co-Applicant SSN', form.coApplicantSsn)
+        formData.append('Co-Applicant Employer', form.coApplicantEmployer)
+        formData.append('Co-Applicant Job Title', form.coApplicantJobTitle)
+        formData.append('Co-Applicant Monthly Income', form.coApplicantMonthlyIncome)
+        formData.append('Co-Applicant Employment Duration', form.coApplicantEmploymentDuration)
+        formData.append('Co-Applicant Consent', form.coApplicantConsent ? 'yes' : 'no')
       }
       formData.append('Current Address', form.currentAddress)
       formData.append('Residency Duration', form.residencyDuration)
       formData.append('Current Rent Amount', form.currentRent)
+      formData.append('Reason for leaving', form.reasonForLeaving)
       formData.append('Current Landlord Name', form.currentLandlordName)
       formData.append('Landlord Phone', form.currentLandlordPhone)
       formData.append('Total Occupants', form.totalOccupants)
+      formData.append('Additional Occupants', form.additionalOccupants)
       formData.append('Has Pets', form.hasPets)
       if (form.hasPets === 'yes') formData.append('Pet Details', form.petDetails)
       formData.append('Has Vehicle', form.hasVehicles)
-      if (form.hasVehicles === 'yes') formData.append('Vehicle Make', form.vehicleDetails)
+      if (form.hasVehicles === 'yes') {
+        formData.append('Vehicle Make', form.vehicleMake)
+        formData.append('Vehicle Model', form.vehicleModel)
+        formData.append('Vehicle Year', form.vehicleYear)
+        formData.append('Vehicle License Plate', form.vehicleLicensePlate)
+      }
+      formData.append('Ever Evicted', form.everEvicted)
+      formData.append('Smoker', form.smoker)
       formData.append('Employment Status', form.employmentStatus)
       formData.append('Employer', form.employerName)
+      formData.append('Employer Address', form.employerAddress)
       formData.append('Job Title', form.jobTitle)
+      formData.append('Employment Start Date', form.employmentStartDate)
+      formData.append('Employment Duration', form.employmentDuration)
+      formData.append('Supervisor Name', form.supervisorName)
+      formData.append('Supervisor Phone', form.supervisorPhone)
       formData.append('Monthly Income', form.monthlyIncome)
       formData.append('Other Income', form.incomeSource)
       formData.append('Reference 1 Name', form.referenceName)
       formData.append('Reference 1 Phone', form.referencePhone)
       formData.append('Reference 1 Relationship', form.referenceRelationship)
+      formData.append('Reference 2 Name', form.reference2Name)
+      formData.append('Reference 2 Phone', form.reference2Phone)
+      formData.append('Reference 2 Relationship', form.reference2Relationship)
       formData.append('Emergency Contact Name', form.emergencyContactName)
       formData.append('Emergency Contact Phone', form.emergencyContactPhone)
+      formData.append('Emergency Contact Relationship', form.emergencyContactRelationship)
+      formData.append('Primary Payment Method', form.primaryPaymentMethod)
+      formData.append('Primary Payment Method Other', form.primaryPaymentMethodOther)
+      formData.append('Alternative Payment Method', form.alternativePaymentMethod)
+      formData.append('Alternative Payment Method Other', form.alternativePaymentMethodOther)
+      formData.append('Third Choice Payment Method', form.thirdChoicePaymentMethod)
+      formData.append('Third Choice Payment Method Other', form.thirdChoicePaymentMethodOther)
+      form.preferredContactMethod.forEach((method) => formData.append('Preferred Contact Method', method))
+      form.preferredTime.forEach((time) => formData.append('Preferred Time', time))
+      formData.append('Preferred Time Specific', form.preferredTimeSpecific)
       formData.append('Terms Consent', 'yes')
       formData.append('SMS Consent', form.smsConsent ? 'yes' : 'no')
       formData.append('Consent Version', '2.0')
@@ -536,6 +681,46 @@ export function ApplyPage() {
                     Applicant Identity &amp; Contact
                   </h2>
 
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+                    <span className="text-xs uppercase font-bold text-cyan-400">Rental Details</span>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                          Requested Move-in Date <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={form.requestedMoveInDate}
+                          onChange={(e) => updateField('requestedMoveInDate', e.target.value)}
+                          className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400 ${
+                            errors.requestedMoveInDate ? 'border-rose-500' : 'border-slate-700'
+                          }`}
+                        />
+                        {errors.requestedMoveInDate && <p className="text-xs text-rose-400 mt-1">{errors.requestedMoveInDate}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                          Desired Lease Term <span className="text-rose-400">*</span>
+                        </label>
+                        <select
+                          value={form.desiredLeaseTerm}
+                          onChange={(e) => updateField('desiredLeaseTerm', e.target.value)}
+                          className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400 ${
+                            errors.desiredLeaseTerm ? 'border-rose-500' : 'border-slate-700'
+                          }`}
+                        >
+                          <option value="">Select term...</option>
+                          <option value="6 months">6 Months</option>
+                          <option value="12 months">12 Months</option>
+                          <option value="18 months">18 Months</option>
+                          <option value="24 months">24 Months</option>
+                          <option value="Month-to-month">Month-to-month</option>
+                        </select>
+                        {errors.desiredLeaseTerm && <p className="text-xs text-rose-400 mt-1">{errors.desiredLeaseTerm}</p>}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
@@ -654,15 +839,67 @@ export function ApplyPage() {
                       </label>
                     </div>
                     {form.hasCoApplicant === 'yes' && (
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Co-Applicant Name</label>
-                          <input type="text" value={form.coApplicantName} onChange={(e) => updateField('coApplicantName', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" />
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Role</label>
+                          <select
+                            value={form.additionalPersonRole}
+                            onChange={(e) => updateField('additionalPersonRole', e.target.value as FormState['additionalPersonRole'])}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none"
+                          >
+                            <option value="Co-applicant">Co-applicant (will live in the unit)</option>
+                            <option value="Guarantor">Guarantor (financial backup only)</option>
+                          </select>
                         </div>
-                        <div>
-                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Co-Applicant Email</label>
-                          <input type="email" value={form.coApplicantEmail} onChange={(e) => updateField('coApplicantEmail', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">First Name <span className="text-rose-400">*</span></label>
+                            <input type="text" value={form.coApplicantFirstName} onChange={(e) => updateField('coApplicantFirstName', e.target.value)} className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none ${errors.coApplicantFirstName ? 'border-rose-500' : 'border-slate-700'}`} />
+                            {errors.coApplicantFirstName && <p className="text-xs text-rose-400 mt-1">{errors.coApplicantFirstName}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Last Name <span className="text-rose-400">*</span></label>
+                            <input type="text" value={form.coApplicantLastName} onChange={(e) => updateField('coApplicantLastName', e.target.value)} className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none ${errors.coApplicantLastName ? 'border-rose-500' : 'border-slate-700'}`} />
+                            {errors.coApplicantLastName && <p className="text-xs text-rose-400 mt-1">{errors.coApplicantLastName}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Email</label>
+                            <input type="email" value={form.coApplicantEmail} onChange={(e) => updateField('coApplicantEmail', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Phone</label>
+                            <input type="tel" value={form.coApplicantPhone} onChange={(e) => updateField('coApplicantPhone', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Date of Birth</label>
+                            <input type="date" value={form.coApplicantDob} onChange={(e) => updateField('coApplicantDob', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">SSN Last 4</label>
+                            <input type="text" maxLength={4} value={form.coApplicantSsn} onChange={(e) => updateField('coApplicantSsn', e.target.value.replace(/\D/g, ''))} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Employer</label>
+                            <input type="text" value={form.coApplicantEmployer} onChange={(e) => updateField('coApplicantEmployer', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Job Title</label>
+                            <input type="text" value={form.coApplicantJobTitle} onChange={(e) => updateField('coApplicantJobTitle', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Gross Monthly Income</label>
+                            <input type="text" value={form.coApplicantMonthlyIncome} onChange={(e) => updateField('coApplicantMonthlyIncome', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Employment Duration</label>
+                            <input type="text" value={form.coApplicantEmploymentDuration} onChange={(e) => updateField('coApplicantEmploymentDuration', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                          </div>
                         </div>
+                        <label className="flex items-start gap-3 text-xs sm:text-sm text-slate-300 cursor-pointer">
+                          <input type="checkbox" checked={form.coApplicantConsent} onChange={(e) => updateField('coApplicantConsent', e.target.checked)} className="mt-1 h-4 w-4 rounded accent-cyan-500" />
+                          <span>I authorize verification of the information provided for this additional person, including credit and background checks. <span className="text-rose-400">*</span></span>
+                        </label>
+                        {errors.coApplicantConsent && <p className="text-xs text-rose-400">{errors.coApplicantConsent}</p>}
                       </div>
                     )}
                   </div>
@@ -726,6 +963,22 @@ export function ApplyPage() {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                      Reason for Leaving <span className="text-rose-400">*</span>
+                    </label>
+                    <textarea
+                      value={form.reasonForLeaving}
+                      onChange={(e) => updateField('reasonForLeaving', e.target.value)}
+                      rows={2}
+                      placeholder="Why are you moving?"
+                      className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 ${
+                        errors.reasonForLeaving ? 'border-rose-500' : 'border-slate-700'
+                      }`}
+                    />
+                    {errors.reasonForLeaving && <p className="text-xs text-rose-400 mt-1">{errors.reasonForLeaving}</p>}
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
@@ -757,6 +1010,29 @@ export function ApplyPage() {
                         }`}
                       />
                       {errors.currentLandlordPhone && <p className="text-xs text-rose-400 mt-1">{errors.currentLandlordPhone}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Total Occupants</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={form.totalOccupants}
+                        onChange={(e) => updateField('totalOccupants', e.target.value)}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Other Occupants</label>
+                      <input
+                        type="text"
+                        value={form.additionalOccupants}
+                        onChange={(e) => updateField('additionalOccupants', e.target.value)}
+                        placeholder="Names, ages, relationship"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+                      />
                     </div>
                   </div>
 
@@ -807,9 +1083,23 @@ export function ApplyPage() {
                       </label>
                     </div>
                     {form.hasVehicles === 'yes' && (
-                      <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Vehicle Details (Make, Model, Year, Plate)</label>
-                        <input type="text" value={form.vehicleDetails} onChange={(e) => updateField('vehicleDetails', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" placeholder="e.g. 2020 Toyota Camry (XYZ123)" />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Make</label>
+                          <input type="text" value={form.vehicleMake} onChange={(e) => updateField('vehicleMake', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Model</label>
+                          <input type="text" value={form.vehicleModel} onChange={(e) => updateField('vehicleModel', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Year</label>
+                          <input type="text" value={form.vehicleYear} onChange={(e) => updateField('vehicleYear', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">License Plate</label>
+                          <input type="text" value={form.vehicleLicensePlate} onChange={(e) => updateField('vehicleLicensePlate', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -828,6 +1118,23 @@ export function ApplyPage() {
                         />
                       </div>
                     )}
+
+                    <div className="grid gap-4 sm:grid-cols-2 border-t border-slate-800 pt-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-2">Have you ever been evicted?</label>
+                        <div className="flex gap-4 text-sm text-white">
+                          <label className="flex items-center gap-2"><input type="radio" checked={form.everEvicted === 'yes'} onChange={() => updateField('everEvicted', 'yes')} /> Yes</label>
+                          <label className="flex items-center gap-2"><input type="radio" checked={form.everEvicted === 'no'} onChange={() => updateField('everEvicted', 'no')} /> No</label>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-2">Do you smoke?</label>
+                        <div className="flex gap-4 text-sm text-white">
+                          <label className="flex items-center gap-2"><input type="radio" checked={form.smoker === 'yes'} onChange={() => updateField('smoker', 'yes')} /> Yes</label>
+                          <label className="flex items-center gap-2"><input type="radio" checked={form.smoker === 'no'} onChange={() => updateField('smoker', 'no')} /> No</label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -911,6 +1218,56 @@ export function ApplyPage() {
                       {errors.jobTitle && <p className="text-xs text-rose-400 mt-1">{errors.jobTitle}</p>}
                     </div>
                   </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Employer Address</label>
+                      <input
+                        type="text"
+                        value={form.employerAddress}
+                        onChange={(e) => updateField('employerAddress', e.target.value)}
+                        placeholder="Employer street address"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Employment Start Date</label>
+                      <input
+                        type="date"
+                        value={form.employmentStartDate}
+                        onChange={(e) => updateField('employmentStartDate', e.target.value)}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Employment Duration</label>
+                      <input
+                        type="text"
+                        value={form.employmentDuration}
+                        onChange={(e) => updateField('employmentDuration', e.target.value)}
+                        placeholder="e.g. 3 years"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Supervisor Name</label>
+                      <input
+                        type="text"
+                        value={form.supervisorName}
+                        onChange={(e) => updateField('supervisorName', e.target.value)}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Supervisor Phone</label>
+                      <input
+                        type="tel"
+                        value={form.supervisorPhone}
+                        onChange={(e) => updateField('supervisorPhone', e.target.value)}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -958,6 +1315,15 @@ export function ApplyPage() {
                   </div>
 
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+                    <span className="text-xs uppercase font-bold text-slate-400">Reference 2 (Optional)</span>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <input type="text" value={form.reference2Name} onChange={(e) => updateField('reference2Name', e.target.value)} placeholder="Full name" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400" />
+                      <input type="tel" value={form.reference2Phone} onChange={(e) => updateField('reference2Phone', e.target.value)} placeholder="Phone number" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400" />
+                    </div>
+                    <input type="text" value={form.reference2Relationship} onChange={(e) => updateField('reference2Relationship', e.target.value)} placeholder="Relationship (former landlord, employer, coworker, friend)" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400" />
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
                     <span className="text-xs uppercase font-bold text-emerald-400">Emergency Contact</span>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
@@ -991,6 +1357,13 @@ export function ApplyPage() {
                         {errors.emergencyContactPhone && <p className="text-xs text-rose-400 mt-1">{errors.emergencyContactPhone}</p>}
                       </div>
                     </div>
+                    <input
+                      type="text"
+                      value={form.emergencyContactRelationship}
+                      onChange={(e) => updateField('emergencyContactRelationship', e.target.value)}
+                      placeholder="Relationship to you (spouse, parent, friend)"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+                    />
                   </div>
 
                   <div className="pt-5 border-t border-slate-800">
@@ -1020,7 +1393,119 @@ export function ApplyPage() {
                 </div>
               )}
 
-              {/* STEP 5: REVIEW & DISCLOSURES */}
+              {/* STEP 5: PAYMENT & CONTACT PREFERENCES */}
+              {currentStep === 'preferences' && (
+                <div className="space-y-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                    Payment &amp; Contact Preferences
+                  </h2>
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                    No payment is collected through this form. A representative will contact you after submission to coordinate the application fee.
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                        Requested Move-in Date <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={form.requestedMoveInDate}
+                        onChange={(e) => updateField('requestedMoveInDate', e.target.value)}
+                        className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400 ${errors.requestedMoveInDate ? 'border-rose-500' : 'border-slate-700'}`}
+                      />
+                      {errors.requestedMoveInDate && <p className="mt-1 text-xs text-rose-400">{errors.requestedMoveInDate}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                        Desired Lease Term <span className="text-rose-400">*</span>
+                      </label>
+                      <select
+                        value={form.desiredLeaseTerm}
+                        onChange={(e) => updateField('desiredLeaseTerm', e.target.value)}
+                        className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400 ${errors.desiredLeaseTerm ? 'border-rose-500' : 'border-slate-700'}`}
+                      >
+                        <option value="">Select term...</option>
+                        <option value="6 months">6 Months</option>
+                        <option value="12 months">12 Months</option>
+                        <option value="18 months">18 Months</option>
+                        <option value="24 months">24 Months</option>
+                        <option value="Month-to-month">Month-to-month</option>
+                      </select>
+                      {errors.desiredLeaseTerm && <p className="mt-1 text-xs text-rose-400">{errors.desiredLeaseTerm}</p>}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                        Primary Payment Method <span className="text-rose-400">*</span>
+                      </label>
+                      <select
+                        value={form.primaryPaymentMethod}
+                        onChange={(e) => updateField('primaryPaymentMethod', e.target.value)}
+                        className={`w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400 ${errors.primaryPaymentMethod ? 'border-rose-500' : 'border-slate-700'}`}
+                      >
+                        <option value="">Select your primary method</option>
+                        {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                      </select>
+                      {form.primaryPaymentMethod === 'Other' && <input type="text" value={form.primaryPaymentMethodOther} onChange={(e) => updateField('primaryPaymentMethodOther', e.target.value)} placeholder="Enter payment method" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />}
+                      {errors.primaryPaymentMethod && <p className="mt-1 text-xs text-rose-400">{errors.primaryPaymentMethod}</p>}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Alternative Payment Method</label>
+                        <select value={form.alternativePaymentMethod} onChange={(e) => updateField('alternativePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400">
+                          <option value="">Optional backup method</option>
+                          {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                        </select>
+                        {form.alternativePaymentMethod === 'Other' && <input type="text" value={form.alternativePaymentMethodOther} onChange={(e) => updateField('alternativePaymentMethodOther', e.target.value)} placeholder="Enter payment method" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Third Payment Method</label>
+                        <select value={form.thirdChoicePaymentMethod} onChange={(e) => updateField('thirdChoicePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-400">
+                          <option value="">Optional additional method</option>
+                          {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                        </select>
+                        {form.thirdChoicePaymentMethod === 'Other' && <input type="text" value={form.thirdChoicePaymentMethodOther} onChange={(e) => updateField('thirdChoicePaymentMethodOther', e.target.value)} placeholder="Enter payment method" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+                    <div>
+                      <span className="block text-xs font-semibold uppercase text-slate-300 mb-2">Preferred Contact Method <span className="text-rose-400">*</span></span>
+                      <div className="flex flex-wrap gap-4 text-sm text-white">
+                        {['Text Message', 'Email'].map((method) => (
+                          <label key={method} className="flex items-center gap-2">
+                            <input type="checkbox" checked={form.preferredContactMethod.includes(method)} onChange={() => toggleArrayField('preferredContactMethod', method)} className="h-4 w-4 rounded accent-cyan-500" />
+                            {method}
+                          </label>
+                        ))}
+                      </div>
+                      {errors.preferredContactMethod && <p className="mt-1 text-xs text-rose-400">{errors.preferredContactMethod}</p>}
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold uppercase text-slate-300 mb-2">Preferred Contact Times <span className="text-rose-400">*</span></span>
+                      <div className="grid gap-3 sm:grid-cols-2 text-sm text-white">
+                        {PREFERRED_TIMES.map((time) => (
+                          <label key={time} className="flex items-center gap-2">
+                            <input type="checkbox" checked={form.preferredTime.includes(time)} onChange={() => toggleArrayField('preferredTime', time)} className="h-4 w-4 rounded accent-cyan-500" />
+                            {time}
+                          </label>
+                        ))}
+                      </div>
+                      {errors.preferredTime && <p className="mt-1 text-xs text-rose-400">{errors.preferredTime}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Additional Contact Notes</label>
+                      <input type="text" value={form.preferredTimeSpecific} onChange={(e) => updateField('preferredTimeSpecific', e.target.value)} placeholder="Best after 7pm, avoid Wednesdays" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 6: REVIEW & DISCLOSURES */}
               {currentStep === 'review' && (
                 <div className="space-y-6">
                   <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
