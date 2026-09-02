@@ -35,12 +35,11 @@ proves an equivalent replacement is safe.
 
 **Last updated:** 2026-09-02
 
-**Current phase:** Phase 1 — reproducible build baseline
+**Current phase:** Phase 2 — safe routing and deployment handoff
 
-**Current next action:** Use the Node 20 workspace runtime to run a clean
-frontend install, then `npm run build` and `npm run lint`. If native optional
-bindings are still unavailable, diagnose the package/install output before
-changing application code.
+**Current next action:** Map every public, application, protected, and blocked
+route against the built `dist/` tree. Fix the `/apply/` entry mismatch without
+removing the legacy fallback, then verify deep links in a built preview.
 
 **Completed in this repair session:**
 
@@ -50,12 +49,14 @@ changing application code.
 - Changed the nested frontend build install from `npm install` to `npm ci` so
   the checked-in `frontend/package-lock.json` is authoritative.
 - Created this resumable execution plan.
+- Made build-time config, cache-busting, CSP nonce, nav/footer, and listing
+  snapshot processing target `dist/` instead of rewriting checked-in source
+  HTML.
+- Made the root `lint` script run the frontend linter.
 
 **Not completed yet:**
 
-- No claim that Node 20 is active until the runtime is reloaded and
-  `node --version` confirms it.
-- No claim that build or lint pass until both commands run successfully.
+- No routing or application behavior has been changed yet.
 - No routing, application, listings, property detail, or visual parity work
   should be considered complete yet.
 
@@ -93,6 +94,17 @@ git diff --check
 - frontend lint exits 0.
 - `dist/index.html` and referenced assets exist.
 - No build step relies on an unlocked nested install.
+
+**Checkpoint result — 2026-09-02: PASSED**
+
+- Runtime: Node `v20.20.0`, npm `10.8.2`.
+- `npm run build`: passed, including frontend compile, Vite output, config
+  generation, static copy, HTML processing, and React merge.
+- `npm run lint`: passed with three existing non-blocking Oxlint warnings in
+  `useSavedProperties.ts` and `ApplyPage.tsx`.
+- Clean `dist/` output contains the React entry and hashed JS/CSS assets.
+- Clean-build source immutability check: passed; no source HTML files changed.
+- `git diff --check`: passed.
 
 **Evidence to record:** exact versions, commands, exit status, and any
 remaining warnings in the Phase 1 log below.
@@ -241,6 +253,14 @@ rollback is documented.
   requested Node 18 while current frontend dependencies require Node 20+.
 - **2026-09-02 — Changes made:** runtime request moved to Node 20; package
   engine constraints aligned; frontend build install made lockfile-driven.
+- **2026-09-02 — Passed:** Node `v20.20.0` / npm `10.8.2`; clean `npm run
+  build` and root `npm run lint` succeeded. The build produced React assets,
+  copied legacy protected pages, generated runtime config, and completed the
+  React merge. Lint reports three existing non-blocking warnings in
+  `useSavedProperties.ts` and `ApplyPage.tsx`.
+- **2026-09-02 — Passed:** source immutability was checked after each stage
+  (frontend build, static copy, config generation, and React merge); no source
+  HTML files changed. `git diff --check` also passed.
 - **Next evidence required:** runtime reload followed by clean build and lint.
 
 ### Phase 2 log
