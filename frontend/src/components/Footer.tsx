@@ -68,10 +68,10 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Col 3: Landlords */}
+          {/* Col 3: Portals */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-              For Landlords
+              Portals
             </h4>
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
@@ -82,6 +82,11 @@ export function Footer() {
               <li>
                 <a href="/landlord/login.html" className="hover:text-cyan-300 transition">
                   Landlord Portal Login
+                </a>
+              </li>
+              <li>
+                <a href="/admin/login.html" className="hover:text-cyan-300 transition">
+                  Admin Portal Login
                 </a>
               </li>
               <li>

@@ -88,6 +88,18 @@ export function Navbar() {
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
             Track App
           </a>
+          <a
+            href="/landlord/login.html"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition text-slate-300 hover:bg-slate-800/60 hover:text-white`}
+          >
+            Landlord Portal
+          </a>
+          <a
+            href="/admin/login.html"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition text-slate-300 hover:bg-slate-800/60 hover:text-white`}
+          >
+            Admin Portal
+          </a>
 
           <Link
             to="/how-it-works"
@@ -189,6 +201,18 @@ export function Navbar() {
             className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
           >
             Track Application
+          </a>
+          <a
+            href="/landlord/login.html"
+            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+          >
+            Landlord Portal
+          </a>
+          <a
+            href="/admin/login.html"
+            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+          >
+            Admin Portal
           </a>
           <Link
             to="/how-it-works"
