@@ -19,7 +19,7 @@ export function ListingsPage() {
 
         <PropertyList
           limit={24}
-          onPropertySelect={(id) => navigate(`/property?id=${id}`)}
+          onPropertySelect={(id) => navigate(`/property?id=${encodeURIComponent(id)}`)}
         />
       </div>
     </main>
