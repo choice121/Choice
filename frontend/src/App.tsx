@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useProperties } from './hooks/useProperties'
 
@@ -87,26 +87,26 @@ const stepLabels: Record<StepKey, string> = {
 }
 
 const initialState: FormState = {
-  propertyAddress: '2457 Maple Creek Dr, Columbus, OH 43219',
-  firstName: 'Jordan',
-  lastName: 'Smith',
-  email: 'jordan.smith@example.com',
-  phone: '(555) 201-1042',
-  dob: '1992-04-15',
-  ssnLast4: '1042',
-  currentAddress: '2145 Lakeview Ave, Columbus, OH 43230',
-  monthlyRent: '$1,950',
-  landlord: 'Northwind Realty',
-  employmentStatus: 'Full-time',
-  monthlyIncome: '$6,400',
-  employer: 'NorthStar Health Systems',
-  referenceName: 'Alicia Morgan',
-  referencePhone: '(555) 873-9202',
-  referenceRelation: 'Former roommate',
-  emergencyName: 'Marcus Smith',
-  emergencyPhone: '(555) 420-7720',
-  moveInDate: '2026-09-15',
-  consent: true,
+  propertyAddress: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  dob: '',
+  ssnLast4: '',
+  currentAddress: '',
+  monthlyRent: '',
+  landlord: '',
+  employmentStatus: '',
+  monthlyIncome: '',
+  employer: '',
+  referenceName: '',
+  referencePhone: '',
+  referenceRelation: '',
+  emergencyName: '',
+  emergencyPhone: '',
+  moveInDate: '',
+  consent: false,
 }
 
 const fieldsByStep: Record<StepKey, (keyof FormState)[]> = {
@@ -123,7 +123,6 @@ function App() {
   const [form, setForm] = useState<FormState>(initialState)
   const [stepIndex, setStepIndex] = useState(0)
   const [errors, setErrors] = useState<FormErrors>({})
-  const [submitted, setSubmitted] = useState(false)
 
   // Real Supabase integration
   const { user, loading: authLoading, error: authError, isAuthenticated } = useAuth()
@@ -168,7 +167,13 @@ function App() {
 
   const handleSubmit = () => {
     if (!validateCurrentStep()) return
-    setSubmitted(true)
+    // The production application flow remains the legacy, server-backed form.
+    // Do not claim an application was submitted from this migration shell.
+    const params = new URLSearchParams({
+      addr: form.propertyAddress,
+      source: '/',
+    })
+    window.location.assign(`/apply/?${params.toString()}`)
   }
 
   const getPropsStatusClass = () => {
@@ -224,32 +229,6 @@ function App() {
   }
 
   const renderStepContent = () => {
-    if (submitted) {
-      return (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-emerald-100">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Application submitted</p>
-          <h3 className="mt-3 text-2xl font-semibold text-white">Application received</h3>
-          <p className="mt-2 text-sm text-emerald-100/90">
-            This state mirrors the legacy flow where an application ID is returned, payment coordination is arranged, and the application enters active review.
-          </p>
-          <div className="mt-5 rounded-xl border border-emerald-400/30 bg-slate-950/50 p-3">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Application ID</p>
-            <p className="mt-2 font-mono text-lg text-white">CP-20260830-7J2K4A</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSubmitted(false)
-              setStepIndex(0)
-            }}
-            className="mt-5 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/20"
-          >
-            Review form again
-          </button>
-        </div>
-      )
-    }
-
     switch (currentStep) {
       case 'property':
         return (
@@ -400,8 +379,7 @@ function App() {
 
             {renderStepContent()}
 
-            {!submitted && (
-              <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-800 pt-5">
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-800 pt-5">
                 <button
                   type="button"
                   onClick={goBack}
@@ -425,12 +403,11 @@ function App() {
                     onClick={handleSubmit}
                     className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
                   >
-                    Submit application
+                    Continue to secure application
                   </button>
                 )}
               </div>
-            )}
-          </div>
+            </div>
 
           <aside className="space-y-6">
             <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
