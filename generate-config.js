@@ -251,6 +251,9 @@ Object.freeze(CONFIG.FEATURES);
 `;
 
 fs.writeFileSync('config.js', output);
+if (fs.existsSync('dist')) {
+  fs.writeFileSync('dist/config.js', output);
+}
 console.log('✅ config.js generated successfully from environment variables');
 
 if (fs.existsSync('apply')) {
@@ -262,6 +265,9 @@ if (fs.existsSync('apply')) {
   };
   const applyOutput = `window.CP_CONFIG = ${JSON.stringify(applyConfig, null, 2)};\n`;
   fs.writeFileSync('apply/config.js', applyOutput);
+  if (fs.existsSync('dist/apply')) {
+    fs.writeFileSync('dist/apply/config.js', applyOutput);
+  }
   console.log('✅ apply/config.js generated successfully (SUPABASE_URL → receive-application Edge Function)');
 }
 
@@ -272,16 +278,17 @@ if (config.SITE_URL) {
   const PLACEHOLDER = 'YOUR-DOMAIN.com';
   const domain = config.SITE_URL.replace(/^https?:\/\//, ''); // strip protocol for bare replacements
 
+  const outputDir = fs.existsSync('dist') ? 'dist' : null;
   ['sitemap.xml', 'robots.txt'].forEach(function (filename) {
-    if (!fs.existsSync(filename)) return;
+    if (!outputDir || !fs.existsSync(filename)) return;
     const original = fs.readFileSync(filename, 'utf8');
     const rewritten = original
       .split('https://' + PLACEHOLDER).join(config.SITE_URL)
       .split('http://'  + PLACEHOLDER).join(config.SITE_URL)
       .split(PLACEHOLDER).join(domain);
     if (rewritten !== original) {
-      fs.writeFileSync(filename, rewritten);
-      console.log('✅ ' + filename + ' domain updated to ' + config.SITE_URL);
+      fs.writeFileSync(outputDir + '/' + filename, rewritten);
+      console.log('✅ dist/' + filename + ' domain updated to ' + config.SITE_URL);
     }
   });
 }
@@ -310,9 +317,17 @@ try {
 // produces unique ?v= strings, so browsers always fetch the latest CSS/JS files
 // even when _headers sets Cache-Control: immutable on /css/* and /js/*.
 const htmlFiles = (function walk(dir) {
+  if (!dir) return [];
   const results = [];
+  const ignoredDirectories = new Set([
+    '.git',
+    '.local',
+    'node_modules',
+    'dist',
+  ]);
   fs.readdirSync(dir).forEach(function(name) {
     const full = dir + '/' + name;
+    if (ignoredDirectories.has(name)) return;
     if (fs.statSync(full).isDirectory()) {
       results.push.apply(results, walk(full));
     } else if (name.endsWith('.html')) {
@@ -420,8 +435,11 @@ console.log('✅ HTML files processed: cache-bust, CSS preload fix, nonce + nav/
 // loading spinner. The client fetches fresh data on any filter change or
 // pagination — this snapshot only speeds up the cold initial page load.
 await (async function injectInitialListings() {
-  const listingsFile = 'listings.html';
-  if (!fs.existsSync(listingsFile)) { console.warn('⚠  listings.html not found — skipping property pre-load'); return; }
+  const listingsFile = fs.existsSync('dist') ? 'dist/listings.html' : null;
+  if (!listingsFile || !fs.existsSync(listingsFile)) {
+    console.warn('⚠  dist/listings.html not found — skipping property pre-load');
+    return;
+  }
 
   const https = require('https');
   const PER_PAGE = 24;
@@ -497,7 +515,7 @@ await (async function injectInitialListings() {
   html = html.replace('</head>', snippet + '</head>');
   fs.writeFileSync(listingsFile, html);
   console.log('✅ Property pre-load: ' + data.rows.length + ' listings embedded in listings.html (total: ' + data.total + ')');
-})();
+})(fs.existsSync('dist') ? 'dist' : null);
 
 // Note: Content-Security-Policy is no longer set in _headers; it is set
 // per-request by functions/_middleware.js so the nonce can rotate on every
