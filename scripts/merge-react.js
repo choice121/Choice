@@ -45,20 +45,31 @@ if (fs.existsSync(reactAssetsSrc)) {
   console.log('✅ Copied React assets to dist/assets/');
 }
 
-// Create direct and alternative routes for property.html, listings.html, and migration.html that serve React index
-const propertyRoutePath = path.join(DIST_DIR, 'property-react.html');
-const listingsRoutePath = path.join(DIST_DIR, 'listings-react.html');
-const migrationRoutePath = path.join(DIST_DIR, 'migration.html');
-const propertyHtmlPath = path.join(DIST_DIR, 'property.html');
-const listingsHtmlPath = path.join(DIST_DIR, 'listings.html');
+// Create direct and alternative routes for migrated pages that serve React SPA index
+const migratedRoutes = [
+  'property-react.html',
+  'listings-react.html',
+  'migration.html',
+  'property.html',
+  'listings.html',
+  'faq.html',
+  'how-to-apply.html',
+  'how-it-works.html',
+  'fair-housing.html',
+  'policies.html',
+  'rental-application-policy.html',
+  'holding-deposit-policy.html',
+  'privacy.html',
+  'terms.html',
+  'apply.html',
+];
 
-fs.copyFileSync(reactIndexSrc, propertyRoutePath);
-fs.copyFileSync(reactIndexSrc, listingsRoutePath);
-fs.copyFileSync(reactIndexSrc, migrationRoutePath);
-fs.copyFileSync(reactIndexSrc, propertyHtmlPath);
-fs.copyFileSync(reactIndexSrc, listingsHtmlPath);
-console.log('✅ Created property.html, listings.html, and migration.html as React entry points');
+migratedRoutes.forEach((routeFile) => {
+  const dest = path.join(DIST_DIR, routeFile);
+  fs.copyFileSync(reactIndexSrc, dest);
+  console.log(`✅ Configured ${routeFile} as React SPA entry point`);
+});
 
 console.log('\n🎉 React build successfully merged with dist/');
-console.log('   Public pages now served by React (SPA)');
-console.log('   Protected flows remain on legacy HTML');
+console.log('   Public and informational pages now served by React (SPA)');
+console.log('   Protected workflows (admin, landlord, tenant, classic apply) remain accessible');

@@ -56,19 +56,27 @@ export function Navbar() {
             Browse Listings
           </Link>
 
-          <a
-            href="/how-to-apply.html"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800/60 hover:text-white"
+          <Link
+            to="/how-to-apply"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive('/how-to-apply')
+                ? 'bg-slate-800 text-cyan-300'
+                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+            }`}
           >
             How to Apply
-          </a>
+          </Link>
 
-          <a
-            href="/faq.html"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800/60 hover:text-white"
+          <Link
+            to="/faq"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive('/faq')
+                ? 'bg-slate-800 text-cyan-300'
+                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+            }`}
           >
             FAQ
-          </a>
+          </Link>
 
           <a
             href="/tenant/portal.html"
@@ -80,43 +88,47 @@ export function Navbar() {
             Track App
           </a>
 
-          <a
-            href="/landlord/register.html"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800/60 hover:text-white"
+          <Link
+            to="/how-it-works"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive('/how-it-works')
+                ? 'bg-slate-800 text-cyan-300'
+                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+            }`}
           >
-            Landlord Portal
-          </a>
+            For Landlords
+          </Link>
 
           <Link
-            to="/migration"
+            to="/policies"
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive('/migration')
+              isActive('/policies')
                 ? 'bg-slate-800 text-cyan-300'
                 : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
             }`}
           >
-            Status
+            Policies
           </Link>
         </nav>
 
         {/* Right CTA */}
         <div className="hidden sm:flex items-center gap-3">
-          <a
-            href="/apply/"
+          <Link
+            to="/apply"
             className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 active:scale-[0.98]"
           >
             Apply Online
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Menu Toggle */}
         <div className="flex items-center gap-2 md:hidden">
-          <a
-            href="/apply/"
+          <Link
+            to="/apply"
             className="rounded-lg bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950"
           >
             Apply
-          </a>
+          </Link>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -153,18 +165,20 @@ export function Navbar() {
           >
             Browse Listings
           </Link>
-          <a
-            href="/how-to-apply.html"
+          <Link
+            to="/how-to-apply"
+            onClick={() => setMobileMenuOpen(false)}
             className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
           >
             How to Apply
-          </a>
-          <a
-            href="/faq.html"
+          </Link>
+          <Link
+            to="/faq"
+            onClick={() => setMobileMenuOpen(false)}
             className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
           >
             FAQ
-          </a>
+          </Link>
           <a
             href="/tenant/portal.html"
             target="_blank"
@@ -173,26 +187,28 @@ export function Navbar() {
           >
             Track Application
           </a>
-          <a
-            href="/landlord/register.html"
+          <Link
+            to="/how-it-works"
+            onClick={() => setMobileMenuOpen(false)}
             className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
           >
-            Landlord Portal
-          </a>
+            For Landlords
+          </Link>
           <Link
-            to="/migration"
+            to="/policies"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-400 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
           >
-            Migration Status
+            Policy Framework
           </Link>
           <div className="pt-2">
-            <a
-              href="/apply/"
+            <Link
+              to="/apply"
+              onClick={() => setMobileMenuOpen(false)}
               className="block w-full rounded-xl bg-cyan-500 py-2.5 text-center font-semibold text-slate-950 shadow"
             >
               Start Rental Application
-            </a>
+            </Link>
           </div>
         </div>
       )}

@@ -46,14 +46,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="/how-to-apply.html" className="hover:text-cyan-300 transition">
+                <Link to="/how-to-apply" className="hover:text-cyan-300 transition">
                   How to Apply
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/apply/" className="hover:text-cyan-300 transition">
+                <Link to="/apply" className="hover:text-cyan-300 transition">
                   Start Application ($50 fee)
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="/tenant/portal.html" className="hover:text-cyan-300 transition">
@@ -61,9 +61,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/faq.html" className="hover:text-cyan-300 transition">
-                  Renter FAQ & Support
-                </a>
+                <Link to="/faq" className="hover:text-cyan-300 transition">
+                  Renter FAQ &amp; Support
+                </Link>
               </li>
             </ul>
           </div>
@@ -85,9 +85,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/how-it-works.html" className="hover:text-cyan-300 transition">
+                <Link to="/how-it-works" className="hover:text-cyan-300 transition">
                   Platform Overview
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="/landlord-platform-agreement.html" className="hover:text-cyan-300 transition">
@@ -100,33 +100,38 @@ export function Footer() {
           {/* Col 4: Trust & Policies */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-              Legal & Trust
+              Legal &amp; Trust
             </h4>
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
-                <a href="/rental-application-policy.html" className="hover:text-cyan-300 transition">
+                <Link to="/policies" className="hover:text-cyan-300 transition font-semibold text-slate-300">
+                  Complete Policy Framework
+                </Link>
+              </li>
+              <li>
+                <Link to="/rental-application-policy" className="hover:text-cyan-300 transition">
                   Rental Application Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/holding-deposit-policy.html" className="hover:text-cyan-300 transition">
+                <Link to="/holding-deposit-policy" className="hover:text-cyan-300 transition">
                   Holding Deposit Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/fair-housing.html" className="hover:text-cyan-300 transition">
+                <Link to="/fair-housing" className="hover:text-cyan-300 transition">
                   Fair Housing Commitment
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/terms.html" className="hover:text-cyan-300 transition">
+                <Link to="/terms" className="hover:text-cyan-300 transition">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacy.html" className="hover:text-cyan-300 transition">
+                <Link to="/privacy" className="hover:text-cyan-300 transition">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
