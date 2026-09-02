@@ -42,6 +42,10 @@
 # ============================================================================
 # React handles routing internally: /, /listings, /property, etc.
 # All public routes default to index.html for SPA routing
+/property                     /property-react.html                          200
+/property/                    /property-react.html                          200
+/listings                     /listings-react.html                          200
+/listings/                    /listings-react.html                          200
 /property.html                /property-react.html                          200
 /listings.html                /listings-react.html                          200
 
