@@ -1,9 +1,10 @@
-import { useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { PropertyDetail } from '../components/PropertyDetail'
 
 export function PropertyDetailPage() {
+  const { id: pathPropertyId } = useParams()
   const [searchParams] = useSearchParams()
-  const propertyId = searchParams.get('id')
+  const propertyId = pathPropertyId || searchParams.get('id')
 
   if (!propertyId) {
     return (
