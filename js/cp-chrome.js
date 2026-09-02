@@ -87,7 +87,7 @@
           { href: 'move-ins.html',        icon: 'i-door',     label: 'Move-ins' }
         ]},
         { sect: 'Properties',     items: [
-          { href: '/listings.html',       icon: 'i-property', label: 'Properties' },
+          { href: 'listings.html',         icon: 'i-property', label: 'Properties' },
           { href: 'pipeline.html',        icon: 'i-spark',    label: 'Pipeline' },
           { href: 'landlords.html',       icon: 'i-user',     label: 'Landlords' }
         ]},
@@ -110,7 +110,7 @@
         { href: 'dashboard.html',    icon: 'i-home',     label: 'Home' },
         { href: 'applications.html', icon: 'i-apps',     label: 'Apps' },
         { href: 'leases.html',       icon: 'i-leases',   label: 'Leases' },
-        { href: '/listings.html',    icon: 'i-property', label: 'Properties' }
+        { href: 'listings.html',      icon: 'i-property', label: 'Properties' }
       ],
       more: [
         { href: 'move-ins.html',          icon: 'i-door',    label: 'Move-ins' },

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1788375467077"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>New Locations · Choice Properties Admin</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-admin.css?v=1788375467077">
+  <script defer src="/config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/cp-chrome.js?v=1788375467077"></script>
+  <script defer src="/js/cp-shell.js?v=1788375467077"></script>
+</head>
+<body data-portal="admin" data-page-title="New Locations" data-page-sub="Review newly detected markets">
+  <div class="app">
+    <main class="app-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Location notifications</div>
+            <div class="text-xs muted">New city and state combinations detected by the property pipeline.</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="refresh-locations" type="button">Refresh</button>
+        </div>
+        <div class="card-body" id="location-list">
+          <div class="empty"><div class="text-sm muted">Loading notifications…</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script defer src="/js/admin/location-notifications.js?v=1788375467077"></script>
+</body>
+</html>

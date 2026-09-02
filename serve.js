@@ -111,6 +111,15 @@ const server = http.createServer(async (req, res) => {
   if (!filePath) return sendJson(res, 400, { error: 'Invalid path' });
 
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    // Never serve the SPA HTML as a missing asset. Browsers then try to parse
+    // the fallback document as JavaScript and report the misleading
+    // "Unexpected token '<'" error, which also hides missing build config.
+    const requestedExtension = path.extname(filePath).toLowerCase();
+    if (requestedExtension && requestedExtension !== '.html') {
+      res.writeHead(404, { 'Content-Type': contentType(filePath) });
+      res.end(`/* Missing asset: ${path.basename(filePath)} */`);
+      return;
+    }
     filePath = path.join(root, 'index.html');
   }
   res.writeHead(200, { 'Content-Type': contentType(filePath) });

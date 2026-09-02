@@ -136,7 +136,7 @@
       strip.innerHTML = [
         kpi({ label:'Scraped (new)',  value:scraped,   tone: scraped > 0 ? 'warn' : '',    sub:'Pending review',     href:'pipeline.html?status=scraped' }),
         kpi({ label:'Edited',         value:edited,    tone: edited  > 0 ? 'info' : '',    sub:'Ready to publish',   href:'pipeline.html?status=edited' }),
-        kpi({ label:'Published',      value:published, tone:'success',                      sub:'Sent to live site',  href:'/listings.html' }),
+        kpi({ label:'Published',      value:published, tone:'success',                      sub:'Sent to live site',  href:'/admin/listings.html' }),
         kpi({ label:'Archived',       value:archived,  tone:'',                             sub:'In pipeline archive',href:'pipeline.html?status=archived' }),
       ].join('');
 
@@ -215,7 +215,7 @@
     const rangeLabel = { '1d':'last 24h', '7d':'last 7 days', '30d':'last 30 days' }[_range] || 'all time';
     const legacyNote = (pulse.source === 'legacy' && _range !== 'all') ? ' ⚠ range n/a' : '';
     document.getElementById('kpi-strip').innerHTML = [
-      kpi({ label:'Active listings',   value:activeListings,                tone:'gold',    sub:'Live on platform', href:'/listings.html' }),
+        kpi({ label:'Active listings',   value:activeListings,                tone:'gold',    sub:'Live on platform', href:'/admin/listings.html' }),
       kpi({ label:'Total apps',        value:c.total||0,                    tone:'brand',   sub:(_range !== 'all' ? (c.this_period||c.this_month||0) + ' ' + rangeLabel : (c.this_month||0) + ' this month') + legacyNote, href:'applications.html' }),
       kpi({ label:'Pending',           value:c.pending||0,                  tone:'warn',    sub:'Awaiting decision', href:'applications.html?status=pending' }),
       kpi({ label:'Approved',          value:c.approved||0,                 tone:'success', sub:(c.unpaid_approved||0) + ' unpaid', href:'applications.html?status=approved' }),
