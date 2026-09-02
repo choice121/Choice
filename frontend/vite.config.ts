@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
-      external: (id) => id.startsWith('/js/cp-error-reporter.js'),
+      external: (id) =>
+        id.startsWith('/config.js') ||
+        id.startsWith('/js/cp-error-reporter.js') ||
+        id.startsWith('/js/cp-api.js'),
     },
   },
 })
