@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getSupabaseClient } from '../utils/supabase'
+import { getPropertyById } from '../utils/supabase'
 
 export interface PropertyDetailData {
   id: string
@@ -9,14 +9,19 @@ export interface PropertyDetailData {
   state: string
   zip: string
   rent_monthly: number
-  beds: number
-  baths: number
-  sqft: number
+  beds: number | null
+  baths: number | null
+  sqft: number | null
   description: string
   status: string
   pet_friendly: boolean
   application_fee: number
   security_deposit: number
+  photos: Array<{
+    url: string
+    display_order: number
+    is_hero: boolean
+  }>
 }
 
 interface PropertyDetailProps {
@@ -27,23 +32,17 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const [property, setProperty] = useState<PropertyDetailData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState(0)
 
   useEffect(() => {
     const fetchProperty = async () => {
       try {
-        const client = getSupabaseClient()
-        const { data, error: supabaseError } = await client
-          .from('properties')
-          .select(
-            'id, title, address, city, state, zip, rent_monthly, beds, baths, sqft, description, status, pet_friendly, application_fee, security_deposit'
-          )
-          .eq('id', propertyId)
-          .maybeSingle()
-
-        if (supabaseError) {
-          setError(supabaseError.message)
-        } else if (data) {
-          setProperty(data as PropertyDetailData)
+        const result = await getPropertyById(propertyId)
+        if (result.error) {
+          setError(result.error)
+        } else if (result.data) {
+          setProperty(result.data as PropertyDetailData)
+          setSelectedPhoto(0)
         } else {
           setError('Property not found')
         }
@@ -99,14 +98,44 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         {/* Main content */}
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            {/* Gallery placeholder */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-              <div className="aspect-video rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-slate-400">Gallery placeholder</p>
-                  <p className="mt-2 text-sm text-slate-500">Photos will load from pipeline CDN</p>
+            {/* Property gallery */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6">
+              {property.photos.length > 0 ? (
+                <>
+                  <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                    <img
+                      src={property.photos[selectedPhoto]?.url}
+                      alt={`${property.title} photo ${selectedPhoto + 1}`}
+                      className="aspect-video w-full object-cover"
+                    />
+                  </div>
+                  {property.photos.length > 1 && (
+                    <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                      {property.photos.map((photo, index) => (
+                        <button
+                          key={`${photo.url}-${index}`}
+                          type="button"
+                          onClick={() => setSelectedPhoto(index)}
+                          aria-label={`View photo ${index + 1}`}
+                          aria-pressed={selectedPhoto === index}
+                          className={`overflow-hidden rounded-lg border-2 transition ${
+                            selectedPhoto === index ? 'border-cyan-400' : 'border-slate-800 hover:border-slate-600'
+                          }`}
+                        >
+                          <img src={photo.url} alt="" className="aspect-square w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex aspect-video items-center justify-center rounded-xl border border-slate-800 bg-slate-950">
+                  <div className="text-center">
+                    <p className="text-slate-400">Photos coming soon</p>
+                    <p className="mt-2 text-sm text-slate-500">Contact us for more details about this home.</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Description */}
@@ -123,15 +152,17 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-center">
                   <p className="text-sm text-slate-400">Bedrooms</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">{property.beds}</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{property.beds ?? '—'}</p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-center">
                   <p className="text-sm text-slate-400">Bathrooms</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">{property.baths}</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{property.baths ?? '—'}</p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-center">
                   <p className="text-sm text-slate-400">Square feet</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">{property.sqft.toLocaleString()}</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">
+                    {property.sqft == null ? '—' : property.sqft.toLocaleString()}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-center">
                   <p className="text-sm text-slate-400">Status</p>
@@ -174,9 +205,12 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               <p className="mt-3 text-sm text-slate-300">
                 Start your rental application now. The process takes about 10 minutes.
               </p>
-              <button className="mt-5 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110">
+              <a
+                href={`/apply/?id=${encodeURIComponent(property.id)}&pn=${encodeURIComponent(property.title)}&addr=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}&zip=${encodeURIComponent(property.zip)}&rent=${encodeURIComponent(String(property.rent_monthly))}&beds=${encodeURIComponent(String(property.beds ?? ''))}&baths=${encodeURIComponent(String(property.baths ?? ''))}&deposit=${encodeURIComponent(String(property.security_deposit))}&fee=${encodeURIComponent(String(property.application_fee))}&source=${encodeURIComponent(`/property?id=${property.id}`)}`}
+                className="mt-5 block w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
+              >
                 Start application
-              </button>
+              </a>
             </div>
 
             {/* Location info */}
