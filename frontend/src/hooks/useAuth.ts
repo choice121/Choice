@@ -29,7 +29,7 @@ export function useAuth() {
   const getAuth = useCallback(() => {
     if (typeof window === 'undefined') return null
     // The Auth namespace is exported from cp-api.js and available globally
-    return (window as any).Auth
+    return (window as any).Auth ?? (window as any).CP?.Auth
   }, [])
 
   useEffect(() => {
