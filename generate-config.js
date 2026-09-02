@@ -158,7 +158,7 @@ await (async function validateSupabaseCredentials() {
     console.error('❌ Supabase credential check threw an unexpected error:', err.message);
     process.exit(1);
   }
-})(fs.existsSync('dist') ? 'dist' : null);
+})();
 
 // Generate config.js
 const output = `// ============================================================
@@ -335,7 +335,7 @@ const htmlFiles = (function walk(dir) {
     }
   });
   return results;
-})('.');
+})(fs.existsSync('dist') ? 'dist' : null);
 
 const BUILD_VERSION = Date.now().toString();
 
@@ -515,7 +515,7 @@ await (async function injectInitialListings() {
   html = html.replace('</head>', snippet + '</head>');
   fs.writeFileSync(listingsFile, html);
   console.log('✅ Property pre-load: ' + data.rows.length + ' listings embedded in listings.html (total: ' + data.total + ')');
-})(fs.existsSync('dist') ? 'dist' : null);
+})();
 
 // Note: Content-Security-Policy is no longer set in _headers; it is set
 // per-request by functions/_middleware.js so the nonce can rotate on every
