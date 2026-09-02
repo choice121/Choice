@@ -30,7 +30,7 @@ export async function getProperties(limit = 10) {
     const client = getSupabaseClient()
     const { data, error } = await client
       .from('properties')
-      .select('id, title, address, city, monthly_rent, bedrooms, bathrooms, square_footage, status')
+      .select('id, title, address, city, monthly_rent, bedrooms, bathrooms, square_footage, status, property_photos(url, display_order, is_hero)')
       .eq('status', 'active')
       .order('listed_at', { ascending: false })
       .limit(limit)
@@ -49,6 +49,11 @@ export async function getProperties(limit = 10) {
       baths: property.bathrooms == null ? null : Number(property.bathrooms),
       sqft: property.square_footage == null ? null : Number(property.square_footage),
       status: property.status || 'active',
+      photo_url: Array.isArray(property.property_photos)
+        ? property.property_photos
+            .filter((photo: any) => photo?.url)
+            .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))[0]?.url || null
+        : null,
     }))
 
     return { ok: true, data: properties, error: null }

@@ -16,6 +16,7 @@ export type PropertyData = {
   baths: number | null
   sqft: number | null
   status: string
+  photo_url: string | null
 }
 
 export function useProperties(limit = 10) {
