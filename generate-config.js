@@ -10,28 +10,28 @@
 const fs = require('fs');
 
 
-// Read from environment variables (set in your hosting platform's dashboard)
-let rawSupabaseUrl = process.env.SUPABASE_URL || '';
-if (!rawSupabaseUrl || rawSupabaseUrl.includes('your-project-ref')) {
-  rawSupabaseUrl = 'https://tlfmwetmhthpyrytrcfo.supabase.co';
-}
+// Read from environment variables (set in your hosting platform's dashboard).
+// Required values intentionally have no source-code fallbacks: a build with
+// missing configuration must fail rather than silently ship a broken site or
+// reuse credentials from a previous environment.
+const rawSupabaseUrl = process.env.SUPABASE_URL || '';
 
 const config = {
   SUPABASE_URL:      rawSupabaseUrl,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
 
   // I-029: SITE_URL is used to rewrite sitemap.xml and robots.txt at build time.
   // Set this to your production domain in your hosting platform's env var dashboard.
   // Example: https://choiceproperties.com  (no trailing slash)
-  SITE_URL: (process.env.SITE_URL || 'https://choice-properties-site.pages.dev').replace(/\/$/, ''),
+  SITE_URL: (process.env.SITE_URL || '').replace(/\/$/, ''),
 
   // APPLY_FORM_URL: Internal application frontend route.
   // Apply Now buttons on all property listings route here.
   // Keep this as /apply unless the internal route changes.
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '/apply').replace(/\/$/, ''),
 
-  IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || 'https://ik.imagekit.io/21rg7lvzo',
-  IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || 'public_...your-key',
+  IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || '',
+  IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
 
   GEOAPIFY_API_KEY: process.env.GEOAPIFY_API_KEY || '',
 
@@ -53,6 +53,11 @@ const config = {
     REALTIME_UPDATES:process.env.FEATURE_REALTIME_UPDATES !== 'false',
   },
 };
+
+// Never allow an embedded value to satisfy the required configuration check.
+// This assignment also keeps generated config output environment-only while
+// the legacy source line is removed from the imported snapshot.
+config.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 
 const EXPECTED_SUPABASE_PROJECT_REF = 'tlfmwetmhthpyrytrcfo';
 

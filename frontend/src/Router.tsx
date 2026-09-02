@@ -44,6 +44,7 @@ export function Router() {
 
         {/* Application Intake */}
         <Route path="/apply" element={<ApplyPage />} />
+        <Route path="/apply/" element={<ApplyPage />} />
         <Route path="/apply.html" element={<ApplyPage />} />
 
         {/* Policies & Legal */}
