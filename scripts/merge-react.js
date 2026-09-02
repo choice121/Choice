@@ -49,10 +49,12 @@ if (fs.existsSync(reactAssetsSrc)) {
 // (Cloudflare _redirects will route them here)
 const propertyRoutePath = path.join(DIST_DIR, 'property-react.html');
 const listingsRoutePath = path.join(DIST_DIR, 'listings-react.html');
+const migrationRoutePath = path.join(DIST_DIR, 'migration.html');
 
 fs.copyFileSync(reactIndexSrc, propertyRoutePath);
 fs.copyFileSync(reactIndexSrc, listingsRoutePath);
-console.log('✅ Created property-react.html and listings-react.html as React entry points');
+fs.copyFileSync(reactIndexSrc, migrationRoutePath);
+console.log('✅ Created property-react.html, listings-react.html, and migration.html as React entry points');
 
 console.log('\n🎉 React build successfully merged with dist/');
 console.log('   Public pages now served by React (SPA)');
