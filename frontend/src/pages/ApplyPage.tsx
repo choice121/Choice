@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { Footer } from '../components/Footer'
@@ -82,8 +82,12 @@ export function ApplyPage() {
 
   const [stepIndex, setStepIndex] = useState(0)
   const [submittedAppId, setSubmittedAppId] = useState<string | null>(null)
+  const [portalLoginUrl, setPortalLoginUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const submissionUuidRef = useRef<string | null>(null)
+  const submittingRef = useRef(false)
 
   const [form, setForm] = useState<FormState>({
     propertyId: initialPropertyId,
@@ -214,91 +218,146 @@ export function ApplyPage() {
   }
 
   const handleSubmit = async () => {
+    if (submittingRef.current || submittedAppId) return
     if (!validateStep('review')) return
+    submittingRef.current = true
     setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
-      // Generate standard verifiable application identifier
-      const generatedId = `CP-APP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-
-      // Attempt submission to local edge function or fallback API
-      try {
-        
-        const formData = new FormData()
-        formData.append('Property ID', form.propertyId)
-        formData.append('First Name', form.firstName)
-        formData.append('Last Name', form.lastName)
-        formData.append('Email', form.email)
-        formData.append('Phone', form.phone)
-        formData.append('DOB', form.dob)
-        formData.append('SSN', form.ssnLast4)
-        formData.append('Has Co-Applicant', form.hasCoApplicant)
-        if (form.hasCoApplicant === 'yes') {
-          formData.append('Co-Applicant Name', form.coApplicantName)
-          formData.append('Co-Applicant Email', form.coApplicantEmail)
-        }
-        formData.append('Current Address', form.currentAddress)
-        formData.append('Residency Duration', form.residencyDuration)
-        formData.append('Current Rent Amount', form.currentRent)
-        formData.append('Current Landlord Name', form.currentLandlordName)
-        formData.append('Landlord Phone', form.currentLandlordPhone)
-        formData.append('Total Occupants', form.totalOccupants)
-        formData.append('Has Pets', form.hasPets)
-        if (form.hasPets === 'yes') formData.append('Pet Details', form.petDetails)
-        formData.append('Has Vehicle', form.hasVehicles)
-        if (form.hasVehicles === 'yes') formData.append('Vehicle Make', form.vehicleDetails)
-        
-        formData.append('Employment Status', form.employmentStatus)
-        formData.append('Employer', form.employerName)
-        formData.append('Job Title', form.jobTitle)
-        formData.append('Monthly Income', form.monthlyIncome)
-        formData.append('Other Income', form.incomeSource)
-        
-        formData.append('Reference 1 Name', form.referenceName)
-        formData.append('Reference 1 Phone', form.referencePhone)
-        formData.append('Reference 1 Relationship', form.referenceRelationship)
-        formData.append('Emergency Contact Name', form.emergencyContactName)
-        formData.append('Emergency Contact Phone', form.emergencyContactPhone)
-        
-        formData.append('Terms Consent', 'yes')
-        formData.append('smsConsent', form.smsConsent ? 'on' : '')
-
-        // Base64 encode documents
-        const encodeFile = (file: any) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => {
-             const res = reader.result as string;
-             resolve(res.split(',')[1])
-          }
-          reader.onerror = reject
-          reader.readAsDataURL(file)
-        })
-
-        if (form.documents && form.documents.length > 0) {
-          const encoded = await Promise.all((form.documents as any[]).map(encodeFile))
-          encoded.forEach((b64, i) => {
-            formData.append(`_docFile_${i}_name`, form.documents[i].name)
-            formData.append(`_docFile_${i}_type`, form.documents[i].type || 'application/octet-stream')
-            formData.append(`_docFile_${i}_data`, b64)
-          })
-        }
-
-        const res = await fetch(((window.CONFIG && window.CONFIG.SUPABASE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co') + '/functions/v1/receive-application', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Accept': 'application/json'
-          }
-        })
-        if (!res.ok) throw new Error('Submission failed')
-
-      } catch (err) {
-        console.warn('Storage fallback used for application submission:', err)
+      const supabaseUrl = window.CONFIG?.SUPABASE_URL?.replace(/\/$/, '')
+      const anonKey = window.CONFIG?.SUPABASE_ANON_KEY
+      if (!supabaseUrl || !anonKey) {
+        throw new Error('The application system is temporarily unavailable. Please try again later or use the classic application.')
       }
 
-      setSubmittedAppId(generatedId)
+      const formData = new FormData()
+      formData.append('Property ID', form.propertyId)
+      formData.append('Property Address', form.propertyAddress)
+      formData.append('Property City', form.propertyCity)
+      formData.append('Property State', form.propertyState)
+      formData.append('Property Zip', form.propertyZip)
+      formData.append('Listed Rent', form.propertyRent)
+      formData.append('Application Fee', '50')
+      formData.append('Security Deposit', form.propertyRent)
+      formData.append('First Name', form.firstName)
+      formData.append('Last Name', form.lastName)
+      formData.append('Email', form.email)
+      formData.append('Phone', form.phone)
+      formData.append('DOB', form.dob)
+      formData.append('SSN', form.ssnLast4)
+      formData.append('Has Co-Applicant', form.hasCoApplicant)
+      if (form.hasCoApplicant === 'yes') {
+        formData.append('Co-Applicant Name', form.coApplicantName)
+        formData.append('Co-Applicant Email', form.coApplicantEmail)
+      }
+      formData.append('Current Address', form.currentAddress)
+      formData.append('Residency Duration', form.residencyDuration)
+      formData.append('Current Rent Amount', form.currentRent)
+      formData.append('Current Landlord Name', form.currentLandlordName)
+      formData.append('Landlord Phone', form.currentLandlordPhone)
+      formData.append('Total Occupants', form.totalOccupants)
+      formData.append('Has Pets', form.hasPets)
+      if (form.hasPets === 'yes') formData.append('Pet Details', form.petDetails)
+      formData.append('Has Vehicle', form.hasVehicles)
+      if (form.hasVehicles === 'yes') formData.append('Vehicle Make', form.vehicleDetails)
+      formData.append('Employment Status', form.employmentStatus)
+      formData.append('Employer', form.employerName)
+      formData.append('Job Title', form.jobTitle)
+      formData.append('Monthly Income', form.monthlyIncome)
+      formData.append('Other Income', form.incomeSource)
+      formData.append('Reference 1 Name', form.referenceName)
+      formData.append('Reference 1 Phone', form.referencePhone)
+      formData.append('Reference 1 Relationship', form.referenceRelationship)
+      formData.append('Emergency Contact Name', form.emergencyContactName)
+      formData.append('Emergency Contact Phone', form.emergencyContactPhone)
+      formData.append('Terms Consent', 'yes')
+      formData.append('SMS Consent', form.smsConsent ? 'yes' : 'no')
+      formData.append('Consent Version', '2.0')
+
+      // Keep one idempotency key for this logical submission so a retry can
+      // safely retrieve the original server-created application.
+      if (!submissionUuidRef.current) {
+        submissionUuidRef.current = window.crypto?.randomUUID?.() ||
+          'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+            const random = Math.random() * 16 | 0
+            const value = character === 'x' ? random : (random & 0x3) | 0x8
+            return value.toString(16)
+          })
+      }
+      formData.set('submission_uuid', submissionUuidRef.current)
+      formData.set('_cp_csrf', sessionStorage.getItem('_cp_csrf') || submissionUuidRef.current)
+
+      const encodeFile = (file: File) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result
+          if (typeof result !== 'string' || !result.includes(',')) {
+            reject(new Error('A document could not be prepared for upload.'))
+            return
+          }
+          resolve(result.split(',')[1])
+        }
+        reader.onerror = () => reject(new Error('A document could not be read.'))
+        reader.readAsDataURL(file)
+      })
+
+      if (form.documents.length > 0) {
+        const encoded = await Promise.all((form.documents as File[]).map(encodeFile))
+        encoded.forEach((base64, index) => {
+          formData.append(`_docFile_${index}_name`, form.documents[index].name)
+          formData.append(`_docFile_${index}_type`, form.documents[index].type || 'application/octet-stream')
+          formData.append(`_docFile_${index}_data`, base64)
+        })
+      }
+
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 120000)
+      let response: Response
+      try {
+        response = await fetch(`${supabaseUrl}/functions/v1/receive-application`, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+          headers: {
+            Accept: 'application/json',
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+        })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new Error('The application system took too long to respond. Please retry; your application was not confirmed.')
+        }
+        throw new Error('We could not reach the application system. Please check your connection and retry.')
+      } finally {
+        window.clearTimeout(timeout)
+      }
+
+      let payload: { success?: boolean; appId?: unknown; portal_login_url?: unknown; error?: unknown } = {}
+      try {
+        payload = await response.json()
+      } catch {
+        throw new Error('The application system returned an unexpected response. Please retry.')
+      }
+
+      if (!response.ok) {
+        const serverMessage = typeof payload.error === 'string' ? payload.error : ''
+        throw new Error(serverMessage || `The application could not be submitted (HTTP ${response.status}). Please retry.`)
+      }
+
+      if (payload.success !== true || typeof payload.appId !== 'string' || !payload.appId.trim()) {
+        const serverMessage = typeof payload.error === 'string' ? payload.error : ''
+        throw new Error(serverMessage || 'The application was not confirmed by the server. Please retry.')
+      }
+
+      setSubmittedAppId(payload.appId)
+      setPortalLoginUrl(typeof payload.portal_login_url === 'string' ? payload.portal_login_url : null)
       window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'The application could not be submitted. Please retry.')
     } finally {
+      submittingRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -370,7 +429,7 @@ export function ApplyPage() {
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
                 <a
-                  href="/tenant/portal.html"
+                  href={portalLoginUrl || '/tenant/portal.html'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 min-h-[44px]"
@@ -438,6 +497,21 @@ export function ApplyPage() {
                 </div>
               </div>
             </div>
+
+            {submissionError && (
+              <div id="application-submission-error" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-100" role="alert">
+                <p className="font-semibold">We could not confirm your application.</p>
+                <p className="mt-1 text-sm text-rose-200/90">{submissionError}</p>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={isSubmitting}
+                  className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-rose-400/50 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Retry Submission
+                </button>
+              </div>
+            )}
 
             {/* Step Progress Bar */}
             <div className="space-y-2">

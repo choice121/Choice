@@ -37,8 +37,8 @@ proves an equivalent replacement is safe.
 
 **Current phase:** Phase 3 — restore shared data and auth contracts
 
-**Current next action:** Compare the React public listing/detail states with
-legacy output, then move to the safe application submission contract.
+**Current next action:** Complete the full React application contract and
+Cloudflare route verification before broader public-page cutover.
 
 **Completed in this repair session:**
 
@@ -310,7 +310,26 @@ rollback is documented.
 
 ### Phase 5 log
 
-- Not started.
+- **2026-09-02 — Safety slice implemented:** React application submission now
+  sends the established field names, consent metadata, Supabase application
+  headers, a stable `submission_uuid`, and attached documents to the
+  `receive-application` Edge Function.
+- **2026-09-02 — Safety slice implemented:** React only enters confirmation
+  after a successful response with a non-empty server-returned `appId`.
+  HTTP, malformed-response, timeout, network, and missing-configuration
+  failures remain on the form with a retryable error state.
+- **2026-09-02 — Safety slice implemented:** Confirmation uses the server
+  `portal_login_url` when provided and otherwise falls back to the tenant
+  tracker. The submit guard prevents concurrent duplicate clicks while the
+  stable UUID makes retries idempotent.
+- **2026-09-02 — Verified:** `npm run build`, `npm run lint`, and
+  `git diff --check` passed. The built `/apply.html` React entry rendered in a
+  browser preview without a visible error. The local `/apply/` directory
+  intentionally remains the legacy fallback because the temporary static
+  server does not process Cloudflare `_redirects`.
+- **Next evidence required:** Complete the remaining legacy field contract,
+  draft/resume and progress behavior, then verify valid, rejected, timed-out,
+  and duplicate submissions against the Edge Function.
 
 ### Phase 6 log
 
