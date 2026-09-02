@@ -21,7 +21,7 @@ const LEGACY_PLACEHOLDER = 'VZEkWatH2Jtta2vFy8dRhA';
 
 const CSP_TEMPLATE = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co https://www.gstatic.com https://cdn.tailwindcss.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
   "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
   "img-src 'self' data: blob: https://ik.imagekit.io https://*.supabase.co https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://maps.geoapify.com https://images.unsplash.com https://*.zillowstatic.com https://photos.zillowstatic.com https://*.rdcpix.com https://ap.rdcpix.com https://*.realtor.com https://*.rentpath.com https://*.trulia.com https://*.apartments.com https://*.redfin.com https://*.opendoor.com https://images.opendoor.com https://*.rentprogress.com https://photos.rentprogress.com",

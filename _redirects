@@ -5,10 +5,29 @@
 # PROTECTED FLOWS (Legacy HTML)
 # ============================================================================
 
-# Admin dashboard (legacy)
-/admin                      /admin/dashboard.html                        302
-/admin/                    /admin/dashboard.html                        302
-/admin/*                    /admin/dashboard.html                        200
+# Admin routes (legacy multi-page HTML)
+/admin                      /admin/login.html                            302
+/admin/                     /admin/login.html                            302
+/admin/dashboard            /admin/dashboard.html                        200
+/admin/login                /admin/login.html                            200
+/admin/applications         /admin/applications.html                     200
+/admin/leases               /admin/leases.html                           200
+/admin/pipeline             /admin/pipeline.html                         200
+/admin/watermark-sniper     /admin/watermark-sniper.html                 200
+/admin/watermark-review     /admin/watermark-review.html                 200
+/admin/vision-audit         /admin/vision-audit.html                     200
+/admin/inspections          /admin/inspections.html                      200
+/admin/messages             /admin/messages.html                         200
+/admin/email-logs           /admin/email-logs.html                       200
+/admin/audit-log            /admin/audit-log.html                        200
+/admin/landlords            /admin/landlords.html                        200
+/admin/move-ins             /admin/move-ins.html                         200
+/admin/property-detail      /admin/property-detail.html                  200
+/admin/lease-detail         /admin/lease-detail.html                     200
+/admin/lease-template       /admin/lease-template.html                   200
+/admin/state-law            /admin/state-law.html                        200
+/admin/deposit-accounting   /admin/deposit-accounting.html               200
+/admin/listings             /admin/listings.html                         200
 
 # Application flow (legacy)
 /apply.html                 /apply/                                      302
@@ -18,17 +37,33 @@
 /apply/lease.html           /apply/                                      302
 /apply/*                    /apply/index.html                            200
 
-# Tenant dashboard (legacy)
-/tenant/*                   /tenant/index.html                           200
+# Tenant dashboard (legacy multi-page HTML)
+/tenant                     /tenant/portal.html                          302
+/tenant/                    /tenant/portal.html                          302
+/tenant/portal              /tenant/portal.html                          200
+/tenant/login               /tenant/login.html                           200
+/tenant/deposit             /tenant/deposit.html                         200
+/tenant/inspection          /tenant/inspection.html                      200
 
-# Legacy landlord routes (legacy)
-/landlord/properties.html   /landlord/dashboard.html                      302
-/landlord/properties        /landlord/dashboard.html                      302
-/landlord/listings.html     /landlord/dashboard.html                      302
-/landlord/listings          /landlord/dashboard.html                      302
+# Landlord routes (legacy multi-page HTML)
+/landlord                   /landlord/login.html                         302
+/landlord/                  /landlord/login.html                         302
+/landlord/dashboard         /landlord/dashboard.html                     200
+/landlord/login             /landlord/login.html                         200
+/landlord/register          /landlord/register.html                      200
+/landlord/properties.html   /landlord/dashboard.html                     302
+/landlord/properties        /landlord/dashboard.html                     302
+/landlord/listings.html     /landlord/dashboard.html                     302
+/landlord/listings          /landlord/dashboard.html                     302
 /landlord/messages.html     /landlord/inquiries.html                     302
 /landlord/messages          /landlord/inquiries.html                     302
-/landlord/*                 /landlord/index.html                         200
+/landlord/applications      /landlord/applications.html                  200
+/landlord/edit-listing      /landlord/edit-listing.html                  200
+/landlord/new-listing       /landlord/new-listing.html                   200
+/landlord/inquiries         /landlord/inquiries.html                     200
+/landlord/inspection-review /landlord/inspection-review.html             200
+/landlord/profile           /landlord/profile.html                       200
+/landlord/settings          /landlord/settings.html                      200
 
 # Auth flows (legacy)
 /auth/*                     /auth/callback.html                          200
