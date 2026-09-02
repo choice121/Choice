@@ -10,16 +10,16 @@ export function getSupabaseClient() {
     throw new Error('Supabase client only available in browser')
   }
 
-  if (!window.supabase) {
-    throw new Error('Supabase SDK not loaded. Ensure supabase.min.js is loaded in parent HTML.')
-  }
-
   if (typeof window.CONFIG === 'undefined' || !window.CONFIG.SUPABASE_URL) {
     throw new Error('CONFIG not ready. Ensure config.js is loaded in parent HTML.')
   }
 
-  // Return the existing global Supabase client (initialized in cp-api.js)
-  return window.supabase
+  if (!window.CP?.sb) {
+    throw new Error('Supabase client not initialized. Ensure cp-api.js is loaded.')
+  }
+
+  // Reuse the lazy singleton initialized by cp-api.js, not the SDK namespace.
+  return window.CP.sb()
 }
 
 /**
@@ -122,6 +122,9 @@ export async function getPropertyById(id: string) {
 declare global {
   interface Window {
     supabase: any
+    CP?: {
+      sb: () => any
+    }
     CONFIG: {
       SUPABASE_URL: string
       SUPABASE_ANON_KEY: string
