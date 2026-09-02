@@ -15,7 +15,7 @@ const rawSupabaseUrl = process.env.SUPABASE_URL || 'https://tlfmwetmhthpyrytrcfo
 
 const config = {
   SUPABASE_URL:      rawSupabaseUrl,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'fake-anon-key',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
   SITE_URL: (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, ''),
   APPLY_FORM_URL: (process.env.APPLY_FORM_URL || '/apply').replace(/\/$/, ''),
   IMAGEKIT_URL:        process.env.IMAGEKIT_URL        || 'https://ik.imagekit.io/fake',
@@ -41,7 +41,7 @@ const config = {
 // Never allow an embedded value to satisfy the required configuration check.
 // This assignment also keeps generated config output environment-only while
 // the legacy source line is removed from the imported snapshot.
-config.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'fake-anon-key';
+config.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
 
 const EXPECTED_SUPABASE_PROJECT_REF = 'tlfmwetmhthpyrytrcfo';
 
