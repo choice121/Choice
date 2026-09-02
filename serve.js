@@ -5,7 +5,10 @@ const path = require('path');
 const PORT = 3000;
 const ROOT = __dirname;
 const distPath = path.join(ROOT, 'dist');
-const staticRoot = fs.existsSync(distPath) ? distPath : ROOT;
+
+function getStaticRoot() {
+  return fs.existsSync(distPath) ? distPath : ROOT;
+}
 
 let visionAuditor = null;
 try {
@@ -62,10 +65,31 @@ function contentType(filePath) {
 }
 
 function safePath(requestPath) {
+  const root = getStaticRoot();
   const decoded = decodeURIComponent(requestPath.split('?')[0]);
   const relative = decoded === '/' ? 'index.html' : decoded.replace(/^[/\\]+/, '');
-  const resolved = path.resolve(staticRoot, relative);
-  return resolved.startsWith(path.resolve(staticRoot) + path.sep) ? resolved : null;
+  const resolved = path.resolve(root, relative);
+  if (!resolved.startsWith(path.resolve(root) + path.sep) && resolved !== path.resolve(root)) {
+    return null;
+  }
+
+  // If path is a directory (e.g. /apply or /admin), look for index.html inside it
+  if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+    const indexPath = path.join(resolved, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return indexPath;
+    }
+  }
+
+  // Also check if .html was omitted (e.g. /how-to-apply or /faq)
+  if (!fs.existsSync(resolved)) {
+    const htmlCandidate = resolved + '.html';
+    if (fs.existsSync(htmlCandidate)) {
+      return htmlCandidate;
+    }
+  }
+
+  return resolved;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -77,6 +101,7 @@ const server = http.createServer(async (req, res) => {
     return handleVisionAudit(req, res);
   }
 
+  const root = getStaticRoot();
   let filePath;
   try {
     filePath = safePath(requestPath);
@@ -86,7 +111,7 @@ const server = http.createServer(async (req, res) => {
   if (!filePath) return sendJson(res, 400, { error: 'Invalid path' });
 
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-    filePath = path.join(staticRoot, 'index.html');
+    filePath = path.join(root, 'index.html');
   }
   res.writeHead(200, { 'Content-Type': contentType(filePath) });
   fs.createReadStream(filePath).pipe(res);

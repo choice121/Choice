@@ -21,6 +21,7 @@ export function Router() {
         <Route path="/listings.html" element={<ListingsPage />} />
         <Route path="/listings-react" element={<ListingsPage />} />
         <Route path="/listings-react.html" element={<ListingsPage />} />
+        <Route path="*" element={<ListingsPage />} />
       </Routes>
     </BrowserRouter>
   )

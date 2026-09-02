@@ -11,11 +11,16 @@ export type PropertyData = {
   title: string
   address: string
   city: string
+  state?: string
+  zip?: string
   rent_monthly: number
   beds: number | null
   baths: number | null
   sqft: number | null
   status: string
+  pet_friendly?: boolean
+  application_fee?: number
+  security_deposit?: number
   photo_url: string | null
 }
 
@@ -24,7 +29,7 @@ export function useProperties(limit = 10) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const fetchListings = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -45,13 +50,30 @@ export function useProperties(limit = 10) {
   }, [limit])
 
   useEffect(() => {
-    refetch()
-  }, [refetch])
+    let isMounted = true
+    getProperties(limit).then((result) => {
+      if (!isMounted) return
+      if (result.ok) {
+        setProperties(result.data || [])
+      } else {
+        setError(result.error || 'Failed to fetch properties')
+      }
+      setLoading(false)
+    }).catch((e) => {
+      if (!isMounted) return
+      setError(String(e))
+      setLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [limit])
 
   return {
     properties,
     loading,
     error,
-    refetch,
+    refetch: fetchListings,
   }
 }

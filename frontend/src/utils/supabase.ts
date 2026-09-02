@@ -5,32 +5,39 @@
  * global client to preserve session, auth state, and storage contracts.
  */
 
+let _fallbackClient: any = null
+
 export function getSupabaseClient() {
   if (typeof window === 'undefined') {
     throw new Error('Supabase client only available in browser')
   }
 
-  if (typeof window.CONFIG === 'undefined' || !window.CONFIG.SUPABASE_URL) {
-    throw new Error('CONFIG not ready. Ensure config.js is loaded in parent HTML.')
+  // Reuse the lazy singleton initialized by cp-api.js if available
+  if (window.CP?.sb) {
+    return window.CP.sb()
   }
 
-  if (!window.CP?.sb) {
-    throw new Error('Supabase client not initialized. Ensure cp-api.js is loaded.')
+  if (_fallbackClient) {
+    return _fallbackClient
   }
 
-  // Reuse the lazy singleton initialized by cp-api.js, not the SDK namespace.
-  return window.CP.sb()
+  if (typeof window.CONFIG !== 'undefined' && window.CONFIG?.SUPABASE_URL && window.supabase) {
+    _fallbackClient = window.supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_ANON_KEY)
+    return _fallbackClient
+  }
+
+  throw new Error('Supabase client not initialized. Ensure config.js and supabase.min.js are loaded.')
 }
 
 /**
  * Type-safe wrapper around window.supabase to access properties table.
  */
-export async function getProperties(limit = 10) {
+export async function getProperties(limit = 40) {
   try {
     const client = getSupabaseClient()
     const { data, error } = await client
       .from('properties')
-      .select('id, title, address, city, monthly_rent, bedrooms, bathrooms, square_footage, status, property_photos(url, display_order, is_hero)')
+      .select('id, title, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, status, pets_allowed, application_fee, security_deposit, property_photos(url, display_order, is_hero)')
       .eq('status', 'active')
       .order('listed_at', { ascending: false })
       .limit(limit)
@@ -39,22 +46,30 @@ export async function getProperties(limit = 10) {
       return { ok: false, data: null, error: error.message }
     }
 
-    const properties = (data || []).map((property: any) => ({
-      id: property.id,
-      title: property.title,
-      address: property.address,
-      city: property.city,
-      rent_monthly: Number(property.monthly_rent) || 0,
-      beds: property.bedrooms == null ? null : Number(property.bedrooms),
-      baths: property.bathrooms == null ? null : Number(property.bathrooms),
-      sqft: property.square_footage == null ? null : Number(property.square_footage),
-      status: property.status || 'active',
-      photo_url: Array.isArray(property.property_photos)
-        ? property.property_photos
-            .filter((photo: any) => photo?.url)
-            .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))[0]?.url || null
-        : null,
-    }))
+    const properties = (data || []).map((property: any) => {
+      const rent = Number(property.monthly_rent) || 0
+      return {
+        id: property.id,
+        title: property.title,
+        address: property.address,
+        city: property.city,
+        state: property.state || '',
+        zip: property.zip || '',
+        rent_monthly: rent,
+        beds: property.bedrooms == null ? null : Number(property.bedrooms),
+        baths: property.bathrooms == null ? null : Number(property.bathrooms),
+        sqft: property.square_footage == null ? null : Number(property.square_footage),
+        status: property.status || 'active',
+        pet_friendly: true, // Always pet-friendly per Choice Properties rules
+        application_fee: 50, // Always $50 per Choice Properties rules
+        security_deposit: rent, // Always 1x monthly rent
+        photo_url: Array.isArray(property.property_photos)
+          ? property.property_photos
+              .filter((photo: any) => photo?.url)
+              .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))[0]?.url || null
+          : null,
+      }
+    })
 
     return { ok: true, data: properties, error: null }
   } catch (e) {
@@ -93,6 +108,8 @@ export async function getPropertyById(id: string) {
           }))
       : []
 
+    const rent = Number(data.monthly_rent) || 0
+
     return {
       ok: true,
       data: {
@@ -100,17 +117,17 @@ export async function getPropertyById(id: string) {
         title: data.title,
         address: data.address,
         city: data.city,
-        state: data.state,
-        zip: data.zip,
-        rent_monthly: Number(data.monthly_rent) || 0,
+        state: data.state || '',
+        zip: data.zip || '',
+        rent_monthly: rent,
         beds: data.bedrooms == null ? null : Number(data.bedrooms),
         baths: data.bathrooms == null ? null : Number(data.bathrooms),
         sqft: data.square_footage == null ? null : Number(data.square_footage),
         description: data.description || '',
         status: data.status || 'active',
-        pet_friendly: Boolean(data.pets_allowed),
-        application_fee: Number(data.application_fee) || 0,
-        security_deposit: Number(data.security_deposit) || 0,
+        pet_friendly: true, // Always pet-friendly per rules
+        application_fee: 50, // Always $50 per rules
+        security_deposit: rent, // Always 1x monthly rent
         photos,
       },
       error: null,

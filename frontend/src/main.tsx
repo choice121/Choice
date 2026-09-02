@@ -5,39 +5,55 @@ import Router from './Router.tsx'
 
 type ReadinessCheck = () => boolean
 
-function ensureScript(src: string, ready: ReadinessCheck, type?: string) {
-  if (ready()) return Promise.resolve()
-
-  return new Promise<void>((resolve, reject) => {
-    const existing = Array.from(document.scripts).find((script) => script.src.includes(src))
-    if (existing) {
-      existing.addEventListener('load', () => resolve(), { once: true })
-      existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = src
-    if (type) script.type = type
-    script.addEventListener('load', () => resolve(), { once: true })
-    script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true })
-    document.head.appendChild(script)
+function waitForReadiness(ready: ReadinessCheck, timeoutMs = 2500): Promise<boolean> {
+  if (ready()) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const start = Date.now()
+    const timer = setInterval(() => {
+      if (ready() || Date.now() - start > timeoutMs) {
+        clearInterval(timer)
+        resolve(ready())
+      }
+    }, 20)
   })
 }
 
+async function ensureScript(src: string, ready: ReadinessCheck, type?: string) {
+  if (ready()) return
+  const isReady = await waitForReadiness(ready, 300)
+  if (isReady) return
+
+  const existing = Array.from(document.scripts).find((script) => script.src.includes(src))
+  if (!existing) {
+    const script = document.createElement('script')
+    script.src = src
+    if (type) script.type = type
+    document.head.appendChild(script)
+  }
+  await waitForReadiness(ready, 2000)
+}
+
 function renderApp() {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <Router />
-    </StrictMode>,
-  )
+  const root = document.getElementById('root')
+  if (root) {
+    createRoot(root).render(
+      <StrictMode>
+        <Router />
+      </StrictMode>,
+    )
+  }
 }
 
 async function bootstrap() {
-  await ensureScript('/config.js', () => Boolean((window as any).CONFIG?.SUPABASE_URL))
-  await ensureScript('/js/supabase.min.js', () => Boolean((window as any).supabase))
-  await ensureScript('/js/cp-api.js', () => Boolean((window as any).CP?.Auth), 'module')
-  renderApp()
+  try {
+    await ensureScript('/config.js', () => Boolean((window as any).CONFIG?.SUPABASE_URL))
+    await ensureScript('/js/supabase.min.js', () => Boolean((window as any).supabase))
+    await ensureScript('/js/cp-api.js', () => Boolean((window as any).CP?.Auth || (window as any).CP?.sb), 'module')
+  } catch (e) {
+    console.warn('Bootstrap script notice:', e)
+  } finally {
+    renderApp()
+  }
 }
 
 bootstrap().catch((error) => {
