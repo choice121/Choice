@@ -158,7 +158,7 @@ await (async function validateSupabaseCredentials() {
     console.error('❌ Supabase credential check threw an unexpected error:', err.message);
     process.exit(1);
   }
-})();
+})(fs.existsSync('dist') ? 'dist' : null);
 
 // Generate config.js
 const output = `// ============================================================
