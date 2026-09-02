@@ -12,9 +12,9 @@ export type PropertyData = {
   address: string
   city: string
   rent_monthly: number
-  beds: number
-  baths: number
-  sqft: number
+  beds: number | null
+  baths: number | null
+  sqft: number | null
   status: string
 }
 
