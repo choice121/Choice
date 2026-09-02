@@ -4,4 +4,9 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      external: (id) => id.startsWith('/js/cp-error-reporter.js'),
+    },
+  },
 })

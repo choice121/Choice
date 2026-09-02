@@ -10,6 +10,7 @@ export interface PropertyCardData {
   baths: number | null
   sqft: number | null
   status: string
+  photo_url: string | null
 }
 
 interface PropertyListProps {
@@ -61,9 +62,19 @@ export function PropertyList({ limit = 12, onPropertySelect }: PropertyListProps
           onClick={() => onPropertySelect?.(property.id)}
           className="group rounded-2xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-cyan-500/40 hover:bg-slate-800"
         >
-          {/* Thumbnail placeholder */}
-          <div className="mb-3 aspect-video rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center group-hover:border-cyan-500/20">
-            <p className="text-xs text-slate-500">Photo</p>
+          <div className="mb-3 aspect-video overflow-hidden rounded-xl border border-slate-800 bg-slate-950 group-hover:border-cyan-500/20">
+            {property.photo_url ? (
+              <img
+                src={property.photo_url}
+                alt=""
+                className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-xs text-slate-500">Photo coming soon</p>
+              </div>
+            )}
           </div>
 
           <h3 className="font-semibold text-white line-clamp-2 group-hover:text-cyan-200">{property.title}</h3>
