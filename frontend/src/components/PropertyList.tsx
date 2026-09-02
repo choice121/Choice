@@ -6,9 +6,9 @@ export interface PropertyCardData {
   address: string
   city: string
   rent_monthly: number
-  beds: number
-  baths: number
-  sqft: number
+  beds: number | null
+  baths: number | null
+  sqft: number | null
   status: string
 }
 
@@ -70,7 +70,7 @@ export function PropertyList({ limit = 12, onPropertySelect }: PropertyListProps
 
           <div className="mt-2 space-y-1 text-sm text-slate-400">
             <p className="line-clamp-1">{property.address}</p>
-            <p>{property.city}</p>
+             <p>{property.city}</p>
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
@@ -80,9 +80,9 @@ export function PropertyList({ limit = 12, onPropertySelect }: PropertyListProps
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500 mb-1">
-                {property.beds}bd / {property.baths}ba
+                 {property.beds == null ? '—' : `${property.beds}bd`} / {property.baths == null ? '—' : `${property.baths}ba`}
               </p>
-              <p className="text-xs text-slate-400">{property.sqft.toLocaleString()} sqft</p>
+               <p className="text-xs text-slate-400">{property.sqft == null ? '—' : `${property.sqft.toLocaleString()} sqft`}</p>
             </div>
           </div>
 
