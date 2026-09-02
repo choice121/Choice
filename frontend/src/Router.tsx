@@ -12,8 +12,10 @@ export function Router() {
         <Route path="/migration" element={<App />} />
         <Route path="/migration.html" element={<App />} />
         <Route path="/property" element={<PropertyDetailPage />} />
+        <Route path="/property/:id" element={<PropertyDetailPage />} />
         <Route path="/property.html" element={<PropertyDetailPage />} />
         <Route path="/property-react" element={<PropertyDetailPage />} />
+        <Route path="/property-react/:id" element={<PropertyDetailPage />} />
         <Route path="/property-react.html" element={<PropertyDetailPage />} />
         <Route path="/listings" element={<ListingsPage />} />
         <Route path="/listings.html" element={<ListingsPage />} />
