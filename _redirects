@@ -29,8 +29,10 @@
 /admin/deposit-accounting   /admin/deposit-accounting.html               200
 /admin/listings             /admin/listings.html                         200
 
-# Application flow (legacy)
+# Application flow (React canonical entry + legacy fallback)
 /apply.html                 /apply/                                      302
+/apply                       /apply/                                      302
+/apply/                      /apply.html                                  200
 /apply/login.html           /apply/?path=dashboard                       302
 /apply/dashboard.html       /apply/?path=dashboard                       302
 /apply/success.html         /apply/?path=dashboard                       302

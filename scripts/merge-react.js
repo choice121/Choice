@@ -73,10 +73,4 @@ migratedRoutes.forEach((routeFile) => {
 console.log('\n🎉 React build successfully merged with dist/');
 console.log('   Public and informational pages now served by React (SPA)');
 console.log('   Protected workflows (admin, landlord, tenant, classic apply) remain accessible');
-
-// Remove legacy /apply folder since the React ApplyPage handles it now.
-const legacyApplyDir = path.join(DIST_DIR, 'apply');
-if (fs.existsSync(legacyApplyDir)) {
-  fs.rmSync(legacyApplyDir, { recursive: true, force: true });
-  console.log('✅ Removed legacy /apply directory (now handled by React SPA)');
-}
+console.log('   Legacy /apply/index.html is retained as the application fallback');

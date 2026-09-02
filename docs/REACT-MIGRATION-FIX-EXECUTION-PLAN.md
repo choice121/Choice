@@ -35,11 +35,10 @@ proves an equivalent replacement is safe.
 
 **Last updated:** 2026-09-02
 
-**Current phase:** Phase 2 — safe routing and deployment handoff
+**Current phase:** Phase 3 — restore shared data and auth contracts
 
-**Current next action:** Map every public, application, protected, and blocked
-route against the built `dist/` tree. Fix the `/apply/` entry mismatch without
-removing the legacy fallback, then verify deep links in a built preview.
+**Current next action:** Inventory the established `CP.Properties` and auth
+contracts before writing a second query implementation.
 
 **Completed in this repair session:**
 
@@ -56,7 +55,8 @@ removing the legacy fallback, then verify deep links in a built preview.
 
 **Not completed yet:**
 
-- No routing or application behavior has been changed yet.
+- The `/apply/` route now serves the React application entry while
+  `/apply/index.html` remains the legacy fallback.
 - No routing, application, listings, property detail, or visual parity work
   should be considered complete yet.
 
@@ -265,7 +265,18 @@ rollback is documented.
 
 ### Phase 2 log
 
-- Not started.
+- **2026-09-02 — Passed:** Added an explicit `/apply/` rewrite to the React
+  `apply.html` entry, retained the legacy `dist/apply/index.html`, and kept
+  historical application aliases intact.
+- **2026-09-02 — Passed:** Rebuilt with `npm run build`; verified React and
+  legacy application entries are distinct, protected admin/landlord/tenant/auth
+  files remain in `dist/`, and `git diff --check` passed.
+- **2026-09-02 — Passed:** Built-preview route checks returned the intended
+  documents for `/`, `/listings`, `/property.html`, `/apply/`,
+  `/apply/index.html`, and protected login/callback routes. The `/apply/`
+  browser preview rendered without a visible error.
+- **Next evidence required:** Inventory and preserve the legacy public data and
+  authentication contracts before implementing React-side adapters.
 
 ### Phase 3 log
 
