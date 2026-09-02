@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useProperties } from '../hooks/useProperties'
+import { useSavedProperties } from '../hooks/useSavedProperties'
 
 export interface PropertyCardData {
   id: string
@@ -21,6 +22,7 @@ interface PropertyListProps {
 }
 
 export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all' }: PropertyListProps) {
+  const { savedIds, toggleSaved } = useSavedProperties()
   const { properties, loading, error, refetch } = useProperties(limit)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCity, setSelectedCity] = useState(initialCity)
@@ -299,7 +301,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               >
                 {property.photo_url ? (
                   <img
-                    src={property.photo_url}
+                    src={window.CONFIG?.img ? window.CONFIG.img(property.photo_url, "card") : property.photo_url}
                     alt={property.title || 'Property photo'}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
@@ -313,6 +315,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                   </div>
                 )}
 
+                <button onClick={(e) => { e.stopPropagation(); toggleSaved(property.id); }} className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border ${savedIds.has(property.id) ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-slate-900/50 border-white/20 text-white'} hover:scale-110 transition z-10`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill={savedIds.has(property.id) ? "currentColor" : "none"} stroke="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg></button>
                 {/* Badges overlay */}
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                   <span className="rounded-full bg-slate-950/80 backdrop-blur-sm border border-slate-700/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 whitespace-nowrap">

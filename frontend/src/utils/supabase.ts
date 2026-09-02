@@ -150,6 +150,8 @@ declare global {
     CONFIG: {
       SUPABASE_URL: string
       SUPABASE_ANON_KEY: string
+      img?: (url: string, preset?: string) => string
+      srcset?: (url: string, preset1x: string, preset2x: string) => string
     }
   }
 }

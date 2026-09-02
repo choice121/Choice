@@ -13,6 +13,9 @@ interface FormState {
   propertyZip: string
 
   // Step 1: Applicant Identity
+  hasCoApplicant: 'yes' | 'no'
+  coApplicantName: string
+  coApplicantEmail: string
   firstName: string
   lastName: string
   email: string
@@ -21,6 +24,9 @@ interface FormState {
   ssnLast4: string
 
   // Step 2: Residency & Occupancy
+  hasVehicles: 'yes' | 'no'
+  vehicleDetails: string
+  documents: any[]
   currentAddress: string
   residencyDuration: string
   currentRent: string
@@ -87,6 +93,9 @@ export function ApplyPage() {
     propertyState: initialStateVal,
     propertyZip: initialZip,
 
+    hasCoApplicant: 'no',
+    coApplicantName: '',
+    coApplicantEmail: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -94,6 +103,9 @@ export function ApplyPage() {
     dob: '',
     ssnLast4: '',
 
+    hasVehicles: 'no',
+    vehicleDetails: '',
+    documents: [],
     currentAddress: '',
     residencyDuration: '',
     currentRent: '',
@@ -211,54 +223,75 @@ export function ApplyPage() {
 
       // Attempt submission to local edge function or fallback API
       try {
-        const payload = {
-          application_id: generatedId,
-          property_id: form.propertyId,
-          property_address: form.propertyAddress,
-          rent: form.propertyRent,
-          applicant: {
-            first_name: form.firstName,
-            last_name: form.lastName,
-            email: form.email,
-            phone: form.phone,
-            dob: form.dob,
-            ssn_last_4: form.ssnLast4,
-          },
-          residency: {
-            current_address: form.currentAddress,
-            duration: form.residencyDuration,
-            current_rent: form.currentRent,
-            landlord_name: form.currentLandlordName,
-            landlord_phone: form.currentLandlordPhone,
-            occupants: form.totalOccupants,
-            has_pets: form.hasPets,
-            pet_details: form.petDetails,
-          },
-          employment: {
-            status: form.employmentStatus,
-            employer: form.employerName,
-            title: form.jobTitle,
-            monthly_income: form.monthlyIncome,
-            source: form.incomeSource,
-          },
-          references: {
-            reference_name: form.referenceName,
-            reference_phone: form.referencePhone,
-            emergency_name: form.emergencyContactName,
-            emergency_phone: form.emergencyContactPhone,
-          },
-          disclosures: {
-            fee_amount: 50,
-            fee_acknowledged: true,
-            terms_agreed: true,
-            sms_consent: form.smsConsent,
-            timestamp: new Date().toISOString(),
-          },
+        
+        const formData = new FormData()
+        formData.append('Property ID', form.propertyId)
+        formData.append('First Name', form.firstName)
+        formData.append('Last Name', form.lastName)
+        formData.append('Email', form.email)
+        formData.append('Phone', form.phone)
+        formData.append('DOB', form.dob)
+        formData.append('SSN', form.ssnLast4)
+        formData.append('Has Co-Applicant', form.hasCoApplicant)
+        if (form.hasCoApplicant === 'yes') {
+          formData.append('Co-Applicant Name', form.coApplicantName)
+          formData.append('Co-Applicant Email', form.coApplicantEmail)
+        }
+        formData.append('Current Address', form.currentAddress)
+        formData.append('Residency Duration', form.residencyDuration)
+        formData.append('Current Rent Amount', form.currentRent)
+        formData.append('Current Landlord Name', form.currentLandlordName)
+        formData.append('Landlord Phone', form.currentLandlordPhone)
+        formData.append('Total Occupants', form.totalOccupants)
+        formData.append('Has Pets', form.hasPets)
+        if (form.hasPets === 'yes') formData.append('Pet Details', form.petDetails)
+        formData.append('Has Vehicle', form.hasVehicles)
+        if (form.hasVehicles === 'yes') formData.append('Vehicle Make', form.vehicleDetails)
+        
+        formData.append('Employment Status', form.employmentStatus)
+        formData.append('Employer', form.employerName)
+        formData.append('Job Title', form.jobTitle)
+        formData.append('Monthly Income', form.monthlyIncome)
+        formData.append('Other Income', form.incomeSource)
+        
+        formData.append('Reference 1 Name', form.referenceName)
+        formData.append('Reference 1 Phone', form.referencePhone)
+        formData.append('Reference 1 Relationship', form.referenceRelationship)
+        formData.append('Emergency Contact Name', form.emergencyContactName)
+        formData.append('Emergency Contact Phone', form.emergencyContactPhone)
+        
+        formData.append('Terms Consent', 'yes')
+        formData.append('smsConsent', form.smsConsent ? 'on' : '')
+
+        // Base64 encode documents
+        const encodeFile = (file: any) => new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+             const res = reader.result as string;
+             resolve(res.split(',')[1])
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+
+        if (form.documents && form.documents.length > 0) {
+          const encoded = await Promise.all((form.documents as any[]).map(encodeFile))
+          encoded.forEach((b64, i) => {
+            formData.append(`_docFile_${i}_name`, form.documents[i].name)
+            formData.append(`_docFile_${i}_type`, form.documents[i].type || 'application/octet-stream')
+            formData.append(`_docFile_${i}_data`, b64)
+          })
         }
 
-        // Store copy in local storage for instant tracker lookup
-        localStorage.setItem(`cp_application_${generatedId}`, JSON.stringify(payload))
-        localStorage.setItem('cp_last_application_id', generatedId)
+        const res = await fetch(((window.CONFIG && window.CONFIG.SUPABASE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co') + '/functions/v1/receive-application', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        })
+        if (!res.ok) throw new Error('Submission failed')
+
       } catch (err) {
         console.warn('Storage fallback used for application submission:', err)
       }
@@ -533,6 +566,32 @@ export function ApplyPage() {
                       {errors.ssnLast4 && <p className="text-xs text-rose-400 mt-1">{errors.ssnLast4}</p>}
                     </div>
                   </div>
+
+                  <div className="mt-4 pt-4 border-t border-slate-800">
+                    <label className="block text-xs font-semibold uppercase text-slate-300 mb-2">
+                      Will you have a Co-Applicant?
+                    </label>
+                    <div className="flex gap-4 mb-4">
+                      <label className="flex items-center gap-2 text-sm text-white">
+                        <input type="radio" name="hasCoApplicant" value="yes" checked={form.hasCoApplicant === 'yes'} onChange={() => updateField('hasCoApplicant', 'yes')} /> Yes
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-white">
+                        <input type="radio" name="hasCoApplicant" value="no" checked={form.hasCoApplicant === 'no'} onChange={() => updateField('hasCoApplicant', 'no')} /> No
+                      </label>
+                    </div>
+                    {form.hasCoApplicant === 'yes' && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Co-Applicant Name</label>
+                          <input type="text" value={form.coApplicantName} onChange={(e) => updateField('coApplicantName', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Co-Applicant Email</label>
+                          <input type="email" value={form.coApplicantEmail} onChange={(e) => updateField('coApplicantEmail', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -660,7 +719,28 @@ export function ApplyPage() {
                       </div>
                     </div>
 
-                    {form.hasPets === 'yes' && (
+  
+                  <div className="pt-5 border-t border-slate-800">
+                    <label className="block text-xs font-semibold uppercase text-slate-300 mb-2">
+                      Do you have any vehicles?
+                    </label>
+                    <div className="flex gap-4 mb-4">
+                      <label className="flex items-center gap-2 text-sm text-white">
+                        <input type="radio" name="hasVehicles" value="yes" checked={form.hasVehicles === 'yes'} onChange={() => updateField('hasVehicles', 'yes')} /> Yes
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-white">
+                        <input type="radio" name="hasVehicles" value="no" checked={form.hasVehicles === 'no'} onChange={() => updateField('hasVehicles', 'no')} /> No
+                      </label>
+                    </div>
+                    {form.hasVehicles === 'yes' && (
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Vehicle Details (Make, Model, Year, Plate)</label>
+                        <input type="text" value={form.vehicleDetails} onChange={(e) => updateField('vehicleDetails', e.target.value)} className="w-full rounded-xl border bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 border-slate-700 outline-none" placeholder="e.g. 2020 Toyota Camry (XYZ123)" />
+                      </div>
+                    )}
+                  </div>
+
+                  {form.hasPets === 'yes' && (
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
                           Pet Details (Breed, weight, count)
@@ -837,6 +917,31 @@ export function ApplyPage() {
                         {errors.emergencyContactPhone && <p className="text-xs text-rose-400 mt-1">{errors.emergencyContactPhone}</p>}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="pt-5 border-t border-slate-800">
+                    <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
+                      Upload Documents (ID, Pay Stubs, etc.)
+                    </label>
+                    <p className="text-xs text-slate-400 mb-3">Please upload PDF, JPG, or PNG files. Up to 4 files, max 3MB total.</p>
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          updateField('documents', Array.from(e.target.files) as any);
+                        }
+                      }} 
+                      className="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
+                    />
+                    {form.documents && form.documents.length > 0 && (
+                      <ul className="mt-3 text-xs text-slate-300 list-disc pl-5">
+                        {form.documents.map((f: any, i: number) => (
+                          <li key={i}>{f.name} ({(f.size / 1024).toFixed(1)} KB)</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               )}

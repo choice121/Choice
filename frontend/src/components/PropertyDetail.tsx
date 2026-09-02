@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getPropertyById } from '../utils/supabase'
+import { useSavedProperties } from '../hooks/useSavedProperties'
 
 export interface PropertyDetailData {
   id: string
@@ -30,6 +31,7 @@ interface PropertyDetailProps {
 }
 
 export function PropertyDetail({ propertyId }: PropertyDetailProps) {
+  const { savedIds, toggleSaved } = useSavedProperties()
   const [property, setProperty] = useState<PropertyDetailData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -176,14 +178,15 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         {/* Left 2 Cols: Photos, Specs, Description, Amenities */}
         <div className="lg:col-span-2 space-y-8">
           {/* Gallery Section */}
-          <div id="property-gallery-container" className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-6 shadow-xl">
+          <div id="property-gallery-container" className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-6 shadow-xl relative">
+            <button onClick={() => toggleSaved(property.id)} className={`absolute top-8 right-8 p-3 rounded-full backdrop-blur-md border ${savedIds.has(property.id) ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-slate-900/50 border-white/20 text-white'} hover:scale-110 transition z-10`}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill={savedIds.has(property.id) ? "currentColor" : "none"} stroke="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg></button>
             {property.photos.length > 0 ? (
               <div className="space-y-4">
                 {/* Main Active Photo */}
                 <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-950">
                   <img
                     id="hero-gallery-image"
-                    src={property.photos[selectedPhoto]?.url}
+                    src={window.CONFIG?.img ? window.CONFIG.img(property.photos[selectedPhoto]?.url, 'gallery') : property.photos[selectedPhoto]?.url}
                     alt={`${property.title} photo ${selectedPhoto + 1}`}
                     className="h-full w-full object-cover"
                   />
@@ -208,7 +211,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                             : 'border-slate-800 opacity-70 hover:opacity-100 hover:border-slate-600'
                         }`}
                       >
-                        <img src={photo.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        <img src={window.CONFIG?.img ? window.CONFIG.img(photo.url, 'thumb') : photo.url} alt="" className="h-full w-full object-cover" loading="lazy" />
                       </button>
                     ))}
                   </div>
