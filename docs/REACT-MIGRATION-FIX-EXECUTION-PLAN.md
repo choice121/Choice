@@ -37,8 +37,8 @@ proves an equivalent replacement is safe.
 
 **Current phase:** Phase 3 — restore shared data and auth contracts
 
-**Current next action:** Inventory the established `CP.Properties` and auth
-contracts before writing a second query implementation.
+**Current next action:** Compare the React public listing/detail states with
+legacy output, then move to the safe application submission contract.
 
 **Completed in this repair session:**
 
@@ -57,8 +57,9 @@ contracts before writing a second query implementation.
 
 - The `/apply/` route now serves the React application entry while
   `/apply/index.html` remains the legacy fallback.
-- No routing, application, listings, property detail, or visual parity work
-  should be considered complete yet.
+- React public listings, property detail, auth state, and saved-property
+  behavior now consume the established contracts and server-side query
+  semantics.
 
 ## Phase order
 
@@ -280,7 +281,28 @@ rollback is documented.
 
 ### Phase 3 log
 
-- Not started.
+- **2026-09-02 — Inventory completed:** `CP.Properties.getListings` is the
+  server-side filtered/paginated listing contract; `CP.Properties.getOne`
+  supplies detail records with ordered `property_photos`; `CP.Auth` exposes
+  the shared session; and `CP.SavedProperties` defines the local/DB save
+  behavior.
+- **2026-09-02 — Implemented:** Added a typed React adapter that normalizes
+  legacy property, landlord, availability, location, and photo fields while
+  preserving a direct-query bootstrap fallback.
+- **2026-09-02 — Implemented:** React listings now pass search, city, bedroom,
+  rent, page, and page-size state to the server contract instead of filtering a
+  fixed browser batch. Added total-count pagination and retryable listing
+  failures.
+- **2026-09-02 — Implemented:** Auth now initializes from the shared session and
+  subscribes to auth changes. Anonymous saved IDs are merged into the
+  authenticated collection, Supabase write errors are checked, and save-sync
+  failures have retryable UI states.
+- **2026-09-02 — Passed:** `npm run build`, `npm run lint`, and `git diff
+  --check` succeeded. Lint reports four non-blocking existing-style React
+  effect warnings, including the pre-existing application warning.
+- **Next evidence required:** Compare representative React listing/detail
+  records and interaction states against their legacy equivalents before
+  beginning application-flow work.
 
 ### Phase 4 log
 

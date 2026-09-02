@@ -3,40 +3,38 @@
  * Uses the getSupabaseClient and getProperties utilities to load live data.
  */
 
-import { useEffect, useState, useCallback } from 'react'
-import { getProperties } from '../utils/supabase'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { getProperties, type PropertyData, type PropertyFilters } from '../utils/supabase'
 
-export type PropertyData = {
-  id: string
-  title: string
-  address: string
-  city: string
-  state?: string
-  zip?: string
-  rent_monthly: number
-  beds: number | null
-  baths: number | null
-  sqft: number | null
-  status: string
-  pet_friendly?: boolean
-  application_fee?: number
-  security_deposit?: number
-  photo_url: string | null
-}
+export type { PropertyData } from '../utils/supabase'
 
-export function useProperties(limit = 10) {
+export function useProperties(options: PropertyFilters | number = {}) {
+  const optionsKey = typeof options === 'number'
+    ? JSON.stringify({ per_page: options })
+    : JSON.stringify(options)
   const [properties, setProperties] = useState<PropertyData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [meta, setMeta] = useState({ total: 0, page: 1, per_page: 24, total_pages: 0 })
+  const requestRef = useRef(0)
 
   const fetchListings = useCallback(async () => {
+    const requestId = ++requestRef.current
     try {
       setLoading(true)
       setError(null)
-      const result = await getProperties(limit)
+      const filters = JSON.parse(optionsKey) as PropertyFilters
+      const result = await getProperties(filters)
+      if (requestId !== requestRef.current) return
 
       if (result.ok) {
-        setProperties(result.data || [])
+        setProperties(result.data?.rows || [])
+        setMeta({
+          total: result.data?.total || 0,
+          page: result.data?.page || 1,
+          per_page: result.data?.per_page || 24,
+          total_pages: result.data?.total_pages || 0,
+        })
       } else {
         setError(result.error || 'Failed to fetch properties')
         setProperties([])
@@ -47,33 +45,17 @@ export function useProperties(limit = 10) {
     } finally {
       setLoading(false)
     }
-  }, [limit])
+  }, [optionsKey])
 
   useEffect(() => {
-    let isMounted = true
-    getProperties(limit).then((result) => {
-      if (!isMounted) return
-      if (result.ok) {
-        setProperties(result.data || [])
-      } else {
-        setError(result.error || 'Failed to fetch properties')
-      }
-      setLoading(false)
-    }).catch((e) => {
-      if (!isMounted) return
-      setError(String(e))
-      setLoading(false)
-    })
-
-    return () => {
-      isMounted = false
-    }
-  }, [limit])
+    void fetchListings()
+  }, [fetchListings])
 
   return {
     properties,
     loading,
     error,
     refetch: fetchListings,
+    ...meta,
   }
 }

@@ -31,7 +31,7 @@ interface PropertyDetailProps {
 }
 
 export function PropertyDetail({ propertyId }: PropertyDetailProps) {
-  const { savedIds, toggleSaved } = useSavedProperties()
+  const { savedIds, toggleSaved, error: savedError, refetch: refetchSaved } = useSavedProperties()
   const [property, setProperty] = useState<PropertyDetailData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -133,6 +133,15 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         </Link>
         <span className="text-xs text-slate-400">Listing ID: {property.id.slice(0, 8)}</span>
       </div>
+
+        {savedError && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200" role="alert">
+            <span>Saved homes could not be synchronized. Your local saves are still shown.</span>
+            <button type="button" onClick={() => void refetchSaved()} className="font-semibold text-amber-300 underline hover:text-amber-100">
+              Retry
+            </button>
+          </div>
+        )}
 
       {/* Title & Header Section */}
       <div id="property-header-card" className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">

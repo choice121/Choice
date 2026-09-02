@@ -1,9 +1,81 @@
 /**
- * Supabase integration bridge for React components.
- * Accesses window.supabase (loaded via parent HTML) and CONFIG.
- * This module does NOT duplicate Supabase initialization—it reuses the existing
- * global client to preserve session, auth state, and storage contracts.
+ * Typed adapter for the public data contracts established by js/cp-api.js.
+ * The legacy CP namespace remains the source of truth; the direct Supabase
+ * queries below are only a bootstrap fallback for pages that load without it.
  */
+
+export type PropertyFilters = {
+  q?: string
+  type?: string
+  city?: string
+  state?: string
+  beds?: number | string
+  min_beds?: number | string
+  min_baths?: number | string
+  min_rent?: number | string
+  max_rent?: number | string
+  sort?: string
+  page?: number
+  per_page?: number
+}
+
+export type PropertyPhoto = {
+  id?: string
+  file_id?: string | null
+  url: string
+  display_order: number
+  is_hero: boolean
+}
+
+export type PropertyLandlord = {
+  id?: string
+  user_id?: string
+  contact_name?: string
+  business_name?: string
+  avatar_url?: string
+  verified?: boolean
+  tagline?: string
+}
+
+export type PropertyData = {
+  id: string
+  title: string
+  address: string
+  city: string
+  state: string
+  zip: string
+  rent_monthly: number
+  beds: number | null
+  baths: number | null
+  sqft: number | null
+  description?: string
+  property_type?: string | null
+  parking?: string | null
+  pets_allowed?: boolean | null
+  available_date?: string | null
+  utilities_included?: string | null
+  lat?: number | null
+  lng?: number | null
+  status: string
+  pet_friendly: boolean
+  application_fee: number
+  security_deposit: number
+  photo_url: string | null
+  photos: PropertyPhoto[]
+  photo_urls: string[]
+  photo_file_ids: Array<string | null>
+  landlord?: PropertyLandlord | null
+}
+
+export type PropertyQueryResult = {
+  rows: PropertyData[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
+type LegacyPropertyRow = Record<string, any>
 
 let _fallbackClient: any = null
 
@@ -29,65 +101,165 @@ export function getSupabaseClient() {
   throw new Error('Supabase client not initialized. Ensure config.js and supabase.min.js are loaded.')
 }
 
-/**
- * Type-safe wrapper around window.supabase to access properties table.
- */
-export async function getProperties(limit = 40) {
-  try {
-    const client = getSupabaseClient()
-    const { data, error } = await client
-      .from('properties')
-      .select('id, title, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, status, pets_allowed, application_fee, security_deposit, property_photos(url, display_order, is_hero)')
-      .eq('status', 'active')
-      .order('listed_at', { ascending: false })
-      .limit(limit)
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
-    if (error) {
-      return { ok: false, data: null, error: error.message }
+function normalizePhotos(row: LegacyPropertyRow): PropertyPhoto[] {
+  if (Array.isArray(row.property_photos)) {
+    return row.property_photos
+      .filter((photo: LegacyPropertyRow) => photo?.url)
+      .sort((a: LegacyPropertyRow, b: LegacyPropertyRow) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map((photo: LegacyPropertyRow) => ({
+        id: photo.id ? String(photo.id) : undefined,
+        file_id: photo.file_id ? String(photo.file_id) : null,
+        url: String(photo.url),
+        display_order: numberOrNull(photo.display_order) ?? 0,
+        is_hero: Boolean(photo.is_hero),
+      }))
+  }
+
+  return (Array.isArray(row.photo_urls) ? row.photo_urls : [])
+    .filter(Boolean)
+    .map((url: unknown, index: number) => ({
+      url: String(url),
+      display_order: index,
+      is_hero: index === 0,
+    }))
+}
+
+export function normalizeProperty(row: LegacyPropertyRow): PropertyData {
+  const rent = numberOrNull(row.monthly_rent ?? row.rent_monthly) ?? 0
+  const photos = normalizePhotos(row)
+
+  return {
+    id: String(row.id),
+    title: String(row.title || ''),
+    address: String(row.address || ''),
+    city: String(row.city || ''),
+    state: String(row.state || ''),
+    zip: String(row.zip || ''),
+    rent_monthly: rent,
+    beds: numberOrNull(row.bedrooms ?? row.beds),
+    baths: numberOrNull(row.bathrooms ?? row.baths),
+    sqft: numberOrNull(row.square_footage ?? row.sqft),
+    description: String(row.description || ''),
+    property_type: row.property_type ?? null,
+    parking: row.parking ?? null,
+    pets_allowed: row.pets_allowed ?? null,
+    available_date: row.available_date ?? null,
+    utilities_included: row.utilities_included ?? null,
+    lat: numberOrNull(row.lat),
+    lng: numberOrNull(row.lng),
+    status: String(row.status || 'active'),
+    pet_friendly: true,
+    application_fee: 50,
+    security_deposit: rent,
+    photo_url: photos[0]?.url || null,
+    photos,
+    photo_urls: photos.map((photo) => photo.url),
+    photo_file_ids: photos.map((photo) => photo.file_id ?? null),
+    landlord: row.landlords || row.landlord || null,
+  }
+}
+
+function normalizeQueryResult(payload: LegacyPropertyRow, filters: PropertyFilters): PropertyQueryResult {
+  const rows = Array.isArray(payload?.rows) ? payload.rows : []
+  const perPage = Number(payload?.per_page ?? filters.per_page ?? 24) || 24
+  const page = Number(payload?.page ?? filters.page ?? 1) || 1
+  const total = Number(payload?.total ?? rows.length) || 0
+
+  return {
+    rows: rows.map(normalizeProperty),
+    total,
+    page,
+    per_page: perPage,
+    total_pages: Number(payload?.total_pages ?? Math.ceil(total / perPage)) || 0,
+  }
+}
+
+/**
+ * Fetch public listings through the established CP.Properties contract.
+ * Accepting a number preserves the original hook's limit-only call shape.
+ */
+export async function getProperties(filtersOrLimit: PropertyFilters | number = {}) {
+  const filters: PropertyFilters = typeof filtersOrLimit === 'number'
+    ? { per_page: filtersOrLimit }
+    : filtersOrLimit
+
+  try {
+    const legacyProperties = window.CP?.Properties
+    if (legacyProperties?.getListings) {
+      const result = await legacyProperties.getListings({
+        ...filters,
+        page: Math.max(1, filters.page ?? 1),
+        per_page: filters.per_page ?? 24,
+      })
+      if (!result?.ok) {
+        return { ok: false, data: null, error: result?.error || 'Failed to fetch properties' }
+      }
+      return { ok: true, data: normalizeQueryResult(result.data, filters), error: null }
     }
 
-    const properties = (data || []).map((property: any) => {
-      const rent = Number(property.monthly_rent) || 0
-      return {
-        id: property.id,
-        title: property.title,
-        address: property.address,
-        city: property.city,
-        state: property.state || '',
-        zip: property.zip || '',
-        rent_monthly: rent,
-        beds: property.bedrooms == null ? null : Number(property.bedrooms),
-        baths: property.bathrooms == null ? null : Number(property.bathrooms),
-        sqft: property.square_footage == null ? null : Number(property.square_footage),
-        status: property.status || 'active',
-        pet_friendly: true, // Always pet-friendly per Choice Properties rules
-        application_fee: 50, // Always $50 per Choice Properties rules
-        security_deposit: rent, // Always 1x monthly rent
-        photo_url: Array.isArray(property.property_photos)
-          ? property.property_photos
-              .filter((photo: any) => photo?.url)
-              .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))[0]?.url || null
-          : null,
-      }
-    })
+    const client = getSupabaseClient()
+    const perPage = filters.per_page ?? 24
+    const page = Math.max(1, filters.page ?? 1)
+    let query = client
+      .from('properties')
+      .select('*, landlords(contact_name, business_name, avatar_url, verified), property_photos(url, file_id, display_order, is_hero)', { count: 'exact' })
+      .eq('status', 'active')
+      .order('listed_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
 
-    return { ok: true, data: properties, error: null }
+    if (filters.q?.trim()) query = query.ilike('title', `%${filters.q.trim()}%`)
+    if (filters.city) query = query.ilike('city', filters.city)
+    if (filters.state) query = query.eq('state', filters.state)
+    if (filters.beds !== undefined && filters.beds !== '') {
+      const beds = Number(filters.beds)
+      query = beds >= 4 ? query.gte('bedrooms', 4) : query.eq('bedrooms', beds)
+    }
+    if (filters.min_rent !== undefined && filters.min_rent !== '') query = query.gte('monthly_rent', Number(filters.min_rent))
+    if (filters.max_rent !== undefined && filters.max_rent !== '') query = query.lte('monthly_rent', Number(filters.max_rent))
+
+    const from = (page - 1) * perPage
+    const { data, error, count } = await query.range(from, from + perPage - 1)
+    if (error) return { ok: false, data: null, error: error.message }
+
+    const total = count ?? 0
+    return {
+      ok: true,
+      data: {
+        rows: (data || []).map(normalizeProperty),
+        total,
+        page,
+        per_page: perPage,
+        total_pages: Math.ceil(total / perPage),
+      },
+      error: null,
+    }
   } catch (e) {
     return { ok: false, data: null, error: String(e) }
   }
 }
 
 /**
- * Fetch a single property by ID.
+ * Fetch a single property by ID through the established CP.Properties contract.
  */
 export async function getPropertyById(id: string) {
   try {
+    const legacyProperties = window.CP?.Properties
+    if (legacyProperties?.getOne) {
+      const result = await legacyProperties.getOne(id)
+      if (!result?.ok) return { ok: false, data: null, error: result?.error || 'Failed to fetch property' }
+      return { ok: true, data: result.data ? normalizeProperty(result.data) : null, error: null }
+    }
+
     const client = getSupabaseClient()
     const { data, error } = await client
       .from('properties')
-      .select(
-        'id, title, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, description, status, pets_allowed, application_fee, security_deposit, property_photos(url, display_order, is_hero)'
-      )
+      .select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(url, display_order, is_hero)')
       .eq('id', id)
       .maybeSingle()
 
@@ -95,43 +267,7 @@ export async function getPropertyById(id: string) {
       return { ok: false, data: null, error: error.message }
     }
 
-    if (!data) return { ok: true, data: null, error: null }
-
-    const photos = Array.isArray(data.property_photos)
-      ? data.property_photos
-          .filter((photo: any) => photo?.url)
-          .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
-          .map((photo: any) => ({
-            url: photo.url,
-            display_order: photo.display_order ?? 0,
-            is_hero: Boolean(photo.is_hero),
-          }))
-      : []
-
-    const rent = Number(data.monthly_rent) || 0
-
-    return {
-      ok: true,
-      data: {
-        id: data.id,
-        title: data.title,
-        address: data.address,
-        city: data.city,
-        state: data.state || '',
-        zip: data.zip || '',
-        rent_monthly: rent,
-        beds: data.bedrooms == null ? null : Number(data.bedrooms),
-        baths: data.bathrooms == null ? null : Number(data.bathrooms),
-        sqft: data.square_footage == null ? null : Number(data.square_footage),
-        description: data.description || '',
-        status: data.status || 'active',
-        pet_friendly: true, // Always pet-friendly per rules
-        application_fee: 50, // Always $50 per rules
-        security_deposit: rent, // Always 1x monthly rent
-        photos,
-      },
-      error: null,
-    }
+    return { ok: true, data: data ? normalizeProperty(data) : null, error: null }
   } catch (e) {
     return { ok: false, data: null, error: String(e) }
   }
@@ -146,6 +282,14 @@ declare global {
     supabase: any
     CP?: {
       sb: () => any
+      Auth?: {
+        getUser(): Promise<{ id: string; email?: string } | null>
+        getSession(): Promise<any>
+      }
+      Properties?: {
+        getListings(filters?: PropertyFilters): Promise<any>
+        getOne(id: string): Promise<any>
+      }
     }
     CONFIG: {
       SUPABASE_URL: string

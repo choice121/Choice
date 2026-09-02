@@ -34,6 +34,7 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true
+    let unsubscribe: (() => void) | undefined
 
     async function checkAuth() {
       try {
@@ -47,21 +48,30 @@ export function useAuth() {
           return
         }
 
-        // Get the current user (no network call if cached)
-        const currentUser = await Auth.getUser()
+        // Read the cached session first so React observes the same session
+        // source as the legacy client without an unnecessary user round-trip.
+        const currentSession = await Auth.getSession()
+        const currentUser = currentSession?.user ?? (currentSession ? await Auth.getUser() : null)
         if (mounted) {
           setUser(currentUser)
           setError(null)
         }
 
-        // Get the session
-        const currentSession = await Auth.getSession()
         if (mounted) {
           setSession(currentSession)
         }
+
+        const client = (window as any).CP?.sb?.()
+        const authSubscription = client?.auth?.onAuthStateChange?.((_event: string, nextSession: AuthSession | null) => {
+          if (!mounted) return
+          setSession(nextSession)
+          setUser(nextSession?.user ?? null)
+          setError(null)
+        })
+        unsubscribe = authSubscription?.data?.subscription?.unsubscribe
       } catch (e) {
         if (mounted) {
-          setError(String(e))
+          setError(e instanceof Error ? e.message : String(e))
           setUser(null)
           setSession(null)
         }
@@ -76,6 +86,7 @@ export function useAuth() {
 
     return () => {
       mounted = false
+      unsubscribe?.()
     }
   }, [getAuth])
 

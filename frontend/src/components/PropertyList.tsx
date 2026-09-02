@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useProperties } from '../hooks/useProperties'
 import { useSavedProperties } from '../hooks/useSavedProperties'
 
@@ -22,12 +22,25 @@ interface PropertyListProps {
 }
 
 export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all' }: PropertyListProps) {
-  const { savedIds, toggleSaved } = useSavedProperties()
-  const { properties, loading, error, refetch } = useProperties(limit)
+  const { savedIds, toggleSaved, error: savedError, refetch: refetchSaved } = useSavedProperties()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCity, setSelectedCity] = useState(initialCity)
   const [selectedBeds, setSelectedBeds] = useState<string>('all')
   const [maxRent, setMaxRent] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const perPage = Math.min(limit, 24)
+  const { properties, loading, error, refetch, total, total_pages: totalPages } = useProperties({
+    q: searchTerm.trim() || undefined,
+    city: selectedCity !== 'all' ? selectedCity : undefined,
+    beds: selectedBeds === '4+' ? 4 : selectedBeds !== 'all' ? selectedBeds : undefined,
+    max_rent: maxRent !== 'all' ? maxRent : undefined,
+    page: currentPage,
+    per_page: perPage,
+  })
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedCity, selectedBeds, maxRent])
 
   // Extract distinct cities for quick filter pills
   const availableCities = useMemo(() => {
@@ -40,50 +53,12 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
     return Array.from(citySet).sort()
   }, [properties])
 
-  // Filter properties
-  const filteredProperties = useMemo(() => {
-    return properties.filter((prop) => {
-      // Search term filter
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase().trim()
-        const matchTitle = (prop.title || '').toLowerCase().includes(query)
-        const matchAddr = (prop.address || '').toLowerCase().includes(query)
-        const matchCity = (prop.city || '').toLowerCase().includes(query)
-        if (!matchTitle && !matchAddr && !matchCity) return false
-      }
-
-      // City filter
-      if (selectedCity !== 'all') {
-        if ((prop.city || '').toLowerCase() !== selectedCity.toLowerCase()) {
-          return false
-        }
-      }
-
-      // Bedrooms filter
-      if (selectedBeds !== 'all') {
-        const bedNum = parseInt(selectedBeds, 10)
-        if (selectedBeds === '4+') {
-          if ((prop.beds || 0) < 4) return false
-        } else if (prop.beds !== bedNum) {
-          return false
-        }
-      }
-
-      // Max rent filter
-      if (maxRent !== 'all') {
-        const max = parseInt(maxRent, 10)
-        if (prop.rent_monthly > max) return false
-      }
-
-      return true
-    })
-  }, [properties, searchTerm, selectedCity, selectedBeds, maxRent])
-
   const clearFilters = () => {
     setSearchTerm('')
     setSelectedCity('all')
     setSelectedBeds('all')
     setMaxRent('all')
+    setCurrentPage(1)
   }
 
   return (
@@ -128,7 +103,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               onChange={(e) => setSelectedCity(e.target.value)}
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
             >
-              <option value="all">All Cities ({properties.length})</option>
+               <option value="all">All Cities ({total})</option>
               {availableCities.map((city) => (
                 <option key={city} value={city}>
                   {city}
@@ -210,12 +185,21 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
         )}
       </div>
 
+      {savedError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200" role="alert">
+          <span>Saved homes could not be synchronized. Your local saves are still shown.</span>
+          <button type="button" onClick={() => void refetchSaved()} className="font-semibold text-amber-300 underline hover:text-amber-100">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Results Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-white">Available Homes</h2>
           <span className="rounded-full bg-cyan-950 border border-cyan-800 px-2.5 py-0.5 text-xs font-medium text-cyan-300">
-            {filteredProperties.length} {filteredProperties.length === 1 ? 'listing' : 'listings'}
+            {total} {total === 1 ? 'listing' : 'listings'}
           </span>
         </div>
 
@@ -264,7 +248,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
       )}
 
       {/* Empty State */}
-      {!loading && !error && filteredProperties.length === 0 && (
+      {!loading && !error && properties.length === 0 && (
         <div id="property-empty-state" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-12 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 mb-4">
             <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -286,9 +270,9 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
       )}
 
       {/* Property Cards Grid */}
-      {!loading && !error && filteredProperties.length > 0 && (
+      {!loading && !error && properties.length > 0 && (
         <div id="properties-grid" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProperties.map((property) => (
+          {properties.map((property) => (
             <article
               key={property.id}
               id={`property-card-${property.id}`}
@@ -394,6 +378,30 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
             </article>
           ))}
         </div>
+      )}
+
+      {!loading && !error && totalPages > 1 && (
+        <nav className="flex items-center justify-center gap-3 pt-2" aria-label="Listings pagination">
+          <button
+            type="button"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-xs text-slate-400">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
+        </nav>
       )}
     </div>
   )
