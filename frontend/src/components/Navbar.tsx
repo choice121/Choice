@@ -21,6 +21,7 @@ export function Navbar() {
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-950/50">
             <svg
+              aria-hidden="true"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -44,7 +45,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+        <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-1 lg:gap-2">
           <Link
             to="/listings"
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -115,7 +116,7 @@ export function Navbar() {
         <div className="hidden sm:flex items-center gap-3">
           <Link
             to="/apply"
-            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 active:scale-[0.98]"
+            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             Apply Online
           </Link>
@@ -134,6 +135,8 @@ export function Navbar() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-300 hover:text-white focus:outline-none"
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-menu"
           >
             {mobileMenuOpen ? (
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,7 +153,7 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2">
+        <div id="mobile-navigation-menu" className="md:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2" aria-label="Mobile navigation">
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}

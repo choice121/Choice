@@ -661,8 +661,8 @@ export function ApplyPage() {
             {/* Step Progress Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-slate-400 font-medium">
-                <span>Step {stepIndex + 1} of {STEP_ORDER.length}: {STEP_TITLES[currentStep]}</span>
-                <span>{Math.round(progressPercent)}% Complete</span>
+                <span aria-live="polite">Step {stepIndex + 1} of {STEP_ORDER.length}: {STEP_TITLES[currentStep]}</span>
+                <span aria-live="polite">{Math.round(progressPercent)}% Complete</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-850">
                 <div
@@ -673,11 +673,11 @@ export function ApplyPage() {
             </div>
 
             {/* Step Content Container */}
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 space-y-6">
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 space-y-6" aria-labelledby="application-step-title">
               {/* STEP 1: IDENTITY */}
               {currentStep === 'identity' && (
                 <div className="space-y-5">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     Applicant Identity &amp; Contact
                   </h2>
 
@@ -909,7 +909,7 @@ export function ApplyPage() {
               {/* STEP 2: RESIDENCY */}
               {currentStep === 'residency' && (
                 <div className="space-y-5">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     Current Residence &amp; Occupants
                   </h2>
 
@@ -1142,7 +1142,7 @@ export function ApplyPage() {
               {/* STEP 3: EMPLOYMENT */}
               {currentStep === 'employment' && (
                 <div className="space-y-5">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     Employment &amp; Income Verification
                   </h2>
 
@@ -1274,7 +1274,7 @@ export function ApplyPage() {
               {/* STEP 4: REFERENCES */}
               {currentStep === 'references' && (
                 <div className="space-y-5">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     References &amp; Emergency Contact
                   </h2>
 
@@ -1396,7 +1396,7 @@ export function ApplyPage() {
               {/* STEP 5: PAYMENT & CONTACT PREFERENCES */}
               {currentStep === 'preferences' && (
                 <div className="space-y-6">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     Payment &amp; Contact Preferences
                   </h2>
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
@@ -1508,7 +1508,7 @@ export function ApplyPage() {
               {/* STEP 6: REVIEW & DISCLOSURES */}
               {currentStep === 'review' && (
                 <div className="space-y-6">
-                  <h2 className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
+                  <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-white border-b border-slate-800 pb-3">
                     Review &amp; Legal Declarations
                   </h2>
 

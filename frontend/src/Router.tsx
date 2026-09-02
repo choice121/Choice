@@ -12,10 +12,12 @@ import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { PoliciesPage } from './pages/PoliciesPage'
 import { ApplyPage } from './pages/ApplyPage'
+import { PageMeta } from './components/PageMeta'
 
 export function Router() {
   return (
     <BrowserRouter>
+      <PageMeta />
       <Routes>
         <Route path="/" element={<ListingsPage />} />
         <Route path="/index.html" element={<ListingsPage />} />
