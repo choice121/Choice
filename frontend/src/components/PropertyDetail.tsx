@@ -29,7 +29,7 @@ function SimilarProperties({ currentId, city, currentRent }: { currentId: string
     <div className="mt-12 pt-12 border-t border-slate-200">
       <div className="mb-6 space-y-1">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Also Available</span>
-        <h2 className="text-2xl font-bold text-slate-900">More in <em className="not-italic text-slate-500">{city}</em></h2>
+        <h2 className="text-2xl font-bold  text-slate-900 font-display">More in <em className="not-italic text-slate-500">{city}</em></h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {similar.map(p => (
@@ -204,7 +204,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left md:text-right shrink-0 shadow-sm">
           <span className="block text-xs uppercase font-bold tracking-wider text-slate-500">Monthly Rent</span>
           <div className="flex items-baseline md:justify-end gap-1 mt-0.5">
-            <span className="text-3xl font-extrabold text-slate-900">${property.rent_monthly.toLocaleString()}</span>
+            <span className="text-3xl font-extrabold  text-slate-900 font-display">${property.rent_monthly.toLocaleString()}</span>
             <span className="text-sm font-semibold uppercase text-slate-500">/mo</span>
           </div>
           <p className="text-[11px] font-semibold text-zillow-green-dark mt-1 uppercase tracking-wider">1x Rent Deposit • $50 App Fee</p>
@@ -298,15 +298,15 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           <div id="property-specs-grid" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bedrooms</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900">{property.beds ?? '—'}</span>
+              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.beds ?? '—'}</span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bathrooms</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900">{property.baths ?? '—'}</span>
+              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.baths ?? '—'}</span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Square Feet</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900">
+              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">
                 {property.sqft == null ? '—' : property.sqft.toLocaleString()}
               </span>
             </div>
@@ -319,7 +319,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           {/* Description */}
           {property.description && (
             <div id="property-description-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900">About This Rental</h2>
+              <h2 className="text-xl font-bold text-slate-900 font-display">About This Rental</h2>
               <div className="text-slate-600 leading-relaxed whitespace-pre-line text-sm sm:text-base space-y-3 font-medium">
                 {property.description}
               </div>
@@ -331,7 +331,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
 
           {/* Verified Lease Terms */}
           <div id="property-terms-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-5 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-900">Transparent Lease Terms</h2>
+            <h2 className="text-xl font-bold text-slate-900 font-display">Transparent Lease Terms</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Monthly Rent</span>
@@ -367,7 +367,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           <div className="grid gap-6 md:grid-cols-2">
             {/* Property Facts */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900">Property Facts</h2>
+              <h2 className="text-xl font-bold text-slate-900 font-display">Property Facts</h2>
               <ul className="space-y-3 text-sm text-slate-600 font-medium">
                 {property.property_type && (
                   <li className="flex justify-between border-b border-slate-100 pb-2">
@@ -438,7 +438,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             {/* Renter Requirements */}
             {(property.minimum_credit_score != null || property.minimum_income_multiplier != null) && (
               <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
-                <h2 className="text-xl font-bold text-slate-900">Renter Requirements</h2>
+                <h2 className="text-xl font-bold text-slate-900 font-display">Renter Requirements</h2>
                 <ul className="space-y-3 text-sm text-slate-600 font-medium">
                   {property.minimum_credit_score != null && (
                      <li className="flex justify-between border-b border-slate-100 pb-2">
@@ -459,7 +459,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
 
           {/* Amenities & Features */}
           <div id="property-amenities-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-900">Amenities & Features</h2>
+            <h2 className="text-xl font-bold text-slate-900 font-display">Amenities & Features</h2>
             
             {(!property.amenities?.length && !property.appliances?.length && !property.utilities_included) ? (
               <p className="text-sm font-medium text-slate-500 italic">No specific amenities listed.</p>
@@ -538,10 +538,10 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           )}
 
           {/* Apply CTA Card */}
-          <div id="property-apply-cta-card" className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-md space-y-5">
+          <div id="property-apply-cta-card" className="sticky top-24 self-start pb-4 max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-md space-y-5">
             <div className="space-y-1">
               <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500">Ready to make this home?</span>
-              <h3 className="text-2xl font-extrabold text-slate-900">Apply in 10 Minutes</h3>
+              <h3 className="text-2xl font-extrabold  text-slate-900 font-display">Apply in 10 Minutes</h3>
             </div>
 
             <p className="text-sm font-medium text-slate-600 leading-relaxed">

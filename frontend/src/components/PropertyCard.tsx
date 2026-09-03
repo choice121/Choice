@@ -51,7 +51,7 @@ export function PropertyCard({ property, isSaved = false, onToggleSave, onProper
         <div className="flex justify-between items-start mb-1">
           <h3
             onClick={() => onPropertySelect?.(property.id)}
-            className="font-bold text-slate-900 text-lg leading-snug line-clamp-1 group-hover:text-zillow-green-dark transition cursor-pointer"
+            className="font-bold text-slate-900 text-lg font-display leading-snug line-clamp-1 group-hover:text-zillow-green-dark transition cursor-pointer"
           >
             {property.title || property.address}
           </h3>
@@ -62,7 +62,7 @@ export function PropertyCard({ property, isSaved = false, onToggleSave, onProper
         </p>
         
         <div className="mt-3 flex items-baseline gap-1">
-          <span className="text-xl font-extrabold text-slate-900">${property.rent_monthly.toLocaleString()}</span>
+          <span className="text-xl font-extrabold text-slate-900 font-display">${property.rent_monthly.toLocaleString()}</span>
           <span className="text-xs font-semibold text-slate-500 uppercase">/mo</span>
         </div>
 
