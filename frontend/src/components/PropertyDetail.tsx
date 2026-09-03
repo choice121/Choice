@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getPropertyById } from '../utils/supabase'
 import { useSavedProperties } from '../hooks/useSavedProperties'
+import { InquiryForm } from './InquiryForm'
+import { PropertyMap } from './PropertyMap'
+import { Lightbox } from './Lightbox'
+import { MobileApplyBar } from './MobileApplyBar'
 
 export interface PropertyDetailData {
   id: string
@@ -19,6 +23,8 @@ export interface PropertyDetailData {
   pet_friendly: boolean
   application_fee: number
   security_deposit: number
+  lat: number | null
+  lng: number | null
   photos: Array<{
     url: string
     display_order: number
@@ -36,6 +42,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState(0)
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -118,10 +125,10 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
     )
   }
 
-  const applyUrl = `/apply/?id=${encodeURIComponent(property.id)}&pn=${encodeURIComponent(property.title || property.address)}&addr=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}&zip=${encodeURIComponent(property.zip)}&rent=${encodeURIComponent(String(property.rent_monthly))}&beds=${encodeURIComponent(String(property.beds ?? ''))}&baths=${encodeURIComponent(String(property.baths ?? ''))}&deposit=${encodeURIComponent(String(property.rent_monthly))}&fee=50&source=${encodeURIComponent(`/property?id=${property.id}`)}`
+  const applyUrl = `/apply?id=${encodeURIComponent(property.id)}&pn=${encodeURIComponent(property.title || property.address)}&addr=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}&zip=${encodeURIComponent(property.zip)}&rent=${encodeURIComponent(String(property.rent_monthly))}&beds=${encodeURIComponent(String(property.beds ?? ''))}&baths=${encodeURIComponent(String(property.baths ?? ''))}&deposit=${encodeURIComponent(String(property.rent_monthly))}&fee=50&source=${encodeURIComponent(`/property?id=${property.id}`)}`
 
   return (
-    <div id="property-detail-view" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <div id="property-detail-view" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 mb-24 md:mb-0">
       {/* Navigation Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
@@ -188,11 +195,38 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         <div className="lg:col-span-2 space-y-8">
           {/* Gallery Section */}
           <div id="property-gallery-container" className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-6 shadow-xl relative">
-            <button onClick={() => toggleSaved(property.id)} className={`absolute top-8 right-8 p-3 rounded-full backdrop-blur-md border ${savedIds.has(property.id) ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-slate-900/50 border-white/20 text-white'} hover:scale-110 transition z-10`}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill={savedIds.has(property.id) ? "currentColor" : "none"} stroke="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg></button>
+            <div className="absolute top-8 right-8 flex gap-2 z-10">
+              <button 
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({ title: property.title || property.address, url: window.location.href })
+                  } else {
+                    navigator.clipboard.writeText(window.location.href)
+                    alert('Link copied to clipboard!')
+                  }
+                }} 
+                className="p-3 rounded-full backdrop-blur-md border bg-slate-900/50 border-white/20 text-white hover:scale-110 transition"
+                aria-label="Share property"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </button>
+              <button onClick={() => toggleSaved(property.id)} className={`p-3 rounded-full backdrop-blur-md border ${savedIds.has(property.id) ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-slate-900/50 border-white/20 text-white'} hover:scale-110 transition`} aria-label="Save property">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill={savedIds.has(property.id) ? "currentColor" : "none"} stroke="currentColor">
+                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
             {property.photos.length > 0 ? (
               <div className="space-y-4">
                 {/* Main Active Photo */}
-                <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-950">
+                <button 
+                  type="button" 
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-950 w-full hover:opacity-95 transition"
+                  aria-label="View fullscreen gallery"
+                >
                   <img
                     id="hero-gallery-image"
                     src={window.CONFIG?.img ? window.CONFIG.img(property.photos[selectedPhoto]?.url, 'gallery') : property.photos[selectedPhoto]?.url}
@@ -202,7 +236,12 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                   <div className="absolute bottom-3 right-3 rounded-lg bg-slate-950/80 backdrop-blur-sm border border-slate-700/80 px-3 py-1 text-xs font-medium text-slate-200">
                     Photo {selectedPhoto + 1} of {property.photos.length}
                   </div>
-                </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors">
+                    <svg className="h-10 w-10 text-white opacity-0 hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </div>
+                </button>
 
                 {/* Thumbnails row */}
                 {property.photos.length > 1 && (
@@ -264,6 +303,9 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               </div>
             </div>
           )}
+
+          {/* Map Section */}
+          <PropertyMap lat={property.lat} lng={property.lng} address={property.address} title={property.title} monthly_rent={property.rent_monthly} />
 
           {/* Verified Lease Terms */}
           <div id="property-terms-card" className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-5">
@@ -355,13 +397,13 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               </div>
             </div>
 
-            <a
+            <Link
               id="apply-now-btn"
-              href={applyUrl}
+              to={applyUrl}
               className="flex w-full min-h-[48px] items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-cyan-900/40 transition hover:brightness-110"
             >
               Start Online Application →
-            </a>
+            </Link>
 
             <p className="text-center text-[11px] text-slate-400">
               🔒 SSL Encrypted • Fast 24-48h Landlord Review
@@ -373,14 +415,37 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               <p className="text-xs text-slate-400 leading-relaxed">
                 Our leasing coordinator is available to answer any questions regarding move-in dates or requirements.
               </p>
-              <div className="text-xs text-slate-300 space-y-1 pt-1">
+              <div className="text-xs text-slate-300 space-y-1 pt-1 mb-2">
                 <p>Call: <a href="tel:7077063137" className="text-cyan-400 hover:underline">707-706-3137</a></p>
                 <p>Email: <a href="mailto:support@choiceproperties.com" className="text-cyan-400 hover:underline">support@choiceproperties.com</a></p>
               </div>
             </div>
+
+            {/* Inquiry Form */}
+            <div id="inquiry-form-section">
+              <InquiryForm propertyId={property.id} />
+            </div>
           </div>
         </aside>
       </div>
+
+      {/* Lightbox */}
+      <Lightbox
+        photos={property.photos}
+        currentIndex={selectedPhoto}
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        onNavigate={setSelectedPhoto}
+      />
+
+      {/* Mobile Sticky Apply Bar */}
+      <MobileApplyBar 
+        rent={property.rent_monthly} 
+        applyUrl={applyUrl} 
+        onMessageClick={() => {
+          document.getElementById('inquiry-form-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }} 
+      />
     </div>
   )
 }
