@@ -118,15 +118,14 @@
     const photos = (p.photo_urls && p.photo_urls.length) ? p.photo_urls : ['/assets/placeholder-property.jpg'];
     const title  = esc(p.title || 'Rental property');
     const id     = esc(p.id);
-    const propUrl = (window.CP && window.CP.UI && window.CP.UI.propertyUrl)
-      ? window.CP.UI.propertyUrl(p)
-      : ('/property.html?id=' + encodeURIComponent(p.id || ''));
+    const rawId  = String(p.id || p.property_id || '');
+    const propUrl = rawId ? ('/property.html?id=' + encodeURIComponent(rawId)) : '/listings.html';
 
     // ── Image slides ──────────────────────────────────────────
     const slidesHtml = photos.map(function (url, i) {
       const imgSrc    = (window.CONFIG && CONFIG.img)    ? CONFIG.img(url, 'card')               : url;
       const imgSrcset = (window.CONFIG && CONFIG.srcset) ? CONFIG.srcset(url, 'card', 'card_2x') : '';
-      const lqip      = (window.CP && CP.UI && CP.UI.lqipUrl) ? CP.UI.lqipUrl(url) : '';
+      const lqip      = (window.CP && window.CP.UI && window.CP.UI.lqipUrl) ? window.CP.UI.lqipUrl(url) : '';
       const lqipStyle = lqip ? ' style="background-image:url(\'' + escAttr(lqip) + '\');background-size:cover;background-position:center"' : '';
       return (
         '<div class="property-card-slide"' + lqipStyle + '>' +
@@ -251,10 +250,10 @@
           // 4. Footer — price pinned to bottom (no divider)
           '<div class="property-card-footer">' +
             '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
-            (cityPageUrl(p.city, p.state)
-              ? '<button class="prop-city-badge" type="button" data-city-url="' + escAttr(cityPageUrl(p.city, p.state)) + '" title="Browse all ' + esc(p.city) + ' listings" aria-label="View all listings in ' + esc(p.city) + ', ' + esc(p.state) + '">' +
+            (p.city && p.state
+              ? '<span class="prop-city-badge" title="' + esc(p.city) + ', ' + esc(p.state) + '" aria-label="Location: ' + esc(p.city) + ', ' + esc(p.state) + '">' +
                   '<i class="fas fa-location-dot"></i> ' + esc(p.city) + ', ' + esc(p.state) +
-                '</button>'
+                '</span>'
               : '') +
           '</div>' +
         '</a>' +

@@ -6,7 +6,12 @@
 cd "$(dirname "$0")"
 
 echo "📤 Pushing changes to GitHub..."
-git push origin main
+TOKEN="${GitHubtoken:-$GITHUB_TOKEN}"
+if [ -n "$TOKEN" ]; then
+  git push "https://${TOKEN}@github.com/choice121/Choice.git" main
+else
+  git push origin main
+fi
 
 if [ $? -eq 0 ]; then
   echo "✅ SUCCESS! Changes pushed to GitHub"

@@ -1032,20 +1032,11 @@ function setupGridDelegation() {
   });
 
   // Card click-through (not on links or buttons).
-  // Phase C: Navigate to the canonical slug URL using the property data
-  // we already cached from the search response. Falls back to the legacy
-  // ?id= URL only when the cached row is missing.
-  // Admin mode always uses ?id= so non-active listings can be loaded.
   grid.addEventListener('click', e => {
     if (e.target.closest('a, button')) return;
     const card = e.target.closest('.property-card');
-    if (!card) return;
-    const id = card.dataset.id;
-    const prop = pageProperties.find(p => String(p.id) === String(id));
-    const url = (window.CP && window.CP.UI && window.CP.UI.propertyUrl)
-      ? window.CP.UI.propertyUrl(prop || { id })
-      : `/property.html?id=${encodeURIComponent(id)}`;
-    window.location.href = url;
+    if (!card || !card.dataset.id) return;
+    window.location.href = `/property.html?id=${encodeURIComponent(card.dataset.id)}`;
   });
 
   // P1-D: Switch non-first slide images from lazy → eager on first hover & highlight map pin
