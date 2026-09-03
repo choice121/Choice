@@ -31,31 +31,8 @@
 /verify-lease.html          /verify-lease.html                           200
 
 # ============================================================================
-# PUBLIC PAGES (React SPA)
-# ============================================================================
-# React handles routing internally: /, /listings, /property, etc.
-# All public routes default to index.html for SPA routing
-/property                     /property-react.html                          200
-/property/                    /property-react.html                          200
-/property/*                   /property-react.html                          200
-/listings                     /listings-react.html                          200
-/listings/                    /listings-react.html                          200
-/property.html                /property-react.html                          200
-/listings.html                /listings-react.html                          200
-
-# React Apply Routing
-/apply.html                   /index.html                                   200
-/apply                        /index.html                                   200
-/apply/                       /index.html                                   200
-/apply/*                      /index.html                                   200
-
-# ============================================================================
 # BLOCKED PATHS (Security & Privacy)
 # ============================================================================
-# Block source / config / docs from being served on the CDN
-# (Cloudflare Pages serves static files before _redirects is consulted
-#  only for exact file matches; wildcard rules below override static serving
-#  for anything we explicitly don't want public.)
 /SETUP.sql                  /404.html                                    404
 /MIGRATION_SCHEMA.sql       /404.html                                    404
 /MISSING_SCHEMA.sql         /404.html                                    404
@@ -73,7 +50,7 @@
 /lease-phases/*             /404.html                                    404
 /components/*               /404.html                                    404
 
-# Developer / planning docs — blocked from public access
+# Developer / planning docs
 /ARCHITECTURE.md            /404.html                                    404
 /CONTRIBUTING.md            /404.html                                    404
 /DEPLOYMENT_GUIDE.md        /404.html                                    404
@@ -91,12 +68,12 @@
 /SUPABASE_CHANGES.md        /404.html                                    404
 /REACT_MIGRATION_REPORT.md  /404.html                                    404
 
-# Orion extension live loader files (served publicly for auto-updates)
+# Orion extension live loader files
 /.pages-orion/*             /.pages-orion/:splat                           200
 
 # ============================================================================
 # CATCH-ALL FOR REACT SPA
 # ============================================================================
-# Any route not matched above → React index.html for SPA routing
-# React Router handles: /, /listings, /property?id=..., etc.
+# Cloudflare Pages automatically serves matching .html files as clean URLs.
+# So /apply automatically serves apply.html (which is React index.html).
 /*                          /index.html                                  200
