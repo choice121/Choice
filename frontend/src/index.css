@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-zillow-blue: #006AFF;
+  --color-zillow-blue-dark: #0058D6;
+  --color-zillow-green: #00AD71;
+  --color-zillow-green-dark: #008055;
+}
+
 :root {
   font-family: Inter, 'Segoe UI', sans-serif;
   line-height: 1.5;

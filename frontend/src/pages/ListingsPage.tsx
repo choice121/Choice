@@ -17,7 +17,7 @@ export function ListingsPage() {
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-[#00AD71] animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-zillow-green animate-pulse" />
                 Live Nationwide Inventory
               </div>
 
@@ -32,7 +32,7 @@ export function ListingsPage() {
               {/* Guarantees Badges */}
               <div className="pt-4 flex flex-wrap gap-2.5 sm:gap-3 text-xs font-semibold text-slate-700">
                 <span className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm whitespace-nowrap">
-                  <span className="text-[#00AD71]">✓</span> 100% Pet Friendly
+                  <span className="text-zillow-green-dark">✓</span> 100% Pet Friendly
                 </span>
                 <span className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm whitespace-nowrap">
                   <span className="text-slate-900">✓</span> Standard $50 Application Fee
@@ -63,7 +63,7 @@ export function ListingsPage() {
 
             <div className="grid gap-8 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 space-y-4 hover:shadow-md transition-shadow">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#006AFF] text-white font-bold text-lg shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zillow-blue text-white font-bold text-lg shadow-sm">
                   1
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">Browse Real Listings</h3>
@@ -73,7 +73,7 @@ export function ListingsPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 space-y-4 hover:shadow-md transition-shadow">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#006AFF] text-white font-bold text-lg shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zillow-blue text-white font-bold text-lg shadow-sm">
                   2
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">Apply in 10 Minutes</h3>
@@ -83,7 +83,7 @@ export function ListingsPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 space-y-4 hover:shadow-md transition-shadow">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#006AFF] text-white font-bold text-lg shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zillow-blue text-white font-bold text-lg shadow-sm">
                   3
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">Guaranteed Terms</h3>

@@ -526,13 +526,13 @@ export function ApplyPage() {
         {/* If submitted successfully, show Confirmation Screen */}
         {submittedAppId ? (
           <section id="application-confirmation-screen" className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="rounded-3xl border border-[#00AD71]/40 bg-gradient-to-b from-slate-100 to-slate-950 p-8 sm:p-12 shadow-2xl space-y-8 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00AD71]/20 border border-[#00AD71]/40 text-[#00AD71] text-3xl">
+            <div className="rounded-3xl border border-zillow-green/40 bg-gradient-to-b from-slate-100 to-slate-950 p-8 sm:p-12 shadow-2xl space-y-8 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zillow-green/20 border border-zillow-green/40 text-zillow-green-dark text-3xl">
                 ✓
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#00AD71]">
+                <span className="text-xs font-bold uppercase tracking-wider text-zillow-green-dark">
                   Submission Received
                 </span>
                 <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900">
@@ -546,7 +546,7 @@ export function ApplyPage() {
               {/* Tracking ID Badge */}
               <div className="mx-auto max-w-md rounded-2xl border border-slate-300 bg-white/90 p-5 space-y-2">
                 <span className="block text-xs uppercase tracking-wider text-slate-500">Your Application Tracking ID</span>
-                <span className="block font-mono text-xl sm:text-2xl font-bold text-[#006AFF] select-all">
+                <span className="block font-mono text-xl sm:text-2xl font-bold text-zillow-blue select-all">
                   {submittedAppId}
                 </span>
                 <p className="text-xs text-slate-500">Save this ID to check your live review status.</p>
@@ -557,15 +557,15 @@ export function ApplyPage() {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">What Happens Next:</h3>
                 <ol className="space-y-3 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#006AFF]/20 text-[#006AFF] font-bold text-xs">1</span>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zillow-blue/20 text-zillow-blue font-bold text-xs">1</span>
                     <span><strong>Screening Fee Coordination:</strong> Our leasing team will contact you within 24 hours at <strong>{form.phone}</strong> or <strong>{form.email}</strong> to securely complete the standard $50 screening fee. Nothing has been charged yet.</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#006AFF]/20 text-[#006AFF] font-bold text-xs">2</span>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zillow-blue/20 text-zillow-blue font-bold text-xs">2</span>
                     <span><strong>Active Review (24–72h):</strong> Your background, credit, and employment records are verified.</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#006AFF]/20 text-[#006AFF] font-bold text-xs">3</span>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zillow-blue/20 text-zillow-blue font-bold text-xs">3</span>
                     <span><strong>Digital Lease Delivery:</strong> Approved applicants receive digital e-sign lease documents and move-in schedule details.</span>
                   </li>
                 </ol>
@@ -577,7 +577,7 @@ export function ApplyPage() {
                   href={portalLoginUrl || '/tenant/portal.html'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#006AFF] px-6 py-3.5 text-sm font-bold text-white shadow-lg  transition hover:bg-[#0058D6] min-h-[44px]"
+                  className="inline-flex items-center justify-center rounded-xl bg-zillow-blue px-6 py-3.5 text-sm font-bold text-white shadow-lg  transition hover:bg-zillow-blue-dark min-h-[44px]"
                 >
                   Open Application Tracker →
                 </a>
@@ -596,7 +596,7 @@ export function ApplyPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-6">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-zillow-blue/30 bg-zillow-blue/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-zillow-blue">
                   Verified Online Intake
                 </div>
                 <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -610,7 +610,7 @@ export function ApplyPage() {
               {/* Switch to Classic Form Link */}
               <a
                 href={classicUrl}
-                className="text-xs text-slate-500 hover:text-[#006AFF] transition underline underline-offset-4"
+                className="text-xs text-slate-500 hover:text-zillow-blue transition underline underline-offset-4"
               >
                 Prefer classic document portal? Open here ↗
               </a>
@@ -638,7 +638,7 @@ export function ApplyPage() {
                 )}
                 <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-center">
                   <span className="block text-[10px] uppercase text-slate-500">App Fee</span>
-                  <span className="font-bold text-[#006AFF]">$50.00</span>
+                  <span className="font-bold text-zillow-blue">$50.00</span>
                 </div>
               </div>
             </div>
@@ -666,7 +666,7 @@ export function ApplyPage() {
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-850">
                 <div
-                  className="h-full rounded-full bg-[#006AFF] transition-all duration-300"
+                  className="h-full rounded-full bg-zillow-blue transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -682,7 +682,7 @@ export function ApplyPage() {
                   </h2>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
-                    <span className="text-xs uppercase font-bold text-[#006AFF]">Rental Details</span>
+                    <span className="text-xs uppercase font-bold text-zillow-blue">Rental Details</span>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
@@ -692,7 +692,7 @@ export function ApplyPage() {
                           type="date"
                           value={form.requestedMoveInDate}
                           onChange={(e) => updateField('requestedMoveInDate', e.target.value)}
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue ${
                             errors.requestedMoveInDate ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         />
@@ -705,7 +705,7 @@ export function ApplyPage() {
                         <select
                           value={form.desiredLeaseTerm}
                           onChange={(e) => updateField('desiredLeaseTerm', e.target.value)}
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue ${
                             errors.desiredLeaseTerm ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         >
@@ -731,7 +731,7 @@ export function ApplyPage() {
                         value={form.firstName}
                         onChange={(e) => updateField('firstName', e.target.value)}
                         placeholder="John"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.firstName ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -747,7 +747,7 @@ export function ApplyPage() {
                         value={form.lastName}
                         onChange={(e) => updateField('lastName', e.target.value)}
                         placeholder="Doe"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.lastName ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -765,7 +765,7 @@ export function ApplyPage() {
                         value={form.email}
                         onChange={(e) => updateField('email', e.target.value)}
                         placeholder="john.doe@example.com"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.email ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -781,7 +781,7 @@ export function ApplyPage() {
                         value={form.phone}
                         onChange={(e) => updateField('phone', e.target.value)}
                         placeholder="(555) 000-0000"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.phone ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -798,7 +798,7 @@ export function ApplyPage() {
                         type="date"
                         value={form.dob}
                         onChange={(e) => updateField('dob', e.target.value)}
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.dob ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -815,7 +815,7 @@ export function ApplyPage() {
                         value={form.ssnLast4}
                         onChange={(e) => updateField('ssnLast4', e.target.value.replace(/\D/g, ''))}
                         placeholder="1234"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.ssnLast4 ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -896,7 +896,7 @@ export function ApplyPage() {
                           </div>
                         </div>
                         <label className="flex items-start gap-3 text-xs sm:text-sm text-slate-600 cursor-pointer">
-                          <input type="checkbox" checked={form.coApplicantConsent} onChange={(e) => updateField('coApplicantConsent', e.target.checked)} className="mt-1 h-4 w-4 rounded accent-[#006AFF]" />
+                          <input type="checkbox" checked={form.coApplicantConsent} onChange={(e) => updateField('coApplicantConsent', e.target.checked)} className="mt-1 h-4 w-4 rounded accent-zillow-blue" />
                           <span>I authorize verification of the information provided for this additional person, including credit and background checks. <span className="text-rose-400">*</span></span>
                         </label>
                         {errors.coApplicantConsent && <p className="text-xs text-rose-400">{errors.coApplicantConsent}</p>}
@@ -922,7 +922,7 @@ export function ApplyPage() {
                       value={form.currentAddress}
                       onChange={(e) => updateField('currentAddress', e.target.value)}
                       placeholder="123 Main St, Apt 4B, City, State 12345"
-                      className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                      className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                         errors.currentAddress ? 'border-rose-500' : 'border-slate-300'
                       }`}
                     />
@@ -939,7 +939,7 @@ export function ApplyPage() {
                         value={form.residencyDuration}
                         onChange={(e) => updateField('residencyDuration', e.target.value)}
                         placeholder="e.g. 2 years"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.residencyDuration ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -955,7 +955,7 @@ export function ApplyPage() {
                         value={form.currentRent}
                         onChange={(e) => updateField('currentRent', e.target.value)}
                         placeholder="$1,200"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.currentRent ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -972,7 +972,7 @@ export function ApplyPage() {
                       onChange={(e) => updateField('reasonForLeaving', e.target.value)}
                       rows={2}
                       placeholder="Why are you moving?"
-                      className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF] ${
+                      className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue ${
                         errors.reasonForLeaving ? 'border-rose-500' : 'border-slate-300'
                       }`}
                     />
@@ -989,7 +989,7 @@ export function ApplyPage() {
                         value={form.currentLandlordName}
                         onChange={(e) => updateField('currentLandlordName', e.target.value)}
                         placeholder="Property Manager Name"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.currentLandlordName ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -1005,7 +1005,7 @@ export function ApplyPage() {
                         value={form.currentLandlordPhone}
                         onChange={(e) => updateField('currentLandlordPhone', e.target.value)}
                         placeholder="(555) 000-0000"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.currentLandlordPhone ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -1021,7 +1021,7 @@ export function ApplyPage() {
                         min={1}
                         value={form.totalOccupants}
                         onChange={(e) => updateField('totalOccupants', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue"
                       />
                     </div>
                     <div>
@@ -1031,7 +1031,7 @@ export function ApplyPage() {
                         value={form.additionalOccupants}
                         onChange={(e) => updateField('additionalOccupants', e.target.value)}
                         placeholder="Names, ages, relationship"
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue"
                       />
                     </div>
                   </div>
@@ -1041,7 +1041,7 @@ export function ApplyPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-sm font-bold text-slate-900">Do you have pets?</span>
-                        <p className="text-xs text-[#00AD71]">All Choice Properties listings are 100% pet-friendly!</p>
+                        <p className="text-xs text-zillow-green-dark">All Choice Properties listings are 100% pet-friendly!</p>
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -1060,7 +1060,7 @@ export function ApplyPage() {
                           onClick={() => updateField('hasPets', 'yes')}
                           className={`rounded-xl px-4 py-1.5 text-xs font-semibold transition ${
                             form.hasPets === 'yes'
-                              ? 'bg-[#006AFF] text-white font-bold'
+                              ? 'bg-zillow-blue text-white font-bold'
                               : 'bg-white border border-slate-200 text-slate-500'
                           }`}
                         >
@@ -1114,7 +1114,7 @@ export function ApplyPage() {
                           value={form.petDetails}
                           onChange={(e) => updateField('petDetails', e.target.value)}
                           placeholder="e.g. 1 Golden Retriever (45 lbs), 1 domestic cat"
-                          className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]"
+                          className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue"
                         />
                       </div>
                     )}
@@ -1154,7 +1154,7 @@ export function ApplyPage() {
                       <select
                         value={form.employmentStatus}
                         onChange={(e) => updateField('employmentStatus', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue"
                       >
                         <option value="Full-time">Full-time Employed</option>
                         <option value="Part-time">Part-time Employed</option>
@@ -1174,7 +1174,7 @@ export function ApplyPage() {
                         value={form.monthlyIncome}
                         onChange={(e) => updateField('monthlyIncome', e.target.value)}
                         placeholder="e.g. $4,500"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.monthlyIncome ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -1195,7 +1195,7 @@ export function ApplyPage() {
                         value={form.employerName}
                         onChange={(e) => updateField('employerName', e.target.value)}
                         placeholder="Acme Corporation"
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.employerName ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -1211,7 +1211,7 @@ export function ApplyPage() {
                         value={form.jobTitle}
                         onChange={(e) => updateField('jobTitle', e.target.value)}
                         placeholder="Software Engineer, Nurse, Manager..."
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-[#006AFF] ${
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none transition focus:border-zillow-blue ${
                           errors.jobTitle ? 'border-rose-500' : 'border-slate-300'
                         }`}
                       />
@@ -1227,7 +1227,7 @@ export function ApplyPage() {
                         value={form.employerAddress}
                         onChange={(e) => updateField('employerAddress', e.target.value)}
                         placeholder="Employer street address"
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue"
                       />
                     </div>
                     <div>
@@ -1236,7 +1236,7 @@ export function ApplyPage() {
                         type="date"
                         value={form.employmentStartDate}
                         onChange={(e) => updateField('employmentStartDate', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue"
                       />
                     </div>
                     <div>
@@ -1246,7 +1246,7 @@ export function ApplyPage() {
                         value={form.employmentDuration}
                         onChange={(e) => updateField('employmentDuration', e.target.value)}
                         placeholder="e.g. 3 years"
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue"
                       />
                     </div>
                     <div>
@@ -1255,7 +1255,7 @@ export function ApplyPage() {
                         type="text"
                         value={form.supervisorName}
                         onChange={(e) => updateField('supervisorName', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue"
                       />
                     </div>
                     <div>
@@ -1264,7 +1264,7 @@ export function ApplyPage() {
                         type="tel"
                         value={form.supervisorPhone}
                         onChange={(e) => updateField('supervisorPhone', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue"
                       />
                     </div>
                   </div>
@@ -1279,7 +1279,7 @@ export function ApplyPage() {
                   </h2>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
-                    <span className="text-xs uppercase font-bold text-[#006AFF]">Personal or Professional Reference</span>
+                    <span className="text-xs uppercase font-bold text-zillow-blue">Personal or Professional Reference</span>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
@@ -1290,7 +1290,7 @@ export function ApplyPage() {
                           value={form.referenceName}
                           onChange={(e) => updateField('referenceName', e.target.value)}
                           placeholder="Jane Smith"
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue ${
                             errors.referenceName ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         />
@@ -1305,7 +1305,7 @@ export function ApplyPage() {
                           value={form.referencePhone}
                           onChange={(e) => updateField('referencePhone', e.target.value)}
                           placeholder="(555) 000-0000"
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue ${
                             errors.referencePhone ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         />
@@ -1317,14 +1317,14 @@ export function ApplyPage() {
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                     <span className="text-xs uppercase font-bold text-slate-500">Reference 2 (Optional)</span>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <input type="text" value={form.reference2Name} onChange={(e) => updateField('reference2Name', e.target.value)} placeholder="Full name" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]" />
-                      <input type="tel" value={form.reference2Phone} onChange={(e) => updateField('reference2Phone', e.target.value)} placeholder="Phone number" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]" />
+                      <input type="text" value={form.reference2Name} onChange={(e) => updateField('reference2Name', e.target.value)} placeholder="Full name" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue" />
+                      <input type="tel" value={form.reference2Phone} onChange={(e) => updateField('reference2Phone', e.target.value)} placeholder="Phone number" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue" />
                     </div>
-                    <input type="text" value={form.reference2Relationship} onChange={(e) => updateField('reference2Relationship', e.target.value)} placeholder="Relationship (former landlord, employer, coworker, friend)" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]" />
+                    <input type="text" value={form.reference2Relationship} onChange={(e) => updateField('reference2Relationship', e.target.value)} placeholder="Relationship (former landlord, employer, coworker, friend)" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue" />
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
-                    <span className="text-xs uppercase font-bold text-[#00AD71]">Emergency Contact</span>
+                    <span className="text-xs uppercase font-bold text-zillow-green-dark">Emergency Contact</span>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
@@ -1335,7 +1335,7 @@ export function ApplyPage() {
                           value={form.emergencyContactName}
                           onChange={(e) => updateField('emergencyContactName', e.target.value)}
                           placeholder="Contact Full Name"
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue ${
                             errors.emergencyContactName ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         />
@@ -1350,7 +1350,7 @@ export function ApplyPage() {
                           value={form.emergencyContactPhone}
                           onChange={(e) => updateField('emergencyContactPhone', e.target.value)}
                           placeholder="(555) 000-0000"
-                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF] ${
+                          className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue ${
                             errors.emergencyContactPhone ? 'border-rose-500' : 'border-slate-300'
                           }`}
                         />
@@ -1362,7 +1362,7 @@ export function ApplyPage() {
                       value={form.emergencyContactRelationship}
                       onChange={(e) => updateField('emergencyContactRelationship', e.target.value)}
                       placeholder="Relationship to you (spouse, parent, friend)"
-                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]"
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue"
                     />
                   </div>
 
@@ -1380,7 +1380,7 @@ export function ApplyPage() {
                           updateField('documents', Array.from(e.target.files) as any);
                         }
                       }} 
-                      className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#006AFF]/20 file:text-[#006AFF] hover:file:bg-[#006AFF]/30"
+                      className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-zillow-blue/20 file:text-zillow-blue hover:file:bg-zillow-blue/30"
                     />
                     {form.documents && form.documents.length > 0 && (
                       <ul className="mt-3 text-xs text-slate-600 list-disc pl-5">
@@ -1399,7 +1399,7 @@ export function ApplyPage() {
                   <h2 id="application-step-title" tabIndex={-1} className="text-lg sm:text-xl font-bold text-slate-900 border-b border-slate-200 pb-3">
                     Payment &amp; Contact Preferences
                   </h2>
-                  <div className="rounded-2xl border border-[#00AD71]/30 bg-[#00AD71]/10 p-4 text-sm text-[#00AD71]">
+                  <div className="rounded-2xl border border-zillow-green/30 bg-zillow-green/10 p-4 text-sm text-zillow-green-dark">
                     No payment is collected through this form. A representative will contact you after submission to coordinate the application fee.
                   </div>
 
@@ -1412,7 +1412,7 @@ export function ApplyPage() {
                         type="date"
                         value={form.requestedMoveInDate}
                         onChange={(e) => updateField('requestedMoveInDate', e.target.value)}
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF] ${errors.requestedMoveInDate ? 'border-rose-500' : 'border-slate-300'}`}
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue ${errors.requestedMoveInDate ? 'border-rose-500' : 'border-slate-300'}`}
                       />
                       {errors.requestedMoveInDate && <p className="mt-1 text-xs text-rose-400">{errors.requestedMoveInDate}</p>}
                     </div>
@@ -1423,7 +1423,7 @@ export function ApplyPage() {
                       <select
                         value={form.desiredLeaseTerm}
                         onChange={(e) => updateField('desiredLeaseTerm', e.target.value)}
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF] ${errors.desiredLeaseTerm ? 'border-rose-500' : 'border-slate-300'}`}
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue ${errors.desiredLeaseTerm ? 'border-rose-500' : 'border-slate-300'}`}
                       >
                         <option value="">Select term...</option>
                         <option value="6 months">6 Months</option>
@@ -1444,7 +1444,7 @@ export function ApplyPage() {
                       <select
                         value={form.primaryPaymentMethod}
                         onChange={(e) => updateField('primaryPaymentMethod', e.target.value)}
-                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF] ${errors.primaryPaymentMethod ? 'border-rose-500' : 'border-slate-300'}`}
+                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue ${errors.primaryPaymentMethod ? 'border-rose-500' : 'border-slate-300'}`}
                       >
                         <option value="">Select your primary method</option>
                         {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
@@ -1455,7 +1455,7 @@ export function ApplyPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Alternative Payment Method</label>
-                        <select value={form.alternativePaymentMethod} onChange={(e) => updateField('alternativePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]">
+                        <select value={form.alternativePaymentMethod} onChange={(e) => updateField('alternativePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue">
                           <option value="">Optional backup method</option>
                           {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
                         </select>
@@ -1463,7 +1463,7 @@ export function ApplyPage() {
                       </div>
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Third Payment Method</label>
-                        <select value={form.thirdChoicePaymentMethod} onChange={(e) => updateField('thirdChoicePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#006AFF]">
+                        <select value={form.thirdChoicePaymentMethod} onChange={(e) => updateField('thirdChoicePaymentMethod', e.target.value)} className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-zillow-blue">
                           <option value="">Optional additional method</option>
                           {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
                         </select>
@@ -1478,7 +1478,7 @@ export function ApplyPage() {
                       <div className="flex flex-wrap gap-4 text-sm text-slate-900">
                         {['Text Message', 'Email'].map((method) => (
                           <label key={method} className="flex items-center gap-2">
-                            <input type="checkbox" checked={form.preferredContactMethod.includes(method)} onChange={() => toggleArrayField('preferredContactMethod', method)} className="h-4 w-4 rounded accent-[#006AFF]" />
+                            <input type="checkbox" checked={form.preferredContactMethod.includes(method)} onChange={() => toggleArrayField('preferredContactMethod', method)} className="h-4 w-4 rounded accent-zillow-blue" />
                             {method}
                           </label>
                         ))}
@@ -1490,7 +1490,7 @@ export function ApplyPage() {
                       <div className="grid gap-3 sm:grid-cols-2 text-sm text-slate-900">
                         {PREFERRED_TIMES.map((time) => (
                           <label key={time} className="flex items-center gap-2">
-                            <input type="checkbox" checked={form.preferredTime.includes(time)} onChange={() => toggleArrayField('preferredTime', time)} className="h-4 w-4 rounded accent-[#006AFF]" />
+                            <input type="checkbox" checked={form.preferredTime.includes(time)} onChange={() => toggleArrayField('preferredTime', time)} className="h-4 w-4 rounded accent-zillow-blue" />
                             {time}
                           </label>
                         ))}
@@ -1499,7 +1499,7 @@ export function ApplyPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Additional Contact Notes</label>
-                      <input type="text" value={form.preferredTimeSpecific} onChange={(e) => updateField('preferredTimeSpecific', e.target.value)} placeholder="Best after 7pm, avoid Wednesdays" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-[#006AFF]" />
+                      <input type="text" value={form.preferredTimeSpecific} onChange={(e) => updateField('preferredTimeSpecific', e.target.value)} placeholder="Best after 7pm, avoid Wednesdays" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-zillow-blue" />
                     </div>
                   </div>
                 </div>
@@ -1514,7 +1514,7 @@ export function ApplyPage() {
 
                   {/* Summary Box */}
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-3 text-xs sm:text-sm text-slate-600">
-                    <span className="text-xs uppercase font-bold text-[#006AFF]">Application Overview</span>
+                    <span className="text-xs uppercase font-bold text-zillow-blue">Application Overview</span>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div><strong className="text-slate-900">Applicant:</strong> {form.firstName} {form.lastName}</div>
                       <div><strong className="text-slate-900">Email:</strong> {form.email}</div>
@@ -1532,7 +1532,7 @@ export function ApplyPage() {
                         type="checkbox"
                         checked={form.certifyAccurate}
                         onChange={(e) => updateField('certifyAccurate', e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded accent-[#006AFF]"
+                        className="mt-1 h-4 w-4 rounded accent-zillow-blue"
                       />
                       <span>
                         <strong className="text-slate-900">Accuracy Certification:</strong> I certify that all information provided in this rental application is true, correct, and complete to the best of my knowledge. Material misrepresentation is grounds for denial or lease termination.
@@ -1545,7 +1545,7 @@ export function ApplyPage() {
                         type="checkbox"
                         checked={form.authorizeScreening}
                         onChange={(e) => updateField('authorizeScreening', e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded accent-[#006AFF]"
+                        className="mt-1 h-4 w-4 rounded accent-zillow-blue"
                       />
                       <span>
                         <strong className="text-slate-900">Screening Authorization:</strong> I authorize Choice Properties and its designated screening agents to verify all provided information, including consumer credit reports, eviction databases, and employment verifications under the FCRA.
@@ -1558,10 +1558,10 @@ export function ApplyPage() {
                         type="checkbox"
                         checked={form.acknowledgeFee}
                         onChange={(e) => updateField('acknowledgeFee', e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded accent-[#006AFF]"
+                        className="mt-1 h-4 w-4 rounded accent-zillow-blue"
                       />
                       <span>
-                        <strong className="text-slate-900">Application Fee Policy:</strong> I acknowledge the fixed <strong className="text-[#006AFF]">$50.00 screening fee</strong>. Nothing is charged right now upon form submission; Choice Properties will contact me to securely coordinate payment before running the review. Once payment is processed, the fee is non-refundable.
+                        <strong className="text-slate-900">Application Fee Policy:</strong> I acknowledge the fixed <strong className="text-zillow-blue">$50.00 screening fee</strong>. Nothing is charged right now upon form submission; Choice Properties will contact me to securely coordinate payment before running the review. Once payment is processed, the fee is non-refundable.
                       </span>
                     </label>
                     {errors.acknowledgeFee && <p className="text-xs text-rose-400 pl-7">{errors.acknowledgeFee}</p>}
@@ -1571,10 +1571,10 @@ export function ApplyPage() {
                         type="checkbox"
                         checked={form.agreeTermsPrivacy}
                         onChange={(e) => updateField('agreeTermsPrivacy', e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded accent-[#006AFF]"
+                        className="mt-1 h-4 w-4 rounded accent-zillow-blue"
                       />
                       <span>
-                        <strong className="text-slate-900">Terms &amp; Privacy:</strong> I have read and agree to the <Link to="/terms" target="_blank" className="text-[#006AFF] underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-[#006AFF] underline">Privacy Policy</Link>, and <Link to="/fair-housing" target="_blank" className="text-[#006AFF] underline">Fair Housing Policy</Link>.
+                        <strong className="text-slate-900">Terms &amp; Privacy:</strong> I have read and agree to the <Link to="/terms" target="_blank" className="text-zillow-blue underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-zillow-blue underline">Privacy Policy</Link>, and <Link to="/fair-housing" target="_blank" className="text-zillow-blue underline">Fair Housing Policy</Link>.
                       </span>
                     </label>
                     {errors.agreeTermsPrivacy && <p className="text-xs text-rose-400 pl-7">{errors.agreeTermsPrivacy}</p>}
@@ -1584,7 +1584,7 @@ export function ApplyPage() {
                         type="checkbox"
                         checked={form.smsConsent}
                         onChange={(e) => updateField('smsConsent', e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded accent-[#006AFF]"
+                        className="mt-1 h-4 w-4 rounded accent-zillow-blue"
                       />
                       <span>
                         (Optional) I consent to receive transactional SMS updates regarding my application review and lease coordination. Message &amp; data rates may apply. Reply STOP to cancel anytime.
@@ -1609,7 +1609,7 @@ export function ApplyPage() {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="rounded-xl bg-[#006AFF] px-6 py-2.5 text-sm font-bold text-white shadow-lg  transition hover:bg-[#0058D6] min-h-[44px]"
+                    className="rounded-xl bg-zillow-blue px-6 py-2.5 text-sm font-bold text-white shadow-lg  transition hover:bg-zillow-blue-dark min-h-[44px]"
                   >
                     Continue →
                   </button>
@@ -1618,7 +1618,7 @@ export function ApplyPage() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-7 py-3 text-sm font-bold uppercase tracking-wider text-slate-900 shadow-lg shadow-emerald-900/30 transition hover:bg-[#0058D6] disabled:opacity-50 min-h-[44px]"
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-7 py-3 text-sm font-bold uppercase tracking-wider text-slate-900 shadow-lg shadow-emerald-900/30 transition hover:bg-zillow-blue-dark disabled:opacity-50 min-h-[44px]"
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Application'}
                   </button>

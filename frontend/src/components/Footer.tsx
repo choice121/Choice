@@ -8,7 +8,7 @@ export function Footer() {
           {/* Brand Col */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#006AFF] text-white shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zillow-blue text-white shadow-sm">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -29,7 +29,7 @@ export function Footer() {
               application fees, and 100% pet-friendly housing across major metro markets.
             </p>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#00AD71]" />
+              <span className="inline-block h-2 w-2 rounded-full bg-zillow-green" />
               <span>Equal Housing Opportunity</span>
             </div>
           </div>

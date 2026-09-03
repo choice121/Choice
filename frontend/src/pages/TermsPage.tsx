@@ -12,14 +12,14 @@ export function TermsPage() {
         <section className="border-b border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-950 px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl space-y-4">
             <nav className="flex items-center gap-2 text-xs font-medium text-slate-500" aria-label="Breadcrumb">
-              <Link to="/" className="hover:text-[#006AFF]">Home</Link>
+              <Link to="/" className="hover:text-zillow-blue">Home</Link>
               <span>›</span>
-              <Link to="/policies" className="hover:text-[#006AFF]">Policies</Link>
+              <Link to="/policies" className="hover:text-zillow-blue">Policies</Link>
               <span>›</span>
               <span className="text-slate-700" aria-current="page">Terms of Service</span>
             </nav>
 
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zillow-blue/30 bg-zillow-blue/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-zillow-blue">
               Platform Agreement
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -83,10 +83,10 @@ export function TermsPage() {
           </div>
 
           <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-850">
-            <Link to="/privacy" className="hover:text-[#006AFF] flex items-center gap-1">
+            <Link to="/privacy" className="hover:text-zillow-blue flex items-center gap-1">
               ← View Privacy Policy
             </Link>
-            <Link to="/policies" className="hover:text-[#006AFF] flex items-center gap-1">
+            <Link to="/policies" className="hover:text-zillow-blue flex items-center gap-1">
               Complete Policy Framework →
             </Link>
           </div>
