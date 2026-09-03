@@ -79,6 +79,55 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (urlPath === '/api/health' && (req.method === 'GET' || req.method === 'HEAD')) {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    if (req.method === 'HEAD') {
+      res.end();
+    } else {
+      res.end(JSON.stringify({ status: 'ok' }));
+    }
+    return;
+  }
+
+  // Handle URL redirects matching _redirects
+  if (urlPath === '/admin' || urlPath === '/admin/') {
+    res.writeHead(302, { Location: '/admin/dashboard.html' });
+    res.end();
+    return;
+  }
+  if (urlPath === '/apply.html') {
+    res.writeHead(302, { Location: '/apply/' });
+    res.end();
+    return;
+  }
+  if (urlPath === '/apply/login.html' || urlPath === '/apply/dashboard.html' || urlPath === '/apply/success.html') {
+    res.writeHead(302, { Location: '/apply/?path=dashboard' });
+    res.end();
+    return;
+  }
+  if (urlPath === '/apply/lease.html') {
+    res.writeHead(302, { Location: '/apply/' });
+    res.end();
+    return;
+  }
+  if (urlPath === '/landlord/properties.html' || urlPath === '/landlord/properties' || urlPath === '/landlord/listings.html' || urlPath === '/landlord/listings') {
+    res.writeHead(302, { Location: '/landlord/dashboard.html' });
+    res.end();
+    return;
+  }
+  if (urlPath === '/landlord/messages.html' || urlPath === '/landlord/messages') {
+    res.writeHead(302, { Location: '/landlord/inquiries.html' });
+    res.end();
+    return;
+  }
+
+  // Handle SPA rewrites matching _redirects
+  if (urlPath.startsWith('/property/') && !urlPath.includes('.')) {
+    urlPath = '/property.html';
+  } else if ((urlPath === '/apply' || urlPath.startsWith('/apply/')) && !urlPath.includes('.')) {
+    urlPath = '/apply/index.html';
+  }
+
   if (urlPath === '/') urlPath = '/index.html';
 
   let filePath = path.join(ROOT, urlPath);

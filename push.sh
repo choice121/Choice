@@ -12,7 +12,7 @@ if [ $? -eq 0 ]; then
   echo "✅ SUCCESS! Changes pushed to GitHub"
   echo ""
   echo "📊 Deployment status:"
-  echo "   - Check GitHub: https://github.com/choicepropertyofficial1-collab/choicepropertiesofficial"
+  echo "   - Check GitHub: https://github.com/choice121/Choice"
   echo "   - Supabase will auto-deploy in 1-2 minutes"
   echo "   - Cloudflare will auto-deploy in 1-2 minutes"
   echo ""

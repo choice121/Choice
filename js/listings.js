@@ -1041,7 +1041,11 @@ function setupGridDelegation() {
     const card = e.target.closest('.property-card');
     if (!card) return;
     const id = card.dataset.id;
-    window.location.href = `/?view=property&id=${encodeURIComponent(id)}`;
+    const prop = pageProperties.find(p => String(p.id) === String(id));
+    const url = (window.CP && window.CP.UI && window.CP.UI.propertyUrl)
+      ? window.CP.UI.propertyUrl(prop || { id })
+      : `/property.html?id=${encodeURIComponent(id)}`;
+    window.location.href = url;
   });
 
   // P1-D: Switch non-first slide images from lazy → eager on first hover & highlight map pin
@@ -1163,8 +1167,10 @@ function initMap(props, isBoundsUpdate = false) {
     const safeTitle = esc(p.title || 'Rental property');
     const safeImg = esc(CONFIG.img(p.photo_urls?.[0] || '','card'));
     const safeRent = Number(p.monthly_rent || 0);
-    // Phase C: canonical slug URL when we have the data, legacy URL otherwise.
-    const popupHref = esc(`/?view=property&id=${safeId}`);
+    // Canonical property details URL
+    const popupHref = esc((window.CP && window.CP.UI && window.CP.UI.propertyUrl)
+      ? window.CP.UI.propertyUrl(p)
+      : `/property.html?id=${safeId}`);
     bounds.push([lat, lng]);
     const icon = L.divIcon({
       className: '',

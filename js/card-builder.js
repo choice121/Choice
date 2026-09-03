@@ -118,7 +118,9 @@
     const photos = (p.photo_urls && p.photo_urls.length) ? p.photo_urls : ['/assets/placeholder-property.jpg'];
     const title  = esc(p.title || 'Rental property');
     const id     = esc(p.id);
-    const propUrl = '/?view=property&id=' + id;
+    const propUrl = (window.CP && window.CP.UI && window.CP.UI.propertyUrl)
+      ? window.CP.UI.propertyUrl(p)
+      : ('/property.html?id=' + encodeURIComponent(p.id || ''));
 
     // ── Image slides ──────────────────────────────────────────
     const slidesHtml = photos.map(function (url, i) {

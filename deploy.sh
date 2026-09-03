@@ -48,7 +48,7 @@ if [ $? -eq 0 ]; then
   echo "   → Or Create Listing / Add Photos"
   echo ""
   echo "📞 Check deployment status:"
-  echo "   → GitHub: https://github.com/choicepropertyofficial1-collab/choicepropertiesofficial/commits/main"
+  echo "   → GitHub: https://github.com/choice121/Choice/commits/main"
   echo "   → Supabase: Edge Functions → imagekit-upload → Logs"
   echo "   → Cloudflare: Pages → choicepropertiesofficial → Deployments"
 else

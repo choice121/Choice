@@ -200,48 +200,13 @@
   }
 
   // --- propertyUrl --------------------------------------------------
-  // Build the canonical, keyword-rich slug URL for a property row.
-  // Format: /rent/<state-2-lower>/<city-slug>/<beds>-<type-slug>-<id-lower>/
-  // Used by card-builder.js, listings.js, share buttons, and edit-listing
-  // "View listing" links so internal navigation lands on the canonical URL
-  // (avoiding the legacy /property.html?id=… → 301 hop). Falls back to the
-  // legacy URL when the row is missing the geo/type fields needed for a
-  // good slug (e.g. preview/draft mode).
-  function _slugSeg(s) {
-    return String(s == null ? '' : s)
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60);
-  }
+  // Returns the canonical destination: /property.html?id=PROPERTY_UUID
+  // Accepts a property object (with id or property_id) or a raw ID string.
   function propertyUrl(p) {
-    if (!p || !p.id) return '/listings.html';
-    var id = String(p.id);
-    // Accept both legacy PROP-XXXXXXXX and UUID formats.
-    // The edge function (functions/rent/[state]/[city]/[slug].js) matches
-    // either a short prop-xxxxxxxx token or a full UUID at the end of the path.
-    if (!/^(PROP-[A-Z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(id)) {
-      return '/property.html?id=' + encodeURIComponent(id);
-    }
-    var state = String(p.state || '').toLowerCase().slice(0, 2);
-    var city = _slugSeg(p.city);
-    if (!state || !city) return '/property.html?id=' + encodeURIComponent(id);
-    var beds = (p.bedrooms == null) ? 'home'
-             : (Number(p.bedrooms) === 0 ? 'studio' : Number(p.bedrooms) + 'br');
-    // Normalize property_type to a clean slug segment (handles SINGLE_FAMILY,
-    // TOWNHOMES, house, apartment, etc. consistently).
-    var rawType = String(p.property_type || '').toLowerCase().replace(/[\s_]+/g, '-');
-    var typeMap = {
-      'single-family': 'house', 'single_family': 'house',
-      'townhomes': 'townhouse', 'townhome': 'townhouse',
-      'condos': 'condo', 'apartment': 'apartment', 'house': 'house',
-      'condo': 'condo', 'townhouse': 'townhouse', 'duplex': 'duplex',
-      'studio': 'studio', 'multi-family': 'multi-family', 'mobile-home': 'mobile-home',
-    };
-    var type = typeMap[rawType] || rawType || 'home';
-    return '/rent/' + state + '/' + city + '/' + beds + '-' + type + '-' + id.toLowerCase() + '/';
+    if (!p) return '/listings.html';
+    var id = (typeof p === 'object') ? (p.id || p.property_id) : p;
+    if (!id) return '/listings.html';
+    return '/property.html?id=' + encodeURIComponent(String(id));
   }
 
   window.CP.UI = {
