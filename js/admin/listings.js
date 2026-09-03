@@ -54,7 +54,7 @@
     const meta = [
       property.bedrooms != null ? `${property.bedrooms} bed` : null,
       property.bathrooms != null ? `${property.bathrooms} bath` : null,
-      property.square_feet ? `${Number(property.square_feet).toLocaleString()} sqft` : null,
+      property.square_footage ? `${Number(property.square_footage).toLocaleString()} sqft` : null,
     ].filter(Boolean).join(' · ');
     return `<article class="pm-card">
       <div class="pm-photo">
@@ -118,7 +118,7 @@
     if (!ok) return;
     try {
       const { data, error } = await CP.sb().from('properties')
-        .select('id,title,address,city,state,zip,status,monthly_rent,bedrooms,bathrooms,square_feet,created_at,listed_at,landlord_id,landlords(contact_name,business_name),property_photos(url,file_id,display_order,is_hero)')
+        .select('id,title,address,city,state,zip,status,monthly_rent,bedrooms,bathrooms,square_footage,created_at,listed_at,landlord_id,landlords(contact_name,business_name),property_photos(url,file_id,display_order,is_hero)')
         .order('listed_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(2000);

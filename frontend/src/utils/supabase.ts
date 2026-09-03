@@ -80,6 +80,16 @@ export type PropertyData = {
   move_in_special?: string | null
   minimum_income_multiplier?: number | null
   minimum_credit_score?: number | null
+  neighborhood?: string | null
+  parking_spaces?: number | null
+  lot_size_sqft?: number | null
+  smoking_allowed?: boolean | null
+  has_basement?: boolean | null
+  has_central_air?: boolean | null
+  pet_deposit?: number | null
+  pet_types_allowed?: string | null
+  pet_weight_limit?: number | null
+  pet_details?: string | null
 }
 
 export type PropertyQueryResult = {
@@ -189,6 +199,16 @@ export function normalizeProperty(row: LegacyPropertyRow): PropertyData {
     move_in_special: row.move_in_special ?? null,
     minimum_income_multiplier: numberOrNull(row.minimum_income_multiplier),
     minimum_credit_score: numberOrNull(row.minimum_credit_score),
+    neighborhood: row.neighborhood ?? null,
+    parking_spaces: numberOrNull(row.parking_spaces),
+    lot_size_sqft: numberOrNull(row.lot_size_sqft),
+    smoking_allowed: row.smoking_allowed ?? null,
+    has_basement: row.has_basement ?? null,
+    has_central_air: row.has_central_air ?? null,
+    pet_deposit: numberOrNull(row.pet_deposit),
+    pet_types_allowed: row.pet_types_allowed ?? null,
+    pet_weight_limit: numberOrNull(row.pet_weight_limit),
+    pet_details: row.pet_details ?? null,
   }
 }
 

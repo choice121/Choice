@@ -354,7 +354,11 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               <div className="rounded-xl border border-slate-800/80 bg-slate-950 p-4 space-y-1">
                 <span className="text-xs text-slate-400">Pet Policy</span>
                 <p className="text-xl font-bold text-emerald-400">100% Pet Friendly</p>
-                <p className="text-[11px] text-slate-500">Dogs and cats welcome</p>
+                <div className="text-[11px] text-slate-500 space-y-1 mt-1">
+                  <p>{property.pet_types_allowed || 'Dogs and cats welcome'}</p>
+                  {property.pet_weight_limit != null && <p>Weight limit: {property.pet_weight_limit} lbs</p>}
+                  {property.pet_deposit != null && <p>Pet deposit: ${property.pet_deposit}</p>}
+                </div>
               </div>
             </div>
           </div>
@@ -377,6 +381,24 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                     <span className="font-medium text-white text-right">{property.year_built}</span>
                   </li>
                 )}
+                {property.lot_size_sqft != null && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Lot Size</span>
+                    <span className="font-medium text-white text-right">{property.lot_size_sqft.toLocaleString()} sqft</span>
+                  </li>
+                )}
+                {property.has_basement != null && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Basement</span>
+                    <span className="font-medium text-white text-right">{property.has_basement ? 'Yes' : 'No'}</span>
+                  </li>
+                )}
+                {property.has_central_air != null && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Central Air</span>
+                    <span className="font-medium text-white text-right">{property.has_central_air ? 'Yes' : 'No'}</span>
+                  </li>
+                )}
                 {property.heating_type && (
                   <li className="flex justify-between border-b border-slate-800/60 pb-2">
                     <span className="text-slate-400">Heating</span>
@@ -392,7 +414,10 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                 {property.parking && (
                   <li className="flex justify-between border-b border-slate-800/60 pb-2">
                     <span className="text-slate-400">Parking</span>
-                    <span className="font-medium text-white text-right">{property.parking}</span>
+                    <span className="font-medium text-white text-right">
+                      {property.parking}
+                      {property.parking_spaces != null && ` (${property.parking_spaces} spaces)`}
+                    </span>
                   </li>
                 )}
                 {property.laundry_type && (
