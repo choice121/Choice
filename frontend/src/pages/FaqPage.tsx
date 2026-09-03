@@ -116,20 +116,20 @@ export function FaqPage() {
   })
 
   return (
-    <div id="faq-page-container" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+    <div id="faq-page-container" className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
       <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section id="faq-hero-section" className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <section id="faq-hero-section" className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-100 via-slate-950 to-slate-950 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-4xl text-center space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300">
               Help Center &amp; Support
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
               Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Questions</span>
             </h1>
-            <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Transparent answers about our standard $50 application fee, 1× rent deposits, approval timelines, and renter protections.
             </p>
 
@@ -143,10 +143,10 @@ export function FaqPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search questions (e.g. fee, pets, approval, deposit)..."
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/90 px-5 py-3.5 pl-12 text-sm text-slate-100 placeholder-slate-400 shadow-inner outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white/90 px-5 py-3.5 pl-12 text-sm text-slate-900 placeholder-slate-400 shadow-inner outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                 />
                 <svg
-                  className="absolute left-4 top-4 h-5 w-5 text-slate-400"
+                  className="absolute left-4 top-4 h-5 w-5 text-slate-500"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -157,7 +157,7 @@ export function FaqPage() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-4 top-3.5 text-xs text-slate-400 hover:text-white"
+                    className="absolute right-4 top-3.5 text-xs text-slate-500 hover:text-slate-900"
                   >
                     Clear
                   </button>
@@ -180,7 +180,7 @@ export function FaqPage() {
                 className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition min-h-[40px] ${
                   selectedCategory === cat.id
                     ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                    : 'bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 {cat.label}
@@ -191,8 +191,8 @@ export function FaqPage() {
           {/* Accordion List */}
           <div id="faq-accordion-list" className="space-y-4">
             {filteredItems.length === 0 ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400 space-y-3">
-                <p className="text-base font-semibold text-slate-200">No matching questions found</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 space-y-3">
+                <p className="text-base font-semibold text-slate-700">No matching questions found</p>
                 <p className="text-sm">Try searching with a different term, or reach out directly to our leasing desk.</p>
                 <button
                   type="button"
@@ -200,7 +200,7 @@ export function FaqPage() {
                     setSearchQuery('')
                     setSelectedCategory('all')
                   }}
-                  className="mt-2 inline-flex items-center rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-cyan-300 hover:bg-slate-700 transition"
+                  className="mt-2 inline-flex items-center rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-cyan-300 hover:bg-slate-700 transition"
                 >
                   Reset Filters
                 </button>
@@ -212,7 +212,7 @@ export function FaqPage() {
                   <div
                     key={item.id}
                     id={item.id}
-                    className="overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-900/80 transition hover:border-slate-700"
+                    className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white/80 transition hover:border-slate-300"
                   >
                     <button
                       type="button"
@@ -221,14 +221,14 @@ export function FaqPage() {
                       aria-controls={`${item.id}-answer`}
                       className="flex w-full items-center justify-between gap-4 p-5 sm:p-6 text-left transition hover:bg-slate-850"
                     >
-                      <span className="text-base sm:text-lg font-bold text-white leading-snug">
+                      <span className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                         {item.question}
                       </span>
                       <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${
                           isOpen
                             ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300 rotate-180'
-                            : 'border-slate-700 bg-slate-800 text-slate-400'
+                            : 'border-slate-300 bg-slate-100 text-slate-500'
                         }`}
                         aria-hidden="true"
                       >
@@ -238,7 +238,7 @@ export function FaqPage() {
                     {isOpen && (
                       <div
                         id={`${item.id}-answer`}
-                        className="border-t border-slate-800/80 px-5 py-4 sm:px-6 text-sm sm:text-base leading-relaxed text-slate-300 space-y-3 bg-slate-950/40"
+                        className="border-t border-slate-200/80 px-5 py-4 sm:px-6 text-sm sm:text-base leading-relaxed text-slate-600 space-y-3 bg-slate-50/40"
                       >
                         <p>{item.answer}</p>
                       </div>
@@ -250,10 +250,10 @@ export function FaqPage() {
           </div>
 
           {/* Assistance CTA Banner */}
-          <div id="faq-support-banner" className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div id="faq-support-banner" className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-100 via-white to-cyan-950/40 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
-              <h3 className="text-xl font-bold text-white">Still have a question?</h3>
-              <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
+              <h3 className="text-xl font-bold text-slate-900">Still have a question?</h3>
+              <p className="text-sm text-slate-600 leading-relaxed max-w-lg">
                 Our leasing desk is open Monday through Saturday to answer questions regarding property tours, applications, or leasing terms.
               </p>
               <div className="flex flex-wrap gap-4 pt-1 text-xs text-cyan-300 justify-center md:justify-start">
@@ -271,7 +271,7 @@ export function FaqPage() {
               <Link
                 to="/listings"
                 id="faq-browse-listings-cta"
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 min-h-[44px]"
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-bold text-slate-900 shadow-lg shadow-cyan-900/30 transition hover:brightness-110 min-h-[44px]"
               >
                 Browse Listings
               </Link>
@@ -280,7 +280,7 @@ export function FaqPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 id="faq-track-app-cta"
-                className="inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 text-sm font-bold text-slate-200 transition hover:bg-slate-700 hover:text-white min-h-[44px]"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-700 hover:text-slate-900 min-h-[44px]"
               >
                 Track Status
               </a>

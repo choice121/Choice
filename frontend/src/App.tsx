@@ -185,7 +185,7 @@ function App() {
   const getAuthStatusClass = () => {
     if (authLoading) return 'rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
     if (isAuthenticated) return 'rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200'
-    return 'rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300'
+    return 'rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600'
   }
 
   const renderField = (
@@ -199,7 +199,7 @@ function App() {
 
     if (type === 'checkbox') {
       return (
-        <label className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-200">
+        <label className="flex items-start gap-3 rounded-2xl border border-slate-300 bg-slate-50/60 p-3 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={Boolean(value)}
@@ -215,13 +215,13 @@ function App() {
 
     return (
       <label className="block">
-        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
+        <span className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</span>
         <input
           type={type}
           value={String(value ?? '')}
           placeholder={placeholder}
           onChange={(event) => updateField(key, event.target.value as never)}
-          className={`w-full rounded-xl border bg-slate-950 px-3 py-2.5 text-slate-50 outline-none transition focus:border-cyan-400 ${error ? 'border-rose-500/70' : 'border-slate-700'}`}
+          className={`w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-slate-50 outline-none transition focus:border-cyan-400 ${error ? 'border-rose-500/70' : 'border-slate-300'}`}
         />
         {error && <span className="mt-1 block text-xs text-rose-300">{error}</span>}
       </label>
@@ -233,8 +233,8 @@ function App() {
       case 'property':
         return (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Property context</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">Property context</p>
               {renderField('propertyAddress', 'Property address applying for', 'text', 'Street, city, state, ZIP')}
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -254,8 +254,8 @@ function App() {
       case 'residency':
         return (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Current residence</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">Current residence</p>
               {renderField('currentAddress', 'Current address', 'text', 'Street, unit, city, state, ZIP')}
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -292,13 +292,13 @@ function App() {
       case 'review':
         return (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-400">Review summary</p>
-              <div className="grid gap-3 md:grid-cols-2 text-sm text-slate-200">
-                <div><span className="text-slate-400">Applicant:</span> {form.firstName} {form.lastName}</div>
-                <div><span className="text-slate-400">Property:</span> {form.propertyAddress}</div>
-                <div><span className="text-slate-400">Income:</span> {form.monthlyIncome}</div>
-                <div><span className="text-slate-400">Move-in:</span> {form.moveInDate}</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">Review summary</p>
+              <div className="grid gap-3 md:grid-cols-2 text-sm text-slate-700">
+                <div><span className="text-slate-500">Applicant:</span> {form.firstName} {form.lastName}</div>
+                <div><span className="text-slate-500">Property:</span> {form.propertyAddress}</div>
+                <div><span className="text-slate-500">Income:</span> {form.monthlyIncome}</div>
+                <div><span className="text-slate-500">Move-in:</span> {form.moveInDate}</div>
               </div>
             </div>
             {renderField('consent', 'Consent', 'checkbox')}
@@ -311,15 +311,15 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <header className="mb-8 rounded-[28px] border border-slate-800 bg-slate-900/75 p-5 shadow-[0_24px_80px_rgba(2,6,23,0.7)] backdrop-blur sm:p-6">
+        <header className="mb-8 rounded-[28px] border border-slate-200 bg-white/75 p-5 shadow-[0_24px_80px_rgba(2,6,23,0.7)] backdrop-blur sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
                 Choice Properties • migration slice
               </p>
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
                 Protected application workflow modernization in progress.
               </h1>
             </div>
@@ -330,33 +330,33 @@ function App() {
         </header>
 
         <section className="mb-8 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/40">
-            <p className="text-sm text-slate-400">Architecture</p>
-            <p className="mt-3 text-2xl font-semibold text-white">React + Vite + TS</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/40">
+            <p className="text-sm text-slate-500">Architecture</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">React + Vite + TS</p>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/40">
-            <p className="text-sm text-slate-400">Design system</p>
-            <p className="mt-3 text-2xl font-semibold text-white">Tailwind + shadcn</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/40">
+            <p className="text-sm text-slate-500">Design system</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">Tailwind + shadcn</p>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/40">
-            <p className="text-sm text-slate-400">Backend</p>
-            <p className="mt-3 text-2xl font-semibold text-white">Supabase contract-first</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/40">
+            <p className="text-sm text-slate-500">Backend</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">Supabase contract-first</p>
           </div>
         </section>
 
         <section className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr]">
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-5 sm:p-6">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Protected flow</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Application intake migration slice</h2>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Protected flow</p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900">Application intake migration slice</h2>
               </div>
               <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
                 {stepIndex + 1} / {stepOrder.length}
               </span>
             </div>
 
-            <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-100">
               <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
 
@@ -369,7 +369,7 @@ function App() {
                   className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
                     index === stepIndex
                       ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
-                      : 'border-slate-700 bg-slate-950 text-slate-300'
+                      : 'border-slate-300 bg-slate-50 text-slate-600'
                   }`}
                 >
                   {stepLabels[step]}
@@ -379,12 +379,12 @@ function App() {
 
             {renderStepContent()}
 
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-800 pt-5">
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-5">
                 <button
                   type="button"
                   onClick={goBack}
                   disabled={stepIndex === 0}
-                  className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Back
                 </button>
@@ -393,7 +393,7 @@ function App() {
                   <button
                     type="button"
                     onClick={goNext}
-                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
+                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
                   >
                     Continue
                   </button>
@@ -401,7 +401,7 @@ function App() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
                   >
                     Continue to secure application
                   </button>
@@ -410,9 +410,9 @@ function App() {
             </div>
 
           <aside className="space-y-6">
-            <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Real Supabase integration</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Live properties feed</h3>
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Real Supabase integration</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Live properties feed</h3>
               <div className="mt-5 space-y-4">
                 <div className={getPropsStatusClass()}>
                   {propsLoading ? 'Fetching...' : propsError ? 'Error' : 'Connected'}
@@ -425,31 +425,31 @@ function App() {
                 {propsLoading && (
                   <div className="space-y-2">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse h-16 rounded-xl border border-slate-800 bg-slate-950/50" />
+                      <div key={i} className="animate-pulse h-16 rounded-xl border border-slate-200 bg-slate-50/50" />
                     ))}
                   </div>
                 )}
                 {!propsLoading && realProperties.length > 0 && (
                   <div className="space-y-2">
                     {realProperties.slice(0, 3).map((prop) => (
-                      <div key={prop.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm">
-                        <p className="font-semibold text-white">{prop.title}</p>
-                        <p className="mt-1 text-slate-400">${prop.rent_monthly}/mo • {prop.city}</p>
+                      <div key={prop.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm">
+                        <p className="font-semibold text-slate-900">{prop.title}</p>
+                        <p className="mt-1 text-slate-500">${prop.rent_monthly}/mo • {prop.city}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {!propsLoading && realProperties.length === 0 && !propsError && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-sm text-slate-400">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-center text-sm text-slate-500">
                     No properties available
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth state</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Session validation</h3>
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Auth state</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Session validation</h3>
               <div className="mt-5 space-y-4">
                 <div className={getAuthStatusClass()}>
                   {authLoading ? 'Checking...' : isAuthenticated ? 'Authenticated' : 'Anonymous'}
@@ -466,24 +466,24 @@ function App() {
                   </div>
                 )}
                 {!authLoading && !isAuthenticated && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-sm text-slate-400">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-center text-sm text-slate-500">
                     Not logged in. Use legacy login pages.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Migration</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Current phase plan</h3>
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Migration</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Current phase plan</h3>
               <div className="mt-5 space-y-3">
                 {migrationPhases.map((phase) => (
-                  <div key={phase.name} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                  <div key={phase.name} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-semibold text-cyan-300">{phase.name}</span>
                       <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                     </div>
-                    <p className="mt-2 text-sm text-slate-300">{phase.detail}</p>
+                    <p className="mt-2 text-sm text-slate-600">{phase.detail}</p>
                   </div>
                 ))}
               </div>
@@ -492,23 +492,23 @@ function App() {
         </section>
 
         <section className="mt-8 grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Route map</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Legacy route → migration target</h3>
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Route map</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">Legacy route → migration target</h3>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
               <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
-                <thead className="bg-slate-950/80 text-slate-300">
+                <thead className="bg-slate-50/80 text-slate-600">
                   <tr>
                     <th className="px-3 py-2 font-medium">Route</th>
                     <th className="px-3 py-2 font-medium">Target</th>
                     <th className="px-3 py-2 font-medium">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 bg-slate-900">
+                <tbody className="divide-y divide-slate-800 bg-white">
                   {routeMigrationMap.map((item) => (
                     <tr key={item.route}>
-                      <td className="px-3 py-2 text-slate-100">{item.route}</td>
-                      <td className="px-3 py-2 text-slate-300">{item.target}</td>
+                      <td className="px-3 py-2 text-slate-900">{item.route}</td>
+                      <td className="px-3 py-2 text-slate-600">{item.target}</td>
                       <td className="px-3 py-2">
                         <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
                           {item.status}
@@ -521,12 +521,12 @@ function App() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth/session compatibility</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Protected session contract</h3>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Auth/session compatibility</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">Protected session contract</h3>
             <ul className="mt-5 space-y-3">
               {authProtections.map((item) => (
-                <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">
+                <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-700">
                   <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
                   <span>{item}</span>
                 </li>
@@ -536,38 +536,38 @@ function App() {
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Protected flow</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Application journey</h3>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Protected flow</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">Application journey</h3>
             <div className="mt-5 space-y-3">
               {protectedFlow.map((stepName, index) => (
-                <div key={stepName} className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <div key={stepName} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/15 text-sm font-semibold text-cyan-200">
                     {index + 1}
                   </div>
-                  <span className="text-sm text-slate-200">{stepName}</span>
+                  <span className="text-sm text-slate-700">{stepName}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Regression matrix</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Business process verification</h3>
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Regression matrix</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">Business process verification</h3>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
               <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
-                <thead className="bg-slate-950/80 text-slate-300">
+                <thead className="bg-slate-50/80 text-slate-600">
                   <tr>
                     <th className="px-3 py-2 font-medium">Step</th>
                     <th className="px-3 py-2 font-medium">Backend dependency</th>
                     <th className="px-3 py-2 font-medium">Must preserve</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 bg-slate-900">
+                <tbody className="divide-y divide-slate-800 bg-white">
                   {regressionMatrix.map((row) => (
                     <tr key={row.step}>
-                      <td className="px-3 py-2 text-slate-100">{row.step}</td>
-                      <td className="px-3 py-2 text-slate-300">{row.backend}</td>
+                      <td className="px-3 py-2 text-slate-900">{row.step}</td>
+                      <td className="px-3 py-2 text-slate-600">{row.backend}</td>
                       <td className="px-3 py-2">
                         <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-200">
                           {row.mustPreserve}
