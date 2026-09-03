@@ -28,19 +28,31 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
   const [selectedBeds, setSelectedBeds] = useState<string>('all')
   const [maxRent, setMaxRent] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  
+  // Advanced filters state
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [selectedType, setSelectedType] = useState<string>('All')
+  const [minBaths, setMinBaths] = useState<string>('Any')
+  const [petsAllowed, setPetsAllowed] = useState(false)
+  const [hasAC, setHasAC] = useState(false)
+
   const perPage = Math.min(limit, 24)
   const { properties, loading, error, refetch, total, total_pages: totalPages } = useProperties({
     q: searchTerm.trim() || undefined,
     city: selectedCity !== 'all' ? selectedCity : undefined,
     beds: selectedBeds === '4+' ? 4 : selectedBeds !== 'all' ? selectedBeds : undefined,
     max_rent: maxRent !== 'all' ? maxRent : undefined,
+    property_type: selectedType !== 'All' ? selectedType : undefined,
+    min_baths: minBaths !== 'Any' ? parseInt(minBaths) : undefined,
+    pets_allowed: petsAllowed ? true : undefined,
+    has_ac: hasAC ? true : undefined,
     page: currentPage,
     per_page: perPage,
   })
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, selectedCity, selectedBeds, maxRent])
+  }, [searchTerm, selectedCity, selectedBeds, maxRent, selectedType, minBaths, petsAllowed, hasAC])
 
   // Extract distinct cities for quick filter pills
   const availableCities = useMemo(() => {
@@ -58,8 +70,14 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
     setSelectedCity('all')
     setSelectedBeds('all')
     setMaxRent('all')
+    setSelectedType('All')
+    setMinBaths('Any')
+    setPetsAllowed(false)
+    setHasAC(false)
     setCurrentPage(1)
   }
+
+  const hasActiveAdvancedFilters = selectedType !== 'All' || minBaths !== 'Any' || petsAllowed || hasAC;
 
   return (
     <div id="property-list-section" className="space-y-6">
@@ -151,6 +169,88 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
             </select>
           </div>
         </div>
+
+        {/* Advanced Filters Toggle */}
+        <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-sm font-medium text-cyan-400 hover:text-cyan-300 transition flex items-center gap-2"
+          >
+            <i className={`fa-solid fa-chevron-${showAdvanced ? 'up' : 'down'}`}></i>
+            Advanced Filters
+            {hasActiveAdvancedFilters && (
+              <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400/20 text-xs text-cyan-400">
+                <i className="fa-solid fa-check"></i>
+              </span>
+            )}
+          </button>
+          <button
+            onClick={clearFilters}
+            className="text-sm font-medium text-slate-400 hover:text-white transition"
+          >
+            Reset All
+          </button>
+        </div>
+
+        {/* Advanced Filters Panel */}
+        {showAdvanced && (
+          <div className="mt-4 grid gap-4 border-t border-slate-800 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Property Type */}
+            <div>
+              <label htmlFor="property-type-select" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Property Type
+              </label>
+              <select
+                id="property-type-select"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              >
+                <option value="All">All Types</option>
+                <option value="House">House</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Townhouse">Townhouse</option>
+              </select>
+            </div>
+
+            {/* Bathrooms */}
+            <div>
+              <label htmlFor="property-baths-select" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Bathrooms
+              </label>
+              <select
+                id="property-baths-select"
+                value={minBaths}
+                onChange={(e) => setMinBaths(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              >
+                <option value="Any">Any</option>
+                <option value="1">1+ Baths</option>
+                <option value="2">2+ Baths</option>
+                <option value="3">3+ Baths</option>
+              </select>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex flex-col gap-3 justify-center sm:col-span-2 lg:col-span-2 pt-2 sm:pt-6">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`relative flex h-5 w-9 items-center rounded-full transition-colors ${petsAllowed ? 'bg-cyan-400' : 'bg-slate-700'}`}>
+                  <input type="checkbox" className="peer sr-only" checked={petsAllowed} onChange={(e) => setPetsAllowed(e.target.checked)} />
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${petsAllowed ? 'translate-x-5' : 'translate-x-1'}`} />
+                </div>
+                <span className="text-sm font-medium text-slate-200 group-hover:text-white transition">Pet Friendly</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`relative flex h-5 w-9 items-center rounded-full transition-colors ${hasAC ? 'bg-cyan-400' : 'bg-slate-700'}`}>
+                  <input type="checkbox" className="peer sr-only" checked={hasAC} onChange={(e) => setHasAC(e.target.checked)} />
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${hasAC ? 'translate-x-5' : 'translate-x-1'}`} />
+                </div>
+                <span className="text-sm font-medium text-slate-200 group-hover:text-white transition">Air Conditioning</span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* Quick City Pills */}
         {availableCities.length > 0 && (

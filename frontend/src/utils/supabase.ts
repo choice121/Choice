@@ -7,11 +7,14 @@
 export type PropertyFilters = {
   q?: string
   type?: string
+  property_type?: string
   city?: string
   state?: string
   beds?: number | string
   min_beds?: number | string
   min_baths?: number | string
+  pets_allowed?: boolean
+  has_ac?: boolean
   min_rent?: number | string
   max_rent?: number | string
   sort?: string
@@ -222,6 +225,30 @@ export async function getProperties(filtersOrLimit: PropertyFilters | number = {
     }
     if (filters.min_rent !== undefined && filters.min_rent !== '') query = query.gte('monthly_rent', Number(filters.min_rent))
     if (filters.max_rent !== undefined && filters.max_rent !== '') query = query.lte('monthly_rent', Number(filters.max_rent))
+
+    if (filters.min_baths !== undefined && filters.min_baths !== '') {
+      query = query.gte('bathrooms', Number(filters.min_baths))
+    }
+    if (filters.pets_allowed) {
+      query = query.eq('pets_allowed', true)
+    }
+    if (filters.has_ac) {
+      query = query.or('has_central_air.eq.true,cooling_type.ilike.%air%')
+    }
+    if (filters.property_type && filters.property_type !== 'All') {
+      const type = filters.property_type
+      let validTypes: string[] = []
+      if (type === 'House') {
+        validTypes = ['House', 'house', 'SINGLE_FAMILY', 'single_family', 'Single Family']
+      } else if (type === 'Apartment') {
+        validTypes = ['APARTMENT', 'Apartment', 'apartment']
+      } else if (type === 'Townhouse') {
+        validTypes = ['TOWNHOMES', 'Townhouse', 'townhouse', 'DUPLEX', 'Duplex', 'duplex']
+      }
+      if (validTypes.length > 0) {
+        query = query.in('property_type', validTypes)
+      }
+    }
 
     const from = (page - 1) * perPage
     const { data, error, count } = await query.range(from, from + perPage - 1)
