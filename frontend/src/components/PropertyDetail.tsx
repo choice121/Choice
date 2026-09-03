@@ -1,44 +1,66 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getPropertyById } from '../utils/supabase'
+import { getPropertyById, type PropertyData } from '../utils/supabase'
+import { useProperties } from '../hooks/useProperties'
 import { useSavedProperties } from '../hooks/useSavedProperties'
 import { InquiryForm } from './InquiryForm'
 import { PropertyMap } from './PropertyMap'
 import { Lightbox } from './Lightbox'
 import { MobileApplyBar } from './MobileApplyBar'
 
-export interface PropertyDetailData {
-  id: string
-  title: string
-  address: string
-  city: string
-  state: string
-  zip: string
-  rent_monthly: number
-  beds: number | null
-  baths: number | null
-  sqft: number | null
-  description: string
-  status: string
-  pet_friendly: boolean
-  application_fee: number
-  security_deposit: number
-  lat: number | null
-  lng: number | null
-  photos: Array<{
-    url: string
-    display_order: number
-    is_hero: boolean
-  }>
-}
-
 interface PropertyDetailProps {
   propertyId: string
 }
 
+function SimilarProperties({ currentId, city, currentRent }: { currentId: string, city: string, currentRent: number }) {
+  const { properties, loading } = useProperties({ city, per_page: 8 })
+  
+  if (loading) return null
+  
+  // Filter out the current property and sort by closest rent
+  const similar = properties
+    .filter(p => p.id !== currentId)
+    .sort((a, b) => Math.abs((a.rent_monthly || 0) - currentRent) - Math.abs((b.rent_monthly || 0) - currentRent))
+    .slice(0, 4)
+
+  if (similar.length === 0) return null
+
+  return (
+    <div className="mt-12 pt-12 border-t border-slate-800/80">
+      <div className="mb-6 space-y-1">
+        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Also Available</span>
+        <h2 className="text-2xl font-bold text-white">More in <em className="not-italic text-slate-300">{city}</em></h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {similar.map(p => (
+          <Link key={p.id} to={`/property?id=${p.id}`} className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden hover:border-cyan-500 transition-colors">
+            <div className="aspect-[4/3] bg-slate-950 overflow-hidden relative">
+              <img 
+                src={p.photo_url ? (window.CONFIG?.img ? window.CONFIG.img(p.photo_url, 'card') : p.photo_url) : '/assets/placeholder-property.jpg'} 
+                alt={p.title || 'Property'} 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+            </div>
+            <div className="p-4 flex flex-col flex-1">
+              <div className="text-lg font-bold text-white flex items-baseline gap-1">
+                ${p.rent_monthly.toLocaleString()} <span className="text-xs font-medium text-slate-400">/mo</span>
+              </div>
+              <h3 className="text-sm font-semibold text-slate-200 mt-1 truncate">{p.title || 'Rental'}</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {[p.beds != null ? `${p.beds} bed` : '', p.baths != null ? `${p.baths} bath` : ''].filter(Boolean).join(' · ')}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{p.address}, {p.city}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const { savedIds, toggleSaved, error: savedError, refetch: refetchSaved } = useSavedProperties()
-  const [property, setProperty] = useState<PropertyDetailData | null>(null)
+  const [property, setProperty] = useState<PropertyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState(0)
@@ -57,7 +79,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         if (result.error) {
           setError(result.error)
         } else if (result.data) {
-          const data = result.data as PropertyDetailData
+          const data = result.data as PropertyData
           // Enforce business rules:
           // Application fee always $50, pet friendly always true, security deposit 1x monthly rent
           data.application_fee = 50
@@ -337,40 +359,159 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             </div>
           </div>
 
-          {/* Amenities & Features (Strictly no smoking policy per guidelines) */}
-          <div id="property-amenities-card" className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl font-bold text-white">Features & Highlights</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 text-xs">✓</span>
-                Pet Friendly (All Breeds Subject to Prior Notice)
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
-                Central Air Conditioning & Heating
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
-                In-Unit or Hookup Laundry Connections
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
-                Off-Street Parking / Garage Included
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
-                Standard 12-Month Lease Agreement
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
-                Digital Maintenance Requests & Online Pay
-              </div>
+          {/* Property Facts & Requirements */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Property Facts */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
+              <h2 className="text-xl font-bold text-white">Property Facts</h2>
+              <ul className="space-y-3 text-sm text-slate-300">
+                {property.property_type && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Type</span>
+                    <span className="font-medium text-white text-right capitalize">{property.property_type.toLowerCase().replace('_', ' ')}</span>
+                  </li>
+                )}
+                {property.year_built != null && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Year Built</span>
+                    <span className="font-medium text-white text-right">{property.year_built}</span>
+                  </li>
+                )}
+                {property.heating_type && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Heating</span>
+                    <span className="font-medium text-white text-right">{property.heating_type}</span>
+                  </li>
+                )}
+                {property.cooling_type && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Cooling</span>
+                    <span className="font-medium text-white text-right">{property.cooling_type}</span>
+                  </li>
+                )}
+                {property.parking && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Parking</span>
+                    <span className="font-medium text-white text-right">{property.parking}</span>
+                  </li>
+                )}
+                {property.laundry_type && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Laundry</span>
+                    <span className="font-medium text-white text-right">{property.laundry_type}</span>
+                  </li>
+                )}
+                {property.flooring && (
+                  <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                    <span className="text-slate-400">Flooring</span>
+                    <span className="font-medium text-white text-right">{property.flooring}</span>
+                  </li>
+                )}
+              </ul>
             </div>
+
+            {/* Renter Requirements */}
+            {(property.minimum_credit_score != null || property.minimum_income_multiplier != null) && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
+                <h2 className="text-xl font-bold text-white">Renter Requirements</h2>
+                <ul className="space-y-3 text-sm text-slate-300">
+                  {property.minimum_credit_score != null && (
+                    <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400">Minimum Credit Score</span>
+                      <span className="font-bold text-cyan-400">{property.minimum_credit_score}</span>
+                    </li>
+                  )}
+                  {property.minimum_income_multiplier != null && (
+                    <li className="flex justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400">Income to Rent Ratio</span>
+                      <span className="font-bold text-cyan-400">{property.minimum_income_multiplier}x</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Amenities & Features */}
+          <div id="property-amenities-card" className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
+            <h2 className="text-xl font-bold text-white">Amenities & Features</h2>
+            
+            {(!property.amenities?.length && !property.appliances?.length && !property.utilities_included) ? (
+              <p className="text-sm text-slate-400 italic">No specific amenities listed.</p>
+            ) : (
+              <div className="space-y-6">
+                {property.amenities && property.amenities.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase text-slate-400 mb-3 tracking-wider">Property Amenities</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
+                      {property.amenities.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400 text-xs">✓</span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {property.appliances && property.appliances.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase text-slate-400 mb-3 tracking-wider">Appliances Included</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
+                      {property.appliances.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 text-xs">✓</span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {property.utilities_included && (
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase text-slate-400 mb-3 tracking-wider">Utilities Included</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
+                      <div className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-400 text-xs">✓</span>
+                        <span>{property.utilities_included}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Sidebar: Apply CTA & Help */}
         <aside className="space-y-6">
+          {/* Landlord Details */}
+          {property.landlord && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 flex items-center gap-4 shadow-lg">
+              {property.landlord.avatar_url ? (
+                <img src={property.landlord.avatar_url} alt={property.landlord.contact_name} className="h-14 w-14 rounded-full object-cover border-2 border-slate-700" />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-slate-800 flex items-center justify-center text-lg font-bold text-slate-300 border-2 border-slate-700">
+                  {property.landlord.contact_name?.[0] || property.landlord.business_name?.[0] || '?'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white font-bold truncate">{property.landlord.business_name || property.landlord.contact_name}</h3>
+                  {property.landlord.verified && (
+                    <svg className="h-4 w-4 text-cyan-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                {property.landlord.tagline && (
+                  <p className="text-xs text-slate-400 truncate mt-0.5">{property.landlord.tagline}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Apply CTA Card */}
           <div id="property-apply-cta-card" className="sticky top-24 rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl shadow-cyan-950/30 space-y-5">
             <div className="space-y-1">
@@ -383,18 +524,42 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             </p>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2 text-xs text-slate-300">
+              {property.available_date && (
+                <div className="flex justify-between border-b border-slate-850 pb-1.5 mb-1.5">
+                  <span>Available From</span>
+                  <span className="font-semibold text-white">{new Date(property.available_date + 'T00:00:00').toLocaleDateString()}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Monthly Rent</span>
                 <span className="font-semibold text-white">${property.rent_monthly.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Security Deposit</span>
-                <span className="font-semibold text-white">${property.rent_monthly.toLocaleString()}</span>
+                <span className="font-semibold text-white">${(property.security_deposit || property.rent_monthly).toLocaleString()}</span>
               </div>
+              {property.last_months_rent != null && property.last_months_rent > 0 && (
+                <div className="flex justify-between">
+                  <span>Last Month's Rent</span>
+                  <span className="font-semibold text-white">${property.last_months_rent.toLocaleString()}</span>
+                </div>
+              )}
+              {property.admin_fee != null && property.admin_fee > 0 && (
+                <div className="flex justify-between border-t border-slate-850 pt-1.5">
+                  <span>Admin / Move-in Fee</span>
+                  <span className="font-semibold text-white">${property.admin_fee.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between border-t border-slate-850 pt-1.5">
                 <span>Application Fee</span>
-                <span className="font-semibold text-cyan-400">$50.00</span>
+                <span className="font-semibold text-cyan-400">${property.application_fee ?? 50}.00</span>
               </div>
+              {property.move_in_special && (
+                <div className="flex justify-between border-t border-slate-850 pt-1.5 text-emerald-400">
+                  <span>Move-in Special</span>
+                  <span className="font-semibold text-right max-w-[60%]">{property.move_in_special}</span>
+                </div>
+              )}
             </div>
 
             <Link
@@ -428,6 +593,9 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           </div>
         </aside>
       </div>
+
+      {/* Similar Listings */}
+      <SimilarProperties currentId={property.id} city={property.city} currentRent={property.rent_monthly} />
 
       {/* Lightbox */}
       <Lightbox

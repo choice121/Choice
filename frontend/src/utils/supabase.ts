@@ -68,6 +68,18 @@ export type PropertyData = {
   photo_urls: string[]
   photo_file_ids: Array<string | null>
   landlord?: PropertyLandlord | null
+  amenities?: string[]
+  appliances?: string[]
+  heating_type?: string | null
+  cooling_type?: string | null
+  laundry_type?: string | null
+  flooring?: string | null
+  year_built?: number | null
+  last_months_rent?: number | null
+  admin_fee?: number | null
+  move_in_special?: string | null
+  minimum_income_multiplier?: number | null
+  minimum_credit_score?: number | null
 }
 
 export type PropertyQueryResult = {
@@ -165,6 +177,18 @@ export function normalizeProperty(row: LegacyPropertyRow): PropertyData {
     photo_urls: photos.map((photo) => photo.url),
     photo_file_ids: photos.map((photo) => photo.file_id ?? null),
     landlord: row.landlords || row.landlord || null,
+    amenities: Array.isArray(row.amenities) ? row.amenities : [],
+    appliances: Array.isArray(row.appliances) ? row.appliances : [],
+    heating_type: row.heating_type ?? null,
+    cooling_type: row.cooling_type ?? null,
+    laundry_type: row.laundry_type ?? null,
+    flooring: row.flooring ?? null,
+    year_built: numberOrNull(row.year_built),
+    last_months_rent: numberOrNull(row.last_months_rent),
+    admin_fee: numberOrNull(row.admin_fee),
+    move_in_special: row.move_in_special ?? null,
+    minimum_income_multiplier: numberOrNull(row.minimum_income_multiplier),
+    minimum_credit_score: numberOrNull(row.minimum_credit_score),
   }
 }
 
