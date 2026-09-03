@@ -32,7 +32,7 @@ function copyRecursive(src, dest) {
 // 1. Copy directories
 const dirsToCopy = [
   'admin',
-  'apply',
+  
   'landlord',
   'tenant',
   'auth',

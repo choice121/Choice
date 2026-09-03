@@ -9,16 +9,6 @@
 /admin                      /admin/login.html                            302
 /admin/                     /admin/login.html                            302
 
-# Application flow (React canonical entry + legacy fallback)
-/apply.html                 /apply/                                      302
-/apply                       /apply/                                      302
-/apply/                      /apply.html                                  200
-/apply/login.html           /apply/?path=dashboard                       302
-/apply/dashboard.html       /apply/?path=dashboard                       302
-/apply/success.html         /apply/?path=dashboard                       302
-/apply/lease.html           /apply/                                      302
-/apply/*                    /apply/index.html                            200
-
 # Tenant dashboard (legacy multi-page HTML)
 /tenant                     /tenant/portal.html                          302
 /tenant/                    /tenant/portal.html                          302
@@ -53,6 +43,12 @@
 /property.html                /property-react.html                          200
 /listings.html                /listings-react.html                          200
 
+# React Apply Routing
+/apply.html                   /index.html                                   200
+/apply                        /index.html                                   200
+/apply/                       /index.html                                   200
+/apply/*                      /index.html                                   200
+
 # ============================================================================
 # BLOCKED PATHS (Security & Privacy)
 # ============================================================================
@@ -60,7 +56,6 @@
 # (Cloudflare Pages serves static files before _redirects is consulted
 #  only for exact file matches; wildcard rules below override static serving
 #  for anything we explicitly don't want public.)
-
 /SETUP.sql                  /404.html                                    404
 /MIGRATION_SCHEMA.sql       /404.html                                    404
 /MISSING_SCHEMA.sql         /404.html                                    404
