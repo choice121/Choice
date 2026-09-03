@@ -86,16 +86,16 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
   }
 
   return (
-    <div className="border-t border-slate-800 pt-5 space-y-3">
-      <h4 className="text-xs font-semibold uppercase text-slate-300">Message Landlord</h4>
+    <div className="border-t border-slate-100 pt-5 space-y-3">
+      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Message Landlord</h4>
       {status === 'success' ? (
-        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-emerald-400 text-sm text-center">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-emerald-700 text-sm font-medium text-center shadow-sm">
           ✓ Message sent! The landlord will be in touch soon.
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
           {status === 'error' && (
-            <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-2 text-rose-400 text-xs">
+            <div className="rounded-lg bg-rose-50 border border-rose-100 p-2 text-rose-700 text-xs font-medium">
               {errorMsg}
             </div>
           )}
@@ -105,7 +105,7 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={status === 'loading'}
-            className="w-full rounded-lg bg-slate-950/50 border border-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 shadow-sm"
             required
           />
           <input
@@ -114,7 +114,7 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={status === 'loading'}
-            className="w-full rounded-lg bg-slate-950/50 border border-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 shadow-sm"
             required
           />
           <input
@@ -123,7 +123,7 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             disabled={status === 'loading'}
-            className="w-full rounded-lg bg-slate-950/50 border border-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 shadow-sm"
           />
           <textarea
             placeholder="I'm interested in this property and have a few questions..."
@@ -132,13 +132,13 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
             disabled={status === 'loading'}
             rows={3}
             maxLength={1500}
-            className="w-full rounded-lg bg-slate-950/50 border border-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 resize-none"
+            className="w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 resize-none shadow-sm"
             required
           />
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {status === 'loading' ? 'Sending...' : 'Send Message'}
           </button>

@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true
@@ -12,14 +21,14 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+    <header className={`sticky top-0 z-50 transition-all duration-200 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white border-b border-slate-200'}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link
           to="/"
           className="flex items-center gap-3 transition hover:opacity-90 focus:outline-none"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-950/50">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
@@ -35,10 +44,10 @@ export function Navbar() {
             </svg>
           </div>
           <div>
-            <span className="block text-lg font-bold tracking-tight text-white">
+            <span className="block text-lg font-bold tracking-tight text-slate-900">
               Choice Properties
             </span>
-            <span className="block text-[11px] font-medium tracking-wider text-cyan-300 uppercase">
+            <span className="block text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
               Rental Marketplace
             </span>
           </div>
@@ -50,8 +59,8 @@ export function Navbar() {
             to="/listings"
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
               isActive('/listings')
-                ? 'bg-slate-800 text-cyan-300'
-                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             Browse Listings
@@ -61,8 +70,8 @@ export function Navbar() {
             to="/how-to-apply"
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
               isActive('/how-to-apply')
-                ? 'bg-slate-800 text-cyan-300'
-                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             How to Apply
@@ -72,8 +81,8 @@ export function Navbar() {
             to="/faq"
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
               isActive('/faq')
-                ? 'bg-slate-800 text-cyan-300'
-                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             FAQ
@@ -83,52 +92,33 @@ export function Navbar() {
             href="/tenant/portal.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800/60 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
             Track App
           </a>
+          
+          <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
           <a
             href="/landlord/login.html"
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition text-slate-300 hover:bg-slate-800/60 hover:text-white`}
+            className="rounded-lg px-3 py-2 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           >
-            Landlord Portal
+            Landlords
           </a>
           <a
             href="/admin/login.html"
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition text-slate-300 hover:bg-slate-800/60 hover:text-white`}
+            className="rounded-lg px-3 py-2 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           >
-            Admin Portal
+            Admin
           </a>
-
-          <Link
-            to="/how-it-works"
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive('/how-it-works')
-                ? 'bg-slate-800 text-cyan-300'
-                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-            }`}
-          >
-            For Landlords
-          </Link>
-
-          <Link
-            to="/policies"
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive('/policies')
-                ? 'bg-slate-800 text-cyan-300'
-                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-            }`}
-          >
-            Policies
-          </Link>
         </nav>
 
         {/* Right CTA */}
-        <div className="hidden sm:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <Link
             to="/apply"
-            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 active:scale-[0.98]"
           >
             Apply Online
           </Link>
@@ -138,25 +128,25 @@ export function Navbar() {
         <div className="flex items-center gap-2 md:hidden">
           <Link
             to="/apply"
-            className="rounded-lg bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950"
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
           >
             Apply
           </Link>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-300 hover:text-white focus:outline-none"
+            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 focus:outline-none"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation-menu"
           >
             {mobileMenuOpen ? (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
           </button>
@@ -165,32 +155,32 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div id="mobile-navigation-menu" className="md:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2" aria-label="Mobile navigation">
+        <div id="mobile-navigation-menu" className="md:hidden border-t border-slate-100 bg-white px-4 pt-2 pb-6 space-y-1 shadow-lg" aria-label="Mobile navigation">
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Home
           </Link>
           <Link
             to="/listings"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Browse Listings
           </Link>
           <Link
             to="/how-to-apply"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             How to Apply
           </Link>
           <Link
             to="/faq"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             FAQ
           </Link>
@@ -198,41 +188,37 @@ export function Navbar() {
             href="/tenant/portal.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Track Application
           </a>
+          
+          <div className="my-2 h-px bg-slate-100"></div>
+          
           <a
             href="/landlord/login.html"
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Landlord Portal
           </a>
           <a
             href="/admin/login.html"
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Admin Portal
           </a>
           <Link
-            to="/how-it-works"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
-          >
-            For Landlords
-          </Link>
-          <Link
             to="/policies"
             onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-lg px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900"
+            className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
-            Policy Framework
+            Policies
           </Link>
-          <div className="pt-2">
+          <div className="pt-4 pb-2">
             <Link
               to="/apply"
               onClick={() => setMobileMenuOpen(false)}
-              className="block w-full rounded-xl bg-cyan-500 py-2.5 text-center font-semibold text-slate-950 shadow"
+              className="block w-full rounded-lg bg-slate-900 py-3 text-center font-semibold text-white shadow-sm hover:bg-slate-800 transition"
             >
               Start Rental Application
             </Link>
@@ -242,3 +228,4 @@ export function Navbar() {
     </header>
   )
 }
+

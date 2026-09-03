@@ -94,7 +94,7 @@ export function Lightbox({ photos, currentIndex, isOpen, onClose, onNavigate }: 
               key={`${photo.url}-${index}`}
               onClick={() => onNavigate(index)}
               className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                currentIndex === index ? 'border-cyan-400 opacity-100 ring-2 ring-cyan-400/20' : 'border-white/10 opacity-40 hover:opacity-100'
+                currentIndex === index ? 'border-white opacity-100 ring-2 ring-white/20' : 'border-white/10 opacity-40 hover:opacity-100'
               }`}
             >
               <img
