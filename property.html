@@ -14,9 +14,24 @@
 <html lang="en">
 <head>
   <script src="/js/cp-error-reporter.js?v=1788375467077"></script>
-  <script src="/js/public-theme.js"></script>
+  <script nonce="__CSP_NONCE__">
+    (function(){
+      try {
+        var t = localStorage.getItem('cp-theme');
+        if (t === 'dark' || t === 'light') {
+          document.documentElement.setAttribute('data-theme', t);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
-  <meta name="theme-color" content="#F7F5F2">
+  <meta name="theme-color" content="var(--m-brand)">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
   <title>Property — Choice Properties</title>
@@ -47,6 +62,62 @@
     /* ── CRITICAL CSS & THEME VARIABLES ───────────────────────────────────── */
     *,*::before,*::after{box-sizing:border-box}
     html{-webkit-text-size-adjust:100%;transition:background-color .2s ease,color .2s ease}
+
+    :root {
+      --m-bg: var(--m-white);
+      --m-surface: var(--m-surface);
+      --m-surface-2: var(--m-surface-2);
+      --m-white: var(--m-white);
+      --m-border: var(--m-border);
+      --m-border-strong: var(--m-border-strong);
+      --m-ink: var(--m-ink);
+      --m-ink-2: var(--m-ink-2);
+      --m-text: var(--m-text);
+      --m-muted: var(--m-muted);
+      --m-muted-2: var(--m-muted);
+      --m-soft: var(--m-soft);
+      --m-brand: var(--m-brand);
+      --m-brand-dark: #0052cc;
+      --m-brand-pale: var(--m-brand-pale);
+    }
+
+    html[data-theme="dark"] {
+      --m-bg: #0b1120;
+      --m-surface: #131d31;
+      --m-surface-2: #070d19;
+      --m-white: #131d31;
+      --m-border: #1e2d4d;
+      --m-border-strong: #2e4168;
+      --m-ink: var(--m-surface);
+      --m-ink-2: var(--m-surface-2);
+      --m-text: var(--m-border);
+      --m-muted: var(--m-soft);
+      --m-muted-2: var(--m-soft);
+      --m-soft: var(--m-muted);
+      --m-brand: var(--m-brand);
+      --m-brand-dark: var(--m-brand);
+      --m-brand-pale: rgba(59, 130, 246, 0.16);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) {
+        --m-bg: #0b1120;
+        --m-surface: #131d31;
+        --m-surface-2: #070d19;
+        --m-white: #131d31;
+        --m-border: #1e2d4d;
+        --m-border-strong: #2e4168;
+        --m-ink: var(--m-surface);
+        --m-ink-2: var(--m-surface-2);
+        --m-text: var(--m-border);
+        --m-muted: var(--m-soft);
+        --m-muted-2: var(--m-soft);
+        --m-soft: var(--m-muted);
+        --m-brand: var(--m-brand);
+        --m-brand-dark: var(--m-brand);
+        --m-brand-pale: rgba(59, 130, 246, 0.16);
+      }
+    }
 
     body[data-portal="public"]{
       margin:0;
@@ -771,7 +842,6 @@
       .cs-card-apply-btn { display: none !important; }
     }
   </style>
-  <link rel="stylesheet" href="/css/cp-public-redesign.css?v=1">
 <script defer src="/config.js?v=1788375467077"></script>
 <script defer src="/js/supabase.min.js"></script>
 <script defer src="/js/cp-ui.js?v=1788375467077"></script>

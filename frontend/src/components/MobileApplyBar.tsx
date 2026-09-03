@@ -8,11 +8,11 @@ interface MobileApplyBarProps {
 
 export function MobileApplyBar({ rent, applyUrl, onMessageClick }: MobileApplyBarProps) {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <div className="cp-mobile-apply-bar md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-        <div className="flex flex-col">
+          <div className="flex flex-col">
           <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Monthly Rent</span>
-          <strong className="text-lg font-extrabold text-slate-900">${rent.toLocaleString()}</strong>
+            <strong className="cp-mobile-rent text-lg font-extrabold text-slate-900">${rent.toLocaleString()}</strong>
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -26,7 +26,7 @@ export function MobileApplyBar({ rent, applyUrl, onMessageClick }: MobileApplyBa
           </button>
           <Link
             to={applyUrl}
-            className="flex h-11 items-center justify-center rounded-xl bg-zillow-blue px-6 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-zillow-blue-dark"
+            className="cp-detail-apply flex h-11 items-center justify-center rounded-xl bg-zillow-blue px-6 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-zillow-blue-dark"
           >
             Apply Now
           </Link>

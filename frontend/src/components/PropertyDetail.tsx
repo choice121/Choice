@@ -26,14 +26,14 @@ function SimilarProperties({ currentId, city, currentRent }: { currentId: string
   if (similar.length === 0) return null
 
   return (
-    <div className="mt-12 pt-12 border-t border-slate-200">
+    <div className="cp-similar-section mt-12 pt-12 border-t border-slate-200">
       <div className="mb-6 space-y-1">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Also Available</span>
         <h2 className="text-2xl font-bold  text-slate-900 font-display">More in <em className="not-italic text-slate-500">{city}</em></h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {similar.map(p => (
-          <Link key={p.id} to={`/property?id=${p.id}`} className="group flex flex-col rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-slate-300 shadow-sm hover:shadow-md transition-all">
+          <Link key={p.id} to={`/property?id=${p.id}`} className="cp-similar-card group flex flex-col rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-slate-300 shadow-sm hover:shadow-md transition-all">
             <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
               <img 
                 src={p.photo_url ? (window.CONFIG?.img ? window.CONFIG.img(p.photo_url, 'card') : p.photo_url) : '/assets/placeholder-property.jpg'} 
@@ -150,17 +150,17 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const applyUrl = `/apply?id=${encodeURIComponent(property.id)}&pn=${encodeURIComponent(property.title || property.address)}&addr=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}&zip=${encodeURIComponent(property.zip)}&rent=${encodeURIComponent(String(property.rent_monthly))}&beds=${encodeURIComponent(String(property.beds ?? ''))}&baths=${encodeURIComponent(String(property.baths ?? ''))}&deposit=${encodeURIComponent(String(property.rent_monthly))}&fee=50&source=${encodeURIComponent(`/property?id=${property.id}`)}`
 
   return (
-    <div id="property-detail-view" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 mb-24 md:mb-0">
+    <div id="property-detail-view" className="cp-detail-view mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 mb-24 md:mb-0">
       {/* Navigation Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
           id="breadcrumb-back-link"
           to="/listings"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition"
+          className="cp-detail-breadcrumb inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition"
         >
           <span aria-hidden="true">←</span> Back to Available Homes
         </Link>
-        <span className="text-xs font-medium text-slate-400">Listing ID: {property.id.slice(0, 8)}</span>
+        <span className="cp-detail-id text-xs font-medium text-slate-400">Listing ID: {property.id.slice(0, 8)}</span>
       </div>
 
         {savedError && (
@@ -173,25 +173,25 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         )}
 
       {/* Title & Header Section */}
-      <div id="property-header-card" className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+      <div id="property-header-card" className="cp-detail-header flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zillow-green-dark">
+            <span className="cp-detail-status rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zillow-green-dark">
               ● {property.status}
             </span>
             <span className="rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
               🐾 Pet Friendly
             </span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <span className="cp-detail-city rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
               {property.city}, {property.state}
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="cp-detail-title text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             {property.title || property.address}
           </h1>
 
-          <p className="text-sm sm:text-base font-medium text-slate-500 flex items-center gap-1.5">
+          <p className="cp-detail-address text-sm sm:text-base font-medium text-slate-500 flex items-center gap-1.5">
             <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -201,13 +201,13 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         </div>
 
         {/* Rent Highlight Box */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left md:text-right shrink-0 shadow-sm">
-          <span className="block text-xs uppercase font-bold tracking-wider text-slate-500">Monthly Rent</span>
+        <div className="cp-detail-price rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left md:text-right shrink-0 shadow-sm">
+          <span className="cp-detail-price-label block text-xs uppercase font-bold tracking-wider text-slate-500">Monthly Rent</span>
           <div className="flex items-baseline md:justify-end gap-1 mt-0.5">
-            <span className="text-3xl font-extrabold  text-slate-900 font-display">${property.rent_monthly.toLocaleString()}</span>
+            <span className="cp-detail-price-value text-3xl font-extrabold text-slate-900 font-display">${property.rent_monthly.toLocaleString()}</span>
             <span className="text-sm font-semibold uppercase text-slate-500">/mo</span>
           </div>
-          <p className="text-[11px] font-semibold text-zillow-green-dark mt-1 uppercase tracking-wider">1x Rent Deposit • $50 App Fee</p>
+          <p className="cp-detail-price-note text-[11px] font-semibold text-zillow-green-dark mt-1 uppercase tracking-wider">1x Rent Deposit • $50 App Fee</p>
         </div>
       </div>
 
@@ -216,7 +216,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         {/* Left 2 Cols: Photos, Specs, Description, Amenities */}
         <div className="lg:col-span-2 space-y-8">
           {/* Gallery Section */}
-          <div id="property-gallery-container" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm relative">
+          <div id="property-gallery-container" className="cp-detail-gallery rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm relative">
             <div className="absolute top-8 right-8 flex gap-2 z-10">
               <button 
                 onClick={() => {
@@ -227,14 +227,14 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                     alert('Link copied to clipboard!')
                   }
                 }} 
-                className="p-3 rounded-full backdrop-blur-md shadow-sm border bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900 hover:scale-110 transition"
+                 className="cp-detail-action p-3 rounded-full backdrop-blur-md shadow-sm border bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900 hover:scale-110 transition"
                 aria-label="Share property"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
               </button>
-              <button onClick={() => toggleSaved(property.id)} className={`p-3 rounded-full backdrop-blur-md shadow-sm border ${savedIds.has(property.id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900'} hover:scale-110 transition`} aria-label="Save property">
+               <button onClick={() => toggleSaved(property.id)} className={`cp-detail-action p-3 rounded-full backdrop-blur-md shadow-sm border ${savedIds.has(property.id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900'} hover:scale-110 transition`} aria-label="Save property">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill={savedIds.has(property.id) ? "currentColor" : "none"} stroke="currentColor">
                   <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                 </svg>
@@ -246,7 +246,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                 <button 
                   type="button" 
                   onClick={() => setIsLightboxOpen(true)}
-                  className="relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-100 w-full hover:opacity-95 transition"
+                   className="cp-detail-gallery-main relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-100 w-full hover:opacity-95 transition"
                   aria-label="View fullscreen gallery"
                 >
                   <img
@@ -296,29 +296,29 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
 
           {/* Key Specs Row */}
           <div id="property-specs-grid" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bedrooms</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.beds ?? '—'}</span>
+            <div className="cp-detail-spec rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+              <span className="cp-detail-spec-label block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bedrooms</span>
+              <span className="cp-detail-spec-value mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.beds ?? '—'}</span>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bathrooms</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.baths ?? '—'}</span>
+            <div className="cp-detail-spec rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+              <span className="cp-detail-spec-label block text-[11px] font-bold uppercase tracking-wider text-slate-500">Bathrooms</span>
+              <span className="cp-detail-spec-value mt-1 block text-2xl font-extrabold text-slate-900 font-display">{property.baths ?? '—'}</span>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Square Feet</span>
-              <span className="mt-1 block text-2xl font-extrabold text-slate-900 font-display">
+            <div className="cp-detail-spec rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+              <span className="cp-detail-spec-label block text-[11px] font-bold uppercase tracking-wider text-slate-500">Square Feet</span>
+              <span className="cp-detail-spec-value mt-1 block text-2xl font-extrabold text-slate-900 font-display">
                 {property.sqft == null ? '—' : property.sqft.toLocaleString()}
               </span>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center shadow-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-zillow-green-dark">Pet Policy</span>
-              <span className="mt-1 block text-lg font-extrabold text-zillow-green-dark">Pets Welcome</span>
+            <div className="cp-detail-spec rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center shadow-sm">
+              <span className="cp-detail-spec-label block text-[11px] font-bold uppercase tracking-wider text-zillow-green-dark">Pet Policy</span>
+              <span className="cp-detail-spec-value mt-1 block text-lg font-extrabold text-zillow-green-dark">Pets Welcome</span>
             </div>
           </div>
 
           {/* Description */}
           {property.description && (
-            <div id="property-description-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
+            <div id="property-description-card" className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 font-display">About This Rental</h2>
               <div className="text-slate-600 leading-relaxed whitespace-pre-line text-sm sm:text-base space-y-3 font-medium">
                 {property.description}
@@ -330,7 +330,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           <PropertyMap lat={property.lat} lng={property.lng} address={property.address} title={property.title} monthly_rent={property.rent_monthly} />
 
           {/* Verified Lease Terms */}
-          <div id="property-terms-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-5 shadow-sm">
+          <div id="property-terms-card" className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-5 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 font-display">Transparent Lease Terms</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-1">
@@ -366,7 +366,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           {/* Property Facts & Requirements */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Property Facts */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
+            <div className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 font-display">Property Facts</h2>
               <ul className="space-y-3 text-sm text-slate-600 font-medium">
                 {property.property_type && (
@@ -437,7 +437,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
 
             {/* Renter Requirements */}
             {(property.minimum_credit_score != null || property.minimum_income_multiplier != null) && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
+              <div className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-900 font-display">Renter Requirements</h2>
                 <ul className="space-y-3 text-sm text-slate-600 font-medium">
                   {property.minimum_credit_score != null && (
@@ -458,7 +458,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           </div>
 
           {/* Amenities & Features */}
-          <div id="property-amenities-card" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
+          <div id="property-amenities-card" className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 font-display">Amenities & Features</h2>
             
             {(!property.amenities?.length && !property.appliances?.length && !property.utilities_included) ? (
@@ -513,7 +513,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         <aside className="space-y-6">
           {/* Landlord Details */}
           {property.landlord && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 flex items-center gap-4 shadow-sm">
+            <div className="cp-detail-section rounded-2xl border border-slate-200 bg-white p-5 flex items-center gap-4 shadow-sm">
               {property.landlord.avatar_url ? (
                 <img src={property.landlord.avatar_url} alt={property.landlord.contact_name} className="h-14 w-14 rounded-full object-cover border border-slate-200" />
               ) : (
@@ -538,7 +538,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           )}
 
           {/* Apply CTA Card */}
-          <div id="property-apply-cta-card" className="sticky top-24 self-start pb-4 max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-md space-y-5">
+          <div id="property-apply-cta-card" className="cp-detail-apply-card sticky top-24 self-start pb-4 max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-md space-y-5">
             <div className="space-y-1">
               <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500">Ready to make this home?</span>
               <h3 className="text-2xl font-extrabold  text-slate-900 font-display">Apply in 10 Minutes</h3>
@@ -590,7 +590,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             <Link
               id="apply-now-btn"
               to={applyUrl}
-              className="flex w-full min-h-[48px] items-center justify-center rounded-xl bg-zillow-blue px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-zillow-blue-dark"
+              className="cp-detail-apply flex w-full min-h-[48px] items-center justify-center rounded-xl bg-zillow-blue px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-zillow-blue-dark"
             >
               Start Online Application →
             </Link>

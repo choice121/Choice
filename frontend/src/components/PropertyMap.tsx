@@ -100,31 +100,31 @@ export function PropertyMap({ lat, lng, address, title, monthly_rent }: Property
   }
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-6 shadow-xl space-y-4">
-      <h2 className="text-xl font-bold text-white">Neighborhood</h2>
+    <div className="cp-map-card rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-6 shadow-xl space-y-4">
+      <h2 className="cp-map-title text-xl font-bold text-white">Neighborhood</h2>
       <div 
         ref={mapRef} 
         className="aspect-[16/9] sm:aspect-[21/9] w-full rounded-xl bg-slate-950 relative z-0"
       />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-        <a href={`https://www.walkscore.com/score/${(address + '-' + title).replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-zillow-blue/50 transition-colors group">
+        <a href={`https://www.walkscore.com/score/${(address + '-' + title).replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-')}`} target="_blank" rel="noopener noreferrer" className="cp-map-link flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-zillow-blue/50 transition-colors group">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-950/50 flex items-center justify-center text-xl">🚶</div>
           <div>
-            <div className="text-sm font-bold text-white group-hover:text-zillow-blue transition-colors">Walk Score</div>
+            <div className="cp-map-link-title text-sm font-bold text-white group-hover:text-zillow-blue transition-colors">Walk Score</div>
             <div className="text-[10px] text-slate-500">Walk & Transit</div>
           </div>
         </a>
-        <a href={`https://www.greatschools.org/search/search.page?q=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-zillow-green/50 transition-colors group">
+        <a href={`https://www.greatschools.org/search/search.page?q=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="cp-map-link flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-zillow-green/50 transition-colors group">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-zillow-green/10 flex items-center justify-center text-xl">🏫</div>
           <div>
-            <div className="text-sm font-bold text-white group-hover:text-zillow-green-dark transition-colors">Schools</div>
+            <div className="cp-map-link-title text-sm font-bold text-white group-hover:text-zillow-green-dark transition-colors">Schools</div>
             <div className="text-[10px] text-slate-500">GreatSchools.org</div>
           </div>
         </a>
-        <a href={`https://www.yelp.com/search?find_loc=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-rose-500/50 transition-colors group col-span-2 md:col-span-1">
+        <a href={`https://www.yelp.com/search?find_loc=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="cp-map-link flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-rose-500/50 transition-colors group col-span-2 md:col-span-1">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rose-950/50 flex items-center justify-center text-xl">☕</div>
           <div>
-            <div className="text-sm font-bold text-white group-hover:text-rose-400 transition-colors">Local</div>
+            <div className="cp-map-link-title text-sm font-bold text-white group-hover:text-rose-400 transition-colors">Local</div>
             <div className="text-[10px] text-slate-500">Nearby amenities</div>
           </div>
         </a>

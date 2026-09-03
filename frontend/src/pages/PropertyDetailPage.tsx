@@ -9,7 +9,7 @@ export function PropertyDetailPage() {
   const propertyId = pathPropertyId || searchParams.get('id')
 
   return (
-    <div id="property-detail-page-container" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+    <div id="property-detail-page-container" className="cp-detail-page min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
       <Navbar />
 
       <main className="flex-1">

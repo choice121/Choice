@@ -81,9 +81,9 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
   const hasActiveAdvancedFilters = selectedType !== 'All' || minBaths !== 'Any' || petsAllowed || hasAC;
 
   return (
-    <div id="property-list-section" className="space-y-6">
+    <div id="property-list-section" className="cp-property-list space-y-6">
       {/* Search & Filter Controls */}
-      <div id="property-filters-card" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+      <div id="property-filters-card" className="cp-filter-card rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Text Search */}
           <div>
@@ -97,7 +97,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                 placeholder="Search city, address, or name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+                className="cp-filter-input w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
               />
               {searchTerm && (
                 <button
@@ -120,7 +120,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               id="property-city-select"
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+              className="cp-filter-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
             >
                <option value="all">All Cities ({total})</option>
               {availableCities.map((city) => (
@@ -140,7 +140,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               id="property-beds-select"
               value={selectedBeds}
               onChange={(e) => setSelectedBeds(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+              className="cp-filter-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
             >
               <option value="all">Any Bedrooms</option>
               <option value="1">1 Bedroom</option>
@@ -159,7 +159,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               id="property-rent-select"
               value={maxRent}
               onChange={(e) => setMaxRent(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+              className="cp-filter-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
             >
               <option value="all">Any Price</option>
               <option value="1200">Up to $1,200/mo</option>
@@ -172,10 +172,10 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
         </div>
 
         {/* Advanced Filters Toggle */}
-        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+        <div className="cp-filter-divider mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-2"
+            className="cp-filter-link text-sm font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-2"
           >
             <i className={`fa-solid fa-chevron-${showAdvanced ? 'up' : 'down'}`}></i>
             Advanced Filters
@@ -187,7 +187,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
           </button>
           <button
             onClick={clearFilters}
-            className="text-sm font-medium text-slate-500 hover:text-slate-900 transition"
+            className="cp-reset-link text-sm font-medium text-slate-500 hover:text-slate-900 transition"
           >
             Reset All
           </button>
@@ -195,7 +195,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
 
         {/* Advanced Filters Panel */}
         {showAdvanced && (
-          <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="cp-filter-divider mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Property Type */}
             <div>
               <label htmlFor="property-type-select" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -205,7 +205,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                 id="property-type-select"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+              className="cp-filter-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
               >
                 <option value="All">All Types</option>
                 <option value="House">House</option>
@@ -223,7 +223,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                 id="property-baths-select"
                 value={minBaths}
                 onChange={(e) => setMinBaths(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
+              className="cp-filter-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition"
               >
                 <option value="Any">Any</option>
                 <option value="1">1+ Baths</option>
@@ -255,12 +255,12 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
 
         {/* Quick City Pills */}
         {availableCities.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+          <div className="cp-filter-divider mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
             <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Popular:</span>
             <button
               type="button"
               onClick={() => setSelectedCity('all')}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
+              className={`cp-quick-pill ${selectedCity === 'all' ? 'cp-quick-pill-active' : ''} rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
                 selectedCity === 'all'
                   ? 'bg-zillow-blue text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -273,7 +273,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                 key={city}
                 type="button"
                 onClick={() => setSelectedCity(city)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
+                className={`cp-quick-pill ${selectedCity === city ? 'cp-quick-pill-active' : ''} rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
                   selectedCity === city
                     ? 'bg-zillow-blue text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -296,10 +296,10 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
       )}
 
       {/* Results Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+      <div className="cp-results-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-slate-900">Available Homes</h2>
-          <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+          <h2 className="cp-results-heading text-xl font-bold text-slate-900">Available Homes</h2>
+          <span className="cp-results-count rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
             {total} {total === 1 ? 'listing' : 'listings'}
           </span>
         </div>
@@ -372,7 +372,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
 
       {/* Property Cards Grid */}
       {!loading && !error && properties.length > 0 && (
-        <div id="properties-grid" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div id="properties-grid" className="cp-property-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {properties.map((property) => (
             <PropertyCard
               key={property.id}
