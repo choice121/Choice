@@ -179,12 +179,12 @@ function App() {
   const getPropsStatusClass = () => {
     if (propsLoading) return 'rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
     if (propsError) return 'rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-200'
-    return 'rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200'
+    return 'rounded-full border border-[#00AD71]/40 bg-[#00AD71]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#00AD71]'
   }
 
   const getAuthStatusClass = () => {
     if (authLoading) return 'rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
-    if (isAuthenticated) return 'rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200'
+    if (isAuthenticated) return 'rounded-full border border-[#00AD71]/40 bg-[#00AD71]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#00AD71]'
     return 'rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600'
   }
 
@@ -204,7 +204,7 @@ function App() {
             type="checkbox"
             checked={Boolean(value)}
             onChange={(event) => updateField(key, event.target.checked as never)}
-            className="mt-1 h-4 w-4 accent-cyan-500"
+            className="mt-1 h-4 w-4 accent-[#006AFF]"
           />
           <span>
             I acknowledge the application requirements and consent to review, approval, and status updates associated with this rental application.
@@ -221,7 +221,7 @@ function App() {
           value={String(value ?? '')}
           placeholder={placeholder}
           onChange={(event) => updateField(key, event.target.value as never)}
-          className={`w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-slate-50 outline-none transition focus:border-cyan-400 ${error ? 'border-rose-500/70' : 'border-slate-300'}`}
+          className={`w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-slate-50 outline-none transition focus:border-[#006AFF] ${error ? 'border-rose-500/70' : 'border-slate-300'}`}
         />
         {error && <span className="mt-1 block text-xs text-rose-300">{error}</span>}
       </label>
@@ -316,14 +316,14 @@ function App() {
         <header className="mb-8 rounded-[28px] border border-slate-200 bg-white/75 p-5 shadow-[0_24px_80px_rgba(2,6,23,0.7)] backdrop-blur sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#006AFF]">
                 Choice Properties • migration slice
               </p>
               <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
                 Protected application workflow modernization in progress.
               </h1>
             </div>
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <div className="rounded-2xl border border-[#00AD71]/30 bg-[#00AD71]/10 px-4 py-3 text-sm text-[#00AD71]">
               Legacy fallback remains live while the new route is validated.
             </div>
           </div>
@@ -351,13 +351,13 @@ function App() {
                 <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Protected flow</p>
                 <h2 className="mt-2 text-xl font-semibold text-slate-900">Application intake migration slice</h2>
               </div>
-              <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+              <span className="rounded-full border border-[#006AFF]/40 bg-[#006AFF]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
                 {stepIndex + 1} / {stepOrder.length}
               </span>
             </div>
 
             <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full bg-[#006AFF] transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
 
             <div className="mb-5 flex flex-wrap gap-2">
@@ -368,7 +368,7 @@ function App() {
                   onClick={() => setStepIndex(index)}
                   className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
                     index === stepIndex
-                      ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                      ? 'border-[#006AFF]/40 bg-[#006AFF]/10 text-cyan-200'
                       : 'border-slate-300 bg-slate-50 text-slate-600'
                   }`}
                 >
@@ -393,7 +393,7 @@ function App() {
                   <button
                     type="button"
                     onClick={goNext}
-                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-cyan-900/30 transition hover:brightness-110"
+                    className="rounded-xl bg-[#006AFF] px-4 py-2 text-sm font-semibold text-white shadow-lg  transition hover:bg-[#0058D6]"
                   >
                     Continue
                   </button>
@@ -401,7 +401,7 @@ function App() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-900/30 transition hover:brightness-110"
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-900/30 transition hover:bg-[#0058D6]"
                   >
                     Continue to secure application
                   </button>
@@ -460,7 +460,7 @@ function App() {
                   </div>
                 )}
                 {isAuthenticated && user && (
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  <div className="rounded-xl border border-[#00AD71]/30 bg-[#00AD71]/10 p-3 text-sm text-[#00AD71]">
                     <p className="font-mono">{user.id}</p>
                     {user.email && <p className="mt-1">{user.email}</p>}
                   </div>
@@ -480,7 +480,7 @@ function App() {
                 {migrationPhases.map((phase) => (
                   <div key={phase.name} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-cyan-300">{phase.name}</span>
+                      <span className="text-sm font-semibold text-[#006AFF]">{phase.name}</span>
                       <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                     </div>
                     <p className="mt-2 text-sm text-slate-600">{phase.detail}</p>
@@ -510,7 +510,7 @@ function App() {
                       <td className="px-3 py-2 text-slate-900">{item.route}</td>
                       <td className="px-3 py-2 text-slate-600">{item.target}</td>
                       <td className="px-3 py-2">
-                        <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+                        <span className="inline-flex rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
                           {item.status}
                         </span>
                       </td>
@@ -527,7 +527,7 @@ function App() {
             <ul className="mt-5 space-y-3">
               {authProtections.map((item) => (
                 <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-700">
-                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] text-emerald-300">✓</span>
+                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#00AD71]/15 text-[10px] text-[#00AD71]">✓</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -542,7 +542,7 @@ function App() {
             <div className="mt-5 space-y-3">
               {protectedFlow.map((stepName, index) => (
                 <div key={stepName} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/15 text-sm font-semibold text-cyan-200">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#006AFF]/15 text-sm font-semibold text-cyan-200">
                     {index + 1}
                   </div>
                   <span className="text-sm text-slate-700">{stepName}</span>
@@ -569,7 +569,7 @@ function App() {
                       <td className="px-3 py-2 text-slate-900">{row.step}</td>
                       <td className="px-3 py-2 text-slate-600">{row.backend}</td>
                       <td className="px-3 py-2">
-                        <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-200">
+                        <span className="inline-flex rounded-full border border-[#00AD71]/30 bg-[#00AD71]/10 px-2 py-1 text-xs font-medium text-[#00AD71]">
                           {row.mustPreserve}
                         </span>
                       </td>

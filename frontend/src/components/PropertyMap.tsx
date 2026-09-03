@@ -107,17 +107,17 @@ export function PropertyMap({ lat, lng, address, title, monthly_rent }: Property
         className="aspect-[16/9] sm:aspect-[21/9] w-full rounded-xl bg-slate-950 relative z-0"
       />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-        <a href={`https://www.walkscore.com/score/${(address + '-' + title).replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-cyan-500/50 transition-colors group">
+        <a href={`https://www.walkscore.com/score/${(address + '-' + title).replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-[#006AFF]/50 transition-colors group">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-950/50 flex items-center justify-center text-xl">🚶</div>
           <div>
-            <div className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">Walk Score</div>
+            <div className="text-sm font-bold text-white group-hover:text-[#006AFF] transition-colors">Walk Score</div>
             <div className="text-[10px] text-slate-500">Walk & Transit</div>
           </div>
         </a>
-        <a href={`https://www.greatschools.org/search/search.page?q=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/50 transition-colors group">
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-950/50 flex items-center justify-center text-xl">🏫</div>
+        <a href={`https://www.greatschools.org/search/search.page?q=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-[#00AD71]/50 transition-colors group">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#00AD71]/10 flex items-center justify-center text-xl">🏫</div>
           <div>
-            <div className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Schools</div>
+            <div className="text-sm font-bold text-white group-hover:text-[#00AD71] transition-colors">Schools</div>
             <div className="text-[10px] text-slate-500">GreatSchools.org</div>
           </div>
         </a>

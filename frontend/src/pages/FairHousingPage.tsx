@@ -12,14 +12,14 @@ export function FairHousingPage() {
         <section className="border-b border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-950 px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl space-y-4">
             <nav className="flex items-center gap-2 text-xs font-medium text-slate-500" aria-label="Breadcrumb">
-              <Link to="/" className="hover:text-cyan-300">Home</Link>
+              <Link to="/" className="hover:text-[#006AFF]">Home</Link>
               <span>›</span>
-              <Link to="/policies" className="hover:text-cyan-300">Policies</Link>
+              <Link to="/policies" className="hover:text-[#006AFF]">Policies</Link>
               <span>›</span>
               <span className="text-slate-700" aria-current="page">Fair Housing Policy</span>
             </nav>
 
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
               Equal Opportunity Policy
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -83,16 +83,16 @@ export function FairHousingPage() {
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900">5. Reporting Violations</h2>
               <p>
-                If you believe you have experienced unlawful discrimination on Choice Properties, please report it immediately to our compliance desk at <a href="mailto:support@choiceproperties.com" className="text-cyan-400 hover:underline">support@choiceproperties.com</a> or call <a href="tel:7077063137" className="text-cyan-400 hover:underline">707-706-3137</a>. You may also file an official complaint with the U.S. Department of Housing and Urban Development (HUD) at <a href="https://www.hud.gov/fairhousing" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">hud.gov/fairhousing</a>.
+                If you believe you have experienced unlawful discrimination on Choice Properties, please report it immediately to our compliance desk at <a href="mailto:support@choiceproperties.com" className="text-[#006AFF] hover:underline">support@choiceproperties.com</a> or call <a href="tel:7077063137" className="text-[#006AFF] hover:underline">707-706-3137</a>. You may also file an official complaint with the U.S. Department of Housing and Urban Development (HUD) at <a href="https://www.hud.gov/fairhousing" target="_blank" rel="noopener noreferrer" className="text-[#006AFF] hover:underline">hud.gov/fairhousing</a>.
               </p>
             </div>
           </div>
 
           <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-850">
-            <Link to="/policies" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/policies" className="hover:text-[#006AFF] flex items-center gap-1">
               ← Back to Complete Policy Framework
             </Link>
-            <Link to="/rental-application-policy" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/rental-application-policy" className="hover:text-[#006AFF] flex items-center gap-1">
               View Rental Application Policy →
             </Link>
           </div>

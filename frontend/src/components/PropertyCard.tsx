@@ -40,7 +40,7 @@ export function PropertyCard({ property, isSaved = false, onToggleSave, onProper
         
         {/* Badges overlay */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-white/95 shadow-sm border border-slate-200 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 whitespace-nowrap">
+          <span className="rounded-full bg-white/95 shadow-sm border border-slate-200 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#00AD71] whitespace-nowrap">
             ● {property.status}
           </span>
         </div>
@@ -51,7 +51,7 @@ export function PropertyCard({ property, isSaved = false, onToggleSave, onProper
         <div className="flex justify-between items-start mb-1">
           <h3
             onClick={() => onPropertySelect?.(property.id)}
-            className="font-bold text-slate-900 text-lg leading-snug line-clamp-1 group-hover:text-emerald-600 transition cursor-pointer"
+            className="font-bold text-slate-900 text-lg leading-snug line-clamp-1 group-hover:text-[#00AD71] transition cursor-pointer"
           >
             {property.title || property.address}
           </h3>
@@ -99,7 +99,7 @@ export function PropertyCard({ property, isSaved = false, onToggleSave, onProper
           </button>
           <a
             href={`/apply/?id=${encodeURIComponent(property.id)}&rent=${encodeURIComponent(String(property.rent_monthly))}&addr=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}`}
-            className="flex items-center justify-center rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 min-h-[44px] whitespace-nowrap"
+            className="flex items-center justify-center rounded-xl bg-[#006AFF] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0058D6] min-h-[44px] whitespace-nowrap"
           >
             Apply Now
           </a>

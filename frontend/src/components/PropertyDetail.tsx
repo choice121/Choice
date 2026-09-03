@@ -176,7 +176,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
       <div id="property-header-card" className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+            <span className="rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#00AD71]">
               ● {property.status}
             </span>
             <span className="rounded-full bg-white border border-slate-200 shadow-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
@@ -207,7 +207,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             <span className="text-3xl font-extrabold text-slate-900">${property.rent_monthly.toLocaleString()}</span>
             <span className="text-sm font-semibold uppercase text-slate-500">/mo</span>
           </div>
-          <p className="text-[11px] font-semibold text-emerald-600 mt-1 uppercase tracking-wider">1x Rent Deposit • $50 App Fee</p>
+          <p className="text-[11px] font-semibold text-[#00AD71] mt-1 uppercase tracking-wider">1x Rent Deposit • $50 App Fee</p>
         </div>
       </div>
 
@@ -311,8 +311,8 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               </span>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center shadow-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-700">Pet Policy</span>
-              <span className="mt-1 block text-lg font-extrabold text-emerald-700">Pets Welcome</span>
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#00AD71]">Pet Policy</span>
+              <span className="mt-1 block text-lg font-extrabold text-[#00AD71]">Pets Welcome</span>
             </div>
           </div>
 
@@ -342,7 +342,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Security Deposit</span>
                 <p className="text-xl font-extrabold text-slate-900">${property.rent_monthly.toLocaleString()}</p>
-                <p className="text-[11px] font-bold text-emerald-600">Guaranteed 1x monthly rent</p>
+                <p className="text-[11px] font-bold text-[#00AD71]">Guaranteed 1x monthly rent</p>
               </div>
 
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-1">
@@ -353,7 +353,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
 
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pet Policy</span>
-                <p className="text-xl font-extrabold text-emerald-600">100% Pet Friendly</p>
+                <p className="text-xl font-extrabold text-[#00AD71]">100% Pet Friendly</p>
                 <div className="text-[11px] font-medium text-slate-500 space-y-1 mt-1">
                   <p>{property.pet_types_allowed || 'Dogs and cats welcome'}</p>
                   {property.pet_weight_limit != null && <p>Weight limit: {property.pet_weight_limit} lbs</p>}
@@ -525,7 +525,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                 <div className="flex items-center gap-2">
                   <h3 className="text-slate-900 font-bold truncate">{property.landlord.business_name || property.landlord.contact_name}</h3>
                   {property.landlord.verified && (
-                    <svg className="h-4 w-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="h-4 w-4 text-[#00AD71] shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   )}
@@ -580,7 +580,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
                 <span className="font-bold text-slate-900">${property.application_fee ?? 50}.00</span>
               </div>
               {property.move_in_special && (
-                <div className="flex justify-between border-t border-slate-200 pt-2.5 mt-1 text-emerald-600">
+                <div className="flex justify-between border-t border-slate-200 pt-2.5 mt-1 text-[#00AD71]">
                   <span>Move-in Special</span>
                   <span className="font-bold text-right max-w-[60%]">{property.move_in_special}</span>
                 </div>
@@ -590,7 +590,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
             <Link
               id="apply-now-btn"
               to={applyUrl}
-              className="flex w-full min-h-[48px] items-center justify-center rounded-xl bg-slate-900 px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-slate-800"
+              className="flex w-full min-h-[48px] items-center justify-center rounded-xl bg-[#006AFF] px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-[#0058D6]"
             >
               Start Online Application →
             </Link>

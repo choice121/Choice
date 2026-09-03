@@ -12,14 +12,14 @@ export function RentalApplicationPolicyPage() {
         <section className="border-b border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-950 px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl space-y-4">
             <nav className="flex items-center gap-2 text-xs font-medium text-slate-500" aria-label="Breadcrumb">
-              <Link to="/" className="hover:text-cyan-300">Home</Link>
+              <Link to="/" className="hover:text-[#006AFF]">Home</Link>
               <span>›</span>
-              <Link to="/policies" className="hover:text-cyan-300">Policies</Link>
+              <Link to="/policies" className="hover:text-[#006AFF]">Policies</Link>
               <span>›</span>
               <span className="text-slate-700" aria-current="page">Rental Application Policy</span>
             </nav>
 
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
               Screening Guidelines
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -54,7 +54,7 @@ export function RentalApplicationPolicyPage() {
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900">2. Application Fee Structure</h2>
               <p>
-                The screening fee for all Choice Properties listings is standardized at <strong className="text-cyan-400">$50.00</strong> per adult applicant (18 years and older). This fee directly covers out-of-pocket costs incurred for consumer credit reporting, criminal record databases, eviction records, and verification overhead.
+                The screening fee for all Choice Properties listings is standardized at <strong className="text-[#006AFF]">$50.00</strong> per adult applicant (18 years and older). This fee directly covers out-of-pocket costs incurred for consumer credit reporting, criminal record databases, eviction records, and verification overhead.
               </p>
               <p>
                 <strong className="text-slate-900">Non-Refundability:</strong> Once the screening fee has been authorized and the third-party screening check initiated, the fee is non-refundable. If an application is denied or another applicant is selected first, applicants are eligible for reapplication credits valid for 45 days.
@@ -74,7 +74,7 @@ export function RentalApplicationPolicyPage() {
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900">4. Security Deposit Policy</h2>
               <p>
-                Choice Properties enforces a standard security deposit equal to exactly <strong className="text-emerald-400">1× monthly rent</strong> for qualified tenants across all properties. Deposits are held in compliant escrow accounts and returned following move-out inspection in accordance with state statutory deadlines.
+                Choice Properties enforces a standard security deposit equal to exactly <strong className="text-[#00AD71]">1× monthly rent</strong> for qualified tenants across all properties. Deposits are held in compliant escrow accounts and returned following move-out inspection in accordance with state statutory deadlines.
               </p>
             </div>
 
@@ -87,10 +87,10 @@ export function RentalApplicationPolicyPage() {
           </div>
 
           <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-850">
-            <Link to="/policies" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/policies" className="hover:text-[#006AFF] flex items-center gap-1">
               ← Back to Policies
             </Link>
-            <Link to="/holding-deposit-policy" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/holding-deposit-policy" className="hover:text-[#006AFF] flex items-center gap-1">
               View Holding Deposit Policy →
             </Link>
           </div>

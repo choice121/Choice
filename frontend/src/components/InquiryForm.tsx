@@ -89,7 +89,7 @@ export function InquiryForm({ propertyId }: InquiryFormProps) {
     <div className="border-t border-slate-100 pt-5 space-y-3">
       <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Message Landlord</h4>
       {status === 'success' ? (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-emerald-700 text-sm font-medium text-center shadow-sm">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-[#00AD71] text-sm font-medium text-center shadow-sm">
           ✓ Message sent! The landlord will be in touch soon.
         </div>
       ) : (

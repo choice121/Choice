@@ -11,12 +11,12 @@ export function HowItWorksPage() {
         {/* Hero Section */}
         <section id="how-it-works-hero" className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-100 via-slate-950 to-slate-950 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-4xl text-center space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
               For Landlords &amp; Property Managers
             </div>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
               List Your Property.<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#006AFF] to-emerald-400">
                 Connect with Verified Tenants.
               </span>
             </h1>
@@ -27,7 +27,7 @@ export function HowItWorksPage() {
               <a
                 href="/landlord/register.html"
                 id="hero-register-landlord-btn"
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-bold text-slate-900 shadow-lg shadow-cyan-900/40 transition hover:brightness-110 min-h-[44px]"
+                className="inline-flex items-center justify-center rounded-xl bg-[#006AFF] px-6 py-3.5 text-sm font-bold text-white shadow-lg  transition hover:bg-[#0058D6] min-h-[44px]"
               >
                 Register as Landlord
               </a>
@@ -52,7 +52,7 @@ export function HowItWorksPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-base font-bold text-cyan-400">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#006AFF]/10 border border-[#006AFF]/30 text-base font-bold text-[#006AFF]">
                   01
                 </span>
                 <span className="text-xs uppercase font-semibold text-slate-500">Free Setup</span>
@@ -65,7 +65,7 @@ export function HowItWorksPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-base font-bold text-cyan-400">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#006AFF]/10 border border-[#006AFF]/30 text-base font-bold text-[#006AFF]">
                   02
                 </span>
                 <span className="text-xs uppercase font-semibold text-slate-500">Fast Listing</span>
@@ -78,7 +78,7 @@ export function HowItWorksPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-base font-bold text-cyan-400">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#006AFF]/10 border border-[#006AFF]/30 text-base font-bold text-[#006AFF]">
                   03
                 </span>
                 <span className="text-xs uppercase font-semibold text-slate-500">Screening</span>
@@ -91,7 +91,7 @@ export function HowItWorksPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-base font-bold text-emerald-400">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00AD71]/10 border border-[#00AD71]/30 text-base font-bold text-[#00AD71]">
                   04
                 </span>
                 <span className="text-xs uppercase font-semibold text-slate-500">Leasing</span>
@@ -108,7 +108,7 @@ export function HowItWorksPage() {
             <h3 className="text-2xl font-bold text-slate-900">Why Property Owners Trust Choice Properties</h3>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Zero Subscription Fees</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   List as many properties as you want without monthly platform retainers or arbitrary listing expiration fees.
@@ -116,7 +116,7 @@ export function HowItWorksPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Comprehensive Screening</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Every applicant undergoes standardized identity verification, credit screening, eviction database checks, and income audits.
@@ -124,7 +124,7 @@ export function HowItWorksPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Standard 1× Rent Security</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Our standard security deposit formula provides robust financial protection while keeping homes accessible to qualified tenants.
@@ -132,7 +132,7 @@ export function HowItWorksPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Dedicated Support Coordinator</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Our team answers the phone and assists with applicant inquiries, scheduling, and onboarding every step of the way.
@@ -140,7 +140,7 @@ export function HowItWorksPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Digital Lease Management</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Built-in compliant e-signatures and centralized lease tracking keep your records orderly and legally sound.
@@ -148,7 +148,7 @@ export function HowItWorksPage() {
               </div>
 
               <div className="space-y-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 font-bold text-sm">✓</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#006AFF]/10 text-[#006AFF] font-bold text-sm">✓</span>
                 <h4 className="text-base font-bold text-slate-900">Equal Housing Compliance</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Standardized applicant qualification protocols ensure strict adherence to federal and state Fair Housing regulations.
@@ -158,7 +158,7 @@ export function HowItWorksPage() {
           </div>
 
           {/* Bottom CTA */}
-          <div id="landlord-bottom-cta" className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-100 via-white to-cyan-950/40 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div id="landlord-bottom-cta" className="rounded-2xl border border-[#006AFF]/30 bg-gradient-to-r from-slate-100 via-white to-[#006AFF]/5 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-2xl font-bold text-slate-900">Ready to fill your vacancies faster?</h3>
               <p className="text-sm text-slate-600 max-w-lg">
@@ -169,7 +169,7 @@ export function HowItWorksPage() {
               <a
                 href="/landlord/register.html"
                 id="cta-landlord-register-bottom"
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-bold text-slate-900 shadow-lg shadow-cyan-900/40 transition hover:brightness-110 min-h-[44px]"
+                className="inline-flex items-center justify-center rounded-xl bg-[#006AFF] px-6 py-3.5 text-sm font-bold text-white shadow-lg  transition hover:bg-[#0058D6] min-h-[44px]"
               >
                 Create Free Account →
               </a>

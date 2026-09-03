@@ -28,7 +28,7 @@ export function Navbar() {
           to="/"
           className="flex items-center gap-3 transition hover:opacity-90 focus:outline-none"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#006AFF] text-white shadow-sm">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
@@ -94,7 +94,7 @@ export function Navbar() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="inline-block h-2 w-2 rounded-full bg-[#00AD71]" />
             Track App
           </a>
           
@@ -118,7 +118,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             to="/apply"
-            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 active:scale-[0.98]"
+            className="inline-flex items-center justify-center rounded-lg bg-[#006AFF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0058D6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 active:scale-[0.98]"
           >
             Apply Online
           </Link>
@@ -128,7 +128,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 md:hidden">
           <Link
             to="/apply"
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
+            className="rounded-lg bg-[#006AFF] px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
           >
             Apply
           </Link>
@@ -218,7 +218,7 @@ export function Navbar() {
             <Link
               to="/apply"
               onClick={() => setMobileMenuOpen(false)}
-              className="block w-full rounded-lg bg-slate-900 py-3 text-center font-semibold text-white shadow-sm hover:bg-slate-800 transition"
+              className="block w-full rounded-lg bg-[#006AFF] py-3 text-center font-semibold text-white shadow-sm hover:bg-[#0058D6] transition"
             >
               Start Rental Application
             </Link>

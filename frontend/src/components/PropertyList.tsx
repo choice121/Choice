@@ -262,7 +262,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
               onClick={() => setSelectedCity('all')}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
                 selectedCity === 'all'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#006AFF] text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -275,7 +275,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
                 onClick={() => setSelectedCity(city)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
                   selectedCity === city
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-[#006AFF] text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -363,7 +363,7 @@ export function PropertyList({ limit = 36, onPropertySelect, initialCity = 'all'
           <button
             type="button"
             onClick={clearFilters}
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition min-h-[44px]"
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-[#006AFF] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0058D6] transition min-h-[44px]"
           >
             Show All Available Properties
           </button>

@@ -123,11 +123,11 @@ export function FaqPage() {
         {/* Hero Section */}
         <section id="faq-hero-section" className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-100 via-slate-950 to-slate-950 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-4xl text-center space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
               Help Center &amp; Support
             </div>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
-              Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Questions</span>
+              Frequently Asked <span className="text-transparent bg-clip-text bg-[#006AFF]">Questions</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Transparent answers about our standard $50 application fee, 1× rent deposits, approval timelines, and renter protections.
@@ -143,7 +143,7 @@ export function FaqPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search questions (e.g. fee, pets, approval, deposit)..."
-                  className="w-full rounded-2xl border border-slate-300 bg-white/90 px-5 py-3.5 pl-12 text-sm text-slate-900 placeholder-slate-400 shadow-inner outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white/90 px-5 py-3.5 pl-12 text-sm text-slate-900 placeholder-slate-400 shadow-inner outline-none transition focus:border-[#006AFF] focus:ring-2 focus:ring-[#006AFF]/20"
                 />
                 <svg
                   className="absolute left-4 top-4 h-5 w-5 text-slate-500"
@@ -179,7 +179,7 @@ export function FaqPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition min-h-[40px] ${
                   selectedCategory === cat.id
-                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    ? 'bg-[#006AFF] text-white shadow-md '
                     : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
@@ -200,7 +200,7 @@ export function FaqPage() {
                     setSearchQuery('')
                     setSelectedCategory('all')
                   }}
-                  className="mt-2 inline-flex items-center rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-cyan-300 hover:bg-slate-700 transition"
+                  className="mt-2 inline-flex items-center rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-[#006AFF] hover:bg-slate-100 transition"
                 >
                   Reset Filters
                 </button>
@@ -227,7 +227,7 @@ export function FaqPage() {
                       <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${
                           isOpen
-                            ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300 rotate-180'
+                            ? 'border-[#006AFF]/50 bg-[#006AFF]/10 text-[#006AFF] rotate-180'
                             : 'border-slate-300 bg-slate-100 text-slate-500'
                         }`}
                         aria-hidden="true"
@@ -250,13 +250,13 @@ export function FaqPage() {
           </div>
 
           {/* Assistance CTA Banner */}
-          <div id="faq-support-banner" className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-100 via-white to-cyan-950/40 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div id="faq-support-banner" className="rounded-2xl border border-[#006AFF]/30 bg-gradient-to-r from-slate-100 via-white to-[#006AFF]/5 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-xl font-bold text-slate-900">Still have a question?</h3>
               <p className="text-sm text-slate-600 leading-relaxed max-w-lg">
                 Our leasing desk is open Monday through Saturday to answer questions regarding property tours, applications, or leasing terms.
               </p>
-              <div className="flex flex-wrap gap-4 pt-1 text-xs text-cyan-300 justify-center md:justify-start">
+              <div className="flex flex-wrap gap-4 pt-1 text-xs text-[#006AFF] justify-center md:justify-start">
                 <a href="tel:7077063137" className="hover:underline flex items-center gap-1.5 font-medium">
                   📞 707-706-3137
                 </a>
@@ -271,7 +271,7 @@ export function FaqPage() {
               <Link
                 to="/listings"
                 id="faq-browse-listings-cta"
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-bold text-slate-900 shadow-lg shadow-cyan-900/30 transition hover:brightness-110 min-h-[44px]"
+                className="inline-flex items-center justify-center rounded-xl bg-[#006AFF] px-5 py-3 text-sm font-bold text-white shadow-lg  transition hover:bg-[#0058D6] min-h-[44px]"
               >
                 Browse Listings
               </Link>

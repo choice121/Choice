@@ -26,7 +26,7 @@ export function MobileApplyBar({ rent, applyUrl, onMessageClick }: MobileApplyBa
           </button>
           <Link
             to={applyUrl}
-            className="flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-slate-800"
+            className="flex h-11 items-center justify-center rounded-xl bg-[#006AFF] px-6 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-[#0058D6]"
           >
             Apply Now
           </Link>

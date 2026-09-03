@@ -12,14 +12,14 @@ export function PrivacyPage() {
         <section className="border-b border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-950 px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl space-y-4">
             <nav className="flex items-center gap-2 text-xs font-medium text-slate-500" aria-label="Breadcrumb">
-              <Link to="/" className="hover:text-cyan-300">Home</Link>
+              <Link to="/" className="hover:text-[#006AFF]">Home</Link>
               <span>›</span>
-              <Link to="/policies" className="hover:text-cyan-300">Policies</Link>
+              <Link to="/policies" className="hover:text-[#006AFF]">Policies</Link>
               <span>›</span>
               <span className="text-slate-700" aria-current="page">Privacy Policy</span>
             </nav>
 
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#006AFF]/30 bg-[#006AFF]/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
               Data Protection &amp; Security
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -63,7 +63,7 @@ export function PrivacyPage() {
                 <li>Preparing digital lease documents and coordinating tenancy onboarding</li>
                 <li>Complying with federal consumer reporting (FCRA) and Fair Housing requirements</li>
               </ul>
-              <p className="text-emerald-400 font-semibold mt-2">
+              <p className="text-[#00AD71] font-semibold mt-2">
                 We never sell, rent, or trade your personal information to third-party advertisers.
               </p>
             </div>
@@ -78,16 +78,16 @@ export function PrivacyPage() {
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900">5. Your Privacy Rights</h2>
               <p>
-                You have the right to request a copy of the personal information we hold about you, request corrections to inaccurate records, or request deletion of personal files subject to statutory legal retention mandates. To exercise your rights, contact <a href="mailto:support@choiceproperties.com" className="text-cyan-400 hover:underline">support@choiceproperties.com</a>.
+                You have the right to request a copy of the personal information we hold about you, request corrections to inaccurate records, or request deletion of personal files subject to statutory legal retention mandates. To exercise your rights, contact <a href="mailto:support@choiceproperties.com" className="text-[#006AFF] hover:underline">support@choiceproperties.com</a>.
               </p>
             </div>
           </div>
 
           <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-850">
-            <Link to="/terms" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/terms" className="hover:text-[#006AFF] flex items-center gap-1">
               ← View Terms of Service
             </Link>
-            <Link to="/policies" className="hover:text-cyan-300 flex items-center gap-1">
+            <Link to="/policies" className="hover:text-[#006AFF] flex items-center gap-1">
               Complete Policy Framework →
             </Link>
           </div>
