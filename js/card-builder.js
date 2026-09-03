@@ -234,9 +234,18 @@
 
         // ── Body — full-width link for click-through ───────────
         '<a href="' + escAttr(propUrl) + '" class="property-card-body" aria-label="' + title + '">' +
-          // 1. Title (2-line clamp — most prominent element)
+          // Price leads the comparison hierarchy on every renter-facing card.
+          '<div class="property-card-footer">' +
+            '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
+            (cityPageUrl(p.city, p.state)
+              ? '<button class="prop-city-badge" type="button" data-city-url="' + escAttr(cityPageUrl(p.city, p.state)) + '" title="Browse all ' + esc(p.city) + ' listings" aria-label="View all listings in ' + esc(p.city) + ', ' + esc(p.state) + '">' +
+                  '<i class="fas fa-location-dot"></i> ' + esc(p.city) + ', ' + esc(p.state) +
+                '</button>'
+              : '') +
+          '</div>' +
+          // Title (2-line clamp — most prominent identity element)
           '<div class="property-card-title">' + title + '</div>' +
-          // 2. Address + availability chip inline
+          // Address + availability chip inline
           '<div class="property-card-addr">' +
             '<i class="fas fa-location-dot"></i>' + addrLine +
             (avail ? '<span class="property-card-addr-sep">·</span>' + avail : '') +
@@ -246,15 +255,6 @@
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
           // 3b. Pet policy chip
           (petChip ? '<div class="property-card-pet-row">' + petChip + '</div>' : '') +
-          // 4. Footer — price pinned to bottom (no divider)
-          '<div class="property-card-footer">' +
-            '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
-            (cityPageUrl(p.city, p.state)
-              ? '<button class="prop-city-badge" type="button" data-city-url="' + escAttr(cityPageUrl(p.city, p.state)) + '" title="Browse all ' + esc(p.city) + ' listings" aria-label="View all listings in ' + esc(p.city) + ', ' + esc(p.state) + '">' +
-                  '<i class="fas fa-location-dot"></i> ' + esc(p.city) + ', ' + esc(p.state) +
-                '</button>'
-              : '') +
-          '</div>' +
         '</a>' +
 
       '</article>'
