@@ -988,16 +988,16 @@ function _initLeafletMap(p) {
 
 function _mapAddressCard(p, addr) {
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;background:var(--surface-2,#f8f9fa);padding:32px 20px;text-align:center">
-      <div style="width:52px;height:52px;background:#e8f0fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#1a73e8">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;background:var(--m-surface-2,#f8f9fa);padding:32px 20px;text-align:center">
+      <div style="width:52px;height:52px;background:var(--m-brand-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--m-brand)">
         <i class="fas fa-map-marker-alt"></i>
       </div>
       <div>
-        <div style="font-weight:700;font-size:1rem;color:var(--text,#1a1a2e);margin-bottom:4px">${esc(p.address)}</div>
-        <div style="color:var(--muted,#6b7280);font-size:.875rem">${esc(p.city)}, ${esc(p.state)} ${esc(p.zip||'')}</div>
+        <div style="font-weight:700;font-size:1rem;color:var(--m-ink);margin-bottom:4px">${esc(p.address)}</div>
+        <div style="color:var(--m-muted);font-size:.875rem">${esc(p.city)}, ${esc(p.state)} ${esc(p.zip||'')}</div>
       </div>
       <a href="https://maps.google.com/maps?q=${addr}" target="_blank" rel="noopener noreferrer"
-         style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1a73e8;color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none">
+         style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:var(--m-brand);color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none">
         <i class="fas fa-map"></i> Open in Google Maps
       </a>
     </div>`;
@@ -1974,51 +1974,51 @@ function initAdminPropertyPanel(prop) {
   // ── Admin info section ──
   const section = document.createElement('div');
   section.id = 'adminPropSection';
-  section.style.cssText = 'background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;margin:24px 0';
+  section.style.cssText = 'background:var(--m-surface);border:1.5px solid var(--m-border);border-radius:12px;padding:20px;margin:24px 0';
   section.innerHTML = `
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span><i class="fas fa-shield-halved" style="color:#006aff"></i> Admin Info</span>
-      <button id="adminSectionEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-soft);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="fas fa-shield-halved" style="color:var(--m-brand)"></i> Admin Info</span>
+      <button id="adminSectionEditBtn" style="background:var(--m-brand);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
         <i class="fas fa-pen"></i> Edit Property
       </button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:20px">
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.views_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Views</div>
+      <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink)">${prop.views_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Views</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.applications_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Applications</div>
+      <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink)">${prop.applications_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Applications</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1e293b">${prop.saves_count??0}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Saves</div>
+      <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--m-ink)">${prop.saves_count??0}</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Saves</div>
       </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
-        <div id="adminInqCountVal" style="font-size:20px;font-weight:700;color:#1e293b">—</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px">Inquiries</div>
+      <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:8px;padding:10px;text-align:center">
+        <div id="adminInqCountVal" style="font-size:20px;font-weight:700;color:var(--m-ink)">—</div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px">Inquiries</div>
       </div>
     </div>
     <div>
-      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">
+      <label style="font-size:12px;font-weight:600;color:var(--m-ink);display:block;margin-bottom:6px">
         <i class="fas fa-sticky-note"></i> Admin Notes (internal)
       </label>
       <textarea id="adminNotesField" rows="3" maxlength="2000"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:border-color 150ms"
+        style="width:100%;border:1.5px solid var(--m-border);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;font-family:inherit;color:var(--m-ink);background:var(--m-surface);outline:none;transition:border-color 150ms"
         placeholder="Private admin notes — not visible to landlords or tenants…"
-        onfocus="this.style.borderColor='#006aff'" onblur="this.style.borderColor='#d1d5db'">${esc(prop.admin_notes||'')}</textarea>
+        onfocus="this.style.borderColor='var(--m-brand)'" onblur="this.style.borderColor='var(--m-border)'">${esc(prop.admin_notes||'')}</textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-        <span style="font-size:11px;color:#94a3b8">Not visible to landlords or tenants</span>
-        <button id="adminNotesSaveBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Save Notes</button>
+        <span style="font-size:11px;color:var(--m-soft)">Not visible to landlords or tenants</span>
+        <button id="adminNotesSaveBtn" style="background:var(--m-brand);color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Save Notes</button>
       </div>
     </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
-      <span style="color:#d1d5db">·</span>
-      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>
-      <span style="color:#d1d5db">·</span>
-      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="font-size:12px;color:#006aff;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-arrow-up-right-from-square"></i> Full Edit</a>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--m-border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
+      <span style="color:var(--m-border)">·</span>
+      <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>
+      <span style="color:var(--m-border)">·</span>
+      <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-arrow-up-right-from-square"></i> Full Edit</a>
     </div>`;
 
   const detailMain = document.getElementById('detailMain');
@@ -2846,8 +2846,8 @@ function injectEnrichmentStyles() {
       border-radius: 12px;
       flex: 1;
       min-width: 170px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      background: var(--m-surface-2);
+      border: 1px solid var(--m-border);
       box-sizing: border-box;
     }
     .req-chip-label {
@@ -2855,107 +2855,98 @@ function injectEnrichmentStyles() {
       font-weight: 700;
       letter-spacing: .05em;
       text-transform: uppercase;
-      color: #64748b;
+      color: var(--m-muted);
       line-height: 1.2;
     }
     .req-chip-value {
       font-size: 13.5px;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--m-ink);
       margin-top: 3px;
       line-height: 1.3;
     }
     .req-chip i { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
     
-    .req-chip.req-emerald { border-color: #a7f3d0; background: #ecfdf5; }
-    .req-chip.req-emerald i { color: #059669; }
-    .req-chip.req-emerald .req-chip-label { color: #065f46; }
-    .req-chip.req-emerald .req-chip-value { color: #064e3b; }
+    .req-chip.req-emerald { border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.08); }
+    .req-chip.req-emerald i { color: #10b981; }
+    .req-chip.req-emerald .req-chip-label { color: #059669; }
+    .req-chip.req-emerald .req-chip-value { color: var(--m-ink); }
 
-    .req-chip.req-rose { border-color: #fecaca; background: #fef2f2; }
-    .req-chip.req-rose i { color: #e11d48; }
-    .req-chip.req-rose .req-chip-label { color: #9f1239; }
-    .req-chip.req-rose .req-chip-value { color: #881337; }
+    .req-chip.req-rose { border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+    .req-chip.req-rose i { color: #ef4444; }
+    .req-chip.req-rose .req-chip-label { color: #e11d48; }
+    .req-chip.req-rose .req-chip-value { color: var(--m-ink); }
 
-    .req-chip.req-blue { border-color: #bfdbfe; background: #eff6ff; }
-    .req-chip.req-blue i { color: #0284c7; }
-    .req-chip.req-blue .req-chip-label { color: #075985; }
-    .req-chip.req-blue .req-chip-value { color: #0c4a6e; }
+    .req-chip.req-blue { border-color: rgba(0,106,255,.35); background: var(--m-brand-pale); }
+    .req-chip.req-blue i { color: var(--m-brand); }
+    .req-chip.req-blue .req-chip-label { color: var(--m-brand); }
+    .req-chip.req-blue .req-chip-value { color: var(--m-ink); }
 
-    .req-chip.req-amber { border-color: #fde68a; background: #fffbeb; }
-    .req-chip.req-amber i { color: #d97706; }
-    .req-chip.req-amber .req-chip-label { color: #92400e; }
-    .req-chip.req-amber .req-chip-value { color: #78350f; }
+    .req-chip.req-amber { border-color: rgba(212,160,23,.35); background: var(--m-gold-pale); }
+    .req-chip.req-amber i { color: var(--m-gold); }
+    .req-chip.req-amber .req-chip-label { color: #b45309; }
+    .req-chip.req-amber .req-chip-value { color: var(--m-ink); }
 
-    /* Dark mode chips: crystal clear contrast, zero WebKit brightness filter glitches */
+    /* Dark mode chips */
     html[data-theme="dark"] .req-chip {
-      background: #162032 !important;
-      border-color: rgba(255, 255, 255, 0.09) !important;
+      background: var(--m-surface-2) !important;
+      border-color: var(--m-border) !important;
     }
-    html[data-theme="dark"] .req-chip-label { color: #94a3b8 !important; }
-    html[data-theme="dark"] .req-chip-value { color: #f8fafc !important; }
+    html[data-theme="dark"] .req-chip-label { color: var(--m-muted) !important; }
+    html[data-theme="dark"] .req-chip-value { color: var(--m-ink) !important; }
+    html[data-theme="dark"] .req-chip.req-emerald { background: rgba(16,185,129,.14) !important; }
     html[data-theme="dark"] .req-chip.req-emerald i { color: #34d399 !important; }
+    html[data-theme="dark"] .req-chip.req-emerald .req-chip-label { color: #34d399 !important; }
+    html[data-theme="dark"] .req-chip.req-rose { background: rgba(239,68,68,.14) !important; }
     html[data-theme="dark"] .req-chip.req-rose i { color: #fb7185 !important; }
+    html[data-theme="dark"] .req-chip.req-rose .req-chip-label { color: #fb7185 !important; }
+    html[data-theme="dark"] .req-chip.req-blue { background: rgba(0,106,255,.14) !important; }
     html[data-theme="dark"] .req-chip.req-blue i { color: #38bdf8 !important; }
+    html[data-theme="dark"] .req-chip.req-blue .req-chip-label { color: #38bdf8 !important; }
+    html[data-theme="dark"] .req-chip.req-amber { background: rgba(212,160,23,.14) !important; }
     html[data-theme="dark"] .req-chip.req-amber i { color: #fbbf24 !important; }
+    html[data-theme="dark"] .req-chip.req-amber .req-chip-label { color: #fbbf24 !important; }
 
     /* Property detail cards */
-    .pf-card { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
-      margin-bottom:10px; background:#fff; }
-    .pf-card-head { background:#f8f9fa; border-bottom:1px solid #e5e7eb;
+    .pf-card { border:1px solid var(--m-border); border-radius:12px; overflow:hidden;
+      margin-bottom:10px; background:var(--m-surface); }
+    .pf-card-head { background:var(--m-surface-2); border-bottom:1px solid var(--m-border);
       padding:9px 14px; display:flex; align-items:center; gap:7px; }
     .pf-card-head-text { font-size:10.5px; font-weight:700; letter-spacing:.08em;
-      text-transform:uppercase; color:#6b7280; }
+      text-transform:uppercase; color:var(--m-soft); }
     .pf-card-body { padding:0 14px; }
     .pf-row { display:flex; justify-content:space-between; align-items:center;
-      padding:10px 0; border-bottom:1px solid #f0f1f3; gap:8px; }
+      padding:10px 0; border-bottom:1px solid var(--m-border); gap:8px; }
     .pf-row-last { border-bottom:none; }
-    .pf-row-label { font-size:13px; color:#6b7280; flex-shrink:0; }
-    .pf-row-value { font-size:13px; font-weight:600; color:#111827;
+    .pf-row-label { font-size:13px; color:var(--m-muted); flex-shrink:0; }
+    .pf-row-value { font-size:13px; font-weight:600; color:var(--m-ink);
       text-align:right; word-break:break-word; max-width:58%; }
-    html[data-theme="dark"] .pf-card { background:#1e293b; border-color:#334155; }
-    html[data-theme="dark"] .pf-card-head { background:#0f172a; border-bottom-color:#334155; }
-    html[data-theme="dark"] .pf-card-head-text { color:#94a3b8; }
-    html[data-theme="dark"] .pf-row { border-bottom-color:#2d3748; }
-    html[data-theme="dark"] .pf-row-label { color:#9ca3af; }
-    html[data-theme="dark"] .pf-row-value { color:#f3f4f6; }
 
     /* Walk Score / Schools cards */
     .score-card { display:flex; align-items:center; gap:14px; padding:16px;
-      border:1.5px solid #e5e7eb; border-radius:12px; text-decoration:none;
-      color:inherit; background:#fafafa; transition:border-color .15s; }
-    .score-card:hover { border-color:#006aff; }
-    .score-card-title { font-weight:700; font-size:14px; color:#1f2937; }
-    .score-card-sub { font-size:12px; color:#6b7280; margin-top:2px; }
-    .score-card-cta { font-size:11.5px; color:#006aff; margin-top:5px; font-weight:600; }
-    html[data-theme="dark"] .score-card { background:#1e293b; border-color:#334155; }
-    html[data-theme="dark"] .score-card:hover { border-color:#3b82f6; }
-    html[data-theme="dark"] .score-card-title { color:#f1f5f9; }
-    html[data-theme="dark"] .score-card-sub { color:#94a3b8; }
+      border:1.5px solid var(--m-border); border-radius:12px; text-decoration:none;
+      color:inherit; background:var(--m-surface-2); transition:border-color .15s, box-shadow .15s; }
+    .score-card:hover { border-color:var(--m-brand); box-shadow:var(--m-shadow-sm); }
+    .score-card-title { font-weight:700; font-size:14px; color:var(--m-ink); }
+    .score-card-sub { font-size:12px; color:var(--m-muted); margin-top:2px; }
+    .score-card-cta { font-size:11.5px; color:var(--m-brand); margin-top:5px; font-weight:600; }
 
     /* Similar listing cards */
-    .similar-card { display:flex; border:1.5px solid #e5e7eb; border-radius:12px;
-      overflow:hidden; text-decoration:none; color:inherit; background:#fff;
-      transition:border-color .15s; }
-    .similar-card:hover { border-color:#006aff; }
+    .similar-card { display:flex; border:1.5px solid var(--m-border); border-radius:12px;
+      overflow:hidden; text-decoration:none; color:inherit; background:var(--m-surface);
+      transition:border-color .15s, box-shadow .15s; }
+    .similar-card:hover { border-color:var(--m-brand); box-shadow:var(--m-shadow-sm); }
     .similar-card-photo { width:96px; height:90px; flex-shrink:0;
-      background:#f3f4f6; overflow:hidden; }
+      background:var(--m-surface-2); overflow:hidden; }
     .similar-card-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .similar-card-body { padding:11px 14px; flex:1; min-width:0; }
-    .similar-card-price { font-size:15px; font-weight:800; color:#0a1628;
+    .similar-card-price { font-size:15px; font-weight:800; color:var(--m-ink);
       letter-spacing:-.02em; line-height:1.2; }
-    .similar-card-title { font-size:12.5px; font-weight:600; color:#1f2937; margin-top:3px;
+    .similar-card-title { font-size:12.5px; font-weight:600; color:var(--m-ink); margin-top:3px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .similar-card-meta { font-size:11.5px; color:#6b7280; margin-top:2px; }
-    .similar-card-addr { font-size:11px; color:#9ca3af; margin-top:1px;
+    .similar-card-meta { font-size:11.5px; color:var(--m-muted); margin-top:2px; }
+    .similar-card-addr { font-size:11px; color:var(--m-soft); margin-top:1px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    html[data-theme="dark"] .similar-card { background:#1e293b; border-color:#334155; }
-    html[data-theme="dark"] .similar-card:hover { border-color:#3b82f6; }
-    html[data-theme="dark"] .similar-card-photo { background:#0f172a; }
-    html[data-theme="dark"] .similar-card-price { color:#f1f5f9; }
-    html[data-theme="dark"] .similar-card-title { color:#e2e8f0; }
-    html[data-theme="dark"] .similar-card-meta { color:#94a3b8; }
-    html[data-theme="dark"] .similar-card-addr { color:#64748b; }
 
     /* Neighborhood & Community Intelligence Styles */
     .intel-container { display:flex; flex-direction:column; gap:16px; margin-top:10px; }
@@ -2963,22 +2954,13 @@ function injectEnrichmentStyles() {
     .intel-nav-strip::-webkit-scrollbar { display:none; }
     .intel-tab-btn {
       display:inline-flex; align-items:center; gap:7px; padding:8px 14px;
-      border-radius:10px; font-size:12.5px; font-weight:700; border:1px solid #e2e8f0;
-      background:#fff; color:#475569; cursor:pointer; white-space:nowrap; transition:all .15s;
+      border-radius:10px; font-size:12.5px; font-weight:700; border:1px solid var(--m-border);
+      background:var(--m-surface); color:var(--m-muted); cursor:pointer; white-space:nowrap; transition:all .15s;
     }
-    .intel-tab-btn:hover { background:#f1f5f9; color:#0f172a; border-color:#cbd5e1; }
+    .intel-tab-btn:hover { background:var(--m-surface-2); color:var(--m-ink); border-color:var(--m-border-strong); }
     .intel-tab-btn.active {
-      background:#006aff; color:#fff; border-color:#006aff;
+      background:var(--m-brand); color:#fff; border-color:var(--m-brand);
       box-shadow:0 2px 6px rgba(0,106,255,.25);
-    }
-    html[data-theme="dark"] .intel-tab-btn {
-      background:#1e293b; color:#94a3b8; border-color:#334155;
-    }
-    html[data-theme="dark"] .intel-tab-btn:hover {
-      background:#334155; color:#f8fafc;
-    }
-    html[data-theme="dark"] .intel-tab-btn.active {
-      background:#2563eb; color:#fff; border-color:#2563eb;
     }
 
     .intel-tab-content { display:none; flex-direction:column; gap:12px; }
@@ -2987,63 +2969,48 @@ function injectEnrichmentStyles() {
     .intel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
     .intel-item-card {
       display:flex; flex-direction:column; padding:14px 16px; border-radius:12px;
-      background:#fff; border:1px solid #e2e8f0; text-decoration:none; color:inherit;
+      background:var(--m-surface); border:1px solid var(--m-border); text-decoration:none; color:inherit;
       transition:transform .12s, border-color .15s, box-shadow .15s;
     }
     .intel-item-card:hover {
-      border-color:#006aff; transform:translateY(-1px);
-      box-shadow:0 4px 12px rgba(0,0,0,.04);
-    }
-    html[data-theme="dark"] .intel-item-card {
-      background:#1e293b; border-color:#334155;
-    }
-    html[data-theme="dark"] .intel-item-card:hover {
-      border-color:#3b82f6; box-shadow:0 4px 12px rgba(0,0,0,.2);
+      border-color:var(--m-brand); transform:translateY(-1px);
+      box-shadow:var(--m-shadow-sm);
     }
 
     .intel-item-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
-    .intel-item-title { font-weight:700; font-size:13.5px; color:#0f172a; line-height:1.3; }
+    .intel-item-title { font-weight:700; font-size:13.5px; color:var(--m-ink); line-height:1.3; }
     .intel-item-badge {
       font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;
-      background:#eff6ff; color:#0284c7; flex-shrink:0;
+      background:var(--m-brand-pale); color:var(--m-brand); flex-shrink:0;
     }
-    .intel-item-desc { font-size:12px; color:#64748b; line-height:1.4; margin-bottom:8px; }
+    .intel-item-desc { font-size:12px; color:var(--m-muted); line-height:1.4; margin-bottom:8px; }
     .intel-item-meta {
       display:flex; align-items:center; gap:12px; font-size:11.5px;
-      color:#475569; font-weight:600; margin-top:auto; padding-top:6px;
-      border-top:1px solid #f1f5f9;
+      color:var(--m-soft); font-weight:600; margin-top:auto; padding-top:6px;
+      border-top:1px solid var(--m-border);
     }
-    html[data-theme="dark"] .intel-item-title { color:#f8fafc; }
-    html[data-theme="dark"] .intel-item-desc { color:#94a3b8; }
-    html[data-theme="dark"] .intel-item-meta { color:#cbd5e1; border-top-color:#334155; }
-    html[data-theme="dark"] .intel-item-badge { background:#1e3a5f; color:#7dd3fc; }
 
     /* Interactive Commute Form */
     .commute-calc-box {
       display:flex; flex-direction:column; gap:10px; padding:16px; border-radius:12px;
-      background:#f8fafc; border:1px solid #e2e8f0;
+      background:var(--m-surface-2); border:1px solid var(--m-border);
     }
-    html[data-theme="dark"] .commute-calc-box { background:#162032; border-color:#334155; }
     .commute-calc-row { display:flex; gap:8px; flex-wrap:wrap; }
     .commute-calc-input {
       flex:1; min-width:200px; padding:9px 12px; border-radius:8px;
-      border:1px solid #cbd5e1; font-size:13px; background:#fff; color:#0f172a; outline:none;
+      border:1px solid var(--m-border); font-size:13px; background:var(--m-surface); color:var(--m-ink); outline:none;
     }
-    .commute-calc-input:focus { border-color:#006aff; ring:2px rgba(0,106,255,.2); }
-    html[data-theme="dark"] .commute-calc-input {
-      background:#1e293b; border-color:#475569; color:#f8fafc;
-    }
+    .commute-calc-input:focus { border-color:var(--m-brand); }
     .commute-calc-btn {
       display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
-      border-radius:8px; font-size:12.5px; font-weight:700; background:#006aff;
+      border-radius:8px; font-size:12.5px; font-weight:700; background:var(--m-brand);
       color:#fff; border:none; cursor:pointer; transition:background .15s;
     }
-    .commute-calc-btn:hover { background:#0053cc; }
+    .commute-calc-btn:hover { background:var(--m-brand-dark); }
     .commute-calc-result {
-      font-size:12.5px; font-weight:600; color:#0369a1; padding:8px 12px;
-      border-radius:6px; background:#e0f2fe; display:none;
+      font-size:12.5px; font-weight:600; color:var(--m-brand); padding:8px 12px;
+      border-radius:6px; background:var(--m-brand-pale); border:1px solid rgba(0,106,255,.2); display:none;
     }
-    html[data-theme="dark"] .commute-calc-result { background:#0c4a6e; color:#bae6fd; }
   `;
   document.head.appendChild(s);
 }
@@ -3601,7 +3568,7 @@ async function loadSimilarListings(p) {
           <div class="similar-card-body">
             <div class="similar-card-price">
               ${s.monthly_rent != null
-                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:#6b7280">/mo</span>'
+                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
                 : 'TBD'}
             </div>
             <div class="similar-card-title">${esc(s.title || 'Rental')}</div>
@@ -3619,7 +3586,7 @@ async function loadSimilarListings(p) {
         <div class="prop-section-head">More in <em>${esc(p.city)}</em>.</div>
         <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
         <a href="/listings.html" style="display:inline-flex;align-items:center;gap:6px;
-          margin-top:16px;font-size:13px;font-weight:600;color:#006aff;text-decoration:none">
+          margin-top:16px;font-size:13px;font-weight:600;color:var(--m-brand);text-decoration:none">
           See all rentals in ${esc(p.city)} <i class="fas fa-arrow-right" style="font-size:11px"></i>
         </a>
       </div>`;
