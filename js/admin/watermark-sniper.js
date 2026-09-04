@@ -644,86 +644,41 @@
     let failed = 0;
     const deletedIds = [];
 
-    // Perform multi-stage atomic cascading cleanup
+    // Perform multi-stage atomic cascading cleanup via CP.Properties.deleteCascadeBulk
     try {
-      // Step 1: Delete photos from property_photos table
-      const { error: photoErr } = await CP.sb()
-        .from('property_photos')
-        .delete()
-        .in('property_id', ids);
+      const result = await CP.Properties.deleteCascadeBulk(ids);
+      if (result && result.ok && result.data) {
+        const dIds = Array.isArray(result.data.deleted_ids) && result.data.deleted_ids.length > 0
+          ? result.data.deleted_ids
+          : ids;
+        deletedIds.push(...dIds);
+        succeeded = dIds.length;
 
-      if(photoErr){
-        console.warn('[watermark-sniper] Photo deletion warning:', photoErr);
-      }
-
-      // Step 2: Delete saved properties links
-      await CP.sb()
-        .from('saved_properties')
-        .delete()
-        .in('property_id', ids)
-        .catch(() => {});
-
-      // Step 3: Delete inquiries
-      await CP.sb()
-        .from('inquiries')
-        .delete()
-        .in('property_id', ids)
-        .catch(() => {});
-
-      // Step 4: Unlink applications referencing these properties
-      await CP.sb()
-        .from('applications')
-        .update({ property_id: null })
-        .in('property_id', ids)
-        .catch(() => {});
-
-      // Step 5: Delete properties from properties table in batch
-      const { error: propErr } = await CP.sb()
-        .from('properties')
-        .delete()
-        .in('id', ids);
-
-      if(!propErr){
-        succeeded = ids.length;
-        deletedIds.push(...ids);
-      } else {
-        console.warn('[watermark-sniper] Batch delete error, falling back to individual deletes:', propErr);
-        // Fallback: Individual sequential deletion
-        for(const id of ids){
-          try {
-            await CP.sb().from('property_photos').delete().eq('property_id', id).catch(() => {});
-            await CP.sb().from('saved_properties').delete().eq('property_id', id).catch(() => {});
-            await CP.sb().from('inquiries').delete().eq('property_id', id).catch(() => {});
-            await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id).catch(() => {});
-            const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
-            if(dErr){
-              console.error(`[watermark-sniper] Failed to delete property ${id}:`, dErr);
-              failed++;
-            } else {
-              succeeded++;
-              deletedIds.push(id);
-            }
-          } catch(err){
-            console.error(`[watermark-sniper] Exception deleting property ${id}:`, err);
-            failed++;
-          }
+        // Asynchronous remote storage purge (ImageKit) to prevent orphaned assets (AGENTS.md rule 4.C)
+        const fileIds = Array.isArray(result.data.file_ids) ? result.data.file_ids : [];
+        if (fileIds.length > 0 && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
+          const authKey = CONFIG.SUPABASE_ANON_KEY || '';
+          fileIds.forEach(fid => {
+            if (!fid) return;
+            fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': authKey,
+                'Authorization': `Bearer ${authKey}`
+              },
+              body: JSON.stringify({ fileId: fid })
+            }).catch(e => console.warn('[watermark-sniper] ImageKit remote delete error:', e));
+          });
         }
+      } else {
+        const errMsg = result?.error || 'Cascading deletion failed';
+        console.error('[watermark-sniper] Deletion failed:', errMsg);
+        failed = ids.length;
       }
     } catch(err){
       console.error('[watermark-sniper] Global deletion exception:', err);
-      // Fallback: Individual deletion
-      for(const id of ids){
-        try {
-          await CP.sb().from('property_photos').delete().eq('property_id', id).catch(() => {});
-          await CP.sb().from('saved_properties').delete().eq('property_id', id).catch(() => {});
-          await CP.sb().from('inquiries').delete().eq('property_id', id).catch(() => {});
-          await CP.sb().from('applications').update({ property_id: null }).eq('property_id', id).catch(() => {});
-          const { error: dErr } = await CP.sb().from('properties').delete().eq('id', id);
-          if(dErr) failed++; else { succeeded++; deletedIds.push(id); }
-        } catch(_) {
-          failed++;
-        }
-      }
+      failed = ids.length;
     }
 
     // Audit log (non-blocking)

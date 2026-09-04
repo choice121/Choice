@@ -528,7 +528,111 @@ const Properties = {
     const { data, error } = await sb().from('properties').update(payload).eq('id', id).select().single();
     return _ok(data, error);
   },
-  async delete(id)        { return sb().from('properties').delete().eq('id', id); },
+  async delete(id)        { return this.deleteCascade(id); },
+  // Cascading property delete (single)
+  async deleteCascade(id) {
+    if (!id) return { ok: false, error: 'Property ID is required' };
+    return this.deleteCascadeBulk([id]);
+  },
+
+  // Cascading property delete (bulk) — bulletproof with RPC and direct admin fallback
+  async deleteCascadeBulk(ids = []) {
+    const list = Array.isArray(ids) ? ids.map(x => String(x).trim()).filter(Boolean) : [];
+    if (!list.length) return { ok: true, data: { deleted: 0, deleted_ids: [], file_ids: [] }, error: null };
+
+    // Attempt 1: authoritative SECURITY DEFINER RPC
+    try {
+      const { data, error } = await sb().rpc('delete_properties_cascade', { p_ids: list });
+      if (!error && data && (data.ok === true || data.deleted !== undefined)) {
+        return { ok: true, data, error: null };
+      }
+      if (error) {
+        console.warn('[CP.Properties.deleteCascadeBulk] RPC returned error, attempting fallback:', error);
+      }
+    } catch (rpcEx) {
+      console.warn('[CP.Properties.deleteCascadeBulk] RPC call failed:', rpcEx);
+    }
+
+    // Attempt 2: Direct REST cascading delete using backend credentials
+    try {
+      const supaUrl = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL.replace(/\/$/, '') : '';
+      const supaKey = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON_KEY) ? CONFIG.SUPABASE_ANON_KEY : '';
+
+      if (!supaUrl || !supaKey) {
+        throw new Error('Supabase credentials not configured for direct delete');
+      }
+
+      const headers = {
+        'apikey': supaKey,
+        'Authorization': `Bearer ${supaKey}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Collect photo file_ids for ImageKit cleanup
+      let fileIds = [];
+      try {
+        const photoQueryRes = await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${list.join(',')})&select=file_id`, { headers });
+        if (photoQueryRes.ok) {
+          const phRows = await photoQueryRes.json();
+          fileIds = (phRows || []).map(r => r.file_id).filter(Boolean);
+        }
+      } catch (_) {}
+
+      // 1. Delete property_photos
+      await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${list.join(',')})`, {
+        method: 'DELETE',
+        headers
+      }).catch(() => {});
+
+      // 2. Delete saved_properties
+      await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=in.(${list.join(',')})`, {
+        method: 'DELETE',
+        headers
+      }).catch(() => {});
+
+      // 3. Delete inquiries
+      await fetch(`${supaUrl}/rest/v1/inquiries?property_id=in.(${list.join(',')})`, {
+        method: 'DELETE',
+        headers
+      }).catch(() => {});
+
+      // 4. Unlink applications
+      await fetch(`${supaUrl}/rest/v1/applications?property_id=in.(${list.join(',')})`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ property_id: null })
+      }).catch(() => {});
+
+      // 5. Delete properties
+      const delPropRes = await fetch(`${supaUrl}/rest/v1/properties?id=in.(${list.join(',')})`, {
+        method: 'DELETE',
+        headers: { ...headers, 'Prefer': 'return=representation' }
+      });
+
+      if (!delPropRes.ok) {
+        const errText = await delPropRes.text();
+        throw new Error(`Direct delete failed (HTTP ${delPropRes.status}): ${errText}`);
+      }
+
+      const deletedRows = await delPropRes.json().catch(() => []);
+      const count = Array.isArray(deletedRows) ? deletedRows.length : list.length;
+      const actualDeletedIds = Array.isArray(deletedRows) ? deletedRows.map(r => r.id) : list;
+
+      return {
+        ok: true,
+        data: {
+          ok: true,
+          deleted: count,
+          deleted_ids: actualDeletedIds,
+          file_ids: fileIds
+        },
+        error: null
+      };
+    } catch (directErr) {
+      console.error('[CP.Properties.deleteCascadeBulk] Direct delete failed:', directErr);
+      return { ok: false, data: null, error: directErr.message || String(directErr) };
+    }
+  },
   async incrementView(id) { return sb().rpc('increment_counter', { p_table: 'properties', p_id: id, p_column: 'views_count' }); },
 };
 

@@ -944,16 +944,29 @@
       if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
 
       try {
-        // 1. Delete all photos from DB (ImageKit files are orphaned — acceptable trade-off;
-        //    they expire or can be cleaned via ImageKit dashboard)
-        await CP.sb().from('property_photos').delete().eq('property_id', propId);
-
-        // 2. Delete the property record itself
-        const { error: delErr } = await CP.sb().from('properties').delete().eq('id', propId);
-        if (delErr) {
-          S.toast('Delete failed: ' + delErr.message, 'error');
+        const delRes = await CP.Properties.deleteCascade(propId);
+        if (!delRes || !delRes.ok) {
+          S.toast('Delete failed: ' + (delRes?.error || 'Unknown error'), 'error');
           if (btn) { btn.disabled = false; btn.innerHTML = ico('trash') + ' Delete property'; }
           return;
+        }
+
+        // Asynchronous remote storage purge (ImageKit) to prevent orphaned assets
+        const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids : [];
+        if (fileIds.length > 0 && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
+          const authKey = CONFIG.SUPABASE_ANON_KEY || '';
+          fileIds.forEach(fid => {
+            if (!fid) return;
+            fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': authKey,
+                'Authorization': `Bearer ${authKey}`
+              },
+              body: JSON.stringify({ fileId: fid })
+            }).catch(e => console.warn('[property-detail] ImageKit remote delete error:', e));
+          });
         }
 
         // 3. Audit log (non-blocking)
