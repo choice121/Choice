@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1788515434100"></script>
+  <script src="/js/cp-error-reporter.js?v=1788529995133"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
@@ -15,14 +15,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1788515434100">
-<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1788520000000">
+<link rel="stylesheet" href="/css/cp-design.css?v=1788529995133">
+<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1788532000000">
 <script defer src="/config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
 <script defer src="/js/cp-api.js" type="module"></script>
-<script defer src="/js/cp-shell.js?v=1788515434100"></script>
+<script defer src="/js/cp-shell.js?v=1788529995133"></script>
 </head>
 <body class="sniper-standalone-body" data-page-title="Watermark Sniper">
+
+  <!-- SVG Icon Sprite for Theme & Controls -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  </svg>
 
   <!-- Full-Screen Dedicated Moderation Workspace Layout -->
   <div class="sniper-workspace-root">
@@ -47,19 +54,32 @@
           <span class="sniper-stat-dot"></span>
           <span>Inventory: <strong id="stat-total-catalog">Loading…</strong> properties</span>
         </div>
-        <div class="sniper-live-stat-pill sniper-staged-pill" id="sniper-staged-stat" title="Properties staged for deletion">
+        <button class="sniper-live-stat-pill sniper-staged-pill sniper-staged-btn" id="sniper-staged-stat" title="Click to view Staged Listings Drawer (Shortcut: S)" type="button">
           <span>Staged: <strong id="stat-staged-count">0</strong></span>
-        </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+        </button>
       </div>
 
       <div class="sniper-topbar-right">
+        <!-- Choice Properties Shared Theme System Toggle -->
+        <div class="theme-toggle sniper-theme-toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme-mode="light" aria-label="Light mode" title="Light"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun"/></svg></button>
+          <button type="button" data-theme-mode="auto"  aria-label="Auto theme" title="Auto"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg></button>
+          <button type="button" data-theme-mode="dark"  aria-label="Dark mode" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        </div>
+
+        <button class="sniper-btn-icon-toggle sniper-btn-queue-toggle" id="sniper-btn-queue-toggle" title="Toggle Staging Drawer (S)" aria-label="Toggle Staging Drawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+          <span class="sniper-topbar-queue-badge" id="sniper-topbar-queue-badge" style="display:none">0</span>
+        </button>
+
         <button class="sniper-btn-primary-action" id="sniper-btn-scan" title="Scan entire database for watermarks and < 6 photo violations">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-16"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 12l7-7"/></svg>
           <span>Scan System</span>
           <span class="sniper-scan-badge" id="sniper-scan-badge" style="display:none">0</span>
         </button>
 
-        <button class="sniper-btn-icon-toggle" id="sniper-btn-shortcuts" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts">
+        <button class="sniper-btn-icon-toggle" id="sniper-btn-shortcuts" title="Keyboard Shortcuts (?)" aria-label="Keyboard Shortcuts">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
         </button>
 
@@ -138,6 +158,28 @@
             <button class="sniper-btn-reset-filters" id="sniper-btn-reset-filters" title="Reset all filters to defaults" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
               <span>Reset</span>
+            </button>
+
+            <!-- Photo Grid Density Switcher -->
+            <div class="sniper-density-toggle" role="group" aria-label="Photo Grid Sizing">
+              <button type="button" class="sniper-density-btn active" data-density="large" id="sniper-density-large" title="Large Inspection View (Keys: 3)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                <span>Large</span>
+              </button>
+              <button type="button" class="sniper-density-btn" data-density="medium" id="sniper-density-medium" title="Medium Standard View (Keys: 2)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Med</span>
+              </button>
+              <button type="button" class="sniper-density-btn" data-density="compact" id="sniper-density-compact" title="Compact Speed View (Keys: 1)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                <span>Compact</span>
+              </button>
+            </div>
+
+            <!-- Focus / Zen Mode Button -->
+            <button class="sniper-btn-focus" id="sniper-btn-focus" title="Toggle Focus Mode to maximize photo area (Key: Z)" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <span>Focus</span>
             </button>
 
           </div>
@@ -251,8 +293,8 @@
             <span>Staging Queue</span>
             <span class="sniper-queue-badge" id="sniper-queue-badge">0</span>
           </div>
-          <button class="sniper-toggle-btn" id="sniper-toggle-drawer" aria-label="Toggle staging queue drawer" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18" id="sniper-toggle-icon"><polyline points="18 15 12 9 6 15"/></svg>
+          <button class="sniper-sidebar-close-btn" id="sniper-sidebar-close-btn" aria-label="Close staging drawer (S or Esc)" title="Close Staging Drawer (S)" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
@@ -317,6 +359,18 @@
         <div class="sniper-modal-body">
           <div class="sniper-shortcut-list">
             <div class="sniper-shortcut-row">
+              <span class="sniper-key">S</span>
+              <span class="sniper-shortcut-desc">Toggle Staging Queue Drawer</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">1</span> / <span class="sniper-key">2</span> / <span class="sniper-key">3</span>
+              <span class="sniper-shortcut-desc">Switch Grid Size: Compact / Med / Large</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Z</span>
+              <span class="sniper-shortcut-desc">Toggle Focus Mode (hide filters)</span>
+            </div>
+            <div class="sniper-shortcut-row">
               <span class="sniper-key">Left Arrow</span> or <span class="sniper-key">Page Up</span>
               <span class="sniper-shortcut-desc">Previous page</span>
             </div>
@@ -330,7 +384,7 @@
             </div>
             <div class="sniper-shortcut-row">
               <span class="sniper-key">Escape</span>
-              <span class="sniper-shortcut-desc">Close dialog / modal</span>
+              <span class="sniper-shortcut-desc">Close dialog / modal / drawer</span>
             </div>
             <div class="sniper-shortcut-row">
               <span class="sniper-key">Delete</span> / <span class="sniper-key">Backspace</span>
@@ -343,6 +397,6 @@
 
   </div>
 
-  <script defer src="/js/admin/watermark-sniper.js?v=1788520000000"></script>
+  <script defer src="/js/admin/watermark-sniper.js?v=1788532000000"></script>
 </body>
 </html>

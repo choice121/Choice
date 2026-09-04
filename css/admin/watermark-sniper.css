@@ -4,24 +4,66 @@
    ========================================================================== */
 
 :root {
-  --sniper-bg: #0b0f19;
-  --sniper-surface: #111827;
-  --sniper-surface-2: #1a2235;
-  --sniper-surface-3: #222e47;
-  --sniper-border: rgba(255, 255, 255, 0.08);
-  --sniper-border-bright: rgba(255, 255, 255, 0.16);
-  --sniper-text: #f8fafc;
-  --sniper-text-muted: #94a3b8;
-  --sniper-primary: #006aff;
-  --sniper-primary-hover: #0056d6;
-  --sniper-danger: #ef4444;
-  --sniper-danger-hover: #dc2626;
+  /* Choice Properties Theme Architecture Integration */
+  --sniper-bg: var(--bg, #0a0f1e);
+  --sniper-surface: var(--surface, #111827);
+  --sniper-surface-2: var(--surface-2, #1e293b);
+  --sniper-surface-3: var(--surface-3, #26334d);
+  --sniper-border: var(--border, rgba(255, 255, 255, 0.08));
+  --sniper-border-bright: var(--border-strong, rgba(255, 255, 255, 0.16));
+  --sniper-text: var(--text, #f8fafc);
+  --sniper-text-muted: var(--muted, #94a3b8);
+  --sniper-primary: var(--primary, #006aff);
+  --sniper-primary-hover: var(--primary-hover, #0056d6);
+  --sniper-danger: var(--danger, #ef4444);
+  --sniper-danger-hover: var(--danger-hover, #dc2626);
   --sniper-danger-bg: rgba(239, 68, 68, 0.14);
-  --sniper-warning: #f59e0b;
+  --sniper-warning: var(--warning, #f59e0b);
   --sniper-warning-bg: rgba(245, 158, 11, 0.14);
-  --sniper-success: #10b981;
+  --sniper-success: var(--success, #10b981);
   --sniper-radius: 8px;
   --sniper-radius-lg: 12px;
+
+  /* Workspace Themed Elements */
+  --sniper-card-bg: var(--surface, #111827);
+  --sniper-card-overlay-bg: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(10, 15, 30, 0.94) 100%);
+  --sniper-card-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  --sniper-stat-bg: var(--surface-2, #1e293b);
+  --sniper-input-bg: var(--surface-2, #1e293b);
+  --sniper-input-border: var(--border, rgba(255, 255, 255, 0.08));
+  --sniper-modal-bg: var(--surface, #111827);
+  --sniper-modal-backdrop: rgba(0, 0, 0, 0.75);
+  --sniper-scroll-thumb: rgba(255, 255, 255, 0.16);
+  --sniper-zero-bg: #151c2e;
+  --sniper-zero-radial: radial-gradient(circle at center, rgba(239, 68, 68, 0.08) 0%, rgba(17, 24, 39, 0.95) 80%);
+  --sniper-zero-title: #fca5a5;
+  --sniper-error-bg: #161b2a;
+}
+
+[data-theme="light"] {
+  --sniper-bg: #f8fafc;
+  --sniper-surface: #ffffff;
+  --sniper-surface-2: #f1f5f9;
+  --sniper-surface-3: #e2e8f0;
+  --sniper-border: rgba(15, 23, 42, 0.08);
+  --sniper-border-bright: rgba(15, 23, 42, 0.18);
+  --sniper-text: #0f172a;
+  --sniper-text-muted: #64748b;
+  --sniper-card-bg: #ffffff;
+  --sniper-card-overlay-bg: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(15, 23, 42, 0.90) 100%);
+  --sniper-card-hover-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --sniper-stat-bg: #f1f5f9;
+  --sniper-input-bg: #ffffff;
+  --sniper-input-border: rgba(15, 23, 42, 0.14);
+  --sniper-modal-bg: #ffffff;
+  --sniper-modal-backdrop: rgba(15, 23, 42, 0.60);
+  --sniper-danger-bg: rgba(239, 68, 68, 0.08);
+  --sniper-warning-bg: rgba(245, 158, 11, 0.10);
+  --sniper-scroll-thumb: rgba(15, 23, 42, 0.16);
+  --sniper-zero-bg: #fffbfb;
+  --sniper-zero-radial: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, #ffffff 80%);
+  --sniper-zero-title: #dc2626;
+  --sniper-error-bg: #f8fafc;
 }
 
 html, body.sniper-standalone-body {
@@ -77,14 +119,14 @@ html, body.sniper-standalone-body {
   font-weight: 600;
   padding: 6px 10px;
   border-radius: var(--sniper-radius);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--sniper-surface-2);
   border: 1px solid var(--sniper-border);
   transition: all 0.15s ease;
 }
 
 .sniper-back-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--sniper-text);
+  background: var(--sniper-surface-3);
   border-color: var(--sniper-border-bright);
 }
 
@@ -104,7 +146,7 @@ html, body.sniper-standalone-body {
   font-weight: 800;
   letter-spacing: -0.02em;
   font-size: 1.05rem;
-  color: #fff;
+  color: var(--sniper-text);
 }
 
 .sniper-brand-sub {
@@ -119,9 +161,9 @@ html, body.sniper-standalone-body {
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.04em;
-  background: rgba(0, 106, 255, 0.16);
-  color: #60a5fa;
-  border: 1px solid rgba(0, 106, 255, 0.3);
+  background: rgba(0, 106, 255, 0.12);
+  color: var(--sniper-primary);
+  border: 1px solid rgba(0, 106, 255, 0.28);
   padding: 2px 7px;
   border-radius: 999px;
   margin-left: 4px;
@@ -137,7 +179,7 @@ html, body.sniper-standalone-body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--sniper-surface-2);
+  background: var(--sniper-stat-bg);
   border: 1px solid var(--sniper-border);
   padding: 5px 12px;
   border-radius: 999px;
@@ -146,7 +188,7 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-live-stat-pill strong {
-  color: #fff;
+  color: var(--sniper-text);
   font-weight: 700;
 }
 
@@ -159,18 +201,61 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-staged-pill {
-  background: rgba(239, 68, 68, 0.08);
+  background: var(--sniper-danger-bg);
   border-color: rgba(239, 68, 68, 0.25);
 }
 
 .sniper-staged-pill strong {
-  color: #f87171;
+  color: var(--sniper-danger);
 }
 
 .sniper-topbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ─── Integrated Theme Segmented Toggle ──────────────────────────────────── */
+.sniper-topbar .theme-toggle {
+  position: static;
+  margin: 0;
+  box-shadow: none;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.sniper-topbar .theme-toggle button {
+  background: transparent;
+  border: 0;
+  color: var(--sniper-text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.sniper-topbar .theme-toggle button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sniper-topbar .theme-toggle button:hover {
+  color: var(--sniper-text);
+}
+
+.sniper-topbar .theme-toggle button[data-active="1"] {
+  background: var(--sniper-surface);
+  color: var(--sniper-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .sniper-btn-primary-action {
@@ -186,7 +271,7 @@ html, body.sniper-standalone-body {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .sniper-btn-primary-action:hover {
@@ -215,12 +300,53 @@ html, body.sniper-standalone-body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
 }
 
 .sniper-btn-icon-toggle:hover {
-  color: #fff;
+  color: var(--sniper-text);
   border-color: var(--sniper-border-bright);
   background: var(--sniper-surface-3);
+}
+
+.sniper-staged-btn {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.sniper-staged-btn:hover {
+  background: var(--sniper-danger-bg);
+  border-color: var(--sniper-danger);
+  transform: translateY(-1px);
+}
+
+.sniper-btn-queue-toggle.active {
+  background: var(--sniper-danger-bg);
+  border-color: var(--sniper-danger);
+  color: var(--sniper-danger);
+}
+
+.sniper-topbar-queue-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--sniper-danger);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--sniper-surface);
+  line-height: 1;
 }
 
 /* ─── Main Workspace Layout ──────────────────────────────────────────────── */
@@ -296,7 +422,8 @@ html, body.sniper-standalone-body {
 
 .sniper-search-box input:focus {
   border-color: var(--sniper-primary);
-  background: #1e2840;
+  background: var(--sniper-surface);
+  box-shadow: 0 0 0 2px rgba(0, 106, 255, 0.15);
 }
 
 .sniper-search-clear-btn {
@@ -313,7 +440,7 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-search-clear-btn:hover {
-  color: #fff;
+  color: var(--sniper-text);
 }
 
 /* Select dropdowns */
@@ -323,8 +450,8 @@ html, body.sniper-standalone-body {
 
 .sniper-select-wrap select {
   height: 34px;
-  background: var(--sniper-surface-2);
-  border: 1px solid var(--sniper-border);
+  background: var(--sniper-input-bg);
+  border: 1px solid var(--sniper-input-border);
   border-radius: var(--sniper-radius);
   color: var(--sniper-text);
   font-size: 0.8125rem;
@@ -350,7 +477,7 @@ html, body.sniper-standalone-body {
   gap: 5px;
   height: 34px;
   padding: 0 10px;
-  background: transparent;
+  background: var(--sniper-surface-2);
   border: 1px solid var(--sniper-border);
   border-radius: var(--sniper-radius);
   color: var(--sniper-text-muted);
@@ -361,9 +488,92 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-btn-reset-filters:hover {
-  color: #fff;
+  color: var(--sniper-text);
   border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+/* Photo Grid Sizing / Density Switcher */
+.sniper-density-toggle {
+  display: inline-flex;
+  align-items: center;
   background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.sniper-density-btn {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: transparent;
+  border: none;
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sniper-density-btn:hover {
+  color: var(--sniper-text);
+}
+
+.sniper-density-btn.active {
+  background: var(--sniper-surface);
+  color: var(--sniper-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  font-weight: 700;
+}
+
+/* Focus / Zen Mode Button */
+.sniper-btn-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-focus:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-btn-focus.active {
+  background: var(--sniper-primary);
+  border-color: var(--sniper-primary);
+  color: #fff;
+}
+
+/* Focus Mode State */
+.sniper-gallery-column.focus-mode .sniper-filters-row > :not(.sniper-btn-focus):not(.sniper-density-toggle) {
+  display: none !important;
+}
+
+.sniper-gallery-column.focus-mode .sniper-toolbar-panel {
+  padding: 6px 16px;
+  background: var(--sniper-surface-2);
+}
+
+.sniper-gallery-column.focus-mode .sniper-scan-banner,
+.sniper-gallery-column.focus-mode .sniper-priority-banner {
+  display: none !important;
 }
 
 /* ─── Notification Banners ───────────────────────────────────────────────── */
@@ -380,13 +590,15 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-scan-banner {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--sniper-danger-bg);
   border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--sniper-text);
 }
 
 .sniper-priority-banner {
-  background: linear-gradient(90deg, rgba(0, 106, 255, 0.14) 0%, rgba(239, 68, 68, 0.12) 100%);
-  border: 1px solid rgba(0, 106, 255, 0.35);
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-primary);
+  color: var(--sniper-text);
 }
 
 .sniper-banner-info, .sniper-priority-info {
@@ -421,10 +633,15 @@ html, body.sniper-standalone-body {
   padding: 0 10px;
   border-radius: 6px;
   font-size: 0.75rem;
-  background: transparent;
+  background: var(--sniper-surface);
   color: var(--sniper-text-muted);
   border: 1px solid var(--sniper-border);
   cursor: pointer;
+}
+
+.sniper-btn-banner-dismiss:hover, .sniper-btn-reset-prio:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
 }
 
 .sniper-btn-stage-matches {
@@ -433,7 +650,7 @@ html, body.sniper-standalone-body {
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  background: #2563eb;
+  background: var(--sniper-primary);
   color: #fff;
   border: none;
   cursor: pointer;
@@ -458,7 +675,7 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-page-info strong {
-  color: #fff;
+  color: var(--sniper-text);
 }
 
 .sniper-bullet-sep {
@@ -467,8 +684,8 @@ html, body.sniper-standalone-body {
 
 .sniper-hint-txt {
   font-size: 0.75rem;
-  color: #60a5fa;
-  font-weight: 500;
+  color: var(--sniper-primary);
+  font-weight: 600;
 }
 
 .sniper-page-controls {
@@ -600,9 +817,26 @@ html, body.sniper-standalone-body {
 
 .sniper-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
   align-content: start;
+  transition: all 0.2s ease;
+}
+
+/* Grid Density Modifiers */
+.sniper-grid.density-large {
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 18px;
+}
+
+.sniper-grid.density-medium {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.sniper-grid.density-compact {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
 }
 
 /* Property Card */
@@ -617,23 +851,22 @@ html, body.sniper-standalone-body {
   user-select: none;
   display: flex;
   flex-direction: column;
-  aspect-ratio: 4 / 3.2;
 }
 
 .sniper-card:hover {
   transform: translateY(-2px);
   border-color: var(--sniper-border-bright);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 /* Staged highlight state */
 .sniper-card.staged {
   border: 2px solid var(--sniper-danger);
-  box-shadow: 0 0 0 1px var(--sniper-danger), 0 8px 24px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 0 1px var(--sniper-danger), 0 8px 24px rgba(239, 68, 68, 0.3);
 }
 
-.sniper-card.staged .sniper-card-overlay {
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.45) 0%, rgba(17, 24, 39, 0.95) 85%);
+.sniper-card.staged .sniper-card-footer {
+  background: var(--sniper-danger-bg);
 }
 
 .sniper-card.staged .sniper-stage-checkbox {
@@ -642,7 +875,20 @@ html, body.sniper-standalone-body {
   color: #fff;
 }
 
-/* Photo Thumbnail */
+/* ─── Unobstructed Photo Canvas (Media Wrap) ────────────────────────────── */
+.sniper-card-media-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10.5;
+  background: #060911;
+  overflow: hidden;
+  display: block;
+}
+
+.sniper-grid.density-compact .sniper-card-media-wrap {
+  aspect-ratio: 4 / 3;
+}
+
 .sniper-card-media {
   position: absolute;
   inset: 0;
@@ -660,7 +906,7 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-card:hover .sniper-card-img {
-  transform: scale(1.03);
+  transform: scale(1.025);
 }
 
 /* Card Badges (Top Row) */
@@ -688,6 +934,7 @@ html, body.sniper-standalone-body {
   justify-content: center;
   color: transparent;
   transition: all 0.15s ease;
+  pointer-events: auto;
 }
 
 .sniper-card-top-right-badges {
@@ -703,7 +950,7 @@ html, body.sniper-standalone-body {
   backdrop-filter: blur(6px);
   color: #f1f5f9;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 3px 7px;
+  padding: 3px 8px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -711,7 +958,7 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-badge-photo-count.alert {
-  background: rgba(245, 158, 11, 0.9);
+  background: rgba(245, 158, 11, 0.92);
   color: #111827;
   font-weight: 800;
 }
@@ -721,71 +968,120 @@ html, body.sniper-standalone-body {
   font-weight: 800;
   background: var(--sniper-danger);
   color: #fff;
-  padding: 3px 7px;
+  padding: 3px 8px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
-/* Card Overlay (Bottom Row) */
-.sniper-card-overlay {
-  position: absolute;
-  inset: 0;
+/* ─── Card Footer (Clean Metadata below Photo) ──────────────────────────── */
+.sniper-card-footer {
+  padding: 10px 12px;
+  background: var(--sniper-surface);
+  border-top: 1px solid var(--sniper-border);
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 12px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(10, 15, 30, 0.92) 100%);
-  z-index: 5;
-  pointer-events: none;
+  gap: 3px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.sniper-grid.density-compact .sniper-card-footer {
+  padding: 7px 9px;
+  gap: 2px;
+}
+
+.sniper-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .sniper-card-address {
   font-weight: 700;
-  font-size: 0.875rem;
-  color: #fff;
+  font-size: 0.84rem;
+  color: var(--sniper-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  flex: 1;
+}
+
+.sniper-grid.density-compact .sniper-card-address {
+  font-size: 0.78rem;
+}
+
+.sniper-card-ext-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--sniper-text-muted);
+  background: transparent;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.sniper-card-ext-btn:hover {
+  color: var(--sniper-primary);
+  background: var(--sniper-surface-2);
 }
 
 .sniper-card-city {
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: var(--sniper-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 1px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-.sniper-card-submeta {
+.sniper-card-bottom-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 0.6875rem;
-  color: #94a3b8;
+  gap: 6px;
+  margin-top: 3px;
 }
 
 .sniper-card-price {
   font-weight: 700;
-  color: #60a5fa;
+  font-size: 0.8125rem;
+  color: var(--sniper-primary);
+}
+
+.sniper-card-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-card-beds {
+  font-size: 0.6875rem;
+  color: var(--sniper-text-muted);
+  background: var(--sniper-surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .sniper-card-type {
+  font-size: 0.625rem;
   text-transform: capitalize;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text-muted);
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 0.625rem;
+  white-space: nowrap;
 }
 
 /* ─── Zero Photos Card ───────────────────────────────────────────────────── */
 .sniper-card.zero-photos {
-  background: #151c2e;
+  background: var(--sniper-zero-bg);
   border: 1px dashed rgba(239, 68, 68, 0.4);
 }
 
@@ -802,13 +1098,13 @@ html, body.sniper-standalone-body {
   justify-content: center;
   padding: 16px;
   text-align: center;
-  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.08) 0%, rgba(17, 24, 39, 0.95) 80%);
+  background: var(--sniper-zero-radial);
 }
 
 .sniper-zero-icon {
   width: 38px;
   height: 38px;
-  color: #f87171;
+  color: var(--sniper-danger);
   opacity: 0.85;
   margin-bottom: 8px;
 }
@@ -816,30 +1112,30 @@ html, body.sniper-standalone-body {
 .sniper-zero-title {
   font-size: 0.875rem;
   font-weight: 800;
-  color: #fca5a5;
+  color: var(--sniper-zero-title);
   margin-bottom: 2px;
 }
 
 .sniper-zero-sub {
   font-size: 0.75rem;
   color: var(--sniper-text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .sniper-zero-badge {
   font-size: 0.6875rem;
   font-weight: 700;
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: var(--sniper-danger-bg);
+  color: var(--sniper-danger);
   border: 1px solid rgba(239, 68, 68, 0.35);
   padding: 2px 8px;
   border-radius: 999px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 /* ─── Image Error Fallback Card ─────────────────────────────────────────── */
 .sniper-card.img-error {
-  background: #161b2a;
+  background: var(--sniper-error-bg);
 }
 
 .sniper-error-fallback {
@@ -851,7 +1147,7 @@ html, body.sniper-standalone-body {
   justify-content: center;
   padding: 16px;
   text-align: center;
-  background: #111827;
+  background: var(--sniper-surface-2);
 }
 
 .sniper-error-icon {
@@ -865,13 +1161,13 @@ html, body.sniper-standalone-body {
 .sniper-error-txt {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--sniper-text);
 }
 
-/* ─── Staging Queue Sidebar ──────────────────────────────────────────────── */
+/* ─── Staging Queue Sidebar / Slide-out Drawer ───────────────────────────── */
 .sniper-sidebar {
-  width: 360px;
-  min-width: 360px;
+  width: 380px;
+  min-width: 380px;
   background: var(--sniper-surface);
   border-left: 1px solid var(--sniper-border);
   display: flex;
@@ -879,7 +1175,22 @@ html, body.sniper-standalone-body {
   height: 100%;
   flex-shrink: 0;
   z-index: 40;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease,
+              margin-right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sniper-sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left-width: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(100%) !important;
+  margin-right: -380px !important;
 }
 
 .sniper-sidebar-header {
@@ -893,13 +1204,33 @@ html, body.sniper-standalone-body {
   background: var(--sniper-surface-2);
 }
 
+.sniper-sidebar-close-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-sidebar-close-btn:hover {
+  background: var(--sniper-surface-3);
+  color: var(--sniper-text);
+  border-color: var(--sniper-border);
+}
+
 .sniper-queue-title {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 700;
   font-size: 0.9375rem;
-  color: #fff;
+  color: var(--sniper-text);
 }
 
 .sniper-queue-badge {
@@ -949,7 +1280,7 @@ html, body.sniper-standalone-body {
 .sniper-empty-title {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--sniper-text);
   margin-bottom: 4px;
 }
 
@@ -972,7 +1303,7 @@ html, body.sniper-standalone-body {
 
 .sniper-queue-item:hover {
   border-color: rgba(239, 68, 68, 0.4);
-  background: #1f2a42;
+  background: var(--sniper-surface-3);
 }
 
 .sniper-queue-thumb-wrap {
@@ -1001,7 +1332,7 @@ html, body.sniper-standalone-body {
 .sniper-queue-addr {
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--sniper-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1025,13 +1356,13 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-queue-reason.watermark {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: var(--sniper-danger-bg);
+  color: var(--sniper-danger);
 }
 
 .sniper-queue-reason.zero {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+  background: var(--sniper-warning-bg);
+  color: var(--sniper-warning);
 }
 
 .sniper-queue-remove-btn {
@@ -1050,7 +1381,7 @@ html, body.sniper-standalone-body {
 
 .sniper-queue-remove-btn:hover {
   color: var(--sniper-danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--sniper-danger-bg);
 }
 
 /* Sidebar Footer */
@@ -1106,8 +1437,9 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-clear-btn:hover:not(:disabled) {
-  color: #fff;
+  color: var(--sniper-text);
   border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
 }
 
 .sniper-clear-btn:disabled {
@@ -1119,7 +1451,7 @@ html, body.sniper-standalone-body {
 .sniper-loading {
   position: absolute;
   inset: 0;
-  background: rgba(11, 15, 25, 0.82);
+  background: var(--sniper-modal-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   flex-direction: column;
@@ -1133,7 +1465,7 @@ html, body.sniper-standalone-body {
 .sniper-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  border: 3px solid rgba(255, 255, 255, 0.15);
   border-top-color: var(--sniper-primary);
   border-radius: 50%;
   animation: sniperSpin 0.7s linear infinite;
@@ -1142,14 +1474,14 @@ html, body.sniper-standalone-body {
 .sniper-loading-txt {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--sniper-text);
 }
 
 /* ─── Modal Dialogs ──────────────────────────────────────────────────────── */
 .sniper-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--sniper-modal-backdrop);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -1160,12 +1492,12 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-modal-box {
-  background: var(--sniper-surface);
+  background: var(--sniper-modal-bg);
   border: 1px solid var(--sniper-border-bright);
   border-radius: var(--sniper-radius-lg);
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--sniper-card-hover-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1177,12 +1509,13 @@ html, body.sniper-standalone-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--sniper-surface);
 }
 
 .sniper-modal-danger-badge {
   font-size: 0.8125rem;
   font-weight: 800;
-  color: #f87171;
+  color: var(--sniper-danger);
 }
 
 .sniper-modal-close-btn {
@@ -1194,17 +1527,18 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-modal-close-btn:hover {
-  color: #fff;
+  color: var(--sniper-text);
 }
 
 .sniper-modal-body {
   padding: 20px;
+  background: var(--sniper-modal-bg);
 }
 
 .sniper-modal-title {
   font-size: 1.125rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--sniper-text);
   margin: 0 0 8px;
 }
 
@@ -1226,6 +1560,7 @@ html, body.sniper-standalone-body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  color: var(--sniper-text);
 }
 
 .sniper-modal-footer {
@@ -1249,8 +1584,9 @@ html, body.sniper-standalone-body {
 }
 
 .sniper-btn-modal-cancel:hover {
-  color: #fff;
+  color: var(--sniper-text);
   border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
 }
 
 .sniper-btn-modal-confirm {
@@ -1284,7 +1620,7 @@ html, body.sniper-standalone-body {
   align-items: center;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--sniper-border);
   font-size: 0.8125rem;
 }
 
@@ -1295,11 +1631,40 @@ html, body.sniper-standalone-body {
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 0.75rem;
-  color: #60a5fa;
+  color: var(--sniper-primary);
+  font-weight: 700;
 }
 
 .sniper-shortcut-desc {
   color: var(--sniper-text-muted);
+}
+
+/* ─── Scrollbars ─────────────────────────────────────────────────────────── */
+.sniper-grid-viewport::-webkit-scrollbar,
+.sniper-queue-list::-webkit-scrollbar,
+.sniper-modal-prop-preview::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-track,
+.sniper-queue-list::-webkit-scrollbar-track,
+.sniper-modal-prop-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-thumb,
+.sniper-queue-list::-webkit-scrollbar-thumb,
+.sniper-modal-prop-preview::-webkit-scrollbar-thumb {
+  background: var(--sniper-scroll-thumb);
+  border-radius: 999px;
+}
+
+.sniper-grid-viewport,
+.sniper-queue-list,
+.sniper-modal-prop-preview {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sniper-scroll-thumb) transparent;
 }
 
 /* ─── Vector Icons & Utilities ───────────────────────────────────────────── */

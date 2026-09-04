@@ -302,39 +302,30 @@
       card.dataset.propId = p.id;
       card.tabIndex = 0;
 
-      // Case 1: ZERO PHOTOS CARD
+      let mediaHtml = '';
       if(isZeroPhotos){
-        card.innerHTML = `
-          <div class="sniper-card-top-badges">
-            <div class="sniper-stage-checkbox" aria-label="Toggle staging">
-              <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        mediaHtml = `
+          <div class="sniper-card-media-wrap">
+            <div class="sniper-zero-photos-body">
+              <svg class="sniper-zero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+              <div class="sniper-zero-title">No Photos Available</div>
+              <div class="sniper-zero-sub">Listing has 0 photos uploaded</div>
+              <div class="sniper-zero-badge">Missing Media Violation</div>
             </div>
-            <div class="sniper-card-top-right-badges">
-              <span class="sniper-badge-photo-count alert">❌ 0 photos</span>
-            </div>
-          </div>
-
-          <div class="sniper-zero-photos-body">
-            <svg class="sniper-zero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-            <div class="sniper-zero-title">No Photos Available</div>
-            <div class="sniper-zero-sub">Listing has 0 photos uploaded</div>
-            <div class="sniper-zero-badge">Missing Media Violation</div>
-          </div>
-
-          <div class="sniper-card-overlay">
-            <div class="sniper-card-address" title="${escSafe(p.address)}">${escSafe(p.address || 'Unknown Address')}</div>
-            <div class="sniper-card-city">${escSafe(p.city || '')}${p.state ? ', ' + escSafe(p.state) : ''} ${escSafe(p.zip || '')}</div>
-            <div class="sniper-card-submeta">
-              <span class="sniper-card-price">${p.monthly_rent ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Contact for Rent'}</span>
-              <span class="sniper-card-type">${escSafe(p.property_type || 'Listing')}</span>
+            <div class="sniper-card-top-badges">
+              <div class="sniper-stage-checkbox" aria-label="Toggle staging">
+                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="sniper-card-top-right-badges">
+                <span class="sniper-badge-photo-count alert">❌ 0 photos</span>
+              </div>
             </div>
           </div>
         `;
       } else {
-        // Case 2: PROPERTY HAS PHOTOS
         const displayPhotoUrl = getThumbUrl(p.photo_url || p.cover_url || '');
         const hasFlag = !!p.has_flagged_photo;
         const isPolicyAlert = photoCount < 6;
@@ -349,33 +340,59 @@
           badgeHtml += `<span class="sniper-badge-photo-count">📷 ${photoCount} photos</span>`;
         }
 
-        card.innerHTML = `
-          <div class="sniper-card-media">
-            <img class="sniper-card-img" src="${displayPhotoUrl}" alt="${escSafe(p.address)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="sniper-error-fallback" style="display:none">
-              <svg class="sniper-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              <div class="sniper-error-txt">Photo Unavailable</div>
+        mediaHtml = `
+          <div class="sniper-card-media-wrap">
+            <div class="sniper-card-media">
+              <img class="sniper-card-img" src="${displayPhotoUrl}" alt="${escSafe(p.address)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="sniper-error-fallback" style="display:none">
+                <svg class="sniper-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <div class="sniper-error-txt">Photo Unavailable</div>
+              </div>
             </div>
-          </div>
-
-          <div class="sniper-card-top-badges">
-            <div class="sniper-stage-checkbox" aria-label="Toggle staging">
-              <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div class="sniper-card-top-right-badges">
-              ${badgeHtml}
-            </div>
-          </div>
-
-          <div class="sniper-card-overlay">
-            <div class="sniper-card-address" title="${escSafe(p.address)}">${escSafe(p.address || 'Unknown Address')}</div>
-            <div class="sniper-card-city">${escSafe(p.city || '')}${p.state ? ', ' + escSafe(p.state) : ''} ${escSafe(p.zip || '')}</div>
-            <div class="sniper-card-submeta">
-              <span class="sniper-card-price">${p.monthly_rent ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Contact for Rent'}</span>
-              <span class="sniper-card-type">${escSafe(p.property_type || 'Listing')}</span>
+            <div class="sniper-card-top-badges">
+              <div class="sniper-stage-checkbox" aria-label="Toggle staging">
+                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="sniper-card-top-right-badges">
+                ${badgeHtml}
+              </div>
             </div>
           </div>
         `;
+      }
+
+      let bedBathTxt = '';
+      if(p.bedrooms != null && p.bathrooms != null){
+        bedBathTxt = `<span class="sniper-card-beds">${p.bedrooms}b / ${p.bathrooms}ba</span>`;
+      } else if(p.bedrooms != null){
+        bedBathTxt = `<span class="sniper-card-beds">${p.bedrooms} bed</span>`;
+      }
+
+      const footerHtml = `
+        <div class="sniper-card-footer">
+          <div class="sniper-card-title-row">
+            <div class="sniper-card-address" title="${escSafe(p.address)}">${escSafe(p.address || 'Unknown Address')}</div>
+            <a href="/property.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+          <div class="sniper-card-city">${escSafe(p.city || '')}${p.state ? ', ' + escSafe(p.state) : ''} ${escSafe(p.zip || '')}</div>
+          <div class="sniper-card-bottom-row">
+            <span class="sniper-card-price">${p.monthly_rent ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Contact for Rent'}</span>
+            <div class="sniper-card-pills">
+              ${bedBathTxt}
+              <span class="sniper-card-type">${escSafe(p.property_type || 'Listing')}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      card.innerHTML = mediaHtml + footerHtml;
+
+      // Prevent external link click from triggering stage
+      const extLink = card.querySelector('.sniper-card-ext-btn');
+      if(extLink){
+        extLink.addEventListener('click', (e) => e.stopPropagation());
       }
 
       // Card Click Handler
@@ -557,6 +574,20 @@
     if(badgeSidebar) badgeSidebar.textContent = count;
     if(badgeTop) badgeTop.textContent = count;
     if(delCount) delCount.textContent = count > 0 ? `(${count})` : '';
+
+    const badgeQueueToggle = document.getElementById('sniper-topbar-queue-badge');
+    if(badgeQueueToggle){
+      badgeQueueToggle.textContent = count;
+      badgeQueueToggle.style.display = count > 0 ? 'flex' : 'none';
+    }
+    const queueToggleBtn = document.getElementById('sniper-btn-queue-toggle');
+    if(queueToggleBtn){
+      if(count > 0){
+        queueToggleBtn.classList.add('active');
+      } else {
+        queueToggleBtn.classList.remove('active');
+      }
+    }
 
     if(deleteBtn) deleteBtn.disabled = count === 0;
     if(clearBtn) clearBtn.disabled = count === 0;
@@ -818,7 +849,16 @@
     const ids = Array.from(queuedProperties.keys());
     let succeeded = 0;
     let failed = 0;
+    let lastErrorDetails = null;
     const actuallyDeletedIds = [];
+    const processedIds = [];
+
+    // Retrieve session token once for ImageKit cleanup
+    let authHeaderToken = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON_KEY) ? CONFIG.SUPABASE_ANON_KEY : '';
+    try {
+      const sess = await (window.CP && window.CP.Auth ? window.CP.Auth.getSession() : null).catch(() => null);
+      if(sess?.access_token) authHeaderToken = sess.access_token;
+    } catch(_) {}
 
     const chunkSize = 50;
     for(let i = 0; i < ids.length; i += chunkSize){
@@ -828,33 +868,38 @@
       try {
         const result = await CP.Properties.deleteCascadeBulk(chunk);
         if(result && result.ok && result.data){
-          const dIds = Array.isArray(result.data.deleted_ids) ? result.data.deleted_ids : chunk;
+          const dIds = Array.isArray(result.data.deleted_ids) ? result.data.deleted_ids : [];
+          const numDeleted = typeof result.data.deleted === 'number' ? result.data.deleted : dIds.length;
           actuallyDeletedIds.push(...dIds);
-          succeeded += dIds.length;
+          processedIds.push(...chunk);
+          succeeded += numDeleted;
 
           // Asynchronous ImageKit purge per AGENTS.md rule 4.C
           const fileIds = Array.isArray(result.data.file_ids) ? result.data.file_ids : [];
           if(fileIds.length > 0 && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL){
-            const authKey = CONFIG.SUPABASE_ANON_KEY || '';
             fileIds.forEach(fid => {
               if(!fid) return;
               fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'apikey': authKey,
-                  'Authorization': `Bearer ${authKey}`
+                  'apikey': CONFIG.SUPABASE_ANON_KEY || authHeaderToken,
+                  'Authorization': `Bearer ${authHeaderToken}`
                 },
                 body: JSON.stringify({ fileId: fid })
               }).catch(e => console.warn('[watermark-sniper] ImageKit remote delete error:', e));
             });
           }
         } else {
-          console.error('[watermark-sniper] Batch deletion failed:', result?.error);
+          const errMsg = result?.error || 'Unknown deletion failure';
+          lastErrorDetails = errMsg;
+          console.error('[watermark-sniper] Batch deletion failed:', { chunk, error: errMsg, result });
           failed += chunk.length;
         }
       } catch(err){
-        console.error('[watermark-sniper] Global deletion error:', err);
+        const errMsg = err?.message || String(err);
+        lastErrorDetails = errMsg;
+        console.error('[watermark-sniper] Global deletion error:', { chunk, error: errMsg, stack: err?.stack });
         failed += chunk.length;
       }
     }
@@ -874,20 +919,27 @@
       }
     } catch(_) {}
 
-    // Cleanup staged properties that were deleted
-    actuallyDeletedIds.forEach(id => queuedProperties.delete(id));
+    // Cleanup staged properties that were processed cleanly by the database
+    processedIds.forEach(id => queuedProperties.delete(id));
 
     renderQueue();
     setLoading(false);
 
-    if(succeeded > 0){
-      toastSafe(`Successfully deleted ${succeeded} listings and purged associated media.`, 'success', 5000);
-      // Refresh options and current page
+    // Distinguish successful, partial, and actual failure
+    if(succeeded > 0 && failed === 0){
+      toastSafe(`Successfully deleted ${succeeded} listing${succeeded === 1 ? '' : 's'} and purged associated media.`, 'success', 5000);
       await loadFilterOptions();
       await loadPage(currentPage);
-    }
-    if(failed > 0){
-      toastSafe(`${failed} listings failed to delete.`, 'error');
+    } else if(succeeded > 0 && failed > 0){
+      toastSafe(`Partially deleted: ${succeeded} listings deleted, ${failed} failed. Check console for details.`, 'warning', 6000);
+      await loadFilterOptions();
+      await loadPage(currentPage);
+    } else if(failed > 0){
+      toastSafe(`Deletion failed for ${failed} listing${failed === 1 ? '' : 's'}. ${lastErrorDetails ? '(' + lastErrorDetails + ')' : 'Check console for details.'}`, 'error', 6000);
+    } else if(processedIds.length > 0){
+      toastSafe('The selected listings were already removed from the database. Staging queue cleared.', 'info', 4000);
+      await loadFilterOptions();
+      await loadPage(currentPage);
     }
   }
 
@@ -1094,16 +1146,98 @@
     const modalCloseBtn = document.getElementById('sniper-modal-close-btn');
     if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeDeleteConfirmationModal);
 
-    // 7. Mobile Drawer Toggle
-    const sidebar = document.getElementById('sniper-sidebar');
-    const drawerToggle = document.getElementById('sniper-toggle-drawer');
-    if(drawerToggle && sidebar){
-      drawerToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
+    // 7. Grid Density Switcher
+    function setGridDensity(density){
+      const grid = document.getElementById('sniper-grid');
+      const buttons = document.querySelectorAll('.sniper-density-btn');
+      if(!grid) return;
+      grid.classList.remove('density-large', 'density-medium', 'density-compact');
+      grid.classList.add(`density-${density}`);
+      buttons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.density === density);
       });
+      try {
+        localStorage.setItem('sniper_grid_density', density);
+      } catch(_) {}
     }
 
-    // 8. Fullscreen Toggle
+    const densityButtons = document.querySelectorAll('.sniper-density-btn');
+    densityButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = btn.dataset.density || 'large';
+        setGridDensity(d);
+      });
+    });
+
+    const savedDensity = localStorage.getItem('sniper_grid_density') || 'large';
+    setGridDensity(savedDensity);
+
+    // 8. Focus / Zen Mode Toggle
+    function toggleFocusMode(forceState){
+      const col = document.getElementById('sniper-gallery-column');
+      const focusBtn = document.getElementById('sniper-btn-focus');
+      if(!col) return;
+      const isFocus = forceState !== undefined ? forceState : !col.classList.contains('focus-mode');
+      col.classList.toggle('focus-mode', isFocus);
+      if(focusBtn) {
+        focusBtn.classList.toggle('active', isFocus);
+        focusBtn.title = isFocus ? 'Exit Focus Mode (Z)' : 'Toggle Focus Mode (Z)';
+      }
+      toastSafe(isFocus ? 'Focus Mode active (filters minimized, press Z to restore)' : 'Focus Mode deactivated', 'info', 2000);
+    }
+
+    const focusBtn = document.getElementById('sniper-btn-focus');
+    if(focusBtn){
+      focusBtn.addEventListener('click', () => toggleFocusMode());
+    }
+
+    // 9. Staging Queue Drawer Toggle
+    function toggleSidebar(forceOpen){
+      const sidebar = document.getElementById('sniper-sidebar');
+      const queueBtn = document.getElementById('sniper-btn-queue-toggle');
+      if(!sidebar) return;
+      const shouldOpen = forceOpen !== undefined ? forceOpen : sidebar.classList.contains('collapsed');
+      if(shouldOpen){
+        sidebar.classList.remove('collapsed');
+        if(queueBtn) queueBtn.classList.add('active');
+      } else {
+        sidebar.classList.add('collapsed');
+        if(queueBtn) queueBtn.classList.remove('active');
+      }
+      try {
+        localStorage.setItem('sniper_drawer_open', shouldOpen ? '1' : '0');
+      } catch(_) {}
+    }
+
+    const queueToggleBtn = document.getElementById('sniper-btn-queue-toggle');
+    if(queueToggleBtn){
+      queueToggleBtn.addEventListener('click', () => toggleSidebar());
+    }
+
+    const stagedStatPill = document.getElementById('sniper-staged-stat');
+    if(stagedStatPill){
+      stagedStatPill.addEventListener('click', () => toggleSidebar(true));
+    }
+
+    const sidebarCloseBtn = document.getElementById('sniper-sidebar-close-btn');
+    if(sidebarCloseBtn){
+      sidebarCloseBtn.addEventListener('click', () => toggleSidebar(false));
+    }
+
+    const drawerToggle = document.getElementById('sniper-toggle-drawer');
+    if(drawerToggle){
+      drawerToggle.addEventListener('click', () => toggleSidebar());
+    }
+
+    // Initial Drawer State: Default collapsed to maximize inspection space
+    const initialDrawerOpen = localStorage.getItem('sniper_drawer_open');
+    if(initialDrawerOpen === '1'){
+      toggleSidebar(true);
+    } else {
+      toggleSidebar(false);
+    }
+
+    // 10. Fullscreen Toggle
     const fsBtn = document.getElementById('sniper-btn-fullscreen');
     if(fsBtn){
       fsBtn.addEventListener('click', () => {
@@ -1115,7 +1249,7 @@
       });
     }
 
-    // 9. Keyboard Shortcuts Dialog
+    // 11. Keyboard Shortcuts Dialog
     const shortcutsBtn = document.getElementById('sniper-btn-shortcuts');
     const shortcutsModal = document.getElementById('sniper-shortcuts-modal');
     const shortcutsClose = document.getElementById('sniper-shortcuts-close-btn');
@@ -1139,6 +1273,21 @@
         if(currentPage > 1) loadPage(currentPage - 1);
       } else if(e.key === 'ArrowRight' || e.key === 'PageDown'){
         if(currentPage < totalPages) loadPage(currentPage + 1);
+      } else if(e.key === 's' || e.key === 'S'){
+        e.preventDefault();
+        toggleSidebar();
+      } else if(e.key === 'z' || e.key === 'Z'){
+        e.preventDefault();
+        toggleFocusMode();
+      } else if(e.key === '1'){
+        e.preventDefault();
+        setGridDensity('compact');
+      } else if(e.key === '2'){
+        e.preventDefault();
+        setGridDensity('medium');
+      } else if(e.key === '3'){
+        e.preventDefault();
+        setGridDensity('large');
       } else if(e.key === '/'){
         e.preventDefault();
         const inp = document.getElementById('sniper-search-input');
@@ -1146,6 +1295,10 @@
       } else if(e.key === 'Escape'){
         closeDeleteConfirmationModal();
         if(shortcutsModal) shortcutsModal.style.display = 'none';
+        const sidebar = document.getElementById('sniper-sidebar');
+        if(sidebar && !sidebar.classList.contains('collapsed')){
+          toggleSidebar(false);
+        }
       } else if((e.key === 'Delete' || e.key === 'Backspace') && queuedProperties.size > 0){
         openDeleteConfirmationModal();
       } else if(e.key === '?'){
@@ -1169,10 +1322,32 @@
 
     // Check if query params specify initial filters (e.g. ?city=Columbus or ?state=OH or ?compliance=zero_photos)
     const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.has('state')) filterState = urlParams.get('state');
-    if(urlParams.has('city')) filterCity = urlParams.get('city');
-    if(urlParams.has('compliance')) filterCompliance = urlParams.get('compliance');
-    if(urlParams.has('search')) searchQuery = urlParams.get('search');
+    if(urlParams.has('state')) {
+      filterState = urlParams.get('state');
+      const el = document.getElementById('sniper-state-select');
+      if(el) el.value = filterState;
+      populateCitiesDropdown();
+    }
+    if(urlParams.has('city')) {
+      filterCity = urlParams.get('city');
+      const el = document.getElementById('sniper-city-select');
+      if(el) el.value = filterCity;
+    }
+    if(urlParams.has('type')) {
+      filterType = urlParams.get('type');
+      const el = document.getElementById('sniper-type-select');
+      if(el) el.value = filterType;
+    }
+    if(urlParams.has('compliance')) {
+      filterCompliance = urlParams.get('compliance');
+      const el = document.getElementById('sniper-compliance-select');
+      if(el) el.value = filterCompliance;
+    }
+    if(urlParams.has('search')) {
+      searchQuery = urlParams.get('search');
+      const el = document.getElementById('sniper-search-input');
+      if(el) el.value = searchQuery;
+    }
 
     await loadPage(1);
   }

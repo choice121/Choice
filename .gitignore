@@ -20,6 +20,7 @@ apply/config.js
 .env.local
 .env.*.local
 !scraper/.env
+!.env.example
 
 # chrome-extension/config.js is the extension's credential config — committed
 # intentionally so it travels with the project everywhere (GitHub, forks, imports).
@@ -33,6 +34,7 @@ apply/config.js
 # Node modules — never commit generated/installed files
 node_modules/
 package-lock.json.bak
+bun.lock
 
 # ============================================================
 # REPLIT — ALL FILES IGNORED (project runs on Cloudflare only)

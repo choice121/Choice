@@ -674,8 +674,9 @@
     if(scheme) scheme.setAttribute('content', 'light dark');
   }
   function initTheme(){
-    if(!document.querySelector('.theme-toggle')){
-      const wrap = document.createElement('div');
+    let wrap = document.querySelector('.theme-toggle');
+    if(!wrap){
+      wrap = document.createElement('div');
       wrap.className = 'theme-toggle';
       wrap.setAttribute('role', 'group');
       wrap.setAttribute('aria-label', 'Theme');
@@ -684,14 +685,16 @@
         '<button type="button" data-theme-mode="auto"  aria-label="Auto theme" title="Auto"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg></button>' +
         '<button type="button" data-theme-mode="dark"  aria-label="Dark mode" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>';
       document.body.appendChild(wrap);
-      wrap.querySelectorAll('button').forEach(b => {
-        b.addEventListener('click', () => {
-          const m = b.dataset.themeMode;
-          try { localStorage.setItem(THEME_KEY, m); } catch(_) {}
-          applyTheme(m);
-        });
-      });
     }
+    document.querySelectorAll('.theme-toggle button').forEach(b => {
+      if(b._cpThemeBound) return;
+      b._cpThemeBound = true;
+      b.addEventListener('click', () => {
+        const m = b.dataset.themeMode;
+        try { localStorage.setItem(THEME_KEY, m); } catch(_) {}
+        applyTheme(m);
+      });
+    });
     applyTheme(readTheme());
     if(window.matchMedia){
       try {

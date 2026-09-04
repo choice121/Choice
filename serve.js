@@ -12,6 +12,17 @@ try {
   console.warn('⚠️ Could not load vision auditor module:', e.message);
 }
 
+// Ensure config.js exists on startup
+const configPath = path.join(ROOT, 'config.js');
+if (!fs.existsSync(configPath)) {
+  try {
+    console.log('Generating config.js on startup...');
+    require('child_process').execSync('node generate-config.js', { cwd: ROOT, stdio: 'inherit' });
+  } catch (e) {
+    console.warn('⚠️ Could not generate config.js on startup:', e.message);
+  }
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
@@ -87,6 +98,18 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ status: 'ok' }));
     }
     return;
+  }
+
+  if (urlPath === '/config.js') {
+    const cfgFile = path.join(ROOT, 'config.js');
+    if (!fs.existsSync(cfgFile)) {
+      try {
+        console.log('Generating config.js on-the-fly...');
+        require('child_process').execSync('node generate-config.js', { cwd: ROOT, stdio: 'inherit' });
+      } catch (err) {
+        console.error('Error generating config.js on-the-fly:', err);
+      }
+    }
   }
 
   // Handle URL redirects matching _redirects

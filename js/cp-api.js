@@ -72,13 +72,21 @@ function sb() {
         'Ensure supabase.min.js defer script runs before cp-api.js.'
       );
     }
-    if (typeof CONFIG === 'undefined' || !CONFIG.SUPABASE_URL) {
+    const resolvedConfig = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.SUPABASE_URL)
+      ? CONFIG
+      : (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.SUPABASE_URL)
+        ? window.CONFIG
+        : (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
+          ? window.CP_CONFIG
+          : null;
+
+    if (!resolvedConfig || !resolvedConfig.SUPABASE_URL) {
       throw new Error(
         'CONFIG not ready. ' +
         'Ensure config.js defer script runs before cp-api.js.'
       );
     }
-    _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    _sb = window.supabase.createClient(resolvedConfig.SUPABASE_URL, resolvedConfig.SUPABASE_ANON_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -542,36 +550,69 @@ const Properties = {
 
     // Attempt 1: authoritative SECURITY DEFINER RPC
     try {
-      const { data, error } = await sb().rpc('delete_properties_cascade', { p_ids: list });
-      if (!error && data && (data.ok === true || data.deleted !== undefined)) {
-        return { ok: true, data, error: null };
-      }
-      if (error) {
-        console.warn('[CP.Properties.deleteCascadeBulk] RPC returned error, attempting fallback:', error);
+      const client = sb();
+      if (client) {
+        const { data, error } = await client.rpc('delete_properties_cascade', { p_ids: list });
+        let parsed = data;
+        if (typeof parsed === 'string') {
+          try { parsed = JSON.parse(parsed); } catch (_) {}
+        }
+        if (!error && parsed && (parsed.ok === true || parsed.deleted !== undefined)) {
+          return { ok: true, data: parsed, error: null };
+        }
+        if (error) {
+          console.warn('[CP.Properties.deleteCascadeBulk] RPC returned error, attempting direct fallback:', error);
+        }
       }
     } catch (rpcEx) {
-      console.warn('[CP.Properties.deleteCascadeBulk] RPC call failed:', rpcEx);
+      console.warn('[CP.Properties.deleteCascadeBulk] RPC call threw exception:', rpcEx);
     }
 
     // Attempt 2: Direct REST cascading delete using backend credentials
     try {
-      const supaUrl = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL.replace(/\/$/, '') : '';
-      const supaKey = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON_KEY) ? CONFIG.SUPABASE_ANON_KEY : '';
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.SUPABASE_URL)
+        ? CONFIG
+        : (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.SUPABASE_URL)
+          ? window.CONFIG
+          : (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.SUPABASE_URL)
+            ? window.CP_CONFIG
+            : null;
+
+      const supaUrl = cfg?.SUPABASE_URL ? cfg.SUPABASE_URL.replace(/\/$/, '') : '';
+      const supaKey = cfg?.SUPABASE_ANON_KEY || '';
 
       if (!supaUrl || !supaKey) {
-        throw new Error('Supabase credentials not configured for direct delete');
+        throw new Error('Supabase credentials not configured for direct delete fallback');
       }
+
+      // Obtain authenticated token if session exists
+      let authToken = supaKey;
+      try {
+        const authModule = (typeof Auth !== 'undefined' && Auth && typeof Auth.getSession === 'function')
+          ? Auth
+          : (typeof window !== 'undefined' && window.CP && window.CP.Auth && typeof window.CP.Auth.getSession === 'function')
+            ? window.CP.Auth
+            : null;
+
+        if (authModule) {
+          const sess = await authModule.getSession().catch(() => null);
+          if (sess?.access_token) authToken = sess.access_token;
+        }
+      } catch (_) {}
 
       const headers = {
         'apikey': supaKey,
-        'Authorization': `Bearer ${supaKey}`,
+        'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       };
+
+      // Safely quote IDs for PostgREST in filter
+      const quotedIds = list.map(x => `"${x.replace(/"/g, '')}"`).join(',');
 
       // Collect photo file_ids for ImageKit cleanup
       let fileIds = [];
       try {
-        const photoQueryRes = await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${list.join(',')})&select=file_id`, { headers });
+        const photoQueryRes = await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${quotedIds})&select=file_id`, { headers });
         if (photoQueryRes.ok) {
           const phRows = await photoQueryRes.json();
           fileIds = (phRows || []).map(r => r.file_id).filter(Boolean);
@@ -579,32 +620,32 @@ const Properties = {
       } catch (_) {}
 
       // 1. Delete property_photos
-      await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${list.join(',')})`, {
+      await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${quotedIds})`, {
         method: 'DELETE',
         headers
       }).catch(() => {});
 
       // 2. Delete saved_properties
-      await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=in.(${list.join(',')})`, {
+      await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=in.(${quotedIds})`, {
         method: 'DELETE',
         headers
       }).catch(() => {});
 
       // 3. Delete inquiries
-      await fetch(`${supaUrl}/rest/v1/inquiries?property_id=in.(${list.join(',')})`, {
+      await fetch(`${supaUrl}/rest/v1/inquiries?property_id=in.(${quotedIds})`, {
         method: 'DELETE',
         headers
       }).catch(() => {});
 
       // 4. Unlink applications
-      await fetch(`${supaUrl}/rest/v1/applications?property_id=in.(${list.join(',')})`, {
+      await fetch(`${supaUrl}/rest/v1/applications?property_id=in.(${quotedIds})`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ property_id: null })
       }).catch(() => {});
 
       // 5. Delete properties
-      const delPropRes = await fetch(`${supaUrl}/rest/v1/properties?id=in.(${list.join(',')})`, {
+      const delPropRes = await fetch(`${supaUrl}/rest/v1/properties?id=in.(${quotedIds})`, {
         method: 'DELETE',
         headers: { ...headers, 'Prefer': 'return=representation' }
       });
