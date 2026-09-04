@@ -892,7 +892,7 @@
         year_built: p.year_built ?? null, floors: p.floors ?? null,
         has_basement: p.has_basement ?? null, has_central_air: p.has_central_air ?? null,
         monthly_rent: p.monthly_rent ?? null, security_deposit: p.security_deposit ?? null,
-        application_fee: 50, admin_fee: p.admin_fee ?? null,
+        application_fee: p.application_fee ?? null, admin_fee: p.admin_fee ?? null,
         last_months_rent: p.last_months_rent ?? null, minimum_lease_months: p.minimum_lease_months ?? null,
         minimum_income_multiplier: p.minimum_income_multiplier ?? null, minimum_credit_score: p.minimum_credit_score ?? null,
         available_date: null, listed_at: null, description: p.description || null, virtual_tour_url: p.virtual_tour_url || null,
@@ -905,7 +905,7 @@
         laundry_type: p.laundry_type || null, heating_type: p.heating_type || null, cooling_type: p.cooling_type || null,
         pets_allowed: p.pets_allowed ?? null, pet_deposit: p.pet_deposit ?? null,
         pet_weight_limit: p.pet_weight_limit ?? null, pet_types_allowed: p.pet_types_allowed ?? [],
-        pet_details: p.pet_details || null,
+        pet_details: p.pet_details || null, smoking_allowed: p.smoking_allowed ?? null,
         showing_instructions: p.showing_instructions || null,
         lat: p.lat ?? null, lng: p.lng ?? null,
         landlord_id: p.landlord_id || null,
@@ -1143,8 +1143,8 @@
                 </label>
               </div>
               <div class="pd-edit-row">
-                <label class="pd-edit-label" style="opacity: 0.6; cursor: not-allowed" title="Application fee is fixed to $50 per platform policy">Application fee ($)
-                  <input class="pd-edit-input" name="application_fee" type="number" value="50" disabled readonly>
+                <label class="pd-edit-label">Application fee ($)
+                  <input class="pd-edit-input" name="application_fee" type="number" value="${esc(String(p.application_fee != null ? p.application_fee : ''))}" placeholder="50" min="0">
                 </label>
                 <label class="pd-edit-label">Admin/move-in fee ($)
                   <input class="pd-edit-input" name="admin_fee" type="number" value="${esc(String(p.admin_fee || ''))}" placeholder="0" min="0">
@@ -1266,6 +1266,13 @@
             <div class="pd-edit-group">
               <div class="pd-edit-group-title">Other</div>
               <div class="pd-edit-row">
+                <label class="pd-edit-label">Smoking
+                  <select class="pd-edit-input" name="smoking_allowed">
+                    <option value="" ${p.smoking_allowed === null ? 'selected' : ''}>—</option>
+                    <option value="true"  ${p.smoking_allowed === true  ? 'selected' : ''}>Allowed</option>
+                    <option value="false" ${p.smoking_allowed === false ? 'selected' : ''}>Not allowed</option>
+                  </select>
+                </label>
                 <label class="pd-edit-label">Featured
                   <select class="pd-edit-input" name="featured">
                     <option value="false" ${!p.featured ? 'selected' : ''}>No</option>
@@ -1710,7 +1717,7 @@
       virtual_tour_url:   get('virtual_tour_url') || null,
       monthly_rent:       getNum('monthly_rent'),
       security_deposit:   getNum('security_deposit'),
-      application_fee:    50,
+      application_fee:    getNum('application_fee'),
       admin_fee:          getNum('admin_fee'),
       last_months_rent:   getNum('last_months_rent'),
       available_date:     get('available_date') || null,
@@ -1735,6 +1742,7 @@
       pet_weight_limit:   getNum('pet_weight_limit'),
       pet_types_allowed:  getArr('pet_types_allowed'),
       pet_details:        get('pet_details') || null,
+      smoking_allowed:    getBool('smoking_allowed'),
       showing_instructions: get('showing_instructions') || null,
       admin_notes:        get('admin_notes') || null,
       featured:           getBool('featured') ?? false,
