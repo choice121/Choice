@@ -28,8 +28,21 @@ export async function requireAuth(req: Request): Promise<AuthResult> {
     };
   }
 
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+
+  // Allow service-role JWT directly
+  if (serviceRoleKey && jwt === serviceRoleKey) {
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    return {
+      ok: true,
+      user: { id: 'service-role', email: 'service-role@system' },
+      supabase,
+    };
+  }
+
   const authClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
+    supabaseUrl,
     Deno.env.get('SUPABASE_ANON_KEY')!
   );
   const { data: { user }, error: authErr } = await authClient.auth.getUser(jwt);
@@ -45,8 +58,8 @@ export async function requireAuth(req: Request): Promise<AuthResult> {
   }
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    supabaseUrl,
+    serviceRoleKey || Deno.env.get('SUPABASE_ANON_KEY')!
   );
 
   return { ok: true, user, supabase };
@@ -58,6 +71,12 @@ export async function requireAdmin(req: Request): Promise<AuthResult> {
   if (!authResult.ok) return authResult;
 
   const { user, supabase } = authResult;
+
+  // Service role is inherently admin
+  if (user.id === 'service-role') {
+    return { ok: true, user, supabase };
+  }
+
   const { data: adminRow } = await supabase
     .from('admin_roles')
     .select('id')

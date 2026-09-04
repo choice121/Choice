@@ -1386,7 +1386,7 @@ class PipelineOrchestrator:
 
     def _cleanup_ik_pipeline_folder(self, pipeline_id: str) -> None:
         """
-        Delete the temporary /properties/<PP-XXXXXXXX> folder from ImageKit after
+        Delete the temporary properties/<PP-XXXXXXXX> folder from ImageKit after
         a listing has been successfully published and its photos re-uploaded to the
         final /properties/<uuid> folder.
 
@@ -1395,7 +1395,9 @@ class PipelineOrchestrator:
         """
         if not pipeline_id or not self._ik_auth:
             return
-        folder_path = "/properties/{}".format(pipeline_id)
+        # ImageKit API expects folderPath without leading slash: "properties/PP-XXXXXXXX"
+        clean_id = pipeline_id.strip("/ ")
+        folder_path = "properties/{}".format(clean_id)
         try:
             import json as _json
             body = _json.dumps({"folderPath": folder_path}).encode()

@@ -875,20 +875,17 @@
           succeeded += numDeleted;
 
           // Asynchronous ImageKit purge per AGENTS.md rule 4.C
-          const fileIds = Array.isArray(result.data.file_ids) ? result.data.file_ids : [];
-          if(fileIds.length > 0 && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL){
-            fileIds.forEach(fid => {
-              if(!fid) return;
-              fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'apikey': CONFIG.SUPABASE_ANON_KEY || authHeaderToken,
-                  'Authorization': `Bearer ${authHeaderToken}`
-                },
-                body: JSON.stringify({ fileId: fid })
-              }).catch(e => console.warn('[watermark-sniper] ImageKit remote delete error:', e));
-            });
+          const fileIds = Array.isArray(result.data.file_ids) ? result.data.file_ids.filter(Boolean) : [];
+          if(typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL){
+            fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': CONFIG.SUPABASE_ANON_KEY || authHeaderToken,
+                'Authorization': `Bearer ${authHeaderToken}`
+              },
+              body: JSON.stringify({ fileIds, propertyIds: chunk })
+            }).catch(e => console.warn('[watermark-sniper] ImageKit remote delete error:', e));
           }
         } else {
           const errMsg = result?.error || 'Unknown deletion failure';

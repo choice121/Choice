@@ -952,21 +952,23 @@
         }
 
         // Asynchronous remote storage purge (ImageKit) to prevent orphaned assets
-        const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids : [];
-        if (fileIds.length > 0 && typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
-          const authKey = CONFIG.SUPABASE_ANON_KEY || '';
-          fileIds.forEach(fid => {
-            if (!fid) return;
-            fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': authKey,
-                'Authorization': `Bearer ${authKey}`
-              },
-              body: JSON.stringify({ fileId: fid })
-            }).catch(e => console.warn('[property-detail] ImageKit remote delete error:', e));
-          });
+        const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids.filter(Boolean) : [];
+        if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
+          let authKey = CONFIG.SUPABASE_ANON_KEY || '';
+          try {
+            const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
+            if (sess?.access_token) authKey = sess.access_token;
+          } catch (_) {}
+
+          fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': CONFIG.SUPABASE_ANON_KEY || authKey,
+              'Authorization': `Bearer ${authKey}`
+            },
+            body: JSON.stringify({ fileIds, propertyId: propId })
+          }).catch(e => console.warn('[property-detail] ImageKit remote delete error:', e));
         }
 
         // 3. Audit log (non-blocking)

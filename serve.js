@@ -113,7 +113,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Handle URL redirects matching _redirects
-  if (urlPath === '/admin' || urlPath === '/admin/') {
+  if (urlPath === '/admin' || urlPath === '/admin/' || urlPath === '/admin/index.html') {
     res.writeHead(302, { Location: '/admin/dashboard.html' });
     res.end();
     return;
