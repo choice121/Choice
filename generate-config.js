@@ -18,7 +18,7 @@ if (!rawSupabaseUrl || rawSupabaseUrl.includes('your-project-ref')) {
 
 const config = {
   SUPABASE_URL:      rawSupabaseUrl,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxODMwMjQsImV4cCI6MjA5MDc1OTAyNH0.sqjt9_oMKDoorA8Tzed1hlkH5zEQGZvFskAG3Qr9CFw',
 
   // I-029: SITE_URL is used to rewrite sitemap.xml and robots.txt at build time.
   // Set this to your production domain in your hosting platform's env var dashboard.
