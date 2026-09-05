@@ -921,9 +921,22 @@
   }
 
   // ─── Cascading Deletion & ImageKit Storage Cleanup ─────────────────────────
-  function openDeleteConfirmationModal(){
+  async function openDeleteConfirmationModal(){
     const count = queuedProperties.size;
     if(count === 0) return;
+
+    // Check if user is authenticated admin before allowing permanent deletion
+    if (window.CP && CP.Auth && typeof CP.Auth.isAdmin === 'function') {
+      const isAdm = await CP.Auth.isAdmin().catch(() => false);
+      if (!isAdm) {
+        toastSafe('Admin authentication required to perform permanent deletions. Please sign in.', 'error');
+        setTimeout(() => {
+          const cur = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/admin/login.html?returnTo=${cur}`;
+        }, 1200);
+        return;
+      }
+    }
 
     const modal = document.getElementById('sniper-delete-modal');
     const modalCount = document.getElementById('modal-del-count');
@@ -1556,10 +1569,14 @@
     await waitReady(12000);
     S = window.AdminShell || window.CPShell;
 
-    if(S && typeof S.requireAdmin === 'function'){
-      const okAuth = await S.requireAdmin().catch(() => false);
-      if(!okAuth) return;
-    }
+    // Gracefully populate admin info if user has an active session without bouncing unauthenticated viewers away
+    try {
+      if(window.CP && CP.Auth && typeof CP.Auth.getUser === 'function'){
+        const user = await CP.Auth.getUser().catch(() => null);
+        const nameEl = document.getElementById('admin-name');
+        if(nameEl && user?.email) nameEl.textContent = user.email;
+      }
+    } catch(_) {}
 
     initUI();
     await loadFilterOptions();

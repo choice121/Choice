@@ -191,7 +191,8 @@ const server = http.createServer(async (req, res) => {
 
     const headers = {
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
     };
 
     res.writeHead(200, headers);
