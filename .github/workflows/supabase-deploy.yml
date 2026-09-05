@@ -90,6 +90,14 @@ jobs:
             -d '{"query":"CREATE TABLE IF NOT EXISTS _migration_history (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW());"}' \
             > /dev/null && echo "Tracking table ready."
 
+          sleep 2
+
+          # Query all already-applied migrations once to avoid hitting Supabase API rate limits
+          curl -sf -X POST "$API" \
+            -H "$AUTH" -H "Content-Type: application/json" \
+            -d '{"query":"SELECT filename FROM _migration_history"}' \
+            -o /tmp/applied_migs.json || echo "[]" > /tmp/applied_migs.json
+
           FAILED=0
 
           for f in supabase/migrations/*.sql; do
@@ -97,11 +105,7 @@ jobs:
             QUOTED=$(python3 -c "import sys; print(\"'\" + sys.argv[1].replace(\"'\", \"''\") + \"'\")" "$BASENAME")
 
             # Skip if already successfully applied
-            ALREADY=$(curl -sf -X POST "$API" \
-              -H "$AUTH" -H "Content-Type: application/json" \
-              -d "{\"query\":\"SELECT 1 FROM _migration_history WHERE filename = ${QUOTED}\"}" || echo "[]")
-
-            if echo "$ALREADY" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if len(d)>0 else 1)" 2>/dev/null; then
+            if python3 -c 'import sys, json; data = json.load(open("/tmp/applied_migs.json")); applied = [r.get("filename") for r in data if isinstance(r, dict)]; sys.exit(0 if sys.argv[1] in applied else 1)' "$BASENAME" 2>/dev/null; then
               echo "Skipping (already applied): $BASENAME"
               continue
             fi
@@ -133,6 +137,7 @@ jobs:
               echo "  FAILED: $BASENAME"
               FAILED=1
             fi
+            sleep 2
           done
 
           if [ "$FAILED" -eq 1 ]; then
