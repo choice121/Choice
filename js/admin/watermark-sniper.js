@@ -23,7 +23,7 @@
 
   // ─── State Management ──────────────────────────────────────────────────────
   let currentPage = 1;
-  let pageSize = 50;
+  let pageSize = 48; // Optimized for 2, 3, 4, 6 column layouts
   let totalProperties = 0;
   let totalPages = 1;
 
@@ -38,6 +38,15 @@
   let currentCatalog = [];       // Rows for the current page
   let currentImages = [];        // Image objects for current page
   const queuedProperties = new Map(); // id -> { id, title, address, city, state, zip, coverUrl, photoCount, reason, photoFileId }
+
+  // Photo Cache & Multi-Photo Navigation per card
+  const propertyPhotosCache = new Map(); // propId -> Array<{id, url, watermark_status, display_order}>
+  const propertyActivePhotoIndex = new Map(); // propId -> number
+
+  // Quick Inspect Modal State
+  let currentInspectProp = null;
+  let currentInspectPhotos = [];
+  let currentInspectIndex = 0;
 
   let similarityPrioritized = true;
   let activeSimilarityProfile = null;
@@ -62,11 +71,17 @@
     return new Set(words);
   }
 
-  function getThumbUrl(rawUrl){
+  function getThumbUrl(rawUrl, size = 'medium'){
     if(!rawUrl || typeof rawUrl !== 'string') return '';
     if(rawUrl.includes('ik.imagekit.io')){
       const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
-      return clean + '?tr=w-320,h-240,c-maintain_ratio,q-60,f-webp';
+      if(size === 'compact') {
+        return clean + '?tr=w-320,h-220,c-maintain_ratio,q-75,f-webp';
+      } else if(size === 'large') {
+        return clean + '?tr=w-640,h-440,c-maintain_ratio,q-85,f-webp';
+      }
+      // Medium default
+      return clean + '?tr=w-480,h-320,c-maintain_ratio,q-80,f-webp';
     }
     if(window.CONFIG && typeof CONFIG.img === 'function'){
       return CONFIG.img(rawUrl, 'thumb');
@@ -78,7 +93,7 @@
     if(!rawUrl || typeof rawUrl !== 'string') return '';
     if(rawUrl.includes('ik.imagekit.io')){
       const clean = rawUrl.replace(/\?tr=[^&]+/, '').split('?')[0];
-      return clean + '?tr=w-90,h-90,c-maintain_ratio,q-50,f-webp';
+      return clean + '?tr=w-90,h-90,c-maintain_ratio,q-60,f-webp';
     }
     return rawUrl;
   }
@@ -208,12 +223,33 @@
     });
   }
 
-  // ─── Catalog Loader (Database-Driven Full Pagination) ──────────────────────
+  // ─── Loading States ────────────────────────────────────────────────────────
+  function setPagingState(isPaging){
+    const loadingBar = document.getElementById('sniper-grid-loading-bar');
+    const grid = document.getElementById('sniper-grid');
+    if(loadingBar) loadingBar.style.display = isPaging ? 'block' : 'none';
+    if(grid) {
+      grid.style.opacity = isPaging ? '0.6' : '1';
+      grid.style.pointerEvents = isPaging ? 'none' : 'auto';
+    }
+  }
+
+  // ─── Catalog Loader (Database-Driven Dynamic Pagination) ───────────────────
   async function loadPage(pageIndex){
     if(pageIndex < 1) pageIndex = 1;
     currentPage = pageIndex;
 
-    setLoading(true, `Querying page ${currentPage} of property inventory…`);
+    const viewport = document.getElementById('sniper-grid-viewport');
+    if(viewport){
+      viewport.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const isInitialOrFilter = currentCatalog.length === 0;
+    if(isInitialOrFilter){
+      setLoading(true, `Querying page ${currentPage} of property inventory…`);
+    } else {
+      setPagingState(true);
+    }
 
     const offset = (currentPage - 1) * pageSize;
 
@@ -229,8 +265,40 @@
     };
 
     try {
-      const { data, error } = await CP.sb().rpc('get_watermark_sniper_catalog', rpcParams);
-      if(error) throw error;
+      let data = null;
+      let error = null;
+
+      try {
+        const res = await CP.sb().rpc('get_watermark_sniper_catalog', rpcParams);
+        data = res.data;
+        error = res.error;
+      } catch(rpcErr){
+        error = rpcErr;
+      }
+
+      // Direct Supabase fallback if RPC ever errors
+      if(error || !Array.isArray(data)){
+        console.warn('[watermark-sniper] RPC call failed, trying direct Supabase fallback query:', error);
+        let q = CP.sb().from('properties').select('id, address, city, state, zip, monthly_rent, bedrooms, bathrooms, property_type, cover_url, photo_count, landlord_id, created_at, updated_at', { count: 'exact' });
+        if(filterState) q = q.eq('state', filterState);
+        if(filterCity) q = q.eq('city', filterCity);
+        if(filterType) q = q.eq('property_type', filterType);
+        if(searchQuery){
+          q = q.or(`address.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%,zip.ilike.%${searchQuery}%`);
+        }
+        if(filterCompliance === 'zero_photos') q = q.or('photo_count.is.null,photo_count.eq.0');
+        else if(filterCompliance === 'under_six_photos') q = q.lt('photo_count', 6);
+
+        q = q.order('updated_at', { ascending: false }).range(offset, offset + pageSize - 1);
+        const fbRes = await q;
+        if(fbRes.error) throw fbRes.error;
+        data = (fbRes.data || []).map(r => ({
+          ...r,
+          total_count: fbRes.count || 0,
+          photo_url: r.cover_url,
+          has_flagged_photo: false
+        }));
+      }
 
       currentCatalog = Array.isArray(data) ? data : [];
       currentImages = [];
@@ -269,6 +337,7 @@
 
       renderGrid();
       updatePaginationControls();
+      updateStagePageButtonState();
       recalculateSimilarities();
 
     } catch(err){
@@ -277,6 +346,232 @@
       renderGridEmpty('Error loading properties. Please check your connection and retry.');
     } finally {
       setLoading(false);
+      setPagingState(false);
+    }
+  }
+
+  // ─── Quick Photo Inspect Modal ─────────────────────────────────────────────
+  async function openInspectModal(property){
+    currentInspectProp = property;
+    currentInspectIndex = 0;
+
+    const modal = document.getElementById('sniper-inspect-modal');
+    if(!modal) return;
+    modal.style.display = 'flex';
+
+    const titleEl = document.getElementById('inspect-title');
+    if(titleEl) titleEl.textContent = property.address || 'Property Photo Inspection';
+
+    const extLink = document.getElementById('inspect-ext-link');
+    if(extLink) extLink.href = `/property.html?id=${encodeURIComponent(property.id)}`;
+
+    updateInspectStageButton();
+
+    // Check cached photos or load from database
+    let photos = propertyPhotosCache.get(property.id);
+    if(!photos || photos.length === 0){
+      try {
+        const { data, error } = await CP.sb()
+          .from('property_photos')
+          .select('id, url, file_id, watermark_status, display_order')
+          .eq('property_id', property.id)
+          .order('display_order');
+        if(!error && data && data.length > 0){
+          photos = data;
+        } else {
+          photos = [
+            {
+              id: property.photo_id || property.id,
+              url: property.photo_url || property.cover_url,
+              file_id: property.photo_file_id || null,
+              watermark_status: property.has_flagged_photo ? 'flagged' : 'clean',
+              display_order: 0
+            }
+          ];
+        }
+      } catch(_) {
+        photos = [
+          {
+            id: property.photo_id || property.id,
+            url: property.photo_url || property.cover_url,
+            file_id: property.photo_file_id || null,
+            watermark_status: 'clean',
+            display_order: 0
+          }
+        ];
+      }
+      propertyPhotosCache.set(property.id, photos);
+    }
+
+    currentInspectPhotos = photos;
+    renderInspectView();
+  }
+
+  function closeInspectModal(){
+    const modal = document.getElementById('sniper-inspect-modal');
+    if(modal) modal.style.display = 'none';
+    currentInspectProp = null;
+    currentInspectPhotos = [];
+  }
+
+  function updateInspectStageButton(){
+    const btn = document.getElementById('inspect-stage-btn');
+    if(!btn || !currentInspectProp) return;
+    const isStaged = queuedProperties.has(currentInspectProp.id);
+    btn.className = 'sniper-btn-inspect-stage' + (isStaged ? ' staged' : '');
+    btn.innerHTML = isStaged
+      ? '<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Staged for Purge</span>'
+      : '<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Stage Property</span>';
+  }
+
+  function renderInspectView(){
+    if(!currentInspectPhotos.length) return;
+    const photo = currentInspectPhotos[currentInspectIndex];
+
+    const imgEl = document.getElementById('inspect-current-img');
+    if(imgEl){
+      const cleanUrl = (photo.url || '').replace(/\?tr=[^&]+/, '').split('?')[0];
+      imgEl.src = cleanUrl ? (cleanUrl + '?tr=w-1200,h-800,c-maintain_ratio,q-85,f-webp') : photo.url;
+      imgEl.alt = currentInspectProp ? (currentInspectProp.address || '') : '';
+    }
+
+    const counterEl = document.getElementById('inspect-photo-counter');
+    if(counterEl){
+      counterEl.textContent = `Photo ${currentInspectIndex + 1} of ${currentInspectPhotos.length}`;
+    }
+
+    const statusPill = document.getElementById('inspect-photo-status');
+    if(statusPill){
+      const status = photo.watermark_status || 'clean';
+      const isFlagged = ['branding', 'watermark', 'flagged'].includes(status);
+      statusPill.className = 'sniper-inspect-status-pill ' + (isFlagged ? 'flagged' : 'clean');
+      statusPill.textContent = isFlagged ? '🚨 Watermark Flagged' : '✓ Genuine Clean Photo';
+    }
+
+    const prevBtn = document.getElementById('inspect-nav-prev');
+    const nextBtn = document.getElementById('inspect-nav-next');
+    if(prevBtn) prevBtn.disabled = currentInspectIndex <= 0;
+    if(nextBtn) nextBtn.disabled = currentInspectIndex >= currentInspectPhotos.length - 1;
+
+    renderInspectFilmstrip();
+    renderInspectMeta();
+  }
+
+  function renderInspectFilmstrip(){
+    const strip = document.getElementById('inspect-filmstrip');
+    if(!strip) return;
+    strip.innerHTML = '';
+
+    currentInspectPhotos.forEach((photo, idx) => {
+      const thumb = document.createElement('div');
+      const isFlagged = ['branding', 'watermark', 'flagged'].includes(photo.watermark_status);
+      thumb.className = 'sniper-inspect-thumb' + (idx === currentInspectIndex ? ' active' : '') + (isFlagged ? ' flagged' : '');
+      thumb.title = `Photo ${idx + 1}` + (isFlagged ? ' (Watermark Flagged)' : '');
+
+      const cleanUrl = (photo.url || '').replace(/\?tr=[^&]+/, '').split('?')[0];
+      const thumbUrl = cleanUrl ? (cleanUrl + '?tr=w-160,h-110,c-maintain_ratio,q-70,f-webp') : photo.url;
+
+      thumb.innerHTML = `<img src="${thumbUrl}" alt="Photo ${idx + 1}" loading="lazy">`;
+      thumb.addEventListener('click', () => {
+        currentInspectIndex = idx;
+        renderInspectView();
+      });
+      strip.appendChild(thumb);
+    });
+  }
+
+  function renderInspectMeta(){
+    const metaBar = document.getElementById('inspect-meta-bar');
+    if(!metaBar || !currentInspectProp) return;
+    const p = currentInspectProp;
+    metaBar.innerHTML = `
+      <div><strong>Address:</strong> ${escSafe(p.address || 'N/A')}, ${escSafe(p.city || '')} ${escSafe(p.state || '')} ${escSafe(p.zip || '')}</div>
+      <div><strong>Rent:</strong> ${p.monthly_rent ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Contact for Rent'}</div>
+      <div><strong>Specs:</strong> ${p.bedrooms || 0} Bed / ${p.bathrooms || 0} Bath (${p.square_feet ? Number(p.square_feet).toLocaleString() + ' sqft' : 'N/A'})</div>
+      <div><strong>Type:</strong> ${escSafe(p.property_type || 'Listing')}</div>
+    `;
+  }
+
+  // ─── Card Photo Cycling ───────────────────────────────────────────────────
+  async function cycleCardPhoto(property, direction, cardEl){
+    let photos = propertyPhotosCache.get(property.id);
+    if(!photos){
+      try {
+        const { data, error } = await CP.sb()
+          .from('property_photos')
+          .select('id, url, file_id, watermark_status, display_order')
+          .eq('property_id', property.id)
+          .order('display_order');
+        if(!error && data && data.length > 0){
+          photos = data;
+        } else {
+          photos = [{ id: property.id, url: property.photo_url || property.cover_url, watermark_status: 'clean' }];
+        }
+      } catch(_) {
+        photos = [{ id: property.id, url: property.photo_url || property.cover_url, watermark_status: 'clean' }];
+      }
+      propertyPhotosCache.set(property.id, photos);
+    }
+
+    if(photos.length <= 1) return;
+
+    let curIdx = propertyActivePhotoIndex.get(property.id) || 0;
+    curIdx = (curIdx + direction + photos.length) % photos.length;
+    propertyActivePhotoIndex.set(property.id, curIdx);
+
+    const imgEl = cardEl.querySelector('.sniper-card-img');
+    if(imgEl && photos[curIdx]){
+      imgEl.src = getThumbUrl(photos[curIdx].url);
+    }
+
+    const dots = cardEl.querySelectorAll('.sniper-card-dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === (curIdx % dots.length)));
+  }
+
+  // ─── Stage Page Toggle ────────────────────────────────────────────────────
+  function toggleStagePage(){
+    if(currentCatalog.length === 0) return;
+    const allStaged = currentCatalog.every(p => queuedProperties.has(p.id));
+
+    if(allStaged){
+      currentCatalog.forEach(p => {
+        if(queuedProperties.has(p.id)){
+          toggleStage(p);
+        }
+      });
+      toastSafe('Unstaged all listings on current page.', 'info');
+    } else {
+      currentCatalog.forEach(p => {
+        if(!queuedProperties.has(p.id)){
+          toggleStage(p);
+        }
+      });
+      toastSafe(`Staged all ${currentCatalog.length} listings on current page.`, 'success');
+    }
+
+    updateStagePageButtonState();
+  }
+
+  function updateStagePageButtonState(){
+    const btn = document.getElementById('sniper-btn-stage-page');
+    const txt = document.getElementById('sniper-stage-page-txt');
+    if(!btn || !txt) return;
+
+    if(currentCatalog.length === 0){
+      btn.disabled = true;
+      txt.textContent = 'Stage Page';
+      btn.classList.remove('all-staged');
+      return;
+    }
+
+    btn.disabled = false;
+    const allStaged = currentCatalog.every(p => queuedProperties.has(p.id));
+    if(allStaged){
+      btn.classList.add('all-staged');
+      txt.textContent = 'Unstage Page';
+    } else {
+      btn.classList.remove('all-staged');
+      txt.textContent = `Stage Page (${currentCatalog.length})`;
     }
   }
 
@@ -340,6 +635,24 @@
           badgeHtml += `<span class="sniper-badge-photo-count">📷 ${photoCount} photos</span>`;
         }
 
+        let arrowsHtml = '';
+        let dotsHtml = '';
+        if(photoCount > 1){
+          arrowsHtml = `
+            <div class="sniper-card-arrows">
+              <button class="sniper-card-arrow-btn prev" type="button" title="Previous photo" aria-label="Previous photo">‹</button>
+              <button class="sniper-card-arrow-btn next" type="button" title="Next photo" aria-label="Next photo">›</button>
+            </div>
+          `;
+          const numDots = Math.min(photoCount, 5);
+          dotsHtml = `
+            <div class="sniper-card-dots">
+              <span class="sniper-card-dot active"></span>
+              ${Array.from({length: numDots - 1}).map(() => '<span class="sniper-card-dot"></span>').join('')}
+            </div>
+          `;
+        }
+
         mediaHtml = `
           <div class="sniper-card-media-wrap">
             <div class="sniper-card-media">
@@ -349,6 +662,8 @@
                 <div class="sniper-error-txt">Photo Unavailable</div>
               </div>
             </div>
+            ${arrowsHtml}
+            ${dotsHtml}
             <div class="sniper-card-top-badges">
               <div class="sniper-stage-checkbox" aria-label="Toggle staging">
                 <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -372,9 +687,14 @@
         <div class="sniper-card-footer">
           <div class="sniper-card-title-row">
             <div class="sniper-card-address" title="${escSafe(p.address)}">${escSafe(p.address || 'Unknown Address')}</div>
-            <a href="/property.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
+            <div style="display:inline-flex;align-items:center;gap:4px;">
+              <button type="button" class="sniper-card-inspect-btn" title="Quick inspect all photos" aria-label="Inspect photos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+              </button>
+              <a href="/property.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
           </div>
           <div class="sniper-card-city">${escSafe(p.city || '')}${p.state ? ', ' + escSafe(p.state) : ''} ${escSafe(p.zip || '')}</div>
           <div class="sniper-card-bottom-row">
@@ -389,13 +709,7 @@
 
       card.innerHTML = mediaHtml + footerHtml;
 
-      // Prevent external link click from triggering stage
-      const extLink = card.querySelector('.sniper-card-ext-btn');
-      if(extLink){
-        extLink.addEventListener('click', (e) => e.stopPropagation());
-      }
-
-      // Card Click Handler
+      // Card Click Handler (stages/unstages listing)
       card.addEventListener('click', (e) => {
         e.preventDefault();
         toggleStage(p);
@@ -408,6 +722,41 @@
           toggleStage(p);
         }
       });
+
+      // Inspect button click
+      const inspectBtn = card.querySelector('.sniper-card-inspect-btn');
+      if(inspectBtn){
+        inspectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          openInspectModal(p);
+        });
+      }
+
+      // External link click prevention
+      const extLink = card.querySelector('.sniper-card-ext-btn');
+      if(extLink){
+        extLink.addEventListener('click', (e) => e.stopPropagation());
+      }
+
+      // Arrow buttons for cycling photos directly on card
+      const prevPhotoBtn = card.querySelector('.sniper-card-arrow-btn.prev');
+      if(prevPhotoBtn){
+        prevPhotoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          cycleCardPhoto(p, -1, card);
+        });
+      }
+
+      const nextPhotoBtn = card.querySelector('.sniper-card-arrow-btn.next');
+      if(nextPhotoBtn){
+        nextPhotoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          cycleCardPhoto(p, 1, card);
+        });
+      }
 
       grid.appendChild(card);
     });
@@ -1153,8 +1502,9 @@
     // 3. Page Size Selector
     const pageSizeSelect = document.getElementById('sniper-page-size-select');
     if(pageSizeSelect){
+      pageSizeSelect.value = '48';
       pageSizeSelect.addEventListener('change', () => {
-        pageSize = parseInt(pageSizeSelect.value, 10) || 50;
+        pageSize = parseInt(pageSizeSelect.value, 10) || 48;
         loadPage(1);
       });
     }
@@ -1173,11 +1523,17 @@
     if(btnLast) btnLast.addEventListener('click', () => loadPage(totalPages));
 
     // Bottom Pagination
+    const btnFirstBottom = document.getElementById('sniper-page-first-bottom');
+    if(btnFirstBottom) btnFirstBottom.addEventListener('click', () => loadPage(1));
+
     const btnPrevBottom = document.getElementById('sniper-page-prev-bottom');
     if(btnPrevBottom) btnPrevBottom.addEventListener('click', () => loadPage(currentPage - 1));
 
     const btnNextBottom = document.getElementById('sniper-page-next-bottom');
     if(btnNextBottom) btnNextBottom.addEventListener('click', () => loadPage(currentPage + 1));
+
+    const btnLastBottom = document.getElementById('sniper-page-last-bottom');
+    if(btnLastBottom) btnLastBottom.addEventListener('click', () => loadPage(totalPages));
 
     // Jump to Page
     const jumpInput = document.getElementById('sniper-jump-input');
@@ -1192,6 +1548,74 @@
     if(jumpInput){
       jumpInput.addEventListener('keydown', (e) => {
         if(e.key === 'Enter') handleJump();
+      });
+    }
+
+    // Stage Page Button
+    const stagePageBtn = document.getElementById('sniper-btn-stage-page');
+    if(stagePageBtn){
+      stagePageBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleStagePage();
+      });
+    }
+
+    // Scroll to Top Floating Button
+    const scrollTopBtn = document.getElementById('sniper-scroll-top-btn');
+    const gridViewport = document.getElementById('sniper-grid-viewport');
+    if(gridViewport && scrollTopBtn){
+      gridViewport.addEventListener('scroll', () => {
+        if(gridViewport.scrollTop > 350){
+          scrollTopBtn.style.display = 'inline-flex';
+        } else {
+          scrollTopBtn.style.display = 'none';
+        }
+      }, { passive: true });
+
+      scrollTopBtn.addEventListener('click', () => {
+        gridViewport.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // Inspect Modal Event Handlers
+    const inspectModalEl = document.getElementById('sniper-inspect-modal');
+    const inspectCloseBtn = document.getElementById('inspect-modal-close-btn');
+    if(inspectCloseBtn) inspectCloseBtn.addEventListener('click', closeInspectModal);
+
+    if(inspectModalEl){
+      inspectModalEl.addEventListener('click', (e) => {
+        if(e.target === inspectModalEl) closeInspectModal();
+      });
+    }
+
+    const inspectPrevBtn = document.getElementById('inspect-nav-prev');
+    if(inspectPrevBtn){
+      inspectPrevBtn.addEventListener('click', () => {
+        if(currentInspectIndex > 0){
+          currentInspectIndex--;
+          renderInspectView();
+        }
+      });
+    }
+
+    const inspectNextBtn = document.getElementById('inspect-nav-next');
+    if(inspectNextBtn){
+      inspectNextBtn.addEventListener('click', () => {
+        if(currentInspectIndex < currentInspectPhotos.length - 1){
+          currentInspectIndex++;
+          renderInspectView();
+        }
+      });
+    }
+
+    const inspectStageBtn = document.getElementById('inspect-stage-btn');
+    if(inspectStageBtn){
+      inspectStageBtn.addEventListener('click', () => {
+        if(currentInspectProp){
+          toggleStage(currentInspectProp);
+          updateInspectStageButton();
+          updateStagePageButtonState();
+        }
       });
     }
 
@@ -1239,7 +1663,7 @@
     const modalCloseBtn = document.getElementById('sniper-modal-close-btn');
     if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeDeleteConfirmationModal);
 
-    // 7. Grid Density Switcher
+    // 7. Grid Density Switcher (Medium by default)
     function setGridDensity(density){
       const grid = document.getElementById('sniper-grid');
       const buttons = document.querySelectorAll('.sniper-density-btn');
@@ -1257,12 +1681,12 @@
     const densityButtons = document.querySelectorAll('.sniper-density-btn');
     densityButtons.forEach(btn => {
       btn.addEventListener('click', () => {
-        const d = btn.dataset.density || 'large';
+        const d = btn.dataset.density || 'medium';
         setGridDensity(d);
       });
     });
 
-    const savedDensity = localStorage.getItem('sniper_grid_density') || 'large';
+    const savedDensity = localStorage.getItem('sniper_grid_density') || 'medium';
     setGridDensity(savedDensity);
 
     // 8. Focus / Zen Mode Toggle
@@ -1362,6 +1786,32 @@
         return;
       }
 
+      const inspectModal = document.getElementById('sniper-inspect-modal');
+      const isInspectOpen = inspectModal && inspectModal.style.display === 'flex';
+
+      if(isInspectOpen){
+        if(e.key === 'ArrowLeft'){
+          e.preventDefault();
+          const prev = document.getElementById('inspect-nav-prev');
+          if(prev && !prev.disabled) prev.click();
+          return;
+        } else if(e.key === 'ArrowRight'){
+          e.preventDefault();
+          const next = document.getElementById('inspect-nav-next');
+          if(next && !next.disabled) next.click();
+          return;
+        } else if(e.key === 'Escape'){
+          e.preventDefault();
+          closeInspectModal();
+          return;
+        } else if(e.key === 's' || e.key === 'S'){
+          e.preventDefault();
+          const stageBtn = document.getElementById('inspect-stage-btn');
+          if(stageBtn) stageBtn.click();
+          return;
+        }
+      }
+
       if(e.key === 'ArrowLeft' || e.key === 'PageUp'){
         if(currentPage > 1) loadPage(currentPage - 1);
       } else if(e.key === 'ArrowRight' || e.key === 'PageDown'){
@@ -1387,6 +1837,7 @@
         if(inp) inp.focus();
       } else if(e.key === 'Escape'){
         closeDeleteConfirmationModal();
+        closeInspectModal();
         if(shortcutsModal) shortcutsModal.style.display = 'none';
         const sidebar = document.getElementById('sniper-sidebar');
         if(sidebar && !sidebar.classList.contains('collapsed')){

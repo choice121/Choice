@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1788594860442"></script>
+  <script src="/js/cp-error-reporter.js?v=1788596004325"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
@@ -15,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1788594860442">
-<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1788594860442">
+<link rel="stylesheet" href="/css/cp-design.css?v=1788596004325">
+<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1788596004325">
 <script defer src="/config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-<script defer src="/js/cp-api.js?v=1788594860442" type="module"></script>
-<script defer src="/js/cp-shell.js?v=1788594860442"></script>
+<script defer src="/js/cp-api.js?v=1788596004325" type="module"></script>
+<script defer src="/js/cp-shell.js?v=1788596004325"></script>
 </head>
 <body class="sniper-standalone-body" data-page-title="Watermark Sniper">
 
@@ -162,17 +162,17 @@
 
             <!-- Photo Grid Density Switcher -->
             <div class="sniper-density-toggle" role="group" aria-label="Photo Grid Sizing">
-              <button type="button" class="sniper-density-btn active" data-density="large" id="sniper-density-large" title="Large Inspection View (Keys: 3)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-                <span>Large</span>
-              </button>
-              <button type="button" class="sniper-density-btn" data-density="medium" id="sniper-density-medium" title="Medium Standard View (Keys: 2)">
+              <button type="button" class="sniper-density-btn active" data-density="medium" id="sniper-density-medium" title="Medium Balanced View (Keys: 2)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                <span>Med</span>
+                <span>Medium</span>
               </button>
               <button type="button" class="sniper-density-btn" data-density="compact" id="sniper-density-compact" title="Compact Speed View (Keys: 1)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
                 <span>Compact</span>
+              </button>
+              <button type="button" class="sniper-density-btn" data-density="large" id="sniper-density-large" title="Large Inspection View (Keys: 3)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                <span>Large</span>
               </button>
             </div>
 
@@ -223,32 +223,35 @@
             <div class="sniper-page-info">
               <span id="sniper-page-summary">Showing 0–0 of 0 properties</span>
               <span class="sniper-bullet-sep">•</span>
-              <span class="sniper-hint-txt">Click any card to stage for deletion</span>
+              <button type="button" class="sniper-btn-stage-page" id="sniper-btn-stage-page" title="Stage or unstage all properties visible on this page">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-13"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span id="sniper-stage-page-txt">Stage Page</span>
+              </button>
             </div>
 
             <div class="sniper-page-controls">
               
               <!-- Page size selector -->
               <div class="sniper-page-size-wrap">
-                <span class="sniper-page-size-lbl">Per page:</span>
+                <span class="sniper-page-size-lbl">Show:</span>
                 <select id="sniper-page-size-select" aria-label="Properties per page">
-                  <option value="25">25</option>
-                  <option value="50" selected>50</option>
-                  <option value="100">100</option>
-                  <option value="200">200</option>
+                  <option value="24">24 / page</option>
+                  <option value="48" selected>48 / page</option>
+                  <option value="96">96 / page</option>
+                  <option value="144">144 / page</option>
                 </select>
               </div>
 
               <!-- Navigation buttons -->
               <div class="sniper-nav-btn-group">
                 <button class="sniper-page-btn" id="sniper-page-first" title="First Page" aria-label="First Page" disabled>«</button>
-                <button class="sniper-page-btn" id="sniper-page-prev" title="Previous Page" aria-label="Previous Page" disabled>‹</button>
+                <button class="sniper-page-btn" id="sniper-page-prev" title="Previous Page" aria-label="Previous Page" disabled>‹ Prev</button>
                 
                 <div class="sniper-page-numbers" id="sniper-page-numbers-top">
                   <!-- Page numbers injected here -->
                 </div>
 
-                <button class="sniper-page-btn" id="sniper-page-next" title="Next Page" aria-label="Next Page" disabled>›</button>
+                <button class="sniper-page-btn" id="sniper-page-next" title="Next Page" aria-label="Next Page" disabled>Next ›</button>
                 <button class="sniper-page-btn" id="sniper-page-last" title="Last Page" aria-label="Last Page" disabled>»</button>
               </div>
 
@@ -266,6 +269,8 @@
 
         <!-- Main Photo Grid Canvas -->
         <div class="sniper-grid-viewport" id="sniper-grid-viewport">
+          <div class="sniper-grid-loading-bar" id="sniper-grid-loading-bar" style="display:none"></div>
+          
           <div class="sniper-grid" id="sniper-grid">
             <!-- Property cards injected here -->
           </div>
@@ -276,11 +281,19 @@
               <span id="sniper-page-summary-bottom">Page 1 of 1</span>
             </div>
             <div class="sniper-page-controls">
+              <button class="sniper-page-btn" id="sniper-page-first-bottom" title="First Page" disabled>« First</button>
               <button class="sniper-page-btn" id="sniper-page-prev-bottom" disabled>‹ Previous</button>
               <div class="sniper-page-numbers" id="sniper-page-numbers-bottom"></div>
               <button class="sniper-page-btn" id="sniper-page-next-bottom" disabled>Next ›</button>
+              <button class="sniper-page-btn" id="sniper-page-last-bottom" title="Last Page" disabled>Last »</button>
             </div>
           </div>
+
+          <!-- Floating Scroll-To-Top Button -->
+          <button class="sniper-scroll-top-btn" id="sniper-scroll-top-btn" title="Back to top" aria-label="Back to top" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sniper-icon-14"><polyline points="18 15 12 9 6 15"/></svg>
+            <span>Top</span>
+          </button>
         </div>
 
       </main>
@@ -395,8 +408,45 @@
       </div>
     </div>
 
+    <!-- 7. Quick Photo Inspect Modal -->
+    <div class="sniper-modal-backdrop sniper-inspect-modal" id="sniper-inspect-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="inspect-title">
+      <div class="sniper-modal-box sniper-inspect-box">
+        <div class="sniper-modal-header">
+          <div class="sniper-inspect-title-wrap">
+            <h2 id="inspect-title" class="sniper-modal-title">Property Inspection</h2>
+            <span class="sniper-inspect-counter" id="inspect-photo-counter">Photo 1 of 1</span>
+          </div>
+          <div class="sniper-inspect-header-actions">
+            <button class="sniper-btn-inspect-stage" id="sniper-btn-inspect-stage" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+              <span id="inspect-stage-btn-txt">Stage Property</span>
+            </button>
+            <a href="#" target="_blank" rel="noopener noreferrer" class="sniper-btn-inspect-ext" id="inspect-ext-link" title="Open listing in new tab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span>View Listing</span>
+            </a>
+            <button class="sniper-modal-close-btn" id="sniper-inspect-close-btn" type="button" aria-label="Close inspection">✕</button>
+          </div>
+        </div>
+        <div class="sniper-inspect-stage">
+          <button class="sniper-inspect-nav-btn prev" id="inspect-nav-prev" title="Previous photo (←)" aria-label="Previous photo">‹</button>
+          <div class="sniper-inspect-main-view">
+            <img class="sniper-inspect-current-img" id="inspect-current-img" src="" alt="Listing photo">
+            <div class="sniper-inspect-status-pill" id="inspect-photo-status">Clean</div>
+          </div>
+          <button class="sniper-inspect-nav-btn next" id="inspect-nav-next" title="Next photo (→)" aria-label="Next photo">›</button>
+        </div>
+        <div class="sniper-inspect-filmstrip" id="inspect-filmstrip">
+          <!-- Thumbnail strip populated dynamically -->
+        </div>
+        <div class="sniper-inspect-meta-bar" id="inspect-meta-bar">
+          <!-- Address, price, beds/baths, policy compliance -->
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script defer src="/js/admin/watermark-sniper.js?v=1788594860442"></script>
+  <script defer src="/js/admin/watermark-sniper.js?v=1788596004325"></script>
 </body>
 </html>
