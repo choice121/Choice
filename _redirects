@@ -57,6 +57,8 @@
 
 # Property detail pages (UUID-based routes served by property.html SPA)
 /property/*                 /property.html                               200
+/matches                    /matches.html                                200
+/matches/*                  /matches.html                                200
 
 # Orion extension live loader files (served publicly for auto-updates)
 /.pages-orion/*             /.pages-orion/:splat                           200

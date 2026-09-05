@@ -8959,6 +8959,8 @@ body[data-portal="public"] .property-grid.property-list-view > .property-card .p
 
 
 /* ── Embedded Mode (Curated Client Share Links) ── */
+body[data-embedded="true"] #site-nav,
+body[data-embedded="true"] #site-footer,
 body[data-embedded="true"] .mv2-nav,
 body[data-embedded="true"] .mv2-nav-drawer-overlay,
 body[data-embedded="true"] .mv2-nav-drawer,
@@ -8966,4 +8968,5 @@ body[data-embedded="true"] .mv2-footer,
 body[data-embedded="true"] #similarSection,
 body[data-embedded="true"] .detail-breadcrumb {
   display: none !important;
+  min-height: 0 !important;
 }
