@@ -4,9 +4,9 @@
 // into native ImageKit storage, updating Supabase records in real time.
 //
 // Usage:
-//   node scripts/migrate_hotlinks_to_imagekit.mjs --properties=5
-//   node scripts/migrate_hotlinks_to_imagekit.mjs --property-id=<UUID>
+//   node scripts/migrate_hotlinks_to_imagekit.mjs --properties=20
 //   node scripts/migrate_hotlinks_to_imagekit.mjs --all
+//   node scripts/migrate_hotlinks_to_imagekit.mjs --property-id=<UUID>
 // ============================================================
 
 import { Buffer } from 'node:buffer';
@@ -27,7 +27,7 @@ const args = process.argv.slice(2);
 const isAll = args.includes('--all');
 const propLimitArg = args.find(a => a.startsWith('--properties='));
 const specificPropIdArg = args.find(a => a.startsWith('--property-id='));
-const maxProperties = isAll ? 999999 : (propLimitArg ? parseInt(propLimitArg.split('=')[1], 10) : 10);
+const maxProperties = isAll ? 999999 : (propLimitArg ? parseInt(propLimitArg.split('=')[1], 10) : 25);
 const targetPropertyId = specificPropIdArg ? specificPropIdArg.split('=')[1] : null;
 
 async function getPropertiesNeedingMigration(limit) {
@@ -39,8 +39,7 @@ async function getPropertiesNeedingMigration(limit) {
   }
 
   // Find properties that have at least one external photo
-  // We query property_photos that don't contain ik.imagekit.io
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?select=property_id&url=not.like.*ik.imagekit.io*&limit=5000`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?select=property_id&url=not.like.*ik.imagekit.io*&limit=10000`, {
     headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
   });
   if (!res.ok) throw new Error(`Failed to query unmigrated photos: HTTP ${res.status}`);
@@ -49,11 +48,19 @@ async function getPropertiesNeedingMigration(limit) {
   const propIds = [...new Set(photos.map(p => p.property_id))].slice(0, limit);
   if (propIds.length === 0) return [];
 
-  // Fetch property details
-  const propRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?id=in.(${propIds.join(',')})&select=id,address,city,state,zip`, {
-    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
-  });
-  return await propRes.json();
+  // Fetch property details in chunks of 50
+  const results = [];
+  for (let i = 0; i < propIds.length; i += 50) {
+    const chunk = propIds.slice(i, i + 50);
+    const propRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?id=in.(${chunk.join(',')})&select=id,address,city,state,zip`, {
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
+    });
+    if (propRes.ok) {
+      const data = await propRes.json();
+      results.push(...data);
+    }
+  }
+  return results;
 }
 
 async function uploadSinglePhoto(externalUrl, propertyId, index, photoId) {
@@ -127,9 +134,9 @@ async function uploadSinglePhoto(externalUrl, propertyId, index, photoId) {
 
 async function migratePropertyFullGallery(property, pIndex, totalProps) {
   console.log(`\n------------------------------------------------------------`);
-  console.log(`[${pIndex + 1}/${totalProps}] Processing Property: ${property.address || property.id}`);
-  console.log(`Location: ${property.city}, ${property.state} ${property.zip}`);
-  console.log(`Property ID: ${property.id}`);
+  console.log(`[${pIndex + 1}/${totalProps}] Property: ${property.address || property.id}`);
+  console.log(`Location: ${property.city || ''}, ${property.state || ''} ${property.zip || ''}`);
+  console.log(`ID: ${property.id}`);
 
   // Fetch ALL photos for this property in exact display_order
   const photosRes = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?property_id=eq.${property.id}&order=display_order.asc`, {
@@ -147,53 +154,56 @@ async function migratePropertyFullGallery(property, pIndex, totalProps) {
   let skipped = 0;
   let failed = 0;
 
-  for (let i = 0; i < allPhotos.length; i++) {
-    const photo = allPhotos[i];
+  // Process photos in concurrent chunks of 3
+  const concurrency = 3;
+  for (let i = 0; i < allPhotos.length; i += concurrency) {
+    const chunk = allPhotos.slice(i, i + concurrency);
+    await Promise.all(chunk.map(async (photo, chunkOffset) => {
+      const photoIdx = i + chunkOffset;
 
-    // Check if already on ImageKit
-    if (photo.url && photo.url.includes('ik.imagekit.io')) {
-      skipped++;
-      continue;
-    }
-
-    try {
-      const uploadResult = await uploadSinglePhoto(photo.url, property.id, i, photo.id);
-
-      // Update the record in Supabase
-      const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?id=eq.${photo.id}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify({
-          url: uploadResult.url,
-          file_id: uploadResult.fileId,
-          width: uploadResult.width || null,
-          height: uploadResult.height || null,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-
-      if (patchRes.ok) {
-        migrated++;
-        console.log(`    ✅ Photo ${i + 1}/${allPhotos.length} migrated -> ${uploadResult.url}`);
-      } else {
-        failed++;
-        console.warn(`    ⚠️ Photo ${i + 1}/${allPhotos.length} uploaded to ImageKit but DB update failed`);
+      if (photo.url && photo.url.includes('ik.imagekit.io')) {
+        skipped++;
+        return;
       }
-    } catch (err) {
-      failed++;
-      console.error(`    ❌ Photo ${i + 1}/${allPhotos.length} error: ${err.message}`);
-    }
 
-    // Brief delay to remain well within free tier rate limits
-    await new Promise(r => setTimeout(r, 200));
+      try {
+        const uploadResult = await uploadSinglePhoto(photo.url, property.id, photoIdx, photo.id);
+
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?id=eq.${photo.id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            url: uploadResult.url,
+            file_id: uploadResult.fileId,
+            width: uploadResult.width || null,
+            height: uploadResult.height || null,
+            updated_at: new Date().toISOString(),
+          }),
+        });
+
+        if (patchRes.ok) {
+          migrated++;
+          console.log(`    ✅ Photo ${photoIdx + 1}/${allPhotos.length} migrated -> ${uploadResult.url}`);
+        } else {
+          failed++;
+          console.warn(`    ⚠️ Photo ${photoIdx + 1}/${allPhotos.length} uploaded to IK but DB update failed`);
+        }
+      } catch (err) {
+        failed++;
+        console.error(`    ❌ Photo ${photoIdx + 1}/${allPhotos.length} error: ${err.message}`);
+      }
+    }));
+
+    // Respect ImageKit API rate limits
+    await new Promise(r => setTimeout(r, 150));
   }
 
-  console.log(`  Summary for this property: ${migrated} migrated, ${skipped} already on ImageKit, ${failed} failed.`);
+  console.log(`  Summary: ${migrated} migrated, ${skipped} already on IK, ${failed} failed.`);
   return { success: failed === 0, migrated, skipped, failed };
 }
 
