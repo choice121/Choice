@@ -38,6 +38,10 @@ updateNav();
 
 const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
+const isEmbedded = params.get('embedded') === 'true';
+if (isEmbedded) {
+  document.body.setAttribute('data-embedded', 'true');
+}
 
 // Resolve the property id from either:
 //   1) the legacy ?id=PROP-XXXXXXXX query string, or

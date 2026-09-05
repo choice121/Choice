@@ -18,11 +18,9 @@ async function loadMatches() {
   }
 
   try {
-    // 1. Fetch the collection
+    // 1. Fetch the collection (via secure RPC to prevent enumeration)
     const { data: collection, error: colError } = await window.CP.sb()
-      .from('client_collections')
-      .select('*')
-      .eq('id', matchId)
+      .rpc('get_client_collection', { collection_id: matchId })
       .single();
 
     if (colError || !collection) {
@@ -81,6 +79,38 @@ async function loadMatches() {
     
     grid.innerHTML = htmls.join('');
     grid.querySelectorAll('.property-card').forEach(window.initCardCarousel);
+    
+    // Append embedded=true to all property links to ensure even right-clicks are isolated
+    grid.querySelectorAll('a').forEach(a => {
+      if (a.href && a.href.includes('property.html')) {
+        const u = new URL(a.href, window.location.origin);
+        u.searchParams.set('embedded', 'true');
+        a.href = u.toString();
+      }
+    });
+    
+    // 5. Intercept Clicks
+    const overlay = document.getElementById('property-overlay');
+    const iframe = document.getElementById('property-iframe');
+    const closeBtn = document.getElementById('closeOverlayBtn');
+    
+    grid.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href.includes('property.html')) {
+        e.preventDefault();
+        const url = new URL(link.href);
+        url.searchParams.set('embedded', 'true');
+        iframe.src = url.toString();
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // lock scroll
+      }
+    });
+    
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+      iframe.src = 'about:blank';
+    });
 
   } catch (err) {
     console.error('Error loading matches:', err);
