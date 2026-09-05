@@ -2,7 +2,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const portArgIndex = process.argv.indexOf('--port');
+const PORT = portArgIndex !== -1 ? parseInt(process.argv[portArgIndex + 1], 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
+const hostArgIndex = process.argv.indexOf('--host');
+const HOST = hostArgIndex !== -1 ? process.argv[hostArgIndex + 1] : '0.0.0.0';
 const ROOT = __dirname;
 
 let visionAuditor = null;
@@ -196,6 +199,6 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Choice Properties dev server running at http://0.0.0.0:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Choice Properties dev server running at http://${HOST}:${PORT}`);
 });
