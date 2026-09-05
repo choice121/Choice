@@ -839,6 +839,102 @@
     if(modal) modal.style.display = 'none';
   }
 
+  async function executeCascadeDelete(chunk) {
+    // Attempt 1: window.CP.Properties.deleteCascadeBulk if defined
+    if (window.CP && window.CP.Properties && typeof window.CP.Properties.deleteCascadeBulk === 'function') {
+      try {
+        const res = await window.CP.Properties.deleteCascadeBulk(chunk);
+        if (res && res.ok && res.data) return res;
+      } catch (e) {
+        console.warn('[watermark-sniper] CP.Properties.deleteCascadeBulk threw:', e);
+      }
+    }
+
+    // Attempt 2: window.CP.Properties.deleteCascade if defined
+    if (window.CP && window.CP.Properties && typeof window.CP.Properties.deleteCascade === 'function') {
+      try {
+        let count = 0;
+        const dIds = [];
+        const fIds = [];
+        for (const id of chunk) {
+          const res = await window.CP.Properties.deleteCascade(id);
+          if (res && res.ok) {
+            count += (res.data?.deleted || 1);
+            if (res.data?.deleted_ids) dIds.push(...res.data.deleted_ids);
+            else dIds.push(id);
+            if (res.data?.file_ids) fIds.push(...res.data.file_ids);
+          }
+        }
+        return { ok: true, data: { deleted: count, deleted_ids: dIds, file_ids: fIds }, error: null };
+      } catch (e) {
+        console.warn('[watermark-sniper] CP.Properties.deleteCascade fallback threw:', e);
+      }
+    }
+
+    // Attempt 3: Supabase RPC 'delete_properties_cascade'
+    const sbClient = (window.CP && typeof window.CP.sb === 'function') ? window.CP.sb() : (window.supabase || null);
+    if (sbClient && typeof sbClient.rpc === 'function') {
+      try {
+        const { data, error } = await sbClient.rpc('delete_properties_cascade', { p_ids: chunk });
+        let parsed = data;
+        if (typeof parsed === 'string') {
+          try { parsed = JSON.parse(parsed); } catch (_) {}
+        }
+        if (!error && parsed && (parsed.ok === true || parsed.deleted !== undefined)) {
+          return { ok: true, data: parsed, error: null };
+        }
+      } catch (e) {
+        console.warn('[watermark-sniper] RPC delete_properties_cascade threw:', e);
+      }
+    }
+
+    // Attempt 4: Direct multi-table cascading delete fallback
+    try {
+      let fileIds = [];
+      if (sbClient) {
+        const { data: photos } = await sbClient.from('property_photos').select('file_id').in('property_id', chunk);
+        fileIds = (photos || []).map(p => p.file_id).filter(Boolean);
+        await sbClient.from('property_photos').delete().in('property_id', chunk).catch(() => {});
+        await sbClient.from('saved_properties').delete().in('property_id', chunk).catch(() => {});
+        await sbClient.from('inquiries').delete().in('property_id', chunk).catch(() => {});
+        await sbClient.from('applications').update({ property_id: null }).in('property_id', chunk).catch(() => {});
+        const { data: delProps, error: delErr } = await sbClient.from('properties').delete().in('id', chunk).select('id');
+        if (!delErr) {
+          const dIds = (delProps || []).map(p => p.id);
+          return { ok: true, data: { deleted: dIds.length || chunk.length, deleted_ids: dIds.length ? dIds : chunk, file_ids: fileIds }, error: null };
+        }
+      }
+
+      // REST API fallback if client wasn't initialized
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG) ? CONFIG : (window.CONFIG || {});
+      const supaUrl = (cfg.SUPABASE_URL || '').replace(/\/$/, '');
+      const supaKey = cfg.SUPABASE_ANON_KEY || '';
+      let authToken = supaKey;
+      try {
+        const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
+        if (sess?.access_token) authToken = sess.access_token;
+      } catch (_) {}
+
+      if (supaUrl && supaKey) {
+        const hdrs = { 'apikey': supaKey, 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+        await fetch(`${supaUrl}/rest/v1/property_photos?property_id=in.(${chunk.join(',')})`, { method: 'DELETE', headers: hdrs }).catch(() => {});
+        await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=in.(${chunk.join(',')})`, { method: 'DELETE', headers: hdrs }).catch(() => {});
+        await fetch(`${supaUrl}/rest/v1/inquiries?property_id=in.(${chunk.join(',')})`, { method: 'DELETE', headers: hdrs }).catch(() => {});
+        await fetch(`${supaUrl}/rest/v1/applications?property_id=in.(${chunk.join(',')})`, { method: 'PATCH', headers: hdrs, body: JSON.stringify({ property_id: null }) }).catch(() => {});
+        const delRes = await fetch(`${supaUrl}/rest/v1/properties?id=in.(${chunk.join(',')})`, { method: 'DELETE', headers: { ...hdrs, 'Prefer': 'return=representation' } });
+        if (delRes.ok) {
+          const rows = await delRes.json().catch(() => []);
+          const dIds = rows.map(r => r.id);
+          return { ok: true, data: { deleted: dIds.length || chunk.length, deleted_ids: dIds.length ? dIds : chunk, file_ids: fileIds }, error: null };
+        }
+      }
+    } catch (directErr) {
+      console.error('[watermark-sniper] Direct cascading delete failed:', directErr);
+    }
+
+    return { ok: false, error: 'All cascading delete strategies failed for the selected listings.' };
+  }
+
   async function performCascadingDeletion(){
     closeDeleteConfirmationModal();
     const count = queuedProperties.size;
@@ -866,7 +962,7 @@
       setLoading(true, `Deleting listings ${i + 1}–${Math.min(i + chunkSize, ids.length)} of ${ids.length}…`);
 
       try {
-        const result = await CP.Properties.deleteCascadeBulk(chunk);
+        const result = await executeCascadeDelete(chunk);
         if(result && result.ok && result.data){
           const dIds = Array.isArray(result.data.deleted_ids) ? result.data.deleted_ids : [];
           const numDeleted = typeof result.data.deleted === 'number' ? result.data.deleted : dIds.length;

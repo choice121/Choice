@@ -1449,6 +1449,8 @@ window.CP = Object.assign(window.CP || {}, {
   buildApplyURL, incrementCounter,
   getSession, getLandlordProfile, requireAuth,
   signIn, signUp, signOut, resetPassword, updateNav,
+  deleteCascade: (id) => Properties.deleteCascade(id),
+  deleteCascadeBulk: (ids) => Properties.deleteCascadeBulk(ids),
 });
 window.CP.UI = Object.assign(window.CP.UI || {}, UI);
 

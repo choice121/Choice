@@ -58,9 +58,19 @@ logger = logging.getLogger("imagekit_upload")
 # -- Credential helpers --------------------------------------------------------
 
 def _get_credentials():
-    """Return (private_key, url_endpoint) from environment variables."""
-    key      = os.environ.get("IMAGEKIT_PRIVATE_KEY", "").strip()
-    endpoint = os.environ.get("IMAGEKIT_URL_ENDPOINT", "").strip().rstrip("/")
+    """Return (private_key, url_endpoint) from environment variables with aliases."""
+    key = (
+        os.environ.get("IMAGEKIT_PRIVATE_KEY")
+        or os.environ.get("Imagekitprivate")
+        or os.environ.get("IMAGEKIT_PRIVATE")
+        or os.environ.get("imagekit_private_key")
+        or ""
+    ).strip()
+    endpoint = (
+        os.environ.get("IMAGEKIT_URL_ENDPOINT")
+        or os.environ.get("IMAGEKIT_URL")
+        or "https://ik.imagekit.io/21rg7lvzo"
+    ).strip().rstrip("/")
     return key, endpoint
 
 

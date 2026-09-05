@@ -159,8 +159,18 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 if not SUPABASE_URL:
     raise RuntimeError("SUPABASE_URL env var is required — set it in .env or environment secrets.")
 SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-IK_PRIVATE_KEY = os.environ.get("IMAGEKIT_PRIVATE_KEY", "").strip()
-IK_URL_ENDPOINT = os.environ.get("IMAGEKIT_URL_ENDPOINT", "https://ik.imagekit.io/21rg7lvzo").rstrip("/")
+IK_PRIVATE_KEY = (
+    os.environ.get("IMAGEKIT_PRIVATE_KEY")
+    or os.environ.get("Imagekitprivate")
+    or os.environ.get("IMAGEKIT_PRIVATE")
+    or os.environ.get("imagekit_private_key")
+    or ""
+).strip()
+IK_URL_ENDPOINT = (
+    os.environ.get("IMAGEKIT_URL_ENDPOINT")
+    or os.environ.get("IMAGEKIT_URL")
+    or "https://ik.imagekit.io/21rg7lvzo"
+).rstrip("/")
 SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://choice-properties-site.pages.dev").rstrip("/")
 
 IK_UPLOAD_URL = "https://upload.imagekit.io/api/v1/files/upload"
