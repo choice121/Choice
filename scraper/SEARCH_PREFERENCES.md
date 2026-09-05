@@ -17,7 +17,7 @@ rules. Run the scraper with the commands listed under each market.
 | Bathrooms | 2+ |
 | Scraped rent range | $1,250–$1,500 / month |
 | Published rent cap | $1,250 / month (tiered proportional reduction — see batch script) |
-| Security deposit | Equal to published rent |
+| Security deposit | Equal to published rent (DB field only; never mentioned in descriptions; lease terms omitted) |
 | Goal | 15 published listings per batch |
 
 **Tiered pricing (this market):**

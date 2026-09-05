@@ -402,7 +402,6 @@ function renderProperty(p) {
       "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
-    "leaseLength": p.lease_terms?.length ? p.lease_terms.join(", ") : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
@@ -617,11 +616,6 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  if (p.lease_terms?.length) {
-    const terms = p.lease_terms.filter(t => t && !/smok/i.test(t));
-    if (terms.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${terms.map(esc).join(', ')}</div>`);
-  }
-  if (p.minimum_lease_months) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-check"></i>Min. Lease: ${p.minimum_lease_months} month${p.minimum_lease_months !== 1 ? 's' : ''}</div>`);
   if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: $${Number(p.security_deposit).toLocaleString()}</div>`);
   if (!leaseItems.length && p.application_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${Number(p.application_fee).toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
@@ -3103,13 +3097,10 @@ function renderPropFacts(p) {
 
   // ── Cards — only fields NOT already in meta strip or tabs ──────────────
 
-  // Move-in: available (future date only — if now, header chip already says so),
-  // lease terms, min lease (also in Lease tab but worth surfacing here)
+  // Move-in: available (future date only — if now, header chip already says so)
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
   const moveInCard = card('Move-in', 'fa-key', [
     row('Available',   !availNow && p.available_date ? formatDate(p.available_date) : null),
-    row('Lease terms', p.lease_terms?.length ? p.lease_terms.join(', ') : null),
-    row('Min. lease',  p.minimum_lease_months ? p.minimum_lease_months + ' months' : null),
   ]);
 
   // Interior: heating / cooling / laundry

@@ -15,6 +15,8 @@
 | External application portals | Strip: TurboTenant, Zillow application, Apartments.com application, RentSpree, AppFolio, Property ID references |
 | Agent / owner / manager names | Strip: "Contact John Smith", "Managed by ABC Realty", "Leasing agent: Jane Doe" |
 | Third-party brokerage branding | Strip: "Listed by Keller Williams", "MLS #12345", "Courtesy of RE/MAX" |
+| Security deposit in description | Strip: listing descriptions must NEVER quote, mention, or state security deposit amounts or terms |
+| Lease terms displayed | Strip / omit: no properties show lease terms or minimum lease duration; omitted from all enrichment and listings |
 | Application fee ≠ $50 | Replace with "Application Fee: $50." — always, no exceptions |
 | "Free application" / "$0 fee" | Replace with "Application Fee: $50." |
 | Competitor brand in listing | Drop ENTIRE listing: FirstKey, Invitation Homes, Progress Residential, Tricon, Coldwell Banker, Keller Williams, RE/MAX, Century 21, Berkshire Hathaway, Main Street Renewal, AMH, eXp Realty |
@@ -30,7 +32,7 @@
 | Rule | What it looks like |
 |---|---|
 | Pets allowed = Yes | Every listing is published as pet-friendly |
-| Security deposit = 1× rent | `security_deposit` = `monthly_rent` |
+| Security deposit = 1× rent (DB only) | `security_deposit` = `monthly_rent` in DB record; NEVER mentioned in descriptions |
 | Application fee = $50 | `application_fee` field = 50, description says "Application Fee: $50." |
 | Apply CTA at end of description | Ends with "Apply now through Choice Properties…" or similar |
 | All photos on ImageKit | `property_photos.url` = `https://ik.imagekit.io/21rg7lvzo/…` |
@@ -48,16 +50,18 @@ When you call `PipelineOrchestrator.run(criteria)`, the pipeline automatically:
 4. Strips agent/owner/broker name references
 5. Strips third-party brokerage/MLS branding
 6. Strips corporate fee schedules and marketing blocks (Mynd "RENT WITH MYND" block, Invitation Homes fee blocks, Progress Residential, Tricon)
-7. Removes individual branded/agent photos from the image list
-8. Normalizes HVAC fields from raw MLS blobs
-9. Infers missing laundry, parking, pets, title, deposit from amenity tags
-10. Fills missing available_date, lease term, deposit by scraping the listing page (Realtor only)
-11. Enforces rent consistency between description text and `monthly_rent` field
-12. Normalizes application fee to $50 in description text
-13. Appends a "Apply now at Choice Properties" CTA to every description
-14. Validates: photos ≥ 6, rent set, no banned language → blocks publish if any fail
-15. Uploads all photos to ImageKit, verifies URLs, inserts into `property_photos`
-16. Publishes, activates, and returns the live URL
+7. Strips all security deposit mentions and figures from descriptions
+8. Omits and clears all lease terms so no properties display lease duration
+9. Removes individual branded/agent photos from the image list
+10. Normalizes HVAC fields from raw MLS blobs
+11. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms)
+12. Fills missing available_date, deposit by scraping the listing page (Realtor only; never extracts lease terms)
+13. Enforces rent consistency between description text and `monthly_rent` field
+14. Normalizes application fee to $50 in description text
+15. Appends a "Apply now at Choice Properties" CTA to every description
+16. Validates: photos ≥ 6, rent set, no banned language → blocks publish if any fail
+17. Uploads all photos to ImageKit, verifies URLs, inserts into `property_photos`
+18. Publishes, activates, and returns the live URL
 
 ---
 

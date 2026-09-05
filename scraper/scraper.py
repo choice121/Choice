@@ -626,20 +626,9 @@ def _map_realtor_property(prop):
     smoking_items    = _details_texts(terms, "smoking",      "tobacco",     "no smoking")
     admin_fee_items  = _details_texts(terms, "admin fee",    "administrative fee")
 
-    # ── minimum_lease_months from lease terms ─────────────────────────────────
+    # ── minimum_lease_months and lease terms: omitted across Choice Properties ──
     minimum_lease_months = None
-    for lt in lease_term_items:
-        lt_lo = lt.lower()
-        m_mo  = re.search(r"(\d+)\s*month", lt_lo)
-        if m_mo:
-            minimum_lease_months = int(m_mo.group(1))
-            break
-        if re.search(r"month[- ]to[- ]month|month/month|m2m|mtm", lt_lo):
-            minimum_lease_months = 1
-            break
-        if re.search(r"\byear\b|12[\s-]*month|annual", lt_lo):
-            minimum_lease_months = 12
-            break
+    lease_term_items = []
 
     # ── available_date — terms first, then units, NOT list_date ───────────────
     available_date = None

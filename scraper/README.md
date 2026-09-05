@@ -214,7 +214,7 @@ python scraper/scraper.py --location "Miami, FL" --dry-run
 | pets_allowed | ✅ | merge | ✅ | preferred |
 | smoking_allowed | ✅ | — | ❌ | ✅ |
 | available_date | ✅ | gap-fill | ❌ | ✅ |
-| minimum_lease_months | ✅ | — | ❌ | ✅ |
+| minimum_lease_months | ❌ (omitted) | — | ❌ | ❌ (omitted per platform rules) |
 | showing_instructions | ❌ | ✅ | ❌ | ❌ |
 | move_in_special | ❌ | ✅ | ❌ | ❌ |
 | location_context | ❌ | ✅ (schools, walk scores) | ❌ | ✅ (school district, walk scores) |

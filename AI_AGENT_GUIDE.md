@@ -147,7 +147,9 @@ These are enforced automatically by the pipeline. You don't implement them — t
 | **Min 6 photos** | Every listing must have at least 6 source images before publishing |
 | **All photos on ImageKit** | No external/hotlinked photo URLs in final listings |
 | **Application fee = $50** | Both the `application_fee` field and description must say $50 |
-| **Security deposit = 1x rent** | `security_deposit` must equal `monthly_rent` |
+| **Security deposit = 1x rent (DB only)** | `security_deposit` in the database equals `monthly_rent`; **NEVER** quote or mention deposits in descriptions |
+| **No security deposit in descriptions** | All security deposit mentions, amounts, and clauses are completely stripped from listing descriptions during enrichment |
+| **No lease terms / duration** | Lease terms are removed from enrichment documentation so no properties show that. Never extract, assign, or display `lease_terms` or `minimum_lease_months` |
 | **Pets allowed = Yes** | Every listing is published as pet-friendly |
 | **No competitor branding** | Listings from FirstKey, Invitation Homes, Progress Residential, Tricon, Coldwell Banker, Keller Williams, RE/MAX, Century 21, Berkshire Hathaway, Main Street Renewal, AMH, eXp Realty, etc. are dropped |
 | **No tour/showing language** | "Schedule a tour", "Book a showing", "Open house", etc. is stripped |

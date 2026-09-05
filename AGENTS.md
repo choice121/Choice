@@ -2,6 +2,7 @@
 
 ## 1. UI Guidelines
 - **Smoking Policy**: The "smoking" tab / smoking policies are removed from property details pages. Do not show smoking restrictions or information on property pages.
+- **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and listing views. No properties show lease terms or minimum lease duration. Future AIs must never display lease terms on property pages.
 
 ## 2. Pipeline Pre-Publishing Rules & Enrichment
 - **Gallery Images Review**: Before publishing any property, review all gallery images to verify that promotional banners, realtor flyers, contact cards, and discount graphic cards are removed — keeping ONLY genuine property photographs.
@@ -9,7 +10,8 @@
 - **Minimum Photos**: Must have at least 6 genuine property photographs.
 - **Application Fee**: Always $50.
 - **Pet Friendly**: Always pet-friendly.
-- **Security Deposit**: Always 1x monthly rent.
+- **Security Deposit**: Always 1x monthly rent in the structured database field, but **NEVER mentioned in descriptions**. All security deposit amounts, quotes, clauses, and references must be completely stripped from listing descriptions during description enrichment (`strip_security_deposit_from_description`). Listing descriptions must remain 100% free of security deposit mentions.
+- **No Lease Term in Enrichment or Properties**: Lease terms are removed from all enrichment documentation and pipelines so no properties show that. Scrapers, enrichment logic, and AI assistants must never extract, populate, or assign lease terms (`lease_terms`, `minimum_lease_months`). All properties must have lease terms omitted.
 
 ## 3. Post-Publishing Mandatory AI Response Format
 After publishing properties, the AI assistant MUST send the user the published properties link(s) in this exact format in the chat for them to verify:

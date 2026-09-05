@@ -17,24 +17,27 @@
 #   4. Strips agent/owner/manager name references
 #   5. Strips brokerage/MLS branding
 #   6. Strips corporate fee schedules
-#   7. Removes individual branded/agent photos from the image list
-#   8. Normalizes heating/cooling from raw MLS blobs
-#   9. Infers missing: laundry, parking, pets, title, deposit
-#  10. Fetches listing page HTML to fill low-score records
-#  11. Enforces rent consistency (description must match monthly_rent)
-#  12. Normalizes application fee to $50 in description
-#  13. Appends "Apply now at Choice Properties" CTA
-#  14. Validates before publish: ≥6 photos, rent set, no banned language
-#  15. Re-scores every record (0–100 quality score)
+#   7. Strips all security deposit mentions and figures from descriptions
+#   8. Removes individual branded/agent photos from the image list
+#   9. Normalizes heating/cooling from raw MLS blobs
+#  10. Infers missing: laundry, parking, pets, title (omits lease terms)
+#  11. Fetches listing page HTML to fill low-score records
+#  12. Enforces rent consistency (description must match monthly_rent)
+#  13. Normalizes application fee to $50 in description
+#  14. Appends "Apply now at Choice Properties" CTA
+#  15. Validates before publish: ≥6 photos, rent set, no banned language
+#  16. Re-scores every record (0–100 quality score)
 #
 # MANDATORY RULES (never bypass):
 #   - Application fee = $50 always
-#   - Security deposit = 1× monthly rent
+#   - Security deposit = 1× monthly rent (structured DB field only; NEVER in descriptions)
+#   - Description must NEVER contain security deposit quotes, amounts, or terms
+#   - Lease terms are permanently omitted: no properties show lease terms or minimum duration
 #   - Pets allowed = Yes (always published as pet-friendly)
 #   - Min 6 photos required before publishing
 #   - All photos must be on ImageKit (never external URLs)
 #   - Description must NOT contain: tour language, portal links,
-#     agent names, competitor branding, wrong fee amounts
+#     agent names, competitor branding, security deposit, wrong fee amounts
 #   - Description MUST end with a Choice Properties apply CTA
 #
 # QUICK REFERENCE: see scraper/RULES.md (short, scannable version)
@@ -49,13 +52,14 @@ Post-processing applied to every scraped record before DB insert:
   1b. strip_external_application_instructions -- remove references to applying via a third-party portal
   1c. replace_owner_manager_references     -- remove property manager / owner / leasing-agent name references
   1d. strip_third_party_branding           -- remove brokerage / MLS / other-platform branding
-  1e. normalize_application_fee_in_description -- replace any non-$50 fee or "free application" language
+  1e. strip_security_deposit_from_description -- remove all security deposit figures, clauses, and terms
+  1f. normalize_application_fee_in_description -- replace any non-$50 fee or "free application" language
   2. strip_corporate_fees   -- remove management company fee blocks from descriptions
   3. is_watermarked         -- detect competitor-branded listings (drop before staging)
   4. normalize_hvac         -- parse raw MLS blobs into separate heating vs cooling fields
-  5. rule_based_enrich      -- infer missing fields: laundry, parking, pets, title, deposit
+  5. rule_based_enrich      -- infer missing fields: laundry, parking, pets, title (clears lease terms)
   6. regex_extract_missing  -- fetch listing page and regex-extract missing fields
-                               (Realtor/non-Zillow only; skips records scored >= 75)
+                               (Realtor/non-Zillow only; skips records scored >= 75; never extracts lease terms)
   6a. enforce_price_consistency -- rewrite any stale rent figure in the description to match
                                    the final published monthly_rent
 
@@ -146,16 +150,50 @@ _BOILERPLATE_PATTERNS = [
 
 _BOILERPLATE_RE = [re.compile(p, re.IGNORECASE) for p in _BOILERPLATE_PATTERNS]
 
+# Patterns to completely strip security deposit mentions and figures from descriptions
+_DEPOSIT_STRIP_PATTERNS = [
+    # 1. Full sentence or bullet starting with security deposit / deposit requirement
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:A\s+|The\s+|No\s+)?(?:refundable\s+)?security\s+deposit\s*(?:is|of|\:|=|-)[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:A\s+|The\s+|No\s+)?(?:refundable\s+)?security\s+deposit\s+(?:is\s+)?(?:required|due|waived|not\s+required)[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:Security\s+deposit|Deposit)\s*[:=-]\s*(?:\$[0-9,]+|\d+x?\s*(?:monthly\s+)?rent|one\s+month(?:[\x27\u2019]s)?\s+rent|equal\s+to\s+[^.!?\n]+|none|waived)[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:Move[- ]in\s+(?:costs?|fees?)|Requirements?)[:\s]+[^\n.!?]*security\s+deposit[^\n.!?]*[.!?]?", re.IGNORECASE),
+    # 2. Inline security deposit expressions (e.g. ", Security Deposit: None", ", and security deposit of $1500")
+    re.compile(r"(?i)(?:,\s*|\s+and\s+)?[-*•]?\s*(?:(?:A|The|No)\s+)?(?:refundable\s+)?security\s+deposit\s*(?:[:=-]|is|of|amounting\s+to|equal\s+to)\s*[^.,!?\n]*", re.IGNORECASE),
+    re.compile(r"(?i)(?:,\s*|\s+and\s+)(?:a\s+)?(?:refundable\s+)?security\s+deposit(?:\s+(?:is|of|amounting\s+to|equal\s+to|\:|=|-)\s*(?:\$[0-9,]+|\d+x?\s*rent|one\s+month(?:[\x27\u2019]s)?\s+rent))?(?:\s+(?:is\s+)?(?:due|required)[^.,!?\n]*)?", re.IGNORECASE),
+    re.compile(r"(?i)\s+and\s+(?:a\s+)?security\s+deposit\b", re.IGNORECASE),
+    # 3. Any remaining sentence explicitly mentioning security deposit
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+]
+
+
+def strip_security_deposit_from_description(text):
+    """
+    Remove all security deposit mentions, amounts, and clauses from listing descriptions.
+    Choice Properties listings must never quote or mention security deposits in descriptions.
+    """
+    if not text:
+        return text
+    for pat in _DEPOSIT_STRIP_PATTERNS:
+        text = pat.sub(" ", text)
+    # Clean up punctuation artifacts and excess whitespace
+    text = re.sub(r",\s*\.", ".", text)
+    text = re.sub(r"\band\s*\.", ".", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
+    return text.strip()
+
 
 def clean_description(text):
     """
-    Strip agent boilerplate, CTA language, and screening criteria from a
-    scraped listing description.  Returns the cleaned string.
+    Strip agent boilerplate, CTA language, screening criteria, and security deposit
+    mentions from a scraped listing description.  Returns the cleaned string.
     """
     if not text:
         return text
     for pat in _BOILERPLATE_RE:
         text = pat.sub("", text)
+    text = strip_security_deposit_from_description(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
     return text
@@ -1299,6 +1337,10 @@ def rule_based_enrich(record):
     if not desc or len(desc) < 200:
         record["description"] = _build_fallback_description(record, existing=desc if desc else None)
 
+    # 10. Permanently omit lease terms — no properties show lease terms
+    record["minimum_lease_months"] = None
+    record["lease_terms"] = "[]"
+
     return record
 
 
@@ -1492,14 +1534,6 @@ _DEPOSIT_PATTERNS = [
     r"security deposit[:\s]*([0-9,]+)",
 ]
 
-_LEASE_MONTHS_PATTERNS = [
-    r"(\d{1,2})[- ]month\s+lease",
-    r"lease term[:\s]+(\d{1,2})\s+months?",
-    r"minimum lease[:\s]+(\d{1,2})\s+months?",
-    r"(\d{1,2})[- ]month\s+minimum",
-    r"Lease term[:\s]+(\d{1,2})\s+months?",
-]
-
 _LAUNDRY_RULES = [
     (
         r"(?i)in[- ]unit laundry"
@@ -1604,16 +1638,9 @@ def regex_extract_missing(record, verbose=False):
                 except Exception:
                     pass
 
-    # minimum_lease_months
-    if not record.get("minimum_lease_months"):
-        for pat in _LEASE_MONTHS_PATTERNS:
-            m = re.search(pat, plain)
-            if m:
-                try:
-                    record["minimum_lease_months"] = int(m.group(1))
-                    break
-                except Exception:
-                    pass
+    # Permanently omit lease terms — no properties show lease terms
+    record["minimum_lease_months"] = None
+    record["lease_terms"] = "[]"
 
     # laundry_type (only if not already inferred from amenities)
     if not record.get("laundry_type"):
@@ -1709,6 +1736,10 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         if rec.get("description"):
             rec["description"] = strip_third_party_branding(rec["description"])
 
+        # Step 2e: strip all security deposit mentions and numbers from description
+        if rec.get("description"):
+            rec["description"] = strip_security_deposit_from_description(rec["description"])
+
         # Step 3: strip corporate fee blocks
         if rec.get("description"):
             rec["description"] = strip_corporate_fees(rec["description"])
@@ -1778,6 +1809,10 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         # ends with an invitation to submit an application.
         if rec.get("description"):
             rec["description"] = append_apply_cta(rec["description"])
+
+        # Permanently clear lease terms so no properties display lease duration
+        rec["minimum_lease_months"] = None
+        rec["lease_terms"] = "[]"
 
         clean_records.append(rec)
 

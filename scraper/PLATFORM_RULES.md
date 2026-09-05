@@ -76,6 +76,21 @@ phrases with **Choice Properties** where appropriate:
 Strip brokerage names, MLS identifiers, and other platform branding from
 descriptions.
 
+### 2e. Security Deposit Mentions — REMOVE (Mandatory)
+Listing descriptions must NEVER mention, quote, or state security deposit
+amounts, clauses, terms, or conditions. All references (e.g. "Security deposit:
+$1,500", "Deposit is equal to 1 month rent", "Refundable security deposit
+required", etc.) must be completely stripped from listing descriptions by
+`strip_security_deposit_from_description()` during enrichment. While the
+database stores a structured `security_deposit` field (defaulting to 1× monthly
+rent), listing descriptions must remain 100% free of deposit statements.
+
+### 2f. Lease Terms & Duration — OMIT (Mandatory)
+No property should show lease terms or minimum lease duration. Scrapers,
+enrichment pipelines, and AI assistants must never extract, populate, or
+display lease terms (`lease_terms`, `minimum_lease_months`). All listings must
+omit lease term durations so no properties display them on the platform.
+
 ---
 
 ## 3. Application Fee Normalization (Mandatory)
@@ -113,11 +128,23 @@ Any wording indicating the application is free or costs $0 must be replaced with
 
 ---
 
-## 4. Rent & Security Deposit Consistency
+## 4. Rent Consistency & Description Sanitization
 
-Every mention of rent or deposit in the description must match the property's
-published `monthly_rent` and `security_deposit` fields. Conflicting amounts
-are replaced by `enforce_price_consistency()` in the enrichment pipeline.
+### 4a. Rent Consistency
+Every mention of rent in the description must match the property's
+published `monthly_rent` field. Conflicting amounts are replaced by
+`enforce_price_consistency()` in the enrichment pipeline.
+
+### 4b. Security Deposit Removal
+Listing descriptions must never state or quote security deposit amounts.
+Security deposits are managed strictly through structured database records
+and must remain omitted from all description prose.
+
+### 4c. Lease Terms Prohibited & Omitted
+No properties show lease terms or minimum lease duration. Scrapers,
+enrichment pipelines, and AI assistants must never extract, populate, or
+display lease terms (`lease_terms`, `minimum_lease_months`). All listings
+must omit lease terms.
 
 ---
 
