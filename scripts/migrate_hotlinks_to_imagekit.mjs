@@ -10,6 +10,7 @@
 // ============================================================
 
 import { Buffer } from 'node:buffer';
+import fs from 'node:fs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tlfmwetmhthpyrytrcfo.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
@@ -30,7 +31,10 @@ const specificPropIdArg = args.find(a => a.startsWith('--property-id='));
 const maxProperties = isAll ? 999999 : (propLimitArg ? parseInt(propLimitArg.split('=')[1], 10) : 25);
 const targetPropertyId = specificPropIdArg ? specificPropIdArg.split('=')[1] : null;
 
-async function getPropertiesNeedingMigration(limit) {
+// Track skipped/problematic properties in memory to avoid infinite retry loops
+const skippedPropertyIds = new Set();
+
+async function getPropertiesNeedingMigration(limit = 25) {
   if (targetPropertyId) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${targetPropertyId}&select=id,address,city,state,zip`, {
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
@@ -38,17 +42,21 @@ async function getPropertiesNeedingMigration(limit) {
     return await res.json();
   }
 
-  // Find properties that have at least one external photo
+  // Find photos that don't contain ik.imagekit.io
   const res = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?select=property_id&url=not.like.*ik.imagekit.io*&limit=10000`, {
     headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
   });
   if (!res.ok) throw new Error(`Failed to query unmigrated photos: HTTP ${res.status}`);
   const photos = await res.json();
 
-  const propIds = [...new Set(photos.map(p => p.property_id))].slice(0, limit);
+  // Filter out any property IDs that had persistent failures in this run
+  const propIds = [...new Set(photos.map(p => p.property_id))]
+    .filter(id => !skippedPropertyIds.has(id))
+    .slice(0, limit);
+
   if (propIds.length === 0) return [];
 
-  // Fetch property details in chunks of 50
+  // Fetch property details
   const results = [];
   for (let i = 0; i < propIds.length; i += 50) {
     const chunk = propIds.slice(i, i + 50);
@@ -134,16 +142,16 @@ async function uploadSinglePhoto(externalUrl, propertyId, index, photoId) {
 
 async function migratePropertyFullGallery(property, pIndex, totalProps) {
   console.log(`\n------------------------------------------------------------`);
-  console.log(`[${pIndex + 1}/${totalProps}] Property: ${property.address || property.id}`);
+  console.log(`[Property #${pIndex + 1}] ${property.address || property.id}`);
   console.log(`Location: ${property.city || ''}, ${property.state || ''} ${property.zip || ''}`);
   console.log(`ID: ${property.id}`);
 
-  // Fetch ALL photos for this property in exact display_order
   const photosRes = await fetch(`${SUPABASE_URL}/rest/v1/property_photos?property_id=eq.${property.id}&order=display_order.asc`, {
     headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` },
   });
   if (!photosRes.ok) {
     console.error(`  ❌ Failed to fetch photos for property ${property.id}`);
+    skippedPropertyIds.add(property.id);
     return { success: false, migrated: 0, skipped: 0, failed: 0 };
   }
 
@@ -188,7 +196,7 @@ async function migratePropertyFullGallery(property, pIndex, totalProps) {
 
         if (patchRes.ok) {
           migrated++;
-          console.log(`    ✅ Photo ${photoIdx + 1}/${allPhotos.length} migrated -> ${uploadResult.url}`);
+          console.log(`    ✅ Photo ${photoIdx + 1}/${allPhotos.length} -> ${uploadResult.url}`);
         } else {
           failed++;
           console.warn(`    ⚠️ Photo ${photoIdx + 1}/${allPhotos.length} uploaded to IK but DB update failed`);
@@ -200,7 +208,11 @@ async function migratePropertyFullGallery(property, pIndex, totalProps) {
     }));
 
     // Respect ImageKit API rate limits
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  if (failed > 0 && migrated === 0) {
+    skippedPropertyIds.add(property.id);
   }
 
   console.log(`  Summary: ${migrated} migrated, ${skipped} already on IK, ${failed} failed.`);
@@ -211,33 +223,47 @@ async function main() {
   console.log('============================================================');
   console.log('Choice Properties — Full-Gallery ImageKit Migration Engine');
   console.log('Policy: 100% of photos for every property (entire gallery)');
-  console.log('============================================================');
+  console.log('Mode: ' + (isAll ? 'ALL PROPERTIES (Continuous Stream)' : `Batch (${maxProperties} properties)`));
+  console.log('============================================================\n');
 
-  const properties = await getPropertiesNeedingMigration(maxProperties);
-  console.log(`Found ${properties.length} properties queued for full-gallery migration.\n`);
-
-  if (properties.length === 0) {
-    console.log('All properties are fully migrated to ImageKit!');
-    return;
-  }
-
+  let totalPropertiesProcessed = 0;
   let totalMigrated = 0;
   let totalSkipped = 0;
   let totalFailed = 0;
+  const startTime = Date.now();
 
-  for (let pIdx = 0; pIdx < properties.length; pIdx++) {
-    const result = await migratePropertyFullGallery(properties[pIdx], pIdx, properties.length);
-    totalMigrated += result.migrated;
-    totalSkipped += result.skipped;
-    totalFailed += result.failed;
+  while (totalPropertiesProcessed < maxProperties) {
+    const batchLimit = Math.min(25, maxProperties - totalPropertiesProcessed);
+    const properties = await getPropertiesNeedingMigration(batchLimit);
+
+    if (!properties || properties.length === 0) {
+      console.log('\n🎉 No more properties needing migration. 100% complete!');
+      break;
+    }
+
+    console.log(`\nStarting batch of ${properties.length} properties...`);
+
+    for (let pIdx = 0; pIdx < properties.length; pIdx++) {
+      const result = await migratePropertyFullGallery(properties[pIdx], totalPropertiesProcessed + pIdx, maxProperties);
+      totalMigrated += result.migrated;
+      totalSkipped += result.skipped;
+      totalFailed += result.failed;
+    }
+
+    totalPropertiesProcessed += properties.length;
+
+    const elapsedMins = ((Date.now() - startTime) / 60000).toFixed(1);
+    console.log(`\n>>> Progress: ${totalPropertiesProcessed} properties completed | ${totalMigrated} photos migrated | Elapsed: ${elapsedMins}m <<<`);
   }
 
+  const elapsedTotal = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log('\n============================================================');
-  console.log('=== Migration Batch Complete ===');
-  console.log(`Properties Processed: ${properties.length}`);
+  console.log('=== Full Migration Run Finished ===');
+  console.log(`Properties Processed: ${totalPropertiesProcessed}`);
   console.log(`Photos Migrated:      ${totalMigrated}`);
   console.log(`Photos Skipped (IK):  ${totalSkipped}`);
   console.log(`Failed Photos:        ${totalFailed}`);
+  console.log(`Total Runtime:        ${elapsedTotal}s`);
   console.log('============================================================');
 }
 
