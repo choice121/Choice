@@ -928,68 +928,161 @@
       setTimeout(() => { location.href = '/admin/property-detail.html?id=' + encodeURIComponent(nd.id) + '&edit=1'; }, 700);
     });
 
-    // ── Delete property button ────────────────────────────────────────────────
-    document.getElementById('pd-btn-delete-property')?.addEventListener('click', async () => {
-      const title = p.title || 'Untitled';
-      const ok = await S.confirm({
-        title:   'Permanently delete this property?',
-        message: `"${title}" and all its photos will be deleted immediately.\n\nThis cannot be undone.`,
-        ok:      'Delete property',
-        cancel:  'Cancel',
-        danger:  true,
-      });
-      if (!ok) return;
+  // ── Delete property button & handler ──────────────────────────────────────
+  async function executeDeleteProperty(id, propertyTitle, triggerBtn) {
+    const title = propertyTitle || 'Untitled';
+    const ok = await S.confirm({
+      title:   'Permanently delete this property?',
+      message: `"${title}" and all its photos will be deleted immediately.\n\nThis cannot be undone.`,
+      ok:      'Delete property',
+      cancel:  'Cancel',
+      danger:  true,
+    });
+    if (!ok) return;
 
-      const btn = document.getElementById('pd-btn-delete-property');
-      if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.textContent = 'Deleting…';
+    }
 
-      try {
-        const delRes = await CP.Properties.deleteCascade(propId);
-        if (!delRes || !delRes.ok) {
-          S.toast('Delete failed: ' + (delRes?.error || 'Unknown error'), 'error');
-          if (btn) { btn.disabled = false; btn.innerHTML = ico('trash') + ' Delete property'; }
-          return;
+    try {
+      let delRes = null;
+
+      // Tier 1: Try authoritative client method
+      const clientFn =
+        (window.CP?.Properties && typeof window.CP.Properties.deleteCascade === 'function')
+          ? window.CP.Properties.deleteCascade.bind(window.CP.Properties)
+          : (window.CP && typeof window.CP.deleteCascade === 'function')
+            ? window.CP.deleteCascade
+            : (window.CP?.Properties && typeof window.CP.Properties.deleteCascadeBulk === 'function')
+              ? (x) => window.CP.Properties.deleteCascadeBulk([x])
+              : (window.CP && typeof window.CP.deleteCascadeBulk === 'function')
+                ? (x) => window.CP.deleteCascadeBulk([x])
+                : null;
+
+      if (clientFn) {
+        try {
+          delRes = await clientFn(id);
+        } catch (mErr) {
+          console.warn('[executeDeleteProperty] Client method error:', mErr);
         }
+      }
 
-        // Asynchronous remote storage purge (ImageKit) to prevent orphaned assets
-        const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids.filter(Boolean) : [];
-        if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
-          let authKey = CONFIG.SUPABASE_ANON_KEY || '';
+      // Tier 2: Authoritative DB RPC directly
+      if (!delRes || !delRes.ok) {
+        try {
+          const client = (window.CP?.sb ? window.CP.sb() : null) || (typeof supabase !== 'undefined' ? supabase : null);
+          if (client) {
+            const { data, error } = await client.rpc('delete_properties_cascade', { p_ids: [id] });
+            let parsed = data;
+            if (typeof parsed === 'string') {
+              try { parsed = JSON.parse(parsed); } catch (_) {}
+            }
+            if (!error && parsed && (parsed.ok === true || parsed.deleted !== undefined)) {
+              delRes = { ok: true, data: parsed, error: null };
+            } else if (error) {
+              console.warn('[executeDeleteProperty] Direct RPC error:', error);
+            }
+          }
+        } catch (rpcErr) {
+          console.warn('[executeDeleteProperty] Direct RPC exception:', rpcErr);
+        }
+      }
+
+      // Tier 3: Direct REST cascading delete fallback
+      if (!delRes || !delRes.ok) {
+        try {
+          const supaUrl = (typeof CONFIG !== 'undefined' && CONFIG?.SUPABASE_URL ? CONFIG.SUPABASE_URL : 'https://tlfmwetmhthpyrytrcfo.supabase.co').replace(/\/$/, '');
+          const supaKey = (typeof CONFIG !== 'undefined' && CONFIG?.SUPABASE_ANON_KEY) || '';
+          let authToken = supaKey;
           try {
             const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
-            if (sess?.access_token) authKey = sess.access_token;
+            if (sess?.access_token) authToken = sess.access_token;
           } catch (_) {}
 
-          fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': CONFIG.SUPABASE_ANON_KEY || authKey,
-              'Authorization': `Bearer ${authKey}`
-            },
-            body: JSON.stringify({ fileIds, propertyId: propId })
-          }).catch(e => console.warn('[property-detail] ImageKit remote delete error:', e));
-        }
+          const headers = {
+            'apikey': supaKey,
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          };
 
-        // 3. Audit log (non-blocking)
+          await fetch(`${supaUrl}/rest/v1/property_photos?property_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers }).catch(() => {});
+          await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers }).catch(() => {});
+          await fetch(`${supaUrl}/rest/v1/inquiries?property_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers }).catch(() => {});
+          await fetch(`${supaUrl}/rest/v1/applications?property_id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers, body: JSON.stringify({ property_id: null }) }).catch(() => {});
+          await fetch(`${supaUrl}/rest/v1/location_notifications?property_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers }).catch(() => {});
+
+          const delFetch = await fetch(`${supaUrl}/rest/v1/properties?id=eq.${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: { ...headers, 'Prefer': 'return=representation' }
+          });
+          if (delFetch.ok) {
+            delRes = { ok: true, data: { deleted: 1, deleted_ids: [id] }, error: null };
+          } else {
+            const txt = await delFetch.text();
+            throw new Error(`REST delete failed (${delFetch.status}): ${txt}`);
+          }
+        } catch (restErr) {
+          console.error('[executeDeleteProperty] REST cascade delete failed:', restErr);
+          if (!delRes) delRes = { ok: false, error: restErr.message || String(restErr) };
+        }
+      }
+
+      if (!delRes || !delRes.ok) {
+        S.toast('Delete failed: ' + (delRes?.error || 'Unknown error'), 'error');
+        if (triggerBtn) {
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = ico('trash') + ' Delete property';
+        }
+        return;
+      }
+
+      // Asynchronous remote storage purge (ImageKit)
+      const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids.filter(Boolean) : [];
+      if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
+        let authKey = CONFIG.SUPABASE_ANON_KEY || '';
         try {
-          const { data: { session: _delSess } } = await CP.Auth.getSession();
-          CP.sb().from('admin_actions').insert([{
-            user_id:     _delSess?.user?.id || null,
-            action:      'property.hard_delete',
-            target_type: 'property',
-            target_id:   String(propId),
-            metadata:    { title, deleted_at: new Date().toISOString() }
-          }]).catch(() => {});
+          const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
+          if (sess?.access_token) authKey = sess.access_token;
         } catch (_) {}
 
-        S.toast('"' + title + '" deleted successfully.', 'success');
-        setTimeout(() => { location.href = '/admin/listings.html'; }, 1200);
-      } catch (err) {
-        S.toast('Unexpected error: ' + (err.message || err), 'error');
-        if (btn) { btn.disabled = false; btn.innerHTML = ico('trash') + ' Delete property'; }
+        fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CONFIG.SUPABASE_ANON_KEY || authKey,
+            'Authorization': `Bearer ${authKey}`
+          },
+          body: JSON.stringify({ fileIds, propertyId: id })
+        }).catch(e => console.warn('[property-detail] ImageKit remote delete error:', e));
       }
-    });
+
+      // Audit log (non-blocking)
+      try {
+        const { data: { session: _delSess } } = await CP.Auth.getSession();
+        CP.sb().from('admin_actions').insert([{
+          user_id:     _delSess?.user?.id || null,
+          action:      'property.hard_delete',
+          target_type: 'property',
+          target_id:   String(id),
+          metadata:    { title, deleted_at: new Date().toISOString() }
+        }]).catch(() => {});
+      } catch (_) {}
+
+      S.toast('"' + title + '" deleted successfully.', 'success');
+      setTimeout(() => { location.href = '/admin/listings.html'; }, 1200);
+    } catch (err) {
+      S.toast('Unexpected error: ' + (err.message || err), 'error');
+      if (triggerBtn) {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = ico('trash') + ' Delete property';
+      }
+    }
+  }
+
+  document.getElementById('pd-btn-delete-property')?.addEventListener('click', (e) => {
+    executeDeleteProperty(propId, p.title, e.currentTarget);
+  });
 
     // Inquiry message expand (click row → modal dialog)
     document.querySelectorAll('.pd-inq-row').forEach(row => {
@@ -1318,6 +1411,9 @@
         </div>
         <div class="pd-edit-footer">
           <button class="btn btn-ghost" id="pd-edit-cancel">Cancel</button>
+          <button class="btn btn-danger btn-sm" id="pd-drawer-delete-btn" type="button" style="display:inline-flex;align-items:center;gap:6px;margin-right:auto">
+            ${ico('trash')} Delete property
+          </button>
           <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
             <button class="btn btn-ghost btn-sm" id="pd-edit-undo" disabled title="Undo last change">↩ Undo</button>
             <button class="btn btn-ghost btn-sm" id="pd-edit-redo" disabled title="Redo">Redo ↪</button>
@@ -1456,6 +1552,9 @@
     document.getElementById('pd-edit-close').addEventListener('click', _guardedClose);
     document.getElementById('pd-edit-cancel').addEventListener('click', _guardedClose);
     document.getElementById('pd-edit-overlay').addEventListener('click', _guardedClose);
+    document.getElementById('pd-drawer-delete-btn')?.addEventListener('click', (e) => {
+      executeDeleteProperty(p.id, p.title, e.currentTarget);
+    });
     document.getElementById('pd-edit-save').addEventListener('click', () => saveEdit(() => {
       clearTimeout(_editUndoDebounce);
       _formDirty = false;

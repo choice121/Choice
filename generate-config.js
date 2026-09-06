@@ -355,8 +355,11 @@ htmlFiles.forEach(function(file) {
   let src = fs.readFileSync(file, 'utf8');
   let modified = false;
 
-  // Step A: cache busting (replaces __BUILD_VERSION__ and any previous numeric timestamp)
-  const afterCB = src.replace(/\?v=(?:__BUILD_VERSION__|\d+)/g, '?v=' + BUILD_VERSION);
+  // Step A: cache busting (replaces __BUILD_VERSION__ and any previous numeric timestamp, and ensures local /js/ and /css/ links get ?v=)
+  let afterCB = src.replace(/\?v=(?:__BUILD_VERSION__|\d+)/g, '?v=' + BUILD_VERSION);
+  afterCB = afterCB.replace(/(src|href)=(["'])(\/(?:js|css)\/[^"'>?]+)\2/g, function(match, attr, q, url) {
+    return `${attr}=${q}${url}?v=${BUILD_VERSION}${q}`;
+  });
   if (afterCB !== src) { src = afterCB; modified = true; }
 
   // Step B: convert CSS preload+onload to plain stylesheet links

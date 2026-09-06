@@ -536,11 +536,11 @@ const Properties = {
     const { data, error } = await sb().from('properties').update(payload).eq('id', id).select().single();
     return _ok(data, error);
   },
-  async delete(id)        { return this.deleteCascade(id); },
+  async delete(id)        { return Properties.deleteCascade(id); },
   // Cascading property delete (single)
   async deleteCascade(id) {
     if (!id) return { ok: false, error: 'Property ID is required' };
-    return this.deleteCascadeBulk([id]);
+    return Properties.deleteCascadeBulk([id]);
   },
 
   // Cascading property delete (bulk) — bulletproof with RPC and direct admin fallback
@@ -1443,15 +1443,21 @@ const Locations = {
   },
 };
 
+const deleteCascade = (id) => Properties.deleteCascade(id);
+const deleteCascadeBulk = (ids) => Properties.deleteCascadeBulk(ids);
+
 window.CP = Object.assign(window.CP || {}, {
   Applications, sb, Auth, Properties, SavedProperties, Inquiries, Landlords, EmailLogs,
   Locations,
   buildApplyURL, incrementCounter,
   getSession, getLandlordProfile, requireAuth,
   signIn, signUp, signOut, resetPassword, updateNav,
-  deleteCascade: (id) => Properties.deleteCascade(id),
-  deleteCascadeBulk: (ids) => Properties.deleteCascadeBulk(ids),
+  deleteCascade,
+  deleteCascadeBulk,
 });
+window.CP.Properties = Properties;
+window.CP.deleteCascade = deleteCascade;
+window.CP.deleteCascadeBulk = deleteCascadeBulk;
 window.CP.UI = Object.assign(window.CP.UI || {}, UI);
 
 // -- ES Module exports -------------------------------------
@@ -1461,4 +1467,4 @@ window.CP.UI = Object.assign(window.CP.UI || {}, UI);
 let _supabaseExport = null;
 try { _supabaseExport = sb(); } catch (_) { /* CONFIG/SDK not ready at module init; use CP.sb() for lazy init */ }
 export { _supabaseExport as supabase };
-export { SavedProperties, buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
+export { Properties, deleteCascade, deleteCascadeBulk, SavedProperties, buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
