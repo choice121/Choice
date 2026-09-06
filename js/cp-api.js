@@ -536,11 +536,11 @@ const Properties = {
     const { data, error } = await sb().from('properties').update(payload).eq('id', id).select().single();
     return _ok(data, error);
   },
-  async delete(id)        { return Properties.deleteCascade(id); },
+  async delete(id)        { return this.deleteCascade(id); },
   // Cascading property delete (single)
   async deleteCascade(id) {
     if (!id) return { ok: false, error: 'Property ID is required' };
-    return Properties.deleteCascadeBulk([id]);
+    return this.deleteCascadeBulk([id]);
   },
 
   // Cascading property delete (bulk) — bulletproof with RPC and direct admin fallback
