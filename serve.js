@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const portArgIndex = process.argv.indexOf('--port');
-const PORT = portArgIndex !== -1 ? parseInt(process.argv[portArgIndex + 1], 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
+const PORT = portArgIndex !== -1 ? parseInt(process.argv[portArgIndex + 1], 10) : 3000;
 const hostArgIndex = process.argv.indexOf('--host');
 const HOST = hostArgIndex !== -1 ? process.argv[hostArgIndex + 1] : '0.0.0.0';
 const ROOT = __dirname;
