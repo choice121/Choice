@@ -402,6 +402,7 @@ function renderProperty(p) {
       "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
+    "leaseLength": p.lease_terms?.length ? p.lease_terms.join(", ") : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
@@ -616,6 +617,11 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
+  if (p.lease_terms?.length) {
+    const terms = p.lease_terms.filter(t => t && !/smok/i.test(t));
+    if (terms.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-file-contract"></i>${terms.map(esc).join(', ')}</div>`);
+  }
+  if (p.minimum_lease_months) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-check"></i>Min. Lease: ${p.minimum_lease_months} month${p.minimum_lease_months !== 1 ? 's' : ''}</div>`);
   if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: $${Number(p.security_deposit).toLocaleString()}</div>`);
   if (!leaseItems.length && p.application_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${Number(p.application_fee).toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
@@ -714,11 +720,11 @@ function renderProperty(p) {
   const availColor = availNow ? '#10b981' : '#d4a017';
   if (_availEl) {
     _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availEl.style.display = '';
+    _availEl.style.display = 'none';
   }
   if (_availStickyEl) {
     _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availStickyEl.style.display = '';
+    _availStickyEl.style.display = 'none';
   }
   document.getElementById('sidebarRent').textContent    = rentStr;
   document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
@@ -1792,169 +1798,6 @@ async function toggleSave(id, btn) {
   }
 }
 
-/* ── Admin Property Deletion (Cascade) ────────────────────────────────────
-   Deletes property with full DB cascade, ImageKit asset purge, and audit log.
-   ──────────────────────────────────────────────────────────────────────── */
-async function executeAdminDeleteProperty(prop, triggerBtn) {
-  if (!prop || !prop.id) return;
-  const title = prop.title || 'Untitled';
-  const confirmed = window.confirm(
-    `Permanently delete this property?\n\n` +
-    `"${title}" and all its photos will be deleted immediately.\n` +
-    `This cannot be undone.`
-  );
-  if (!confirmed) return;
-
-  if (triggerBtn) {
-    triggerBtn.disabled = true;
-    triggerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting…';
-  }
-
-  try {
-    let delRes = null;
-
-    // Tier 1: Authoritative client method
-    const clientFn =
-      (window.CP?.Properties && typeof window.CP.Properties.deleteCascade === 'function')
-        ? window.CP.Properties.deleteCascade.bind(window.CP.Properties)
-        : (window.CP && typeof window.CP.deleteCascade === 'function')
-          ? window.CP.deleteCascade
-          : (window.CP?.Properties && typeof window.CP.Properties.deleteCascadeBulk === 'function')
-            ? (x) => window.CP.Properties.deleteCascadeBulk([x])
-            : (window.CP && typeof window.CP.deleteCascadeBulk === 'function')
-              ? (x) => window.CP.deleteCascadeBulk([x])
-              : null;
-
-    if (clientFn) {
-      try {
-        delRes = await clientFn(prop.id);
-      } catch (cErr) {
-        console.warn('[executeAdminDeleteProperty] Client method call failed:', cErr);
-      }
-    }
-
-    // Tier 2: Direct Supabase RPC
-    if (!delRes || !delRes.ok) {
-      try {
-        const client = (window.CP?.sb ? window.CP.sb() : null) || (typeof supabase !== 'undefined' ? supabase : null);
-        if (client) {
-          const { data, error } = await client.rpc('delete_properties_cascade', { p_ids: [prop.id] });
-          let parsed = data;
-          if (typeof parsed === 'string') {
-            try { parsed = JSON.parse(parsed); } catch (_) {}
-          }
-          if (!error && parsed && (parsed.ok === true || parsed.deleted !== undefined)) {
-            delRes = { ok: true, data: parsed, error: null };
-          } else if (error) {
-            console.warn('[executeAdminDeleteProperty] RPC error:', error);
-          }
-        }
-      } catch (rpcErr) {
-        console.warn('[executeAdminDeleteProperty] RPC exception:', rpcErr);
-      }
-    }
-
-    // Tier 3: Direct REST cascade fallback
-    if (!delRes || !delRes.ok) {
-      try {
-        const supaUrl = (typeof CONFIG !== 'undefined' && CONFIG?.SUPABASE_URL ? CONFIG.SUPABASE_URL : 'https://tlfmwetmhthpyrytrcfo.supabase.co').replace(/\/$/, '');
-        const supaKey = (typeof CONFIG !== 'undefined' && CONFIG?.SUPABASE_ANON_KEY) || '';
-        let authToken = supaKey;
-        try {
-          const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
-          if (sess?.access_token) authToken = sess.access_token;
-        } catch (_) {}
-
-        const headers = {
-          'apikey': supaKey,
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        };
-
-        await fetch(`${supaUrl}/rest/v1/property_photos?property_id=eq.${encodeURIComponent(prop.id)}`, { method: 'DELETE', headers }).catch(() => {});
-        await fetch(`${supaUrl}/rest/v1/saved_properties?property_id=eq.${encodeURIComponent(prop.id)}`, { method: 'DELETE', headers }).catch(() => {});
-        await fetch(`${supaUrl}/rest/v1/inquiries?property_id=eq.${encodeURIComponent(prop.id)}`, { method: 'DELETE', headers }).catch(() => {});
-        await fetch(`${supaUrl}/rest/v1/applications?property_id=eq.${encodeURIComponent(prop.id)}`, { method: 'PATCH', headers, body: JSON.stringify({ property_id: null }) }).catch(() => {});
-        await fetch(`${supaUrl}/rest/v1/location_notifications?property_id=eq.${encodeURIComponent(prop.id)}`, { method: 'DELETE', headers }).catch(() => {});
-
-        const delFetch = await fetch(`${supaUrl}/rest/v1/properties?id=eq.${encodeURIComponent(prop.id)}`, {
-          method: 'DELETE',
-          headers: { ...headers, 'Prefer': 'return=representation' }
-        });
-        if (delFetch.ok) {
-          delRes = { ok: true, data: { deleted: 1, deleted_ids: [prop.id] }, error: null };
-        } else {
-          const txt = await delFetch.text();
-          throw new Error(`REST delete failed (${delFetch.status}): ${txt}`);
-        }
-      } catch (restErr) {
-        console.error('[executeAdminDeleteProperty] REST fallback failed:', restErr);
-        if (!delRes) delRes = { ok: false, error: restErr.message || String(restErr) };
-      }
-    }
-
-    if (!delRes || !delRes.ok) {
-      const errMsg = delRes?.error || 'Unknown error occurred during deletion';
-      if (typeof showToast === 'function') showToast('Delete failed: ' + errMsg, 'error');
-      else alert('Delete failed: ' + errMsg);
-      if (triggerBtn) {
-        triggerBtn.disabled = false;
-        triggerBtn.innerHTML = '<i class="fas fa-trash-can"></i> Delete';
-      }
-      return;
-    }
-
-    // Remote asset purge via ImageKit edge function (non-blocking)
-    const fileIds = Array.isArray(delRes.data?.file_ids) ? delRes.data.file_ids.filter(Boolean) : [];
-    if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) {
-      let authKey = CONFIG.SUPABASE_ANON_KEY || '';
-      try {
-        const sess = await (window.CP?.Auth?.getSession ? window.CP.Auth.getSession() : null).catch(() => null);
-        if (sess?.access_token) authKey = sess.access_token;
-      } catch (_) {}
-
-      fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': CONFIG.SUPABASE_ANON_KEY || authKey,
-          'Authorization': `Bearer ${authKey}`
-        },
-        body: JSON.stringify({ fileIds, propertyId: prop.id })
-      }).catch(e => console.warn('[property.js] ImageKit remote delete error:', e));
-    }
-
-    // Audit log (non-blocking)
-    try {
-      const sess = await window.CP.Auth.getSession();
-      if (sess?.user?.id) {
-        window.CP.sb().from('admin_actions').insert({
-          action: 'property.hard_delete',
-          target_type: 'property',
-          target_id: prop.id,
-          metadata: { title, deleted_at: new Date().toISOString() },
-          user_id: sess.user.id
-        }).catch(() => {});
-      }
-    } catch (_) {}
-
-    if (typeof showToast === 'function') showToast(`"${title}" deleted successfully.`, 'success');
-    else alert(`"${title}" deleted successfully.`);
-
-    setTimeout(() => {
-      window.location.href = '/listings.html';
-    }, 1000);
-  } catch (err) {
-    const msg = err.message || String(err);
-    if (typeof showToast === 'function') showToast('Unexpected error: ' + msg, 'error');
-    else alert('Unexpected error: ' + msg);
-    if (triggerBtn) {
-      triggerBtn.disabled = false;
-      triggerBtn.innerHTML = '<i class="fas fa-trash-can"></i> Delete';
-    }
-  }
-}
-
 /* ── Admin property panel ─────────────────────────────────────────────────
    Injected immediately after renderProperty() when _isAdminViewer is true.
    Provides:
@@ -2035,9 +1878,6 @@ function initAdminPropertyPanel(prop) {
       .adw-save-btn:hover:not(:disabled){background:#0054cc}
       .adw-cancel-btn{background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
       .adw-cancel-btn:hover{border-color:#9ca3af}
-      .adw-delete-btn{background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s,border-color .15s}
-      .adw-delete-btn:hover:not(:disabled){background:#fecaca;border-color:#f87171}
-      .adw-delete-btn:disabled{opacity:.5;cursor:not-allowed}
       .adw-full-link{background:#fff;color:#006aff;border:1.5px solid #006aff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap}
       .adw-full-link:hover{background:#eff6ff}
       .adw-toggle-wrap{display:flex;align-items:center;gap:10px;padding:6px 0}
@@ -2052,8 +1892,7 @@ function initAdminPropertyPanel(prop) {
         .adw-row.c3{grid-template-columns:1fr 1fr}
         .adw-footer{flex-wrap:wrap;gap:8px}
         .adw-save-btn{order:-1;width:100%;flex:unset;padding:13px 0;font-size:14px}
-        .adw-delete-btn{order:2;width:100%;justify-content:center;padding:11px 0}
-        .adw-cancel-btn,.adw-full-link{flex:1;text-align:center;justify-content:center}
+        .adw-cancel-btn,.adw-full-link{flex:1}
         .adw-input{font-size:16px}
         .adw-section{padding:14px 16px}
         .adw-label{font-size:12px}
@@ -2080,9 +1919,6 @@ function initAdminPropertyPanel(prop) {
     <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
       <button id="adminQuickEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
         <i class="fas fa-pen"></i> Edit
-      </button>
-      <button id="adminDeletePropBtn" type="button" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px" title="Permanently delete property">
-        <i class="fas fa-trash-can"></i> Delete
       </button>
       <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px">
         <i class="fas fa-arrow-up-right-from-square"></i> Full Edit
@@ -2222,13 +2058,10 @@ function initAdminPropertyPanel(prop) {
     } finally { b.disabled = false; b.textContent = 'Save Notes'; }
   });
 
-  // ── Wire quick-edit drawer & admin actions ──
+  // ── Wire quick-edit drawer ──
   const { open: openDrawer } = buildAdminEditDrawer(prop);
   document.getElementById('adminQuickEditBtn')?.addEventListener('click', openDrawer);
   document.getElementById('adminSectionEditBtn')?.addEventListener('click', openDrawer);
-  document.getElementById('adminDeletePropBtn')?.addEventListener('click', (e) => {
-    executeAdminDeleteProperty(prop, e.currentTarget);
-  });
 }
 
 /* ── Quick-edit drawer (slide-in from right, wired by initAdminPropertyPanel) ── */
@@ -2454,9 +2287,6 @@ function buildAdminEditDrawer(prop) {
     </div>
     <div class="adw-footer">
       <button class="adw-cancel-btn" id="adwCancelBtn" type="button">Cancel</button>
-      <button class="adw-delete-btn" id="adwDeleteBtn" type="button" title="Permanently delete property">
-        <i class="fas fa-trash-can"></i> Delete
-      </button>
       <a href="/admin/property-detail.html?id=${esc(prop.id)}" target="_blank" rel="noopener" class="adw-full-link">
         <i class="fas fa-arrow-up-right-from-square"></i> Full Edit
       </a>
@@ -2509,9 +2339,6 @@ function buildAdminEditDrawer(prop) {
   overlay.addEventListener('click', closeDrawer);
   document.getElementById('adwCloseBtn').addEventListener('click', closeDrawer);
   document.getElementById('adwCancelBtn').addEventListener('click', closeDrawer);
-  document.getElementById('adwDeleteBtn')?.addEventListener('click', (e) => {
-    executeAdminDeleteProperty(prop, e.currentTarget);
-  });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
@@ -3276,10 +3103,13 @@ function renderPropFacts(p) {
 
   // ── Cards — only fields NOT already in meta strip or tabs ──────────────
 
-  // Move-in: available (future date only — if now, header chip already says so)
+  // Move-in: available (future date only — if now, header chip already says so),
+  // lease terms, min lease (also in Lease tab but worth surfacing here)
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
   const moveInCard = card('Move-in', 'fa-key', [
     row('Available',   !availNow && p.available_date ? formatDate(p.available_date) : null),
+    row('Lease terms', p.lease_terms?.length ? p.lease_terms.join(', ') : null),
+    row('Min. lease',  p.minimum_lease_months ? p.minimum_lease_months + ' months' : null),
   ]);
 
   // Interior: heating / cooling / laundry
