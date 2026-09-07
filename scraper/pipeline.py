@@ -1134,6 +1134,17 @@ class PipelineOrchestrator:
         self._log("   Dedup: {} already staged ({} already published), {} new".format(
             len(records) - len(new_records), already_published, len(new_records)))
 
+        for r in new_records:
+            ad = r.get("available_date")
+            if not ad or str(ad).strip() in ("", "None", "null"):
+                r["available_date"] = None
+            elif isinstance(ad, str):
+                ad_str = ad.strip()
+                if not re.match(r"^\d{4}-\d{2}-\d{2}", ad_str):
+                    r["available_date"] = None
+                else:
+                    r["available_date"] = ad_str[:10]
+
         # Insert new records in batches of 50
         for i in range(0, len(new_records), 50):
             batch = new_records[i:i + 50]
@@ -1170,6 +1181,10 @@ class PipelineOrchestrator:
             pid = rec.get("id")
             if not pid:
                 continue
+            ad = rec.get("available_date")
+            clean_ad = None
+            if ad and str(ad).strip() not in ("", "None", "null") and isinstance(ad, str) and re.match(r"^\d{4}-\d{2}-\d{2}", ad.strip()):
+                clean_ad = ad.strip()[:10]
             try:
                 r = self._pipe_session.patch(
                     "{}/rest/v1/pipeline_properties?id=eq.{}".format(SUPABASE_URL, pid),
@@ -1178,6 +1193,7 @@ class PipelineOrchestrator:
                         "security_deposit": rec.get("security_deposit"),
                         "description": rec.get("description"),
                         "application_fee": 50,
+                        "available_date": clean_ad,
                     },
                     timeout=20,
                 )

@@ -1879,10 +1879,16 @@ import os
 import urllib.request
 import urllib.error
 
+_gemini_disabled = False
+
 def _gemini_extract_missing(record, verbose=False):
     """
     If essential fields are missing, use Gemini Flash to extract them directly from the description.
     """
+    global _gemini_disabled
+    if _gemini_disabled:
+        return
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return
@@ -1914,7 +1920,7 @@ Respond ONLY with a valid JSON object using this exact schema:
 }}
 """
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
@@ -1944,5 +1950,9 @@ Respond ONLY with a valid JSON object using this exact schema:
                     if verbose:
                         print(f"      => AI Extracted: {ai_data}")
     except Exception as e:
-        if verbose:
+        if "429" in str(e):
+            _gemini_disabled = True
+            if verbose:
+                print("      => Gemini API rate limit reached, skipping further AI enrichment.")
+        elif verbose:
             print(f"      => AI extraction failed: {e}")
