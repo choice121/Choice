@@ -655,29 +655,30 @@ class PipelineOrchestrator:
         self._log("\n" + result.summary())
         return result
 
-    def run_records(self, records: List[Dict], dry_run: bool = False, batch_name: str = "record batch") -> PipelineResult:
+    def run_records(self, records: List[Dict], criteria: Optional[BatchCriteria] = None, dry_run: bool = False, batch_name: str = "record batch") -> PipelineResult:
         """Process an existing list of records through the full pipeline."""
-        criteria = BatchCriteria(
-            locations=[batch_name],
-            beds_exact=None,
-            beds_min=None,
-            beds_max=None,
-            baths_min=0.0,
-            baths_max=None,
-            rent_min=0,
-            rent_max=10_000_000,
-            rent_floor=None,
-            rent_cap=None,
-            allowed_types=set(),
-            zip_codes=[],
-            target=max(1, len(records)),
-            past_days=0,
-            limit=max(1, len(records)),
-            min_score=0,
-            fallback_locations=[],
-            pricing_fn=None,
-            batch_name=batch_name,
-        )
+        if criteria is None:
+            criteria = BatchCriteria(
+                locations=[batch_name],
+                beds_exact=None,
+                beds_min=None,
+                beds_max=None,
+                baths_min=0.0,
+                baths_max=None,
+                rent_min=0,
+                rent_max=10_000_000,
+                rent_floor=None,
+                rent_cap=None,
+                allowed_types=set(),
+                zip_codes=[],
+                target=max(1, len(records)),
+                past_days=0,
+                limit=max(1, len(records)),
+                min_score=0,
+                fallback_locations=[],
+                pricing_fn=None,
+                batch_name=batch_name,
+            )
         return self._run_records(records, criteria, dry_run)
 
     def _run_records(self, records: List[Dict], criteria: BatchCriteria, dry_run: bool) -> PipelineResult:
@@ -1145,9 +1146,36 @@ class PipelineOrchestrator:
                 else:
                     r["available_date"] = ad_str[:10]
 
+        # Cache valid column names from pipeline_properties
+        valid_cols = None
+        try:
+            r_cols = self._pipe_session.get(
+                "{}/rest/v1/pipeline_properties?select=*&limit=1".format(SUPABASE_URL),
+                timeout=10
+            )
+            if r_cols.ok and r_cols.json():
+                valid_cols = set(r_cols.json()[0].keys())
+        except Exception:
+            pass
+
         # Insert new records in batches of 50
         for i in range(0, len(new_records), 50):
-            batch = new_records[i:i + 50]
+            batch = []
+            for r in new_records[i:i + 50]:
+                cleaned = {}
+                for k, v in r.items():
+                    if k.startswith("_"):
+                        continue
+                    if valid_cols and k not in valid_cols:
+                        continue
+                    if k == "application_fee" and v is not None:
+                        try:
+                            cleaned[k] = int(round(float(v)))
+                        except Exception:
+                            cleaned[k] = 50
+                    else:
+                        cleaned[k] = v
+                batch.append(cleaned)
             try:
                 r = self._pipe_session.post(
                     "{}/rest/v1/pipeline_properties?on_conflict=source_listing_id".format(SUPABASE_URL),

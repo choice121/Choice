@@ -1,0 +1,13 @@
+[
+  {
+    "street": "4795 Prosperity Pl",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45238",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1315,
+    "source_price": 1647,
+    "photos_count": 30,
+    "style": "propertytype.single_family",
+    "source_url": 
