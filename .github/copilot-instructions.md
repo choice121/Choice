@@ -110,4 +110,16 @@
 
     ### Re-download endpoint (new)
     The pipeline has a `POST /api/properties/{id}/redownload-images` endpoint that clears and re-queues image downloads for a specific property. This is an internal pipeline operation — it does not affect the Choice website directly.
+
+    ---
+
+    ## PERMANENT SCRAPING, ENRICHMENT & PUBLISHING RULES (MANDATORY)
+    All AI systems, Copilot sessions, and scrapers must strictly adhere to the permanent 22 rules defined in `AGENTS.md` (Section 5):
+    - **No Lease Term display**: Lease terms, durations, and minimum lengths are completely banned from UI and descriptions.
+    - **No Smoking policy display**: Smoking policies are omitted from property pages.
+    - **Security Deposit**: 1x rent in database, strictly stripped from descriptions (`strip_security_deposit_from_description`).
+    - **Photo Filtering**: Min 6 genuine clean property photos; promotional flyers, Realtor contact cards, MLS watermarks stripped. Properties failing photo rules must be rejected/unpublished and remote storage purged.
+    - **True Description Uniqueness**: Independent openings, storytelling, paragraph structure, and voice; no templates; cross-batch similarity audit with auto-rewrite loop.
+    - **End-to-End Workflow**: Scrape → Verify → Deduplicate → Enrich → Clean → Process Images → Synchronize Data → Generate Description → Validate → Auto-Correct → Re-Validate → Publish. Never leave a workflow half-done.
+
   

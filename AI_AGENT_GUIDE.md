@@ -39,6 +39,7 @@ python3 scraper/run_ai_job.py \
 
 | File | Why |
 |---|---|
+| `AGENTS.md` | **System Invariants & Permanent Publishing Engine** — Highest Priority Law |
 | `scraper/PLATFORM_RULES.md` | **Mandatory rules** — never bypass these |
 | `scraper/RULES.md` | Quick reference for what is/isn't allowed |
 | `scraper/PIPELINE_USAGE.md` | How the 13-step pipeline works |
@@ -54,6 +55,7 @@ python3 scraper/run_ai_job.py \
    Example: "Find 10 2-bedroom houses in Dallas, TX between $1300-1800"
 
 2. YOU READ THE RULES
+   - Read AGENTS.md (Section 5 — Permanent Engine Rules)
    - Read scraper/PLATFORM_RULES.md
    - Read scraper/RULES.md
    - Understand the mandatory requirements
