@@ -42,6 +42,8 @@ const dirsToCopy = [
   'assets',
   'webfonts',
   '.well-known',
+  '.pages-orion',
+  'chrome-extension',
 ];
 
 dirsToCopy.forEach((dir) => {
