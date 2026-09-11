@@ -26,9 +26,10 @@
 
   if (document.getElementById('cp-save-btn')) return;
 
-  // Remote live-content.js runs in the page's main world, where
-  // chrome.runtime is unavailable. Relay photo-download requests from that
-  // world through this isolated content-script context.
+  // Remote live-content.js is injected into the page's main world. In
+  // Orion/WebKit (and Chromium MV3), chrome.runtime is only available to
+  // this isolated content-script world, so expose a narrow postMessage
+  // bridge for the background photo downloader.
   window.addEventListener('message', function (event) {
     var data = event && event.data;
     if (event.source !== window || !data || data.type !== 'CP_DOWNLOAD_PHOTO') return;
@@ -92,9 +93,8 @@
 
       // SPA navigation handling
       var lastUrl = location.href;
-      var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
-      var MAX_PHOTOS = IS_MOBILE ? 20 : 40;
+      var PHOTO_BATCH_SIZE = 12;
+      var MAX_PHOTOS = 40;
 
       function isSupportedPage(url) {
         return /zillow\.com\/homedetails\//i.test(url) ||
@@ -128,6 +128,7 @@
 
         // Touch/click feedback for mobile
         var onDown = function(e) {
+          if (e.type === 'touchstart') e.preventDefault();
           btn.style.transform = 'scale(0.94)';
           btn.style.opacity = '0.85';
           if (navigator.vibrate) navigator.vibrate(8);
@@ -188,34 +189,6 @@
         }
       }
 
-      // ── Photo download via background worker ─────────────────
-      function downloadViaBackground(url) {
-        return new Promise(function(resolve) {
-          try {
-            if (!chrome.runtime || !chrome.runtime.sendMessage) {
-              resolve(null);
-              return;
-            }
-            chrome.runtime.sendMessage(
-              { type: 'DOWNLOAD_PHOTO', url: url },
-              function(response) {
-                if (chrome.runtime.lastError) {
-                  resolve(null);
-                  return;
-                }
-                if (response && response.ok && response.dataUri) {
-                  resolve(response);
-                } else {
-                  resolve(null);
-                }
-              }
-            );
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      }
-
       function dedupePhotoUrls(urls) {
         var seen = new Set();
         var unique = [];
@@ -250,6 +223,33 @@
         return urls;
       }
 
+      function downloadViaBackground(url) {
+        return new Promise(function(resolve) {
+          try {
+            if (!chrome.runtime || !chrome.runtime.sendMessage) {
+              resolve(null);
+              return;
+            }
+            chrome.runtime.sendMessage(
+              { type: 'DOWNLOAD_PHOTO', url: url },
+              function(response) {
+                if (chrome.runtime.lastError) {
+                  resolve(null);
+                  return;
+                }
+                if (response && response.ok && response.dataUri) {
+                  resolve(response);
+                } else {
+                  resolve(null);
+                }
+              }
+            );
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      }
+
       function blobToBase64(blob) {
         return new Promise(function(resolve, reject) {
           var reader = new FileReader();
@@ -259,33 +259,10 @@
         });
       }
 
-      // Resize/convert images using canvas. Returns a Blob or null on failure.
-      function optimizeImageBlob(blob, maxWidth, quality) {
-        return new Promise(async function(resolve) {
-          try {
-            if (!self.createImageBitmap) return resolve(null);
-            const imgBitmap = await createImageBitmap(blob);
-            const ratio = Math.min(1, maxWidth / imgBitmap.width);
-            const w = Math.round(imgBitmap.width * ratio);
-            const h = Math.round(imgBitmap.height * ratio);
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(imgBitmap, 0, 0, w, h);
-            canvas.toBlob(function(b) { resolve(b); }, 'image/webp', quality);
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      }
-
       async function uploadOnePhoto(url, index) {
         try {
-          // Download via background worker (bypasses CORS)
           var photo = await downloadViaBackground(url);
           if (!photo) {
-            // Fallback: direct fetch
             try {
               var imgRes = await fetch(url, {
                 mode: 'cors',
@@ -293,14 +270,9 @@
                 headers: { 'Accept': 'image/*' }
               });
               if (imgRes.ok) {
-                        var blob = await imgRes.blob();
-                        // Optimize image on client: resize large images and convert to WebP to save bandwidth.
-                        try {
-                          var optimized = await optimizeImageBlob(blob, 1600, 0.85);
-                          if (optimized) blob = optimized;
-                        } catch (_) {}
-                        var base64 = await blobToBase64(blob);
-                        var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
+                var blob = await imgRes.blob();
+                var base64 = await blobToBase64(blob);
+                var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
                 if (ext === 'jpeg') ext = 'jpg';
                 photo = { dataUri: base64, ext: ext };
               }
@@ -308,7 +280,6 @@
           }
           if (!photo) return null;
 
-          // Upload to ImageKit
           var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
             method: 'POST',
             headers: {
@@ -369,129 +340,12 @@
           var extracted = window.CP_Extractors.extract(location.href, document);
           if (!extracted) { setError('Could not read listing'); return; }
 
-          // Show preview/edit modal to allow user to adjust fields and optionally set a folder name
-          openPreviewModal(extracted, btn);
-        } catch (e) {
-          console.error('[CP]', e);
-          setError('Network error');
-        }
-      }
-
-      // ── Preview / edit modal (mobile-first) ─────────────────
-      function escapeHtml(str){
-        if(str === null || str === undefined) return '';
-        return String(str).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#39;');
-      }
-
-      function openPreviewModal(extracted, triggerBtn) {
-        var existing = document.getElementById('cp-preview-modal');
-        if (existing) existing.remove();
-
-        var modal = document.createElement('div');
-        modal.id = 'cp-preview-modal';
-        modal.innerHTML = `\
-          <style>\
-            #cp-preview-modal { position:fixed; inset:0; z-index:2147483648; display:flex; align-items:flex-end; justify-content:center; }\
-            #cp-preview-modal .cp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }\
-            #cp-preview-modal .cp-sheet { position:relative; width:100%; max-width:680px; background:#0a0f1e; color:#fff; border-radius:14px 14px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.5); padding:max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); max-height:88vh; overflow:auto; }\
-            #cp-preview-modal .cp-hd { display:flex; align-items:center; gap:8px; }\
-            #cp-preview-modal .cp-hd h3 { margin:0; font-size:16px; font-weight:700; }\
-            #cp-preview-modal .cp-row { display:flex; gap:8px; margin-top:10px; }\
-            #cp-preview-modal .cp-row .cp-field { flex:1; display:flex; flex-direction:column; }\
-            #cp-preview-modal input, #cp-preview-modal textarea { background:#0f1724; border:1px solid rgba(255,255,255,.06); color:#fff; padding:10px 12px; border-radius:8px; font-size:15px; min-height:44px; }\
-            #cp-preview-modal textarea { min-height:84px; resize:vertical; }\
-            #cp-preview-modal .cp-actions { display:flex; gap:8px; margin-top:12px; }\
-            #cp-preview-modal .btn { padding:10px 16px; border-radius:10px; cursor:pointer; border:none; font-size:15px; min-height:44px; }\
-            #cp-preview-modal .btn-primary { background:#6366f1; color:#fff }\
-            #cp-preview-modal .btn-ghost { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.04) }\
-          </style>\
-          <div class="cp-backdrop"></div>\
-          <div class="cp-sheet" role="dialog" aria-modal="true" aria-label="Preview listing">\
-            <div class="cp-hd"><h3>Preview & Edit</h3><div style="flex:1"></div><button id="cp-preview-close" class="btn btn-ghost">Close</button></div>\
-            <div style="margin-top:8px;font-size:13px;color:#94a3b8">Edit fields before importing. Folder name is optional.</div>\
-            <div class="cp-row">\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Title</label><input id="cp-prev-title" value="${escapeHtml(extracted.title||'')}" /></div>\
-            </div>\
-            <div class="cp-row">\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Address</label><input id="cp-prev-address" value="${escapeHtml(extracted.address||'')}" /></div>\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">City</label><input id="cp-prev-city" value="${escapeHtml(extracted.city||'')}" /></div>\
-            </div>\
-            <div class="cp-row">\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">State</label><input id="cp-prev-state" value="${escapeHtml(extracted.state||'')}" /></div>\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">ZIP</label><input id="cp-prev-zip" value="${escapeHtml(extracted.zip||'')}" /></div>\
-            </div>\
-            <div class="cp-row">\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Monthly Rent</label><input id="cp-prev-rent" value="${escapeHtml(String(extracted.monthly_rent || extracted.rent || ''))}" /></div>\
-              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Bedrooms</label><input id="cp-prev-beds" value="${escapeHtml(String(extracted.bedrooms || extracted.beds || ''))}" /></div>\
-            </div>\
-            <div style="margin-top:8px" class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Description</label><textarea id="cp-prev-desc">${escapeHtml(extracted.description||'')}</textarea></div>\
-            <div style="margin-top:8px" class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Folder name (optional)</label><input id="cp-prev-folder" placeholder="e.g. Columbus Q3, Fix Descriptions" /></div>\
-            <div class="cp-actions"><button id="cp-prev-cancel" class="btn btn-ghost">Cancel</button><div style="flex:1"></div><button id="cp-prev-confirm" class="btn btn-primary">Import to Pipeline</button></div>\
-          </div>`;
-
-        document.body.appendChild(modal);
-
-        // Swipe-to-dismiss for mobile
-        var sheet = modal.querySelector('.cp-sheet');
-        var startY = 0;
-        var currentY = 0;
-        var isDragging = false;
-        sheet.addEventListener('touchstart', function(e) {
-          startY = e.touches[0].clientY;
-          isDragging = true;
-          sheet.style.transition = 'none';
-        }, { passive: true });
-        sheet.addEventListener('touchmove', function(e) {
-          if (!isDragging) return;
-          currentY = e.touches[0].clientY;
-          var dy = currentY - startY;
-          if (dy > 0) {
-            sheet.style.transform = 'translateY(' + dy + 'px)';
-            sheet.style.opacity = Math.max(0, 1 - dy / 300);
-          }
-        }, { passive: true });
-        sheet.addEventListener('touchend', function() {
-          if (!isDragging) return;
-          isDragging = false;
-          sheet.style.transition = 'transform 0.25s, opacity 0.25s';
-          var dy = currentY - startY;
-          if (dy > 120) {
-            closePreviewModal();
-          } else {
-            sheet.style.transform = '';
-            sheet.style.opacity = '';
-          }
-        });
-
-        modal.querySelector('.cp-backdrop').addEventListener('click', closePreviewModal);
-        modal.querySelector('#cp-preview-close').addEventListener('click', closePreviewModal);
-        modal.querySelector('#cp-prev-cancel').addEventListener('click', closePreviewModal);
-        modal.querySelector('#cp-prev-confirm').addEventListener('click', function () {
-          var updated = Object.assign({}, extracted);
-          updated.title = document.getElementById('cp-prev-title').value.trim();
-          updated.address = document.getElementById('cp-prev-address').value.trim();
-          updated.city = document.getElementById('cp-prev-city').value.trim();
-          updated.state = document.getElementById('cp-prev-state').value.trim();
-          updated.zip = document.getElementById('cp-prev-zip').value.trim();
-          updated.monthly_rent = document.getElementById('cp-prev-rent').value.trim();
-          updated.bedrooms = document.getElementById('cp-prev-beds').value.trim();
-          updated.description = document.getElementById('cp-prev-desc').value.trim();
-          var folderName = document.getElementById('cp-prev-folder').value.trim();
-          closePreviewModal();
-          startImportProcess(updated, triggerBtn, folderName || null);
-        });
-
-        function closePreviewModal() { var m = document.getElementById('cp-preview-modal'); if (m) m.remove(); }
-      }
-
-      // Start import after user confirmed edits in preview modal
-      async function startImportProcess(extracted, triggerBtn, folderName) {
-        var btn = triggerBtn || document.getElementById('cp-save-btn');
-        try {
           // Extract photo URLs
           var photoUrls = extractPhotoUrls(extracted.original_image_urls);
           if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
-            extracted.photo_urls.forEach(function(u) { if (typeof u === 'string') photoUrls.push(u); });
+            extracted.photo_urls.forEach(function(u) {
+              if (typeof u === 'string') photoUrls.push(u);
+            });
           }
 
           // v4.0: Save property FIRST, then upload photos in background
@@ -518,12 +372,15 @@
             available_date: extracted.available_date,
             pets_allowed: extracted.pets_allowed,
             original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
-            _import: 'browser-extension-v4.0.0',
+            _import: 'browser-extension-v4.0.0-orion',
           };
-          if (folderName) payload.folder_name = folderName;
 
           var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-          var direct = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          var direct = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
           var resp = await direct.json();
 
           if (resp && resp.ok) {

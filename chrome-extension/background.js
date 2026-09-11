@@ -236,11 +236,6 @@ async function optimizeImageBlob(blob, maxWidth, quality) {
 }
 
 // ── Photo download helper (v4.1) ─────────────────────────────
-// The background service worker has host_permissions for
-// Zillow/Realtor/Apartments/Redfin CDNs, so it can fetch images
-// without CORS restrictions. Downloads, optimizes, and returns
-// the image as a base64 data URI.
-//
 // Retries transient failures with exponential backoff.
 async function downloadPhoto(url) {
   const parsedUrl = new URL(url);
@@ -275,7 +270,7 @@ async function downloadPhoto(url) {
 
       if (!res.ok) {
         lastErr = new Error('HTTP ' + res.status);
-        if (res.status === 403 || res.status === 429) break; // don't retry auth/rate-limit
+        if (res.status === 403 || res.status === 429) break;
         if (attempt < DOWNLOAD_RETRIES) {
           await new Promise(r => setTimeout(r, DOWNLOAD_BACKOFF_BASE * Math.pow(2, attempt - 1)));
           continue;
@@ -315,8 +310,6 @@ async function downloadPhoto(url) {
 }
 
 function blobToBase64(blob) {
-  // FileReader is not available in MV3/Orion service workers. Convert the
-  // response bytes directly so successful CDN downloads reach ImageKit.
   return blob.arrayBuffer().then(function(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = '';
@@ -395,8 +388,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   // ── DOWNLOAD_PHOTO handler (v4.0) ──────────────────────────
-  // Content script sends { type: 'DOWNLOAD_PHOTO', url } and
-  // receives { ok: true, dataUri, contentType, ext } or { ok: false }.
   if (msg.type === 'DOWNLOAD_PHOTO') {
     (async () => {
       try {
