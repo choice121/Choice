@@ -194,338 +194,229 @@
   }
 
   // ── v4.0: Save property first, then upload photos in background ──
-  async function handleSave() {
-    var btn = document.getElementById('cp-save-btn');
-    if (!btn) return;
-    btn.textContent = 'Saving…';
-    btn.style.background = '#818cf8';
-    btn.disabled = true;
+  
+      function escapeHtml(str){
+        if(str === null || str === undefined) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
 
-    try {
-      console.log('[CP] handleSave start', location.href);
-      var extractor = window.CP_Extractors && window.CP_Extractors.detect(location.href);
-      if (!extractor) { console.warn('[CP] No extractor for', location.href); setError('Unsupported page'); return; }
-      console.log('[CP] extractor:', extractor.id);
+      async function fetchFolders() {
+        try {
+          var res = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import?action=list_folders&secret=cp_import_7Kx3m9P2w5');
+          var data = await res.json();
+          return data.folders || [];
+        } catch (e) {
+          return [];
+        }
+      }
 
-      var extracted = window.CP_Extractors.extract(location.href, document);
-      if (!extracted) { console.warn('[CP] Extract returned null'); setError('Could not read listing'); return; }
-      console.log('[CP] extracted source:', extracted.source, 'id:', extracted.source_listing_id);
+      async function openPreviewModal(extracted, triggerBtn) {
+        var existing = document.getElementById('cp-preview-modal');
+        if (existing) existing.remove();
 
-      // ── Extract photo URLs ──────────────────────────────────
-      var photoUrls = extractPhotoUrls(extracted.original_image_urls);
-      if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
-        extracted.photo_urls.forEach(function(u) {
-          if (typeof u === 'string') photoUrls.push(u);
+        var folders = await fetchFolders();
+        var folderOptions = '<option value="">(No folder / Main)</option>';
+        folders.forEach(function(f) {
+          folderOptions += '<option value="' + escapeHtml(f.id) + '">' + escapeHtml(f.name) + '</option>';
+        });
+        folderOptions += '<option value="__new__">+ Create new folder...</option>';
+
+        var modal = document.createElement('div');
+        modal.id = 'cp-preview-modal';
+        modal.innerHTML = `
+          <style>
+            #cp-preview-modal { position:fixed; inset:0; z-index:2147483648; display:flex; align-items:flex-end; justify-content:center; }
+            #cp-preview-modal .cp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
+            #cp-preview-modal .cp-sheet { position:relative; width:100%; max-width:680px; background:#0a0f1e; color:#fff; border-radius:14px 14px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.5); padding:max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); max-height:88vh; overflow:auto; font-family:-apple-system, sans-serif; }
+            #cp-preview-modal .cp-hd { display:flex; align-items:center; gap:8px; }
+            #cp-preview-modal .cp-hd h3 { margin:0; font-size:16px; font-weight:700; }
+            #cp-preview-modal .cp-row { display:flex; gap:8px; margin-top:10px; }
+            #cp-preview-modal .cp-row .cp-field { flex:1; display:flex; flex-direction:column; }
+            #cp-preview-modal input, #cp-preview-modal select, #cp-preview-modal textarea { background:#0f1724; border:1px solid rgba(255,255,255,.06); color:#fff; padding:10px 12px; border-radius:8px; font-size:15px; min-height:44px; outline:none; }
+            #cp-preview-modal textarea { min-height:84px; resize:vertical; }
+            #cp-preview-modal .cp-actions { display:flex; gap:8px; margin-top:12px; }
+            #cp-preview-modal .btn { padding:10px 16px; border-radius:10px; cursor:pointer; border:none; font-size:15px; min-height:44px; font-weight:bold; }
+            #cp-preview-modal .btn-primary { background:#6366f1; color:#fff }
+            #cp-preview-modal .btn-ghost { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.04) }
+          </style>
+          <div class="cp-backdrop"></div>
+          <div class="cp-sheet" role="dialog" aria-modal="true" aria-label="Preview listing">
+            <div class="cp-hd"><h3>Preview & Edit</h3><div style="flex:1"></div><button id="cp-preview-close" class="btn btn-ghost">Close</button></div>
+            <div class="cp-row">
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Title</label><input id="cp-prev-title" value="${escapeHtml(extracted.title||'')}" /></div>
+            </div>
+            <div class="cp-row">
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Address</label><input id="cp-prev-address" value="${escapeHtml(extracted.address||'')}" /></div>
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">City</label><input id="cp-prev-city" value="${escapeHtml(extracted.city||'')}" /></div>
+            </div>
+            <div class="cp-row">
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">State</label><input id="cp-prev-state" value="${escapeHtml(extracted.state||'')}" /></div>
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">ZIP</label><input id="cp-prev-zip" value="${escapeHtml(extracted.zip||'')}" /></div>
+            </div>
+            <div class="cp-row">
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Monthly Rent</label><input id="cp-prev-rent" value="${escapeHtml(String(extracted.monthly_rent || extracted.rent || ''))}" /></div>
+              <div class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Bedrooms</label><input id="cp-prev-beds" value="${escapeHtml(String(extracted.bedrooms || extracted.beds || ''))}" /></div>
+            </div>
+            <div style="margin-top:8px" class="cp-field"><label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Description</label><textarea id="cp-prev-desc">${escapeHtml(extracted.description||'')}</textarea></div>
+            <div style="margin-top:8px" class="cp-field">
+              <label style="font-size:12px;color:#94a3b8;margin-bottom:6px">Folder</label>
+              <select id="cp-prev-folder-sel">${folderOptions}</select>
+              <div id="cp-new-folder-row" style="display:none; margin-top:8px; display:flex; gap:8px;">
+                 <input id="cp-new-folder-input" style="flex:1" placeholder="New folder name..." />
+                 <button id="cp-create-folder-btn" class="btn btn-primary" style="background:#4ade80;color:#064e3b">Create</button>
+              </div>
+            </div>
+            <div class="cp-actions"><button id="cp-prev-cancel" class="btn btn-ghost">Cancel</button><div style="flex:1"></div><button id="cp-prev-confirm" class="btn btn-primary">Save to Pipeline</button></div>
+          </div>`;
+
+        document.body.appendChild(modal);
+        document.getElementById('cp-new-folder-row').style.display = 'none';
+
+        var folderSel = document.getElementById('cp-prev-folder-sel');
+        var newFolderRow = document.getElementById('cp-new-folder-row');
+        var createBtn = document.getElementById('cp-create-folder-btn');
+        var newFolderInp = document.getElementById('cp-new-folder-input');
+
+        folderSel.addEventListener('change', function() {
+          if (folderSel.value === '__new__') {
+            newFolderRow.style.display = 'flex';
+            newFolderInp.focus();
+          } else {
+            newFolderRow.style.display = 'none';
+          }
+        });
+
+        createBtn.addEventListener('click', async function() {
+          var name = newFolderInp.value.trim();
+          if (!name) return;
+          createBtn.textContent = '...';
+          try {
+            var res = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'create_folder', secret: 'cp_import_7Kx3m9P2w5', name: name })
+            });
+            var data = await res.json();
+            if (data.ok && data.id) {
+               var opt = document.createElement('option');
+               opt.value = data.id;
+               opt.textContent = name;
+               folderSel.insertBefore(opt, folderSel.lastElementChild);
+               folderSel.value = data.id;
+               newFolderRow.style.display = 'none';
+            }
+          } catch (e) {}
+          createBtn.textContent = 'Create';
+        });
+
+        function closePreviewModal() { var m = document.getElementById('cp-preview-modal'); if (m) m.remove(); }
+        modal.querySelector('.cp-backdrop').addEventListener('click', closePreviewModal);
+        modal.querySelector('#cp-preview-close').addEventListener('click', closePreviewModal);
+        modal.querySelector('#cp-prev-cancel').addEventListener('click', closePreviewModal);
+
+        modal.querySelector('#cp-prev-confirm').addEventListener('click', function () {
+          var updated = Object.assign({}, extracted);
+          updated.title = document.getElementById('cp-prev-title').value.trim();
+          updated.address = document.getElementById('cp-prev-address').value.trim();
+          updated.city = document.getElementById('cp-prev-city').value.trim();
+          updated.state = document.getElementById('cp-prev-state').value.trim();
+          updated.zip = document.getElementById('cp-prev-zip').value.trim();
+          updated.monthly_rent = document.getElementById('cp-prev-rent').value.trim();
+          updated.bedrooms = document.getElementById('cp-prev-beds').value.trim();
+          updated.description = document.getElementById('cp-prev-desc').value.trim();
+          
+          if (folderSel.value && folderSel.value !== '__new__') {
+            updated.folder_id = folderSel.value;
+            updated.folder_name = folderSel.options[folderSel.selectedIndex].text;
+          }
+
+          closePreviewModal();
+          startImportProcess(updated, triggerBtn);
         });
       }
 
-      // ── v4.0: Save property FIRST, then upload photos ───────
-      // Build payload with source URLs (no ImageKit upload yet)
-      var payload = {
-        source: extracted.source,
-        source_listing_id: extracted.source_listing_id,
-        source_url: extracted.source_url || extracted.url || location.href,
-        title: extracted.title,
-        address: extracted.address,
-        city: extracted.city,
-        state: extracted.state,
-        zip: extracted.zip,
-        lat: extracted.lat,
-        lng: extracted.lng,
-        monthly_rent: extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent,
-        bedrooms: extracted.bedrooms != null ? extracted.bedrooms : extracted.beds,
-        bathrooms: extracted.bathrooms != null ? extracted.bathrooms : extracted.baths,
-        half_bathrooms: extracted.half_bathrooms,
-        square_footage: extracted.square_footage != null ? extracted.square_footage : extracted.sqft,
-        lot_size_sqft: extracted.lot_size_sqft != null ? extracted.lot_size_sqft : extracted.lot_sqft,
-        year_built: extracted.year_built,
-        property_type: extracted.property_type,
-        description: extracted.description,
-        available_date: extracted.available_date,
-        pets_allowed: extracted.pets_allowed,
-        original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
-        folder_id: window.CP_TARGET_FOLDER || undefined,
-        _import: 'browser-extension-v4.1.0-live',
-      };
+      async function handleSave() {
+        var btn = document.getElementById('cp-save-btn');
+        if (!btn) return;
+        btn.textContent = 'Loading...';
+        try {
+          var extractor = window.CP_Extractors && window.CP_Extractors.detect(location.href);
+          if (!extractor) { setError('Unsupported page'); return; }
 
-      // ── Save property immediately ───────────────────────────
-      btn.textContent = 'Saving to pipeline…';
-      var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-      var saveRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      console.log('[CP] save response status:', saveRes.status, saveRes.statusText);
-      var resp;
-      try {
-        resp = await saveRes.json();
-      } catch (parseErr) {
-        console.error('[CP] Failed to parse JSON response:', parseErr, 'status:', saveRes.status);
-        setError('Invalid server response (' + saveRes.status + ')');
-        return;
+          var extracted = window.CP_Extractors.extract(location.href, document);
+          if (!extracted) { setError('Could not read listing'); return; }
+
+          openPreviewModal(extracted, btn);
+        } catch (e) {
+          setError('Extraction error');
+        }
       }
-      console.log('[CP] save response:', resp);
 
-      if (resp && resp.ok) {
-        var ikPhotos = resp.imagekit_photos || 0;
-        var photoImport = resp.photo_import;
+      async function startImportProcess(extracted, triggerBtn) {
+        var btn = triggerBtn || document.getElementById('cp-save-btn');
+        btn.textContent = 'Saving...';
+        btn.style.background = '#818cf8';
+        btn.disabled = true;
 
-        if (photoImport === 'complete') {
-          // Photos were already uploaded (browser-side upload path)
-          btn.textContent = 'Saved! ' + ikPhotos + ' photos ✓';
-          btn.style.background = '#16a34a';
-          setTimeout(function () { btn.remove(); }, 6000);
-        } else {
-          // v4.0: Property saved, photos uploading in background
-          btn.textContent = 'Saved! ✓';
-          btn.style.background = '#16a34a';
+        try {
+          var photoUrls = extractPhotoUrls(extracted.original_image_urls);
+          if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
+            extracted.photo_urls.forEach(function(u) { if (typeof u === 'string') photoUrls.push(u); });
+          }
 
-          // Show progress widget for background photo uploads
-          showProgressWidget();
-          updateProgressWidget('Photos uploading…');
+          var payload = {
+            source: extracted.source,
+            source_listing_id: extracted.source_listing_id,
+            source_url: extracted.source_url || extracted.url || location.href,
+            title: extracted.title,
+            address: extracted.address,
+            city: extracted.city,
+            state: extracted.state,
+            zip: extracted.zip,
+            lat: extracted.lat,
+            lng: extracted.lng,
+            monthly_rent: extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent,
+            bedrooms: extracted.bedrooms != null ? extracted.bedrooms : extracted.beds,
+            bathrooms: extracted.bathrooms != null ? extracted.bathrooms : extracted.baths,
+            half_bathrooms: extracted.half_bathrooms,
+            square_footage: extracted.square_footage != null ? extracted.square_footage : extracted.sqft,
+            lot_size_sqft: extracted.lot_size_sqft != null ? extracted.lot_size_sqft : extracted.lot_sqft,
+            year_built: extracted.year_built,
+            property_type: extracted.property_type,
+            description: extracted.description,
+            available_date: extracted.available_date,
+            pets_allowed: extracted.pets_allowed,
+            folder_id: extracted.folder_id,
+            folder_name: extracted.folder_name,
+            original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
+            _import: 'browser-extension-v4.1.0-modal',
+          };
 
-          // Start background photo uploads
-          // We don't await this — it runs in the background
-          if (photoUrls.length > 0) {
-            uploadPhotosInBackground(photoUrls, function(completed, total) {
-              updateProgressWidget('Photos: ' + completed + '/' + total);
-            }).then(function(result) {
-              if (result.uploaded.length > 0) {
-                updateProgressWidget(result.uploaded.length + ' photos uploaded ✓');
-                // v4.0: Update the pipeline record with ImageKit URLs
-                updatePipelinePhotos(payload, result.uploaded);
-              } else if (result.failed > 0) {
-                updateProgressWidget('Photos queued for server retry');
-              }
-              setTimeout(hideProgressWidget, 4000);
-            }).catch(function() {
-              updateProgressWidget('Photo upload queued');
-              setTimeout(hideProgressWidget, 3000);
-            });
+          var direct = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          var resp = await direct.json();
+
+          if (resp && resp.ok) {
+            btn.textContent = 'Saved! Photos uploading in background.';
+            btn.style.background = '#16a34a';
+            
+            setTimeout(function () { btn.remove(); }, 3000);
+          } else if (resp && resp.duplicate) {
+            btn.textContent = 'Already in pipeline';
+            btn.style.background = '#a16207';
+            setTimeout(function () { btn.remove(); }, 3000);
           } else {
-            hideProgressWidget();
+            setError(resp && resp.error ? resp.error.slice(0, 40) : 'Server error');
           }
-
-          setTimeout(function () { btn.remove(); }, 6000);
+        } catch (e) {
+          setError('Network error');
         }
-      } else if (resp && resp.duplicate) {
-        btn.textContent = 'Already in pipeline';
-        btn.style.background = '#a16207';
-        setTimeout(function () { btn.remove(); }, 6000);
-      } else if (resp && resp.queued) {
-        btn.textContent = 'Queued offline (' + resp.queueLength + ')';
-        btn.style.background = '#d97706';
-        setTimeout(function () { btn.remove(); }, 6000);
-      } else {
-        console.warn('[CP] Save rejected:', resp);
-        setError(resp && resp.error ? resp.error.slice(0, 40) : 'Server error');
-      }
-    } catch (e) {
-      console.error('[CP] handleSave exception:', e);
-      setError('Network error');
-    }
-  }
-
-  // ── Update pipeline record with uploaded ImageKit URLs (v4.0) ──
-  // Called after background photo uploads complete. Sends _update_photos_only
-  // to the receive-pipeline-import edge function to update the record.
-  async function updatePipelinePhotos(originalPayload, uploadedPhotos) {
-    try {
-      if (!uploadedPhotos || uploadedPhotos.length === 0) return;
-      var updatePayload = Object.assign({}, originalPayload, {
-        _update_photos_only: true,
-        original_image_urls: JSON.stringify(uploadedPhotos),
-      });
-      var updateUrl = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-      var updateRes = await fetch(updateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatePayload),
-      });
-      var updateResp = await updateRes.json();
-      if (updateResp && updateResp.updated === 'photos_only') {
-        console.log('[CP] Pipeline photos updated:', updateResp.imagekit_photos);
-      }
-    } catch (e) {
-      console.warn('[CP] Failed to update pipeline photos:', e);
-    }
-  }
-
-  // ── Background photo upload (v4.0) ──────────────────────────
-  // Runs after the property is saved. Uploads photos in the background
-  // and updates the pipeline record when complete.
-  async function uploadPhotosInBackground(photoUrls, progressCallback) {
-    var uploaded = [];
-    var failed = 0;
-    var urls = dedupePhotoUrls(photoUrls);
-    var limit = Math.min(urls.length, MAX_PHOTOS);
-    var total = limit;
-
-    for (var i = 0; i < limit; i += PHOTO_BATCH_SIZE) {
-      var batch = urls.slice(i, i + PHOTO_BATCH_SIZE);
-      if (progressCallback) progressCallback(Math.min(i, total), total);
-      var results = await Promise.all(batch.map(function(url, batchIndex) {
-        return uploadOnePhoto(url, i + batchIndex);
-      }));
-      for (var j = 0; j < results.length; j++) {
-        if (results[j]) uploaded.push(results[j]);
-        else failed++;
-        if (progressCallback) progressCallback(Math.min(i + j + 1, total), total);
-      }
-    }
-    return { uploaded: uploaded, failed: failed, total: total };
-  }
-
-  // Download a photo via the background worker (bypasses CORS)
-  async function downloadViaBackground(url) {
-    return new Promise(function(resolve) {
-      try {
-        if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) {
-          var requestId = 'cp-photo-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-          var timer = setTimeout(function () {
-            window.removeEventListener('message', onResult);
-            resolve(null);
-          }, 25000);
-          function onResult(event) {
-            var data = event && event.data;
-            if (event.source !== window || !data ||
-                data.type !== 'CP_DOWNLOAD_PHOTO_RESULT' ||
-                data.requestId !== requestId) return;
-            clearTimeout(timer);
-            window.removeEventListener('message', onResult);
-            resolve(data.ok && data.dataUri ? data : null);
-          }
-          window.addEventListener('message', onResult);
-          window.postMessage({ type: 'CP_DOWNLOAD_PHOTO', requestId: requestId, url: url }, '*');
-          return;
-        }
-        chrome.runtime.sendMessage(
-          { type: 'DOWNLOAD_PHOTO', url: url },
-          function(response) {
-            if (chrome.runtime.lastError) {
-              resolve(null);
-              return;
-            }
-            if (response && response.ok && response.dataUri) {
-              resolve(response);
-            } else {
-              resolve(null);
-            }
-          }
-        );
-      } catch (e) {
-        resolve(null);
-      }
-    });
-  }
-
-  // Fallback: try direct fetch from content script (works for some CDNs)
-  async function downloadViaDirectFetch(url) {
-    try {
-      var imgRes = await fetch(url, {
-        mode: 'cors',
-        credentials: 'include',
-        headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
-      });
-      if (!imgRes.ok) return null;
-      var blob = await imgRes.blob();
-      // Optimize image on client: resize large images and convert to WebP to save bandwidth.
-      try {
-        var optimized = await optimizeImageBlob(blob, 1600, 0.85);
-        if (optimized) blob = optimized;
-      } catch (_) {}
-      var base64 = await blobToBase64(blob);
-      var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
-      if (ext === 'jpeg') ext = 'jpg';
-      return {
-        dataUri: base64,
-        contentType: blob.type || 'image/jpeg',
-        ext: ext,
-        size: blob.size,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Resize/convert images using canvas. Returns a Blob or null on failure.
-  function optimizeImageBlob(blob, maxWidth, quality) {
-    return new Promise(async function(resolve) {
-      try {
-        if (!self.createImageBitmap) return resolve(null);
-        const imgBitmap = await createImageBitmap(blob);
-        const ratio = Math.min(1, maxWidth / imgBitmap.width);
-        const w = Math.round(imgBitmap.width * ratio);
-        const h = Math.round(imgBitmap.height * ratio);
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(imgBitmap, 0, 0, w, h);
-        canvas.toBlob(function(b) { resolve(b); }, 'image/webp', quality);
-      } catch (e) {
-        resolve(null);
-      }
-    });
-  }
-
-  async function uploadOnePhoto(url, index) {
-    try {
-      // 1. Try background worker download first (bypasses CORS)
-      var photo = await downloadViaBackground(url);
-
-      // 2. Fallback: direct content-script fetch
-      if (!photo) {
-        photo = await downloadViaDirectFetch(url);
       }
 
-      // 3. If both failed, return null (will be retried server-side)
-      if (!photo) {
-        console.warn('[CP] All download methods failed for:', url.slice(0, 100));
-        return null;
-      }
-
-      // 4. Upload to ImageKit via pipeline-photo-upload edge function
-      var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-import-secret': SECRET
-        },
-        body: JSON.stringify({
-          fileData: photo.dataUri,
-          fileName: 'photo_' + (index + 1) + '.' + photo.ext,
-          folder: '/pipeline/temp'
-        })
-      });
-      var ikData = await ikRes.json();
-      if (!ikData || !ikData.url) {
-        console.warn('[CP] ImageKit upload failed:', ikData);
-        return null;
-      }
-      return {
-        url: ikData.url,
-        fileId: ikData.fileId || null,
-        width: ikData.width || null,
-        height: ikData.height || null,
-      };
-    } catch (e) {
-      console.error('[CP] Photo upload error:', e.message);
-      return null;
-    }
-  }
-
-  function blobToBase64(blob) {
-    return new Promise(function(resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function() { resolve(reader.result); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  function setError(msg) {
+function setError(msg) {
     var btn = document.getElementById('cp-save-btn');
     if (!btn) return;
     btn.textContent = 'Failed: ' + msg;
