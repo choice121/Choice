@@ -146,3 +146,6 @@ verify_jwt = false
 # verify_jwt must be false so the phone can POST without a Supabase JWT.
 [functions.receive-pipeline-import]
 verify_jwt = false
+
+[functions.extract-listing-ai]
+verify_jwt = false

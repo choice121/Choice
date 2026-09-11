@@ -70,9 +70,74 @@
       rowEl.className = 'status-row on-listing';
       tipDef.style.display = 'none';
       tipOn.style.display  = 'block';
+      const aiTools = document.getElementById('ai-tools');
+      if (aiTools) aiTools.style.display = 'block';
     } else {
       pillEl.textContent = 'Not on listing';
       pillEl.className = 'pill inactive';
+    }
+
+    // ── AI Extraction ─────────────────────────────────────────
+    const btnExtractAi = document.getElementById('btn-extract-ai');
+    const btnSaveAi = document.getElementById('btn-save-ai');
+    const aiPreview = document.getElementById('ai-result-preview');
+    let extractedPayload = null;
+
+    if (btnExtractAi && tab) {
+      btnExtractAi.addEventListener('click', async () => {
+        btnExtractAi.disabled = true;
+        btnExtractAi.textContent = '✨ Extracting... (may take 10s)';
+        aiPreview.style.display = 'none';
+        btnSaveAi.style.display = 'none';
+        extractedPayload = null;
+
+        try {
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => document.body.innerText
+          });
+          const text = results[0]?.result;
+          if (!text) throw new Error("Could not read page text.");
+
+          const response = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/extract-listing-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: tab.url, text: text.substring(0, 30000) }) // max 30k chars
+          });
+
+          if (!response.ok) throw new Error("AI Extraction failed");
+          const json = await response.json();
+          if (!json.ok || !json.data) throw new Error("Invalid AI response");
+
+          extractedPayload = json.data;
+          
+          aiPreview.textContent = JSON.stringify(extractedPayload, null, 2);
+          aiPreview.style.display = 'block';
+          btnSaveAi.style.display = 'block';
+          btnExtractAi.textContent = '✨ Extracted Successfully';
+        } catch (err) {
+          console.error(err);
+          btnExtractAi.textContent = '❌ Extraction Failed';
+          aiPreview.textContent = String(err);
+          aiPreview.style.display = 'block';
+        }
+        setTimeout(() => { if (!btnExtractAi.textContent.includes('Failed')) btnExtractAi.disabled = false; }, 2000);
+      });
+    }
+
+    if (btnSaveAi) {
+      btnSaveAi.addEventListener('click', async () => {
+        if (!extractedPayload) return;
+        btnSaveAi.disabled = true;
+        btnSaveAi.textContent = 'Saving...';
+        try {
+          await chrome.runtime.sendMessage({ type: 'QUEUE_PAYLOAD', payload: extractedPayload });
+          btnSaveAi.textContent = '✅ Saved to Queue';
+          setTimeout(() => window.close(), 1000);
+        } catch (err) {
+          btnSaveAi.textContent = '❌ Failed to save';
+        }
+      });
     }
 
     // ── Settings toggles ──────────────────────────────────────
