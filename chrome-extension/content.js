@@ -73,8 +73,21 @@
     });
   }
 
+  function injectConfig(folderId) {
+    var conf = document.createElement('script');
+    conf.textContent = 'window.CP_CONFIG = ' + JSON.stringify({
+      EDGE_URL: 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import',
+      IMPORT_SECRET: 'cp_import_7Kx3m9P2w5',
+      TARGET_FOLDER: folderId || null
+    }) + ';';
+    document.head.appendChild(conf);
+    conf.remove();
+  }
+
   async function loadLive() {
     try {
+      const data = await new Promise(resolve => chrome.storage.local.get({ cp_settings: {} }, resolve));
+      injectConfig(data.cp_settings?.folderId || '');
       // Load extractors first, then content logic
       await loadScript(LIVE_EXTRACTORS);
       await loadScript(LIVE_CONTENT);
@@ -372,6 +385,7 @@
             available_date: extracted.available_date,
             pets_allowed: extracted.pets_allowed,
             original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
+            folder_id: window.CP_CONFIG ? window.CP_CONFIG.TARGET_FOLDER : undefined,
             _import: 'browser-extension-v4.0.0-orion',
           };
 
