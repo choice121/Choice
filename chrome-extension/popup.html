@@ -300,7 +300,17 @@
 
   <div class="settings">
     <div class="settings-title">Capture settings</div>
-    <div class="setting-row">
+    <div class="setting-row" style="flex-direction:column; align-items:flex-start; gap:4px">
+      <span>Pipeline Folder</span>
+      <select id="folder-select" style="width:100%; padding:6px; font-size:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:4px; outline:none;">
+        <option value="">(Loading folders...)</option>
+      </select>
+      <div style="display:flex; width:100%; gap:6px; margin-top:4px">
+        <input type="text" id="new-folder-input" placeholder="New folder name..." style="display:none; flex:1; padding:6px; font-size:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:4px; outline:none;" />
+        <button id="btn-create-folder" style="display:none; padding:6px 10px; font-size:11px; background:#4ade80; color:#064e3b; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Create</button>
+      </div>
+    </div>
+    <div class="setting-row" style="margin-top:8px">
       <span>Download to PC</span>
       <label class="toggle">
         <input type="checkbox" id="toggle-download" checked>

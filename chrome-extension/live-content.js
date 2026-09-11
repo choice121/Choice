@@ -244,6 +244,7 @@
         available_date: extracted.available_date,
         pets_allowed: extracted.pets_allowed,
         original_image_urls: JSON.stringify(photoUrls.map(function(u) { return { url: u }; })),
+        folder_id: window.CP_TARGET_FOLDER || undefined,
         _import: 'browser-extension-v4.1.0-live',
       };
 
