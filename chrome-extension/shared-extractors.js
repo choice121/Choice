@@ -193,40 +193,144 @@
     }, overrides);
   }
 
+  function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < (str || '').length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash;
+  }
+
   // ── Zillow ───────────────────────────────────────────────────
   function extractZillow(doc, url) {
     const nd = getNextData(doc);
-    if (!nd) return null;
 
     let prop = null;
-    const cachePaths = [
-      ['props', 'pageProps', 'componentProps', 'gdpClientCache'],
-      ['props', 'pageProps', 'initialData', 'gdpClientCache'],
-      ['props', 'pageProps', 'gdpClientCache'],
-    ];
-    for (const path of cachePaths) {
-      if (prop) break;
+    if (nd) {
+      const cachePaths = [
+        ['props', 'pageProps', 'componentProps', 'gdpClientCache'],
+        ['props', 'pageProps', 'initialData', 'gdpClientCache'],
+        ['props', 'pageProps', 'gdpClientCache'],
+      ];
+      for (const path of cachePaths) {
+        if (prop) break;
+        try {
+          let node = nd;
+          for (const key of path) { node = node[key]; if (!node) break; }
+          if (!node) continue;
+          const cache = typeof node === 'string' ? JSON.parse(node) : node;
+          if (!cache || typeof cache !== 'object') continue;
+          for (const k of Object.keys(cache)) {
+            const v = cache[k];
+            if (!v || typeof v !== 'object') continue;
+            if (v.property && v.property.zpid) { prop = v.property; break; }
+            if (v.data && v.data.property && v.data.property.zpid) { prop = v.data.property; break; }
+            if (v.zpid !== undefined && (v.bedrooms !== undefined || v.price !== undefined)) { prop = v; break; }
+          }
+        } catch (_) {}
+      }
+      if (!prop) {
+        try {
+          const cp = nd.props && nd.props.pageProps && nd.props.pageProps.componentProps;
+          if (cp && cp.homeDetails && cp.homeDetails.zpid) prop = cp.homeDetails;
+        } catch (_) {}
+      }
+    }
+
+    // Fallback: Schema.org JSON-LD scripts
+    if (!prop && doc && typeof doc.querySelectorAll === 'function') {
       try {
-        let node = nd;
-        for (const key of path) { node = node[key]; if (!node) break; }
-        if (!node) continue;
-        const cache = typeof node === 'string' ? JSON.parse(node) : node;
-        if (!cache || typeof cache !== 'object') continue;
-        for (const k of Object.keys(cache)) {
-          const v = cache[k];
-          if (!v || typeof v !== 'object') continue;
-          if (v.property && v.property.zpid) { prop = v.property; break; }
-          if (v.data && v.data.property && v.data.property.zpid) { prop = v.data.property; break; }
-          if (v.zpid !== undefined && (v.bedrooms !== undefined || v.price !== undefined)) { prop = v; break; }
+        const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+        for (const s of scripts) {
+          try {
+            const raw = JSON.parse(s.textContent);
+            const list = Array.isArray(raw) ? raw : [raw];
+            for (const item of list) {
+              if (!item) continue;
+              const type = item['@type'];
+              if (type === 'SingleFamilyResidence' || type === 'Apartment' || type === 'Residence' || type === 'RealEstateListing' || item.address) {
+                const a = item.address || {};
+                const geo = item.geo || {};
+                const offers = item.offers || {};
+                const zpidM = (url || '').match(/(\d+)_zpid/i);
+                prop = {
+                  zpid: zpidM ? zpidM[1] : ('zillow-' + Math.abs(hashCode(url || ''))),
+                  address: {
+                    streetAddress: a.streetAddress || '',
+                    city: a.addressLocality || '',
+                    state: a.addressRegion || '',
+                    zipcode: a.postalCode || ''
+                  },
+                  price: offers.price || (offers.priceSpecification && offers.priceSpecification.price) || null,
+                  bedrooms: item.numberOfBedrooms || item.numberOfRooms || null,
+                  bathrooms: item.numberOfBathroomsTotal || item.numberOfFullBathrooms || null,
+                  livingArea: item.floorSize ? parseInt(item.floorSize.value || item.floorSize, 10) : null,
+                  description: item.description || null,
+                  photos: Array.isArray(item.image) ? item.image : (item.image ? [item.image] : []),
+                  latitude: geo.latitude || null,
+                  longitude: geo.longitude || null,
+                  homeType: type === 'Apartment' ? 'APARTMENT' : 'SINGLE_FAMILY'
+                };
+                break;
+              }
+            }
+          } catch (_) {}
+          if (prop) break;
         }
       } catch (_) {}
     }
-    if (!prop) {
+
+    // Fallback: DOM query selector if no structured data found
+    if (!prop && doc && typeof doc.querySelector === 'function') {
       try {
-        const cp = nd.props.pageProps.componentProps;
-        if (cp && cp.homeDetails && cp.homeDetails.zpid) prop = cp.homeDetails;
+        const h1 = doc.querySelector('h1');
+        const priceEl = doc.querySelector('[data-testid="price"], span[data-testid="price"], .summary-container span');
+        const descEl = doc.querySelector('[data-testid="description"], .property-description');
+        const streetText = h1 ? h1.textContent.trim() : '';
+        if (streetText || priceEl) {
+          const zpidMatch = (url || '').match(/(\d+)_zpid/i);
+          const zpid = zpidMatch ? zpidMatch[1] : ('zillow-' + Math.abs(hashCode(url || '')));
+          
+          const addrParts = streetText.split(',');
+          let street = addrParts[0] ? addrParts[0].trim() : '';
+          let city = addrParts[1] ? addrParts[1].trim() : '';
+          let state = '', zip = '';
+          if (addrParts[2]) {
+            const sz = addrParts[2].trim().split(/\s+/);
+            state = sz[0] || '';
+            zip = sz[1] || '';
+          }
+
+          const bodyText = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
+          const bedMatch = bodyText.match(/(\d+)\s*(?:bd|bed|bedroom)/i);
+          const bathMatch = bodyText.match(/(\d+(?:\.\d+)?)\s*(?:ba|bath|bathroom)/i);
+          const sqftMatch = bodyText.match(/([\d,]+)\s*(?:sqft|sq\s*ft)/i);
+
+          const photos = [];
+          if (typeof doc.querySelectorAll === 'function') {
+            const imgs = doc.querySelectorAll('img[src*="zillowstatic.com"], img[src*="photos"]');
+            imgs.forEach(img => {
+              const src = img.src || (typeof img.getAttribute === 'function' && img.getAttribute('src'));
+              if (src && !photos.includes(src)) photos.push(src);
+            });
+          }
+
+          prop = {
+            zpid: zpid,
+            address: { streetAddress: street, city: city, state: state, zipcode: zip },
+            price: priceEl ? priceEl.textContent.trim() : null,
+            bedrooms: bedMatch ? parseInt(bedMatch[1], 10) : null,
+            bathrooms: bathMatch ? parseFloat(bathMatch[1]) : null,
+            livingArea: sqftMatch ? parseInt(sqftMatch[1].replace(/,/g, ''), 10) : null,
+            description: descEl ? descEl.textContent.trim() : null,
+            photos: photos,
+            homeType: 'SINGLE_FAMILY'
+          };
+        }
       } catch (_) {}
     }
+
     if (!prop) return null;
 
     const rf   = prop.resoFacts || {};
@@ -480,7 +584,7 @@
 
   // ── Registry + detection ─────────────────────────────────────
   const EXTRACTORS = [
-    { id: 'zillow',     match: /zillow\.com\/homedetails\//i,            fn: extractZillow },
+    { id: 'zillow',     match: /zillow\.com\/(homedetails|b|apartments|community)\/|_zpid/i, fn: extractZillow },
     { id: 'realtor',    match: /realtor\.com\/realestateandhomes-detail\//i, fn: extractRealtor },
     { id: 'apartments', match: /apartments\.com\//i,                     fn: extractApartments },
     { id: 'redfin',     match: /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i, fn: extractRedfin },

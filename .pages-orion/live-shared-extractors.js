@@ -1,22 +1,7 @@
 // ============================================================
 // Choice Properties — Multi-site Listing Extractor Registry
-// GENERATED FILE — DO NOT EDIT DIRECTLY.
-// Edit src/extractors/shared-extractors.js and run:
-//   node scripts/build-extractors.js
-// ============================================================
-// ============================================================
-// Choice Properties — Canonical Multi-site Listing Extractor
-// ============================================================
-// THIS IS THE SINGLE SOURCE OF TRUTH for all listing extraction.
-// Do NOT edit the generated copies in:
-//   - chrome-extension/shared-extractors.js
-//   - .pages-orion/live-shared-extractors.js
-//   - supabase/functions/_shared/zillow-extract.ts
-//
-// To update: edit this file, then run: node scripts/build-extractors.js
-// This generates all runtime variants from this one source.
-//
-// Supported sites: Zillow, Realtor.com, Apartments.com, Redfin
+// Pure functions. No chrome.* APIs. Works in browser + Node.
+// Each extractor returns the normalized pipeline payload.
 // ============================================================
 (function (global) {
   'use strict';
@@ -29,12 +14,15 @@
       if (!el) return null;
       try { return JSON.parse(el.textContent); } catch (_) { return null; }
     }
+
     if (typeof source === 'string') {
       try { return JSON.parse(source); } catch (_) { return null; }
     }
+
     if (typeof source === 'object') {
       return source;
     }
+
     return null;
   }
 
@@ -55,10 +43,13 @@
     return best;
   }
 
-  // Zillow CDN serves the same photo at multiple variant suffixes.
-  // Dedup by base image hash, keep highest-resolution variant.
+  // Zillow CDN serves the same photo at multiple variant suffixes:
+  //   -uncropped_scaled_within_1536_1152.jpg  (full-res)
+  //   -cc_ft_1536.jpg                          (compressed)
+  //   -p_h.jpg                                 (hero)
+  // We dedup by the base image hash and keep the highest-resolution variant.
   function dedupZillowPhotos(urls) {
-    const byHash = new Map();
+    const byHash = new Map(); // hash -> { url, score }
     const scoreOf = (u) => {
       if (/-uncropped_scaled_within_1536_1152\.jpg/.test(u)) return 3;
       if (/-cc_ft_1536\.jpg/.test(u)) return 2;
@@ -67,7 +58,7 @@
     };
     for (const u of urls) {
       const m = u.match(/\/fp\/([a-f0-9]{16,})-/i);
-      const hash = m ? m[1] : u;
+      const hash = m ? m[1] : u; // fall back to full URL if no hash
       const score = scoreOf(u);
       const cur = byHash.get(hash);
       if (!cur || score > cur.score) byHash.set(hash, { url: u, score });
@@ -151,23 +142,6 @@
     return parts.length ? parts.join('; ') : null;
   }
 
-  // Sample a small portion of __NEXT_DATA__ / prop for debugging without
-  // sending huge payloads. Truncate long strings and arrays.
-  function sampleValue(v, depth) {
-    if (depth <= 0) return null;
-    if (v == null) return v;
-    if (typeof v === 'string') return v.length > 200 ? v.slice(0, 200) + '...' : v;
-    if (typeof v === 'number' || typeof v === 'boolean') return v;
-    if (Array.isArray(v)) return v.slice(0, 6).map(i => sampleValue(i, depth - 1));
-    if (typeof v === 'object') {
-      const out = {};
-      const keys = Object.keys(v).slice(0, 12);
-      for (const k of keys) out[k] = sampleValue(v[k], depth - 1);
-      return out;
-    }
-    return null;
-  }
-
   const TYPE_MAP = {
     SINGLE_FAMILY: 'SINGLE_FAMILY', MULTI_FAMILY: 'MULTI_FAMILY', CONDO: 'CONDOS',
     CONDO_TOWNHOME: 'CONDOS', TOWNHOUSE: 'TOWNHOMES', APARTMENT: 'APARTMENT',
@@ -185,7 +159,8 @@
   }
 
   // Zillow URLs embed the zpid at the end: .../12345_zpid/
-  // If the URL's zpid doesn't match the data's zpid, rebuild a canonical URL.
+  // If the URL's zpid doesn't match the data's zpid (stale/wrong URL), rebuild
+  // a canonical URL from the data so the source link always points to the right listing.
   function canonicalZillowUrl(url, zpid) {
     if (!zpid) return url;
     const m = url.match(/(https?:\/\/[^/]+\/homedetails\/[^/]+)\/\d+_zpid\/?/i);
@@ -218,129 +193,144 @@
     }, overrides);
   }
 
-  // ── Zillow attrMap helper ────────────────────────────────────
-  // Zillow stores rich facts as a label→value object in prop.attrMap
-  // (and occasionally in prop.facts). The resoFacts (rf) object often
-  // lacks these. Parse attrMap to fill in bonus fields that raise the
-  // quality score (county, year_built, parking, pets, appliances,
-  // heating, cooling, laundry, basement, lot size, flooring).
-  function fromAttrMap(prop) {
-    const facts = {};
-    const src   = prop.attrMap || prop.facts || {};
-    if (Array.isArray(src)) {
-      for (const f of src) {
-        if (f && typeof f === 'object') {
-          const label = f.label || f.name || f.type || '';
-          const val   = f.value || f.text || '';
-          if (label && val != null) facts[String(label).trim().toLowerCase()] = String(val).trim();
-        }
-      }
-    } else if (src && typeof src === 'object') {
-      for (const k of Object.keys(src)) {
-        const v = src[k];
-        if (v != null && v !== '') facts[String(k).trim().toLowerCase()] = String(v).trim();
-      }
+  function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < (str || '').length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
     }
-    return facts;
-  }
-
-  function factYearBuilt(facts, current) {
-    if (current) return current;
-    for (const k of ['year built', 'yearbuilt', 'built in', 'year']) {
-      if (facts[k]) { const n = parseInt(String(facts[k]).replace(/[^0-9]/g, ''), 10); if (n && n > 1800) return n; }
-    }
-    return null;
-  }
-
-  function factLotSize(facts, current) {
-    if (current) return current;
-    for (const k of ['lot size', 'lot', 'lotsize']) {
-      if (facts[k]) {
-        const n = parseInt(String(facts[k]).replace(/[^0-9]/g, ''), 10);
-        if (n) return n;
-      }
-    }
-    return null;
-  }
-
-  function factList(facts, current, keys) {
-    if (current && current.length) return current;
-    for (const k of keys) {
-      if (facts[k]) {
-        const parts = String(facts[k]).split(',').map(s => s.trim()).filter(Boolean);
-        if (parts.length) return parts;
-      }
-    }
-    return current || [];
-  }
-
-  function factBool(facts, current, keys) {
-    if (current != null) return current;
-    for (const k of keys) {
-      if (facts[k]) {
-        const v = String(facts[k]).toLowerCase();
-        return !(v === 'none' || v === 'no' || v === 'false' || v === '0');
-      }
-    }
-    return null;
-  }
-
-  function factPets(facts, current) {
-    if (current != null) return current;
-    for (const k of ['pet friendly', 'pets allowed', 'pet types allowed', 'pets', 'pet policy']) {
-      if (facts[k]) {
-        const v = String(facts[k]).toLowerCase();
-        return !(v === 'no' || v === 'false' || v === 'not allowed');
-      }
-    }
-    return null;
-  }
-
-  function splitFactValues(value) {
-    if (value == null) return [];
-    if (Array.isArray(value)) {
-      return value.flatMap(item => splitFactValues(item));
-    }
-    const text = String(value).trim();
-    if (!text || text === 'null' || text === 'none' || text.toLowerCase() === 'n/a') return [];
-    const parts = text.split(/\s*[,;|]\s*/).map(s => s.trim()).filter(Boolean);
-    return parts.length ? parts : [text];
+    return hash;
   }
 
   // ── Zillow ───────────────────────────────────────────────────
   function extractZillow(doc, url) {
     const nd = getNextData(doc);
-    if (!nd) return null;
 
     let prop = null;
-    const cachePaths = [
-      ['props', 'pageProps', 'componentProps', 'gdpClientCache'],
-      ['props', 'pageProps', 'initialData', 'gdpClientCache'],
-      ['props', 'pageProps', 'gdpClientCache'],
-    ];
-    for (const path of cachePaths) {
-      if (prop) break;
+    if (nd) {
+      const cachePaths = [
+        ['props', 'pageProps', 'componentProps', 'gdpClientCache'],
+        ['props', 'pageProps', 'initialData', 'gdpClientCache'],
+        ['props', 'pageProps', 'gdpClientCache'],
+      ];
+      for (const path of cachePaths) {
+        if (prop) break;
+        try {
+          let node = nd;
+          for (const key of path) { node = node[key]; if (!node) break; }
+          if (!node) continue;
+          const cache = typeof node === 'string' ? JSON.parse(node) : node;
+          if (!cache || typeof cache !== 'object') continue;
+          for (const k of Object.keys(cache)) {
+            const v = cache[k];
+            if (!v || typeof v !== 'object') continue;
+            if (v.property && v.property.zpid) { prop = v.property; break; }
+            if (v.data && v.data.property && v.data.property.zpid) { prop = v.data.property; break; }
+            if (v.zpid !== undefined && (v.bedrooms !== undefined || v.price !== undefined)) { prop = v; break; }
+          }
+        } catch (_) {}
+      }
+      if (!prop) {
+        try {
+          const cp = nd.props && nd.props.pageProps && nd.props.pageProps.componentProps;
+          if (cp && cp.homeDetails && cp.homeDetails.zpid) prop = cp.homeDetails;
+        } catch (_) {}
+      }
+    }
+
+    // Fallback: Schema.org JSON-LD scripts
+    if (!prop && doc && typeof doc.querySelectorAll === 'function') {
       try {
-        let node = nd;
-        for (const key of path) { node = node[key]; if (!node) break; }
-        if (!node) continue;
-        const cache = typeof node === 'string' ? JSON.parse(node) : node;
-        if (!cache || typeof cache !== 'object') continue;
-        for (const k of Object.keys(cache)) {
-          const v = cache[k];
-          if (!v || typeof v !== 'object') continue;
-          if (v.property && v.property.zpid) { prop = v.property; break; }
-          if (v.data && v.data.property && v.data.property.zpid) { prop = v.data.property; break; }
-          if (v.zpid !== undefined && (v.bedrooms !== undefined || v.price !== undefined)) { prop = v; break; }
+        const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+        for (const s of scripts) {
+          try {
+            const raw = JSON.parse(s.textContent);
+            const list = Array.isArray(raw) ? raw : [raw];
+            for (const item of list) {
+              if (!item) continue;
+              const type = item['@type'];
+              if (type === 'SingleFamilyResidence' || type === 'Apartment' || type === 'Residence' || type === 'RealEstateListing' || item.address) {
+                const a = item.address || {};
+                const geo = item.geo || {};
+                const offers = item.offers || {};
+                const zpidM = (url || '').match(/(\d+)_zpid/i);
+                prop = {
+                  zpid: zpidM ? zpidM[1] : ('zillow-' + Math.abs(hashCode(url || ''))),
+                  address: {
+                    streetAddress: a.streetAddress || '',
+                    city: a.addressLocality || '',
+                    state: a.addressRegion || '',
+                    zipcode: a.postalCode || ''
+                  },
+                  price: offers.price || (offers.priceSpecification && offers.priceSpecification.price) || null,
+                  bedrooms: item.numberOfBedrooms || item.numberOfRooms || null,
+                  bathrooms: item.numberOfBathroomsTotal || item.numberOfFullBathrooms || null,
+                  livingArea: item.floorSize ? parseInt(item.floorSize.value || item.floorSize, 10) : null,
+                  description: item.description || null,
+                  photos: Array.isArray(item.image) ? item.image : (item.image ? [item.image] : []),
+                  latitude: geo.latitude || null,
+                  longitude: geo.longitude || null,
+                  homeType: type === 'Apartment' ? 'APARTMENT' : 'SINGLE_FAMILY'
+                };
+                break;
+              }
+            }
+          } catch (_) {}
+          if (prop) break;
         }
       } catch (_) {}
     }
-    if (!prop) {
+
+    // Fallback: DOM query selector if no structured data found
+    if (!prop && doc && typeof doc.querySelector === 'function') {
       try {
-        const cp = nd.props.pageProps.componentProps;
-        if (cp && cp.homeDetails && cp.homeDetails.zpid) prop = cp.homeDetails;
+        const h1 = doc.querySelector('h1');
+        const priceEl = doc.querySelector('[data-testid="price"], span[data-testid="price"], .summary-container span');
+        const descEl = doc.querySelector('[data-testid="description"], .property-description');
+        const streetText = h1 ? h1.textContent.trim() : '';
+        if (streetText || priceEl) {
+          const zpidMatch = (url || '').match(/(\d+)_zpid/i);
+          const zpid = zpidMatch ? zpidMatch[1] : ('zillow-' + Math.abs(hashCode(url || '')));
+          
+          const addrParts = streetText.split(',');
+          let street = addrParts[0] ? addrParts[0].trim() : '';
+          let city = addrParts[1] ? addrParts[1].trim() : '';
+          let state = '', zip = '';
+          if (addrParts[2]) {
+            const sz = addrParts[2].trim().split(/\s+/);
+            state = sz[0] || '';
+            zip = sz[1] || '';
+          }
+
+          const bodyText = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
+          const bedMatch = bodyText.match(/(\d+)\s*(?:bd|bed|bedroom)/i);
+          const bathMatch = bodyText.match(/(\d+(?:\.\d+)?)\s*(?:ba|bath|bathroom)/i);
+          const sqftMatch = bodyText.match(/([\d,]+)\s*(?:sqft|sq\s*ft)/i);
+
+          const photos = [];
+          if (typeof doc.querySelectorAll === 'function') {
+            const imgs = doc.querySelectorAll('img[src*="zillowstatic.com"], img[src*="photos"]');
+            imgs.forEach(img => {
+              const src = img.src || (typeof img.getAttribute === 'function' && img.getAttribute('src'));
+              if (src && !photos.includes(src)) photos.push(src);
+            });
+          }
+
+          prop = {
+            zpid: zpid,
+            address: { streetAddress: street, city: city, state: state, zipcode: zip },
+            price: priceEl ? priceEl.textContent.trim() : null,
+            bedrooms: bedMatch ? parseInt(bedMatch[1], 10) : null,
+            bathrooms: bathMatch ? parseFloat(bathMatch[1]) : null,
+            livingArea: sqftMatch ? parseInt(sqftMatch[1].replace(/,/g, ''), 10) : null,
+            description: descEl ? descEl.textContent.trim() : null,
+            photos: photos,
+            homeType: 'SINGLE_FAMILY'
+          };
+        }
       } catch (_) {}
     }
+
     if (!prop) return null;
 
     const rf   = prop.resoFacts || {};
@@ -373,50 +363,14 @@
     for (const t of (prop.tags || [])) addA(t);
     for (const f of [...(rf.communityFeatures || []), ...(rf.interiorFeatures || []), ...(rf.exteriorFeatures || []), ...(rf.poolFeatures || [])]) addA(f);
 
-    // Parse Zillow's amenityCategories (structured groups of amenities)
-    try {
-      if (prop.amenityCategories && Array.isArray(prop.amenityCategories)) {
-        for (const cat of prop.amenityCategories) {
-          if (!cat) continue;
-          // cat may be { name: 'Community', amenities: ['Pool','Gym'] } or similar
-          if (Array.isArray(cat.amenities)) {
-            for (const a of cat.amenities) addA(typeof a === 'string' ? a : (a && a.name));
-          }
-          if (cat.name && typeof cat.name === 'string') addA(cat.name);
-        }
-      }
-    } catch (_) {}
-
-    // ── attrMap fallback ───────────────────────────────────────
-    // Zillow's resoFacts sometimes omits fields that are only present
-    // in prop.attrMap (a label→value object). Parse it to fill any
-    // bonus fields that came back null from resoFacts.
-    const facts = fromAttrMap(prop);
-
     let parking = null;
     if (rf.parkingFeatures && rf.parkingFeatures.length) parking = rf.parkingFeatures.join(', ');
     else if (prop.parkingType) parking = String(prop.parkingType).replace(/_/g, ' ');
-    parking = parking || (facts.parking ? String(facts.parking) : null);
 
-    const pets = prop.isPetFriendly != null ? prop.isPetFriendly : (rf.petsAllowed != null ? rf.petsAllowed : factPets(facts, null));
+    const pets = prop.isPetFriendly != null ? prop.isPetFriendly : (rf.petsAllowed != null ? rf.petsAllowed : null);
     const petTypes = [];
     if (rf.catsAllowed) petTypes.push('cats');
     if (rf.dogsAllowed) petTypes.push('dogs');
-    if (!petTypes.length) {
-      const pv = [
-        facts['pet policy'],
-        facts['pet types allowed'],
-        facts['pets'],
-        facts['pets allowed'],
-        facts['amenities'],
-        facts['features']
-      ].filter(Boolean).join(' ');
-      const normalized = String(pv || (pets ? 'dogs and cats' : '')).toLowerCase();
-      if (normalized) {
-        if (/cat/i.test(normalized)) petTypes.push('cats');
-        if (/dog/i.test(normalized)) petTypes.push('dogs');
-      }
-    }
 
     let minLease = null;
     const ltRaw = rf.leaseTerm || rf.leaseTerms || rf.minimumLease || null;
@@ -428,67 +382,26 @@
       else if (/\byear\b|12[\s-]*month|annual/.test(lt)) minLease = 12;
     }
 
-    const yrBuilt = factYearBuilt(facts, yr ? parseInt(String(yr), 10) : null);
-    const lotSize = factLotSize(facts, null);
-    const heating = (rf.heating && rf.heating.length ? rf.heating.join(', ') : null)
-                  || (facts.heating ? String(facts.heating) : null);
-    const cooling = (rf.cooling && rf.cooling.length ? rf.cooling.join(', ') : null)
-                  || (facts.cooling ? String(facts.cooling) : null);
-    const laundry = (rf.laundryFeatures && rf.laundryFeatures.length ? rf.laundryFeatures.join(', ') : null)
-                  || (facts.laundry ? String(facts.laundry) : null);
-    const appliances = (rf.appliances && rf.appliances.length ? rf.appliances : factList(facts, [], ['appliances']));
-    const smoking = rf.smokingAllowed != null ? !!rf.smokingAllowed : factBool(facts, null, ['smoking']);
-
-    // Zillow often stores the richest feature data here, especially for
-    // parking, heating, cooling, laundry, pets, and amenity lists.
-    // Always merge these values so Orion imports keep the full feature set.
-    const keysToScan = [
-      'amenities', 'features', 'interior features', 'exterior features',
-      'community features', 'parking', 'laundry', 'heating', 'cooling',
-      'appliances', 'pet policy', 'pets', 'pet types allowed'
-    ];
-    for (const key of keysToScan) {
-      const value = facts[key];
-      if (value) {
-        for (const item of splitFactValues(value)) addA(item);
-      }
-    }
-
-    const secDeposit = safeI(rf.securityDeposit) || safeI(facts['security deposit']) || null;
-
-    // Sample a small original_data excerpt to help debugging missing fields
-    let sampled = null;
-    try {
-      sampled = {
-        zpid: zpid,
-        attrMap: sampleValue(prop.attrMap || prop.facts || {}, 2),
-        amenityCategories: sampleValue(prop.amenityCategories || [], 2),
-        resoFacts: sampleValue(rf || {}, 2),
-      };
-    } catch (_) { sampled = null; }
-
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.unformattedPrice, prop.rentZestimate),
       bedrooms: beds, bathrooms: bathF, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
-      year_built: yrBuilt,
-      lot_size_sqft: lotSize,
+      year_built: yr ? parseInt(String(yr), 10) : null,
       floors: safeI(prop.stories || rf.stories),
       garage_spaces: safeI(prop.garageParkingCapacity || prop.garageSpaces),
       total_units: safeI(prop.unitCount),
       property_type: propType,
       description: prop.description || null,
-      neighborhood: hood || (facts['neighborhood'] ? String(facts['neighborhood']) : null),
-      county: county || (facts['county'] ? String(facts['county']) : null),
+      neighborhood: hood, county,
       location_context: ctxParts.length ? ctxParts.join('; ') : null,
-      pets_allowed: pets != null ? !!pets : null,
+      pets_allowed: pets,
       pet_types_allowed: JSON.stringify(petTypes),
-      available_date: parseDate(rf.dateAvailable || rf.availableFrom || prop.dateAvailable || facts['available']),
+      available_date: parseDate(rf.dateAvailable || rf.availableFrom || prop.dateAvailable),
       minimum_lease_months: minLease,
-      smoking_allowed: smoking,
-      security_deposit: secDeposit,
+      smoking_allowed: rf.smokingAllowed != null ? !!rf.smokingAllowed : null,
+      security_deposit: safeI(rf.securityDeposit),
       pet_deposit: safeI(rf.petFee || rf.petDepositFee),
       admin_fee: safeI(rf.adminFee),
       parking_fee: safeI(rf.parkingFee),
@@ -498,16 +411,15 @@
       move_in_special: rf.concessions ? String(rf.concessions).slice(0, 200) : null,
       parking,
       amenities: JSON.stringify(Object.keys(amenityMap)),
-      appliances: JSON.stringify(appliances),
+      appliances: JSON.stringify(rf.appliances || []),
       utilities_included: JSON.stringify(rf.utilities || rf.utilitiesIncluded || []),
-      heating_type: heating,
-      cooling_type: cooling,
-      laundry_type: laundry,
+      heating_type: rf.heating && rf.heating.length ? rf.heating.join(', ') : null,
+      cooling_type: rf.cooling && rf.cooling.length ? rf.cooling.join(', ') : null,
+      laundry_type: rf.laundryFeatures && rf.laundryFeatures.length ? rf.laundryFeatures.join(', ') : null,
       virtual_tour_url: vtour,
       has_basement: !!(rf.basement && rf.basement !== 'None' && rf.basement !== 'false' && rf.basement !== false),
       has_central_air: !!(rf.hasCooling || (rf.cooling && rf.cooling.some(c => c.toLowerCase().includes('central')))),
       original_image_urls: JSON.stringify(collectPhotos(prop)),
-      original_data: sampled ? JSON.stringify(sampled) : null,
       agent_name: (prop.attributionInfo && prop.attributionInfo.agentName)  || null,
       broker_name: (prop.attributionInfo && prop.attributionInfo.brokerName) || null,
     });
@@ -672,7 +584,7 @@
 
   // ── Registry + detection ─────────────────────────────────────
   const EXTRACTORS = [
-    { id: 'zillow',     match: /zillow\.com\/homedetails\//i,            fn: extractZillow },
+    { id: 'zillow',     match: /zillow\.com\/(homedetails|b|apartments|community)\/|_zpid/i, fn: extractZillow },
     { id: 'realtor',    match: /realtor\.com\/realestateandhomes-detail\//i, fn: extractRealtor },
     { id: 'apartments', match: /apartments\.com\//i,                     fn: extractApartments },
     { id: 'redfin',     match: /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i, fn: extractRedfin },

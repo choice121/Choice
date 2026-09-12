@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Save listings to Choice Properties pipeline.",
   "permissions": ["storage", "tabs", "downloads", "alarms", "scripting"],
   "host_permissions": [
-    "https://www.zillow.com/*",
-    "https://m.zillow.com/*",
-    "https://www.realtor.com/*",
-    "https://www.apartments.com/*",
-    "https://www.redfin.com/*",
+    "https://*.zillow.com/*",
+    "https://*.realtor.com/*",
+    "https://*.apartments.com/*",
+    "https://*.redfin.com/*",
     "https://tlfmwetmhthpyrytrcfo.supabase.co/*",
     "https://choice-properties-site.pages.dev/*"
   ],
@@ -35,13 +34,12 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.zillow.com/homedetails/*",
-        "https://m.zillow.com/homedetails/*",
-        "https://www.realtor.com/realestateandhomes-detail/*",
-        "https://www.apartments.com/*",
-        "https://www.redfin.com/*",
-        "https://m.redfin.com/*"
+        "https://*.zillow.com/*",
+        "https://*.realtor.com/*",
+        "https://*.apartments.com/*",
+        "https://*.redfin.com/*"
       ],
+      "css": ["content.css"],
       "js": ["config.js", "shared-extractors.js", "content.js"],
       "run_at": "document_idle"
     }

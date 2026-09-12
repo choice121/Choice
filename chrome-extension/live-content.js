@@ -286,15 +286,22 @@
           }
         });
 
+        newFolderInp.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            createBtn.click();
+          }
+        });
+
         createBtn.addEventListener('click', async function() {
           var name = newFolderInp.value.trim();
           if (!name) return;
           createBtn.textContent = '...';
           try {
-            var res = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import', {
+            var res = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import?secret=cp_import_7Kx3m9P2w5', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'create_folder', secret: 'cp_import_7Kx3m9P2w5', name: name })
+              body: JSON.stringify({ action: 'create_folder', name: name })
             });
             var data = await res.json();
             if (data.ok && data.id) {
@@ -304,6 +311,7 @@
                folderSel.insertBefore(opt, folderSel.lastElementChild);
                folderSel.value = data.id;
                newFolderRow.style.display = 'none';
+               newFolderInp.value = '';
             }
           } catch (e) {}
           createBtn.textContent = 'Create';

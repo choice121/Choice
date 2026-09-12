@@ -15,7 +15,8 @@
     } catch (_) {}
 
     const isSupportedListing = tab && tab.url && (
-      /zillow\.com\/homedetails\//i.test(tab.url) ||
+      /zillow\.com\/(homedetails|b|apartments|community)\//i.test(tab.url) ||
+      /zillow\.com\/.*_zpid/i.test(tab.url) ||
       /realtor\.com\/realestateandhomes-detail\//i.test(tab.url) ||
       /apartments\.com\//i.test(tab.url) ||
       /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(tab.url)
@@ -87,6 +88,33 @@
       tipOn.style.display  = 'block';
       const aiTools = document.getElementById('ai-tools');
       if (aiTools) aiTools.style.display = 'block';
+
+      const btnSavePopup = document.getElementById('btn-save-listing-popup');
+      if (btnSavePopup && tab) {
+        btnSavePopup.addEventListener('click', async () => {
+          btnSavePopup.disabled = true;
+          btnSavePopup.textContent = 'Opening Preview...';
+          try {
+            await chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_SAVE' });
+            window.close();
+          } catch (e) {
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['config.js', 'shared-extractors.js', 'content.js']
+              });
+              setTimeout(async () => {
+                try {
+                  await chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_SAVE' });
+                  window.close();
+                } catch (_) {}
+              }, 300);
+            } catch (_) {
+              btnSavePopup.textContent = '❌ Could not open modal';
+            }
+          }
+        });
+      }
     } else {
       pillEl.textContent = 'Not on listing';
       pillEl.className = 'pill inactive';
@@ -218,16 +246,23 @@
         }
       });
 
+      newFolderInp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          btnCreateFolder.click();
+        }
+      });
+
       btnCreateFolder.addEventListener('click', async () => {
         const fName = newFolderInp.value.trim();
         if (!fName) return;
         btnCreateFolder.disabled = true;
         btnCreateFolder.textContent = '...';
         try {
-          const res = await fetch(EDGE_URL, {
+          const res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'create_folder', secret: SECRET, name: fName })
+            body: JSON.stringify({ action: 'create_folder', name: fName })
           });
           const data = await res.json();
           if (data.ok && data.id) {

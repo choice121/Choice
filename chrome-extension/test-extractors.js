@@ -85,5 +85,35 @@ t('Zillow URL zpid match passthrough', () => {
   assert.strictEqual(p.source_url, ZGOOD, 'should keep URL when zpid matches');
 });
 
+// --- Fallback JSON-LD & DOM tests ---
+t('Zillow JSON-LD fallback', () => {
+  const ldDoc = {
+    getElementById: () => null,
+    querySelectorAll: (sel) => {
+      if (sel === 'script[type="application/ld+json"]') {
+        return [{
+          textContent: JSON.stringify({
+            '@type': 'SingleFamilyResidence',
+            address: { streetAddress: '777 Lucky Ln', addressLocality: 'Columbus', addressRegion: 'OH', postalCode: '43215' },
+            offers: { price: 1750 },
+            numberOfBedrooms: 3,
+            numberOfBathroomsTotal: 2,
+            description: 'Spacious renovated home in Columbus.',
+            image: ['https://photos.zillowstatic.com/fp/lucky.jpg']
+          })
+        }];
+      }
+      return [];
+    }
+  };
+  const p = api.extractZillow(ldDoc, 'https://www.zillow.com/homedetails/777-Lucky-Ln-Columbus-OH-43215/12349999_zpid/');
+  assert.ok(p, 'should extract from JSON-LD');
+  assert.strictEqual(p.address, '777 Lucky Ln');
+  assert.strictEqual(p.city, 'Columbus');
+  assert.strictEqual(p.monthly_rent, 1750);
+  assert.strictEqual(p.bedrooms, 3);
+  assert.strictEqual(p.bathrooms, 2);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail > 0 ? 1 : 0);
