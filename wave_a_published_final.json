@@ -1,0 +1,101 @@
+[
+  {
+    "pipeline_id": "PP-2F334469",
+    "property_id": "b59dd726-07e8-4db3-b848-897a5d934217",
+    "address": "2023 W 93rd St #1",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44102",
+    "rent": 1900,
+    "beds": 4,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-DA16E8A6",
+    "property_id": "a28feb24-6a4f-4dac-96ec-0ad595ae0796",
+    "address": "119 River Rock Way #1",
+    "city": "Berea",
+    "state": "OH",
+    "zip": "44017",
+    "rent": 2495,
+    "beds": 3,
+    "baths": 3
+  },
+  {
+    "pipeline_id": "PP-7DAC0757",
+    "property_id": "a2cd0208-4e19-4ddb-b800-417ad66edf38",
+    "address": "17424 Oxford Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44111",
+    "rent": 2200,
+    "beds": 3,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-7DE1AA99",
+    "property_id": "4e3f0af9-6792-4d33-aad2-e5fce9825cf6",
+    "address": "12605 Crossburn Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44135",
+    "rent": 1895,
+    "beds": 3,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-46642B8B",
+    "property_id": "f976b566-1348-42a1-905b-7ab5470f4b76",
+    "address": "3971 Lonna Ct",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44111",
+    "rent": 2100,
+    "beds": 3,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-3ACE1493",
+    "property_id": "abef6f06-e900-4731-a43f-7fdf747cb3a1",
+    "address": "15025 Schuyler Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44111",
+    "rent": 2400,
+    "beds": 3,
+    "baths": 3
+  },
+  {
+    "pipeline_id": "PP-4DDECAA9",
+    "property_id": "ba506749-1923-46cc-b4bb-88189901cef0",
+    "address": "7304 Park Place Ct",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44102",
+    "rent": 3550,
+    "beds": 3,
+    "baths": 3
+  },
+  {
+    "pipeline_id": "PP-A8A0837F",
+    "property_id": "9831b82b-630d-4aaa-95bb-d3c2858a60c0",
+    "address": "4480 W 148th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44135",
+    "rent": 1600,
+    "beds": 3,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-3FB1BF3B",
+    "property_id": "4081-w-158th-st-PP-39FE3",
+    "address": "4081 W 158th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44135",
+    "rent": 2200,
+    "beds": 3,
+    "baths": 2
+  }
+]

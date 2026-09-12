@@ -1,9 +1,14 @@
 #!/bin/bash
-# Quick push script for mobile development
-
-# Operate from the current working directory (repo root), not a hardcoded path.
-# Previously hardcoded /workspaces/choicepropertiesofficial (a stale Replit path).
+# Push script for Choice Properties
 cd "$(dirname "$0")"
+
+echo "📊 Checking git status..."
+if [ -n "$(git status --porcelain)" ]; then
+  echo "📝 Staging changes..."
+  git add -A
+  echo "✅ Committing changes..."
+  git commit -m "feat(extension): upgrade Zillow UI to v5.0 with live inspection card, integrated photo progress, and instant live loader"
+fi
 
 echo "📤 Pushing changes to GitHub..."
 TOKEN="${GitHubtoken:-$GITHUB_TOKEN}"
@@ -17,15 +22,10 @@ if [ $? -eq 0 ]; then
   echo "✅ SUCCESS! Changes pushed to GitHub"
   echo ""
   echo "📊 Deployment status:"
-  echo "   - Check GitHub: https://github.com/choice121/Choice"
-  echo "   - Supabase will auto-deploy in 1-2 minutes"
-  echo "   - Cloudflare will auto-deploy in 1-2 minutes"
-  echo ""
-  echo "🧪 Next steps:"
-  echo "   1. Wait 3-5 minutes for deployment"
-  echo "   2. Try uploading a photo"
-  echo "   3. Check Supabase logs for new debug output"
+  echo "   - GitHub: https://github.com/choice121/Choice"
+  echo "   - Cloudflare auto-deploys in 1-2 minutes"
+  echo "   - Extension picks up updates immediately on next page refresh!"
 else
   echo "❌ FAILED! Error pushing to GitHub"
-  echo "   Try again in a moment, or check your internet connection"
+  echo "   If authentication failed, export GITHUB_TOKEN='your_personal_access_token' and re-run ./push.sh"
 fi

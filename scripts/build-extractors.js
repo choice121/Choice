@@ -44,7 +44,9 @@ console.log('✓ Generated chrome-extension/shared-extractors.js');
 // Write to .pages-orion
 const orionTarget = path.join(ROOT, '.pages-orion', 'live-shared-extractors.js');
 fs.writeFileSync(orionTarget, browserContent, 'utf8');
-console.log('✓ Generated .pages-orion/live-shared-extractors.js');
+const orionBundledTarget = path.join(ROOT, '.pages-orion', 'shared-extractors.js');
+fs.writeFileSync(orionBundledTarget, browserContent, 'utf8');
+console.log('✓ Generated .pages-orion/live-shared-extractors.js and shared-extractors.js');
 
 // ── 2. Deno/TypeScript variant (for Edge Functions) ───────────────────
 // Convert the IIFE to a Deno module that exports the extractor functions.

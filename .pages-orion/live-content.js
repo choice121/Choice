@@ -1,49 +1,447 @@
 // ============================================================
-// Choice Properties — Chrome Extension Content Script
-// v4.2.0 — Bulletproof Zillow & Multi-Portal Pipeline Ingestion
-// Injects floating "Save to Pipeline" button with Save-First
-// preview modal, folder creation, and direct Supabase sync.
+// Choice Properties — Live Content Script v5.0.0
+// Universal High-Quality Browser Extension UI for Zillow,
+// Realtor.com, Apartments.com, and Redfin
+//
+// Key Features:
+// 1. Sleek Floating Action Card (Glassmorphism, collision-aware)
+// 2. Pre-flight Live Inspection (Shows parsed rent, beds, baths, photo count before saving)
+// 3. One-Click Fast Save + Integrated Photo Upload Progress Bar
+// 4. Post-Save Quick Actions (Open Pipeline, Copy Link)
+// 5. Zillow Search / Feed Card Quick-Save Buttons
+// 6. Instant Live-Update Architecture (Zero reinstall needed)
 // ============================================================
 (function () {
   'use strict';
 
-  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) ||
-    'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
-  var SECRET = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) ||
-    'cp_import_7Kx3m9P2w5';
+  // Prevent multiple executions
+  if (window.__CP_LIVE_CONTENT_LOADED__) return;
+  window.__CP_LIVE_CONTENT_LOADED__ = true;
+
+  // ── Configuration ──────────────────────────────────────────
+  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
+  var VERSION  = '5.0.0-live';
+
+  var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
+  var MAX_PHOTOS = IS_MOBILE ? 25 : 50;
 
   var lastUrl = location.href;
-  var isSaving = false;
+  var activeWidget = null;
+  var isExpanded = false;
+  var isMinimized = false;
+  var currentExtractedData = null;
 
-  // ── URL & Page detection ─────────────────────────────────────
-  function isSupportedPage(url) {
-    if (!url) return false;
-    // Direct URL match for Zillow, Realtor, Apartments.com, Redfin
-    if (/zillow\.com\/(homedetails|b|apartments|community)\//i.test(url) || /zillow\.com\/.*_zpid/i.test(url)) return true;
-    if (/realtor\.com\/realestateandhomes-detail\//i.test(url)) return true;
-    if (/apartments\.com\//i.test(url)) return true;
-    if (/redfin\.com\//i.test(url)) return true;
+  // ── Inject Custom Styles ────────────────────────────────────
+  function injectStyles() {
+    if (document.getElementById('cp-live-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'cp-live-styles';
+    style.textContent = `
+      #cp-widget-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2147483647;
+        width: 360px;
+        max-width: calc(100vw - 32px);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #f8fafc;
+        overflow: hidden;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
+        box-sizing: border-box;
+      }
+      #cp-widget-container * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      #cp-widget-container.cp-minimized {
+        width: auto;
+        border-radius: 28px;
+        background: rgba(15, 23, 42, 0.92);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      #cp-widget-container.cp-minimized .cp-full-body {
+        display: none !important;
+      }
+      .cp-mini-trigger {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+      #cp-widget-container.cp-minimized .cp-mini-trigger {
+        display: flex !important;
+      }
+      .cp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(30, 41, 59, 0.6);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .cp-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cp-logo-icon {
+        width: 22px;
+        height: 22px;
+        background: linear-gradient(135deg, #10b981 0%, #6366f1 100%);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+      }
+      .cp-brand-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #f1f5f9;
+        letter-spacing: -0.01em;
+      }
+      .cp-header-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cp-badge-verified {
+        font-size: 10px;
+        font-weight: 600;
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(52, 211, 153, 0.25);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .cp-header-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: color 0.15s, background 0.15s;
+      }
+      .cp-header-btn:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .cp-body {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .cp-property-snapshot {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cp-address-line {
+        font-size: 13px;
+        font-weight: 600;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-chips-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .cp-chip {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+      }
+      .cp-chip-price {
+        background: rgba(99, 102, 241, 0.2);
+        color: #a5b4fc;
+        border: 1px solid rgba(165, 180, 252, 0.25);
+      }
+      .cp-chip-photos {
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+      }
+      .cp-accordion-toggle {
+        font-size: 11px;
+        color: #818cf8;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+        padding: 2px 0;
+        text-align: left;
+      }
+      .cp-accordion-toggle:hover {
+        color: #a5b4fc;
+      }
+      .cp-inspector-tray {
+        display: none;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 11px;
+        color: #94a3b8;
+        line-height: 1.6;
+      }
+      .cp-inspector-tray.cp-open {
+        display: block;
+      }
+      .cp-inspector-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .cp-inspector-item strong {
+        color: #e2e8f0;
+      }
+      .cp-save-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        height: 44px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+        transition: transform 0.12s, box-shadow 0.12s, background 0.15s, opacity 0.15s;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      .cp-save-action-btn:hover {
+        background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        transform: translateY(-1px);
+      }
+      .cp-save-action-btn:active {
+        transform: scale(0.97);
+      }
+      .cp-save-action-btn:disabled {
+        opacity: 0.85;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+      /* Integrated Progress State */
+      .cp-progress-box {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+      }
+      .cp-progress-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+      .cp-progress-bar-track {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .cp-progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #6366f1, #10b981);
+        border-radius: 999px;
+        transition: width 0.25s ease;
+      }
+      /* Success State */
+      .cp-success-box {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        padding: 6px 0;
+      }
+      .cp-success-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #34d399;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .cp-success-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .cp-btn-secondary {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+        transition: background 0.15s;
+      }
+      .cp-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .cp-btn-primary-sm {
+        flex: 1.2;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        background: #10b981;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+        transition: background 0.15s;
+      }
+      .cp-btn-primary-sm:hover {
+        background: #059669;
+      }
+      /* Zillow Search Card Badge */
+      .cp-search-card-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 25;
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        transition: all 0.15s ease;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      .cp-search-card-btn:hover {
+        background: #4f46e5;
+        border-color: #818cf8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+      }
+      .cp-search-card-btn.cp-saved {
+        background: #10b981 !important;
+        border-color: #34d399 !important;
+      }
+      /* Spinner */
+      .cp-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: cp-spin 0.7s linear infinite;
+        display: inline-block;
+      }
+      @keyframes cp-spin {
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
-    // Check if user is on Zillow and a listing detail view or modal is active
-    if (/zillow\.com/i.test(url) && typeof document !== 'undefined') {
-      if (document.querySelector('[data-test="detail-modal"], [data-testid="search-detail-panel"], #search-detail-root, .layout-detail, [data-testid="hdp-top-bar"], [data-testid="price"]')) {
-        return true;
+  // ── Smart Layout Collision Avoidance ────────────────────────
+  function updateWidgetPosition() {
+    if (!activeWidget) return;
+    var bottomOffset = 24;
+
+    // Check Zillow's sticky bottom bars or action panels
+    var stickySelectors = [
+      '[data-testid="bottom-bar"]',
+      '.hdp-bottom-bar',
+      'div[class*="BottomBar"]',
+      'div[class*="sticky-bottom"]',
+      '#search-detail-root [data-testid="bottom-bar"]',
+      '.floating-bottom-bar',
+      'div[class*="StickyBanner"]'
+    ];
+
+    for (var i = 0; i < stickySelectors.length; i++) {
+      var el = document.querySelector(stickySelectors[i]);
+      if (el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.height > 20 && rect.top < window.innerHeight && rect.bottom > 0) {
+          var barHeight = window.innerHeight - rect.top;
+          if (barHeight > 10 && barHeight < 250) {
+            bottomOffset = Math.max(bottomOffset, barHeight + 14);
+          }
+        }
       }
     }
-    return false;
+
+    activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
   }
 
-  // ── Helpers ─────────────────────────────────────────────────
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+  // ── URL & Page Support Detection ────────────────────────────
+  function isDetailPage(url) {
+    return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
+           /zillow\.com\/.*_zpid/i.test(url) ||
+           /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
+           /realtor\.com\/realestateandhomes-detail/i.test(url) ||
+           /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
+           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url);
   }
 
+  function isSearchPage(url) {
+    return /zillow\.com\/(homes|for_rent|b\/|search)/i.test(url);
+  }
+
+  // ── Extract Photo URLs Helper ───────────────────────────────
   function extractPhotoUrls(raw) {
     var urls = [];
     if (!raw) return urls;
@@ -56,514 +454,251 @@
           else if (typeof item === 'object' && typeof item.url === 'string') urls.push(item.url);
         });
       }
-    } catch (_) {}
+    } catch (e) {}
     return urls;
   }
 
-  function getStoredFolderId() {
-    return new Promise(function (resolve) {
-      try {
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-          chrome.storage.local.get({ cp_settings: {} }, function (items) {
-            if (items && items.cp_settings) {
-              resolve(items.cp_settings.folderId || '');
-            } else {
-              resolve('');
-            }
-          });
-        } else if (typeof localStorage !== 'undefined') {
-          resolve(localStorage.getItem('cp_folder_id') || '');
-        } else {
-          resolve('');
-        }
-      } catch (_) {
-        resolve('');
-      }
+  function dedupePhotoUrls(urls) {
+    var seen = new Set();
+    var unique = [];
+    if (!Array.isArray(urls)) return unique;
+    urls.forEach(function (raw) {
+      if (!raw) return;
+      var url = typeof raw === 'string' ? raw.trim() : (raw.url || '');
+      if (!url || !/^https?:\/\//i.test(url) || seen.has(url)) return;
+      seen.add(url);
+      unique.push(url);
     });
+    return unique;
   }
 
-  function storeSelectedFolderId(folderId) {
-    try {
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get({ cp_settings: {} }, function (stored) {
-          var s = stored.cp_settings || {};
-          s.folderId = folderId;
-          chrome.storage.local.set({ cp_settings: s });
-        });
-      }
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('cp_folder_id', folderId);
-      }
-    } catch (_) {}
-  }
-
-  // ── Folder API ──────────────────────────────────────────────
-  async function fetchFolders() {
-    try {
-      var res = await fetch(EDGE_URL + '?action=list_folders&secret=' + encodeURIComponent(SECRET));
-      var data = await res.json();
-      return (data && data.folders) || [];
-    } catch (e) {
-      console.warn('[CP] Failed to fetch folders:', e);
-      return [];
+  // ── Build & Inject Main Widget ──────────────────────────────
+  function removeWidget() {
+    if (activeWidget) {
+      activeWidget.remove();
+      activeWidget = null;
     }
   }
 
-  async function createFolder(name) {
+  function injectWidget() {
+    removeWidget();
+    if (!isDetailPage(location.href)) return;
+
+    injectStyles();
+
+    // Run pre-flight extraction
+    var extracted = null;
     try {
-      var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_folder', name: name })
-      });
-      return await res.json();
-    } catch (e) {
-      console.warn('[CP] Failed to create folder:', e);
-      return { ok: false, error: e.message };
+      if (window.CP_Extractors && typeof window.CP_Extractors.extract === 'function') {
+        extracted = window.CP_Extractors.extract(location.href, document);
+      }
+    } catch (err) {
+      console.warn('[CP] Pre-flight extraction notice:', err);
     }
-  }
+    currentExtractedData = extracted;
 
-  // ── Button injection & management ───────────────────────────
-  function removeButton() {
-    var old = document.getElementById('cp-save-btn');
-    if (old) old.remove();
-  }
+    var container = document.createElement('div');
+    container.id = 'cp-widget-container';
 
-  function injectButton() {
-    if (document.getElementById('cp-save-btn')) return;
-    if (!isSupportedPage(location.href)) return;
+    // Format display attributes
+    var rentStr = 'Rent pending';
+    if (extracted && (extracted.monthly_rent || extracted.rent)) {
+      var rentNum = extracted.monthly_rent || extracted.rent;
+      rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
+    }
 
-    var btn = document.createElement('button');
-    btn.id = 'cp-save-btn';
-    btn.setAttribute('type', 'button');
-    btn.innerHTML = `
-      <div class="cp-btn-inner" style="display:flex;align-items:center;gap:8px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v13M5 9l7 7 7-7"/>
-          <path d="M3 20h18"/>
-        </svg>
-        <span class="cp-btn-label">Save to Pipeline</span>
+    var bedsBaths = 'Listing details';
+    if (extracted && (extracted.bedrooms != null || extracted.bathrooms != null)) {
+      var beds = extracted.bedrooms != null ? extracted.bedrooms + ' bd' : '';
+      var baths = extracted.bathrooms != null ? extracted.bathrooms + ' ba' : '';
+      bedsBaths = [beds, baths].filter(Boolean).join(' • ');
+      if (extracted.square_footage) {
+        bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
+      }
+    }
+
+    var photoUrls = [];
+    if (extracted) {
+      photoUrls = extractPhotoUrls(extracted.original_image_urls);
+      if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
+        photoUrls = extracted.photo_urls;
+      }
+    }
+    var photoCount = photoUrls.length || 'Verified';
+
+    var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
+    if (extracted && extracted.city && extracted.state) {
+      addressStr += ', ' + extracted.city + ', ' + extracted.state;
+    }
+
+    container.innerHTML = `
+      <!-- Minimized State Trigger -->
+      <div class="cp-mini-trigger" id="cp-expand-trigger" title="Click to expand Choice Properties importer">
+        <div class="cp-logo-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        </div>
+        <span>${rentStr} • Choice Import</span>
       </div>
-    `;
 
-    Object.assign(btn.style, {
-      position: 'fixed',
-      bottom: 'max(24px, env(safe-area-inset-bottom))',
-      right: 'max(24px, env(safe-area-inset-right))',
-      zIndex: '2147483647',
-      padding: '0 20px',
-      minWidth: '60px',
-      height: '52px',
-      background: '#6366f1',
-      color: '#fff',
-      border: 'none',
-      borderRadius: '26px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '15px',
-      fontWeight: '700',
-      letterSpacing: '0.01em',
-      cursor: 'pointer',
-      boxShadow: '0 4px 20px rgba(99,102,241,0.5), 0 2px 6px rgba(0,0,0,0.2)',
-      touchAction: 'manipulation',
-      userSelect: 'none',
-      WebkitUserSelect: 'none',
-      transition: 'transform 0.12s, opacity 0.12s, background 0.15s, box-shadow 0.15s',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      lineHeight: '1'
-    });
-
-    btn.addEventListener('mouseenter', function () {
-      btn.style.background = '#4f46e5';
-      btn.style.boxShadow = '0 6px 24px rgba(99,102,241,0.6)';
-      btn.style.transform = 'translateY(-1px)';
-    });
-
-    btn.addEventListener('mouseleave', function () {
-      btn.style.background = '#6366f1';
-      btn.style.boxShadow = '0 4px 20px rgba(99,102,241,0.5), 0 2px 6px rgba(0,0,0,0.2)';
-      btn.style.transform = 'translateY(0)';
-    });
-
-    btn.addEventListener('click', handleSave);
-
-    if (document.body) {
-      document.body.appendChild(btn);
-    }
-  }
-
-  // ── URL & DOM change watchers ───────────────────────────────
-  function onLocationChange() {
-    if (location.href === lastUrl) return;
-    lastUrl = location.href;
-    removeButton();
-    setTimeout(injectButton, 300);
-  }
-
-  function watchUrlChanges() {
-    window.addEventListener('popstate', onLocationChange);
-    setInterval(function () {
-      if (location.href !== lastUrl) {
-        onLocationChange();
-      } else if (!document.getElementById('cp-save-btn') && isSupportedPage(location.href)) {
-        injectButton();
-      }
-    }, 800);
-
-    if (document.body) {
-      var observer = new MutationObserver(function () {
-        if (!document.getElementById('cp-save-btn') && isSupportedPage(location.href)) {
-          injectButton();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: false });
-    }
-  }
-
-  // ── Preview & Edit Modal ────────────────────────────────────
-  async function openPreviewModal(extracted, triggerBtn) {
-    var existing = document.getElementById('cp-preview-modal');
-    if (existing) existing.remove();
-
-    var folders = await fetchFolders();
-    var savedFolderId = await getStoredFolderId();
-
-    var folderOptions = '<option value="">(No folder / Main)</option>';
-    folders.forEach(function (f) {
-      var isSelected = (savedFolderId && f.id === savedFolderId) || (extracted.folder_id && f.id === extracted.folder_id);
-      folderOptions += '<option value="' + escapeHtml(f.id) + '"' + (isSelected ? ' selected' : '') + '>' + escapeHtml(f.name) + '</option>';
-    });
-    folderOptions += '<option value="__new__">+ Create new folder...</option>';
-
-    var photoCount = 0;
-    if (Array.isArray(extracted.photo_urls)) photoCount = extracted.photo_urls.length;
-    else if (extracted.original_image_urls) photoCount = extractPhotoUrls(extracted.original_image_urls).length;
-
-    var modal = document.createElement('div');
-    modal.id = 'cp-preview-modal';
-    modal.innerHTML = `
-      <div class="cp-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:2147483648;"></div>
-      <div class="cp-sheet" role="dialog" aria-modal="true" style="
-        position:fixed;
-        bottom:0;
-        left:50%;
-        transform:translateX(-50%);
-        width:100%;
-        max-width:720px;
-        background:#0d1527;
-        color:#f8fafc;
-        border:1px solid rgba(255,255,255,0.1);
-        border-bottom:none;
-        border-radius:18px 18px 0 0;
-        box-shadow:0 -12px 40px rgba(0,0,0,0.7);
-        padding:20px 24px 28px 24px;
-        max-height:90vh;
-        overflow-y:auto;
-        font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size:14px;
-        z-index:2147483649;
-        box-sizing:border-box;
-      ">
-        <style>
-          #cp-preview-modal input, #cp-preview-modal select, #cp-preview-modal textarea {
-            background:#15213b;
-            border:1px solid rgba(255,255,255,0.12);
-            color:#f8fafc;
-            padding:10px 12px;
-            border-radius:8px;
-            font-size:14px;
-            box-sizing:border-box;
-            outline:none;
-            transition:border-color 0.15s;
-          }
-          #cp-preview-modal input:focus, #cp-preview-modal select:focus, #cp-preview-modal textarea:focus {
-            border-color:#6366f1;
-            box-shadow:0 0 0 2px rgba(99,102,241,0.25);
-          }
-          #cp-preview-modal .cp-row { display:flex; gap:12px; margin-top:12px; }
-          #cp-preview-modal .cp-field { display:flex; flex-direction:column; flex:1; min-width:0; }
-          #cp-preview-modal label { font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }
-          #cp-preview-modal .btn {
-            border:none;
-            border-radius:8px;
-            padding:10px 18px;
-            font-size:14px;
-            font-weight:600;
-            cursor:pointer;
-            transition:opacity 0.15s, background 0.15s;
-          }
-          #cp-preview-modal .btn:hover { opacity:0.9; }
-        </style>
-
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08);">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:28px; height:28px; border-radius:6px; background:#6366f1; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; font-size:14px;">CP</div>
-            <h3 style="margin:0; font-size:17px; font-weight:700; color:#fff;">Save Listing to Pipeline</h3>
-            ${photoCount > 0 ? `<span style="background:rgba(99,102,241,0.2); color:#a5b4fc; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:600;">📸 ${photoCount} photos</span>` : ''}
+      <!-- Full Body -->
+      <div class="cp-full-body">
+        <div class="cp-header">
+          <div class="cp-brand">
+            <div class="cp-logo-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            </div>
+            <span class="cp-brand-title">Choice Properties</span>
           </div>
-          <button id="cp-preview-close" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer; padding:4px 8px;">✕</button>
-        </div>
-
-        <div class="cp-row">
-          <div class="cp-field">
-            <label>Listing Title</label>
-            <input id="cp-prev-title" value="${escapeHtml(extracted.title || '')}" />
+          <div class="cp-header-badges">
+            <span class="cp-badge-verified">Zillow Verified</span>
+            <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
+            <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
         </div>
 
-        <div class="cp-row">
-          <div class="cp-field" style="flex:2">
-            <label>Address</label>
-            <input id="cp-prev-address" value="${escapeHtml(extracted.address || '')}" />
+        <div class="cp-body">
+          <div class="cp-property-snapshot">
+            <div class="cp-address-line" title="${addressStr}">${addressStr}</div>
+            <div class="cp-chips-row">
+              <span class="cp-chip cp-chip-price">${rentStr}</span>
+              <span class="cp-chip">${bedsBaths}</span>
+              <span class="cp-chip cp-chip-photos">📸 ${photoCount} photos</span>
+            </div>
+            <button class="cp-accordion-toggle" id="cp-toggle-tray">
+              <span>View details breakdown</span> <span id="cp-chevron">▾</span>
+            </button>
+            <div class="cp-inspector-tray" id="cp-inspector-tray">
+              <div class="cp-inspector-grid">
+                <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
+                <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
+                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
+              </div>
+            </div>
           </div>
-          <div class="cp-field">
-            <label>City</label>
-            <input id="cp-prev-city" value="${escapeHtml(extracted.city || '')}" />
-          </div>
-        </div>
 
-        <div class="cp-row">
-          <div class="cp-field">
-            <label>State</label>
-            <input id="cp-prev-state" value="${escapeHtml(extracted.state || '')}" />
-          </div>
-          <div class="cp-field">
-            <label>ZIP Code</label>
-            <input id="cp-prev-zip" value="${escapeHtml(extracted.zip || '')}" />
-          </div>
-        </div>
+          <!-- Main Action Button -->
+          <button class="cp-save-action-btn" id="cp-btn-save">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Save to Pipeline</span>
+          </button>
 
-        <div class="cp-row">
-          <div class="cp-field">
-            <label>Monthly Rent ($/mo)</label>
-            <input id="cp-prev-rent" value="${escapeHtml(String(extracted.monthly_rent || extracted.rent || ''))}" />
+          <!-- Integrated Progress Box -->
+          <div class="cp-progress-box" id="cp-progress-box">
+            <div class="cp-progress-header">
+              <span id="cp-progress-status">Uploading photos to ImageKit…</span>
+              <span id="cp-progress-count">0%</span>
+            </div>
+            <div class="cp-progress-bar-track">
+              <div class="cp-progress-bar-fill" id="cp-progress-fill"></div>
+            </div>
           </div>
-          <div class="cp-field">
-            <label>Bedrooms</label>
-            <input id="cp-prev-beds" value="${escapeHtml(String(extracted.bedrooms !== null && extracted.bedrooms !== undefined ? extracted.bedrooms : ''))}" />
-          </div>
-          <div class="cp-field">
-            <label>Bathrooms</label>
-            <input id="cp-prev-baths" value="${escapeHtml(String(extracted.bathrooms !== null && extracted.bathrooms !== undefined ? extracted.bathrooms : ''))}" />
-          </div>
-          <div class="cp-field">
-            <label>Sq Ft</label>
-            <input id="cp-prev-sqft" value="${escapeHtml(String(extracted.square_footage || ''))}" />
-          </div>
-        </div>
 
-        <div style="margin-top:12px;" class="cp-field">
-          <label>Target Pipeline Folder</label>
-          <select id="cp-prev-folder-sel" style="width:100%; cursor:pointer;">
-            ${folderOptions}
-          </select>
-          <div id="cp-new-folder-row" style="display:none; margin-top:8px; gap:8px;">
-            <input id="cp-new-folder-input" style="flex:1" placeholder="Enter new folder name..." />
-            <button id="cp-create-folder-btn" type="button" class="btn" style="background:#10b981; color:#fff; padding:8px 16px;">Create</button>
+          <!-- Success State -->
+          <div class="cp-success-box" id="cp-success-box">
+            <div class="cp-success-banner">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Saved to Choice Pipeline!</span>
+            </div>
+            <div class="cp-success-actions">
+              <a class="cp-btn-secondary" id="cp-copy-link-btn" href="javascript:void(0)">Copy Link</a>
+              <a class="cp-btn-primary-sm" id="cp-open-pipeline-btn" target="_blank" href="https://choice-properties-site.pages.dev/admin/pipeline.html">Open Pipeline ↗</a>
+            </div>
           </div>
-          <div id="cp-folder-err-msg" style="display:none; color:#f87171; font-size:12px; margin-top:6px;"></div>
-        </div>
-
-        <div style="margin-top:12px;" class="cp-field">
-          <label>Description</label>
-          <textarea id="cp-prev-desc" rows="4" style="resize:vertical;">${escapeHtml(extracted.description || '')}</textarea>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08);">
-          <button id="cp-prev-cancel" class="btn" style="background:rgba(255,255,255,0.06); color:#cbd5e1;">Cancel</button>
-          <button id="cp-prev-confirm" class="btn" style="background:#6366f1; color:#fff; padding:10px 24px; font-weight:700;">Save to Pipeline</button>
         </div>
       </div>
     `;
 
-    document.body.appendChild(modal);
+    document.body.appendChild(container);
+    activeWidget = container;
 
-    var folderSel = document.getElementById('cp-prev-folder-sel');
-    var newFolderRow = document.getElementById('cp-new-folder-row');
-    var newFolderInp = document.getElementById('cp-new-folder-input');
-    var createBtn = document.getElementById('cp-create-folder-btn');
-    var folderErrMsg = document.getElementById('cp-folder-err-msg');
+    // Attach Event Listeners
+    var minimizeBtn = container.querySelector('#cp-btn-minimize');
+    var closeBtn = container.querySelector('#cp-btn-close');
+    var expandTrigger = container.querySelector('#cp-expand-trigger');
+    var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
+    var inspectorTray = container.querySelector('#cp-inspector-tray');
+    var chevron = container.querySelector('#cp-chevron');
+    var saveBtn = container.querySelector('#cp-btn-save');
+    var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
-    folderSel.addEventListener('change', function () {
-      if (folderSel.value === '__new__') {
-        newFolderRow.style.display = 'flex';
-        newFolderInp.focus();
+    minimizeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      container.classList.add('cp-minimized');
+      isMinimized = true;
+    });
+
+    closeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      removeWidget();
+    });
+
+    expandTrigger.addEventListener('click', function () {
+      container.classList.remove('cp-minimized');
+      isMinimized = false;
+    });
+
+    toggleTrayBtn.addEventListener('click', function () {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        inspectorTray.classList.add('cp-open');
+        chevron.textContent = '▴';
       } else {
-        newFolderRow.style.display = 'none';
-        folderErrMsg.style.display = 'none';
-        if (folderSel.value) {
-          storeSelectedFolderId(folderSel.value);
-        }
+        inspectorTray.classList.remove('cp-open');
+        chevron.textContent = '▾';
       }
     });
 
-    async function handleCreateFolder() {
-      var name = newFolderInp.value.trim();
-      if (!name) return;
-      createBtn.textContent = 'Creating...';
-      createBtn.disabled = true;
-      folderErrMsg.style.display = 'none';
+    saveBtn.addEventListener('click', handleSave);
 
-      var res = await createFolder(name);
-      if (res && res.ok && res.id) {
-        var opt = document.createElement('option');
-        opt.value = res.id;
-        opt.textContent = name;
-        opt.selected = true;
-        folderSel.insertBefore(opt, folderSel.lastElementChild);
-        folderSel.value = res.id;
-        newFolderRow.style.display = 'none';
-        newFolderInp.value = '';
-        storeSelectedFolderId(res.id);
-      } else {
-        folderErrMsg.textContent = 'Could not create folder: ' + (res && res.error || 'Server error');
-        folderErrMsg.style.display = 'block';
-      }
-
-      createBtn.textContent = 'Create';
-      createBtn.disabled = false;
-    }
-
-    createBtn.addEventListener('click', handleCreateFolder);
-    newFolderInp.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleCreateFolder();
+    copyLinkBtn.addEventListener('click', function () {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(location.href);
+        copyLinkBtn.textContent = 'Copied! ✓';
+        setTimeout(function () { copyLinkBtn.textContent = 'Copy Link'; }, 2500);
       }
     });
 
-    function closePreviewModal() {
-      var m = document.getElementById('cp-preview-modal');
-      if (m) m.remove();
-    }
-
-    modal.querySelector('.cp-backdrop').addEventListener('click', closePreviewModal);
-    modal.querySelector('#cp-preview-close').addEventListener('click', closePreviewModal);
-    modal.querySelector('#cp-prev-cancel').addEventListener('click', closePreviewModal);
-
-    window.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closePreviewModal();
-    }, { once: true });
-
-    modal.querySelector('#cp-prev-confirm').addEventListener('click', function () {
-      var updated = Object.assign({}, extracted);
-      updated.title = document.getElementById('cp-prev-title').value.trim();
-      updated.address = document.getElementById('cp-prev-address').value.trim();
-      updated.city = document.getElementById('cp-prev-city').value.trim();
-      updated.state = document.getElementById('cp-prev-state').value.trim();
-      updated.zip = document.getElementById('cp-prev-zip').value.trim();
-      updated.monthly_rent = document.getElementById('cp-prev-rent').value.trim();
-      updated.bedrooms = document.getElementById('cp-prev-beds').value.trim();
-      updated.bathrooms = document.getElementById('cp-prev-baths').value.trim();
-      updated.square_footage = document.getElementById('cp-prev-sqft').value.trim();
-      updated.description = document.getElementById('cp-prev-desc').value.trim();
-
-      if (folderSel.value && folderSel.value !== '__new__') {
-        updated.folder_id = folderSel.value;
-        updated.folder_name = folderSel.options[folderSel.selectedIndex].text;
-      } else {
-        updated.folder_id = null;
-        updated.folder_name = null;
-      }
-
-      closePreviewModal();
-      startImportProcess(updated, triggerBtn);
-    });
+    updateWidgetPosition();
   }
 
-  // ── Extraction and save flow ────────────────────────────────
+  // ── Save Execution Flow ─────────────────────────────────────
   async function handleSave() {
-    if (isSaving) return;
-    var btn = document.getElementById('cp-save-btn');
-    if (btn) {
-      var label = btn.querySelector('.cp-btn-label');
-      if (label) label.textContent = 'Reading listing...';
-    }
+    var saveBtn = document.querySelector('#cp-btn-save');
+    var progressBox = document.querySelector('#cp-progress-box');
+    var progressStatus = document.querySelector('#cp-progress-status');
+    var progressCount = document.querySelector('#cp-progress-count');
+    var progressFill = document.querySelector('#cp-progress-fill');
+    var successBox = document.querySelector('#cp-success-box');
+
+    if (!saveBtn) return;
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="cp-spinner"></span> <span>Saving to pipeline…</span>';
+    saveBtn.style.background = '#6366f1';
 
     try {
       var extractor = window.CP_Extractors && window.CP_Extractors.detect(location.href);
-      var extracted = null;
-      if (extractor) {
+      var extracted = currentExtractedData;
+      if (!extracted && window.CP_Extractors) {
         extracted = window.CP_Extractors.extract(location.href, document);
       }
 
-      // Robust fallback if extract returned null or incomplete data
-      if (!extracted || !extracted.address) {
-        var h1 = document.querySelector('h1');
-        var priceEl = document.querySelector('[data-testid="price"], span[data-testid="price"], .summary-container span, [data-test="price"]');
-        var descEl = document.querySelector('[data-testid="description"], .property-description, [data-test="listing-description"]');
-        var bedsEl = document.querySelector('[data-testid="bed-bath-beyond"], [data-testid="beds"], span[data-testid="beds"]');
-
-        var fullH1 = h1 ? h1.textContent.trim() : '';
-        var parts = fullH1.split(',');
-        var street = parts[0] ? parts[0].trim() : '';
-        var city = parts[1] ? parts[1].trim() : '';
-        var stateZip = parts[2] ? parts[2].trim().split(/\s+/) : [];
-        var state = stateZip[0] || '';
-        var zip = stateZip[1] || '';
-
-        var zpidM = location.href.match(/(\d+)_zpid/i);
-        var zpid = zpidM ? zpidM[1] : ('zillow-' + Date.now());
-
-        var photos = [];
-        var imgs = document.querySelectorAll('img[src*="zillowstatic.com"], img[src*="photos"], img[src*="rdcpix.com"], img[src*="apartments.com"]');
-        imgs.forEach(function (img) {
-          var src = img.src || img.getAttribute('src');
-          if (src && !photos.includes(src) && !src.includes('avatar') && !src.includes('icon')) {
-            photos.push(src);
-          }
-        });
-
-        extracted = Object.assign({}, extracted || {}, {
-          source: 'zillow',
-          source_listing_id: zpid,
-          source_url: location.href,
-          title: street ? (street + ' Rental') : (extracted && extracted.title ? extracted.title : 'Choice Properties Rental'),
-          address: street || (extracted && extracted.address) || '',
-          city: city || (extracted && extracted.city) || '',
-          state: state || (extracted && extracted.state) || '',
-          zip: zip || (extracted && extracted.zip) || '',
-          monthly_rent: priceEl ? priceEl.textContent.replace(/[^0-9]/g, '') : (extracted ? extracted.monthly_rent : ''),
-          bedrooms: (extracted && extracted.bedrooms) || '',
-          bathrooms: (extracted && extracted.bathrooms) || '',
-          square_footage: (extracted && extracted.square_footage) || '',
-          description: descEl ? descEl.textContent.trim() : (extracted ? extracted.description : ''),
-          original_image_urls: photos.length ? JSON.stringify(photos) : (extracted ? extracted.original_image_urls : '[]')
-        });
+      if (!extracted) {
+        setError('Could not extract listing');
+        return;
       }
 
-      if (btn) {
-        var lbl = btn.querySelector('.cp-btn-label');
-        if (lbl) lbl.textContent = 'Save to Pipeline';
-      }
-
-      openPreviewModal(extracted, btn);
-    } catch (e) {
-      console.error('[CP] Extraction error:', e);
-      setError('Extraction error');
-    }
-  }
-
-  async function startImportProcess(extracted, triggerBtn) {
-    var btn = triggerBtn || document.getElementById('cp-save-btn');
-    if (btn) {
-      var lbl = btn.querySelector('.cp-btn-label');
-      if (lbl) lbl.textContent = 'Saving...';
-      btn.style.background = '#818cf8';
-    }
-    isSaving = true;
-
-    try {
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
       if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
         photoUrls = extracted.photo_urls;
       }
+      photoUrls = dedupePhotoUrls(photoUrls);
 
       var payload = {
         source: extracted.source || 'zillow',
-        source_listing_id: extracted.source_listing_id || (location.href.match(/(\d+)_zpid/i) || [])[1] || String(Date.now()),
-        source_url: extracted.source_url || location.href,
+        source_listing_id: extracted.source_listing_id,
+        source_url: extracted.source_url || extracted.url || location.href,
         title: extracted.title,
         address: extracted.address,
         city: extracted.city,
@@ -571,98 +706,338 @@
         zip: extracted.zip,
         lat: extracted.lat,
         lng: extracted.lng,
-        monthly_rent: extracted.monthly_rent ? parseInt(String(extracted.monthly_rent).replace(/[^0-9]/g, ''), 10) : null,
-        bedrooms: extracted.bedrooms ? parseInt(String(extracted.bedrooms).replace(/[^0-9]/g, ''), 10) : null,
-        bathrooms: extracted.bathrooms ? parseFloat(String(extracted.bathrooms).replace(/[^0-9.]/g, '')) : null,
-        square_footage: extracted.square_footage ? parseInt(String(extracted.square_footage).replace(/[^0-9]/g, ''), 10) : null,
-        property_type: extracted.property_type || 'SINGLE_FAMILY',
+        monthly_rent: extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent,
+        bedrooms: extracted.bedrooms != null ? extracted.bedrooms : extracted.beds,
+        bathrooms: extracted.bathrooms != null ? extracted.bathrooms : extracted.baths,
+        half_bathrooms: extracted.half_bathrooms,
+        square_footage: extracted.square_footage != null ? extracted.square_footage : extracted.sqft,
+        lot_size_sqft: extracted.lot_size_sqft != null ? extracted.lot_size_sqft : extracted.lot_sqft,
+        year_built: extracted.year_built,
+        property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         available_date: extracted.available_date,
-        folder_id: extracted.folder_id || null,
-        folder_name: extracted.folder_name || null,
+        pets_allowed: true, // Choice Properties standard
+        application_fee: 50, // Choice Properties standard
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'chrome-extension-v4.2.0'
+        _import: 'browser-extension-v5.0.0-live',
       };
 
-      var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      // ── Step 1: Save property record first (Instant < 2s) ───
+      var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
+      var saveRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      var resp = await res.json();
+
+      var resp = null;
+      try {
+        resp = await saveRes.json();
+      } catch (err) {
+        setError('Invalid server response');
+        return;
+      }
 
       if (resp && resp.ok) {
-        if (btn) {
-          btn.style.background = '#16a34a';
-          var l = btn.querySelector('.cp-btn-label');
-          if (l) l.textContent = '✓ Saved to Pipeline!';
+        // Record created successfully!
+        saveBtn.style.display = 'none';
+
+        if (photoUrls.length > 0) {
+          progressBox.style.display = 'flex';
+          progressStatus.textContent = 'Uploading photos to ImageKit…';
+
+          uploadPhotosInBackground(photoUrls, function (completed, total) {
+            var percent = Math.round((completed / total) * 100);
+            progressFill.style.width = percent + '%';
+            progressCount.textContent = percent + '%';
+            progressStatus.textContent = 'Uploaded ' + completed + ' of ' + total + ' photos';
+          }).then(function (result) {
+            progressBox.style.display = 'none';
+            successBox.style.display = 'flex';
+            if (result.uploaded.length > 0) {
+              updatePipelinePhotos(payload, result.uploaded);
+            }
+          }).catch(function () {
+            progressBox.style.display = 'none';
+            successBox.style.display = 'flex';
+          });
+        } else {
+          successBox.style.display = 'flex';
         }
-        setTimeout(function () {
-          if (btn) {
-            btn.style.background = '#6366f1';
-            var l = btn.querySelector('.cp-btn-label');
-            if (l) l.textContent = 'Save to Pipeline';
-          }
-        }, 3500);
       } else if (resp && resp.duplicate) {
-        if (btn) {
-          btn.style.background = '#a16207';
-          var l = btn.querySelector('.cp-btn-label');
-          if (l) l.textContent = 'Already in pipeline';
-        }
+        saveBtn.innerHTML = '<span>Already in Pipeline</span>';
+        saveBtn.style.background = '#b45309';
         setTimeout(function () {
-          if (btn) {
-            btn.style.background = '#6366f1';
-            var l = btn.querySelector('.cp-btn-label');
-            if (l) l.textContent = 'Save to Pipeline';
-          }
-        }, 3500);
+          saveBtn.innerHTML = '<span>Save to Pipeline</span>';
+          saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
+          saveBtn.disabled = false;
+        }, 4000);
       } else {
-        setError(resp && resp.error ? resp.error.slice(0, 40) : 'Server error');
+        setError(resp && resp.error ? resp.error.slice(0, 45) : 'Save failed');
       }
     } catch (e) {
-      console.error('[CP] Save error:', e);
-      setError('Network error');
-    } finally {
-      isSaving = false;
+      console.error('[CP] handleSave error:', e);
+      setError('Network connection error');
     }
   }
 
   function setError(msg) {
-    var btn = document.getElementById('cp-save-btn');
-    if (!btn) return;
-    btn.style.background = '#dc2626';
-    var l = btn.querySelector('.cp-btn-label');
-    if (l) l.textContent = 'Failed: ' + msg;
+    var saveBtn = document.querySelector('#cp-btn-save');
+    if (!saveBtn) return;
+    saveBtn.innerHTML = '<span>Failed: ' + msg + '</span>';
+    saveBtn.style.background = '#dc2626';
+    saveBtn.disabled = false;
     setTimeout(function () {
-      if (btn) {
-        btn.style.background = '#6366f1';
-        var label = btn.querySelector('.cp-btn-label');
-        if (label) label.textContent = 'Save to Pipeline';
+      if (saveBtn) {
+        saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
+        saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
       }
     }, 4000);
   }
 
-  // ── Listen for messages from popup or background ────────────
-  try {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-      chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-        if (request && request.action === 'TRIGGER_SAVE') {
-          handleSave();
-          sendResponse({ ok: true });
+  // ── Photo Upload Pipeline ───────────────────────────────────
+  async function uploadPhotosInBackground(photoUrls, progressCallback) {
+    var uploaded = [];
+    var failed = 0;
+    var urls = dedupePhotoUrls(photoUrls);
+    var limit = Math.min(urls.length, MAX_PHOTOS);
+    var total = limit;
+
+    for (var i = 0; i < limit; i += PHOTO_BATCH_SIZE) {
+      var batch = urls.slice(i, i + PHOTO_BATCH_SIZE);
+      if (progressCallback) progressCallback(Math.min(i, total), total);
+      var results = await Promise.all(batch.map(function (url, batchIndex) {
+        return uploadOnePhoto(url, i + batchIndex);
+      }));
+      for (var j = 0; j < results.length; j++) {
+        if (results[j]) uploaded.push(results[j]);
+        else failed++;
+        if (progressCallback) progressCallback(Math.min(i + j + 1, total), total);
+      }
+    }
+    return { uploaded: uploaded, failed: failed, total: total };
+  }
+
+  async function downloadViaBackground(url) {
+    return new Promise(function (resolve) {
+      try {
+        if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) {
+          var requestId = 'cp-photo-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+          var timer = setTimeout(function () {
+            window.removeEventListener('message', onResult);
+            resolve(null);
+          }, 25000);
+          function onResult(event) {
+            var data = event && event.data;
+            if (event.source !== window || !data ||
+                data.type !== 'CP_DOWNLOAD_PHOTO_RESULT' ||
+                data.requestId !== requestId) return;
+            clearTimeout(timer);
+            window.removeEventListener('message', onResult);
+            resolve(data.ok && data.dataUri ? data : null);
+          }
+          window.addEventListener('message', onResult);
+          window.postMessage({ type: 'CP_DOWNLOAD_PHOTO', requestId: requestId, url: url }, '*');
+          return;
+        }
+        chrome.runtime.sendMessage(
+          { type: 'DOWNLOAD_PHOTO', url: url },
+          function (response) {
+            if (chrome.runtime.lastError) {
+              resolve(null);
+              return;
+            }
+            resolve(response && response.ok && response.dataUri ? response : null);
+          }
+        );
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function downloadViaDirectFetch(url) {
+    try {
+      var imgRes = await fetch(url, {
+        mode: 'cors',
+        credentials: 'include',
+        headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
+      });
+      if (!imgRes.ok) return null;
+      var blob = await imgRes.blob();
+      var base64 = await blobToBase64(blob);
+      var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
+      if (ext === 'jpeg') ext = 'jpg';
+      return {
+        dataUri: base64,
+        contentType: blob.type || 'image/jpeg',
+        ext: ext,
+        size: blob.size,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function uploadOnePhoto(url, index) {
+    try {
+      var photo = await downloadViaBackground(url);
+      if (!photo) photo = await downloadViaDirectFetch(url);
+      if (!photo) return null;
+
+      var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-import-secret': SECRET
+        },
+        body: JSON.stringify({
+          fileData: photo.dataUri,
+          fileName: 'photo_' + (index + 1) + '.' + photo.ext,
+          folder: '/pipeline/temp'
+        })
+      });
+      var ikData = await ikRes.json();
+      if (!ikData || !ikData.url) return null;
+
+      return {
+        url: ikData.url,
+        fileId: ikData.fileId || null,
+        width: ikData.width || null,
+        height: ikData.height || null,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function updatePipelinePhotos(originalPayload, uploadedPhotos) {
+    try {
+      if (!uploadedPhotos || !uploadedPhotos.length) return;
+      var updatePayload = Object.assign({}, originalPayload, {
+        _update_photos_only: true,
+        original_image_urls: JSON.stringify(uploadedPhotos),
+      });
+      await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      });
+    } catch (e) {}
+  }
+
+  // ── Zillow Search Results Cards Quick-Save ──────────────────
+  function injectSearchCardButtons() {
+    if (!isSearchPage(location.href)) return;
+    var cards = document.querySelectorAll('article[data-test="property-card"], div[class*="StyledPropertyCard"], .photo-cards > li');
+    if (!cards || !cards.length) return;
+
+    cards.forEach(function (card) {
+      if (card.querySelector('.cp-search-card-btn')) return;
+
+      var linkEl = card.querySelector('a[href*="/homedetails/"], a[href*="_zpid"]');
+      if (!linkEl) return;
+      var targetUrl = linkEl.href;
+
+      var btn = document.createElement('button');
+      btn.className = 'cp-search-card-btn';
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg> <span>+ Choice</span>';
+      btn.title = 'Save to Choice Properties Pipeline';
+
+      btn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.innerHTML = '<span class="cp-spinner"></span> <span>Saving…</span>';
+
+        try {
+          var priceEl = card.querySelector('[data-test="property-card-price"], span[class*="PropertyCardPrice"]');
+          var addrEl = card.querySelector('address, [data-test="property-card-addr"]');
+          var rentMatch = priceEl ? priceEl.textContent.replace(/[^0-9]/g, '') : '';
+          var rent = rentMatch ? parseInt(rentMatch, 10) : null;
+          var address = addrEl ? addrEl.textContent.trim() : 'Zillow Card Listing';
+
+          var cardPayload = {
+            source: 'zillow',
+            source_url: targetUrl,
+            address: address,
+            monthly_rent: rent,
+            pets_allowed: true,
+            application_fee: 50,
+            _import: 'zillow-search-card-v5',
+          };
+
+          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cardPayload),
+          });
+          var cardResp = await saveRes.json();
+
+          if (cardResp && cardResp.ok) {
+            btn.classList.add('cp-saved');
+            btn.innerHTML = '<span>Saved ✓</span>';
+          } else {
+            btn.innerHTML = '<span>Already in DB</span>';
+          }
+        } catch (err) {
+          btn.innerHTML = '<span>Saved to Tab</span>';
+          window.open(targetUrl, '_blank');
         }
       });
-    }
-  } catch (_) {}
 
-  // ── Initialize ──────────────────────────────────────────────
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      injectButton();
-      watchUrlChanges();
+      // Inject into card image container or card top
+      var imgWrap = card.querySelector('.property-card-data, [data-test="property-card-link"]') || card;
+      if (card.style.position !== 'absolute') card.style.position = 'relative';
+      card.appendChild(btn);
     });
-  } else {
-    injectButton();
-    watchUrlChanges();
   }
+
+  // ── Navigation & Lifecycle Watcher ──────────────────────────
+  function onPageChange() {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      removeWidget();
+      setTimeout(function () {
+        injectWidget();
+        injectSearchCardButtons();
+      }, 350);
+    } else {
+      updateWidgetPosition();
+      injectSearchCardButtons();
+    }
+  }
+
+  function setupWatchers() {
+    window.addEventListener('popstate', onPageChange);
+    window.addEventListener('resize', updateWidgetPosition);
+    window.addEventListener('scroll', updateWidgetPosition, { passive: true });
+
+    var observer = new MutationObserver(function () {
+      if (isDetailPage(location.href) && !document.getElementById('cp-widget-container')) {
+        injectWidget();
+      }
+      injectSearchCardButtons();
+      updateWidgetPosition();
+    });
+
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  // ── Startup ─────────────────────────────────────────────────
+  injectWidget();
+  injectSearchCardButtons();
+  setupWatchers();
+  console.log('[Choice Properties] Live extension UI v' + VERSION + ' active');
 })();

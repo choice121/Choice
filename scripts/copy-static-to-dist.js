@@ -42,8 +42,6 @@ const dirsToCopy = [
   'assets',
   'webfonts',
   '.well-known',
-  '.pages-orion',
-  'chrome-extension',
 ];
 
 dirsToCopy.forEach((dir) => {
@@ -96,18 +94,5 @@ filesToCopy.forEach((file) => {
     console.log(`✅ Copied ${file} to dist/${file}`);
   }
 });
-
-// 3. Package chrome-extension.zip for direct browser download
-try {
-  const { execSync } = require('child_process');
-  const extDir = path.join(ROOT_DIR, 'chrome-extension');
-  const zipDest = path.join(DIST_DIR, 'chrome-extension.zip');
-  if (fs.existsSync(extDir)) {
-    execSync(`python3 -c "import zipfile, os; zf = zipfile.ZipFile('${zipDest}', 'w', zipfile.ZIP_DEFLATED); [zf.write(os.path.join(r, f), os.path.relpath(os.path.join(r, f), '${extDir}')) for r, d, files in os.walk('${extDir}') for f in files]; zf.close()"`);
-    console.log(`📦 Created ${zipDest} successfully.`);
-  }
-} catch (zipErr) {
-  console.warn('⚠️ Could not create extension zip:', zipErr.message);
-}
 
 console.log('🎉 Successfully populated dist/ with all static admin, landlord, tenant, apply, and platform resources.');

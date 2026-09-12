@@ -18,6 +18,12 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/.pages-orion/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
 /config.js
   Cache-Control: no-cache, no-store, must-revalidate
 
@@ -54,11 +60,3 @@
 
 /apply/js/*
   Cache-Control: public, max-age=31536000, immutable
-
-/.pages-orion/*
-  Cache-Control: no-cache, no-store, must-revalidate
-  Access-Control-Allow-Origin: *
-
-/chrome-extension/*
-  Cache-Control: no-cache, no-store, must-revalidate
-  Access-Control-Allow-Origin: *

@@ -1,154 +1,425 @@
 /* ============================================================
-   Import to Choice Properties — Floating Button Styles
-   Injected on zillow.com/homedetails/* pages
+   Import to Choice Properties — Modern UI Styles v5.0.0
+   Injected on Zillow, Realtor, Apartments, and Redfin
    ============================================================ */
 
-#cp-save-btn {
+#cp-widget-container {
   position: fixed;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  right: max(24px, env(safe-area-inset-right));
-  z-index: 2147483647; /* always on top */
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483647;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #f8fafc;
+  overflow: hidden;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
+  box-sizing: border-box;
+}
 
-  display: flex;
+#cp-widget-container * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#cp-widget-container.cp-minimized {
+  width: auto;
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+#cp-widget-container.cp-minimized .cp-full-body {
+  display: none !important;
+}
+
+.cp-mini-trigger {
+  display: none;
   align-items: center;
-  justify-content: center;
-  min-width: 60px;
-  height: 52px;
-  padding: 0 20px;
-
-  background: #6366f1;
-  color: #fff;
-  border-radius: 26px;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5), 0 2px 6px rgba(0,0,0,0.2);
-
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  white-space: nowrap;
-
+  gap: 8px;
+  padding: 10px 16px;
   cursor: pointer;
   user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.2s, max-width 0.3s;
-  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
 }
 
-#cp-save-btn:hover {
-  background: #4f46e5;
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.55), 0 1px 4px rgba(0,0,0,0.18);
-  transform: translateY(-1px);
+#cp-widget-container.cp-minimized .cp-mini-trigger {
+  display: flex !important;
 }
 
-#cp-save-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
-}
-
-/* ── Collapsed state (auto-shrinks to pill after success) ─────────────────── */
-#cp-save-btn.cp-collapsed {
-  max-width: 52px;
-  padding: 0;
-  opacity: 0.7;
-}
-#cp-save-btn.cp-collapsed .cp-result {
-  opacity: 0;
-}
-#cp-save-btn.cp-collapsed:hover {
-  opacity: 1;
-  max-width: 340px;
-  padding: 0 20px;
-}
-#cp-save-btn.cp-collapsed:hover .cp-result {
-  opacity: 1;
-}
-
-/* ── Loading state ────────────────────────────────────────────────────────── */
-#cp-save-btn.cp-loading {
-  background: #6366f1;
-  cursor: wait;
-}
-
-/* ── Success state ────────────────────────────────────────────────────────── */
-#cp-save-btn.cp-success {
-  background: #16a34a;
-  box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4), 0 1px 4px rgba(0,0,0,0.12);
-}
-#cp-save-btn.cp-success:hover {
-  background: #15803d;
-}
-
-/* ── Duplicate state ──────────────────────────────────────────────────────── */
-#cp-save-btn.cp-duplicate {
-  background: #a16207;
-  box-shadow: 0 4px 16px rgba(161, 98, 7, 0.3);
-  cursor: default;
-}
-
-/* ── Error state ──────────────────────────────────────────────────────────── */
-#cp-save-btn.cp-error {
-  background: #dc2626;
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
-}
-#cp-save-btn.cp-error:hover {
-  background: #b91c1c;
-}
-
-/* ── Inner: idle content ──────────────────────────────────────────────────── */
-#cp-save-btn .cp-btn-inner {
+.cp-header {
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-#cp-save-btn .cp-icon {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-#cp-save-btn .cp-label {
-  white-space: nowrap;
-}
-
-/* ── Spinner ─────────────────────────────────────────────────────────────── */
-#cp-save-btn .cp-spinner {
+.cp-brand {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-#cp-save-btn .cp-spin-ring {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+.cp-logo-icon {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #10b981 0%, #6366f1 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.cp-brand-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+}
+
+.cp-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-badge-verified {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cp-header-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.cp-header-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cp-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cp-property-snapshot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cp-address-line {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cp-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+.cp-chip-price {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(165, 180, 252, 0.25);
+}
+
+.cp-chip-photos {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.cp-accordion-toggle {
+  font-size: 11px;
+  color: #818cf8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  padding: 2px 0;
+  text-align: left;
+}
+
+.cp-accordion-toggle:hover {
+  color: #a5b4fc;
+}
+
+.cp-inspector-tray {
+  display: none;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.cp-inspector-tray.cp-open {
+  display: block;
+}
+
+.cp-inspector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cp-inspector-item strong {
+  color: #e2e8f0;
+}
+
+.cp-save-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.15s, opacity 0.15s;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.cp-save-action-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
+
+.cp-save-action-btn:active {
+  transform: scale(0.97);
+}
+
+.cp-save-action-btn:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Integrated Progress State */
+.cp-progress-box {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.cp-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.cp-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cp-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6366f1, #10b981);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+/* Success State */
+.cp-success-box {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.cp-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34d399;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cp-success-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cp-btn-secondary {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  transition: background 0.15s;
+}
+
+.cp-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.cp-btn-primary-sm {
+  flex: 1.2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  border: none;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+  transition: background 0.15s;
+}
+
+.cp-btn-primary-sm:hover {
+  background: #059669;
+}
+
+/* Zillow Search Card Badge */
+.cp-search-card-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 25;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.cp-search-card-btn:hover {
+  background: #4f46e5;
+  border-color: #818cf8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+}
+
+.cp-search-card-btn.cp-saved {
+  background: #10b981 !important;
+  border-color: #34d399 !important;
+}
+
+/* Spinner */
+.cp-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: cp-spin 0.7s linear infinite;
-  flex-shrink: 0;
+  display: inline-block;
 }
 
 @keyframes cp-spin {
   to { transform: rotate(360deg); }
 }
 
-/* ── Result ───────────────────────────────────────────────────────────────── */
-#cp-save-btn .cp-result {
+/* Legacy single button fallback */
+#cp-save-btn {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
+  z-index: 2147483647;
   display: flex;
   align-items: center;
-  gap: 7px;
-  transition: opacity 0.2s;
-}
-
-#cp-save-btn .cp-result svg {
-  flex-shrink: 0;
-}
-
-#cp-save-btn .cp-result span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 260px;
+  justify-content: center;
+  min-width: 60px;
+  height: 50px;
+  padding: 0 22px;
+  background: #6366f1;
+  color: #fff;
+  border-radius: 25px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
