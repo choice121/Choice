@@ -1,0 +1,122 @@
+[
+  {
+    "n": 1,
+    "id": "8af584a0-71ba-401f-8186-0dab9c115970",
+    "address": "1581 E 47th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44103",
+    "rent": 1200,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=8af584a0-71ba-401f-8186-0dab9c115970"
+  },
+  {
+    "n": 2,
+    "id": "40e6e767-e4b6-463a-b3de-a9996cfdda8c",
+    "address": "13802 Byron Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44120",
+    "rent": 1200,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=40e6e767-e4b6-463a-b3de-a9996cfdda8c"
+  },
+  {
+    "n": 3,
+    "id": "7923ed68-b62e-4b97-8878-631c8a72c185",
+    "address": "2025 E 81st St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44103",
+    "rent": 1200,
+    "beds": 1,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=7923ed68-b62e-4b97-8878-631c8a72c185"
+  },
+  {
+    "n": 4,
+    "id": "f5480aec-0495-4bf7-a1a3-0d1b34942bc7",
+    "address": "1911 E 123rd St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44106",
+    "rent": 1200,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=f5480aec-0495-4bf7-a1a3-0d1b34942bc7"
+  },
+  {
+    "n": 5,
+    "id": "5c9d495a-84a5-49d3-ae38-4453e8976107",
+    "address": "2613 Martin Luther King Jr Dr",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44104",
+    "rent": 1200,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=5c9d495a-84a5-49d3-ae38-4453e8976107"
+  },
+  {
+    "n": 6,
+    "id": "3d477a7d-99bb-457d-b23b-5fde9deb710d",
+    "address": "13706 Coit Rd",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44110",
+    "rent": 1100,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3d477a7d-99bb-457d-b23b-5fde9deb710d"
+  },
+  {
+    "n": 7,
+    "id": "7afa1dec-95bb-4678-9446-47ceb0236b53",
+    "address": "17906 Brazil Rd",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44119",
+    "rent": 1195,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=7afa1dec-95bb-4678-9446-47ceb0236b53"
+  },
+  {
+    "n": 8,
+    "id": "98859203-274d-43c2-bfe0-9b5edea4eb28",
+    "address": "4019 Newark Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44109",
+    "rent": 1080,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=98859203-274d-43c2-bfe0-9b5edea4eb28"
+  },
+  {
+    "n": 9,
+    "id": "4886f897-81f8-4da1-ae19-606c8503a423",
+    "address": "3463 E 149th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44120",
+    "rent": 1050,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=4886f897-81f8-4da1-ae19-606c8503a423"
+  },
+  {
+    "n": 10,
+    "id": "d7c206d0-d2f6-4b34-ac33-7093d0d6564b",
+    "address": "12405 Signet Ave",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44120",
+    "rent": 1200,
+    "beds": 2,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=d7c206d0-d2f6-4b34-ac33-7093d0d6564b"
+  }
+]

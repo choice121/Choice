@@ -1,0 +1,86 @@
+[
+  {
+    "n": 1,
+    "id": "726e4eb7-eb24-4320-97db-540260552d09",
+    "address": "2281 Winthrop Chase Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28212",
+    "rent": 1950,
+    "beds": 4,
+    "baths": 2.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=726e4eb7-eb24-4320-97db-540260552d09"
+  },
+  {
+    "n": 2,
+    "id": "39b7e2fa-2f08-4618-a579-21223ecf9bc1",
+    "address": "2027 Tears Ln",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28217",
+    "rent": 2200,
+    "beds": 4,
+    "baths": 3.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=39b7e2fa-2f08-4618-a579-21223ecf9bc1"
+  },
+  {
+    "n": 3,
+    "id": "8ad0e672-ea56-4501-afe4-2f9e83e973e4",
+    "address": "11022 Garden Oaks Ln",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28273",
+    "rent": 2200,
+    "beds": 4,
+    "baths": 3.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=8ad0e672-ea56-4501-afe4-2f9e83e973e4"
+  },
+  {
+    "n": 4,
+    "id": "e9f96004-9ab6-477a-86b5-9c28be971aee",
+    "address": "4143 Lurelin Ln",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28262",
+    "rent": 2200,
+    "beds": 4,
+    "baths": 2.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=e9f96004-9ab6-477a-86b5-9c28be971aee"
+  },
+  {
+    "n": 5,
+    "id": "3139e8ce-61d1-45f8-9bb2-9e02df128a40",
+    "address": "3327 Ellingford Rd",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28214",
+    "rent": 2150,
+    "beds": 4,
+    "baths": 2.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3139e8ce-61d1-45f8-9bb2-9e02df128a40"
+  },
+  {
+    "n": 6,
+    "id": "2851ad2d-db84-42a1-8842-618df7b9271c",
+    "address": "1117 Wonder Way",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28208",
+    "rent": 2200,
+    "beds": 4,
+    "baths": 2.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=2851ad2d-db84-42a1-8842-618df7b9271c"
+  },
+  {
+    "n": 7,
+    "id": "abcd96e2-1885-40d7-b3d8-a347a6e04e63",
+    "address": "4129 Edenborn Ln",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28208",
+    "rent": 2195,
+    "beds": 4,
+    "baths": 2.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=abcd96e2-1885-40d7-b3d8-a347a6e04e63"
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "n": 1,
+    "id": "25db3ad4-b347-48b3-8cf4-b621565e3316",
+    "address": "7015 S Grand Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63111",
+    "rent": 1200,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=25db3ad4-b347-48b3-8cf4-b621565e3316"
+  },
+  {
+    "n": 2,
+    "id": "c30d1b94-c354-4cf2-8d1c-1a70c2e0a38b",
+    "address": "5520 Floy Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63136",
+    "rent": 1395,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=c30d1b94-c354-4cf2-8d1c-1a70c2e0a38b"
+  },
+  {
+    "n": 3,
+    "id": "311cd40c-c3e7-442a-b616-4624c306f925",
+    "address": "4831 Bessie Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63115",
+    "rent": 1400,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=311cd40c-c3e7-442a-b616-4624c306f925"
+  },
+  {
+    "n": 4,
+    "id": "3d01f6d9-5d23-4196-8736-12b2ce60a40c",
+    "address": "2306 Farrar St",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63107",
+    "rent": 1400,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3d01f6d9-5d23-4196-8736-12b2ce60a40c"
+  },
+  {
+    "n": 5,
+    "id": "a12c71e6-07de-445c-8b84-a36f2b8d7647",
+    "address": "4262 Dardenne Dr",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63120",
+    "rent": 1150,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=a12c71e6-07de-445c-8b84-a36f2b8d7647"
+  },
+  {
+    "n": 6,
+    "id": "a4762c1b-a1e4-46b7-a72c-5d67f3c8f425",
+    "address": "5216 Davison Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63120",
+    "rent": 1200,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=a4762c1b-a1e4-46b7-a72c-5d67f3c8f425"
+  },
+  {
+    "n": 7,
+    "id": "d20b445c-e0f7-4e49-ad4a-97f02e8bc8a0",
+    "address": "8990 Edna St",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63147",
+    "rent": 1200,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=d20b445c-e0f7-4e49-ad4a-97f02e8bc8a0"
+  },
+  {
+    "n": 8,
+    "id": "3130dcd7-a250-49fb-9935-7f205465ec5e",
+    "address": "3342 Iowa Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63118",
+    "rent": 1300,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3130dcd7-a250-49fb-9935-7f205465ec5e"
+  },
+  {
+    "n": 9,
+    "id": "dfad5cf9-f2e9-4c4d-946d-f575941c10df",
+    "address": "5916 Minnesota Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63111",
+    "rent": 1275,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=dfad5cf9-f2e9-4c4d-946d-f575941c10df"
+  },
+  {
+    "n": 10,
+    "id": "57c9a97d-3b2a-44e2-a67d-4509000119fe",
+    "address": "4556 Athlone Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63115",
+    "rent": 1350,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=57c9a97d-3b2a-44e2-a67d-4509000119fe"
+  }
+]

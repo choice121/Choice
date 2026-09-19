@@ -54,6 +54,23 @@ Temporary scraping requirements such as location, property type, bedroom count, 
 
 The system must complete the entire workflow automatically without requiring additional instructions after the initial scraping request.
 
+## 6. Property Details Precision & Classification Standards
+
+### A. Bathroom Extraction & Decimal Precision (No Truncation)
+- **Zero Truncation**: Fractional bathroom counts (`1.5`, `2.5`, `3.5`) must never be rounded down or truncated to integer values.
+- **Narrative Cross-Check**: Scrapers and enrichment engines must deep-parse both structured fields and the original narrative text. If the original source text mentions a half-bath, powder room, or "1.5 baths" (e.g. 1 full bath + 1 powder room), the database must strictly store `bathrooms: 1.5` and `half_bathrooms: 1`.
+- **Consistency**: The bathroom count in the title, structured database, badge displays, and enriched description must 100% align with verified reality.
+
+### B. Architectural Property Classification
+- **Physical Reality Over Portal Defaults**: MLS and aggregate feeds frequently bucket half-duplexes and townhomes under generic `SINGLE_FAMILY` tags. AI agents and scrapers must verify the physical architectural structure:
+  - **DUPLEX**: Any half-duplex, duplex unit, 1/2 duplex, or side-by-side attached two-unit property must be classified as `DUPLEX`.
+  - **TOWNHOUSE**: Any attached multi-story townhome or rowhouse must be classified as `TOWNHOUSE`.
+  - **SINGLE_FAMILY**: Only standalone, detached single-family houses with independent parcel footprints are classified as `SINGLE_FAMILY`.
+  - **APARTMENT**: Multi-family apartment complex units are classified as `APARTMENT`.
+
+### C. Exact Original Source Titles
+- **Verbatim Source Title Preservation**: Property titles in `properties.title` and `pipeline_properties.title` must strictly match the original title from Zillow / the original source without artificial downstream re-formatting or synthetic reconstruction.
+
 ---
 
 ### 1. Complete Automated Workflow
