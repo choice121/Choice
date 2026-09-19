@@ -144,6 +144,42 @@
   function fmtType(t) {
     return !t ? 'Rental' : t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
+  function parseBaths(rawBaths, descText) {
+    let baths = rawBaths != null ? parseFloat(rawBaths) : null;
+    let half = null;
+    if (baths != null && baths % 1 !== 0) {
+      half = 1;
+    }
+    const text = String(descText || '').toLowerCase();
+    if (baths === 1 || baths === null) {
+      if (text.includes('1.5 bath') || text.includes('1 and a half bath') || text.includes('one and a half bath') || text.includes('half bath') || text.includes('powder room')) {
+        baths = 1.5;
+        half = 1;
+      }
+    } else if (baths === 2) {
+      if (text.includes('2.5 bath') || text.includes('2 and a half bath') || text.includes('two and a half bath')) {
+        baths = 2.5;
+        half = 1;
+      }
+    } else if (baths === 3) {
+      if (text.includes('3.5 bath') || text.includes('3 and a half bath') || text.includes('three and a half bath')) {
+        baths = 3.5;
+        half = 1;
+      }
+    }
+    return { bathrooms: baths, half_bathrooms: half };
+  }
+  function detectPropType(homeType, descText, titleText) {
+    const text = (String(descText || '') + ' ' + String(titleText || '')).toLowerCase();
+    if (text.includes('1/2 duplex') || text.includes('half duplex') || text.includes('half-duplex') || text.includes('duplex') || text.includes('side-by-side')) {
+      return 'DUPLEX';
+    }
+    if (text.includes('townhouse') || text.includes('townhome') || text.includes('rowhouse')) {
+      return 'TOWNHOUSE';
+    }
+    const t = (homeType || '').toUpperCase().replace(/[^A-Z_]/g, '_');
+    return TYPE_MAP[t] || t || 'SINGLE_FAMILY';
+  }
   function buildTitle(beds, propType, city, street) {
     return city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : (street || 'Rental Listing');
   }
@@ -225,9 +261,11 @@
     const state  = addr.state   || prop.state   || '';
     const zip    = addr.zipcode || prop.zipcode || '';
     const beds   = prop.bedrooms != null ? prop.bedrooms : (prop.beds != null ? prop.beds : null);
-    const bathsR = prop.bathrooms != null ? prop.bathrooms : (prop.baths != null ? prop.baths : null);
-    const bathF  = bathsR != null ? Math.floor(bathsR) : null;
-    const bathH  = bathsR != null && bathsR !== bathF ? 1 : null;
+    const rawDesc = (prop.description || '') + ' ' + (rf.description || '');
+    const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(
+      prop.bathrooms != null ? prop.bathrooms : (prop.baths != null ? prop.baths : null),
+      rawDesc
+    );
     const lat    = prop.latitude  || (prop.latLong && prop.latLong.latitude)  || null;
     const lng    = prop.longitude || (prop.latLong && prop.latLong.longitude) || null;
     const sqft   = prop.livingArea || prop.area || null;
@@ -235,7 +273,7 @@
     const hood   = prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null;
     const county = prop.county || addr.county || null;
     const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || null;
-    const propType = normalizeType(prop.homeType);
+    const propType = detectPropType(prop.homeType, rawDesc, prop.title || '');
 
     const ctxParts = [];
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
@@ -317,7 +355,7 @@
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.unformattedPrice, prop.rentZestimate),
-      bedrooms: beds, bathrooms: bathF, half_bathrooms: bathH,
+      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       lot_size_sqft: lotSizeSqft,
@@ -650,14 +688,16 @@
     const state  = addr.state_code || addr.state || prop.state || '';
     const zip    = addr.postal_code || addr.zipcode || prop.zipcode || '';
     const beds   = prop.beds != null ? prop.beds : (prop.bedrooms != null ? prop.bedrooms : null);
-    const bathsR = prop.baths != null ? prop.baths : (prop.bathrooms != null ? prop.bathrooms : null);
-    const bathF  = bathsR != null ? Math.floor(bathsR) : null;
-    const bathH  = bathsR != null && bathsR !== bathF ? 1 : null;
+    const rawDesc = String(prop.description || prop.text || '');
+    const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(
+      prop.baths != null ? prop.baths : (prop.bathrooms != null ? prop.bathrooms : null),
+      rawDesc
+    );
     const lat    = prop.lat || addr.lat || null;
     const lng    = prop.lng || addr.lng || null;
     const sqft   = prop.sqft || prop.square_feet || null;
     const yr     = prop.year_built || null;
-    const propType = normalizeType(prop.prop_type || prop.property_type || prop.home_type);
+    const propType = detectPropType(prop.prop_type || prop.property_type || prop.home_type, rawDesc, prop.title || '');
 
     const photos = collectPhotoUrls(prop, ['photos']);
     if (prop.primary_photo) {
@@ -669,7 +709,7 @@
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.list_price, null),
-      bedrooms: beds, bathrooms: bathF, half_bathrooms: bathH,
+      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,
@@ -711,9 +751,8 @@
     const state  = addr.state || addr.stateCode || '';
     const zip    = addr.zip || addr.postalCode || '';
     const beds   = prop.bedrooms != null ? prop.bedrooms : null;
-    const bathsR = prop.bathrooms != null ? prop.bathrooms : null;
-    const bathF  = bathsR != null ? Math.floor(bathsR) : null;
-    const bathH  = bathsR != null && bathsR !== bathF ? 1 : null;
+    const rawDesc = String(prop.description || '');
+    const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(prop.bathrooms, rawDesc);
     const lat    = prop.latitude || (prop.geo && prop.geo.lat) || null;
     const lng    = prop.longitude || (prop.geo && prop.geo.lng) || null;
     const sqft   = prop.squareFeet || prop.sqft || null;
@@ -725,7 +764,7 @@
       title: buildTitle(beds, 'APARTMENT', city, street),
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.minPrice, null),
-      bedrooms: beds, bathrooms: bathF, half_bathrooms: bathH,
+      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: 'APARTMENT',
@@ -766,14 +805,13 @@
     const state  = addr.state || addr.stateCode || '';
     const zip    = addr.zip || addr.postalCode || '';
     const beds   = prop.beds != null ? prop.beds : null;
-    const bathsR = prop.baths != null ? prop.baths : null;
-    const bathF  = bathsR != null ? Math.floor(bathsR) : null;
-    const bathH  = bathsR != null && bathsR !== bathF ? 1 : null;
+    const rawDesc = String(prop.description || '');
+    const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(prop.baths, rawDesc);
     const lat    = prop.latitude || (prop.location && prop.location.latitude) || null;
     const lng    = prop.longitude || (prop.location && prop.location.longitude) || null;
     const sqft   = prop.sqft || prop.livingArea || null;
     const yr     = prop.yearBuilt || null;
-    const propType = normalizeType(prop.propertyType || prop.homeType);
+    const propType = detectPropType(prop.propertyType || prop.homeType, rawDesc, prop.title || '');
 
     const photos = collectPhotoUrls(prop, ['photos', 'images', 'media']);
 
@@ -781,7 +819,7 @@
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.rent, null),
-      bedrooms: beds, bathrooms: bathF, half_bathrooms: bathH,
+      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,

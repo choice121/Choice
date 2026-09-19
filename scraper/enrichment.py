@@ -1214,6 +1214,39 @@ def rule_based_enrich(record):
             seen.add(lowered)
         return tags
 
+    # 0. Precise Bathroom & Architectural Classification Standardization
+    desc_str = (record.get("description") or "").lower()
+    title_str = (record.get("title") or "").lower()
+    full_text = desc_str + " " + title_str
+
+    # Bathroom decimal precision & narrative cross-check
+    raw_baths = record.get("bathrooms")
+    if raw_baths is not None:
+        try:
+            b_val = float(raw_baths)
+            if b_val == 1.0 or b_val == 1:
+                if any(k in full_text for k in ["1.5 bath", "1 and a half bath", "one and a half bath", "half bath", "powder room"]):
+                    record["bathrooms"] = 1.5
+                    record["half_bathrooms"] = 1
+            elif b_val == 2.0 or b_val == 2:
+                if any(k in full_text for k in ["2.5 bath", "2 and a half bath", "two and a half bath"]):
+                    record["bathrooms"] = 2.5
+                    record["half_bathrooms"] = 1
+            elif b_val == 3.0 or b_val == 3:
+                if any(k in full_text for k in ["3.5 bath", "3 and a half bath", "three and a half bath"]):
+                    record["bathrooms"] = 3.5
+                    record["half_bathrooms"] = 1
+        except Exception:
+            pass
+
+    # Architectural property classification
+    if any(k in full_text for k in ["1/2 duplex", "half duplex", "half-duplex", "duplex", "side-by-side"]):
+        record["property_type"] = "DUPLEX"
+    elif any(k in full_text for k in ["townhouse", "townhome", "rowhouse"]):
+        record["property_type"] = "TOWNHOUSE"
+    elif not record.get("property_type"):
+        record["property_type"] = "SINGLE_FAMILY"
+
     # 1. Auto-title with key feature
     if not record.get("title"):
         beds = record.get("bedrooms")
