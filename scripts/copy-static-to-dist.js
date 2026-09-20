@@ -97,4 +97,11 @@ filesToCopy.forEach((file) => {
   }
 });
 
+// Also ensure choice-properties-extension.zip is at dist root for direct download
+const zipSrc = path.join(ROOT_DIR, 'public', 'choice-properties-extension.zip');
+if (fs.existsSync(zipSrc)) {
+  fs.copyFileSync(zipSrc, path.join(DIST_DIR, 'choice-properties-extension.zip'));
+  console.log('✅ Copied public/choice-properties-extension.zip to dist/choice-properties-extension.zip');
+}
+
 console.log('🎉 Successfully populated dist/ with all static admin, landlord, tenant, apply, and platform resources.');

@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v15.0.0] - 2026-09-20
+### Policy & Package Alignment Update
+- **Deposit & Badge Policy Alignment**: Aligned client ingestion standards with platform rules (hidden security deposit from display, removed "Just listed" freshness badges).
+- **Repackaged Distribution Zip**: Compiled and repackaged `choice-properties-extension.zip` v15.0.0 with synced test suite passing (20/20 test cases).
+- **Edge & Content Scripts Synchronized**: All extractor variants (`chrome-extension`, `.pages-orion`, `supabase/functions`) compiled and verified.
+
+---
+
 ## [v14.0.0] - 2026-09-20
 ### Opendoor Sale-to-Rent Conversion & For-Sale Stripping Engine
 - **Opendoor For-Sale Jargon Stripper**: Integrated comprehensive regex stripping for mortgage, buyer financing, escrow, closing costs, earnest money, investor/ARV tags, open house announcements, and Opendoor broker assurances.

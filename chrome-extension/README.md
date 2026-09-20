@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v14.0.0)
+# Choice Properties — Universal Chrome Extension (v15.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **7 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
