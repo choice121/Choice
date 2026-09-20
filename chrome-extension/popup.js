@@ -31,6 +31,7 @@
     const flushBtn  = document.getElementById('flush-btn');
     const versionPill = document.getElementById('ext-version-pill');
 
+    // Default to local manifest first
     if (versionPill && chrome.runtime && chrome.runtime.getManifest) {
       try {
         const manifest = chrome.runtime.getManifest();
@@ -39,6 +40,31 @@
         }
       } catch (_) {}
     }
+
+    // Live Cloud Sync: fetch latest version & status from live deployment
+    (async function syncLiveVersion() {
+      try {
+        const metaRes = await fetch('https://choice-properties-site.pages.dev/extension-meta.json?_t=' + Date.now(), { cache: 'no-store' });
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          if (meta && meta.version && versionPill) {
+            versionPill.textContent = 'v' + meta.version;
+            versionPill.title = 'Live synced from Cloud • Updated ' + (meta.updated_at ? new Date(meta.updated_at).toLocaleDateString() : 'recently');
+          }
+        }
+      } catch (_) {
+        // Fallback to raw GitHub if pages is cold
+        try {
+          const ghRes = await fetch('https://raw.githubusercontent.com/choice121/Choice/main/public/extension-meta.json?_t=' + Date.now());
+          if (ghRes.ok) {
+            const meta = await ghRes.json();
+            if (meta && meta.version && versionPill) {
+              versionPill.textContent = 'v' + meta.version;
+            }
+          }
+        } catch (_) {}
+      }
+    })();
 
     // Get session count from badge (fallback to "—" if API not available)
     let count = 0;

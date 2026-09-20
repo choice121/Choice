@@ -118,7 +118,25 @@ if (fs.existsSync(LIVE_CONTENT_PATH)) {
   console.log(`✓ Updated .pages-orion/live-content.js with v${newVersion}-live`);
 }
 
-// ── 4. Generate Chrome Update XML (extension-updates.xml) ─────────────
+// ── 4. Generate Live Extension Metadata & Chrome Update XML ─────────
+const metaData = {
+  version: newVersion,
+  updated_at: new Date().toISOString(),
+  timestamp: Date.now(),
+  channel: 'stable',
+  name: 'Import to Choice Properties',
+  download_url: 'https://choice-properties-site.pages.dev/choice-properties-extension.zip',
+  github_url: 'https://raw.githubusercontent.com/choice121/Choice/main/public/choice-properties-extension.zip'
+};
+const META_PATH = path.join(PUBLIC_DIR, 'extension-meta.json');
+const ROOT_META_PATH = path.join(ROOT, 'extension-meta.json');
+if (!fs.existsSync(PUBLIC_DIR)) {
+  fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+}
+fs.writeFileSync(META_PATH, JSON.stringify(metaData, null, 2), 'utf8');
+fs.writeFileSync(ROOT_META_PATH, JSON.stringify(metaData, null, 2), 'utf8');
+console.log(`✓ Generated extension-meta.json with live v${newVersion}`);
+
 const updateXml = `<?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='choicepropertiesautoupdate'>
@@ -126,9 +144,6 @@ const updateXml = `<?xml version='1.0' encoding='UTF-8'?>
   </app>
 </gupdate>
 `;
-if (!fs.existsSync(PUBLIC_DIR)) {
-  fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-}
 fs.writeFileSync(UPDATE_XML_PATH, updateXml, 'utf8');
 console.log('✓ Generated public/extension-updates.xml');
 

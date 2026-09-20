@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v8.0.0
+// Choice Properties — Universal Content Script & UI Engine v9.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, and Redfin.
 // ============================================================
@@ -11,7 +11,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '8.0.0';
+  var VERSION  = '9.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -175,7 +175,7 @@
             <span class="cp-brand-title">Choice Properties</span>
           </div>
           <div class="cp-header-badges">
-            <span class="cp-badge-verified">Verified v${VERSION}</span>
+            <span class="cp-badge-verified" id="cp-version-badge">Verified v${VERSION}</span>
             <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
             <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
@@ -285,6 +285,23 @@
     });
 
     updateWidgetPosition();
+
+    // Live Cloud Metadata Sync (instantly reflects GitHub pushes)
+    (async function syncWidgetVersion() {
+      try {
+        var metaRes = await fetch('https://choice-properties-site.pages.dev/extension-meta.json?_t=' + Date.now(), { cache: 'no-store' });
+        if (metaRes.ok) {
+          var meta = await metaRes.json();
+          if (meta && meta.version) {
+            var badge = container.querySelector('#cp-version-badge');
+            if (badge) {
+              badge.textContent = 'Verified v' + meta.version;
+              badge.title = 'Live Cloud Sync Connected';
+            }
+          }
+        }
+      } catch (err) {}
+    })();
   }
 
   // ── Save Execution Flow ─────────────────────────────────────
