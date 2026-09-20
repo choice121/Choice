@@ -639,18 +639,30 @@ def _parse_move_in_special(html, description):
     return None
 
 
-_SALE_LANGUAGE_RE = re.compile(
-    r"\b(for sale|sale listing|sale price|asking price|new construction|original list price|open house|selling for|list price|MLS[#:\s]+\w+)\b",
-    re.IGNORECASE,
-)
+_SALE_LANGUAGE_PATTERNS = [
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:for\s+sale|listed\s+for\s+sale|on\s+the\s+market|priced\s+to\s+sell|motivated\s+seller|seller\s+is\s+motivated)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:mortgage|down\s*payment|fha(?:\s+loan)?|conventional\s+(?:loan|financing)|va\s+loan|usda\s+loan|pre-?approved\s+buyers?|lender\s+(?:letter|pre-?approval|credit)|seller\s+financing|assumable\s+mortgage)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:title\s+company|escrow|closing\s+costs?|seller\s+concessions?|lender\s+concessions?|earnest\s+money|warranty\s+deed|deed\s+transfer)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:open\s+house|broker\s+preview|buyers?\s+agent|buyer\s+rebate|commission|bac\s+fee)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:investor\s+special|turnkey\s+investment|cash\s+flow|cap\s+rate|arv\b|fix\s+and\s+flip|instant\s+equity)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:opendoor\s+brokerage|opendoor\s+guarantee|opendoor\s+certified|opendoor\s+exclusive)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:make\s+an\s+offer|submit\s+all\s+offers|as-is\s+sale|sold\s+as-is|subject\s+to\s+inspection)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:for sale|sale listing|sale price|asking price|new construction|original list price|open house|selling for|list price|MLS[#:\s]+\w+)\b", re.IGNORECASE),
+]
 
 
 def _clean_sale_description(text, monthly_rent):
     if not text:
         return text
-    result = _SALE_LANGUAGE_RE.sub("", text)
+    result = text
+    for pat in _SALE_LANGUAGE_PATTERNS:
+        result = pat.sub(" ", result)
     if monthly_rent:
         result = re.sub(r"\$[\d,]+(?:\.\d{2})?", "${:,.0f}".format(monthly_rent), result)
+    # Strip security deposit mentions if any existed
+    result = re.sub(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?", " ", result)
+    result = re.sub(r",\s*\.", ".", result)
+    result = re.sub(r"\band\s*\.", ".", result)
     result = re.sub(r"\s+", " ", result).strip()
     result = result.replace(". .", ".")
     return result
@@ -1369,10 +1381,10 @@ def _parse_opendoor_html(html, url, verbose=False):
         "total_units": None,
         "has_basement": has_basement,
         "has_central_air": has_central_air,
-        "virtual_tour_url": None,
+        "virtual_tour_url": virtual_tour,
         "monthly_rent": monthly_rent,
-        "security_deposit": None,       # Left blank — admin sets this after review
-        "application_fee": None,        # Not applicable for Opendoor sale→rental conversions
+        "security_deposit": monthly_rent,  # 1x rent in database (omitted from descriptions)
+        "application_fee": 50,             # Canonical $50 application fee
         "pet_deposit": None,
         "admin_fee": None,
         "move_in_special": move_in_special,
@@ -1380,14 +1392,14 @@ def _parse_opendoor_html(html, url, verbose=False):
         "hoa_fee": None,
         "tax_value": None,
         "description": cleaned_description,
+        "original_description": raw_desc if raw_desc else None,
         "showing_instructions": None,
         # Default available_date to today — Opendoor homes are vacant/unoccupied
         # (they buy homes directly), so immediate availability is the safe default.
         "available_date": available_date or date.today().isoformat(),
-        # Standard 12-month lease for single-family conversions
-        "minimum_lease_months": 12,
+        "minimum_lease_months": None,      # Lease terms are permanently omitted
         "lease_terms": "[]",
-        "pets_allowed": pets_allowed,
+        "pets_allowed": pets_allowed if pets_allowed is not None else True,  # Always pet-friendly
         "pet_types_allowed": "[]",
         "pet_weight_limit": None,
         "pet_details": None,

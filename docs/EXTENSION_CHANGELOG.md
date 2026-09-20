@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v14.0.0] - 2026-09-20
+### Opendoor Sale-to-Rent Conversion & For-Sale Stripping Engine
+- **Opendoor For-Sale Jargon Stripper**: Integrated comprehensive regex stripping for mortgage, buyer financing, escrow, closing costs, earnest money, investor/ARV tags, open house announcements, and Opendoor broker assurances.
+- **Dual-Field Context Preservation**: Captures immutable `original_description` while providing a 100% rental-cleaned `description` field for pipeline staging.
+- **Canonical Rental Rules Enforcement**: Automatically applies $50 application fee, 1x rent security deposit (in DB, stripped from descriptions), pet-friendly default (`pets_allowed: true`), and omits lease terms across all Opendoor ingestion points.
+- **Synced Extractor Variants**: Rebuilt and tested all extractor targets (`chrome-extension`, `.pages-orion`, `supabase/functions`) passing 20/20 test cases.
+
+---
+
 ## [v13.0.1] - 2026-09-20
 ### Dual-Field Ingestion & Context Preservation
 - **Original Description Ingestion**: Added explicit `original_description` capture across all 7 supported platform extractors (`Zillow`, `Realtor`, `Apartments.com`, `Redfin`, `Opendoor`, `Progress Residential`, `CJ Real Estate`) in `src/extractors/shared-extractors.js`.

@@ -184,6 +184,16 @@
     return city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : (street || 'Rental Listing');
   }
 
+  function cleanForSaleText(text) {
+    if (!text) return null;
+    let s = String(text);
+    s = s.replace(/(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:for\s+sale|listed\s+for\s+sale|on\s+the\s+market|priced\s+to\s+sell|motivated\s+seller|mortgage|down\s*payment|fha|conventional\s+financing|va\s+loan|seller\s+financing|title\s+company|escrow|closing\s+costs?|earnest\s+money|open\s+house|investor\s+special|cash\s+flow|arv\b|opendoor\s+brokerage|make\s+an\s+offer)\b[^\n.!?]*[.!?]?/gi, ' ');
+    s = s.replace(/(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?/gi, ' ');
+    s = s.replace(/,\s*\./g, '.').replace(/\band\s*\./gi, '.').replace(/[ \t]{2,}/g, ' ').replace(/\n\s*\n\s*\n+/g, '\n\n');
+    s = s.trim();
+    return s || null;
+  }
+
   function canonicalZillowUrl(url, zpid) {
     if (!zpid) return url;
     const m = url.match(/(https?:\/\/[^/]+\/homedetails\/[^/]+)\/\d+_zpid\/?/i);
@@ -897,15 +907,22 @@
     if (prop.heroImage) addPhoto(prop.heroImage);
     if (prop.primaryPhoto) addPhoto(typeof prop.primaryPhoto === 'string' ? prop.primaryPhoto : prop.primaryPhoto.url);
 
+    const rent = parseRent(prop.price || prop.listPrice || prop.estimatedRent, null);
+
     return basePayload('opendoor', String(prop.id || prop.listingId || prop.homeId || ''), url, {
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
-      monthly_rent: parseRent(prop.price || prop.listPrice || prop.estimatedRent, null),
+      monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,
-      description: prop.description || prop.publicRemarks || null,
+      description: cleanForSaleText(rawDesc) || null,
+      original_description: rawDesc || null,
+      pets_allowed: true,
+      application_fee: 50,
+      security_deposit: rent,
+      minimum_lease_months: null,
       neighborhood: prop.neighborhood || null,
       hoa_fee: prop.hoaFee != null ? safeI(prop.hoaFee) : null,
       garage_spaces: prop.garageSpaces != null ? safeI(prop.garageSpaces) : null,
@@ -955,7 +972,12 @@
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft,
       property_type: 'SINGLE_FAMILY',
-      description: rawDesc || null,
+      description: cleanForSaleText(rawDesc) || null,
+      original_description: rawDesc || null,
+      pets_allowed: true,
+      application_fee: 50,
+      security_deposit: rent,
+      minimum_lease_months: null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }

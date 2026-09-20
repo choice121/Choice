@@ -11,6 +11,7 @@
 
 | Rule | What to do |
 |---|---|
+| For-Sale & Financing Jargon | Strip: "For sale", "mortgage", "down payment", "FHA/VA loan", "escrow", "closing costs", "open house", "investor special", "cap rate", "Opendoor brokerage", "make an offer" |
 | Tour / showing language | Strip: "Schedule a tour", "Book a showing", "Open house", "Contact for viewing" |
 | External application portals | Strip: TurboTenant, Zillow application, Apartments.com application, RentSpree, AppFolio, Property ID references |
 | Agent / owner / manager names | Strip: "Contact John Smith", "Managed by ABC Realty", "Leasing agent: Jane Doe" |

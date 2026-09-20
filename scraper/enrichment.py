@@ -165,6 +165,36 @@ _DEPOSIT_STRIP_PATTERNS = [
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
 ]
 
+# Patterns to strip home-sale, buyer, financing, and investment jargon (for Opendoor & sale-to-rent conversions)
+_FOR_SALE_PATTERNS = [
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:for\s+sale|listed\s+for\s+sale|on\s+the\s+market|priced\s+to\s+sell|motivated\s+seller|seller\s+is\s+motivated)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:mortgage|down\s*payment|fha(?:\s+loan)?|conventional\s+(?:loan|financing)|va\s+loan|usda\s+loan|pre-?approved\s+buyers?|lender\s+(?:letter|pre-?approval|credit)|seller\s+financing|assumable\s+mortgage)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:title\s+company|escrow|closing\s+costs?|seller\s+concessions?|lender\s+concessions?|earnest\s+money|warranty\s+deed|deed\s+transfer)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:open\s+house|broker\s+preview|buyers?\s+agent|buyer\s+rebate|commission|bac\s+fee)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:investor\s+special|turnkey\s+investment|cash\s+flow|cap\s+rate|arv\b|fix\s+and\s+flip|instant\s+equity)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:opendoor\s+brokerage|opendoor\s+guarantee|opendoor\s+certified|opendoor\s+exclusive)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:make\s+an\s+offer|submit\s+all\s+offers|as-is\s+sale|sold\s+as-is|subject\s+to\s+inspection)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:great\s+starter\s+home|perfect\s+for\s+first[- ]time\s+home\s*buyers?|first[- ]time\s+buyer)\b", re.IGNORECASE),
+]
+
+
+def strip_for_sale_jargon_from_description(text):
+    """
+    Remove all for-sale, buyer, lender, mortgage, and escrow jargon from listing descriptions.
+    Ensures properties converted from Opendoor or sales feeds read 100% as rental listings.
+    """
+    if not text:
+        return text
+    for pat in _FOR_SALE_PATTERNS:
+        text = pat.sub(" ", text)
+    # Clean up punctuation artifacts and excess whitespace
+    text = re.sub(r",\s*\.", ".", text)
+    text = re.sub(r"\band\s*\.", ".", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
+    return text.strip()
+
 
 def strip_security_deposit_from_description(text):
     """
@@ -186,13 +216,14 @@ def strip_security_deposit_from_description(text):
 
 def clean_description(text):
     """
-    Strip agent boilerplate, CTA language, screening criteria, and security deposit
-    mentions from a scraped listing description.  Returns the cleaned string.
+    Strip agent boilerplate, CTA language, screening criteria, for-sale jargon,
+    and security deposit mentions from a scraped listing description.  Returns the cleaned string.
     """
     if not text:
         return text
     for pat in _BOILERPLATE_RE:
         text = pat.sub("", text)
+    text = strip_for_sale_jargon_from_description(text)
     text = strip_security_deposit_from_description(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
