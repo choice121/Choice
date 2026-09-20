@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v9.0.0
+// Choice Properties — Universal Content Script & UI Engine v10.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, and Redfin.
 // ============================================================
@@ -11,7 +11,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '9.0.0';
+  var VERSION  = '10.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -25,12 +25,18 @@
 
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
+    if (window.CP_Extractors && typeof window.CP_Extractors.detect === 'function') {
+      if (window.CP_Extractors.detect(url)) return true;
+    }
     return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
            /zillow\.com\/.*_zpid/i.test(url) ||
            /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
            /realtor\.com\/realestateandhomes-detail/i.test(url) ||
            /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
-           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url);
+           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
+           /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
+           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
+           /(cjproperties\.org|cjrealestate\.com)\/[^/]+/i.test(url);
   }
 
   function isSearchPage(url) {

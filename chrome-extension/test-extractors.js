@@ -36,18 +36,89 @@ const FD = doc({
   }
 });
 
+const O = 'https://www.opendoor.com/homes/dallas-tx/789-elm-st-75202/od123456';
+const OD = doc({
+  props: {
+    pageProps: {
+      home: {
+        id: 'od123456',
+        address: { streetAddress: '789 Elm St', city: 'Dallas', state: 'TX', zip: '75202' },
+        price: 2450,
+        beds: 3,
+        baths: 2.5,
+        sqft: 1850,
+        photos: [{ url: 'https://cdn.opendoor.com/photos/1.jpg' }, { url: 'https://cdn.opendoor.com/photos/2.jpg' }],
+        description: 'Spacious home with updated kitchen and 2.5 baths.'
+      }
+    }
+  }
+});
+
+const PR = 'https://rentprogress.com/houses-for-rent/tx/san-antonio/1204-cedar-ln-78201';
+const PRD = doc({
+  props: {
+    pageProps: {
+      property: {
+        id: 'pr99988',
+        streetAddress: '1204 Cedar Ln',
+        city: 'San Antonio',
+        state: 'TX',
+        zip: '78201',
+        marketRent: 2150,
+        bedrooms: 4,
+        bathrooms: 2,
+        squareFeet: 2100,
+        images: [{ url: 'https://media.rentprogress.com/p1.jpg' }, { url: 'https://media.rentprogress.com/p2.jpg' }],
+        description: 'Beautiful 4 bed rental in San Antonio.'
+      }
+    }
+  }
+});
+
+const CJ = 'https://cjproperties.org/listings/detail/3305-grand-view-blvd-columbus-oh';
+const CJD = {
+  querySelector: (sel) => {
+    if (sel.includes('title') || sel.includes('h1')) return { textContent: '3305 Grand View Blvd, Columbus, OH 43219' };
+    if (sel.includes('price')) return { textContent: '$1,350/mo' };
+    if (sel.includes('desc')) return { textContent: 'Quiet side-by-side half duplex with 2 beds and 1.5 baths.' };
+    return null;
+  },
+  querySelectorAll: (sel) => {
+    if (sel.includes('detail') || sel.includes('specs')) {
+      return [
+        { textContent: '2 Beds' },
+        { textContent: '1.5 Baths' },
+        { textContent: '1,100 Sq Ft' }
+      ];
+    }
+    if (sel.includes('img')) {
+      return [
+        { src: 'https://cjproperties.org/photos/img1.jpg', getAttribute: () => null },
+        { src: 'https://cjproperties.org/photos/img2.jpg', getAttribute: () => null }
+      ];
+    }
+    return [];
+  }
+};
+
 // --- Tests ---
 console.log('CP_Extractors tests\n');
 t('detect Zillow', () => assert.strictEqual(api.detect(Z).id, 'zillow'));
 t('detect Realtor', () => assert.strictEqual(api.detect(R).id, 'realtor'));
 t('detect Apartments', () => assert.strictEqual(api.detect(A).id, 'apartments'));
 t('detect Redfin', () => assert.strictEqual(api.detect(F).id, 'redfin'));
+t('detect Opendoor', () => assert.strictEqual(api.detect(O).id, 'opendoor'));
+t('detect Progress Residential', () => assert.strictEqual(api.detect(PR).id, 'progress_residential'));
+t('detect CJ Real Estate', () => assert.strictEqual(api.detect(CJ).id, 'cj_real_estate'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
 t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-09-01'); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
 t('Realtor payload', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
-t('dispatch', () => { assert.strictEqual(api.extract(Z, ZD).source, 'zillow'); assert.strictEqual(api.extract('https://fb.com/', doc({})), null); });
+t('Opendoor payload', () => { const p = api.extractOpendoor(OD, O); assert.strictEqual(p.source_listing_id, 'od123456'); assert.strictEqual(p.address, '789 Elm St'); assert.strictEqual(p.monthly_rent, 2450); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.square_footage, 1850); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
+t('Progress Residential payload', () => { const p = api.extractProgressResidential(PRD, PR); assert.strictEqual(p.source_listing_id, 'pr99988'); assert.strictEqual(p.address, '1204 Cedar Ln'); assert.strictEqual(p.monthly_rent, 2150); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 2100); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
+t('CJ Real Estate payload', () => { const p = api.extractCJRealEstate(CJD, CJ); assert.strictEqual(p.address, '3305 Grand View Blvd'); assert.strictEqual(p.city, 'Columbus'); assert.strictEqual(p.state, 'OH'); assert.strictEqual(p.monthly_rent, 1350); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.bathrooms, 1.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.property_type, 'DUPLEX'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
+t('dispatch', () => { assert.strictEqual(api.extract(Z, ZD).source, 'zillow'); assert.strictEqual(api.extract(O, OD).source, 'opendoor'); assert.strictEqual(api.extract(PR, PRD).source, 'progress_residential'); assert.strictEqual(api.extract(CJ, CJD).source, 'cj_real_estate'); assert.strictEqual(api.extract('https://fb.com/', doc({})), null); });
 t('Zillow minimal', () => { const d = doc(cache({ zpid: 111, address: { streetAddress: '1 Empty St', city: 'Nowhere', state: 'TX' }, price: 1000 })); const p = api.extractZillow(d, Z); assert.ok(p); assert.strictEqual(p.monthly_rent, 1000); assert.strictEqual(p.bedrooms, null); assert.strictEqual(p.security_deposit, null); });
 
 // --- Photo dedup ---
