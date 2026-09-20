@@ -1,6 +1,7 @@
 /* ============================================================
-   Import to Choice Properties — Modern UI Styles v5.0.0
-   Injected on Zillow, Realtor, Apartments, and Redfin
+   Import to Choice Properties — Modern UI Styles v13.0.0
+   Injected on Zillow, Realtor, Apartments, Redfin, Opendoor,
+   Progress Residential, and CJ Real Estate.
    ============================================================ */
 
 #cp-widget-container {
@@ -176,6 +177,48 @@
   color: #6ee7b7;
 }
 
+.cp-chip-warn {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.cp-chip-type {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+/* Mini Photo Preview Strip */
+.cp-photo-preview-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.cp-photo-thumb {
+  width: 44px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1e293b;
+  flex-shrink: 0;
+}
+
+.cp-photo-more {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
 .cp-accordion-toggle {
   font-size: 11px;
   color: #818cf8;
@@ -252,17 +295,18 @@
 
 .cp-folder-select {
   width: 100%;
-  height: 32px;
+  appearance: none;
+  -webkit-appearance: none;
   background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   color: #f1f5f9;
   font-size: 12px;
   font-weight: 500;
-  padding: 0 8px;
-  outline: none;
+  padding: 7px 28px 7px 10px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  transition: all 0.15s ease;
 }
 
 .cp-folder-select:focus {
@@ -271,70 +315,78 @@
 }
 
 .cp-folder-select option {
-  background: #1e293b;
+  background: #0f172a;
   color: #f8fafc;
-  padding: 6px;
 }
 
+/* Save Action Button */
 .cp-save-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  height: 44px;
-  border: none;
-  border-radius: 12px;
+  padding: 11px 16px;
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: #ffffff;
-  font-size: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-  transition: transform 0.12s, box-shadow 0.12s, background 0.15s, opacity 0.15s;
-  user-select: none;
-  touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+  transition: all 0.18s ease;
+  position: relative;
 }
 
-.cp-save-action-btn:hover {
+.cp-save-action-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
   transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
 }
 
-.cp-save-action-btn:active {
-  transform: scale(0.97);
+.cp-save-action-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .cp-save-action-btn:disabled {
   opacity: 0.85;
   cursor: not-allowed;
-  transform: none !important;
 }
 
-/* Integrated Progress State */
+.cp-hotkey-hint {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  margin-left: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* Progress Box */
 .cp-progress-box {
   display: none;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  background: rgba(30, 41, 59, 0.5);
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 8px;
+  padding: 10px;
 }
 
 .cp-progress-header {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
+  color: #94a3b8;
   font-weight: 600;
-  color: #cbd5e1;
 }
 
 .cp-progress-bar-track {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -342,7 +394,7 @@
 .cp-progress-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #6366f1, #10b981);
+  background: linear-gradient(90deg, #6366f1 0%, #10b981 100%);
   border-radius: 999px;
   transition: width 0.25s ease;
 }
@@ -360,7 +412,7 @@
   align-items: center;
   gap: 8px;
   color: #34d399;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -408,7 +460,7 @@
   background: #059669;
 }
 
-/* Zillow Search Card Badge */
+/* Search Card Badge */
 .cp-search-card-btn {
   position: absolute;
   top: 10px;
@@ -457,26 +509,4 @@
 
 @keyframes cp-spin {
   to { transform: rotate(360deg); }
-}
-
-/* Legacy single button fallback */
-#cp-save-btn {
-  position: fixed;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  right: max(24px, env(safe-area-inset-right));
-  z-index: 2147483647;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 60px;
-  height: 50px;
-  padding: 0 22px;
-  background: #6366f1;
-  color: #fff;
-  border-radius: 25px;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
 }

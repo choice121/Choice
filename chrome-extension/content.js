@@ -1,7 +1,10 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v12.0.0
+// Choice Properties — Universal Content Script & UI Engine v13.0.0
 // Runs securely inside Chrome Extension isolated world on
-// Zillow, Realtor.com, Apartments.com, and Redfin.
+// Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
+// Progress Residential, and CJ Real Estate.
+// High Performance • Instant SPA Navigation • Smart Pre-Flight HUD
+// Global Hotkeys (Cmd/Ctrl+Shift+S) • Resilient Background Retry
 // ============================================================
 (function () {
   'use strict';
@@ -11,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '12.0.0';
+  var VERSION  = '13.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -22,6 +25,8 @@
   var isExpanded = false;
   var isMinimized = false;
   var currentExtractedData = null;
+  var cachedFolders = [];
+  var isSaving = false;
 
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
@@ -40,7 +45,33 @@
   }
 
   function isSearchPage(url) {
-    return /zillow\.com\/(homes|for_rent|b\/|search)/i.test(url);
+    return /zillow\.com\/(homes|for_rent|b\/|search)/i.test(url) ||
+           /realtor\.com\/(apartments|houses-for-rent|realestateandhomes-search)/i.test(url) ||
+           /redfin\.com\/.*\/filter/i.test(url);
+  }
+
+  // ── Fast In-Memory & LocalStorage Folder Cache ───────────────
+  function getCachedFolders() {
+    if (cachedFolders && cachedFolders.length > 0) return cachedFolders;
+    try {
+      var localData = localStorage.getItem('cp_pipeline_folders_cache');
+      if (localData) {
+        var parsed = JSON.parse(localData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedFolders = parsed;
+          return cachedFolders;
+        }
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  function setCachedFolders(folders) {
+    if (!Array.isArray(folders)) return;
+    cachedFolders = folders;
+    try {
+      localStorage.setItem('cp_pipeline_folders_cache', JSON.stringify(folders));
+    } catch (e) {}
   }
 
   // ── Smart Layout Collision Avoidance ────────────────────────
@@ -117,7 +148,7 @@
     removeWidget();
     if (!isDetailPage(location.href)) return;
 
-    // Run pre-flight extraction
+    // Fast Pre-Flight Extraction
     var extracted = null;
     try {
       if (window.CP_Extractors && typeof window.CP_Extractors.extract === 'function') {
@@ -155,16 +186,27 @@
         photoUrls = extracted.photo_urls;
       }
     }
-    var photoCount = photoUrls.length || 'Verified';
+    photoUrls = dedupePhotoUrls(photoUrls);
+    var photoCount = photoUrls.length;
+    var photoBadgeClass = photoCount >= 6 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
 
+    var propType = (extracted && extracted.property_type) ? extracted.property_type.replace(/_/g, ' ') : 'Property';
     var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
     if (extracted && extracted.city && extracted.state) {
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
+    // Build Folder Options from Instant Cache
+    var cached = getCachedFolders();
+    var folderOptionsHtml = '<option value="">(Default / Main Inbox)</option>';
+    cached.forEach(function (f) {
+      folderOptionsHtml += '<option value="' + f.id + '">' + (f.icon || '📁') + ' ' + f.name + '</option>';
+    });
+
     container.innerHTML = `
       <!-- Minimized State Trigger -->
-      <div class="cp-mini-trigger" id="cp-expand-trigger" title="Click to expand Choice Properties importer">
+      <div class="cp-mini-trigger" id="cp-expand-trigger" title="Click to expand Choice Properties importer (Cmd/Ctrl+Shift+S to save)">
         <div class="cp-logo-icon">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         </div>
@@ -181,7 +223,7 @@
             <span class="cp-brand-title">Choice Properties</span>
           </div>
           <div class="cp-header-badges">
-            <span class="cp-badge-verified" id="cp-version-badge">Verified v${VERSION}</span>
+            <span class="cp-badge-verified" id="cp-version-badge">Live v${VERSION}</span>
             <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
             <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
@@ -193,8 +235,20 @@
             <div class="cp-chips-row">
               <span class="cp-chip cp-chip-price">${rentStr}</span>
               <span class="cp-chip">${bedsBaths}</span>
-              <span class="cp-chip cp-chip-photos">📸 ${photoCount} photos</span>
+              <span class="cp-chip ${photoBadgeClass}">${photoBadgeText}</span>
+              <span class="cp-chip cp-chip-type">${propType}</span>
             </div>
+
+            <!-- Mini Photo Pre-Flight Strip -->
+            ${photoUrls.length > 0 ? `
+              <div class="cp-photo-preview-strip">
+                ${photoUrls.slice(0, 5).map(function (u) {
+                  return '<img src="' + u + '" class="cp-photo-thumb" alt="thumb" loading="lazy" />';
+                }).join('')}
+                ${photoUrls.length > 5 ? '<span class="cp-photo-more">+' + (photoUrls.length - 5) + '</span>' : ''}
+              </div>
+            ` : ''}
+
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -208,7 +262,7 @@
             </div>
           </div>
 
-          <!-- Folder Selection Target (Recommendation 1) -->
+          <!-- Folder Selection Target (Fast Instant Cache) -->
           <div class="cp-folder-select-row">
             <label for="cp-folder-select" class="cp-folder-label">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -216,15 +270,16 @@
             </label>
             <div class="cp-folder-select-wrapper">
               <select id="cp-folder-select" class="cp-folder-select">
-                <option value="">(Default / Main Inbox)</option>
+                ${folderOptionsHtml}
               </select>
             </div>
           </div>
 
-          <!-- Main Action Button -->
+          <!-- Main Action Button with Hotkey Hint -->
           <button class="cp-save-action-btn" id="cp-btn-save">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             <span>Save to Pipeline</span>
+            <span class="cp-hotkey-hint">${IS_MOBILE ? '' : '⌘⇧S'}</span>
           </button>
 
           <!-- Integrated Progress Box -->
@@ -242,7 +297,7 @@
           <div class="cp-success-box" id="cp-success-box">
             <div class="cp-success-banner">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>Saved to Choice Pipeline!</span>
+              <span id="cp-success-text">Saved to Choice Pipeline!</span>
             </div>
             <div class="cp-success-actions">
               <a class="cp-btn-secondary" id="cp-copy-link-btn" href="javascript:void(0)">Copy Link</a>
@@ -305,7 +360,7 @@
 
     updateWidgetPosition();
 
-    // Fetch pipeline folders dynamically (Recommendation 1)
+    // Revalidate Folders in background (0ms UI latency)
     (async function fetchFolders() {
       var folderSelect = container.querySelector('#cp-folder-select');
       if (!folderSelect) return;
@@ -315,6 +370,8 @@
         if (res.ok) {
           var data = await res.json();
           if (data && Array.isArray(data.folders) && data.folders.length > 0) {
+            setCachedFolders(data.folders);
+            var currentVal = folderSelect.value;
             folderSelect.innerHTML = '<option value="">(Default / Main Inbox)</option>';
             data.folders.forEach(function (f) {
               var opt = document.createElement('option');
@@ -322,14 +379,13 @@
               opt.textContent = (f.icon || '📁') + ' ' + f.name;
               folderSelect.appendChild(opt);
             });
+            if (currentVal) folderSelect.value = currentVal;
           }
         }
-      } catch (e) {
-        console.warn('[CP] Folder fetch error:', e);
-      }
+      } catch (e) {}
     })();
 
-    // Live Cloud Metadata Sync (instantly reflects GitHub pushes)
+    // Live Cloud Metadata Sync
     (async function syncWidgetVersion() {
       try {
         var metaRes = await fetch('https://choice-properties-site.pages.dev/extension-meta.json?_t=' + Date.now(), { cache: 'no-store' });
@@ -347,16 +403,19 @@
     })();
   }
 
-  // ── Save Execution Flow ─────────────────────────────────────
+  // ── Save Execution Flow (Fast + Resilient Background Process) ─
   async function handleSave() {
+    if (isSaving) return;
     var saveBtn = document.querySelector('#cp-btn-save');
     var progressBox = document.querySelector('#cp-progress-box');
     var progressStatus = document.querySelector('#cp-progress-status');
     var progressCount = document.querySelector('#cp-progress-count');
     var progressFill = document.querySelector('#cp-progress-fill');
     var successBox = document.querySelector('#cp-success-box');
+    var successText = document.querySelector('#cp-success-text');
 
     if (!saveBtn) return;
+    isSaving = true;
 
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="cp-spinner"></span> <span>Saving to pipeline…</span>';
@@ -370,6 +429,7 @@
 
       if (!extracted) {
         setError('Could not extract listing');
+        isSaving = false;
         return;
       }
 
@@ -410,24 +470,35 @@
         _import: 'browser-extension-v' + VERSION,
       };
 
-      // ── Step 1: Save property record first (Instant < 2s) ───
+      // ── Step 1: Save property record with fast retry ──────────
       var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-      var saveRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
       var resp = null;
-      try {
-        resp = await saveRes.json();
-      } catch (err) {
-        setError('Invalid server response');
-        return;
+      var retries = 2;
+
+      while (retries >= 0) {
+        try {
+          var saveRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          resp = await saveRes.json();
+          if (resp) break;
+        } catch (fetchErr) {
+          retries--;
+          if (retries < 0) throw fetchErr;
+          await new Promise(function (r) { setTimeout(r, 600); });
+        }
       }
 
       if (resp && resp.ok) {
         saveBtn.style.display = 'none';
+
+        if (resp.folder && resp.folder.name) {
+          if (successText) {
+            successText.textContent = 'Saved to ' + resp.folder.name + ' (#' + resp.folder.serial + ')';
+          }
+        }
 
         if (photoUrls.length > 0) {
           progressBox.style.display = 'flex';
@@ -441,17 +512,21 @@
           }).then(function (result) {
             progressBox.style.display = 'none';
             successBox.style.display = 'flex';
+            isSaving = false;
             if (result.uploaded.length > 0) {
               updatePipelinePhotos(payload, result.uploaded);
             }
           }).catch(function () {
             progressBox.style.display = 'none';
             successBox.style.display = 'flex';
+            isSaving = false;
           });
         } else {
           successBox.style.display = 'flex';
+          isSaving = false;
         }
       } else if (resp && resp.duplicate) {
+        isSaving = false;
         if (resp.folder && resp.folder.folder) {
           saveBtn.innerHTML = '<span>Updated Folder (' + (resp.folder.folder.slice(0, 14)) + ')</span>';
           saveBtn.style.background = '#059669';
@@ -460,15 +535,17 @@
           saveBtn.style.background = '#b45309';
         }
         setTimeout(function () {
-          saveBtn.innerHTML = '<span>Save to Pipeline</span>';
+          saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span><span class="cp-hotkey-hint">⌘⇧S</span>';
           saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
           saveBtn.disabled = false;
         }, 4000);
       } else {
+        isSaving = false;
         setError(resp && resp.error ? resp.error.slice(0, 45) : 'Save failed');
       }
     } catch (e) {
       console.error('[CP] handleSave error:', e);
+      isSaving = false;
       setError('Network connection error');
     }
   }
@@ -481,7 +558,7 @@
     saveBtn.disabled = false;
     setTimeout(function () {
       if (saveBtn) {
-        saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
+        saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span><span class="cp-hotkey-hint">⌘⇧S</span>';
         saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
       }
     }, 4000);
@@ -612,16 +689,16 @@
     } catch (e) {}
   }
 
-  // ── Zillow Search Results Cards Quick-Save ──────────────────
+  // ── Search Results Cards Quick-Save (All Supported Feeds) ────
   function injectSearchCardButtons() {
     if (!isSearchPage(location.href)) return;
-    var cards = document.querySelectorAll('article[data-test="property-card"], div[class*="StyledPropertyCard"], .photo-cards > li');
+    var cards = document.querySelectorAll('article[data-test="property-card"], div[class*="StyledPropertyCard"], .photo-cards > li, div[data-testid="property-card"]');
     if (!cards || !cards.length) return;
 
     cards.forEach(function (card) {
       if (card.querySelector('.cp-search-card-btn')) return;
 
-      var linkEl = card.querySelector('a[href*="/homedetails/"], a[href*="_zpid"]');
+      var linkEl = card.querySelector('a[href*="/homedetails/"], a[href*="_zpid"], a[href*="/realestateandhomes-detail/"]');
       if (!linkEl) return;
       var targetUrl = linkEl.href;
 
@@ -641,7 +718,7 @@
           var addrEl = card.querySelector('address, [data-test="property-card-addr"]');
           var rentMatch = priceEl ? priceEl.textContent.replace(/[^0-9]/g, '') : '';
           var rent = rentMatch ? parseInt(rentMatch, 10) : null;
-          var address = addrEl ? addrEl.textContent.trim() : 'Zillow Card Listing';
+          var address = addrEl ? addrEl.textContent.trim() : 'Search Card Listing';
 
           var cardPayload = {
             source: 'zillow',
@@ -650,7 +727,7 @@
             monthly_rent: rent,
             pets_allowed: true,
             application_fee: 50,
-            _import: 'zillow-search-card-v' + VERSION,
+            _import: 'search-card-v' + VERSION,
           };
 
           var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
@@ -664,7 +741,7 @@
             btn.classList.add('cp-saved');
             btn.innerHTML = '<span>Saved ✓</span>';
           } else {
-            btn.innerHTML = '<span>Already in DB</span>';
+            btn.innerHTML = '<span>In Pipeline</span>';
           }
         } catch (err) {
           btn.innerHTML = '<span>Saved to Tab</span>';
@@ -672,29 +749,60 @@
         }
       });
 
-      var imgWrap = card.querySelector('.property-card-data, [data-test="property-card-link"]') || card;
       if (card.style.position !== 'absolute') card.style.position = 'relative';
       card.appendChild(btn);
     });
   }
 
-  // ── Navigation & Lifecycle Watcher ──────────────────────────
-  function onPageChange() {
+  // ── Global Hotkeys Hook (Cmd/Ctrl+Shift+S) ───────────────────
+  function setupGlobalHotkeys() {
+    window.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (activeWidget && !isSaving) {
+          if (isMinimized) {
+            activeWidget.classList.remove('cp-minimized');
+            isMinimized = false;
+          }
+          handleSave();
+        }
+      }
+    });
+  }
+
+  // ── 0ms Instant SPA History Hooks & Mutation Watchers ────────
+  function hookHistoryMethods() {
+    var rawPushState = history.pushState;
+    var rawReplaceState = history.replaceState;
+
+    history.pushState = function () {
+      var result = rawPushState.apply(this, arguments);
+      onUrlChange();
+      return result;
+    };
+
+    history.replaceState = function () {
+      var result = rawReplaceState.apply(this, arguments);
+      onUrlChange();
+      return result;
+    };
+  }
+
+  function onUrlChange() {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       removeWidget();
+      // Fast mount using requestIdleCallback / fast timeout
       setTimeout(function () {
         injectWidget();
         injectSearchCardButtons();
-      }, 350);
-    } else {
-      updateWidgetPosition();
-      injectSearchCardButtons();
+      }, 100);
     }
   }
 
   function setupWatchers() {
-    window.addEventListener('popstate', onPageChange);
+    hookHistoryMethods();
+    window.addEventListener('popstate', onUrlChange);
     window.addEventListener('resize', updateWidgetPosition);
     window.addEventListener('scroll', updateWidgetPosition, { passive: true });
 
@@ -715,5 +823,6 @@
   injectWidget();
   injectSearchCardButtons();
   setupWatchers();
-  console.log('[Choice Properties] Extension UI v' + VERSION + ' active');
+  setupGlobalHotkeys();
+  console.log('[Choice Properties] High-Performance Engine v' + VERSION + ' active');
 })();

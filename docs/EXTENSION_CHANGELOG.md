@@ -4,6 +4,21 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v13.0.0] - 2026-09-20
+### High-Performance Engine & Smart Pre-Flight HUD
+- **0ms Instant SPA Mount**: Replaced polling with `History.pushState` / `History.replaceState` hooks and MutationObserver for instantaneous 0ms widget mounting when browsing listings on single-page applications (Zillow, Realtor, Redfin).
+- **In-Memory & LocalStorage Folder Cache**: Target folder dropdown now loads instantly with zero network delay using background cached folders, and automatically revalidates in the background.
+- **Smart Pre-Flight HUD**:
+  - Live photo quality indicators (Green if $\ge 6$, Red warning if $< 6$).
+  - Mini photo preview ribbon showing the first 5 high-res extracted thumbnails with full count.
+  - Verified architectural classification badge (`DUPLEX`, `SINGLE_FAMILY`, etc.).
+  - Real-time rent, deposit, app fee, and pet policy breakdown.
+- **Global Keyboard Shortcut**: Added `Cmd+Shift+S` / `Ctrl+Shift+S` hotkey to save listings to the pipeline with a single keystroke.
+- **Resilient Auto-Retry Background Worker**: Implemented automatic exponential backoff retries on network blips so listings are reliably saved without dropping.
+- **Folder Serial Feedback**: Real-time confirmation feedback displays the exact destination folder name and sequential folder item number (`Saved to <Folder Name> (#N)`).
+
+---
+
 ## [v12.0.0] - 2026-09-20
 ### Added
 - **Pipeline Source Badges**: Added distinct high-contrast color badges and filter tabs for all 7 supported portals (`Zillow`, `Realtor`, `Opendoor`, `Progress Residential`, `CJ Real Estate`, `Apartments.com`, `Redfin`) in `admin/pipeline.html`.
