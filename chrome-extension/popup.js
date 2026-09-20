@@ -29,6 +29,16 @@
     const queueRow  = document.getElementById('queue-row');
     const queueCount = document.getElementById('queue-count');
     const flushBtn  = document.getElementById('flush-btn');
+    const versionPill = document.getElementById('ext-version-pill');
+
+    if (versionPill && chrome.runtime && chrome.runtime.getManifest) {
+      try {
+        const manifest = chrome.runtime.getManifest();
+        if (manifest && manifest.version) {
+          versionPill.textContent = 'v' + manifest.version;
+        }
+      } catch (_) {}
+    }
 
     // Get session count from badge (fallback to "—" if API not available)
     let count = 0;

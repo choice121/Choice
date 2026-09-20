@@ -77,7 +77,33 @@ if (fs.existsSync(ORION_MANIFEST_PATH)) {
 console.log('🔄 Building extractor variants...');
 execSync('node scripts/build-extractors.js', { cwd: ROOT, stdio: 'inherit' });
 
-// ── 3. Update live-content.js with new version header & constant ──────
+// ── 3. Update version headers & constants in files ─────────────────
+const EXT_CONTENT_PATH = path.join(ROOT, 'chrome-extension', 'content.js');
+if (fs.existsSync(EXT_CONTENT_PATH)) {
+  let contentJs = fs.readFileSync(EXT_CONTENT_PATH, 'utf8');
+  contentJs = contentJs.replace(
+    /var VERSION\s*=\s*['"][^'"]+['"];/,
+    `var VERSION  = '${newVersion}';`
+  );
+  contentJs = contentJs.replace(
+    /\/\/\s*Choice Properties — Universal Content Script & UI Engine v[^\n]+/,
+    `// Choice Properties — Universal Content Script & UI Engine v${newVersion}`
+  );
+  fs.writeFileSync(EXT_CONTENT_PATH, contentJs, 'utf8');
+  console.log(`✓ Updated chrome-extension/content.js with v${newVersion}`);
+}
+
+const POPUP_HTML_PATH = path.join(ROOT, 'chrome-extension', 'popup.html');
+if (fs.existsSync(POPUP_HTML_PATH)) {
+  let popupHtml = fs.readFileSync(POPUP_HTML_PATH, 'utf8');
+  popupHtml = popupHtml.replace(
+    /<span id="ext-version-pill"[^>]*>v[^<]*<\/span>/,
+    `<span id="ext-version-pill" style="font-size:10px;font-weight:600;background:rgba(99,102,241,0.25);color:#a5b4fc;padding:2px 6px;border-radius:4px;border:1px solid rgba(165,180,252,0.3);margin-left:4px">v${newVersion}</span>`
+  );
+  fs.writeFileSync(POPUP_HTML_PATH, popupHtml, 'utf8');
+  console.log(`✓ Updated chrome-extension/popup.html with v${newVersion}`);
+}
+
 if (fs.existsSync(LIVE_CONTENT_PATH)) {
   let liveContent = fs.readFileSync(LIVE_CONTENT_PATH, 'utf8');
   liveContent = liveContent.replace(
