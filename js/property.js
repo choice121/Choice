@@ -617,8 +617,7 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  if (p.security_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-shield-alt"></i>Security Deposit: $${Number(p.security_deposit).toLocaleString()}</div>`);
-  if (!leaseItems.length && p.application_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${Number(p.application_fee).toLocaleString()}</div>`);
+  if (p.application_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${Number(p.application_fee).toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
@@ -721,8 +720,11 @@ function renderProperty(p) {
     _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
     _availStickyEl.style.display = 'none';
   }
-  document.getElementById('sidebarRent').textContent    = rentStr;
-  document.getElementById('sidebarDeposit').textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
+  document.getElementById('sidebarRent').textContent = rentStr;
+  const _depEl = document.getElementById('sidebarDeposit');
+  if (_depEl) {
+    _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
+  }
   // Flat $50 application fee is the platform standard. If a property has no
   // explicit fee, default to $50 rather than showing "Free" (which contradicts
   // the marketing promise and the scraper normalization rules).

@@ -56,22 +56,6 @@
     return '<span class="property-card-price-dollar">$</span>' + n.toLocaleString();
   }
 
-  // ── Freshness chip (Phase 9.2) ──────────────────────────────
-  // Uses listed_at (original source listing date) — NOT created_at (scrape date).
-  // Shows "Just listed" chip on the photo ONLY for properties under 30 hours old.
-  // All other properties show the exact date via listedDateLabel() instead.
-  function freshnessLabel(listedAt) {
-    if (!listedAt) return null;
-    var raw = String(listedAt);
-    var t = raw.length === 10
-      ? new Date(raw + 'T12:00:00').getTime()
-      : new Date(raw).getTime();
-    if (isNaN(t)) return null;
-    var hours = (Date.now() - t) / 36e5;
-    if (hours >= 0 && hours < 30) return 'Just listed';
-    return null;
-  }
-
   // ── Listed date label ────────────────────────────────────────
   // Shows the exact original listing date on every card — "Listed Jun 22".
   // Matches the date format used on Zillow / Realtor.com.
@@ -159,11 +143,6 @@
       badge = '<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>';
     }
 
-    var freshLabel = freshnessLabel(p.listed_at);
-    var freshChipHtml = freshLabel
-      ? '<div class="property-card-fresh-chip"><span class="property-card-fresh-dot"></span>' + freshLabel + '</div>'
-      : '';
-
     var tourChipHtml = p.virtual_tour_url
       ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
       : '';
@@ -212,8 +191,6 @@
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
           // Featured / verified badge — top-left (self-positioned via .property-card-badge)
           badge +
-          // Freshness chip — stacks under badge (Phase 9.2)
-          freshChipHtml +
           // 3D Tour badge
           tourChipHtml +
           // Carousel position indicators — bottom-center
