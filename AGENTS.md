@@ -405,3 +405,36 @@ The task is complete only when the entire workflow has successfully finished:
 
 No additional user instruction should be required for any of these permanent processing steps.
 Temporary instructions in an individual scraping request should control only that specific batch and must not overwrite or permanently modify these rules unless explicitly requested.
+
+---
+
+## 7. Mandatory Browser Extension Versioning, Extraction Architecture & Change Tracking
+
+Any future AI agent working on or modifying the Choice Properties Chrome Extension (`chrome-extension/`, `.pages-orion/`, `src/extractors/`, `supabase/functions/receive-pipeline-import/`) MUST strictly adhere to these invariant rules:
+
+### A. Strict Semantic Versioning & Sync Protocol
+1. **Never Make Silent Edits**: Whenever ANY file or extractor in the extension is modified (content scripts, popup, CSS, extractors, edge functions), the version number MUST be bumped (e.g., `v12.0.0` ➔ `v13.0.0`).
+2. **Execute Automated Sync & Package Script**: You MUST run `node scripts/sync-and-bump-extension.mjs` after making changes to ensure:
+   - All extractor variants (`chrome-extension/shared-extractors.js`, `.pages-orion/live-shared-extractors.js`, `supabase/functions/_shared/zillow-extract.ts`) are freshly compiled from `src/extractors/shared-extractors.js`.
+   - `manifest.json`, `content.js`, `popup.html`, `extension-meta.json`, and `public/extension-updates.xml` are updated with the exact matching version.
+   - `public/choice-properties-extension.zip` is freshly repackaged.
+   - The extractor automated test suite (`20/20 test cases`) passes.
+3. **Mandatory Documentation in CHANGELOG & README**: Every version bump MUST be recorded in `chrome-extension/README.md` and `docs/EXTENSION_CHANGELOG.md` detailing:
+   - Version number and timestamp.
+   - Exact features, fixes, or portal adjustments implemented.
+   - Updated platform compatibility list.
+
+### B. 7-Portal Universal Ingestion Architecture
+The extension extracts listings across 7 platforms directly into the Supabase pipeline staging table:
+1. **Zillow**: `__NEXT_DATA__` + `gdpClientCache` + JSON-LD (full uncropped 1536px photos).
+2. **Realtor.com**: `__NEXT_DATA__` (`pageProps.initialState` / RESO schema).
+3. **Apartments.com**: Microdata/JSON-LD + Dynamic DOM table with base rent resolution.
+4. **Redfin**: `__NEXT_DATA__` + `reactServerState` + upscaled photo CDNs.
+5. **Opendoor**: Hydrated State (`pageProps.home`) + DOM photo galleries.
+6. **Progress Residential**: Hydrated State (`pageProps.property`) + Fastly/Cloudinary CDNs.
+7. **CJ Real Estate**: AppFolio / Propertyware Schema + high-res s3 galleries.
+
+### C. Pipeline & Folder Ingestion Invariants
+- **Dynamic Target Folder Dropdown**: The extension widget dynamically queries active pipeline folders from `receive-pipeline-import?action=list_folders`. Selected `folder_id` is passed with the payload for automatic staging assignment.
+- **Rule Ingestion Enforcement**: Auto-$50 application fee, pet-friendly = true, 1x rent security deposit (never in descriptions), zero bathroom truncation (Rule 6A), architectural type classification (Rule 6B), and no lease term displays.
+

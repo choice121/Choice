@@ -1,106 +1,57 @@
-# Import to Choice Properties — Chrome Extension
+# Choice Properties — Universal Chrome Extension (v12.0.0)
 
-One-click listing → Pipeline importer for **Zillow, Realtor.com, Apartments.com, and Redfin**. No server fetch, no IP blocking, all photos captured.
-
-## How it works
-
-When you open any supported listing detail page, the extension injects a purple **"Save to Pipeline"** button in the bottom-right corner. Click it and the listing — every field and every photo — is sent directly to your Choice Properties pipeline.
-
-**Why it never gets blocked:** The extension reads the page's embedded JSON (`__NEXT_DATA__` / Redux state) directly from the already-loaded page (same data your browser is already displaying). No outbound fetch to the listing site, no datacenter IP, nothing to block.
-
-## v2.0 features
-
-- **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin (per-site extractors in `shared-extractors.js`)
-- **Download to PC** — each save also writes `listing.json` + all photos to `~/Downloads/ChoiceImports/{id}/` (toggle in popup)
-- **Offline queue** — if the pipeline is unreachable, the listing is queued in `chrome.storage.local` and auto-synced when back online (badge shows amber count; "Sync now" button in popup)
-- **Settings** — enable/disable Download-to-PC and Offline queue from the popup
+A browser extension that allows Choice Properties agents to save rental listings directly from **7 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
 ---
 
-## Install (takes ~30 seconds)
+## Supported Portals (7 Total)
 
-### Step 1 — Generate icons (one time only)
-
-```bash
-cd chrome-extension
-node generate-icons.js
-```
-
-This creates `icons/icon16.png`, `icon32.png`, `icon48.png`, `icon128.png`.
-
-### Step 2 — Load into Chrome
-
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (toggle, top-right)
-3. Click **Load unpacked**
-4. Select the `chrome-extension/` folder from this project
-5. Done ✓
-
-The extension icon appears in your Chrome toolbar.
-
-### Step 3 — Use it
-
-1. Browse to any supported listing detail page  
-   *(Zillow `zillow.com/homedetails/…`, Realtor.com, Apartments.com, or Redfin)*
-2. Click the purple **↓ Save to Pipeline** button (bottom-right corner)
-3. Button turns green: "✓ Saved! 24 photos · San Francisco · Q:88/100"
-4. Open your [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to review and publish
+| Platform | URL Patterns Supported | Extraction Method |
+| :--- | :--- | :--- |
+| **Zillow** | `zillow.com/homedetails/*`, `zillow.com/b/*` | `__NEXT_DATA__` + `gdpClientCache` + JSON-LD |
+| **Realtor.com** | `realtor.com/realestateandhomes-detail/*` | `__NEXT_DATA__` (`pageProps.initialState`) |
+| **Apartments.com** | `apartments.com/*` | Microdata / JSON-LD + Dynamic DOM Table |
+| **Redfin** | `redfin.com/*` | `__NEXT_DATA__` + `reactServerState` |
+| **Opendoor** | `opendoor.com/homes/*` | Hydrated State (`pageProps.home`) + DOM |
+| **Progress Residential** | `rentprogress.com/houses-for-rent/*` | Hydrated State (`pageProps.property`) + Fastly CDN |
+| **CJ Real Estate** | `cjproperties.org/*`, `appfolio.com/*` | AppFolio Schema + high-res s3 galleries |
 
 ---
 
-## What gets captured
+## Features
 
-| Field | Source |
-|---|---|
-| Address, city, state, ZIP | `address` object |
-| Lat / lng | `latitude`, `longitude` |
-| Rent, deposit, fees | `price`, `resoFacts.*` |
-| Beds, baths, sqft, lot, year built | Direct fields |
-| Property type | `homeType` → normalized |
-| Available date | `resoFacts.dateAvailable` |
-| Description | `description` |
-| Pets, smoking policy | `isPetFriendly`, `resoFacts.petsAllowed` |
-| HVAC, laundry, parking | `resoFacts.heating/cooling/laundry/parking` |
-| Appliances, amenities, utilities | `resoFacts.appliances/communityFeatures/…` |
-| Walk / transit / bike scores | `walkScore`, `transitScore`, `bikeScore` |
-| Virtual tour URL | `virtualTourUrl` |
-| All photos (up to 50) | `responsivePhotosOriginalRatio` (full-res JPEG) |
-| Agent / broker name | `attributionInfo` |
-
-Photos are stored as source URLs and transferred to ImageKit automatically when you publish the listing from the pipeline.
+- **1-Click Staging**: Floating on-page widget appears automatically on supported property detail pages.
+- **Dynamic Folder Selection**: Choose an active pipeline folder (e.g. *Columbus SFRs*, *Short-Term Duplexes*) before saving.
+- **Strict Compliance Enforcement**:
+  - **Rule 6A Zero Truncation**: Fractional baths (`1.5`, `2.5`, `3.5`) are never rounded down.
+  - **Rule 6B Architectural Classification**: Attached side-by-side units and 1/2 duplexes are auto-classified as `DUPLEX`.
+  - **Fee & Policy Normalization**: Automatically assigns $50 application fee, pet-friendly status, and omits lease terms / smoking policies.
+- **High-Resolution Photography**: Pulls uncropped full-res source photos (up to 1536px) directly from application cache states.
+- **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 
 ---
 
-## Updating
+## Installation
 
-The extension lives in this repo under `chrome-extension/`. To update:
-
-1. Edit `content.js` (extraction logic) or `content.css` (button style)
-2. Go to `chrome://extensions` → click the **↺ refresh** icon on the extension card
-3. Reload any open Zillow tabs
-
-No reinstall needed for code changes — just refresh.
-
----
-
-## Works on
-
-- Chrome / Chromium (primary)
-- Microsoft Edge (Chromium-based) — same install steps
-- Brave, Arc, or any Chromium browser
+### Method A: Install ZIP in Developer Mode
+1. Download `choice-properties-extension.zip` from [Choice Properties Site](https://choice-properties-site.pages.dev/choice-properties-extension.zip).
+2. Unzip to a local folder.
+3. Open Chrome and navigate to `chrome://extensions`.
+4. Enable **Developer mode** (top-right toggle).
+5. Click **Load unpacked** and select the unzipped `chrome-extension` folder.
 
 ---
 
-## Files
+## Development & Build Workflow
 
-| File | Purpose |
-|---|---|
-| `manifest.json` | Extension config (MV3) |
-| `shared-extractors.js` | Multi-site extractor registry (Zillow, Realtor, Apartments, Redfin) |
-| `content.js` | Injected on supported sites — extracts data + renders button |
-| `content.css` | Floating button styles |
-| `background.js` | Service worker — session count, offline queue flush, badge |
-| `popup.html` / `popup.js` | Toolbar popup — session count, queue status, settings toggles |
-| `test-extractors.js` | Node test harness for the extractor registry |
-| `generate-icons.js` | One-time icon generator (pure Node.js, no deps) |
-| `icons/` | Generated PNG icons (16 / 32 / 48 / 128 px) |
+Whenever making modifications to the extension:
+1. Edit the source extractor definitions in `src/extractors/shared-extractors.js`.
+2. Run the automated sync and bump tool:
+   ```bash
+   node scripts/sync-and-bump-extension.mjs
+   ```
+3. Verify test suite:
+   - Compiles all 3 variants (`chrome-extension`, `.pages-orion`, `supabase/functions`).
+   - Executes 20 automated test cases.
+   - Bumps version and updates `extension-meta.json` and `public/choice-properties-extension.zip`.
+4. Record all changes in `docs/EXTENSION_CHANGELOG.md`.
