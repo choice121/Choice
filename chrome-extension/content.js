@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v10.0.0
+// Choice Properties — Universal Content Script & UI Engine v11.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, and Redfin.
 // ============================================================
@@ -11,7 +11,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '10.0.0';
+  var VERSION  = '11.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -208,6 +208,19 @@
             </div>
           </div>
 
+          <!-- Folder Selection Target (Recommendation 1) -->
+          <div class="cp-folder-select-row">
+            <label for="cp-folder-select" class="cp-folder-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              <span>Target Folder:</span>
+            </label>
+            <div class="cp-folder-select-wrapper">
+              <select id="cp-folder-select" class="cp-folder-select">
+                <option value="">(Default / Main Inbox)</option>
+              </select>
+            </div>
+          </div>
+
           <!-- Main Action Button -->
           <button class="cp-save-action-btn" id="cp-btn-save">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -292,6 +305,30 @@
 
     updateWidgetPosition();
 
+    // Fetch pipeline folders dynamically (Recommendation 1)
+    (async function fetchFolders() {
+      var folderSelect = container.querySelector('#cp-folder-select');
+      if (!folderSelect) return;
+      try {
+        var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+        var res = await fetch(url);
+        if (res.ok) {
+          var data = await res.json();
+          if (data && Array.isArray(data.folders) && data.folders.length > 0) {
+            folderSelect.innerHTML = '<option value="">(Default / Main Inbox)</option>';
+            data.folders.forEach(function (f) {
+              var opt = document.createElement('option');
+              opt.value = f.id;
+              opt.textContent = (f.icon || '📁') + ' ' + f.name;
+              folderSelect.appendChild(opt);
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[CP] Folder fetch error:', e);
+      }
+    })();
+
     // Live Cloud Metadata Sync (instantly reflects GitHub pushes)
     (async function syncWidgetVersion() {
       try {
@@ -342,6 +379,9 @@
       }
       photoUrls = dedupePhotoUrls(photoUrls);
 
+      var folderSelect = document.querySelector('#cp-folder-select');
+      var selectedFolderId = folderSelect && folderSelect.value ? folderSelect.value : null;
+
       var payload = {
         source: extracted.source || 'zillow',
         source_listing_id: extracted.source_listing_id,
@@ -365,6 +405,7 @@
         available_date: extracted.available_date,
         pets_allowed: true,
         application_fee: 50,
+        folder_id: selectedFolderId,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
         _import: 'browser-extension-v' + VERSION,
       };
