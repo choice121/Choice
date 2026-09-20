@@ -5,6 +5,7 @@
   "description": "Choice Properties — Nationwide rental property marketplace. Deployed exclusively to Cloudflare Pages.",
   "scripts": {
     "build": "node generate-config.js && node scripts/copy-static-to-dist.js",
+    "bump-extension": "node scripts/sync-and-bump-extension.mjs",
     "lint": "node -e \"console.log('Linting passed')\"",
     "setup-credentials": "node scripts/open-setup.mjs",
     "load-credentials": "node scripts/setup-credentials.mjs",

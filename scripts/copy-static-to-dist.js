@@ -42,6 +42,8 @@ const dirsToCopy = [
   'assets',
   'webfonts',
   '.well-known',
+  '.pages-orion',
+  'public',
 ];
 
 dirsToCopy.forEach((dir) => {
