@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1789918321925"></script>
+  <script src="/js/cp-error-reporter.js?v=1789922574232"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
@@ -15,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1789918321925">
+<link rel="stylesheet" href="/css/cp-design.css?v=1789922574232">
 <script defer src="/config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-<script defer src="/js/cp-api.js?v=1789918321925" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=1789918321925"></script>
-<script defer src="/js/cp-shell.js?v=1789918321925"></script>
+<script defer src="/js/cp-api.js?v=1789922574232" type="module"></script>
+<script defer src="/js/cp-chrome.js?v=1789922574232"></script>
+<script defer src="/js/cp-shell.js?v=1789922574232"></script>
 <style>
   /* ═══════════════════════════════════════════════════════════
      PREMIUM PIPELINE UI — Mobile-first, polished, professional
@@ -399,6 +399,27 @@
 
   /* Old sidebar hidden — replaced by chip row */
   .pl-folder-sidebar{display:none}
+
+  /* ── Original vs Enriched Compare Modal ─────────────────── */
+  #pl-desc-compare-modal{position:fixed;inset:0;z-index:450;display:flex;align-items:center;justify-content:center;padding:16px}
+  .pl-compare-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
+  .pl-compare-dialog{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md,14px);
+    width:100%;max-width:960px;max-height:min(88dvh,720px);box-shadow:0 12px 48px rgba(0,0,0,.35);display:flex;flex-direction:column;animation:fadeUp .2s ease;overflow:hidden}
+  .pl-compare-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+  .pl-compare-title{font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+  .pl-compare-close{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1.2rem;padding:3px 8px;border-radius:4px;line-height:1}
+  .pl-compare-close:hover{background:var(--surface-2);color:var(--text)}
+  .pl-compare-body{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;overflow-y:auto;flex:1}
+  @media(max-width:640px){.pl-compare-body{grid-template-columns:1fr;gap:20px}}
+  .pl-compare-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+  .pl-compare-col-hd{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .pl-compare-col-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted-2);display:flex;align-items:center;gap:6px}
+  .pl-compare-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px}
+  .pl-compare-badge-orig{background:rgba(234,179,8,.15);color:#d97706}
+  .pl-compare-badge-curr{background:rgba(99,102,241,.15);color:var(--brand)}
+  .pl-compare-col-content{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;
+    font-size:.84rem;line-height:1.6;color:var(--text);white-space:pre-wrap;overflow-y:auto;flex:1;max-height:420px;word-break:break-word}
+  .pl-compare-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-shrink:0}
 </style>
 </head>
 <body data-page-title="Pipeline" data-page-sub="Scraped listings for review">
@@ -524,6 +545,6 @@
 <div class="pl-folder-modal-backdrop" id="pl-folder-modal-backdrop"></div>
 <div class="pl-folder-modal-sheet" id="pl-folder-modal-sheet"></div>
 
-<script defer src="/js/admin/pipeline.js?v=1789918321925"></script>
+<script defer src="/js/admin/pipeline.js?v=1789922574232"></script>
 </body>
 </html>

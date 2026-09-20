@@ -594,9 +594,24 @@
 
       <!-- Description -->
       <div class="pl-section">
-        <div class="pl-section-title">Description &amp; instructions</div>
+        <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Description &amp; instructions</span>
+          ${l.original_description ? `
+            <button type="button" class="btn btn-ghost btn-sm" id="pl-compare-desc-btn" style="font-size:.72rem;padding:2px 8px;color:var(--brand);display:inline-flex;align-items:center;gap:4px" title="View side-by-side comparison of original scraped text vs enriched description">
+              ⇄ Compare Original vs Enriched
+            </button>` : ''}
+        </div>
         <div class="pl-form-grid full">
-          ${fi('description','Description', l.description,'textarea',false,true)}
+          <div class="pl-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <label for="pf-description" style="margin:0">Description (Current / Enriched)</label>
+              ${l.original_description && l.original_description !== l.description ? `
+                <button type="button" class="btn btn-ghost btn-sm" id="pl-revert-desc-btn" style="font-size:.68rem;padding:1px 6px;color:var(--muted-2)" title="Restore description to original scraped listing text">
+                  ↺ Revert to original
+                </button>` : ''}
+            </div>
+            <textarea id="pf-description">${S.esc(l.description??'')}</textarea>
+          </div>
           ${fi('showing_instructions','Showing instructions', l.showing_instructions,'textarea',false,true)}
           ${fi('move_in_special','Move-in special / concession', l.move_in_special,'text',false,true)}
           ${fi('location_context','Location context', l.location_context,'text',false,true)}
@@ -723,6 +738,22 @@
 
       const pubBtn = panel.querySelector('.pl-pub-btn-panel');
       if(pubBtn) pubBtn.addEventListener('click', () => doPublish(l.id));
+
+      const compareBtn = panel.querySelector('#pl-compare-desc-btn');
+      if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
+
+      const revertBtn = panel.querySelector('#pl-revert-desc-btn');
+      if(revertBtn) revertBtn.addEventListener('click', async () => {
+        if(!l.original_description) return;
+        const ok = await S.confirm('Revert to original description?', 'This replaces the current enriched description in the input box with the original raw text from the listing source. You can still edit it before saving.');
+        if(!ok) return;
+        const ta = panel.querySelector('#pf-description');
+        if(ta){
+          ta.value = l.original_description;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          S.toast('Description reverted to original text', 'info');
+        }
+      });
 
       const delBtn = panel.querySelector('.pl-del-btn');
       if(delBtn) delBtn.addEventListener('click', async e => {
@@ -1043,6 +1074,78 @@ function wirePanelPhotoActions(){
     el.innerHTML = html;
   }
 
+  // ── Description Comparison Modal ────────────────────────────────────────────
+
+  function openDescCompareModal(l){
+    if(!l) return;
+    // Remove existing if any
+    const existing = document.getElementById('pl-desc-compare-modal');
+    if(existing) existing.remove();
+
+    const currentDesc = document.querySelector('#pf-description')?.value ?? l.description ?? '';
+    const origDesc = l.original_description || 'No original description captured.';
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-desc-compare-modal';
+    modal.innerHTML = `
+      <div class="pl-compare-backdrop"></div>
+      <div class="pl-compare-dialog" role="dialog" aria-modal="true" aria-label="Compare Descriptions">
+        <div class="pl-compare-hd">
+          <div class="pl-compare-title">
+            <span>⇄ Description Comparison</span>
+            <span style="font-size:.8rem;font-weight:400;color:var(--muted-2);margin-left:4px">
+              ${S.esc(l.address || l.title || '')}
+            </span>
+          </div>
+          <button class="pl-compare-close" title="Close">✕</button>
+        </div>
+        <div class="pl-compare-body">
+          <div class="pl-compare-col">
+            <div class="pl-compare-col-hd">
+              <span class="pl-compare-col-title">Original Scraped Text</span>
+              <span class="pl-compare-badge pl-compare-badge-orig">Unmodified Source</span>
+            </div>
+            <div class="pl-compare-col-content">${S.esc(origDesc)}</div>
+          </div>
+          <div class="pl-compare-col">
+            <div class="pl-compare-col-hd">
+              <span class="pl-compare-col-title">Current Enriched Description</span>
+              <span class="pl-compare-badge pl-compare-badge-curr">Live in Form</span>
+            </div>
+            <div class="pl-compare-col-content">${S.esc(currentDesc || 'Empty description')}</div>
+          </div>
+        </div>
+        <div class="pl-compare-ft">
+          ${l.original_description ? `
+            <button class="btn btn-outline btn-sm" id="pl-modal-revert-btn" style="margin-right:auto">
+              ↺ Use Original in Form
+            </button>` : ''}
+          <button class="btn btn-ghost btn-sm" id="pl-modal-close-btn">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-compare-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-compare-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-modal-close-btn').addEventListener('click', closeModal);
+
+    const modalRevertBtn = modal.querySelector('#pl-modal-revert-btn');
+    if(modalRevertBtn){
+      modalRevertBtn.addEventListener('click', () => {
+        const ta = document.querySelector('#pf-description');
+        if(ta && l.original_description){
+          ta.value = l.original_description;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          S.toast('Original description copied to editor', 'info');
+        }
+        closeModal();
+      });
+    }
+  }
+
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   function collectPatch(){
@@ -1054,7 +1157,7 @@ function wirePanelPhotoActions(){
     // Plain text fields
     const textFields = [
       'title','address','city','state','zip','county','neighborhood',
-      'description','showing_instructions','move_in_special','location_context','virtual_tour_url',
+      'description','original_description','showing_instructions','move_in_special','location_context','virtual_tour_url',
       'property_type','available_date',
       'heating_type','cooling_type','laundry_type','parking',
     ];

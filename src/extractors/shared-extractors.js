@@ -197,7 +197,7 @@
       title: null, address: null, city: null, state: null, zip: null, lat: null, lng: null,
       monthly_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null,
       square_footage: null, year_built: null, lot_size_sqft: null, floors: null,
-      garage_spaces: null, total_units: null, property_type: null, description: null,
+      garage_spaces: null, total_units: null, property_type: null, description: null, original_description: null,
       neighborhood: null, county: null, location_context: null, pets_allowed: null,
       pet_types_allowed: null, available_date: null, listed_at: null, minimum_lease_months: null,
       smoking_allowed: null, security_deposit: null, pet_deposit: null, admin_fee: null,

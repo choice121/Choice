@@ -131,14 +131,17 @@ Do not create information simply because a field exists. If information is unava
 
 ---
 
-### 5. Description Enrichment
-Every property must receive a fully enriched, detailed, natural, property-specific description.
-The description must use the verified information available for that particular property.
-Preserve useful richness from the original listing.
-Do not unnecessarily shorten detailed source information.
-Do not convert a rich original listing into a generic short paragraph.
-Richness must come from verified information, not filler.
-If limited information is available, write naturally using only what is known. Do not artificially lengthen the description.
+### 5. Description Enrichment & Context Preservation
+- **Original Description Preservation (`original_description`)**: Every property scraped or imported into the pipeline MUST permanently store the raw, unmodified listing text in `original_description`. This field serves as the immutable ground-truth anchor of the property's authentic details.
+- **Context Preservation in Rewrites**: When generating or rewriting descriptions, the enrichment process MUST NEVER lose or discard specific real-world details provided in the original text (such as custom finishes, brand new HVAC/appliances, layout nuances, natural lighting, specific basement details, yard characteristics, or unique architectural accents).
+- **Surgical Cleaning vs Wholesale Replacement**: Enrichment must operate via surgical enhancement:
+  - Clean out prohibited text (broker contacts, agent names/headshots, portal URLs, external showing/application links, security deposit mentions, smoking policies, and lease duration clauses).
+  - Elevate the tone to Choice Properties standards with natural phrasing, active voice, and professional flow.
+  - DO NOT replace an authentic, informative description with a generic AI summary template.
+- **Dual-State Availability**: Both the current enriched `description` and the untouched `original_description` must be preserved in the pipeline so admins can compare them side-by-side or revert if necessary.
+- Every property must receive a fully enriched, detailed, natural, property-specific description grounded in verified facts.
+- Richness must come from verified information, not filler.
+- If limited information is available, write naturally using only what is known. Do not artificially lengthen the description.
 
 ---
 

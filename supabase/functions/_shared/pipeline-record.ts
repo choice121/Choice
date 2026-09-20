@@ -168,6 +168,7 @@ export interface PipelineRecordInput {
   parking_fee?: number | null;
   hoa_fee?: number | null;
   description?: string | null;
+  original_description?: string | null;
   showing_instructions?: string | null;
   available_date?: string | null;
   minimum_lease_months?: number | null;
@@ -272,6 +273,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
 
     // Listing details
     description:          safeStr(body.description),
+    original_description: safeStr(body.original_description) ?? safeStr(body.description),
     showing_instructions: safeStr(body.showing_instructions),
     available_date:       availDate,
     minimum_lease_months: safeInt(body.minimum_lease_months),

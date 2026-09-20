@@ -850,6 +850,7 @@ def _map_listing(raw):
 
         # -- Listing details ---------------------------------------------------
         "description":           desc,
+        "original_description":  desc,
         "showing_instructions":  None,
         "available_date":        None,
         "listed_at":             _listed_at,

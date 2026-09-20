@@ -895,6 +895,7 @@ def _map_realtor_property(prop):
         "hoa_fee":               hoa_fee,
         "tax_value":             tax_val,
         "description":           desc_txt,
+        "original_description":  desc_txt,
         "showing_instructions":  None,
         "available_date":        available_date,
         "listed_at":             str(ld)[:10] if ld else None,

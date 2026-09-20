@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v13.0.1] - 2026-09-20
+### Dual-Field Ingestion & Context Preservation
+- **Original Description Ingestion**: Added explicit `original_description` capture across all 7 supported platform extractors (`Zillow`, `Realtor`, `Apartments.com`, `Redfin`, `Opendoor`, `Progress Residential`, `CJ Real Estate`) in `src/extractors/shared-extractors.js`.
+- **Pipeline Edge Function Payload Alignment**: Ingests raw unedited listing text into both `original_description` and `description` upon initial extraction so downstream AI enrichment never loses original context.
+
+---
+
 ## [v13.0.0] - 2026-09-20
 ### High-Performance Engine & Smart Pre-Flight HUD
 - **0ms Instant SPA Mount**: Replaced polling with `History.pushState` / `History.replaceState` hooks and MutationObserver for instantaneous 0ms widget mounting when browsing listings on single-page applications (Zillow, Realtor, Redfin).
