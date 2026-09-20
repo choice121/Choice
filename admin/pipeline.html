@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1789915912747"></script>
+  <script src="/js/cp-error-reporter.js?v=1789917074253"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
@@ -15,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1789915912747">
+<link rel="stylesheet" href="/css/cp-design.css?v=1789917074253">
 <script defer src="/config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-<script defer src="/js/cp-api.js?v=1789915912747" type="module"></script>
-<script defer src="/js/cp-chrome.js?v=1789915912747"></script>
-<script defer src="/js/cp-shell.js?v=1789915912747"></script>
+<script defer src="/js/cp-api.js?v=1789917074253" type="module"></script>
+<script defer src="/js/cp-chrome.js?v=1789917074253"></script>
+<script defer src="/js/cp-shell.js?v=1789917074253"></script>
 <style>
   /* ═══════════════════════════════════════════════════════════
      PREMIUM PIPELINE UI — Mobile-first, polished, professional
@@ -107,8 +107,13 @@
   /* ── Source badge ───────────────────────────────────────── */
   .src-badge{display:inline-flex;align-items:center;font-size:.65rem;font-weight:700;
     letter-spacing:.02em;padding:2px 7px;border-radius:99px;text-transform:uppercase}
-  .src-zillow {background:rgba(0,106,255,.12);color:#0055cc}
-  .src-realtor{background:rgba(220,38,38,.12);color:#b91c1c}
+  .src-zillow             {background:rgba(0,106,255,.12);color:#0055cc}
+  .src-realtor            {background:rgba(220,38,38,.12);color:#b91c1c}
+  .src-opendoor           {background:rgba(14,165,233,.12);color:#0284c7}
+  .src-progress_residential{background:rgba(16,185,129,.12);color:#059669}
+  .src-cj_real_estate     {background:rgba(245,158,11,.12);color:#d97706}
+  .src-apartments         {background:rgba(139,92,246,.12);color:#7c3aed}
+  .src-redfin             {background:rgba(239,68,68,.12);color:#dc2626}
 
   /* ── Quality score ──────────────────────────────────────── */
   .qs-badge{display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:99px}
@@ -432,6 +437,11 @@
         <button class="chip chip-sm active" data-pl-source="">All</button>
         <button class="chip chip-sm" data-pl-source="zillow">Zillow</button>
         <button class="chip chip-sm" data-pl-source="realtor">Realtor</button>
+        <button class="chip chip-sm" data-pl-source="opendoor">Opendoor</button>
+        <button class="chip chip-sm" data-pl-source="progress_residential">Progress</button>
+        <button class="chip chip-sm" data-pl-source="cj_real_estate">CJ Real Estate</button>
+        <button class="chip chip-sm" data-pl-source="apartments">Apartments</button>
+        <button class="chip chip-sm" data-pl-source="redfin">Redfin</button>
       </div>
       <div class="source-chip-row" id="quality-chips" role="tablist" aria-label="Filter by quality score">
         <span class="source-filter-label">Quality:</span>
@@ -514,6 +524,6 @@
 <div class="pl-folder-modal-backdrop" id="pl-folder-modal-backdrop"></div>
 <div class="pl-folder-modal-sheet" id="pl-folder-modal-sheet"></div>
 
-<script defer src="/js/admin/pipeline.js?v=1789915912747"></script>
+<script defer src="/js/admin/pipeline.js?v=1789917074253"></script>
 </body>
 </html>

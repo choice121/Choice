@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v11.0.0
+// Choice Properties — Universal Content Script & UI Engine v12.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, and Redfin.
 // ============================================================
@@ -11,7 +11,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '11.0.0';
+  var VERSION  = '12.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -452,8 +452,13 @@
           successBox.style.display = 'flex';
         }
       } else if (resp && resp.duplicate) {
-        saveBtn.innerHTML = '<span>Already in Pipeline</span>';
-        saveBtn.style.background = '#b45309';
+        if (resp.folder && resp.folder.folder) {
+          saveBtn.innerHTML = '<span>Updated Folder (' + (resp.folder.folder.slice(0, 14)) + ')</span>';
+          saveBtn.style.background = '#059669';
+        } else {
+          saveBtn.innerHTML = '<span>Already in Pipeline</span>';
+          saveBtn.style.background = '#b45309';
+        }
         setTimeout(function () {
           saveBtn.innerHTML = '<span>Save to Pipeline</span>';
           saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
