@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1789982302018"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<title>Watermark Sniper · Moderation Workspace · Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=1789982302018">
+<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1789982302018">
+<script defer src="/config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+<script defer src="/js/cp-api.js?v=1789982302018" type="module"></script>
+<script defer src="/js/cp-shell.js?v=1789982302018"></script>
+</head>
+<body class="sniper-standalone-body" data-page-title="Watermark Sniper">
+
+  <!-- SVG Icon Sprite for Theme & Controls -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  </svg>
+
+  <!-- Full-Screen Dedicated Moderation Workspace Layout -->
+  <div class="sniper-workspace-root">
+
+    <!-- 1. Top Navigation Bar (Clean, Purpose-Built, No Admin Dashboard Distractions) -->
+    <header class="sniper-topbar" id="sniper-topbar">
+      <div class="sniper-topbar-left">
+        <a href="/admin/" class="sniper-back-btn" id="sniper-back-btn" title="Return to Choice Admin Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="sniper-icon-16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span>Admin Console</span>
+        </a>
+        <div class="sniper-topbar-divider" aria-hidden="true"></div>
+        <div class="sniper-brand-title">
+          <span class="sniper-brand-logo">Choice</span>
+          <span class="sniper-brand-sub">Watermark Sniper</span>
+          <span class="sniper-mode-pill">Visual Moderation</span>
+        </div>
+      </div>
+
+      <div class="sniper-topbar-center">
+        <div class="sniper-live-stat-pill" id="sniper-inventory-stat" title="Total active properties in database">
+          <span class="sniper-stat-dot"></span>
+          <span>Inventory: <strong id="stat-total-catalog">Loading…</strong> properties</span>
+        </div>
+        <button class="sniper-live-stat-pill sniper-staged-pill sniper-staged-btn" id="sniper-staged-stat" title="Click to view Staged Listings Drawer (Shortcut: S)" type="button">
+          <span>Staged: <strong id="stat-staged-count">0</strong></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="sniper-topbar-right">
+        <!-- Choice Properties Shared Theme System Toggle -->
+        <div class="theme-toggle sniper-theme-toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme-mode="light" aria-label="Light mode" title="Light"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun"/></svg></button>
+          <button type="button" data-theme-mode="auto"  aria-label="Auto theme" title="Auto"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg></button>
+          <button type="button" data-theme-mode="dark"  aria-label="Dark mode" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        </div>
+
+        <button class="sniper-btn-icon-toggle sniper-btn-queue-toggle" id="sniper-btn-queue-toggle" title="Toggle Staging Drawer (S)" aria-label="Toggle Staging Drawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+          <span class="sniper-topbar-queue-badge" id="sniper-topbar-queue-badge" style="display:none">0</span>
+        </button>
+
+        <button class="sniper-btn-primary-action" id="sniper-btn-scan" title="Scan entire database for watermarks and < 6 photo violations">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-16"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 12l7-7"/></svg>
+          <span>Scan System</span>
+          <span class="sniper-scan-badge" id="sniper-scan-badge" style="display:none">0</span>
+        </button>
+
+        <button class="sniper-btn-icon-toggle" id="sniper-btn-shortcuts" title="Keyboard Shortcuts (?)" aria-label="Keyboard Shortcuts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+        </button>
+
+        <button class="sniper-btn-icon-toggle" id="sniper-btn-fullscreen" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18" id="sniper-fs-icon"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. Main Workspace Layout: Filter Bar + Main Gallery + Staging Sidebar -->
+    <div class="sniper-main-layout">
+
+      <!-- Gallery Column -->
+      <main class="sniper-gallery-column" id="sniper-gallery-column">
+
+        <!-- Filter & Control Toolbar -->
+        <section class="sniper-toolbar-panel" id="sniper-toolbar-panel" aria-label="Catalog Filters">
+          
+          <div class="sniper-filters-row">
+            
+            <!-- Search Input -->
+            <div class="sniper-search-box">
+              <svg class="sniper-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="sniper-search-input" type="search" placeholder="Search address, city, zip, ID…" autocomplete="off" aria-label="Search listings">
+              <button class="sniper-search-clear-btn" id="sniper-search-clear" aria-label="Clear search" style="display:none" type="button">✕</button>
+            </div>
+
+            <!-- Dynamic State Filter -->
+            <div class="sniper-select-wrap">
+              <label for="sniper-state-select" class="sr-only">State</label>
+              <select id="sniper-state-select" aria-label="Filter by state">
+                <option value="">All States</option>
+              </select>
+            </div>
+
+            <!-- Dynamic City Filter -->
+            <div class="sniper-select-wrap">
+              <label for="sniper-city-select" class="sr-only">City</label>
+              <select id="sniper-city-select" aria-label="Filter by city">
+                <option value="">All Cities</option>
+              </select>
+            </div>
+
+            <!-- Dynamic Property Type Filter -->
+            <div class="sniper-select-wrap">
+              <label for="sniper-type-select" class="sr-only">Property Type</label>
+              <select id="sniper-type-select" aria-label="Filter by property type">
+                <option value="">All Property Types</option>
+              </select>
+            </div>
+
+            <!-- Date Added Filter -->
+            <div class="sniper-select-wrap">
+              <label for="sniper-date-select" class="sr-only">Date Added</label>
+              <select id="sniper-date-select" aria-label="Filter by date added">
+                <option value="all">All Time</option>
+                <option value="24h">Past 24 Hours</option>
+                <option value="7d">Past 7 Days</option>
+                <option value="30d">Past 30 Days</option>
+              </select>
+            </div>
+
+            <!-- Photo Compliance / Violation Filter -->
+            <div class="sniper-select-wrap sniper-compliance-wrap">
+              <label for="sniper-compliance-select" class="sr-only">Photo Compliance</label>
+              <select id="sniper-compliance-select" aria-label="Filter by photo compliance status">
+                <option value="all">All Listings</option>
+                <option value="with_photos">With Photos Only</option>
+                <option value="zero_photos">⚠️ 0 Photos (Missing)</option>
+                <option value="under_6_photos">⚠️ &lt; 6 Photos (Policy Alert)</option>
+                <option value="flagged_only">🚨 Watermark Flagged Only</option>
+              </select>
+            </div>
+
+            <!-- Reset Filters Button -->
+            <button class="sniper-btn-reset-filters" id="sniper-btn-reset-filters" title="Reset all filters to defaults" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span>Reset</span>
+            </button>
+
+            <!-- Photo Grid Density Switcher -->
+            <div class="sniper-density-toggle" role="group" aria-label="Photo Grid Sizing">
+              <button type="button" class="sniper-density-btn active" data-density="medium" id="sniper-density-medium" title="Medium Balanced View (Keys: 2)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Medium</span>
+              </button>
+              <button type="button" class="sniper-density-btn" data-density="compact" id="sniper-density-compact" title="Compact Speed View (Keys: 1)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                <span>Compact</span>
+              </button>
+              <button type="button" class="sniper-density-btn" data-density="large" id="sniper-density-large" title="Large Inspection View (Keys: 3)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                <span>Large</span>
+              </button>
+            </div>
+
+            <!-- Focus / Zen Mode Button -->
+            <button class="sniper-btn-focus" id="sniper-btn-focus" title="Toggle Focus Mode to maximize photo area (Key: Z)" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <span>Focus</span>
+            </button>
+
+          </div>
+
+          <!-- Notification Banners -->
+          <!-- System Scan Banner -->
+          <div class="sniper-scan-banner" id="sniper-scan-banner" style="display:none">
+            <div class="sniper-banner-info">
+              <span class="sniper-banner-emoji">🔍</span>
+              <div>
+                <strong id="sniper-scan-title" style="color:#f87171">System Scan Complete:</strong>
+                <span id="sniper-scan-msg" style="color:#fca5a5">Found violations</span>
+              </div>
+            </div>
+            <div class="sniper-banner-actions">
+              <button id="sniper-btn-stage-scan-flagged" class="sniper-btn-banner-action danger">Stage All Scanned Violations</button>
+              <button id="sniper-btn-dismiss-scan" class="sniper-btn-banner-dismiss">Dismiss</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Similarity Priority Banner -->
+          <div class="sniper-priority-banner" id="sniper-priority-banner" style="display:none">
+            <div class="sniper-priority-info">
+              <span class="sniper-priority-icon">⚡</span>
+              <div>
+                <strong id="sniper-prio-count">0 matching properties</strong> detected with similar watermark/landlord patterns.
+              </div>
+            </div>
+            <div class="sniper-priority-actions">
+              <button class="sniper-btn-stage-matches" id="sniper-btn-stage-matches">
+                <span>Stage All Similar</span> (<span id="sniper-match-count">0</span>)
+              </button>
+              <button class="sniper-btn-reset-prio" id="sniper-btn-reset-prio">
+                Dismiss
+              </button>
+            </div>
+          </div>
+
+          <!-- Pagination Bar (Sticky Top) -->
+          <div class="sniper-pagination-bar" id="sniper-pagination-top">
+            <div class="sniper-page-info">
+              <span id="sniper-page-summary">Showing 0–0 of 0 properties</span>
+              <span class="sniper-bullet-sep">•</span>
+              <button type="button" class="sniper-btn-stage-page" id="sniper-btn-stage-page" title="Stage or unstage all properties visible on this page">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-13"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span id="sniper-stage-page-txt">Stage Page</span>
+              </button>
+            </div>
+
+            <div class="sniper-page-controls">
+              
+              <!-- Page size selector -->
+              <div class="sniper-page-size-wrap">
+                <span class="sniper-page-size-lbl">Show:</span>
+                <select id="sniper-page-size-select" aria-label="Properties per page">
+                  <option value="24">24 / page</option>
+                  <option value="48" selected>48 / page</option>
+                  <option value="96">96 / page</option>
+                  <option value="144">144 / page</option>
+                </select>
+              </div>
+
+              <!-- Navigation buttons -->
+              <div class="sniper-nav-btn-group">
+                <button class="sniper-page-btn" id="sniper-page-first" title="First Page" aria-label="First Page" disabled>«</button>
+                <button class="sniper-page-btn" id="sniper-page-prev" title="Previous Page" aria-label="Previous Page" disabled>‹ Prev</button>
+                
+                <div class="sniper-page-numbers" id="sniper-page-numbers-top">
+                  <!-- Page numbers injected here -->
+                </div>
+
+                <button class="sniper-page-btn" id="sniper-page-next" title="Next Page" aria-label="Next Page" disabled>Next ›</button>
+                <button class="sniper-page-btn" id="sniper-page-last" title="Last Page" aria-label="Last Page" disabled>»</button>
+              </div>
+
+              <!-- Jump to page -->
+              <div class="sniper-jump-wrap">
+                <label for="sniper-jump-input" class="sr-only">Jump to page</label>
+                <input type="number" id="sniper-jump-input" min="1" max="1" placeholder="Page" aria-label="Jump to page">
+                <button type="button" id="sniper-jump-btn" class="sniper-page-btn sniper-jump-go">Go</button>
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Main Photo Grid Canvas -->
+        <div class="sniper-grid-viewport" id="sniper-grid-viewport">
+          <div class="sniper-grid-loading-bar" id="sniper-grid-loading-bar" style="display:none"></div>
+          
+          <div class="sniper-grid" id="sniper-grid">
+            <!-- Property cards injected here -->
+          </div>
+
+          <!-- Bottom Pagination Bar -->
+          <div class="sniper-pagination-bar sniper-pagination-bottom" id="sniper-pagination-bottom">
+            <div class="sniper-page-info">
+              <span id="sniper-page-summary-bottom">Page 1 of 1</span>
+            </div>
+            <div class="sniper-page-controls">
+              <button class="sniper-page-btn" id="sniper-page-first-bottom" title="First Page" disabled>« First</button>
+              <button class="sniper-page-btn" id="sniper-page-prev-bottom" disabled>‹ Previous</button>
+              <div class="sniper-page-numbers" id="sniper-page-numbers-bottom"></div>
+              <button class="sniper-page-btn" id="sniper-page-next-bottom" disabled>Next ›</button>
+              <button class="sniper-page-btn" id="sniper-page-last-bottom" title="Last Page" disabled>Last »</button>
+            </div>
+          </div>
+
+          <!-- Floating Scroll-To-Top Button -->
+          <button class="sniper-scroll-top-btn" id="sniper-scroll-top-btn" title="Back to top" aria-label="Back to top" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sniper-icon-14"><polyline points="18 15 12 9 6 15"/></svg>
+            <span>Top</span>
+          </button>
+        </div>
+
+      </main>
+
+      <!-- 3. Staging Queue Panel (Sticky Right Sidebar / Mobile Collapsible Bottom Drawer) -->
+      <aside class="sniper-sidebar" id="sniper-sidebar" aria-label="Staging Queue">
+        <div class="sniper-sidebar-header" id="sniper-sidebar-header">
+          <div class="sniper-queue-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+            <span>Staging Queue</span>
+            <span class="sniper-queue-badge" id="sniper-queue-badge">0</span>
+          </div>
+          <button class="sniper-sidebar-close-btn" id="sniper-sidebar-close-btn" aria-label="Close staging drawer (S or Esc)" title="Close Staging Drawer (S)" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="sniper-queue-list" id="sniper-queue-list">
+          <div class="sniper-empty-queue" id="sniper-empty-queue">
+            <svg class="sniper-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <div class="sniper-empty-title">Queue is empty</div>
+            <div class="sniper-empty-sub">Click any photo or card in the inventory to stage for deletion.</div>
+          </div>
+        </div>
+
+        <div class="sniper-sidebar-footer">
+          <button class="sniper-delete-btn" id="sniper-btn-delete" disabled type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-18"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+            <span>Delete Flagged Listings</span>
+            <span id="sniper-del-count"></span>
+          </button>
+          <button class="sniper-clear-btn" id="sniper-btn-clear" disabled type="button">
+            Clear Staging Queue
+          </button>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- 4. Loading Overlay -->
+    <div class="sniper-loading" id="sniper-loading">
+      <div class="sniper-spinner"></div>
+      <div class="sniper-loading-txt" id="sniper-loading-txt">Querying property inventory…</div>
+    </div>
+
+    <!-- 5. Delete Confirmation Modal -->
+    <div class="sniper-modal-backdrop" id="sniper-delete-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="sniper-modal-box">
+        <div class="sniper-modal-header">
+          <div class="sniper-modal-danger-badge">⚠️ Confirm Permanent Deletion</div>
+          <button class="sniper-modal-close-btn" id="sniper-modal-close-btn" type="button" aria-label="Close dialog">✕</button>
+        </div>
+        <div class="sniper-modal-body">
+          <h2 id="modal-title" class="sniper-modal-title">Permanently delete <span id="modal-del-count">0</span> properties?</h2>
+          <p class="sniper-modal-desc">
+            This operation will perform a full cascading delete from Supabase and hard-delete all associated images from remote storage (ImageKit) per AGENTS.md policy rules.
+          </p>
+          <div class="sniper-modal-prop-preview" id="modal-prop-preview">
+            <!-- Sample addresses listed here -->
+          </div>
+        </div>
+        <div class="sniper-modal-footer">
+          <button class="sniper-btn-modal-cancel" id="sniper-btn-modal-cancel" type="button">Cancel</button>
+          <button class="sniper-btn-modal-confirm" id="sniper-btn-modal-confirm" type="button">Yes, Permanently Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Keyboard Shortcuts Modal -->
+    <div class="sniper-modal-backdrop" id="sniper-shortcuts-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+      <div class="sniper-modal-box sniper-shortcuts-box">
+        <div class="sniper-modal-header">
+          <h2 id="shortcuts-title" class="sniper-modal-title" style="margin:0">Keyboard Shortcuts</h2>
+          <button class="sniper-modal-close-btn" id="sniper-shortcuts-close-btn" type="button" aria-label="Close shortcuts">✕</button>
+        </div>
+        <div class="sniper-modal-body">
+          <div class="sniper-shortcut-list">
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">S</span>
+              <span class="sniper-shortcut-desc">Toggle Staging Queue Drawer</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">1</span> / <span class="sniper-key">2</span> / <span class="sniper-key">3</span>
+              <span class="sniper-shortcut-desc">Switch Grid Size: Compact / Med / Large</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Z</span>
+              <span class="sniper-shortcut-desc">Toggle Focus Mode (hide filters)</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Left Arrow</span> or <span class="sniper-key">Page Up</span>
+              <span class="sniper-shortcut-desc">Previous page</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Right Arrow</span> or <span class="sniper-key">Page Down</span>
+              <span class="sniper-shortcut-desc">Next page</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">/</span>
+              <span class="sniper-shortcut-desc">Focus search field</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Escape</span>
+              <span class="sniper-shortcut-desc">Close dialog / modal / drawer</span>
+            </div>
+            <div class="sniper-shortcut-row">
+              <span class="sniper-key">Delete</span> / <span class="sniper-key">Backspace</span>
+              <span class="sniper-shortcut-desc">Open delete confirmation for staged items</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script defer src="/js/admin/watermark-sniper.js?v=1789982302018"></script>
+</body>
+</html>

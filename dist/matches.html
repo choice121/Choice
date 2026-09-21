@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1789982302018"></script>
+  <script nonce="__CSP_NONCE__">
+    (function(){
+      try {
+        var t = localStorage.getItem('cp-theme');
+        if (t === 'dark' || t === 'light') {
+          document.documentElement.setAttribute('data-theme', t);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your Property Matches — Choice Properties</title>
+  <meta name="description" content="View your personalized curated property matches.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1789982302018">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1789982302018">
+  <style>
+    body[data-portal="public"] {
+      margin: 0;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--m-surface, #f7f9fc);
+      color: var(--m-text, #1f2937);
+      line-height: 1.6;
+    }
+    .match-header {
+      background: var(--m-bg, #ffffff);
+      padding: 40px 24px;
+      text-align: center;
+      border-bottom: 1px solid var(--m-border, #e4e8ef);
+      margin-bottom: 32px;
+      box-shadow: var(--m-shadow-sm, 0 1px 2px rgba(15,23,42,0.06));
+    }
+    .match-header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background: var(--m-brand-pale, #eaf2ff);
+      color: var(--m-brand, #006aff);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .match-header h1 {
+      font-size: clamp(24px, 4vw, 32px);
+      font-weight: 800;
+      color: var(--m-ink, #0a1729);
+      margin: 0 0 10px;
+      letter-spacing: -0.02em;
+    }
+    .match-header p {
+      font-size: 16px;
+      color: var(--m-muted, #4b5563);
+      margin: 0 auto;
+      max-width: 600px;
+    }
+    .matches-container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+    .match-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--m-muted, #4b5563);
+      background: var(--m-bg, #ffffff);
+      border-radius: var(--m-r-xl, 16px);
+      border: 1px solid var(--m-border, #e4e8ef);
+    }
+    .match-empty i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: var(--m-brand, #006aff);
+      opacity: 0.7;
+    }
+    .match-empty h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--m-ink, #0a1729);
+      margin: 0 0 8px;
+    }
+    .match-empty p {
+      font-size: 15px;
+      color: var(--m-muted, #4b5563);
+      margin: 0;
+    }
+    
+    /* ── Embedded Property Overlay ── */
+    #property-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: var(--m-bg, #ffffff);
+      display: none;
+      flex-direction: column;
+    }
+    #property-overlay.active {
+      display: flex;
+    }
+    .property-overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: var(--m-bg, #ffffff);
+      border-bottom: 1px solid var(--m-border, #e4e8ef);
+      box-shadow: var(--m-shadow-sm, 0 1px 3px rgba(15,23,42,0.08));
+      z-index: 2;
+    }
+    .property-overlay-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--m-muted, #4b5563);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .property-overlay-close {
+      background: var(--m-surface, #f7f9fc);
+      border: 1px solid var(--m-border, #e4e8ef);
+      color: var(--m-ink, #0a1729);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .property-overlay-close:hover {
+      background: var(--m-surface-2, #eff2f7);
+      border-color: var(--m-border-strong, #d4dae3);
+      color: var(--m-brand, #006aff);
+    }
+    #property-iframe {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: var(--m-bg, #ffffff);
+      -webkit-overflow-scrolling: touch;
+    }
+  </style>
+</head>
+<body data-portal="public" class="cp-page-matches">
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ── Main Navigation (Isolated Branded Header) ── -->
+  <nav class="nav mv2-nav" id="mainNav">
+    <div class="nav-inner mv2-nav-inner">
+      <div class="nav-logo mv2-nav-logo">
+        <div class="nav-logo-emblem">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+            <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+          </svg>
+        </div>
+        <div class="nav-logo-text-wrap">
+          <div class="nav-logo-name mv2-nav-logo-name">Choice Properties</div>
+          <div class="nav-logo-tagline mv2-nav-logo-tagline">Rental Marketplace</div>
+        </div>
+      </div>
+      <div class="nav-links mv2-nav-links">
+        <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
+          <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
+          <i class="fas fa-sun theme-toggle__icon theme-toggle__icon--sun"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="mainContent">
+    <div id="matchHeaderContainer">
+      <div class="match-header">
+        <div class="match-header-badge"><i class="fas fa-spinner fa-spin"></i> Loading</div>
+        <h1>Loading your curated matches...</h1>
+        <p>Retrieving your personalized collection.</p>
+      </div>
+    </div>
+    
+    <div class="matches-container">
+      <div class="property-grid property-list-view" id="propertyGrid" role="list">
+        <!-- Skeleton loaders while loading -->
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:35%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
+            <div class="skeleton skeleton-line" style="width:55%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:40%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:38%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
+            <div class="skeleton skeleton-line" style="width:60%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:45%;margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer mv2-footer">
+    <div class="footer-container mv2-footer-container" style="justify-content:center; text-align:center; padding:32px 20px;">
+      <div class="footer-brand mv2-footer-brand" style="margin:0 auto; display:flex; flex-direction:column; align-items:center;">
+        <div class="nav-logo-emblem" style="margin-bottom:10px;">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+            <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+          </svg>
+        </div>
+        <div class="footer-logo mv2-footer-logo" style="font-weight:700; font-size:16px;">Choice Properties</div>
+        <p class="footer-desc mv2-footer-desc" style="margin-top:4px; font-size:14px; color:var(--m-muted, #64748b);">Curated homes and seamless rentals.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div id="property-overlay">
+    <div class="property-overlay-header">
+      <div class="property-overlay-title">
+        <i class="fas fa-home"></i> Property Details
+      </div>
+      <button class="property-overlay-close" id="closeOverlayBtn">
+        <i class="fas fa-arrow-left"></i> Back to Collection
+      </button>
+    </div>
+    <iframe id="property-iframe" title="Property Details"></iframe>
+  </div>
+
+  <script defer src="/config.js?v=1789982302018"></script>
+  <script defer src="/js/supabase.min.js?v=1789982302018"></script>
+  <script defer src="/js/cp-ui.js?v=1789982302018"></script>
+  <script type="module" src="/js/cp-api.js?v=1789982302018"></script>
+  <script defer src="/js/card-builder.js?v=1789982302018"></script>
+  <script type="module" src="/js/matches.js?v=1789982302018"></script>
+</body>
+</html>

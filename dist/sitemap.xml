@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Domain: choice-properties-site.pages.dev
+
+  This is now a SITEMAP INDEX. It points to two child sitemaps:
+
+  1. /sitemap-pages.xml     — the small set of static marketing pages
+  2. /sitemap-properties.xml — every active property listing
+                               (generated dynamically by
+                                functions/sitemap-properties.xml.js)
+
+  The dynamic file is generated at request time from Supabase, cached
+  for 1 hour at the edge, and revalidated in the background after that.
+-->
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://choice-properties-site.pages.dev/sitemap-pages.xml</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://choice-properties-site.pages.dev/sitemap-properties.xml</loc>
+  </sitemap>
+</sitemapindex>
