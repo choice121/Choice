@@ -6,8 +6,9 @@ echo "📊 Checking git status..."
 if [ -n "$(git status --porcelain)" ]; then
   echo "📝 Staging changes..."
   git add -A
-  echo "✅ Committing changes..."
-  git commit -m "feat(extension): upgrade Zillow UI to v5.0 with live inspection card, integrated photo progress, and instant live loader"
+  MSG="${1:-feat(extension): release v18.0.0 with universal zip serving and Opendoor/Progress Residential support}"
+  echo "✅ Committing changes: $MSG..."
+  git commit -m "$MSG"
 fi
 
 echo "📤 Pushing changes to GitHub..."
