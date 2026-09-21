@@ -43,6 +43,7 @@ const MIME = {
   '.ttf':  'font/ttf',
   '.webp': 'image/webp',
   '.pdf':  'application/pdf',
+  '.zip':  'application/zip',
   '.txt':  'text/plain; charset=utf-8',
   '.xml':  'application/xml; charset=utf-8',
   '.webmanifest': 'application/manifest+json',
@@ -168,9 +169,13 @@ const server = http.createServer(async (req, res) => {
     filePath = path.join(filePath, 'index.html');
   }
 
-  // Try appending .html if direct file doesn't exist
   if (!fs.existsSync(filePath) && fs.existsSync(filePath + '.html')) {
     filePath = filePath + '.html';
+  } else if (!fs.existsSync(filePath)) {
+    const publicCandidate = path.join(ROOT, 'public', urlPath);
+    if (fs.existsSync(publicCandidate) && !fs.statSync(publicCandidate).isDirectory()) {
+      filePath = publicCandidate;
+    }
   }
 
   fs.readFile(filePath, (err, data) => {

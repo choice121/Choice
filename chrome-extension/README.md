@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v15.0.0)
+# Choice Properties — Universal Chrome Extension (v18.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **7 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -12,8 +12,8 @@ A browser extension that allows Choice Properties agents to save rental listings
 | **Realtor.com** | `realtor.com/realestateandhomes-detail/*` | `__NEXT_DATA__` (`pageProps.initialState`) |
 | **Apartments.com** | `apartments.com/*` | Microdata / JSON-LD + Dynamic DOM Table |
 | **Redfin** | `redfin.com/*` | `__NEXT_DATA__` + `reactServerState` |
-| **Opendoor** | `opendoor.com/homes/*` | Hydrated State (`pageProps.home`) + DOM |
-| **Progress Residential** | `rentprogress.com/houses-for-rent/*` | Hydrated State (`pageProps.property`) + Fastly CDN |
+| **Opendoor** | `opendoor.com/properties/*`, `opendoor.com/homes/*` | React Query Dehydrated State + Script Scanner + Slug Parser + DOM |
+| **Progress Residential** | `rentprogress.com/houses-for-rent/*`, `rentprogress.com/homes/*` | Hydrated State (`pageProps.property`) + Script Scanner + Fastly CDN |
 | **CJ Real Estate** | `cjproperties.org/*`, `appfolio.com/*` | AppFolio Schema + high-res s3 galleries |
 
 ---
@@ -26,6 +26,7 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Mini photo thumbnail ribbon for instant visual preview.
   - Verified architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.).
   - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
+- **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
 - **Instant Folder Selection**: Fast in-memory cached folder selector loads with 0ms network latency.
 - **Global Keyboard Shortcut**: Press `Cmd+Shift+S` (or `Ctrl+Shift+S`) to save immediately from anywhere on the page.
 - **Resilient Auto-Retry Background Worker**: Automatically retries with exponential backoff on transient network drops to guarantee zero dropped listings.

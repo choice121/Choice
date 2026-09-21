@@ -162,6 +162,15 @@ with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
 print(f'✅ Successfully packaged choice-properties-extension.zip v${newVersion} ({os.path.getsize(output_path)} bytes)')
 "`, { cwd: ROOT, stdio: 'inherit' });
 
+// Also copy to root and dist for universal HTTP serving
+try {
+  fs.copyFileSync(ZIP_PATH, path.join(ROOT, 'choice-properties-extension.zip'));
+  const distZip = path.join(ROOT, 'dist', 'choice-properties-extension.zip');
+  if (fs.existsSync(path.join(ROOT, 'dist'))) {
+    fs.copyFileSync(ZIP_PATH, distZip);
+  }
+} catch (_) {}
+
 // ── 6. Run Extractors Test Suite to Guarantee Zero Breakage ───────────
 console.log('🧪 Running extractor test suite...');
 execSync('node chrome-extension/test-extractors.js', { cwd: ROOT, stdio: 'inherit' });

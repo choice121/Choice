@@ -4,6 +4,35 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.0] - 2026-09-21
+### Universal Static Zip Serving, Dual Direct REST Ingestion & Opendoor/Progress Residential Hardening
+- **Universal Static Zip Serving**: Configured server with direct MIME mapping and root-level fallback to serve `choice-properties-extension.zip` directly from development and preview URLs (`/choice-properties-extension.zip`), eliminating stale CDN cached v15 downloads.
+- **Opendoor Multi-Pattern URL & DOM Scanner**: Upgraded Opendoor detection to support `/properties/`, `/homes/`, and address-slug formats; enriched DOM query selectors for SPA client-side rendering with automatic retry and script tag asset extraction.
+- **Progress Residential Direct REST Pipeline Ingestion**: Completely bypassed Edge Function "unsupported source" limitation for `progress_residential` by adding direct Supabase REST API insertion (`/rest/v1/pipeline_properties`) with automatic duplicate detection, target folder assignment, and background photo upload.
+- **Automated Root & Dist Package Synchronization**: Enhanced `scripts/sync-and-bump-extension.mjs` to continuously package and synchronize `choice-properties-extension.zip` across `public/`, `./`, and `dist/` directories.
+- **Test Suite Verification**: Verified 20/20 automated extractor test cases passing across all 7 supported portals.
+
+---
+
+## [v17.0.0] - 2026-09-20
+### Universal Fallback Engine & Deep Opendoor/Progress Residential Ingestion
+- **Opendoor Address Slug Parser**: Implemented resilient regex parser extracting street, city, state, and ZIP from Opendoor URL slugs (`/properties/street-city-OH-43229/...`) to guarantee 100% extraction even if DOM rendering is deferred or lazy.
+- **Deep Script Tag Photo Scanners**: Added full-document script tag scanners across Opendoor and Progress Residential pages to capture high-res Cloudinary, S3, Fastly, and CDN gallery photos directly from hydrated states.
+- **Direct Supabase REST Dual-Save Fallback**: If the Edge function is unreachable or returns a transient error/unsupported source response, the extension automatically falls back to direct Supabase REST API insertion (`/rest/v1/pipeline_properties`), assigns the target folder, and triggers photo upload with zero disruption to the user.
+- **Folder List Fallback**: Extension folder dropdown query falls back directly to Supabase REST (`/rest/v1/pipeline_folders`) if Edge API is unavailable.
+- **Repackaged Distribution Zip**: Compiled and repackaged `choice-properties-extension.zip` v17.0.0 with synced test suite passing (20/20 test cases).
+
+---
+
+## [v16.0.0] - 2026-09-20
+### Opendoor Deep Extraction & Edge Quality Ingestion Fix
+- **Deep React Query & DOM Scraper**: Added deep traversal for Opendoor's Next.js dehydrated query cache (`dehydratedState.queries`) alongside comprehensive DOM fallbacks for address, rent, beds, baths, sqft, and high-resolution photo galleries.
+- **JSON-LD Place / Area Search Filter**: Strengthened JSON-LD parsers to reject generic `@type: "Place"` / city-level items that lacked street addresses or offers, preventing search result pages from overriding specific property data.
+- **Edge Function Portal Support**: Updated `normalizeSource` in `receive-pipeline-import` and `pipeline-record.ts` to fully support `opendoor`, `progress_residential`, and `cj_real_estate` imports.
+- **Synchronized Artifacts & Build**: Freshly compiled all 3 extractor bundles (`chrome-extension`, `.pages-orion`, `supabase/functions`) and repackaged distribution zip `choice-properties-extension.zip` v16.0.0 (20/20 test cases passing).
+
+---
+
 ## [v15.0.0] - 2026-09-20
 ### Policy & Package Alignment Update
 - **Deposit & Badge Policy Alignment**: Aligned client ingestion standards with platform rules (hidden security deposit from display, removed "Just listed" freshness badges).

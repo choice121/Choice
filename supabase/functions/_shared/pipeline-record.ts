@@ -97,8 +97,14 @@ export function normalizePropType(v: unknown): string | null {
 
 export function normalizeSource(v: unknown): string {
   const source = safeStr(v)?.toLowerCase() ?? 'zillow';
-  if (!['zillow', 'realtor', 'apartments', 'redfin'].includes(source)) {
-    throw new Error(`Unsupported source: ${source}`);
+  const allowed = [
+    'zillow', 'realtor', 'apartments', 'redfin',
+    'opendoor', 'progress', 'progress_residential', 'cjrealestate', 'cj_real_estate',
+  ];
+  if (!allowed.includes(source)) {
+    if (source.includes('opendoor')) return 'opendoor';
+    if (source.includes('progress')) return 'progress_residential';
+    if (source.includes('cj')) return 'cj_real_estate';
   }
   return source;
 }
