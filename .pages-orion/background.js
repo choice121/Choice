@@ -239,7 +239,7 @@ async function optimizeImageBlob(blob, maxWidth, quality) {
 // Retries transient failures with exponential backoff.
 async function downloadPhoto(url) {
   const parsedUrl = new URL(url);
-  const allowedHosts = /(^|\.)((zillowstatic\.com)|(rdcpix\.com)|(apartments\.com)|(redfin\.com))$/i;
+  const allowedHosts = /(^|\.)((zillowstatic\.com)|(rdcpix\.com)|(apartments\.com)|(redfin\.com)|(cdn-redfin\.com)|(opendoor\.com)|(cloudinary\.com)|(rentprogress\.com)|(fastly\.net)|(amazonaws\.com)|(cjproperties\.org)|(cjrealestate\.com)|(appfolio\.com))$/i;
   if (parsedUrl.protocol !== 'https:' || !allowedHosts.test(parsedUrl.hostname)) {
     console.warn('[CP] Refusing photo download from unsupported host:', parsedUrl.hostname);
     return null;
