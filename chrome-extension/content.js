@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v18.0.0
+// Choice Properties — Universal Content Script & UI Engine v18.0.4
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, and CJ Real Estate.
@@ -14,9 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var SUPABASE_URL = 'https://tlfmwetmhthpyrytrcfo.supabase.co';
-  var SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
-  var VERSION  = '18.0.0';
+  var VERSION  = '18.0.4';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -379,21 +377,6 @@
           }
         } catch (_) {}
 
-        if (!foldersList) {
-          try {
-            var directRes = await fetch(SUPABASE_URL + '/rest/v1/pipeline_folders?select=id,name,icon,serial_number&order=created_at.asc', {
-              headers: {
-                'apikey': SERVICE_KEY,
-                'Authorization': 'Bearer ' + SERVICE_KEY,
-                'Accept-Profile': 'pipeline'
-              }
-            });
-            if (directRes.ok) {
-              foldersList = await directRes.json();
-            }
-          } catch (_) {}
-        }
-
         if (Array.isArray(foldersList) && foldersList.length > 0) {
           setCachedFolders(foldersList);
           var currentVal = folderSelect.value;
@@ -494,7 +477,7 @@
         _import: 'browser-extension-v' + VERSION,
       };
 
-      // ── Step 1: Save property record with Edge + Direct Supabase fallback ──────────
+      // ── Step 1: Save the property record through the pipeline function ────────────
       var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
       var resp = null;
       var retries = 2;
@@ -512,14 +495,6 @@
           retries--;
           if (retries < 0) break;
           await new Promise(function (r) { setTimeout(r, 600); });
-        }
-      }
-
-      // If Edge function failed or rejected source, fall back to direct Supabase REST insert
-      if (!resp || (!resp.ok && !resp.duplicate)) {
-        var directResp = await directSupabaseSave(payload);
-        if (directResp && (directResp.ok || directResp.duplicate)) {
-          resp = directResp;
         }
       }
 
@@ -579,103 +554,6 @@
       console.error('[CP] handleSave error:', e);
       isSaving = false;
       setError('Network connection error');
-    }
-  }
-
-  async function directSupabaseSave(payload) {
-    try {
-      var sourceListingId = String(payload.source_listing_id || ('gen_' + Date.now()));
-      var source = payload.source || 'zillow';
-
-      // 1. Check duplicate
-      try {
-        var dupRes = await fetch(SUPABASE_URL + '/rest/v1/pipeline_properties?source_listing_id=eq.' + encodeURIComponent(sourceListingId) + '&source=eq.' + encodeURIComponent(source) + '&select=id,title,folder_id,folder_serial', {
-          headers: {
-            'apikey': SERVICE_KEY,
-            'Authorization': 'Bearer ' + SERVICE_KEY,
-            'Accept-Profile': 'pipeline'
-          }
-        });
-        if (dupRes.ok) {
-          var existingList = await dupRes.json();
-          if (Array.isArray(existingList) && existingList.length > 0) {
-            var existing = existingList[0];
-            return { ok: false, duplicate: true, id: existing.id, title: existing.title, message: 'Already in pipeline' };
-          }
-        }
-      } catch (_) {}
-
-      // 2. Insert record directly into pipeline schema
-      var recId = 'PP-' + Math.floor(10000000 + Math.random() * 90000000);
-      var row = {
-        id: recId,
-        source: source,
-        source_url: payload.source_url || '',
-        source_listing_id: sourceListingId,
-        status: 'scraped',
-        title: payload.title || (payload.address ? (payload.bedrooms ? payload.bedrooms + ' Bed in ' : '') + (payload.city || 'Rental') : 'Rental Listing'),
-        address: payload.address || '',
-        city: payload.city || null,
-        state: payload.state || null,
-        zip: payload.zip || null,
-        monthly_rent: payload.monthly_rent != null ? payload.monthly_rent : null,
-        bedrooms: payload.bedrooms != null ? payload.bedrooms : null,
-        bathrooms: payload.bathrooms != null ? payload.bathrooms : null,
-        half_bathrooms: payload.half_bathrooms != null ? payload.half_bathrooms : null,
-        square_footage: payload.square_footage != null ? payload.square_footage : null,
-        year_built: payload.year_built != null ? payload.year_built : null,
-        property_type: payload.property_type || 'SINGLE_FAMILY',
-        description: payload.description || null,
-        original_description: payload.original_description || payload.description || null,
-        pets_allowed: true,
-        application_fee: 50,
-        security_deposit: payload.monthly_rent || null,
-        original_image_urls: payload.original_image_urls || '[]',
-        local_image_paths: '[]',
-        folder_id: payload.folder_id || null,
-        scraped_at: new Date().toISOString()
-      };
-
-      var insRes = await fetch(SUPABASE_URL + '/rest/v1/pipeline_properties', {
-        method: 'POST',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': 'Bearer ' + SERVICE_KEY,
-          'Content-Type': 'application/json',
-          'Accept-Profile': 'pipeline',
-          'Content-Profile': 'pipeline',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(row)
-      });
-
-      if (!insRes.ok) {
-        var errText = await insRes.text();
-        return { ok: false, error: errText };
-      }
-
-      var inserted = await insRes.json();
-      var created = Array.isArray(inserted) ? inserted[0] : inserted;
-
-      if (payload.folder_id && created && created.id) {
-        try {
-          var fRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/pipeline_folder_add_property', {
-            method: 'POST',
-            headers: {
-              'apikey': SERVICE_KEY,
-              'Authorization': 'Bearer ' + SERVICE_KEY,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ p_property_id: created.id, p_folder_id: payload.folder_id })
-          });
-          var fData = await fRes.json();
-          return { ok: true, id: created.id, title: created.title, folder: fData };
-        } catch (_) {}
-      }
-
-      return { ok: true, id: created.id, title: created.title };
-    } catch (e) {
-      return { ok: false, error: e.message || 'Direct save error' };
     }
   }
 
@@ -820,23 +698,6 @@
         if (res.ok) updated = true;
       } catch (_) {}
 
-      if (!updated && originalPayload && originalPayload.source_listing_id) {
-        var ikJson = JSON.stringify(uploadedPhotos);
-        await fetch(SUPABASE_URL + '/rest/v1/pipeline_properties?source_listing_id=eq.' + encodeURIComponent(originalPayload.source_listing_id) + '&source=eq.' + encodeURIComponent(originalPayload.source || 'zillow'), {
-          method: 'PATCH',
-          headers: {
-            'apikey': SERVICE_KEY,
-            'Authorization': 'Bearer ' + SERVICE_KEY,
-            'Content-Type': 'application/json',
-            'Accept-Profile': 'pipeline',
-            'Content-Profile': 'pipeline'
-          },
-          body: JSON.stringify({
-            original_image_urls: ikJson,
-            image_urls: ikJson
-          })
-        });
-      }
     } catch (e) {}
   }
 
