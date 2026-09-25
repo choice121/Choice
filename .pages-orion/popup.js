@@ -5,11 +5,14 @@
 
 (async function () {
   try {
+    const EXTENSION_API = (typeof chrome !== 'undefined' && chrome.tabs) ? chrome :
+      ((typeof browser !== 'undefined' && browser.tabs) ? browser : null);
+
     // Query the active tab to see context
     let tab = null;
     try {
-      if (chrome.tabs && chrome.tabs.query) {
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (EXTENSION_API && EXTENSION_API.tabs && EXTENSION_API.tabs.query) {
+        const tabs = await EXTENSION_API.tabs.query({ active: true, currentWindow: true });
         tab = tabs && tabs[0];
       }
     } catch (_) {}
@@ -33,8 +36,8 @@
     // Get session count from badge (fallback to "—" if API not available)
     let count = 0;
     try {
-      if (chrome.action && chrome.action.getBadgeText) {
-        const badgeText = await chrome.action.getBadgeText({});
+      if (EXTENSION_API && EXTENSION_API.action && EXTENSION_API.action.getBadgeText) {
+        const badgeText = await EXTENSION_API.action.getBadgeText({});
         count = parseInt(badgeText, 10) || 0;
       }
     } catch (_) {}
@@ -42,8 +45,8 @@
 
     // Queue status
     try {
-      if (chrome.storage && chrome.storage.local) {
-        const data = await chrome.storage.local.get({ cp_queue: [] });
+      if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
+        const data = await EXTENSION_API.storage.local.get({ cp_queue: [] });
         const queue = data.cp_queue || [];
         if (queue.length > 0) {
           queueRow.style.display = 'flex';
@@ -57,7 +60,7 @@
           flushBtn.disabled = true;
           flushBtn.textContent = 'Syncing…';
           try {
-            await chrome.runtime.sendMessage({ type: 'FLUSH_QUEUE' });
+            await EXTENSION_API.runtime.sendMessage({ type: 'FLUSH_QUEUE' });
           } catch (_) {}
           setTimeout(() => window.close(), 800);
         });
@@ -78,8 +81,8 @@
     // ── Settings toggles ──────────────────────────────────────
     try {
       let s = { downloadToPC: true, offlineQueue: true };
-      if (chrome.storage && chrome.storage.local) {
-        const settings = await chrome.storage.local.get({ cp_settings: { downloadToPC: true, offlineQueue: true } });
+      if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
+        const settings = await EXTENSION_API.storage.local.get({ cp_settings: { downloadToPC: true, offlineQueue: true } });
         s = settings.cp_settings || s;
       }
 
@@ -90,8 +93,8 @@
 
       const save = async () => {
         try {
-          if (chrome.storage && chrome.storage.local) {
-            await chrome.storage.local.set({
+          if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
+            await EXTENSION_API.storage.local.set({
               cp_settings: { downloadToPC: dlToggle.checked, offlineQueue: oqToggle.checked }
             });
           }

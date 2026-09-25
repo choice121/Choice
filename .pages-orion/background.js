@@ -7,7 +7,7 @@
 // Orion/Safari compatibility: some environments expose `browser` instead
 // of `chrome`, and `chrome.storage.session` is not available.
 if (typeof browser !== 'undefined' && typeof chrome === 'undefined') {
-  try { window.chrome = browser; } catch (_) {}
+  try { globalThis.chrome = browser; } catch (_) {}
 }
 
 // Polyfill AbortSignal.timeout for older browsers (Orion/Safari)

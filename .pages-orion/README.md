@@ -1,6 +1,8 @@
-# Import to Choice Properties — Chrome Extension
+# Import to Choice Properties — Orion Extension
 
-One-click listing → Pipeline importer for **Zillow, Realtor.com, Apartments.com, and Redfin**. No server fetch, no IP blocking, all photos captured.
+One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, and CJ Real Estate**.
+
+The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
 ## How it works
 
@@ -8,10 +10,9 @@ When you open any supported listing detail page, the extension injects a purple 
 
 **Why it never gets blocked:** The extension reads the page's embedded JSON (`__NEXT_DATA__` / Redux state) directly from the already-loaded page (same data your browser is already displaying). No outbound fetch to the listing site, no datacenter IP, nothing to block.
 
-## v2.0 features
+## Features
 
-- **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin (per-site extractors in `shared-extractors.js`)
-- **Download to PC** — each save also writes `listing.json` + all photos to `~/Downloads/ChoiceImports/{id}/` (toggle in popup)
+- **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, and CJ Real Estate (per-site extractors in `shared-extractors.js`)
 - **Offline queue** — if the pipeline is unreachable, the listing is queued in `chrome.storage.local` and auto-synced when back online (badge shows amber count; "Sync now" button in popup)
 - **Settings** — enable/disable Download-to-PC and Offline queue from the popup
 
@@ -22,26 +23,26 @@ When you open any supported listing detail page, the extension injects a purple 
 ### Step 1 — Generate icons (one time only)
 
 ```bash
-cd chrome-extension
+cd .pages-orion
 node generate-icons.js
 ```
 
 This creates `icons/icon16.png`, `icon32.png`, `icon48.png`, `icon128.png`.
 
-### Step 2 — Load into Chrome
+### Step 2 — Load into the browser
 
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (toggle, top-right)
+1. Open the browser's extension manager
+2. Enable **Developer mode**
 3. Click **Load unpacked**
-4. Select the `chrome-extension/` folder from this project
+4. Select the `.pages-orion/` folder from this project
 5. Done ✓
 
 The extension icon appears in your Chrome toolbar.
 
 ### Step 3 — Use it
 
-1. Browse to any supported listing detail page  
-   *(Zillow `zillow.com/homedetails/…`, Realtor.com, Apartments.com, or Redfin)*
+1. Browse to any supported listing detail page
+   *(Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, or CJ Real Estate)*
 2. Click the purple **↓ Save to Pipeline** button (bottom-right corner)
 3. Button turns green: "✓ Saved! 24 photos · San Francisco · Q:88/100"
 4. Open your [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to review and publish
@@ -73,11 +74,11 @@ Photos are stored as source URLs and transferred to ImageKit automatically when 
 
 ## Updating
 
-The extension lives in this repo under `chrome-extension/`. To update:
+The extension lives in this repo under `.pages-orion/`. To update:
 
-1. Edit `content.js` (extraction logic) or `content.css` (button style)
-2. Go to `chrome://extensions` → click the **↺ refresh** icon on the extension card
-3. Reload any open Zillow tabs
+1. Edit `live-content.js`, `content.js`, or `content.css`
+2. Reload the extension from the browser's extension manager
+3. Reload any open listing tabs
 
 No reinstall needed for code changes — just refresh.
 
@@ -85,9 +86,8 @@ No reinstall needed for code changes — just refresh.
 
 ## Works on
 
-- Chrome / Chromium (primary)
-- Microsoft Edge (Chromium-based) — same install steps
-- Brave, Arc, or any Chromium browser
+- Orion-compatible browser builds with Manifest V3 support
+- Chromium-based browsers should use the main `chrome-extension/` package
 
 ---
 
@@ -97,7 +97,8 @@ No reinstall needed for code changes — just refresh.
 |---|---|
 | `manifest.json` | Extension config (MV3) |
 | `shared-extractors.js` | Multi-site extractor registry (Zillow, Realtor, Apartments, Redfin) |
-| `content.js` | Injected on supported sites — extracts data + renders button |
+| `content.js` | Extension bridge for photo downloads and bundled runtime startup |
+| `live-content.js` | Injected UI, save flow, retry handling, and photo upload progress |
 | `content.css` | Floating button styles |
 | `background.js` | Service worker — session count, offline queue flush, badge |
 | `popup.html` / `popup.js` | Toolbar popup — session count, queue status, settings toggles |
