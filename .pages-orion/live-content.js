@@ -494,6 +494,18 @@
     return unique;
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
+  }
+
   // ── Build & Inject Main Widget ──────────────────────────────
   function removeWidget() {
     if (activeWidget) {
@@ -560,7 +572,7 @@
         <div class="cp-logo-icon">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         </div>
-        <span>${rentStr} • Choice Import</span>
+        <span>${escapeHtml(rentStr)} • Choice Import</span>
       </div>
 
       <!-- Full Body -->
@@ -573,7 +585,7 @@
             <span class="cp-brand-title">Choice Properties</span>
           </div>
           <div class="cp-header-badges">
-            <span class="cp-badge-verified">${sourceLabel} Verified</span>
+            <span class="cp-badge-verified">${escapeHtml(sourceLabel)} Verified</span>
             <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
             <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
@@ -581,11 +593,11 @@
 
         <div class="cp-body">
           <div class="cp-property-snapshot">
-            <div class="cp-address-line" title="${addressStr}">${addressStr}</div>
+            <div class="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
             <div class="cp-chips-row">
-              <span class="cp-chip cp-chip-price">${rentStr}</span>
-              <span class="cp-chip">${bedsBaths}</span>
-              <span class="cp-chip cp-chip-photos">📸 ${photoCount} photos</span>
+              <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
+              <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
+              <span class="cp-chip cp-chip-photos">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
@@ -834,7 +846,7 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
-    saveBtn.innerHTML = '<span>Failed: ' + msg + '</span>';
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     setTimeout(function () {
@@ -893,7 +905,8 @@
         EXTENSION_API.runtime.sendMessage(
           { type: 'DOWNLOAD_PHOTO', url: url },
           function (response) {
-            if (chrome.runtime.lastError) {
+            var runtimeError = EXTENSION_API.runtime.lastError;
+            if (runtimeError) {
               resolve(null);
               return;
             }
@@ -1036,8 +1049,12 @@
           if (cardResp && cardResp.ok) {
             btn.classList.add('cp-saved');
             btn.innerHTML = '<span>Saved ✓</span>';
-          } else {
+          } else if (cardResp && cardResp.duplicate) {
             btn.innerHTML = '<span>Already in DB</span>';
+          } else {
+            var errorMessage = cardResp && cardResp.error ? String(cardResp.error).slice(0, 45) : 'Save failed';
+            btn.innerHTML = '<span>' + escapeHtml(errorMessage) + '</span>';
+            btn.disabled = false;
           }
         } catch (err) {
           btn.innerHTML = '<span>Saved to Tab</span>';

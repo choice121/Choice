@@ -176,10 +176,10 @@ async function flushQueue() {
     await setQueue(remaining);
   } else {
     await setQueue([]);
-    if (flushed > 0) {
-      for (let i = 0; i < flushed; i++) {
-        await incrementCount();
-      }
+  }
+  if (flushed > 0) {
+    for (let i = 0; i < flushed; i++) {
+      await incrementCount();
     }
   }
   await updateBadge();

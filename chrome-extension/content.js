@@ -136,6 +136,18 @@
     return unique;
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
+  }
+
   // ── Build & Inject Main Widget ──────────────────────────────
   function removeWidget() {
     if (activeWidget) {
@@ -201,7 +213,8 @@
     var cached = getCachedFolders();
     var folderOptionsHtml = '<option value="">(Default / Main Inbox)</option>';
     cached.forEach(function (f) {
-      folderOptionsHtml += '<option value="' + f.id + '">' + (f.icon || '📁') + ' ' + f.name + '</option>';
+      folderOptionsHtml += '<option value="' + escapeHtml(f.id) + '">' +
+        escapeHtml(f.icon || '📁') + ' ' + escapeHtml(f.name) + '</option>';
     });
 
     container.innerHTML = `
@@ -210,7 +223,7 @@
         <div class="cp-logo-icon">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         </div>
-        <span>${rentStr} • Choice Import</span>
+        <span>${escapeHtml(rentStr)} • Choice Import</span>
       </div>
 
       <!-- Full Body -->
@@ -231,19 +244,19 @@
 
         <div class="cp-body">
           <div class="cp-property-snapshot">
-            <div class="cp-address-line" title="${addressStr}">${addressStr}</div>
+            <div class="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
             <div class="cp-chips-row">
-              <span class="cp-chip cp-chip-price">${rentStr}</span>
-              <span class="cp-chip">${bedsBaths}</span>
-              <span class="cp-chip ${photoBadgeClass}">${photoBadgeText}</span>
-              <span class="cp-chip cp-chip-type">${propType}</span>
+              <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
+              <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
+              <span class="cp-chip ${photoBadgeClass}">${escapeHtml(photoBadgeText)}</span>
+              <span class="cp-chip cp-chip-type">${escapeHtml(propType)}</span>
             </div>
 
             <!-- Mini Photo Pre-Flight Strip -->
             ${photoUrls.length > 0 ? `
               <div class="cp-photo-preview-strip">
                 ${photoUrls.slice(0, 5).map(function (u) {
-                  return '<img src="' + u + '" class="cp-photo-thumb" alt="thumb" loading="lazy" />';
+                  return '<img src="' + escapeHtml(u) + '" class="cp-photo-thumb" alt="thumb" loading="lazy" />';
                 }).join('')}
                 ${photoUrls.length > 5 ? '<span class="cp-photo-more">+' + (photoUrls.length - 5) + '</span>' : ''}
               </div>
@@ -535,7 +548,7 @@
       } else if (resp && resp.duplicate) {
         isSaving = false;
         if (resp.folder && resp.folder.folder) {
-          saveBtn.innerHTML = '<span>Updated Folder (' + (resp.folder.folder.slice(0, 14)) + ')</span>';
+          saveBtn.innerHTML = '<span>Updated Folder (' + escapeHtml(resp.folder.folder.slice(0, 14)) + ')</span>';
           saveBtn.style.background = '#059669';
         } else {
           saveBtn.innerHTML = '<span>Already in Pipeline</span>';
@@ -560,7 +573,7 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
-    saveBtn.innerHTML = '<span>Failed: ' + msg + '</span>';
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     setTimeout(function () {
@@ -752,8 +765,12 @@
           if (cardResp && cardResp.ok) {
             btn.classList.add('cp-saved');
             btn.innerHTML = '<span>Saved ✓</span>';
-          } else {
+          } else if (cardResp && cardResp.duplicate) {
             btn.innerHTML = '<span>In Pipeline</span>';
+          } else {
+            var errorMessage = cardResp && cardResp.error ? String(cardResp.error).slice(0, 45) : 'Save failed';
+            btn.innerHTML = '<span>' + escapeHtml(errorMessage) + '</span>';
+            btn.disabled = false;
           }
         } catch (err) {
           btn.innerHTML = '<span>Saved to Tab</span>';
