@@ -714,11 +714,11 @@ function renderProperty(p) {
   const availColor = availNow ? '#10b981' : '#d4a017';
   if (_availEl) {
     _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availEl.style.display = 'none';
+    _availEl.style.display = '';
   }
   if (_availStickyEl) {
     _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availStickyEl.style.display = 'none';
+    _availStickyEl.style.display = '';
   }
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
@@ -3316,10 +3316,10 @@ function renderPropFacts(p) {
     if (fd) fd.style.display = '';
   }
 
-  // Suppress "Available From" in Costs table — shown in move-in card instead
+  // Show "Available From" in Costs table when future available_date is present
   if (!availNow && p.available_date) {
     const moveInRow = document.getElementById('sidebarMoveInRow');
-    if (moveInRow) moveInRow.style.display = 'none';
+    if (moveInRow) moveInRow.style.display = '';
   }
 
   section.style.display = '';
