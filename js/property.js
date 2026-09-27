@@ -3282,7 +3282,7 @@ function renderPropFacts(p) {
   // Move-in: available (future date only — if now, header chip already says so)
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
   const moveInCard = card('Move-in', 'fa-key', [
-    row('Available',   !availNow && p.available_date ? formatDate(p.available_date) : null),
+    row('Available',   availNow ? 'Immediate' : formatDate(p.available_date)),
   ]);
 
   // Interior: heating / cooling / laundry
