@@ -133,6 +133,18 @@ export function normalizeDate(v: unknown): string | null {
   return s.slice(0, 40); // store raw as last resort
 }
 
+export function normalizeTimestamp(v: unknown): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const iso = s.includes('T') || s.includes('Z') || s.includes(' ') ? s : `${s}T00:00:00Z`;
+  try {
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  } catch { /* ignore */ }
+  return s;
+}
+
 // ── Build a full pipeline_properties record from a normalized payload ───
 export interface PipelineRecordInput {
   source: string;
@@ -201,6 +213,13 @@ export interface PipelineRecordInput {
   original_data?: string | null;
   edited_fields?: string | null;
   inferred_features?: string | null;
+  listed_at?: string | null;
+  original_listing_date?: string | null;
+  source_last_updated_at?: string | null;
+  imported_at?: string | null;
+  _imported_at?: string | null;
+  source_status?: string | null;
+  last_verified_at?: string | null;
   published_at?: string | null;
   choice_property_id?: string | null;
   scraped_at?: string | null;
@@ -212,7 +231,13 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const source = normalizeSource(body.source);
   const propType = normalizePropType(body.property_type);
   const availDate = normalizeDate(body.available_date);
+  const listedAt = normalizeDate(body.listed_at) ?? normalizeDate(body.original_listing_date) ?? null;
   const now = new Date().toISOString();
+  const sourceLastUpdatedAt = normalizeTimestamp(body.source_last_updated_at) ?? normalizeTimestamp(body.updated_at) ?? null;
+  const importedAt = normalizeTimestamp(body.imported_at) ?? normalizeTimestamp(body._imported_at) ?? normalizeTimestamp(body.scraped_at) ?? now;
+  const publishedAt = normalizeTimestamp(body.published_at) ?? null;
+  const sourceStatus = safeStr(body.source_status) ?? 'available';
+  const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
 
   const title = safeStr(body.title) ??
     ((body.bedrooms ? `${body.bedrooms}BR ` : '') +
@@ -312,11 +337,16 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     agent_image_url:      safeStr(body.agent_image_url),
     poster_landlord_id:   safeStr(body.poster_landlord_id),
 
-    // Pipeline metadata
+    // Provenance and lifecycle metadata
+    listed_at:            listedAt,
+    source_last_updated_at: sourceLastUpdatedAt,
+    imported_at:          importedAt,
+    source_status:        sourceStatus,
+    last_verified_at:     lastVerifiedAt,
     original_data:        safeStr(body.original_data) ?? originalData,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
-    published_at:         safeStr(body.published_at),
+    published_at:         publishedAt,
     choice_property_id:   safeStr(body.choice_property_id),
     scraped_at:           safeStr(body.scraped_at) ?? now,
     updated_at:           safeStr(body.updated_at) ?? now,
