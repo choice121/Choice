@@ -57,18 +57,20 @@
   }
 
   // ── Listed date label ────────────────────────────────────────
-  // Shows the exact original listing date on every card — "Listed Jun 22".
-  // Matches the date format used on Zillow / Realtor.com.
-  // Shown for ALL properties so renters always see when it first hit the market.
-  function listedDateLabel(listedAt) {
-    if (!listedAt) return null;
-    var raw = String(listedAt);
+  // Prefer the original listing date from the source site when it exists.
+  // Only fall back to the import date if the source listing date is missing,
+  // so public cards do not misrepresent an older listing as newly listed.
+  function listedDateLabel(listedAt, importedAt) {
+    var activeAt = listedAt || importedAt || null;
+    if (!activeAt) return null;
+    var raw = String(activeAt);
     var t = raw.length === 10
       ? new Date(raw + 'T12:00:00').getTime()
       : new Date(raw).getTime();
     if (isNaN(t)) return null;
     var d = new Date(t);
-    return 'Listed ' + d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+    var label = listedAt ? 'Listed' : 'Imported';
+    return label + ' ' + d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
   }
 
   // ── Availability chip ───────────────────────────────────────
@@ -147,7 +149,7 @@
       ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
       : '';
 
-    var listedLabel = listedDateLabel(p.listed_at);
+    var listedLabel = listedDateLabel(p.listed_at, p.imported_at || p.created_at);
 
     // Type chip removed from card — type is in the title and the filter bar.
 

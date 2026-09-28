@@ -327,7 +327,7 @@
           ${missing.length ? `<span class="qs-badge qs-low" title="Missing: ${S.esc(missing.join(', '))}">${missing.length} missing</span>` : '<span class="qs-badge qs-high">✓ Complete</span>'}
           ${isEnriched(l) ? `<span class="qs-badge qs-high" title="Phase 2 scrape data available">Full data</span>` : ''}
           ${l.available_date ? `<span class="qs-badge" style="background:rgba(99,102,241,.1);color:var(--brand)">Avail ${S.esc(l.available_date)}</span>` : ''}
-          ${l.listed_at ? `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="Original listing date on source site">Listed ${S.esc(new Date(l.listed_at + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="No original listing date — using import date">Imported ${S.esc(new Date(l.scraped_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>`}
+          ${l.listed_at ? `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="Original listing date from the source site">Listed ${S.esc(new Date(l.listed_at + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : l.scraped_at ? `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="Source listing date missing; showing import timestamp as a fallback">Imported ${S.esc(new Date(l.scraped_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : ''}
         </div>
       </div>
       <div class="pl-card-ft" onclick="event.stopPropagation()">
