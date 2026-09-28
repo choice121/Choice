@@ -740,30 +740,14 @@ async function fetchAndRender() {
   if (isLoading) return;
   isLoading = true;
 
-  // ── Use server-injected initial data on first unfiltered page-1 load ──
-  // The server embeds window.__INITIAL_LISTINGS__ directly into listings.html
-  // so properties paint immediately without waiting for a Supabase round-trip.
-  const hasNoFilters = !activeSearch && (activeType === 'all' || !activeType) &&
-    !activeBeds && !activeMinRent && !activeMaxRent && !activeMinBaths &&
-    !activeLaundry && !activeHeating && !activePetType && currentPage === 1 &&
-    sortBy === 'newest';
-  // Only use the build-time snapshot when it has actual rows.
-  // If rows is empty (build happened before listings were active, or Supabase
-  // was slow during deploy), fall through to the live API call below so
-  // users always see the current state of the database.
-  if (hasNoFilters && window.__INITIAL_LISTINGS__ && window.__INITIAL_LISTINGS__.rows?.length > 0) {
-    const cached = window.__INITIAL_LISTINGS__;
-    window.__INITIAL_LISTINGS__ = null; // consume once; filter changes use live API
-    isLoading = false;
-    const { rows, total, total_pages } = cached;
-    totalCount = total;
-    totalPages = total_pages;
-    pageProperties = rows || [];
-    renderProperties(rows);
-    renderPagination();
-    return;
-  }
-  // Discard empty snapshot so live API takes over
+  // ── Always load the live listing set ───────────────────────────────────
+  // listings.html may contain a build-time snapshot for crawlers and fast
+  // first paint, but that snapshot can outlive rows that were removed or
+  // replaced in Supabase. Rendering it as interactive data makes cards link
+  // to listings that now correctly resolve as unavailable. Keep the snapshot
+  // out of the interactive path and use the live active-listings query below.
+  // Discard any embedded snapshot so it cannot be reused after a filter
+  // change or browser navigation.
   if (window.__INITIAL_LISTINGS__) window.__INITIAL_LISTINGS__ = null;
 
   showSkeletons();
