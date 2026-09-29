@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.10] - 2026-09-29
+### Invitation Homes Activation & Progress Residential AEM Detail Hardening
+- **Invitation Homes**: Added Chromium and Orion host/content matches plus a dedicated extractor for Invitation Homes property routes, JSON-LD, Svelte-rendered address/spec data, and Cloudinary galleries.
+- **Progress Residential**: Added explicit support for current AEM property-detail pages, preserving decimal rents, fractional baths, property IDs, server-rendered specs, and `photos.rentprogress.com` galleries.
+- **Shared Builds**: Regenerated Chromium and Orion extractor variants from the canonical source and added fixtures for both live page structures.
+- **Release Validation**: Required Invitation Homes matches in both packages and kept archive/version parity checks enabled.
+
 ## [v18.0.9] - 2026-09-29
 ### AppFolio/CJ Domain Activation & Cloudflare Release Artifact Fixes
 - **Portal Activation**: Added Chromium and Orion content-script matches for AppFolio and `cjrealestate.com`, and added AppFolio URL dispatch to the canonical CJ Real Estate extractor.

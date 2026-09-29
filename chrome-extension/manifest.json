@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "18.0.9",
+  "version": "18.0.10",
   "description": "Save listings to Choice Properties pipeline with instant live updates.",
   "permissions": [
     "storage",
@@ -36,6 +36,8 @@
     "https://*.amazonaws.com/*",
     "https://appfolio.com/*",
     "https://*.appfolio.com/*",
+    "https://www.invitationhomes.com/*",
+    "https://invitationhomes.com/*",
     "https://tlfmwetmhthpyrytrcfo.supabase.co/*",
     "https://choice-properties-site.pages.dev/*"
   ],
@@ -76,7 +78,9 @@
         "https://*.cjrealestate.com/*",
         "https://cjrealestate.com/*",
         "https://appfolio.com/*",
-        "https://*.appfolio.com/*"
+        "https://*.appfolio.com/*",
+        "https://www.invitationhomes.com/*",
+        "https://invitationhomes.com/*"
       ],
       "css": [
         "content.css"

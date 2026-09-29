@@ -1,8 +1,8 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v18.0.9
+// Choice Properties — Universal Content Script & UI Engine v18.0.10
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
-// Progress Residential, and CJ Real Estate.
+// Progress Residential, CJ Real Estate, and Invitation Homes.
 // High Performance • Instant SPA Navigation • Smart Pre-Flight HUD
 // Global Hotkeys (Cmd/Ctrl+Shift+S) • Resilient Background Retry
 // ============================================================
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.9';
+  var VERSION  = '18.0.10';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -42,7 +42,8 @@
            /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
            /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
            /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
-           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url);
+           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url) ||
+           /invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i.test(url);
   }
 
   function isSearchPage(url) {

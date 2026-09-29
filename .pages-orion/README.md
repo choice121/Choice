@@ -1,6 +1,6 @@
 # Import to Choice Properties — Orion Extension
 
-One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, and CJ Real Estate**.
+One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes**.
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
@@ -12,7 +12,7 @@ When you open any supported listing detail page, the extension injects a purple 
 
 ## Features
 
-- **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, and CJ Real Estate (per-site extractors in `shared-extractors.js`)
+- **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes (per-site extractors in `shared-extractors.js`)
 - **Offline queue** — if the pipeline is unreachable, the listing is queued in `chrome.storage.local` and auto-synced when back online (badge shows amber count; "Sync now" button in popup)
 - **Settings** — enable/disable Download-to-PC and Offline queue from the popup
 
@@ -42,7 +42,7 @@ The extension icon appears in your Chrome toolbar.
 ### Step 3 — Use it
 
 1. Browse to any supported listing detail page
-   *(Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, or CJ Real Estate)*
+   *(Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, or Invitation Homes)*
 2. Click the purple **↓ Save to Pipeline** button (bottom-right corner)
 3. Button turns green: "✓ Saved! 24 photos · San Francisco · Q:88/100"
 4. Open your [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to review and publish

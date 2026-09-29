@@ -70,6 +70,8 @@ const requiredContentMatches = [
   'https://*.cjrealestate.com/*',
   'https://appfolio.com/*',
   'https://*.appfolio.com/*',
+  'https://www.invitationhomes.com/*',
+  'https://invitationhomes.com/*',
 ];
 for (const [name, manifest] of [['Chromium', chromeManifest], ['Orion', orionManifest]]) {
   if (!manifest) continue;

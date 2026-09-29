@@ -2,7 +2,8 @@
 // Choice Properties — Canonical Multi-site Listing Extractor
 // ============================================================
 // THIS IS THE SINGLE SOURCE OF TRUTH for all listing extraction.
-// Supported sites: Zillow, Realtor.com, Apartments.com, Redfin
+// Supported sites: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
+// Progress Residential, CJ Real Estate, Invitation Homes
 // Multi-Tier Resilient Ingestion: NextData -> JSON-LD -> Meta -> DOM
 // ============================================================
 (function (global) {
@@ -121,7 +122,10 @@
   function parseRent(rawPrice, rentZestimate) {
     let rent = null;
     if (typeof rawPrice === 'number' && rawPrice > 0) rent = rawPrice;
-    else if (rawPrice) { const d = String(rawPrice).replace(/[^0-9]/g, ''); rent = d ? parseInt(d, 10) : null; }
+    else if (rawPrice) {
+      const match = String(rawPrice).replace(/,/g, '').match(/(\d+(?:\.\d{1,2})?)/);
+      rent = match ? parseFloat(match[1]) : null;
+    }
     if (!rent && rentZestimate) rent = parseInt(String(rentZestimate), 10) || null;
     return rent;
   }
@@ -442,7 +446,7 @@
     if (prop.offers) {
       const off = Array.isArray(prop.offers) ? prop.offers[0] : prop.offers;
       const p = off.price || off.lowPrice || (off.priceSpecification && off.priceSpecification.price);
-      if (p) rent = parseInt(String(p).replace(/[^0-9]/g, ''), 10) || null;
+      if (p) rent = parseRent(p, null);
     }
 
     const beds = prop.numberOfBedrooms || prop.numberOfRooms || null;
@@ -471,9 +475,11 @@
       lat, lng,
       monthly_rent: rent,
       bedrooms: beds ? Number(beds) : null,
-      bathrooms: baths ? Math.floor(Number(baths)) : null,
+      bathrooms: baths ? parseBaths(baths, desc).bathrooms : null,
       half_bathrooms: baths && (Number(baths) % 1 !== 0) ? 1 : null,
-      property_type: normalizeType(prop['@type'] || 'APARTMENT'),
+      property_type: /SingleFamilyResidence|House|Residence/i.test(String(prop['@type'] || ''))
+        ? 'SINGLE_FAMILY'
+        : normalizeType(prop['@type'] || 'APARTMENT'),
       description: desc,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
     });
@@ -1188,7 +1194,7 @@
 
   // ── Progress Residential ─────────────────────────────────────
   function extractProgressResidential(doc, url) {
-    const idFromUrl = (url.match(/\/([a-z0-9_-]+)$/i) || [])[1] || 'pr_' + Date.now();
+    const idFromUrl = (url.match(/\/([a-z0-9_-]+)\/?$/i) || [])[1] || 'pr_' + Date.now();
 
     // 1. Check JSON-LD
     const ld = extractFromJsonLd(doc, url, 'progress_residential');
@@ -1251,29 +1257,63 @@
       });
     }
 
-    if (ld && ld.address) return ld;
-
     // 3. DOM Fallback for Progress Residential
-    return extractProgressResidentialDom(doc, url);
+    const dom = extractProgressResidentialDom(doc, url);
+    if (ld && ld.address) {
+      // The AEM detail page exposes the complete gallery and exact half-bath
+      // count in rendered HTML, while JSON-LD usually has the rent and geo.
+      // Merge both instead of returning the first partial representation.
+      const ldPhotos = (() => {
+        try { return JSON.parse(ld.original_image_urls || '[]'); } catch (_) { return []; }
+      })();
+      const domPhotos = (() => {
+        try { return JSON.parse((dom && dom.original_image_urls) || '[]'); } catch (_) { return []; }
+      })();
+      return basePayload('progress_residential', String(
+        (doc && doc.querySelector && doc.querySelector('[data-property-node-path]') &&
+          doc.querySelector('[data-property-node-path]').getAttribute('data-property-node-path')) ||
+        ld.source_listing_id || idFromUrl
+      ), url, Object.assign({}, ld, dom || {}, {
+        source: 'progress_residential',
+        source_listing_id: String(
+          (doc && doc.querySelector && doc.querySelector('[data-property-node-path]') &&
+            doc.querySelector('[data-property-node-path]').getAttribute('data-property-node-path')) ||
+          ld.source_listing_id || idFromUrl
+        ),
+        source_url: url,
+        monthly_rent: (ld.monthly_rent != null ? ld.monthly_rent : (dom && dom.monthly_rent)),
+        lat: ld.lat != null ? ld.lat : (dom && dom.lat),
+        lng: ld.lng != null ? ld.lng : (dom && dom.lng),
+        original_image_urls: JSON.stringify([...new Set(domPhotos.concat(ldPhotos))].slice(0, 50)),
+      }));
+    }
+    return dom;
   }
 
   function extractProgressResidentialDom(doc, url) {
     if (!doc || typeof doc.querySelector !== 'function') return null;
     const idFromUrl = (url.match(/\/([a-z0-9_-]+)$/i) || [])[1] || 'pr_' + Date.now();
 
-    const headingEl = doc.querySelector('.property-details-header h1, h1.property-title, .pdp-address, h1');
-    const fullHeading = headingEl ? headingEl.textContent.trim() : '';
-    const m = fullHeading.match(/^([^,]+),\s*([^,]+),\s*([A-Z]{2})\s*(\d{5})?/i);
+    const headingEl = doc.querySelector('.property-details-header h1, h1.property-title, .pdp-address, .property-info .address h1, h1');
+    const fullHeading = headingEl ? headingEl.textContent.replace(/\s+/g, ' ').trim() : '';
+    const m = fullHeading.match(/^([^,]+),\s*([^,]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?/i);
     const street = m ? m[1].trim() : fullHeading;
     const city   = m ? m[2].trim() : '';
     const state  = m ? m[3].trim().toUpperCase() : '';
     const zip    = m && m[4] ? m[4].trim() : '';
 
-    const rentEl = doc.querySelector('.property-price, .market-rent, .price-display, [data-testid="rent-price"]');
+    const rentEl = doc.querySelector('.property-price, .market-rent, .price-display, [data-testid="rent-price"], .estimated-cost, [class*="rent"], [class*="price"]');
     const rent = rentEl ? parseRent(rentEl.textContent, null) : null;
 
     let beds = null, baths = null, sqft = null;
-    const specItems = doc.querySelectorAll('.spec-item, .property-amenity, .badge-detail, .property-meta-item, li');
+    const pageText = doc.body && doc.body.innerText ? doc.body.innerText.replace(/\s+/g, ' ') : '';
+    const pageBeds = pageText.match(/(\d+)\s*(?:bed|beds|bedroom|bedrooms)\b/i);
+    const pageBaths = pageText.match(/(\d+(?:\.\d+)?)\s*(?:bath|baths|bathroom|bathrooms)\b/i);
+    const pageSqft = pageText.match(/([\d,]+)\s*(?:sq\.?\s*ft|square\s*feet)\b/i);
+    if (pageBeds) beds = parseInt(pageBeds[1], 10);
+    if (pageBaths) baths = parseFloat(pageBaths[1]);
+    if (pageSqft) sqft = parseInt(pageSqft[1].replace(/,/g, ''), 10);
+    const specItems = doc.querySelectorAll('.spec-item, .property-amenity, .badge-detail, .property-meta-item, .key-features-and-services-icons__list-item, li');
     specItems.forEach(item => {
       const t = item.textContent.toLowerCase();
       if (t.includes('bed') && !beds) beds = safeI(t);
@@ -1284,15 +1324,19 @@
       if (t.includes('sq') || t.includes('sqft')) sqft = safeI(t);
     });
 
-    const descEl = doc.querySelector('.property-description, .property-overview, #description');
-    const rawDesc = descEl ? descEl.textContent.trim() : '';
+    const descEl = doc.querySelector('.property-description, .property-overview, #description, .container-dynamic-info-desc-property, .dynamic-info-desc-property');
+    const rawDesc = descEl ? descEl.textContent.replace(/\s+/g, ' ').trim() : '';
     const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(baths, rawDesc);
 
     const photos = [];
-    const imgs = doc.querySelectorAll('.gallery-slider img, .property-photos img, .swiper-slide img, img[src*="rentprogress"]');
+    const imgs = doc.querySelectorAll('.gallery-slider img, .property-photos img, .swiper-slide img, img[src*="rentprogress"], img.testimonial-image, picture source[srcset]');
     imgs.forEach(img => {
-      const src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy');
-      if (src && src.startsWith('http') && !photos.includes(src)) photos.push(src);
+      const raw = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy') ||
+        img.getAttribute('srcset') || '';
+      const candidates = raw.split(',').map(s => s.trim().split(/\s+/)[0]);
+      candidates.forEach(src => {
+        if (/^https?:\/\/photos\.rentprogress\.com\//i.test(src) && !photos.includes(src)) photos.push(src);
+      });
     });
 
     return basePayload('progress_residential', idFromUrl, url, {
@@ -1306,6 +1350,75 @@
       pets_allowed: true,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
+  }
+
+  // ── Invitation Homes ──────────────────────────────────────────
+  // Invitation Homes is a Svelte application. Listing pages expose JSON-LD
+  // inconsistently, so use it when present and supplement it with the
+  // server-rendered address/spec/photo elements.
+  function extractInvitationHomes(doc, url) {
+    const idFromUrl = (url.match(/\/(?:property|homes-for-rent)\/([^/?#]+)/i) || [])[1] ||
+      (url.match(/\/([^/?#]+)\/?$/i) || [])[1] || 'invh_' + Date.now();
+    const ld = extractFromJsonLd(doc, url, 'invitation_homes');
+    if (!doc || typeof doc.querySelector !== 'function') return ld;
+
+    const textOf = (selector) => {
+      const el = doc.querySelector(selector);
+      return el && el.textContent ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+    };
+    const meta = (selector) => {
+      const el = doc.querySelector(selector);
+      return el && el.getAttribute ? (el.getAttribute('content') || '').trim() : '';
+    };
+    const titleText = textOf('h1, [data-testid*="address"], [data-testid*="property-title"]') ||
+      meta('meta[property="og:title"]') || doc.title || '';
+    const addressMatch = titleText.match(/^([^,]+),\s*([^,]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?/i);
+    const street = addressMatch ? addressMatch[1].trim() : titleText;
+    const city = addressMatch ? addressMatch[2].trim() : '';
+    const state = addressMatch ? addressMatch[3].toUpperCase() : '';
+    const zip = addressMatch && addressMatch[4] ? addressMatch[4] : '';
+    const bodyText = doc.body && doc.body.innerText ? doc.body.innerText.replace(/\s+/g, ' ') : '';
+    const rentMatch = bodyText.match(/\$[\s]*([\d,]+(?:\.\d{1,2})?)(?:\s*\/\s*(?:mo|month)|\s*per\s+month)?/i);
+    const bedsMatch = bodyText.match(/(\d+)\s*(?:bed|beds|bedroom|bedrooms)\b/i);
+    const bathsMatch = bodyText.match(/(\d+(?:\.\d+)?)\s*(?:bath|baths|bathroom|bathrooms)\b/i);
+    const sqftMatch = bodyText.match(/([\d,]+)\s*(?:sq\.?\s*ft|square\s*feet)\b/i);
+    const description = textOf('[data-testid*="description"], [class*="description"], [class*="Description"]') ||
+      meta('meta[name="description"]') || null;
+    const photos = [];
+    const addPhoto = (raw) => {
+      String(raw || '').split(',').map(s => s.trim().split(/\s+/)[0]).forEach(src => {
+        if (/^https?:\/\//i.test(src) && !/logo|icon|favicon|avatar|map/i.test(src) && !photos.includes(src)) photos.push(src);
+      });
+    };
+    doc.querySelectorAll('img, picture source').forEach(el => {
+      addPhoto(el.src || el.getAttribute('src') || el.getAttribute('data-src') || el.getAttribute('srcset'));
+    });
+    const ldPhotos = (() => {
+      try { return JSON.parse((ld && ld.original_image_urls) || '[]'); } catch (_) { return []; }
+    })();
+    const rawDesc = description || (ld && ld.description) || '';
+    const propType = detectPropType(null, rawDesc, titleText);
+    return basePayload('invitation_homes', String(
+      (ld && ld.source_listing_id) || idFromUrl
+    ), url, Object.assign({}, ld || {}, {
+      source: 'invitation_homes',
+      source_listing_id: String((ld && ld.source_listing_id) || idFromUrl),
+      source_url: url,
+      title: (ld && ld.title) || buildTitle(bedsMatch && Number(bedsMatch[1]), propType, city, street),
+      address: (ld && ld.address) || street || null,
+      city: (ld && ld.city) || city || null,
+      state: (ld && ld.state) || state || null,
+      zip: (ld && ld.zip) || zip || null,
+      monthly_rent: ld && ld.monthly_rent != null ? ld.monthly_rent : (rentMatch ? parseRent(rentMatch[1], null) : null),
+      bedrooms: ld && ld.bedrooms != null ? ld.bedrooms : (bedsMatch ? Number(bedsMatch[1]) : null),
+      bathrooms: ld && ld.bathrooms != null ? ld.bathrooms : (bathsMatch ? parseBaths(Number(bathsMatch[1]), rawDesc).bathrooms : null),
+      half_bathrooms: ld && ld.half_bathrooms != null ? ld.half_bathrooms : (bathsMatch && Number(bathsMatch[1]) % 1 !== 0 ? 1 : null),
+      square_footage: ld && ld.square_footage != null ? ld.square_footage : (sqftMatch ? parseInt(sqftMatch[1].replace(/,/g, ''), 10) : null),
+      property_type: (ld && ld.property_type) || propType,
+      description: (ld && ld.description) || description,
+      original_image_urls: JSON.stringify([...new Set(photos.concat(ldPhotos))].slice(0, 50)),
+      pets_allowed: ld && ld.pets_allowed != null ? ld.pets_allowed : /pet friendly|pets allowed|dogs? allowed|cats? allowed/i.test(bodyText) ? true : null,
+    }));
   }
 
   // ── CJ Real Estate ───────────────────────────────────────────
@@ -1434,6 +1547,11 @@
       match: /(cjrealestate\.com|cjproperties\.org|appfolio\.com)\/[^/]+/i,
       fn: extractCJRealEstate 
     },
+    {
+      id: 'invitation_homes',
+      match: /invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i,
+      fn: extractInvitationHomes
+    },
   ];
 
   function detect(url) {
@@ -1455,6 +1573,9 @@
     }
     if (/cjproperties\.org|cjrealestate\.com|appfolio\.com/i.test(url)) {
       return { id: 'cj_real_estate', match: /cjproperties|cjrealestate|appfolio/i, fn: extractCJRealEstate };
+    }
+    if (/invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i.test(url)) {
+      return { id: 'invitation_homes', match: /invitationhomes/i, fn: extractInvitationHomes };
     }
     return null;
   }
@@ -1499,6 +1620,7 @@
     extractProgressResidential,
     extractProgressResidentialDom,
     extractCJRealEstate,
+    extractInvitationHomes,
     extractFromJsonLd, 
     EXTRACTORS 
   };

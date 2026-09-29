@@ -74,6 +74,67 @@ const PRD = doc({
     }
   }
 });
+const PRLIVE = 'https://rentprogress.com/property-details/3187-andy-ter/columbus/oh/43223/1008555';
+const PRLIVE_D = {
+  body: { innerText: '3 Beds 2.5 Baths 1,506 Sq Ft' },
+  querySelector: (sel) => {
+    if (sel.includes('data-property-node-path')) return { getAttribute: () => '1008555' };
+    if (sel.includes('h1')) return { textContent: '3187 Andy Ter, Columbus, OH 43223' };
+    return null;
+  },
+  querySelectorAll: (sel) => {
+    if (sel.includes('application/ld+json')) return [{
+      textContent: JSON.stringify({
+        '@type': 'SingleFamilyResidence',
+        identifier: '1008555',
+        name: '3187 Andy Ter',
+        address: { streetAddress: '3187 Andy Ter', addressLocality: 'Columbus', addressRegion: 'OH', postalCode: '43223' },
+        geo: { latitude: 39.96, longitude: -83.01 },
+        offers: { price: '1890.98' },
+        numberOfBedrooms: 3,
+        numberOfBathroomsTotal: 2.5,
+        image: 'https://photos.rentprogress.com/WebPhotos/Columbus/1008555/01-Hero-md.jpg',
+      }),
+    }];
+    if (sel.includes('rentprogress') || sel.includes('testimonial-image') || sel.includes('srcset')) {
+      return [
+        { src: 'https://photos.rentprogress.com/WebPhotos/Columbus/1008555/01-Hero-lg.jpg', getAttribute: () => null },
+        { src: 'https://photos.rentprogress.com/WebPhotos/Columbus/1008555/05-LivingRoom-lg.jpg', getAttribute: () => null },
+      ];
+    }
+    return [];
+  },
+};
+
+const IH = 'https://www.invitationhomes.com/property/abc-123';
+const IHD = {
+  title: 'Invitation Homes',
+  body: { innerText: '$2,150/mo 3 Beds 2 Baths 1,650 Sq Ft Pet friendly' },
+  querySelector: (sel) => {
+    if (sel.includes('h1')) return { textContent: '123 Oak Street, Dallas, TX 75201' };
+    return null;
+  },
+  querySelectorAll: (sel) => {
+    if (sel.includes('application/ld+json')) return [{
+      textContent: JSON.stringify({
+        '@type': 'SingleFamilyResidence',
+        identifier: 'ih-abc-123',
+        address: { streetAddress: '123 Oak Street', addressLocality: 'Dallas', addressRegion: 'TX', postalCode: '75201' },
+        offers: { price: '2150' },
+        numberOfBedrooms: 3,
+        numberOfBathroomsTotal: 2,
+        image: ['https://res.cloudinary.com/invh-web/image/upload/home-1.jpg'],
+      }),
+    }];
+    if (sel.includes('img') || sel.includes('source')) {
+      return [
+        { src: 'https://res.cloudinary.com/invh-web/image/upload/home-1.jpg', getAttribute: () => null },
+        { src: 'https://res.cloudinary.com/invh-web/image/upload/home-2.jpg', getAttribute: () => null },
+      ];
+    }
+    return [];
+  },
+};
 
 const CJ = 'https://cjproperties.org/listings/detail/3305-grand-view-blvd-columbus-oh';
 const AF = 'https://choice.appfolio.com/listings/detail/3305-grand-view-blvd-columbus-oh';
@@ -119,9 +180,12 @@ t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.s
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Opendoor payload', () => { const p = api.extractOpendoor(OD, O); assert.strictEqual(p.source_listing_id, 'od123456'); assert.strictEqual(p.address, '789 Elm St'); assert.strictEqual(p.monthly_rent, 2450); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.square_footage, 1850); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('Progress Residential payload', () => { const p = api.extractProgressResidential(PRD, PR); assert.strictEqual(p.source_listing_id, 'pr99988'); assert.strictEqual(p.address, '1204 Cedar Ln'); assert.strictEqual(p.monthly_rent, 2150); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 2100); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
+t('Progress Residential live AEM payload', () => { const p = api.extractProgressResidential(PRLIVE_D, PRLIVE); assert.strictEqual(p.source_listing_id, '1008555'); assert.strictEqual(p.address, '3187 Andy Ter'); assert.strictEqual(p.monthly_rent, 1890.98); assert.strictEqual(p.bathrooms, 2.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.square_footage, 1506); assert.strictEqual(JSON.parse(p.original_image_urls).length, 3); });
+t('Invitation Homes payload', () => { const p = api.extractInvitationHomes(IHD, IH); assert.strictEqual(p.source_listing_id, 'ih-abc-123'); assert.strictEqual(p.address, '123 Oak Street'); assert.strictEqual(p.city, 'Dallas'); assert.strictEqual(p.monthly_rent, 2150); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('CJ Real Estate payload', () => { const p = api.extractCJRealEstate(CJD, CJ); assert.strictEqual(p.address, '3305 Grand View Blvd'); assert.strictEqual(p.city, 'Columbus'); assert.strictEqual(p.state, 'OH'); assert.strictEqual(p.monthly_rent, 1350); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.bathrooms, 1.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.property_type, 'DUPLEX'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('AppFolio payload', () => { const p = api.extractCJRealEstate(CJD, AF); assert.strictEqual(p.source, 'cj_real_estate'); assert.strictEqual(p.source_url, AF); assert.strictEqual(p.monthly_rent, 1350); });
 t('dispatch', () => { assert.strictEqual(api.extract(Z, ZD).source, 'zillow'); assert.strictEqual(api.extract(O, OD).source, 'opendoor'); assert.strictEqual(api.extract(PR, PRD).source, 'progress_residential'); assert.strictEqual(api.extract(CJ, CJD).source, 'cj_real_estate'); assert.strictEqual(api.extract('https://fb.com/', doc({})), null); });
+t('detect Invitation Homes', () => { assert.strictEqual(api.detect(IH).id, 'invitation_homes'); });
 t('Zillow minimal', () => { const d = doc(cache({ zpid: 111, address: { streetAddress: '1 Empty St', city: 'Nowhere', state: 'TX' }, price: 1000 })); const p = api.extractZillow(d, Z); assert.ok(p); assert.strictEqual(p.monthly_rent, 1000); assert.strictEqual(p.bedrooms, null); assert.strictEqual(p.security_deposit, null); });
 
 // --- Photo dedup ---

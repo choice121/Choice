@@ -1,6 +1,6 @@
 # Choice Properties — Platform Documentation
 
-Choice Properties is a modern rental listing platform with integrated client portals, an admin dashboard, automated scraping/enrichment pipelines, and a universal 7-portal browser extension.
+Choice Properties is a modern rental listing platform with integrated client portals, an admin dashboard, automated scraping/enrichment pipelines, and a universal 8-portal browser extension.
 
 ---
 
@@ -8,16 +8,17 @@ Choice Properties is a modern rental listing platform with integrated client por
 
 ```
                                ┌─────────────────────────────┐
-                               │  7 Supported Rental Portals │
+                               │  8 Supported Rental Portals │
                                │ (Zillow, Realtor, Opendoor, │
-                               │  Progress, CJ, Apts, Redfin)│
+                               │  Progress, CJ, Apts, Redfin,│
+                               │  Invitation Homes)           │
                                └──────────────┬──────────────┘
                                               │
                     ┌─────────────────────────┴────────────────────────┐
                     ▼                                                  ▼
      ┌────────────────────────────┐                     ┌───────────────────────────┐
      │ Universal Chrome Extension │                     │ Automated Python Pipeline │
-     │  (v18.0.9 — 1-click stage) │                     │ (HomeHarvest + Orchestrator)│
+     │  (v18.0.10 — 1-click stage)│                     │ (HomeHarvest + Orchestrator)│
      └──────────────┬─────────────┘                     └─────────────┬─────────────┘
                     │                                                 │
                     └─────────────────────────┬───────────────────────┘
@@ -53,7 +54,7 @@ Choice Properties is a modern rental listing platform with integrated client por
 ## Key Directories & Components
 
 - `admin/` — Admin management dashboards (Pipeline, Leases, Inspections, Applications, Watermark Sniper).
-- `chrome-extension/` — Chrome Extension source files (v18.0.9).
+- `chrome-extension/` — Chrome Extension source files (v18.0.10).
 - `scraper/` — Python automated pipeline orchestrator and HomeHarvest scrapers.
 - `src/extractors/` — Single source-of-truth extractor logic (`shared-extractors.js`).
 - `supabase/` — Database schemas, security rules, and edge function endpoints.
