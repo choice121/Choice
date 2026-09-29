@@ -68,16 +68,18 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return permissiveCorsResponse(req);
 
   // ── Auth: shared secret ──────────────────────────────────────
-  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET') || Deno.env.get('IMPORT_SECRET') || 'cp_import_7Kx3m9P2w5';
+  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET') || Deno.env.get('IMPORT_SECRET') || '';
   const url = new URL(req.url);
   const incoming = url.searchParams.get('secret') || req.headers.get('x-import-secret');
   if (!incoming || incoming !== IMPORT_SECRET) {
     return permissiveJsonErr(401, 'Invalid import secret', req);
   }
 
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://tlfmwetmhthpyrytrcfo.supabase.co';
-  const FALLBACK_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
-  const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || FALLBACK_SERVICE_KEY;
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+  const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || '';
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    return permissiveJsonErr(500, 'Server import configuration is incomplete', req);
+  }
   const adminClient  = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -335,7 +337,6 @@ Deno.serve(async (req) => {
   let neighborhood = safeStr(body.neighborhood);
 
   if (!county && lat != null && lng != null) {
-    const geoapifyKey = Deno.env.get('GEOAPIFY_API_KEY') || 'c072dfce73f24bf782c3cda01d1fa0de'; // fallback key if needed, or use env
     const actualKey = Deno.env.get('GEOAPIFY_API_KEY');
     if (actualKey) {
       try {

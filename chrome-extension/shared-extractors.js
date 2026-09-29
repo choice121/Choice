@@ -119,6 +119,19 @@
     return s.slice(0, 40);
   }
 
+  // Original listing dates must come from an actual source date/epoch. Do not
+  // turn "today" or "now" into an invented historical listing date.
+  function parseOriginalListingDate(v) {
+    if (!v || typeof v === 'object') return null;
+    const s = String(v).trim();
+    if (!s || /^(now|today|immediate|ready)$/i.test(s)) return null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (/^\d{13}$/.test(s)) { try { return new Date(parseInt(s, 10)).toISOString().slice(0, 10); } catch (_) {} }
+    if (/^\d{10}$/.test(s)) { try { return new Date(parseInt(s, 10) * 1000).toISOString().slice(0, 10); } catch (_) {} }
+    try { const d = new Date(s); if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10); } catch (_) {}
+    return null;
+  }
+
   function safeI(v) {
     if (!v && v !== 0) return null;
     const n = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
@@ -226,6 +239,7 @@
       utilities_included: null, heating_type: null, cooling_type: null, laundry_type: null,
       virtual_tour_url: null, has_basement: null, has_central_air: null,
       original_image_urls: '[]', agent_name: null, broker_name: null,
+      agent_image_url: null, agent_profile_url: null, source_last_updated_at: null,
       _import: 'browser-extension-v5.0-resilient'
     }, overrides);
   }
@@ -269,6 +283,7 @@
 
     const rf   = prop.resoFacts || {};
     const addr = prop.address   || {};
+    const ai   = prop.attributionInfo || {};
     const zpid = String(prop.zpid || '');
     const street = addr.streetAddress || prop.streetAddress || '';
     const city   = addr.city    || prop.city    || '';
@@ -288,6 +303,14 @@
     const county = prop.county || addr.county || null;
     const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || null;
     const propType = detectPropType(prop.homeType, rawDesc, prop.title || '');
+    const listedAt = parseOriginalListingDate(
+      prop.listingDate || prop.listDate || prop.datePosted || prop.dateListed ||
+      (prop.listingMetadata && prop.listingMetadata.listingDate) || rf.listingDate
+    );
+    const sourceLastUpdatedAt = parseOriginalListingDate(
+      prop.lastUpdatedDate || prop.updatedDate || prop.dateUpdated ||
+      (prop.listingMetadata && prop.listingMetadata.lastUpdatedDate) || rf.lastUpdatedDate
+    );
 
     const ctxParts = [];
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
@@ -366,7 +389,7 @@
     }
 
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
-      title: buildTitle(beds, propType, city, street),
+      title: prop.title || null,
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.unformattedPrice, prop.rentZestimate),
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -404,8 +427,12 @@
       has_basement: hasBasement,
       has_central_air: hasCentralAir,
       original_image_urls: JSON.stringify(collectPhotos(prop)),
-      agent_name: (prop.attributionInfo && prop.attributionInfo.agentName)  || null,
-      broker_name: (prop.attributionInfo && prop.attributionInfo.brokerName) || null,
+      agent_name: ai.agentName || null,
+      broker_name: ai.brokerName || null,
+      agent_image_url: ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || null,
+      agent_profile_url: ai.agentProfileUrl || ai.profileUrl || ai.agentUrl || null,
+      listed_at: listedAt,
+      source_last_updated_at: sourceLastUpdatedAt,
     });
   }
 

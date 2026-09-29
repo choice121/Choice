@@ -5,6 +5,11 @@
 // Used by both receive-pipeline-import and import-from-url edge functions.
 // ============================================================
 
+import {
+  classifySourceIdentity,
+  normalizeIdentitySource,
+} from './source-identity.ts';
+
 // ── Quality-score weights (shared across all import channels) ────────────
 export const CORE_FIELDS = [
   'address', 'city', 'state', 'zip', 'lat', 'lng',
@@ -96,17 +101,7 @@ export function normalizePropType(v: unknown): string | null {
 }
 
 export function normalizeSource(v: unknown): string {
-  const source = safeStr(v)?.toLowerCase() ?? 'zillow';
-  const allowed = [
-    'zillow', 'realtor', 'apartments', 'redfin',
-    'opendoor', 'progress', 'progress_residential', 'cjrealestate', 'cj_real_estate',
-  ];
-  if (!allowed.includes(source)) {
-    if (source.includes('opendoor')) return 'opendoor';
-    if (source.includes('progress')) return 'progress_residential';
-    if (source.includes('cj')) return 'cj_real_estate';
-  }
-  return source;
+  return normalizeIdentitySource(v);
 }
 
 // ── Normalize available_date to YYYY-MM-DD ─────────────────────────────
@@ -209,6 +204,11 @@ export interface PipelineRecordInput {
   agent_name?: string | null;
   broker_name?: string | null;
   agent_image_url?: string | null;
+  agent_profile_url?: string | null;
+  source_profile_name?: string | null;
+  source_profile_image_url?: string | null;
+  source_profile_url?: string | null;
+  company_logo_url?: string | null;
   poster_landlord_id?: string | null;
   original_data?: string | null;
   edited_fields?: string | null;
@@ -229,6 +229,17 @@ export interface PipelineRecordInput {
 
 export function buildPipelineRecord(body: PipelineRecordInput): Record<string, unknown> {
   const source = normalizeSource(body.source);
+  const identity = classifySourceIdentity({
+    source,
+    agent_name: body.agent_name,
+    broker_name: body.broker_name,
+    agent_image_url: body.agent_image_url,
+    agent_profile_url: body.agent_profile_url,
+    source_profile_name: body.source_profile_name,
+    source_profile_url: body.source_profile_url,
+    company_logo_url: body.company_logo_url,
+    poster_landlord_id: body.poster_landlord_id,
+  });
   const propType = normalizePropType(body.property_type);
   const availDate = normalizeDate(body.available_date);
   const listedAt = normalizeDate(body.listed_at) ?? normalizeDate(body.original_listing_date) ?? null;
@@ -239,10 +250,9 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const sourceStatus = safeStr(body.source_status) ?? 'available';
   const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
 
-  const title = safeStr(body.title) ??
-    ((body.bedrooms ? `${body.bedrooms}BR ` : '') +
-     (propType ?? 'Rental') +
-     (body.city ? ` in ${body.city}` : ''));
+  // Source titles are evidence. Do not synthesize a replacement title when a
+  // source omitted it; the publish gate will reject a record without one.
+  const title = safeStr(body.title);
 
   const originalData = JSON.stringify({
     zpid:        body.source_listing_id,
@@ -277,7 +287,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     // Property details
     property_type:        propType,
     bedrooms:             safeInt(body.bedrooms),
-    bathrooms:            safeInt(body.bathrooms),
+    bathrooms:            safeFloat(body.bathrooms),
     half_bathrooms:       safeInt(body.half_bathrooms),
     total_bathrooms:      safeFloat(body.bathrooms),
     square_footage:       safeInt(body.square_footage),
@@ -332,10 +342,18 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     local_image_paths:    safeStr(body.local_image_paths) ?? '[]',
 
     // Agent / broker
-    agent_name:           safeStr(body.agent_name),
-    broker_name:          safeStr(body.broker_name),
-    agent_image_url:      safeStr(body.agent_image_url),
-    poster_landlord_id:   safeStr(body.poster_landlord_id),
+    agent_name:           identity.agent_name,
+    broker_name:          identity.broker_name,
+    agent_image_url:      identity.agent_image_url,
+    agent_profile_url:    identity.agent_profile_url,
+    source_type:          identity.source_type,
+    identity_strategy:    identity.identity_strategy,
+    identity_status:      identity.identity_status,
+    source_profile_type:  identity.source_profile_type,
+    source_profile_name:  identity.source_profile_name,
+    source_profile_image_url: identity.source_profile_image_url,
+    source_profile_url:   identity.source_profile_url,
+    poster_landlord_id:   identity.poster_landlord_id,
 
     // Provenance and lifecycle metadata
     listed_at:            listedAt,

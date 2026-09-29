@@ -120,7 +120,7 @@ async function loadProperty(id) {
   try {
     const { data, error } = await supabase
       .from('properties')
-      .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
+      .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), source_profiles(id, profile_type, display_name, image_url, profile_url, website_url), property_photos(id, url, file_id, display_order, is_hero)')
       .ilike('id', id)
       .single();
     if (error || !data) throw new Error('Not found');
@@ -757,22 +757,44 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
-  // Landlord card
-  if (p.landlords) {
-    const ll = p.landlords;
-    const name = ll.business_name || ll.contact_name;
+  // Source identity card. Opendoor is intentionally rendered without any
+  // poster, agent, user, or company profile until its dedicated strategy is
+  // implemented.
+  const sourceIdentity = p.identity_strategy === 'NO_IDENTITY' ? null : (
+    p.source_profiles || (
+      p.source_profile_name ? {
+        profile_type: p.source_profile_type,
+        display_name: p.source_profile_name,
+        image_url: p.source_profile_image_url,
+        profile_url: p.source_profile_url,
+      } : null
+    )
+  );
+  const landlordIdentity = p.landlords && p.identity_strategy !== 'COMPANY_SOURCE' ? p.landlords : null;
+  if (sourceIdentity || landlordIdentity) {
+    const ll = landlordIdentity;
+    const profile = sourceIdentity;
+    const name = profile?.display_name || ll?.business_name || ll?.contact_name;
     const card = document.getElementById('landlordCard');
     card.style.display = 'flex';
     document.getElementById('landlordName').textContent = name;
-    if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
+    document.getElementById('landlordTagline').textContent =
+      profile?.profile_type === 'company'
+        ? `Source: ${p.source || 'property provider'}`
+        : (ll?.tagline || (p.source ? `Source: ${p.source}` : ''));
     const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) {
-      avatarEl.innerHTML = `<img src="${esc(CONFIG.img(ll.avatar_url,'avatar'))}" alt="${esc(name)}" loading="lazy">`;
+    const imageUrl = profile?.image_url || ll?.avatar_url || p.agent_image_url;
+    if (imageUrl) {
+      avatarEl.innerHTML = `<img src="${esc(CONFIG.img(imageUrl,'avatar'))}" alt="${esc(name)}" loading="lazy">`;
       const avatarImg = avatarEl.querySelector('img');
       if (avatarImg) avatarImg.onerror = function() { this.onerror = null; this.src = '/assets/avatar-placeholder.svg'; };
     }
     else avatarEl.textContent = name.charAt(0).toUpperCase();
-    if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
+    if (ll?.verified || p.identity_status === 'confirmed') document.getElementById('landlordVerified').style.display = 'inline';
+    if (profile?.profile_url) {
+      const nameEl = document.getElementById('landlordName');
+      nameEl.innerHTML = `<a href="${esc(profile.profile_url)}" target="_blank" rel="noopener noreferrer">${esc(name)}</a>`;
+    }
   }
 
   // Apply button — wire URL with full property context for form prefill

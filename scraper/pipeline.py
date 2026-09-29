@@ -75,6 +75,8 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
+from source_identity import apply_identity
+
 
 def _load_dotenv():
     for candidate in [
@@ -1117,6 +1119,7 @@ class PipelineOrchestrator:
 
     def _step9_stage(self, records: List[Dict]) -> List[Dict]:
         """Stage records in pipeline_properties; resolve pipeline IDs."""
+        records = [apply_identity(r) for r in records]
         if not self._pipe_session:
             return records
 

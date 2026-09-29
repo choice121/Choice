@@ -4,6 +4,19 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.14] - 2026-09-29
+### Centralized Source Identity and Provenance Guardrails
+- **Identity strategies**: Synchronized agent/poster, direct company/source,
+  unknown-review, and Opendoor no-identity behavior across the shared extractor
+  and pipeline contract.
+- **Profile evidence**: Preserve observed Zillow agent profile URLs and images,
+  while reusing canonical source-company profiles for direct providers.
+- **Date and precision safety**: Preserve source listing/update dates only when
+  an actual source date is available and retain fractional bathroom values.
+- **Platform compatibility**: Chromium and Orion packages remain synchronized
+  across Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress
+  Residential, Invitation Homes, and CJ Real Estate.
+
 ## [v18.0.13] - 2026-09-29
 ### Invitation Homes Live Routes & Progress Residential AEM Reliability
 - **Invitation Homes activation**: Added the current `/houses-for-rent/...` listing route to the canonical extractor, content-script widget detection, and popup supported-listing status so the Save to Pipeline action appears on live listings.

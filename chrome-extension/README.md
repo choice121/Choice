@@ -1,4 +1,19 @@
-# Choice Properties — Universal Chrome Extension (v18.0.13)
+# Choice Properties — Universal Chrome Extension (v18.0.14)
+
+## Source identity contract
+
+All imports are normalized by the shared pipeline identity policy before they
+are staged:
+
+- Zillow/Realtor agent-oriented listings preserve observed agent name,
+  brokerage, public profile URL, and profile image when the source exposes them.
+- Progress Residential, Invitation Homes, Main Street Renewal, and CJ Real
+  Estate use a reusable company/source profile and never attach an unrelated
+  individual.
+- Opendoor is imported and published without any agent, poster, user, or
+  inferred profile identity.
+- Missing profile data and original listing dates remain missing; the importer
+  does not invent them. Fractional bathrooms are preserved.
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
