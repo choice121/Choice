@@ -883,6 +883,28 @@
       if (u && !photos.includes(u)) photos.unshift(u);
     }
 
+    const advertisers = prop.advertisers || prop.advertiser || {};
+    const agentValue = prop.agent || prop.listing_agent || prop.listingAgent ||
+      prop.listing_agent_details || advertisers.agent || advertisers.listingAgent || null;
+    const agent = Array.isArray(agentValue) ? agentValue[0] : agentValue;
+    const brokerValue = prop.broker || prop.listing_office || prop.listingOffice ||
+      advertisers.broker || advertisers.office || advertisers.listingOffice || null;
+    const broker = Array.isArray(brokerValue) ? brokerValue[0] : brokerValue;
+    const agentName = (typeof agent === 'string' ? agent :
+      agent?.name || agent?.full_name || agent?.fullName || agent?.display_name) ||
+      prop.agent_name || prop.agentName || null;
+    const brokerName = (typeof broker === 'string' ? broker :
+      broker?.name || broker?.office_name || broker?.officeName) ||
+      prop.broker_name || prop.brokerName || null;
+    const agentImage = typeof agent === 'object' && agent
+      ? (agent.image_url || agent.imageUrl || agent.photo_url || agent.photoUrl ||
+        agent.photo || agent.image || agent.profile_photo || agent.profilePhoto || null)
+      : null;
+    const agentProfileUrl = typeof agent === 'object' && agent
+      ? (agent.profile_url || agent.profileUrl || agent.agent_url || agent.agentUrl ||
+        agent.url || agent.href || null)
+      : null;
+
     return basePayload('realtor', String(prop.property_id || prop.rdc_web_url || ''), url, {
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
@@ -896,6 +918,10 @@
       county: prop.county || null,
       available_date: parseDate(prop.available_date || prop.date_available),
       virtual_tour_url: prop.virtual_tour_url || null,
+      agent_name: agentName,
+      broker_name: brokerName,
+      agent_image_url: agentImage,
+      agent_profile_url: agentProfileUrl,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
       ...extractSourceDates(prop),
     });
@@ -1782,9 +1808,37 @@
     }
   }
 
-  const api = { 
+  const IMPORT_IDENTITY_FIELDS = [
+    'source_type',
+    'identity_strategy',
+    'identity_status',
+    'source_profile_type',
+    'source_profile_name',
+    'source_profile_image_url',
+    'source_profile_url',
+    'agent_name',
+    'broker_name',
+    'agent_image_url',
+    'agent_profile_url',
+    'company_logo_url',
+    'poster_landlord_id',
+    'listed_at',
+    'source_last_updated_at',
+  ];
+
+  function buildImportIdentityPayload(record) {
+    const result = {};
+    const source = record && typeof record === 'object' ? record : {};
+    for (const field of IMPORT_IDENTITY_FIELDS) {
+      result[field] = source[field] == null ? null : source[field];
+    }
+    return result;
+  }
+
+  const api = {
     detect, 
     extract, 
+    buildImportIdentityPayload,
     extractZillow, 
     extractZillowNextData, 
     extractZillowFromDom, 

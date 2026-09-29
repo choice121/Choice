@@ -15,6 +15,21 @@ import { updateNav as _updateNav } from '/js/cp-api.js';
 const esc = CP.UI.esc;
 const showToast = window.showToast;
 
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function safeImageUrl(value) {
+  const raw = String(value || '');
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  return safeExternalUrl(raw);
+}
+
 // Extended nav init — wires both navAuthLink and drawerAuthLink, populates contacts
 async function updateNav() {
   await _updateNav();
@@ -757,43 +772,60 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
-  // Source identity card. Opendoor is intentionally rendered without any
-  // poster, agent, user, or company profile until its dedicated strategy is
-  // implemented.
-  const sourceIdentity = p.identity_strategy === 'NO_IDENTITY' ? null : (
-    p.source_profiles || (
-      p.source_profile_name ? {
-        profile_type: p.source_profile_type,
-        display_name: p.source_profile_name,
-        image_url: p.source_profile_image_url,
-        profile_url: p.source_profile_url,
-      } : null
-    )
-  );
-  const landlordIdentity = p.landlords && p.identity_strategy !== 'COMPANY_SOURCE' ? p.landlords : null;
+  // Keep the scraped poster separate from the landlord assigned to manage the
+  // Choice listing. In particular, never infer a poster for NO_IDENTITY sources.
+  const strategy = p.identity_strategy;
+  const relatedProfile = Array.isArray(p.source_profiles) ? p.source_profiles[0] : p.source_profiles;
+  const relatedLandlord = Array.isArray(p.landlords) ? p.landlords[0] : p.landlords;
+  const profileType = strategy === 'COMPANY_SOURCE' ? 'company' : 'agent';
+  const sourceIdentity = ['COMPANY_SOURCE', 'AGENT_POSTER'].includes(strategy)
+    ? {
+        profile_type: relatedProfile?.profile_type || p.source_profile_type || profileType,
+        display_name: relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
+        image_url: relatedProfile?.image_url || p.source_profile_image_url || p.agent_image_url || null,
+        profile_url: relatedProfile?.profile_url || p.source_profile_url || p.agent_profile_url || null,
+      }
+    : null;
+  const landlordIdentity = relatedLandlord && strategy !== 'COMPANY_SOURCE' && strategy !== 'NO_IDENTITY'
+    ? relatedLandlord
+    : null;
+  const posterName = sourceIdentity?.display_name;
+  const landlordName = landlordIdentity?.business_name || landlordIdentity?.contact_name || 'Property Owner';
   if (sourceIdentity || landlordIdentity) {
-    const ll = landlordIdentity;
     const profile = sourceIdentity;
-    const name = profile?.display_name || ll?.business_name || ll?.contact_name;
+    const name = posterName || landlordName;
+    const isSourcePoster = !!posterName;
     const card = document.getElementById('landlordCard');
     card.style.display = 'flex';
     document.getElementById('landlordName').textContent = name;
-    document.getElementById('landlordTagline').textContent =
-      profile?.profile_type === 'company'
-        ? `Source: ${p.source || 'property provider'}`
-        : (ll?.tagline || (p.source ? `Source: ${p.source}` : ''));
+    document.getElementById('landlordTagline').textContent = isSourcePoster
+      ? (profile.profile_type === 'company'
+          ? `Rental provider${p.source ? ` · ${p.source}` : ''}`
+          : (p.broker_name ? `Listing agent · ${p.broker_name}` : `Listing agent${p.source ? ` · ${p.source}` : ''}`))
+      : (landlordIdentity?.tagline || 'Assigned property manager');
     const avatarEl = document.getElementById('landlordAvatar');
-    const imageUrl = profile?.image_url || ll?.avatar_url || p.agent_image_url;
+    const imageUrl = (isSourcePoster ? profile?.image_url : null) || landlordIdentity?.avatar_url;
     if (imageUrl) {
-      avatarEl.innerHTML = `<img src="${esc(CONFIG.img(imageUrl,'avatar'))}" alt="${esc(name)}" loading="lazy">`;
+      let renderedImageUrl = safeImageUrl(imageUrl);
+      if (window.CONFIG && typeof window.CONFIG.img === 'function') {
+        renderedImageUrl = safeImageUrl(CONFIG.img(imageUrl, 'avatar')) || renderedImageUrl;
+      }
+      if (renderedImageUrl) {
+        avatarEl.innerHTML = `<img src="${esc(renderedImageUrl)}" alt="${esc(name)}" loading="lazy">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
       const avatarImg = avatarEl.querySelector('img');
       if (avatarImg) avatarImg.onerror = function() { this.onerror = null; this.src = '/assets/avatar-placeholder.svg'; };
     }
     else avatarEl.textContent = name.charAt(0).toUpperCase();
-    if (ll?.verified || p.identity_status === 'confirmed') document.getElementById('landlordVerified').style.display = 'inline';
-    if (profile?.profile_url) {
+    if ((!isSourcePoster && landlordIdentity?.verified) || (isSourcePoster && p.identity_status === 'confirmed')) {
+      document.getElementById('landlordVerified').style.display = 'inline';
+    }
+    const profileUrl = isSourcePoster ? safeExternalUrl(profile?.profile_url) : null;
+    if (profileUrl) {
       const nameEl = document.getElementById('landlordName');
-      nameEl.innerHTML = `<a href="${esc(profile.profile_url)}" target="_blank" rel="noopener noreferrer">${esc(name)}</a>`;
+      nameEl.innerHTML = `<a href="${esc(profileUrl)}" target="_blank" rel="noopener noreferrer">${esc(name)}</a>`;
     }
   }
 

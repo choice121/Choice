@@ -570,6 +570,13 @@
         _import: 'browser-extension-v' + VERSION,
       };
 
+      if (!window.CP_Extractors || typeof window.CP_Extractors.buildImportIdentityPayload !== 'function') {
+        isSaving = false;
+        setError('Extension identity contract unavailable; refresh the listing and try again');
+        return;
+      }
+      Object.assign(payload, window.CP_Extractors.buildImportIdentityPayload(extracted));
+
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
         isSaving = false;
         setError('Listing payload is too large');

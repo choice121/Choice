@@ -277,7 +277,7 @@
     </div>
 
     <!-- Tabs (only shown to logged-in landlord viewing their own profile, but kept here for parity) -->
-    <div class="profile-tabs">
+    <div class="profile-tabs" style="display:none">
       <div class="profile-tabs-inner">
         <a href="/landlord/settings.html" class="profile-tab">Settings</a>
         <a href="#" id="tabProfileSelf" class="profile-tab active">My Profile</a>
@@ -346,6 +346,15 @@
   const tabProfileSelf = document.getElementById('tabProfileSelf');
   if (tabProfileSelf && landlordId) tabProfileSelf.href = `/landlord/profile.html?id=${landlordId}`;
 
+  function safeProfileUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   if (!landlordId) { window.location.href = '/index.html'; }
   else { loadProfile(landlordId); }
 
@@ -381,7 +390,7 @@
 
   async function loadProfile(id) {
     const { data: landlord, error } = await supabase
-      .from('public_landlord_profiles')
+      .from('landlords_public')
       .select('*')
       .eq('id', id)
       .single();
@@ -394,19 +403,37 @@
 
     renderProfile(landlord);
 
-    const { data: listings } = await supabase
-      .from('properties')
-      .select('*')
-      .eq('landlord_id', id)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+    const [{ data: listings, error: listingsError }, { data: stats, error: statsError }] = await Promise.all([
+      supabase
+        .from('properties')
+        .select('*, property_photos(url,display_order)')
+        .eq('landlord_id', id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }),
+      supabase.rpc('get_public_landlord_profile_stats', { p_landlord_id: id })
+    ]);
 
-    renderStats(landlord, listings || []);
-    renderListings(listings || []);
+    if (listingsError) {
+      console.error('[landlord-profile] listings lookup failed:', listingsError);
+      CP.UI.toast('Could not load this profile’s listings.', 'error');
+    }
+    if (statsError) console.warn('[landlord-profile] profile stats unavailable:', statsError);
+
+    const listingRows = (listings || []).map(p => ({
+      ...p,
+      photo_urls: (Array.isArray(p.property_photos) ? p.property_photos : [])
+        .slice()
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map(photo => photo.url)
+        .filter(Boolean)
+    }));
+    const statsRow = Array.isArray(stats) ? stats[0] : stats;
+    renderStats(landlord, listingRows, statsError ? null : statsRow);
+    renderListings(listingRows);
   }
 
   function renderProfile(l) {
-    const displayName = l.business_name || l.contact_name;
+    const displayName = l.business_name || l.contact_name || 'Property Owner';
     document.title = `${displayName} — Choice Properties`;
 
     const setMetaId  = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
@@ -423,8 +450,8 @@
 
     // Avatar
     const avatarEl = document.getElementById('avatarEl');
-    if (l.avatar_url && window.CONFIG && CONFIG.img) {
-      avatarEl.outerHTML = `<img id="avatarEl" class="profile-avatar" src="${CONFIG.img(l.avatar_url,'avatar_lg')}" alt="${displayName}" loading="lazy">`;
+    if (l.avatar_url && window.CONFIG && typeof CONFIG.img === 'function') {
+      avatarEl.outerHTML = `<img id="avatarEl" class="profile-avatar" src="${esc(CONFIG.img(l.avatar_url,'avatar_lg'))}" alt="${esc(displayName)}" loading="lazy">`;
     } else {
       avatarEl.textContent = displayName.charAt(0).toUpperCase();
     }
@@ -446,7 +473,7 @@
       const label = typeLabels[l.account_type] || l.account_type;
       const badgeEl = document.getElementById('accountTypeBadge');
       if (badgeEl) {
-        badgeEl.innerHTML = `<span class="pill pill-info">${label}</span>`;
+        badgeEl.innerHTML = `<span class="pill pill-info">${esc(label)}</span>`;
         badgeEl.style.display = '';
       }
     }
@@ -458,7 +485,8 @@
     }
 
     const contacts = [];
-    if (l.website) contacts.push(`<a href="${l.website}" target="_blank" class="profile-contact-item">${l.website.replace(/^https?:\/\//, '')}</a>`);
+    const website = safeProfileUrl(l.website);
+    if (website) contacts.push(`<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="profile-contact-item">${esc(website.replace(/^https?:\/\//, ''))}</a>`);
     document.getElementById('profileContactRow').innerHTML = contacts.join('');
 
     if (l.bio) {
@@ -469,28 +497,31 @@
     if (l.specialties?.length) {
       document.getElementById('specSection').style.display = '';
       document.getElementById('profileSpecs').innerHTML =
-        l.specialties.map(s => `<span class="specialty-tag">${s}</span>`).join('');
+        l.specialties.map(s => `<span class="specialty-tag">${esc(s)}</span>`).join('');
     }
 
     const rows = [];
     if (l.contact_name && l.business_name) rows.push({ label:'Contact',     val: l.contact_name });
-    if (l.license_number)                  rows.push({ label:'License #',   val: l.license_number });
     if (l.years_experience)                rows.push({ label:'Experience',  val: `${l.years_experience} years` });
-    rows.push({ label:'Member Since', val: new Date(l.created_at).getFullYear() });
+    const memberSince = l.created_at ? new Date(l.created_at).getFullYear() : null;
+    if (Number.isFinite(memberSince)) rows.push({ label:'Member Since', val: memberSince });
 
     document.getElementById('infoRows').innerHTML = rows.map(r => `
       <div class="profile-info-row">
         <div>
-          <div class="profile-info-row-label">${r.label}</div>
-          <div class="profile-info-row-val">${r.val}</div>
+          <div class="profile-info-row-label">${esc(r.label)}</div>
+          <div class="profile-info-row-val">${esc(r.val)}</div>
         </div>
       </div>`).join('');
 
     const socials = [];
-    if (l.social_facebook)  socials.push(`<a href="${l.social_facebook}"  target="_blank" class="profile-social-btn facebook">f</a>`);
-    if (l.social_instagram) socials.push(`<a href="${l.social_instagram}" target="_blank" class="profile-social-btn instagram">IG</a>`);
-    if (l.social_linkedin)  socials.push(`<a href="${l.social_linkedin}"  target="_blank" class="profile-social-btn linkedin">in</a>`);
-    if (l.website)          socials.push(`<a href="${l.website}"          target="_blank" class="profile-social-btn website">🌐</a>`);
+    const facebook = safeProfileUrl(l.social_facebook);
+    const instagram = safeProfileUrl(l.social_instagram);
+    const linkedin = safeProfileUrl(l.social_linkedin);
+    if (facebook)  socials.push(`<a href="${esc(facebook)}" target="_blank" rel="noopener noreferrer" class="profile-social-btn facebook">f</a>`);
+    if (instagram) socials.push(`<a href="${esc(instagram)}" target="_blank" rel="noopener noreferrer" class="profile-social-btn instagram">IG</a>`);
+    if (linkedin)  socials.push(`<a href="${esc(linkedin)}" target="_blank" rel="noopener noreferrer" class="profile-social-btn linkedin">in</a>`);
+    if (website)    socials.push(`<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="profile-social-btn website">🌐</a>`);
 
     if (socials.length) {
       const sr = document.getElementById('socialRow');
@@ -499,15 +530,18 @@
     }
   }
 
-  function renderStats(l, listings) {
-    const totalViews = listings.reduce((s, p) => s + (p.views_count || 0), 0);
-    const totalApps  = listings.reduce((s, p) => s + (p.applications_count || 0), 0);
-    const yearsActive = l.years_experience || (new Date().getFullYear() - new Date(l.created_at).getFullYear()) || 1;
+  function renderStats(l, listings, stats) {
+    const totalViews = stats && stats.total_views != null ? Number(stats.total_views) : null;
+    const totalApps = stats && stats.total_applications != null ? Number(stats.total_applications) : null;
+    const createdYear = l.created_at ? new Date(l.created_at).getFullYear() : NaN;
+    const yearsActive = l.years_experience != null
+      ? Number(l.years_experience)
+      : (Number.isFinite(createdYear) ? Math.max(0, new Date().getFullYear() - createdYear) : null);
 
     document.getElementById('statListings').textContent = listings.length;
-    document.getElementById('statViews').textContent    = totalViews > 999 ? (totalViews/1000).toFixed(1)+'k' : totalViews;
-    document.getElementById('statYears').textContent    = yearsActive;
-    document.getElementById('statApps').textContent     = totalApps;
+    document.getElementById('statViews').textContent    = totalViews == null ? '—' : (totalViews > 999 ? (totalViews/1000).toFixed(1)+'k' : totalViews);
+    document.getElementById('statYears').textContent    = yearsActive == null || !Number.isFinite(yearsActive) ? '—' : yearsActive;
+    document.getElementById('statApps').textContent     = totalApps == null || !Number.isFinite(totalApps) ? '—' : totalApps;
   }
 
   function renderListings(listings) {
@@ -523,19 +557,22 @@
     grid.innerHTML = listings.map(p => {
       const photo    = p.photo_urls?.[0] || '/assets/placeholder-property.jpg';
       const availNow = !p.available_date || new Date(p.available_date) <= new Date();
+      const rent = p.monthly_rent == null
+        ? 'Contact for pricing'
+        : `$${Number(p.monthly_rent).toLocaleString()}<span style="font-size:.75rem;font-weight:500;color:var(--muted)">/mo</span>`;
       return `
         <article class="card">
-          <a href="/property.html?id=${p.id}" style="display:block">
+          <a href="/property.html?id=${encodeURIComponent(p.id)}" style="display:block">
             <div style="aspect-ratio:16/10;overflow:hidden;border-radius:var(--r-md) var(--r-md) 0 0;position:relative;background:var(--surface-2)">
-              <img src="${photo}" alt="${esc(p.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+              <img src="${esc(photo)}" alt="${esc(p.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">
               <div style="position:absolute;top:10px;left:10px">
                 <span class="pill pill-warning">${capitalize(p.property_type || 'Property')}</span>
               </div>
             </div>
           </a>
           <div class="card-body">
-            <div style="font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px">$${p.monthly_rent.toLocaleString()}<span style="font-size:.75rem;font-weight:500;color:var(--muted)">/mo</span></div>
-            <a href="/property.html?id=${p.id}" style="text-decoration:none;color:inherit">
+            <div style="font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px">${rent}</div>
+            <a href="/property.html?id=${encodeURIComponent(p.id)}" style="text-decoration:none;color:inherit">
               <div style="font-weight:600;font-size:.95rem;color:var(--text);margin-bottom:6px">${esc(p.title)}</div>
             </a>
             <div class="text-sm muted" style="margin-bottom:8px">${esc(p.address)}, ${esc(p.city)}</div>

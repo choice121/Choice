@@ -96,6 +96,7 @@ const SOURCE_ALIASES: Record<string, string> = {
   mainstreetrenewal: 'main_street_renewal',
   cjrealestate: 'cj_real_estate',
   cj: 'cj_real_estate',
+  cjproperties: 'cj_real_estate',
   'cj properties': 'cj_real_estate',
   'cj realty': 'cj_real_estate',
 };

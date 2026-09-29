@@ -21,6 +21,7 @@ ALIASES = {
     "mainstreetrenewal": "main_street_renewal",
     "cjrealestate": "cj_real_estate",
     "cj": "cj_real_estate",
+    "cjproperties": "cj_real_estate",
     "cj properties": "cj_real_estate",
     "cj realty": "cj_real_estate",
 }
@@ -34,7 +35,9 @@ COMPANIES = {
 
 
 def normalize_source(value: Any) -> str:
-    raw = str(value or "zillow").strip().lower()
+    raw = str(value or "unknown").strip().lower()
+    if not raw:
+        raw = "unknown"
     return ALIASES.get(raw, raw)
 
 
@@ -65,7 +68,9 @@ def classify_identity(record: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     if source in COMPANIES:
-        name = supplied_name or broker_name or COMPANIES[source]
+        # A brokerage/advertiser value may name an individual agent or a
+        # co-broker; it is not proof of the direct source company's identity.
+        name = supplied_name or COMPANIES[source]
         return {
             "source": source,
             "source_type": "DIRECT_PROPERTY_COMPANY",

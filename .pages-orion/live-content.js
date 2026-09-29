@@ -801,6 +801,16 @@
       }
       photoUrls = dedupePhotoUrls(photoUrls);
 
+      var folderSelect = document.querySelector('#cp-folder-select');
+      var selectedFolderId = folderSelect && folderSelect.value ? folderSelect.value : null;
+      var selectedFolderName = null;
+      if (folderSelect && folderSelect.selectedIndex >= 0) {
+        var selectedOption = folderSelect.options[folderSelect.selectedIndex];
+        selectedFolderName = selectedOption && selectedOption.value
+          ? selectedOption.textContent.replace(/^[^\S\r\n]*[^\w]*\s*/, '').trim()
+          : null;
+      }
+
       var payload = {
         source: extracted.source || 'zillow',
         source_listing_id: extracted.source_listing_id,
@@ -824,9 +834,17 @@
         available_date: extracted.available_date,
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
+        folder_id: selectedFolderId,
+        folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
         _import: 'browser-extension-v18.0.14-live',
       };
+
+      if (!window.CP_Extractors || typeof window.CP_Extractors.buildImportIdentityPayload !== 'function') {
+        setError('Extension identity contract unavailable; refresh the listing and try again');
+        return;
+      }
+      Object.assign(payload, window.CP_Extractors.buildImportIdentityPayload(extracted));
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
         setError('Listing payload is too large');

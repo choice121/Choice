@@ -57,6 +57,46 @@
   };
   function ico(n){ return _SV[n] || ''; }
 
+  const PROPERTY_SELECT = '*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), source_profiles(id,profile_type,display_name,image_url,profile_url,website_url), property_photos(id,url,display_order,watermark_status,file_id)';
+
+  function oneRelation(value) {
+    return Array.isArray(value) ? (value[0] || null) : (value || null);
+  }
+
+  function safeExternalUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function sourcePosterInfo(property) {
+    const relation = oneRelation(property.source_profiles);
+    const strategy = property.identity_strategy ||
+      (property.source_profile_type === 'company' ? 'COMPANY_SOURCE' :
+        property.source_profile_type === 'agent' ? 'AGENT_POSTER' : null);
+    if (strategy === 'NO_IDENTITY') {
+      return { strategy, label: 'No poster identity', name: null, image: null, url: null };
+    }
+    if (strategy === 'UNKNOWN_REVIEW') {
+      return { strategy, label: 'Needs review', name: null, image: null, url: null };
+    }
+    if (strategy !== 'COMPANY_SOURCE' && strategy !== 'AGENT_POSTER') return null;
+
+    const isCompany = strategy === 'COMPANY_SOURCE';
+    return {
+      strategy,
+      label: isCompany ? 'Source company' : 'Listing agent',
+      name: relation?.display_name || property.source_profile_name || property.agent_name || null,
+      image: relation?.image_url || property.source_profile_image_url ||
+        (isCompany ? property.company_logo_url : property.agent_image_url) || null,
+      url: safeExternalUrl(relation?.profile_url || relation?.website_url ||
+        property.source_profile_url || property.agent_profile_url),
+      broker: !isCompany ? (property.broker_name || null) : null,
+    };
+  }
   // ── Option constants ──────────────────────────────────────────────────────────
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
   const AMENITY_OPTIONS    = ['Pool','Gym / Fitness Center','Rooftop Access','Elevator','Doorman / Concierge','Storage Unit','Bike Room','BBQ / Grill Area','Courtyard / Garden','Balcony / Patio','In-unit Laundry','Washer/Dryer Hookups','Fireplace','EV Charging','Dog Run','High Ceilings','City Views','Smart Home'];
@@ -452,7 +492,8 @@
       : [];
 
     const urls     = _photos.map(x => x.url).filter(Boolean);
-    const landlord = p.landlords;
+    const landlord = oneRelation(p.landlords);
+    const poster = sourcePosterInfo(p);
 
     // ── Gallery HTML ──
     const galleryHtml = renderGallery(_photos);
@@ -463,7 +504,8 @@
         <div class="pd-header-price">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span></div>
         <h2 class="pd-header-title">${esc(p.title || 'Untitled')}</h2>
         <div class="pd-header-address">${ico('pin')} ${esc([p.address, p.city, p.state, p.zip].filter(Boolean).join(', ') || '—')}</div>
-        ${landlord ? `<div class="pd-listed-by">Listed by <strong>${esc(landlord.business_name || landlord.contact_name || '—')}</strong></div>` : ''}
+        ${poster?.name ? `<div class="pd-listed-by">${esc(poster.label)} <strong>${esc(poster.name)}</strong>${poster.broker ? ` · Brokerage: ${esc(poster.broker)}` : ''}</div>` : ''}
+        ${landlord ? `<div class="pd-listed-by">Assigned landlord <strong>${esc(landlord.business_name || landlord.contact_name || 'Property Owner')}</strong></div>` : ''}
       </div>`;
 
     // ── Status + actions ──
@@ -616,12 +658,33 @@
       </div>`;
     }
 
-    // ── Landlord ──
+    // ── Source poster / assigned landlord ──
+    let posterHtml = '';
+    if (poster) {
+      const posterName = poster.name || poster.label;
+      const posterImage = safeExternalUrl(poster.image);
+      posterHtml = `<div class="pd-section">
+        <div class="pd-section-title">Original poster</div>
+        <div class="pd-landlord">
+          <div class="pd-landlord-avatar">
+            ${posterImage
+              ? `<img src="${esc(posterImage)}" alt="${esc(posterName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+              : initials(posterName)}
+          </div>
+          <div class="pd-landlord-info">
+            <div class="pd-landlord-name">${esc(posterName)}</div>
+            <div class="pd-landlord-tagline">${esc(poster.label)}${poster.broker ? ` · Brokerage: ${esc(poster.broker)}` : ''}${p.source ? ` · Source: ${esc(p.source)}` : ''}</div>
+            ${poster.url ? `<div class="pd-landlord-meta"><a href="${esc(poster.url)}" target="_blank" rel="noopener noreferrer" style="font-size:.74rem;color:var(--brand)">View source profile ↗</a></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }
+
     let landlordHtml = '';
     if (landlord) {
-      const name = landlord.business_name || landlord.contact_name || '—';
+      const name = landlord.business_name || landlord.contact_name || 'Property Owner';
       landlordHtml = `<div class="pd-section">
-        <div class="pd-section-title">Landlord</div>
+        <div class="pd-section-title">Assigned landlord</div>
         <div class="pd-landlord">
           <div class="pd-landlord-avatar">
             ${landlord.avatar_url
@@ -712,6 +775,7 @@
       + vtHtml
       + tabsHtml
       + renderMap(p)
+      + posterHtml
       + landlordHtml
       + wmHtml
       + appsHtml
@@ -1902,7 +1966,7 @@
     // Reload page data
     const { data } = await CP.sb()
       .from('properties')
-      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+      .select(PROPERTY_SELECT)
       .eq('id', propId)
       .single();
     if (data) {
@@ -2418,7 +2482,7 @@
         // Reload fresh photo data, update gallery, close panel
         const { data: freshProp } = await CP.sb()
           .from('properties')
-          .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+          .select(PROPERTY_SELECT)
           .eq('id', propId).single();
         if (freshProp) {
           _photos = Array.isArray(freshProp.property_photos)
@@ -2716,7 +2780,7 @@
     // Reload page
     const { data } = await CP.sb()
       .from('properties')
-      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+      .select(PROPERTY_SELECT)
       .eq('id', propId).single();
     if (data) {
       const [appsRes, inqsRes] = await Promise.all([
@@ -2754,7 +2818,7 @@
     // Phase 1: load property first for fast first paint
     const propRes = await CP.sb()
       .from('properties')
-      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+      .select(PROPERTY_SELECT)
       .eq('id', propId)
       .single();
 
@@ -2839,7 +2903,7 @@
             // Auto-refresh page data without requiring a manual reload
             const { data: freshProp } = await CP.sb()
               .from('properties')
-              .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+              .select(PROPERTY_SELECT)
               .eq('id', propId).single();
             if (freshProp) {
               render(freshProp, [], []);
