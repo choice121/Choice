@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.0.8
+// Choice Properties — Live Content Script v18.0.9
 // Universal High-Quality Browser Extension UI for seven supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.8-live';
+  var VERSION  = '18.0.9-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -457,7 +457,7 @@
            /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
            /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
            /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
-           /(cjproperties\.org|cjrealestate\.com)\/[^/]+/i.test(url);
+           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url);
   }
 
   function isSearchPage(url) {
@@ -755,7 +755,7 @@
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v18.0.8-live',
+        _import: 'browser-extension-v18.0.9-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

@@ -86,6 +86,8 @@ const filesToCopy = [
   'count.html',
   'setup-credentials.html',
   '404.html',
+  'extension-meta.json',
+  'extension-updates.xml',
 ];
 
 filesToCopy.forEach((file) => {
@@ -97,11 +99,13 @@ filesToCopy.forEach((file) => {
   }
 });
 
-// Also ensure choice-properties-extension.zip is at dist root for direct download
-const zipSrc = path.join(ROOT_DIR, 'public', 'choice-properties-extension.zip');
-if (fs.existsSync(zipSrc)) {
-  fs.copyFileSync(zipSrc, path.join(DIST_DIR, 'choice-properties-extension.zip'));
-  console.log('✅ Copied public/choice-properties-extension.zip to dist/choice-properties-extension.zip');
+// Ensure both extension packages are at dist root for direct downloads.
+for (const zipName of ['choice-properties-extension.zip', 'choice-properties-orion-extension.zip']) {
+  const zipSrc = path.join(ROOT_DIR, 'public', zipName);
+  if (fs.existsSync(zipSrc)) {
+    fs.copyFileSync(zipSrc, path.join(DIST_DIR, zipName));
+    console.log(`✅ Copied public/${zipName} to dist/${zipName}`);
+  }
 }
 
 console.log('🎉 Successfully populated dist/ with all static admin, landlord, tenant, apply, and platform resources.');

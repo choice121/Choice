@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.9] - 2026-09-29
+### AppFolio/CJ Domain Activation & Cloudflare Release Artifact Fixes
+- **Portal Activation**: Added Chromium and Orion content-script matches for AppFolio and `cjrealestate.com`, and added AppFolio URL dispatch to the canonical CJ Real Estate extractor.
+- **Cloudflare Release Paths**: Published extension metadata, update XML, and both Chromium/Orion ZIP packages at the Cloudflare Pages root so the URLs used by the extension and release documentation resolve correctly.
+- **Release Validation**: Added coverage for required portal matches, current README versions, and generated `dist/` release artifacts.
+- **Extractor Tests**: Added AppFolio detection and payload coverage.
+
 ## [v18.0.8] - 2026-09-29
 ### v18 Package Alignment, Queue Recovery & Release Validation
 - **Canonical v18 Packaging**: Chromium and Orion/Safari sources now use one synchronized version and the release script generates both ZIP packages from the current source directories.

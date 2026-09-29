@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "18.0.8",
+  "version": "18.0.9",
   "description": "Save listings to Choice Properties pipeline with instant live updates.",
   "permissions": [
     "storage",
@@ -74,7 +74,9 @@
         "https://*.cjproperties.org/*",
         "https://cjproperties.org/*",
         "https://*.cjrealestate.com/*",
-        "https://cjrealestate.com/*"
+        "https://cjrealestate.com/*",
+        "https://appfolio.com/*",
+        "https://*.appfolio.com/*"
       ],
       "css": [
         "content.css"

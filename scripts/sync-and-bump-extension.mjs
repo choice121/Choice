@@ -35,6 +35,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const ZIP_PATH = path.join(PUBLIC_DIR, 'choice-properties-extension.zip');
 const ORION_ZIP_PATH = path.join(PUBLIC_DIR, 'choice-properties-orion-extension.zip');
 const UPDATE_XML_PATH = path.join(PUBLIC_DIR, 'extension-updates.xml');
+const ROOT_UPDATE_XML_PATH = path.join(ROOT, 'extension-updates.xml');
 
 // ── 1. Read and bump version ──────────────────────────────────────────
 if (!fs.existsSync(MANIFEST_PATH)) {
@@ -154,7 +155,7 @@ updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
   [/Choice Properties — Orion Content Bridge v[^\n]+/, `Choice Properties — Orion Content Bridge v${newVersion}`],
 ]);
 updateTextFile(path.join(ROOT, 'chrome-extension', 'README.md'), [
-  [/# Import to Choice Properties — Universal Chrome Extension \(v[^)]+\)/, `# Import to Choice Properties — Universal Chrome Extension (v${newVersion})`],
+  [/^# Choice Properties — Universal Chrome Extension \(v[^)]+\)/m, `# Choice Properties — Universal Chrome Extension (v${newVersion})`],
 ]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'live-content.js'), [
   [/browser-extension-v[0-9.]+-live/g, `browser-extension-v${newVersion}-live`],
@@ -223,6 +224,7 @@ const updateXml = `<?xml version='1.0' encoding='UTF-8'?>
 </gupdate>
 `;
 fs.writeFileSync(UPDATE_XML_PATH, updateXml, 'utf8');
+fs.writeFileSync(ROOT_UPDATE_XML_PATH, updateXml, 'utf8');
 console.log('✓ Generated public/extension-updates.xml');
 
 // ── 5. Zip both extension packages ─────────────────────────────────────
@@ -255,6 +257,8 @@ try {
   if (fs.existsSync(path.join(ROOT, 'dist'))) {
     fs.copyFileSync(ZIP_PATH, distZip);
     fs.copyFileSync(ORION_ZIP_PATH, distOrionZip);
+    fs.copyFileSync(ROOT_META_PATH, path.join(ROOT, 'dist', 'extension-meta.json'));
+    fs.copyFileSync(ROOT_UPDATE_XML_PATH, path.join(ROOT, 'dist', 'extension-updates.xml'));
   }
 } catch (_) {}
 

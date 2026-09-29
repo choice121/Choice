@@ -1431,7 +1431,7 @@
     },
     { 
       id: 'cj_real_estate',     
-      match: /(cjrealestate\.com|cjproperties\.org)\/[^/]+/i, 
+      match: /(cjrealestate\.com|cjproperties\.org|appfolio\.com)\/[^/]+/i,
       fn: extractCJRealEstate 
     },
   ];
@@ -1453,8 +1453,8 @@
     if (/rentprogress\.com/i.test(url)) {
       return { id: 'progress_residential', match: /rentprogress\.com/i, fn: extractProgressResidential };
     }
-    if (/cjproperties\.org|cjrealestate\.com/i.test(url)) {
-      return { id: 'cj_real_estate', match: /cjproperties|cjrealestate/i, fn: extractCJRealEstate };
+    if (/cjproperties\.org|cjrealestate\.com|appfolio\.com/i.test(url)) {
+      return { id: 'cj_real_estate', match: /cjproperties|cjrealestate|appfolio/i, fn: extractCJRealEstate };
     }
     return null;
   }

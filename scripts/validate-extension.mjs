@@ -65,6 +65,22 @@ if (rootManifest && chromeManifest && rootManifest.version !== chromeManifest.ve
   failures.push(`Root manifest is stale: ${rootManifest.version}; expected ${chromeManifest.version}`);
 }
 
+const requiredContentMatches = [
+  'https://cjrealestate.com/*',
+  'https://*.cjrealestate.com/*',
+  'https://appfolio.com/*',
+  'https://*.appfolio.com/*',
+];
+for (const [name, manifest] of [['Chromium', chromeManifest], ['Orion', orionManifest]]) {
+  if (!manifest) continue;
+  const matches = new Set((manifest.content_scripts || []).flatMap(script => script.matches || []));
+  for (const requiredMatch of requiredContentMatches) {
+    if (!matches.has(requiredMatch)) {
+      failures.push(`${name}: missing content-script match ${requiredMatch}`);
+    }
+  }
+}
+
 for (const [name, manifest] of [['Chromium', chromeManifest], ['Orion', orionManifest]]) {
   if (!manifest) continue;
   if ((manifest.permissions || []).some(permission => ['downloads', 'alarms'].includes(permission))) {
@@ -119,6 +135,36 @@ function checkArchive(relativePath, expectedVersion) {
 if (chromeManifest && orionManifest && chromeManifest.version === orionManifest.version) {
   checkArchive('public/choice-properties-extension.zip', chromeManifest.version);
   checkArchive('public/choice-properties-orion-extension.zip', orionManifest.version);
+}
+
+if (chromeManifest) {
+  const expectedVersion = chromeManifest.version;
+  const chromeReadme = fs.existsSync(path.join(ROOT, 'chrome-extension/README.md'))
+    ? fs.readFileSync(path.join(ROOT, 'chrome-extension/README.md'), 'utf8')
+    : '';
+  const rootReadme = fs.existsSync(path.join(ROOT, 'README.md'))
+    ? fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')
+    : '';
+  if (!chromeReadme.includes(`(v${expectedVersion})`)) {
+    failures.push(`chrome-extension/README.md does not advertise v${expectedVersion}`);
+  }
+  if (!rootReadme.includes(`v${expectedVersion}`)) {
+    failures.push(`README.md does not advertise v${expectedVersion}`);
+  }
+
+  for (const releaseFile of [
+    'dist/choice-properties-extension.zip',
+    'dist/choice-properties-orion-extension.zip',
+    'dist/extension-meta.json',
+    'dist/extension-updates.xml',
+  ]) {
+    requireFile(releaseFile);
+  }
+
+  const distMeta = readJson('dist/extension-meta.json').value;
+  if (distMeta && distMeta.version !== expectedVersion) {
+    failures.push(`dist/extension-meta.json is stale: ${distMeta.version}; expected ${expectedVersion}`);
+  }
 }
 
 if (failures.length) {

@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v18.0.0)
+# Choice Properties — Universal Chrome Extension (v18.0.9)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **7 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -14,7 +14,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 | **Redfin** | `redfin.com/*` | `__NEXT_DATA__` + `reactServerState` |
 | **Opendoor** | `opendoor.com/properties/*`, `opendoor.com/homes/*` | React Query Dehydrated State + Script Scanner + Slug Parser + DOM |
 | **Progress Residential** | `rentprogress.com/houses-for-rent/*`, `rentprogress.com/homes/*` | Hydrated State (`pageProps.property`) + Script Scanner + Fastly CDN |
-| **CJ Real Estate** | `cjproperties.org/*`, `appfolio.com/*` | AppFolio Schema + high-res s3 galleries |
+| **CJ Real Estate** | `cjproperties.org/*`, `cjrealestate.com/*`, `appfolio.com/*` | AppFolio Schema + high-res s3 galleries |
 
 ---
 
