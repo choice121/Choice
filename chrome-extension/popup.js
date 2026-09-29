@@ -18,7 +18,10 @@
       /zillow\.com\/homedetails\//i.test(tab.url) ||
       /realtor\.com\/realestateandhomes-detail\//i.test(tab.url) ||
       /apartments\.com\//i.test(tab.url) ||
-      /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(tab.url)
+      /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(tab.url) ||
+      /opendoor\.com\/(?:homes|properties|listings)\//i.test(tab.url) ||
+      /rentprogress\.com\/(?:houses-for-rent|homes|properties|rental-homes)\//i.test(tab.url) ||
+      /(?:cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(tab.url)
     );
 
     const countEl   = document.getElementById('session-count');
@@ -28,8 +31,10 @@
     const tipOn     = document.getElementById('tip-on-listing');
     const queueRow  = document.getElementById('queue-row');
     const queueCount = document.getElementById('queue-count');
+    const queueError = document.getElementById('queue-error');
     const flushBtn  = document.getElementById('flush-btn');
     const versionPill = document.getElementById('ext-version-pill');
+    const exportBtn = document.getElementById('export-queue-btn');
 
     // Default to local manifest first
     if (versionPill && chrome.runtime && chrome.runtime.getManifest) {
@@ -85,6 +90,11 @@
           queueRow.style.display = 'flex';
           queueCount.textContent = String(queue.length);
           flushBtn.disabled = false;
+          const lastError = queue.map(item => item && item._last_error).filter(Boolean).pop();
+          if (queueError && lastError) {
+            queueError.textContent = String(lastError).slice(0, 140);
+            queueError.style.display = 'block';
+          }
         } else {
           queueRow.style.display = 'none';
         }
@@ -96,6 +106,19 @@
             await chrome.runtime.sendMessage({ type: 'FLUSH_QUEUE' });
           } catch (_) {}
           setTimeout(() => window.close(), 800);
+        });
+
+        exportBtn?.addEventListener('click', async () => {
+          try {
+            const latest = await chrome.storage.local.get({ cp_queue: [] });
+            const blob = new Blob([JSON.stringify(latest.cp_queue || [], null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'choice-properties-import-queue.json';
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          } catch (_) {}
         });
       }
     } catch (_) {}
@@ -113,27 +136,24 @@
 
     // ── Settings toggles ──────────────────────────────────────
     try {
-      let s = { downloadToPC: true, offlineQueue: true };
+      let s = { offlineQueue: true };
       if (chrome.storage && chrome.storage.local) {
         const settings = await chrome.storage.local.get({ cp_settings: { downloadToPC: true, offlineQueue: true } });
         s = settings.cp_settings || s;
       }
 
-      const dlToggle = document.getElementById('toggle-download');
       const oqToggle = document.getElementById('toggle-queue');
-      dlToggle.checked = s.downloadToPC;
       oqToggle.checked = s.offlineQueue;
 
       const save = async () => {
         try {
           if (chrome.storage && chrome.storage.local) {
             await chrome.storage.local.set({
-              cp_settings: { downloadToPC: dlToggle.checked, offlineQueue: oqToggle.checked }
+              cp_settings: { offlineQueue: oqToggle.checked }
             });
           }
         } catch (_) {}
       };
-      dlToggle.addEventListener('change', save);
       oqToggle.addEventListener('change', save);
     } catch (_) {}
   } catch (e) {

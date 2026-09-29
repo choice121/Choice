@@ -5,9 +5,7 @@
   "description": "Save listings to Choice Properties pipeline with instant live updates.",
   "permissions": [
     "storage",
-    "tabs",
-    "downloads",
-    "alarms"
+    "tabs"
   ],
   "host_permissions": [
     "https://www.zillow.com/*",

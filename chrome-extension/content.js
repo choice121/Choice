@@ -634,7 +634,7 @@
     try {
       var imgRes = await fetch(url, {
         mode: 'cors',
-        credentials: 'include',
+        credentials: 'omit',
         headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
       });
       if (!imgRes.ok) return null;

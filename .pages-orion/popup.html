@@ -293,19 +293,16 @@
     <div>
       <div class="q-label">Offline queue</div>
       <div class="q-count" id="queue-count">0</div>
+      <div id="queue-error" style="display:none;max-width:150px;margin-top:3px;color:#fca5a5;font-size:10px;line-height:1.3"></div>
     </div>
-    <button class="flush-btn" id="flush-btn" disabled>Sync now</button>
+    <div style="display:flex;gap:5px">
+      <button class="flush-btn" id="export-queue-btn" type="button">Export</button>
+      <button class="flush-btn" id="flush-btn" disabled>Sync now</button>
+    </div>
   </div>
 
   <div class="settings">
     <div class="settings-title">Capture settings</div>
-    <div class="setting-row">
-      <span>Download to PC</span>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-download" checked>
-        <span class="slider"></span>
-      </label>
-    </div>
     <div class="setting-row">
       <span>Offline queue</span>
       <label class="toggle">
