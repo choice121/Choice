@@ -4,6 +4,18 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.8] - 2026-09-29
+### v18 Package Alignment, Queue Recovery & Release Validation
+- **Canonical v18 Packaging**: Chromium and Orion/Safari sources now use one synchronized version and the release script generates both ZIP packages from the current source directories.
+- **Legacy Package Cleanup**: The root and `dist/` manifest copies are synchronized to the current v18 release instead of advertising the retired v2 package.
+- **Portal Status Alignment**: The popup now recognizes Opendoor, Progress Residential, and CJ Real Estate in addition to the original four portals.
+- **Queue Recovery**: Offline queue items retain retry counts and the latest failure reason, and users can export the queue for recovery before retrying.
+- **Payload Guardrails**: Oversized listing payloads are rejected before upload with a visible error.
+- **Permission Reduction**: Removed unused `downloads` and `alarms` permissions; direct photo fallback fetches do not send browser credentials.
+- **Build Validation**: Added package validation for manifest versions, required files, generated extractor parity, JavaScript syntax, ZIP contents, and the 20-case extractor suite.
+
+---
+
 ## [v18.0.0] - 2026-09-21
 ### Universal Static Zip Serving, Dual Direct REST Ingestion & Opendoor/Progress Residential Hardening
 - **Universal Static Zip Serving**: Configured server with direct MIME mapping and root-level fallback to serve `choice-properties-extension.zip` directly from development and preview URLs (`/choice-properties-extension.zip`), eliminating stale CDN cached v15 downloads.

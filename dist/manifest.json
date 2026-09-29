@@ -1,27 +1,70 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "2.0.0",
-  "description": "Save any Zillow, Realtor.com, Apartments.com, or Redfin listing to your Choice Properties pipeline with one click — all fields and photos captured. Optional Download-to-PC and offline queue.",
-  "permissions": ["tabs", "storage", "downloads"],
+  "version": "18.0.8",
+  "description": "Save listings to Choice Properties pipeline with instant live updates.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
   "host_permissions": [
     "https://www.zillow.com/*",
+    "https://m.zillow.com/*",
     "https://www.realtor.com/*",
     "https://www.apartments.com/*",
     "https://www.redfin.com/*",
-    "https://photos.zillowstatic.com/*",
-    "https://tlfmwetmhthpyrytrcfo.supabase.co/*"
+    "https://www.opendoor.com/*",
+    "https://opendoor.com/*",
+    "https://*.rentprogress.com/*",
+    "https://rentprogress.com/*",
+    "https://*.cjproperties.org/*",
+    "https://cjproperties.org/*",
+    "https://*.cjrealestate.com/*",
+    "https://cjrealestate.com/*",
+    "https://m.redfin.com/*",
+    "https://zillowstatic.com/*",
+    "https://*.zillowstatic.com/*",
+    "https://rdcpix.com/*",
+    "https://*.rdcpix.com/*",
+    "https://cdn-redfin.com/*",
+    "https://*.cdn-redfin.com/*",
+    "https://cloudinary.com/*",
+    "https://*.cloudinary.com/*",
+    "https://fastly.net/*",
+    "https://*.fastly.net/*",
+    "https://amazonaws.com/*",
+    "https://*.amazonaws.com/*",
+    "https://appfolio.com/*",
+    "https://*.appfolio.com/*",
+    "https://tlfmwetmhthpyrytrcfo.supabase.co/*",
+    "https://choice-properties-site.pages.dev/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://www.zillow.com/homedetails/*",
-        "https://www.realtor.com/realestateandhomes-detail/*",
+        "https://www.zillow.com/*",
+        "https://m.zillow.com/*",
+        "https://www.realtor.com/*",
         "https://www.apartments.com/*",
-        "https://www.redfin.com/*"
+        "https://www.redfin.com/*",
+        "https://m.redfin.com/*",
+        "https://www.opendoor.com/*",
+        "https://opendoor.com/*",
+        "https://*.rentprogress.com/*",
+        "https://rentprogress.com/*",
+        "https://*.cjproperties.org/*",
+        "https://cjproperties.org/*",
+        "https://*.cjrealestate.com/*",
+        "https://cjrealestate.com/*"
       ],
-      "js": ["shared-extractors.js", "content.js"],
-      "css": ["content.css"],
+      "css": [
+        "content.css"
+      ],
+      "js": [
+        "config.js",
+        "shared-extractors.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -32,16 +75,16 @@
     "default_popup": "popup.html",
     "default_title": "Import to Choice Properties",
     "default_icon": {
-      "16":  "icons/icon16.png",
-      "32":  "icons/icon32.png",
-      "48":  "icons/icon48.png",
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
   "icons": {
-    "16":  "icons/icon16.png",
-    "32":  "icons/icon32.png",
-    "48":  "icons/icon48.png",
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
 }

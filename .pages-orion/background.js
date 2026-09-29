@@ -23,6 +23,7 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
 const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
 const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
 const MAX_QUEUE_ITEMS = 75;
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_WIDTH = 1600;
 const IMAGE_QUALITY = 0.82;
 const DOWNLOAD_TIMEOUT = 8000;
@@ -101,11 +102,26 @@ function queueItemKey(item) {
   return `${item.source || 'unknown'}|${item.source_listing_id || 'unknown'}`;
 }
 
-async function addQueueItem(item) {
+async function addQueueItem(item, errorMessage) {
   const queue = await getQueue();
-  const exists = queue.some(q => queueItemKey(q) === queueItemKey(item));
-  if (exists) return queue.length;
-  queue.push(Object.assign({}, item, { _queued_at: Date.now() }));
+  const existingIndex = queue.findIndex(q => queueItemKey(q) === queueItemKey(item));
+  const now = Date.now();
+  if (existingIndex >= 0) {
+    queue[existingIndex] = Object.assign({}, queue[existingIndex], {
+      _last_attempt_at: now,
+      _last_error: errorMessage || queue[existingIndex]._last_error || 'Retry pending',
+      _retry_count: (queue[existingIndex]._retry_count || 0) + 1,
+    });
+    await setQueue(queue);
+    await updateBadge();
+    return queue.length;
+  }
+  queue.push(Object.assign({}, item, {
+    _queued_at: now,
+    _last_attempt_at: now,
+    _retry_count: 0,
+    _last_error: errorMessage || null,
+  }));
   const trimmed = queue.slice(-MAX_QUEUE_ITEMS);
   await setQueue(trimmed);
   await updateBadge();
@@ -131,11 +147,15 @@ async function updateBadge() {
 }
 
 async function postPayload(payload) {
+  const serialized = JSON.stringify(payload);
+  if (serialized.length > MAX_PAYLOAD_BYTES) {
+    throw new Error('Payload exceeds the 2 MB import limit');
+  }
   const res = await fetch(EDGE_URL, {
     method:  'POST',
     mode:    'cors',
     headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
-    body:    JSON.stringify(payload),
+    body:    serialized,
   });
   let body;
   try {
@@ -165,10 +185,18 @@ async function flushQueue() {
       if (resp && (resp.ok || resp.duplicate)) {
         flushed++;
       } else {
-        remaining.push(item);
+        remaining.push(Object.assign({}, item, {
+          _last_attempt_at: Date.now(),
+          _retry_count: (item._retry_count || 0) + 1,
+          _last_error: (resp && resp.error) || 'Server rejected import',
+        }));
       }
     } catch (err) {
-      remaining.push(item);
+      remaining.push(Object.assign({}, item, {
+        _last_attempt_at: Date.now(),
+        _retry_count: (item._retry_count || 0) + 1,
+        _last_error: err && err.message ? err.message : 'Network error',
+      }));
     }
   }
 
@@ -343,7 +371,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'QUEUE_PAYLOAD') {
     (async () => {
       try {
-        const queueLength = await addQueueItem(msg.payload);
+        const queueLength = await addQueueItem(msg.payload, msg.error);
         sendResponse({ ok: true, queued: true, queueLength });
       } catch (err) {
         sendResponse({ ok: false, error: String(err) });
@@ -354,6 +382,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg.type === 'UPLOAD_PAYLOAD') {
     (async () => {
+      let networkError = 'Network error';
       try {
         const resp = await postPayload(msg.payload);
         if (resp && (resp.ok || resp.duplicate)) {
@@ -367,15 +396,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         });
         return;
       } catch (err) {
+        networkError = err && err.message ? err.message : 'Network error';
         if (!msg.settings?.offlineQueue) {
-          sendResponse({ ok: false, error: String(err) });
+          sendResponse({ ok: false, error: networkError });
           return;
         }
       }
 
       if (msg.settings?.offlineQueue) {
         try {
-          const queueLength = await addQueueItem(msg.payload);
+          const queueLength = await addQueueItem(msg.payload, networkError);
           sendResponse({ ok: false, queued: true, queueLength });
         } catch (queueErr) {
           sendResponse({ ok: false, error: String(queueErr) });

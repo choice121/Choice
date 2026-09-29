@@ -138,7 +138,7 @@
     try {
       let s = { offlineQueue: true };
       if (chrome.storage && chrome.storage.local) {
-        const settings = await chrome.storage.local.get({ cp_settings: { downloadToPC: true, offlineQueue: true } });
+        const settings = await chrome.storage.local.get({ cp_settings: { offlineQueue: true } });
         s = settings.cp_settings || s;
       }
 

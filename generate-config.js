@@ -311,9 +311,11 @@ try {
 // even when _headers sets Cache-Control: immutable on /css/* and /js/*.
 const htmlFiles = (function walk(dir) {
   const results = [];
+  const ignoredDirectories = new Set(['.git', '.local', 'node_modules', 'dist']);
   fs.readdirSync(dir).forEach(function(name) {
     const full = dir + '/' + name;
-    if (fs.statSync(full).isDirectory()) {
+    if (ignoredDirectories.has(name)) return;
+    if (fs.lstatSync(full).isDirectory()) {
       results.push.apply(results, walk(full));
     } else if (name.endsWith('.html')) {
       results.push(full);

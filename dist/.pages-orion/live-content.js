@@ -1,7 +1,6 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.0.0
-// Universal High-Quality Browser Extension UI for Zillow,
-// Realtor.com, Apartments.com, and Redfin
+// Choice Properties — Live Content Script v18.0.8
+// Universal High-Quality Browser Extension UI for seven supported portals
 //
 // Key Features:
 // 1. Sleek Floating Action Card (Glassmorphism, collision-aware)
@@ -14,6 +13,9 @@
 (function () {
   'use strict';
 
+  var EXTENSION_API = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome :
+    ((typeof browser !== 'undefined' && browser.runtime) ? browser : null);
+
   // Prevent multiple executions
   if (window.__CP_LIVE_CONTENT_LOADED__) return;
   window.__CP_LIVE_CONTENT_LOADED__ = true;
@@ -21,11 +23,12 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.0-live';
+  var VERSION  = '18.0.8-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
-  var MAX_PHOTOS = IS_MOBILE ? 25 : 50;
+  var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
+  var MAX_PHOTOS = IS_MOBILE ? 20 : 50;
+  var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
   var lastUrl = location.href;
   var activeWidget = null;
@@ -41,8 +44,8 @@
     style.textContent = `
       #cp-widget-container {
         position: fixed;
-        bottom: 24px;
-        right: 24px;
+        bottom: max(16px, env(safe-area-inset-bottom));
+        right: max(12px, env(safe-area-inset-right));
         z-index: 2147483647;
         width: 360px;
         max-width: calc(100vw - 32px);
@@ -136,8 +139,8 @@
         border: none;
         color: #94a3b8;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 44px;
+        height: 44px;
         border-radius: 4px;
         display: flex;
         align-items: center;
@@ -201,7 +204,8 @@
         align-items: center;
         gap: 4px;
         font-weight: 600;
-        padding: 2px 0;
+        min-height: 44px;
+        padding: 8px 0;
         text-align: left;
       }
       .cp-accordion-toggle:hover {
@@ -246,6 +250,22 @@
         transition: transform 0.12s, box-shadow 0.12s, background 0.15s, opacity 0.15s;
         user-select: none;
         touch-action: manipulation;
+      }
+      @media (max-width: 480px) {
+        #cp-widget-container {
+          width: calc(100vw - 20px);
+          max-width: calc(100vw - 20px);
+          right: 10px;
+        }
+        .cp-header {
+          padding: 8px 10px;
+        }
+        .cp-body {
+          padding: 10px;
+        }
+        .cp-inspector-grid {
+          grid-template-columns: 1fr;
+        }
       }
       .cp-save-action-btn:hover {
         background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
@@ -434,7 +454,10 @@
            /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
            /realtor\.com\/realestateandhomes-detail/i.test(url) ||
            /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
-           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url);
+           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
+           /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
+           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
+           /(cjproperties\.org|cjrealestate\.com)\/[^/]+/i.test(url);
   }
 
   function isSearchPage(url) {
@@ -470,6 +493,18 @@
       unique.push(url);
     });
     return unique;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
   }
 
   // ── Build & Inject Main Widget ──────────────────────────────
@@ -524,7 +559,8 @@
         photoUrls = extracted.photo_urls;
       }
     }
-    var photoCount = photoUrls.length || 'Verified';
+    var photoCount = photoUrls.length;
+    var sourceLabel = extracted && extracted.source ? String(extracted.source).replace(/_/g, ' ') : 'Listing';
 
     var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
     if (extracted && extracted.city && extracted.state) {
@@ -537,7 +573,7 @@
         <div class="cp-logo-icon">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         </div>
-        <span>${rentStr} • Choice Import</span>
+        <span>${escapeHtml(rentStr)} • Choice Import</span>
       </div>
 
       <!-- Full Body -->
@@ -550,7 +586,7 @@
             <span class="cp-brand-title">Choice Properties</span>
           </div>
           <div class="cp-header-badges">
-            <span class="cp-badge-verified">Zillow Verified</span>
+            <span class="cp-badge-verified">${escapeHtml(sourceLabel)} Verified</span>
             <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
             <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
@@ -558,11 +594,11 @@
 
         <div class="cp-body">
           <div class="cp-property-snapshot">
-            <div class="cp-address-line" title="${addressStr}">${addressStr}</div>
+            <div class="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
             <div class="cp-chips-row">
-              <span class="cp-chip cp-chip-price">${rentStr}</span>
-              <span class="cp-chip">${bedsBaths}</span>
-              <span class="cp-chip cp-chip-photos">📸 ${photoCount} photos</span>
+              <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
+              <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
+              <span class="cp-chip cp-chip-photos">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
@@ -719,26 +755,23 @@
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v5.0.0-live',
+        _import: 'browser-extension-v18.0.8-live',
       };
 
-      // ── Step 1: Save property record first (Instant < 2s) ───
-      var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-      var saveRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      var resp = null;
-      try {
-        resp = await saveRes.json();
-      } catch (err) {
-        setError('Invalid server response');
+      if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+        setError('Listing payload is too large');
         return;
       }
 
-      if (resp && resp.ok) {
+      // ── Step 1: Save property record first (Instant < 2s) ───
+      var resp = await submitPayload(payload);
+
+      if (resp && resp.queued) {
+        saveBtn.style.display = 'none';
+        var queuedBanner = successBox.querySelector('.cp-success-banner span');
+        if (queuedBanner) queuedBanner.textContent = 'Queued for pipeline sync';
+        successBox.style.display = 'flex';
+      } else if (resp && resp.ok) {
         // Record created successfully!
         saveBtn.style.display = 'none';
 
@@ -754,6 +787,10 @@
           }).then(function (result) {
             progressBox.style.display = 'none';
             successBox.style.display = 'flex';
+            var resultBanner = successBox.querySelector('.cp-success-banner span');
+            if (resultBanner && result.failed > 0) {
+              resultBanner.textContent = 'Saved; ' + result.failed + ' photo' + (result.failed === 1 ? '' : 's') + ' failed';
+            }
             if (result.uploaded.length > 0) {
               updatePipelinePhotos(payload, result.uploaded);
             }
@@ -781,10 +818,41 @@
     }
   }
 
+  async function submitPayload(payload) {
+    var lastResponse = null;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+          lastResponse = await new Promise(function (resolve) {
+            EXTENSION_API.runtime.sendMessage({
+              type: 'UPLOAD_PAYLOAD',
+              payload: payload,
+              settings: { offlineQueue: true }
+            }, function (response) {
+              resolve(EXTENSION_API.runtime.lastError ? { ok: false, error: EXTENSION_API.runtime.lastError.message } : response);
+            });
+          });
+        } else {
+          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          lastResponse = await saveRes.json();
+        }
+        if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) return lastResponse;
+      } catch (err) {
+        lastResponse = { ok: false, error: err.message || 'Network connection error' };
+      }
+      if (attempt < 2) await new Promise(function (resolve) { setTimeout(resolve, 600 * (attempt + 1)); });
+    }
+    return lastResponse || { ok: false, error: 'Network connection error' };
+  }
+
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
-    saveBtn.innerHTML = '<span>Failed: ' + msg + '</span>';
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     setTimeout(function () {
@@ -821,7 +889,7 @@
   async function downloadViaBackground(url) {
     return new Promise(function (resolve) {
       try {
-        if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) {
+        if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
           var requestId = 'cp-photo-' + Date.now() + '-' + Math.random().toString(36).slice(2);
           var timer = setTimeout(function () {
             window.removeEventListener('message', onResult);
@@ -840,10 +908,11 @@
           window.postMessage({ type: 'CP_DOWNLOAD_PHOTO', requestId: requestId, url: url }, '*');
           return;
         }
-        chrome.runtime.sendMessage(
+        EXTENSION_API.runtime.sendMessage(
           { type: 'DOWNLOAD_PHOTO', url: url },
           function (response) {
-            if (chrome.runtime.lastError) {
+            var runtimeError = EXTENSION_API.runtime.lastError;
+            if (runtimeError) {
               resolve(null);
               return;
             }
@@ -860,7 +929,7 @@
     try {
       var imgRes = await fetch(url, {
         mode: 'cors',
-        credentials: 'include',
+        credentials: 'omit',
         headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
       });
       if (!imgRes.ok) return null;
@@ -986,8 +1055,12 @@
           if (cardResp && cardResp.ok) {
             btn.classList.add('cp-saved');
             btn.innerHTML = '<span>Saved ✓</span>';
-          } else {
+          } else if (cardResp && cardResp.duplicate) {
             btn.innerHTML = '<span>Already in DB</span>';
+          } else {
+            var errorMessage = cardResp && cardResp.error ? String(cardResp.error).slice(0, 45) : 'Save failed';
+            btn.innerHTML = '<span>' + escapeHtml(errorMessage) + '</span>';
+            btn.disabled = false;
           }
         } catch (err) {
           btn.innerHTML = '<span>Saved to Tab</span>';

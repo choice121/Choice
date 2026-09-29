@@ -1,13 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "18.0.0",
+  "version": "18.0.8",
   "description": "Save listings to Choice Properties pipeline with instant live updates.",
   "permissions": [
     "storage",
-    "tabs",
-    "downloads",
-    "alarms"
+    "tabs"
   ],
   "host_permissions": [
     "https://www.zillow.com/*",
@@ -15,6 +13,29 @@
     "https://www.realtor.com/*",
     "https://www.apartments.com/*",
     "https://www.redfin.com/*",
+    "https://www.opendoor.com/*",
+    "https://opendoor.com/*",
+    "https://*.rentprogress.com/*",
+    "https://rentprogress.com/*",
+    "https://*.cjproperties.org/*",
+    "https://cjproperties.org/*",
+    "https://*.cjrealestate.com/*",
+    "https://cjrealestate.com/*",
+    "https://m.redfin.com/*",
+    "https://zillowstatic.com/*",
+    "https://*.zillowstatic.com/*",
+    "https://rdcpix.com/*",
+    "https://*.rdcpix.com/*",
+    "https://cdn-redfin.com/*",
+    "https://*.cdn-redfin.com/*",
+    "https://cloudinary.com/*",
+    "https://*.cloudinary.com/*",
+    "https://fastly.net/*",
+    "https://*.fastly.net/*",
+    "https://amazonaws.com/*",
+    "https://*.amazonaws.com/*",
+    "https://appfolio.com/*",
+    "https://*.appfolio.com/*",
     "https://tlfmwetmhthpyrytrcfo.supabase.co/*",
     "https://choice-properties-site.pages.dev/*"
   ],
@@ -45,7 +66,15 @@
         "https://www.realtor.com/*",
         "https://www.apartments.com/*",
         "https://www.redfin.com/*",
-        "https://m.redfin.com/*"
+        "https://m.redfin.com/*",
+        "https://www.opendoor.com/*",
+        "https://opendoor.com/*",
+        "https://*.rentprogress.com/*",
+        "https://rentprogress.com/*",
+        "https://*.cjproperties.org/*",
+        "https://cjproperties.org/*",
+        "https://*.cjrealestate.com/*",
+        "https://cjrealestate.com/*"
       ],
       "css": [
         "content.css"
@@ -53,6 +82,8 @@
       "js": [
         "config.js",
         "shared-extractors.js",
+        "live-shared-extractors.js",
+        "live-content.js",
         "content.js"
       ],
       "run_at": "document_idle"

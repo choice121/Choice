@@ -105,7 +105,7 @@
     try {
       let s = { offlineQueue: true };
       if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
-        const settings = await EXTENSION_API.storage.local.get({ cp_settings: { downloadToPC: true, offlineQueue: true } });
+        const settings = await EXTENSION_API.storage.local.get({ cp_settings: { offlineQueue: true } });
         s = settings.cp_settings || s;
       }
 

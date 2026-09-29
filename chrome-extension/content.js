@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v18.0.4
+// Choice Properties — Universal Content Script & UI Engine v18.0.8
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, and CJ Real Estate.
@@ -14,11 +14,12 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.4';
+  var VERSION  = '18.0.8';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
   var MAX_PHOTOS = IS_MOBILE ? 25 : 50;
+  var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
   var lastUrl = location.href;
   var activeWidget = null;
@@ -490,28 +491,21 @@
         _import: 'browser-extension-v' + VERSION,
       };
 
-      // ── Step 1: Save the property record through the pipeline function ────────────
-      var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET);
-      var resp = null;
-      var retries = 2;
-
-      while (retries >= 0) {
-        try {
-          var saveRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          resp = await saveRes.json();
-          if (resp && (resp.ok || resp.duplicate)) break;
-        } catch (fetchErr) {
-          retries--;
-          if (retries < 0) break;
-          await new Promise(function (r) { setTimeout(r, 600); });
-        }
+      if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+        isSaving = false;
+        setError('Listing payload is too large');
+        return;
       }
 
-      if (resp && resp.ok) {
+      // ── Step 1: Save the property record through the pipeline function ────────────
+      var resp = await submitPayload(payload);
+
+      if (resp && resp.queued) {
+        saveBtn.style.display = 'none';
+        if (successText) successText.textContent = 'Queued for pipeline sync';
+        successBox.style.display = 'flex';
+        isSaving = false;
+      } else if (resp && resp.ok) {
         saveBtn.style.display = 'none';
 
         if (resp.folder && resp.folder.name) {
@@ -568,6 +562,41 @@
       isSaving = false;
       setError('Network connection error');
     }
+  }
+
+  async function submitPayload(payload) {
+    var lastResponse = null;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+          lastResponse = await new Promise(function (resolve) {
+            chrome.runtime.sendMessage({
+              type: 'UPLOAD_PAYLOAD',
+              payload: payload,
+              settings: { offlineQueue: true }
+            }, function (response) {
+              resolve(chrome.runtime.lastError
+                ? { ok: false, error: chrome.runtime.lastError.message }
+                : response);
+            });
+          });
+        } else {
+          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          lastResponse = await saveRes.json();
+        }
+        if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) {
+          return lastResponse;
+        }
+      } catch (err) {
+        lastResponse = { ok: false, error: err.message || 'Network connection error' };
+      }
+      if (attempt < 2) await new Promise(function (resolve) { setTimeout(resolve, 600 * (attempt + 1)); });
+    }
+    return lastResponse || { ok: false, error: 'Network connection error' };
   }
 
   function setError(msg) {
