@@ -132,6 +132,26 @@
     return null;
   }
 
+  function extractSourceDates(record) {
+    const metadata = record && (record.listingMetadata || record.listing || record.metadata || {});
+    return {
+      listed_at: parseOriginalListingDate(
+        record && (
+          record.listingDate || record.listDate || record.datePosted || record.dateListed ||
+          record.datePublished || metadata.listingDate || metadata.datePosted ||
+          metadata.dateListed || metadata.datePublished
+        )
+      ),
+      source_last_updated_at: parseOriginalListingDate(
+        record && (
+          record.lastUpdatedDate || record.updatedDate || record.dateUpdated ||
+          record.lastModified || metadata.lastUpdatedDate || metadata.dateUpdated ||
+          metadata.lastModified
+        )
+      ),
+    };
+  }
+
   function safeI(v) {
     if (!v && v !== 0) return null;
     const n = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
@@ -160,6 +180,93 @@
   }
   function fmtType(t) {
     return !t ? 'Rental' : t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function normalizeBrowserSource(value) {
+    const source = String(value || 'unknown').trim().toLowerCase();
+    const aliases = {
+      progress: 'progress_residential',
+      'progress-residential': 'progress_residential',
+      invitation: 'invitation_homes',
+      'invitation-homes': 'invitation_homes',
+      'invitation homes': 'invitation_homes',
+      'main-street-renewal': 'main_street_renewal',
+      'main street renewal': 'main_street_renewal',
+      mainstreetrenewal: 'main_street_renewal',
+      cjrealestate: 'cj_real_estate',
+      cj: 'cj_real_estate',
+      'cj properties': 'cj_real_estate',
+      'cj realty': 'cj_real_estate',
+    };
+    return aliases[source] || source;
+  }
+
+  function applyBrowserIdentityContract(payload) {
+    const source = normalizeBrowserSource(payload.source);
+    const directCompanies = {
+      progress_residential: 'Progress Residential',
+      invitation_homes: 'Invitation Homes',
+      main_street_renewal: 'Main Street Renewal',
+      cj_real_estate: 'CJ Real Estate',
+    };
+
+    payload.source = source;
+    if (source === 'opendoor') {
+      return Object.assign(payload, {
+        source_type: 'SPECIAL_CASE',
+        identity_strategy: 'NO_IDENTITY',
+        identity_status: 'unavailable',
+        source_profile_type: null,
+        source_profile_name: null,
+        source_profile_image_url: null,
+        source_profile_url: null,
+        agent_name: null,
+        agent_image_url: null,
+        agent_profile_url: null,
+        broker_name: null,
+        poster_landlord_id: null,
+      });
+    }
+
+    if (directCompanies[source]) {
+      return Object.assign(payload, {
+        source_type: 'DIRECT_PROPERTY_COMPANY',
+        identity_strategy: 'COMPANY_SOURCE',
+        identity_status: 'confirmed',
+        source_profile_type: 'company',
+        source_profile_name: payload.source_profile_name || directCompanies[source],
+        source_profile_image_url: payload.source_profile_image_url || payload.company_logo_url || null,
+        source_profile_url: payload.source_profile_url || null,
+        agent_name: null,
+        agent_image_url: null,
+        agent_profile_url: null,
+        broker_name: directCompanies[source],
+        poster_landlord_id: null,
+      });
+    }
+
+    const agentEvidence = payload.agent_name || payload.agent_profile_url;
+    if (source === 'zillow' || source === 'realtor' || agentEvidence) {
+      return Object.assign(payload, {
+        source_type: 'AGENT_PLATFORM',
+        identity_strategy: 'AGENT_POSTER',
+        identity_status: agentEvidence ? 'confirmed' : 'unavailable',
+        source_profile_type: 'agent',
+        source_profile_name: payload.agent_name || null,
+        source_profile_image_url: payload.agent_image_url || null,
+        source_profile_url: payload.agent_profile_url || null,
+      });
+    }
+
+    return Object.assign(payload, {
+      source_type: source === 'apartments' || source === 'redfin' ? 'AGGREGATOR' : 'UNKNOWN',
+      identity_strategy: 'UNKNOWN_REVIEW',
+      identity_status: 'review',
+      source_profile_type: null,
+      source_profile_name: null,
+      source_profile_image_url: null,
+      source_profile_url: null,
+    });
   }
   function parseBaths(rawBaths, descText) {
     let baths = rawBaths != null ? parseFloat(rawBaths) : null;
@@ -225,7 +332,7 @@
 
   // ── Base payload ─────────────────────────────────────────────
   function basePayload(source, id, url, overrides) {
-    return Object.assign({
+    const payload = Object.assign({
       source, source_listing_id: id, source_url: url,
       title: null, address: null, city: null, state: null, zip: null, lat: null, lng: null,
       monthly_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null,
@@ -240,8 +347,13 @@
       virtual_tour_url: null, has_basement: null, has_central_air: null,
       original_image_urls: '[]', agent_name: null, broker_name: null,
       agent_image_url: null, agent_profile_url: null, source_last_updated_at: null,
+      source_type: null, identity_strategy: null, identity_status: null,
+      source_profile_type: null, source_profile_name: null,
+      source_profile_image_url: null, source_profile_url: null,
+      company_logo_url: null, poster_landlord_id: null,
       _import: 'browser-extension-v5.0-resilient'
     }, overrides);
+    return applyBrowserIdentityContract(payload);
   }
 
   // ── Zillow Primary NextData Extractor ─────────────────────────
@@ -485,6 +597,9 @@
     const beds = prop.numberOfBedrooms || prop.numberOfRooms || null;
     const baths = prop.numberOfBathroomsTotal || prop.numberOfFullBathrooms || null;
     const desc = prop.description || null;
+    const seller = prop.seller || prop.provider || null;
+    const sellerIsPerson = seller && /person/i.test(String(seller['@type'] || ''));
+    const sellerIsOrganization = seller && /organization|localbusiness/i.test(String(seller['@type'] || ''));
     const photos = [];
     if (Array.isArray(prop.image)) {
       prop.image.forEach(img => {
@@ -500,7 +615,7 @@
     const sourceId = zpidMatch || String(prop.identifier || prop.sku || prop['@id'] || Date.now());
 
     return basePayload(sourceName, sourceId, url, {
-      title: prop.name || (street ? buildTitle(beds, 'APARTMENT', city, street) : null),
+      title: prop.name || null,
       address: street || prop.name || null,
       city: city || null,
       state: state || null,
@@ -515,6 +630,15 @@
         : normalizeType(prop['@type'] || 'APARTMENT'),
       description: desc,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
+      ...extractSourceDates(prop),
+      agent_name: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsPerson
+        ? (seller.name || null) : null,
+      agent_image_url: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsPerson && seller.image
+        ? (typeof seller.image === 'string' ? seller.image : seller.image.url) : null,
+      agent_profile_url: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsPerson
+        ? (seller.url || seller.sameAs || null) : null,
+      broker_name: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsOrganization
+        ? (seller.name || null) : null,
     });
   }
 
@@ -779,6 +903,7 @@
       available_date: parseDate(prop.available_date || prop.date_available),
       virtual_tour_url: prop.virtual_tour_url || null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
+      ...extractSourceDates(prop),
     });
   }
 
@@ -1059,7 +1184,7 @@
     const sourceId = String(prop.id || prop.listingId || prop.homeId || idFromUrl);
 
     return basePayload('opendoor', sourceId, url, {
-      title: buildTitle(beds, propType, city, street),
+      title: prop.title || (dom && dom.title) || null,
       address: street, city, state, zip, lat, lng,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -1077,6 +1202,7 @@
       garage_spaces: prop.garageSpaces != null ? safeI(prop.garageSpaces) : (dom ? dom.garage_spaces : null),
       available_date: parseDate(prop.availableDate || prop.listDate || (dom ? dom.available_date : null)),
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
+      ...extractSourceDates(prop),
     });
   }
 
@@ -1291,7 +1417,7 @@
       }
 
       return basePayload('progress_residential', String(prop.id || prop.propertyId || idFromUrl), url, {
-        title: buildTitle(beds, 'SINGLE_FAMILY', city, street),
+        title: prop.title || (dom && dom.title) || null,
         address: street, city, state, zip,
         monthly_rent: rent,
         bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -1302,6 +1428,7 @@
         pets_allowed: true,
         available_date: parseDate(prop.availableDate || prop.readyDate),
         original_image_urls: JSON.stringify(photos.slice(0, 50)),
+        ...extractSourceDates(prop),
       });
     }
 
@@ -1390,7 +1517,7 @@
     });
 
     return basePayload('progress_residential', idFromUrl, url, {
-      title: buildTitle(beds, 'SINGLE_FAMILY', city, street),
+      title: fullHeading || null,
       address: street, city, state, zip,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -1399,6 +1526,7 @@
       description: rawDesc || null,
       pets_allowed: true,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
+      ...extractSourceDates({}),
     });
   }
 
@@ -1522,7 +1650,7 @@
     });
 
     return basePayload('cj_real_estate', idFromUrl, url, {
-      title: buildTitle(beds, propType, city, street),
+      title: fullTitle || null,
       address: street, city, state, zip,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,

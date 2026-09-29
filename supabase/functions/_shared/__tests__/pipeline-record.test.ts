@@ -24,6 +24,10 @@ Deno.test('source identity policy separates agent, company, and Opendoor cases',
   assertEquals(opendoor.identity_strategy, 'NO_IDENTITY');
   assertEquals(opendoor.agent_name, null);
   assertEquals(opendoor.poster_landlord_id, null);
+
+  const unknown = classifySourceIdentity({ source: null, agent_name: null });
+  assertEquals(unknown.source, 'unknown');
+  assertEquals(unknown.identity_strategy, 'UNKNOWN_REVIEW');
 });
 
 Deno.test('buildPipelineRecord preserves source provenance and keeps listing dates separate from import/publication dates', () => {

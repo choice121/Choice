@@ -61,6 +61,17 @@ export interface ZillowExtracted {
   original_image_urls: string;
   agent_name: string | null;
   broker_name: string | null;
+  agent_image_url: string | null;
+  agent_profile_url: string | null;
+  listed_at: string | null;
+  source_last_updated_at: string | null;
+  source_type: string | null;
+  identity_strategy: string | null;
+  identity_status: string | null;
+  source_profile_type: string | null;
+  source_profile_name: string | null;
+  source_profile_image_url: string | null;
+  source_profile_url: string | null;
 }
 
 // ── Type coercion helpers ──────────────────────────────────────────────
@@ -111,6 +122,13 @@ function normalizeDate(v: unknown): string | null {
   if (/^\d{10}$/.test(s)) { try { return new Date(parseInt(s) * 1000).toISOString().slice(0, 10); } catch { /* ignore */ } }
   try { const d = new Date(s); if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10); } catch { /* ignore */ }
   return s.slice(0, 40);
+}
+
+function normalizeOriginalDate(v: unknown): string | null {
+  if (!v || typeof v === 'object') return null;
+  const s = String(v).trim();
+  if (!s || /^(now|today|immediate|ready)$/i.test(s)) return null;
+  return normalizeDate(s);
 }
 
 // ── Zillow __NEXT_DATA__ extraction ───────────────────────────────────
@@ -279,9 +297,15 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     return t.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
   }
   const city = addr.city || prop.city || '';
-  const title = city
-    ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city)
-    : (addr.streetAddress || prop.streetAddress || 'Zillow Rental');
+  const title = prop.title || null;
+  const listedAt = normalizeOriginalDate(
+    prop.listingDate || prop.listDate || prop.datePosted || prop.dateListed ||
+    prop.listingMetadata?.listingDate || prop.resoFacts?.listingDate
+  );
+  const sourceLastUpdatedAt = normalizeOriginalDate(
+    prop.lastUpdatedDate || prop.updatedDate || prop.dateUpdated ||
+    prop.listingMetadata?.lastUpdatedDate || prop.resoFacts?.lastUpdatedDate
+  );
 
   return {
     source: 'zillow',
@@ -335,5 +359,16 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     original_image_urls: JSON.stringify(photosCapped),
     agent_name: ai.agentName || null,
     broker_name: ai.brokerName || null,
+    agent_image_url: ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || null,
+    agent_profile_url: ai.agentProfileUrl || ai.profileUrl || ai.agentUrl || null,
+    listed_at: listedAt,
+    source_last_updated_at: sourceLastUpdatedAt,
+    source_type: 'AGENT_PLATFORM',
+    identity_strategy: 'AGENT_POSTER',
+    identity_status: ai.agentName || ai.agentProfileUrl ? 'confirmed' : 'unavailable',
+    source_profile_type: 'agent',
+    source_profile_name: ai.agentName || null,
+    source_profile_image_url: ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || null,
+    source_profile_url: ai.agentProfileUrl || ai.profileUrl || ai.agentUrl || null,
   };
 }

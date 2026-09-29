@@ -73,7 +73,7 @@ SECURITY DEFINER
 SET search_path = public, pipeline
 AS $$
 DECLARE
-  v_source TEXT := lower(coalesce(NEW.source, ''));
+  v_source TEXT := lower(coalesce(NEW.source, 'unknown'));
   v_strategy TEXT := 'UNKNOWN_REVIEW';
   v_type TEXT := 'UNKNOWN';
   v_profile_type TEXT := NULL;
@@ -282,7 +282,14 @@ BEGIN
   v_avail := CASE WHEN p.available_date IS NOT NULL
     AND p.available_date ~ '^\d{4}-\d{2}-\d{2}$'
     THEN p.available_date::date ELSE CURRENT_DATE END;
-  v_listed := COALESCE(p.listed_at::date, p.scraped_at::date, CURRENT_DATE);
+  -- A source listing date is optional evidence. Never substitute scrape/import
+  -- time here, otherwise an unknown date is published as a fabricated "new"
+  -- listing date.
+  v_listed := CASE
+    WHEN p.listed_at IS NOT NULL AND p.listed_at ~ '^\d{4}-\d{2}-\d{2}'
+      THEN p.listed_at::date
+    ELSE NULL
+  END;
   v_imported_at := COALESCE(p.imported_at, p.scraped_at::timestamptz, now());
 
   INSERT INTO public.properties (

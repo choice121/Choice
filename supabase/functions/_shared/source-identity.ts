@@ -24,6 +24,7 @@ export interface SourceIdentityInput {
   agent_image_url?: unknown;
   agent_profile_url?: unknown;
   source_profile_name?: unknown;
+  source_profile_image_url?: unknown;
   source_profile_url?: unknown;
   company_logo_url?: unknown;
   poster_landlord_id?: unknown;
@@ -106,7 +107,9 @@ function text(value: unknown): string | null {
 }
 
 export function normalizeIdentitySource(value: unknown): string {
-  const raw = (text(value) || 'zillow').toLowerCase();
+  // A missing source is not evidence of Zillow. It must remain reviewable
+  // instead of silently entering the agent-platform policy.
+  const raw = (text(value) || 'unknown').toLowerCase();
   return SOURCE_ALIASES[raw] || raw;
 }
 
@@ -126,6 +129,7 @@ export function classifySourceIdentity(input: SourceIdentityInput): SourceIdenti
   const agentImageUrl = text(input.agent_image_url);
   const agentProfileUrl = text(input.agent_profile_url);
   const suppliedProfileName = text(input.source_profile_name);
+  const suppliedProfileImageUrl = text(input.source_profile_image_url);
   const suppliedProfileUrl = text(input.source_profile_url);
   const companyLogoUrl = text(input.company_logo_url);
 
@@ -162,12 +166,12 @@ export function classifySourceIdentity(input: SourceIdentityInput): SourceIdenti
       source_type: policy.sourceType,
       identity_strategy: strategy,
       source_profile_type: 'company',
-      source_profile_name: suppliedProfileName || brokerName || policy.companyName || null,
-      source_profile_image_url: companyLogoUrl,
+      source_profile_name: suppliedProfileName || policy.companyName || null,
+      source_profile_image_url: suppliedProfileImageUrl || companyLogoUrl,
       source_profile_url: suppliedProfileUrl,
-      identity_status: suppliedProfileName || brokerName || policy.companyName ? 'confirmed' : 'unavailable',
+      identity_status: suppliedProfileName || policy.companyName ? 'confirmed' : 'unavailable',
       agent_name: null,
-      broker_name: brokerName || policy.companyName || null,
+      broker_name: policy.companyName || suppliedProfileName || null,
       agent_image_url: null,
       agent_profile_url: null,
       poster_landlord_id: null,

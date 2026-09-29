@@ -236,6 +236,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     agent_image_url: body.agent_image_url,
     agent_profile_url: body.agent_profile_url,
     source_profile_name: body.source_profile_name,
+    source_profile_image_url: body.source_profile_image_url,
     source_profile_url: body.source_profile_url,
     company_logo_url: body.company_logo_url,
     poster_landlord_id: body.poster_landlord_id,

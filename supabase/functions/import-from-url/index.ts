@@ -201,7 +201,7 @@ async function handleImport(
   const folderId   = safeStr(body?.folder_id || null);
   
   const record = buildPipelineRecord({
-    source: 'zillow',
+     source: safeStr(extracted.source) || 'zillow',
     source_listing_id: sourceListingId,
     folder_name: folderName,
     source_url: rawUrl,
@@ -255,6 +255,10 @@ async function handleImport(
     broker_name: safeStr(extracted.broker_name),
     agent_image_url: safeStr(extracted.agent_image_url),
     agent_profile_url: safeStr(extracted.agent_profile_url),
+     source_profile_name: safeStr(extracted.source_profile_name),
+     source_profile_image_url: safeStr(extracted.source_profile_image_url),
+     source_profile_url: safeStr(extracted.source_profile_url),
+     company_logo_url: safeStr(extracted.company_logo_url),
     listed_at: safeStr(extracted.listed_at),
     source_last_updated_at: safeStr(extracted.source_last_updated_at),
     original_data: originalData,
