@@ -60,7 +60,7 @@ function imageEntryUrl(entry: ImageEntry): string {
 
 // ── ImageKit auto-upload config ─────────────────────────────────
 const MAX_PHOTOS_TO_UPLOAD = 40;
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 8;
 const FETCH_TIMEOUT = 15_000;
 const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 
@@ -265,13 +265,15 @@ Deno.serve(async (req) => {
   }
 
   // Duplicate check
-  const { data: existing } = await adminClient
+  const { data: existingRows } = await adminClient
     .schema('pipeline')
     .from('pipeline_properties')
     .select('id, title, folder_id, folder_serial')
     .eq('source_listing_id', sourceListingId)
     .eq('source', source)
-    .maybeSingle();
+    .order('imported_at', { ascending: false })
+    .limit(1);
+  const existing = existingRows?.[0] ?? null;
 
   if (existing) {
     // If folder was specified and existing record doesn't have it, we can assign it
@@ -376,6 +378,11 @@ Deno.serve(async (req) => {
     .map(imageEntryUrl)
     .filter((u) => typeof u === 'string' && u.startsWith('http'));
 
+  if (sourceImageUrls.length > 0) {
+    record.photo_import_status = 'queued';
+    record.photo_upload_status = 'uploading';
+  }
+
   // ── Handle Folder Assignment Prior to or During Insert ────────
   let targetFolderId: string | null = safeStr(body.folder_id);
   const targetFolderName = safeStr(body.folder_name);
@@ -431,12 +438,29 @@ Deno.serve(async (req) => {
     return permissiveJsonErr(500, 'Database insert failed: ' + insertErr.message, req);
   }
 
-  // Auto-upload images to ImageKit if not already ImageKit
+  // Auto-upload images to ImageKit if not already ImageKit. This closure is
+  // scheduled with EdgeRuntime.waitUntil below so the record response is not
+  // held open by remote image downloads.
+  const processImageUploads = async () => {
   let imagekitUploaded = 0;
   let imagekitFailed = 0;
   const imagekitUrls: ImageEntry[] = [];
   const alreadyImageKit = sourceImageUrls.length > 0 && sourceImageUrls.every((u) => u.includes('ik.imagekit.io'));
   const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
+
+  if (!IMAGEKIT_PRIVATE_KEY && sourceImageUrls.length > 0) {
+    await adminClient
+      .schema('pipeline')
+      .from('pipeline_properties')
+      .update({
+        photo_import_status: 'failed',
+        photo_upload_status: 'failed',
+        last_photo_import_error: 'ImageKit storage is not configured',
+        last_photo_import_at: new Date().toISOString(),
+      })
+      .eq('id', record.id);
+    return;
+  }
 
   if (alreadyImageKit) {
     imagekitUrls.push(...sourceImageEntries);
@@ -520,47 +544,44 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (imagekitUrls.length > 0) {
-      await adminClient
-        .schema('pipeline')
-        .from('pipeline_properties')
-        .update({
-          original_image_urls: JSON.stringify(imagekitUrls),
-          photo_import_status: 'ok',
-          last_photo_import_at: new Date().toISOString(),
-          last_photo_import_error: null,
-        })
-        .eq('id', record.id);
+  }
+
+  await adminClient
+    .schema('pipeline')
+    .from('pipeline_properties')
+    .update(imagekitUrls.length > 0 ? {
+      original_image_urls: JSON.stringify(imagekitUrls),
+      photo_import_status: 'ok',
+      photo_upload_status: 'complete',
+      last_photo_import_at: new Date().toISOString(),
+      last_photo_import_error: null,
+    } : {
+      photo_import_status: 'failed',
+      photo_upload_status: 'failed',
+      last_photo_import_at: new Date().toISOString(),
+      last_photo_import_error: 'No property photos could be uploaded to ImageKit',
+    })
+    .eq('id', record.id);
+  };
+
+  const imageTask = sourceImageUrls.length > 0 ? processImageUploads() : null;
+  if (imageTask) {
+    const edgeRuntime = (globalThis as typeof globalThis & {
+      EdgeRuntime?: { waitUntil: (promise: Promise<unknown>) => void };
+    }).EdgeRuntime;
+    if (edgeRuntime?.waitUntil) {
+      edgeRuntime.waitUntil(imageTask);
+    } else {
+      void imageTask.catch((error) => console.error('[receive-pipeline-import] Background photo processing failed:', error));
     }
   }
 
-  // Count total properties in folder for the response
-  let folderCount = 1;
-  let finalFolderName = targetFolderName;
-  if (targetFolderId) {
-    const { count } = await adminClient
-      .schema('pipeline')
-      .from('pipeline_properties')
-      .select('id', { count: 'exact', head: true })
-      .eq('folder_id', targetFolderId);
-    if (count != null) folderCount = count;
-
-    if (!finalFolderName) {
-      const { data: fData } = await adminClient
-        .schema('pipeline')
-        .from('pipeline_folders')
-        .select('name')
-        .eq('id', targetFolderId)
-        .maybeSingle();
-      if (fData?.name) finalFolderName = fData.name;
-    }
-  }
-
+  // The extension supplies a cached folder name, so avoid extra reads on the
+  // latency-sensitive save path.
   const folderResult = targetFolderId ? {
     folder_id: targetFolderId,
-    name: finalFolderName || 'Folder',
+    name: targetFolderName || 'Folder',
     serial: record.folder_serial,
-    total_count: folderCount,
   } : null;
 
   return permissiveJsonOk({
@@ -569,8 +590,9 @@ Deno.serve(async (req) => {
     title:  String(record.title),
     score:  record.data_quality_score,
     photos: sourceImageUrls.length,
-    imagekit_photos: imagekitUploaded,
-    imagekit_failed: imagekitFailed,
+    photos_queued: Boolean(imageTask),
+    imagekit_photos: 0,
+    imagekit_failed: 0,
     city:   safeStr(body.city),
     rent:   safeInt(body.monthly_rent),
     folder: folderResult,

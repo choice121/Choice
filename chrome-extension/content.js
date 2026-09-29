@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v18.0.10
+// Choice Properties — Universal Content Script & UI Engine v18.0.11
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.10';
+  var VERSION  = '18.0.11';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -28,6 +28,8 @@
   var currentExtractedData = null;
   var cachedFolders = [];
   var isSaving = false;
+  var listingRefreshTimer = null;
+  var hydrationRefreshTimers = [];
 
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
@@ -50,6 +52,59 @@
     return /zillow\.com\/(homes|for_rent|b\/|search)/i.test(url) ||
            /realtor\.com\/(apartments|houses-for-rent|realestateandhomes-search)/i.test(url) ||
            /redfin\.com\/.*\/filter/i.test(url);
+  }
+
+  function extractCurrentListing() {
+    if (!window.CP_Extractors || typeof window.CP_Extractors.extract !== 'function') return null;
+    try {
+      return window.CP_Extractors.extract(location.href, document);
+    } catch (err) {
+      console.warn('[CP] Listing extraction notice:', err);
+      return null;
+    }
+  }
+
+  function extractionSignature(data) {
+    if (!data) return '';
+    var photos = extractPhotoUrls(data.original_image_urls);
+    if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    return [
+      data.source,
+      data.source_listing_id,
+      data.source_url,
+      data.address,
+      data.city,
+      data.state,
+      data.zip,
+      data.monthly_rent != null ? data.monthly_rent : data.rent,
+      data.bedrooms != null ? data.bedrooms : data.beds,
+      data.bathrooms != null ? data.bathrooms : data.baths,
+      data.square_footage != null ? data.square_footage : data.sqft,
+      photos.length,
+      data.description ? String(data.description).length : 0
+    ].join('|');
+  }
+
+  function scheduleListingRefresh(delay) {
+    if (listingRefreshTimer) clearTimeout(listingRefreshTimer);
+    listingRefreshTimer = setTimeout(function () {
+      listingRefreshTimer = null;
+      if (isSaving || !isDetailPage(location.href)) return;
+      var next = extractCurrentListing();
+      if (!next) return;
+      if (!activeWidget || extractionSignature(next) !== extractionSignature(currentExtractedData)) {
+        injectWidget();
+      }
+    }, delay == null ? 220 : delay);
+  }
+
+  function scheduleHydrationRefreshes() {
+    hydrationRefreshTimers.forEach(function (timer) { clearTimeout(timer); });
+    hydrationRefreshTimers = [0, 250, 800, 1800, 3500].map(function (delay) {
+      return setTimeout(function () {
+        scheduleListingRefresh(0);
+      }, delay);
+    });
   }
 
   // ── Fast In-Memory & LocalStorage Folder Cache ───────────────
@@ -163,14 +218,7 @@
     if (!isDetailPage(location.href)) return;
 
     // Fast Pre-Flight Extraction
-    var extracted = null;
-    try {
-      if (window.CP_Extractors && typeof window.CP_Extractors.extract === 'function') {
-        extracted = window.CP_Extractors.extract(location.href, document);
-      }
-    } catch (err) {
-      console.warn('[CP] Pre-flight extraction notice:', err);
-    }
+    var extracted = extractCurrentListing();
     currentExtractedData = extracted;
 
     var container = document.createElement('div');
@@ -463,6 +511,11 @@
 
       var folderSelect = document.querySelector('#cp-folder-select');
       var selectedFolderId = folderSelect && folderSelect.value ? folderSelect.value : null;
+      var selectedFolderName = null;
+      if (folderSelect && folderSelect.selectedIndex >= 0) {
+        var selectedOption = folderSelect.options[folderSelect.selectedIndex];
+        selectedFolderName = selectedOption && selectedOption.value ? selectedOption.textContent.replace(/^[^\S\r\n]*[^\w]*\s*/, '').trim() : null;
+      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -488,6 +541,7 @@
         pets_allowed: true,
         application_fee: 50,
         folder_id: selectedFolderId,
+        folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
         _import: 'browser-extension-v' + VERSION,
       };
@@ -514,32 +568,11 @@
             successText.textContent = 'Saved to ' + resp.folder.name + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
           }
         }
-
-        if (photoUrls.length > 0) {
-          progressBox.style.display = 'flex';
-          progressStatus.textContent = 'Uploading photos to ImageKit…';
-
-          uploadPhotosInBackground(photoUrls, function (completed, total) {
-            var percent = Math.round((completed / total) * 100);
-            progressFill.style.width = percent + '%';
-            progressCount.textContent = percent + '%';
-            progressStatus.textContent = 'Uploaded ' + completed + ' of ' + total + ' photos';
-          }).then(function (result) {
-            progressBox.style.display = 'none';
-            successBox.style.display = 'flex';
-            isSaving = false;
-            if (result.uploaded.length > 0) {
-              updatePipelinePhotos(payload, result.uploaded);
-            }
-          }).catch(function () {
-            progressBox.style.display = 'none';
-            successBox.style.display = 'flex';
-            isSaving = false;
-          });
-        } else {
-          successBox.style.display = 'flex';
-          isSaving = false;
+        if (resp.photos_queued && successText) {
+          successText.textContent = (successText.textContent || 'Saved to Choice Pipeline') + ' • Photos processing';
         }
+        successBox.style.display = 'flex';
+        isSaving = false;
       } else if (resp && resp.duplicate) {
         isSaving = false;
         if (resp.folder && resp.folder.folder) {
@@ -850,12 +883,10 @@
   function onUrlChange() {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      currentExtractedData = null;
       removeWidget();
-      // Fast mount using requestIdleCallback / fast timeout
-      setTimeout(function () {
-        injectWidget();
-        injectSearchCardButtons();
-      }, 100);
+      scheduleHydrationRefreshes();
+      setTimeout(injectSearchCardButtons, 100);
     }
   }
 
@@ -866,9 +897,7 @@
     window.addEventListener('scroll', updateWidgetPosition, { passive: true });
 
     var observer = new MutationObserver(function () {
-      if (isDetailPage(location.href) && !document.getElementById('cp-widget-container')) {
-        injectWidget();
-      }
+      scheduleListingRefresh();
       injectSearchCardButtons();
       updateWidgetPosition();
     });
@@ -883,5 +912,6 @@
   injectSearchCardButtons();
   setupWatchers();
   setupGlobalHotkeys();
+  scheduleHydrationRefreshes();
   console.log('[Choice Properties] High-Performance Engine v' + VERSION + ' active');
 })();

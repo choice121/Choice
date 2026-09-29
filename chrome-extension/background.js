@@ -34,6 +34,7 @@ const PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
 const MAX_PHOTOS = IS_MOBILE ? 20 : 40;
 const DOWNLOAD_RETRIES = 3;
 const DOWNLOAD_BACKOFF_BASE = 1000;
+const QUEUE_FLUSH_CONCURRENCY = IS_MOBILE ? 2 : 4;
 
 // ── Session count storage with fallback ──────────────────────
 // chrome.storage.session is Chrome-only. On Orion/Safari we fall back
@@ -172,33 +173,54 @@ async function postPayload(payload) {
   return body;
 }
 
-async function flushQueue() {
+let queueFlushInFlight = null;
+function flushQueue() {
+  if (queueFlushInFlight) return queueFlushInFlight;
+  queueFlushInFlight = flushQueueInternal().finally(() => {
+    queueFlushInFlight = null;
+  });
+  return queueFlushInFlight;
+}
+
+async function flushQueueInternal() {
   const queue = await getQueue();
   if (queue.length === 0) return 0;
 
-  const remaining = [];
   let flushed = 0;
-
-  for (const item of queue) {
-    try {
-      const resp = await postPayload(item);
-      if (resp && (resp.ok || resp.duplicate)) {
-        flushed++;
-      } else {
-        remaining.push(Object.assign({}, item, {
+  let nextIndex = 0;
+  const results = new Array(queue.length);
+  const worker = async () => {
+    while (nextIndex < queue.length) {
+      const index = nextIndex++;
+      const item = queue[index];
+      try {
+        const resp = await postPayload(item);
+        if (resp && (resp.ok || resp.duplicate)) {
+          results[index] = null;
+          flushed++;
+        } else {
+          results[index] = Object.assign({}, item, {
+            _last_attempt_at: Date.now(),
+            _retry_count: (item._retry_count || 0) + 1,
+            _last_error: (resp && resp.error) || 'Server rejected import',
+          });
+        }
+      } catch (err) {
+        results[index] = Object.assign({}, item, {
           _last_attempt_at: Date.now(),
           _retry_count: (item._retry_count || 0) + 1,
-          _last_error: (resp && resp.error) || 'Server rejected import',
-        }));
+          _last_error: err && err.message ? err.message : 'Network error',
+        });
       }
-    } catch (err) {
-      remaining.push(Object.assign({}, item, {
-        _last_attempt_at: Date.now(),
-        _retry_count: (item._retry_count || 0) + 1,
-        _last_error: err && err.message ? err.message : 'Network error',
-      }));
     }
-  }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(QUEUE_FLUSH_CONCURRENCY, queue.length) },
+      () => worker()
+    )
+  );
+  const remaining = results.filter(Boolean);
 
   if (remaining.length > 0) {
     await setQueue(remaining);

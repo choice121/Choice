@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.11] - 2026-09-29
+### Fast Pipeline Saves & SPA Listing Refresh Reliability
+- **Fast Acknowledgement**: Pipeline imports now return immediately after the property insert while Edge Runtime background work handles ImageKit photo processing and records explicit upload failures.
+- **Lower Save Latency**: Folder responses use the extension’s selected folder name and skip two nonessential count/name reads; the extension no longer starts a duplicate client-side photo upload after the server accepts a listing.
+- **Batch Reliability**: Offline queued listings flush with bounded parallel workers, coalesce overlapping flush triggers, and preserve per-item retry state.
+- **SPA Refreshing**: Chromium and Orion widgets debounce DOM changes, re-extract after hydration, detect listing-data changes, and hook history navigation so new SPA listings refresh without a browser reload.
+- **Release Validation**: Rebuilt Chromium and Orion packages with all 25 extractor cases passing.
+
 ## [v18.0.10] - 2026-09-29
 ### Invitation Homes Activation & Progress Residential AEM Detail Hardening
 - **Invitation Homes**: Added Chromium and Orion host/content matches plus a dedicated extractor for Invitation Homes property routes, JSON-LD, Svelte-rendered address/spec data, and Cloudinary galleries.
