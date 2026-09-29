@@ -105,9 +105,38 @@ const PRLIVE_D = {
     return [];
   },
 };
+const PRAEM = {
+  body: { innerText: '4 Beds 2 Baths 1820 Sq Ft' },
+  querySelector: (sel) => {
+    if (sel.includes('property-details-page-container h1')) {
+      return { textContent: '1610 E Campbell Ave, Gilbert, AZ 85234' };
+    }
+    if (sel.includes('img[alt*="/Mo"]')) {
+      return {
+        textContent: '',
+        getAttribute: (name) => name === 'alt'
+          ? '2,810/Mo, 1610 E Campbell Ave Gilbert, AZ 85234 Living Room View'
+          : null,
+      };
+    }
+    return null;
+  },
+  querySelectorAll: (sel) => {
+    if (sel.includes('.property-details-page-container')) {
+      return [
+        { src: 'https://photos.rentprogress.com/WebPhotos/Phoenix/996058/01-Hero-lg.jpg', getAttribute: () => null },
+        { src: 'https://photos.rentprogress.com/WebPhotos/Phoenix/996058/03-LivingRoom-lg.jpg', getAttribute: () => null },
+      ];
+    }
+    if (sel.includes('application/ld+json') || sel.includes('srcset')) return [];
+    return [];
+  },
+};
+const PRAEM_URL = 'https://rentprogress.com/property-details/1610-e-campbell-ave/gilbert/az/85234/996058?source=search';
 
 const IH = 'https://www.invitationhomes.com/property/abc-123';
 const IH_NESTED = 'https://www.invitationhomes.com/homes-for-rent/oh/columbus/abc-123';
+const IH_LIVE = 'https://www.invitationhomes.com/houses-for-rent/8920-sw-228th-ln-miami-fl-33190';
 const IHD = {
   title: 'Invitation Homes',
   body: { innerText: '$2,150/mo 3 Beds 2 Baths 1,650 Sq Ft Pet friendly' },
@@ -197,12 +226,14 @@ t('Opendoor does not count unrelated script photos when listing photos exist', (
 });
 t('Progress Residential payload', () => { const p = api.extractProgressResidential(PRD, PR); assert.strictEqual(p.source_listing_id, 'pr99988'); assert.strictEqual(p.address, '1204 Cedar Ln'); assert.strictEqual(p.monthly_rent, 2150); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 2100); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('Progress Residential live AEM payload', () => { const p = api.extractProgressResidential(PRLIVE_D, PRLIVE); assert.strictEqual(p.source_listing_id, '1008555'); assert.strictEqual(p.address, '3187 Andy Ter'); assert.strictEqual(p.monthly_rent, 1890.98); assert.strictEqual(p.bathrooms, 2.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.square_footage, 1506); assert.strictEqual(JSON.parse(p.original_image_urls).length, 3); });
+t('Progress Residential current AEM DOM payload', () => { const p = api.extractProgressResidential(PRAEM, PRAEM_URL); assert.strictEqual(p.source_listing_id, '996058'); assert.strictEqual(p.address, '1610 E Campbell Ave'); assert.strictEqual(p.monthly_rent, 2810); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1820); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('Invitation Homes payload', () => { const p = api.extractInvitationHomes(IHD, IH); assert.strictEqual(p.source_listing_id, 'ih-abc-123'); assert.strictEqual(p.address, '123 Oak Street'); assert.strictEqual(p.city, 'Dallas'); assert.strictEqual(p.monthly_rent, 2150); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('CJ Real Estate payload', () => { const p = api.extractCJRealEstate(CJD, CJ); assert.strictEqual(p.address, '3305 Grand View Blvd'); assert.strictEqual(p.city, 'Columbus'); assert.strictEqual(p.state, 'OH'); assert.strictEqual(p.monthly_rent, 1350); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.bathrooms, 1.5); assert.strictEqual(p.half_bathrooms, 1); assert.strictEqual(p.property_type, 'DUPLEX'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 2); });
 t('AppFolio payload', () => { const p = api.extractCJRealEstate(CJD, AF); assert.strictEqual(p.source, 'cj_real_estate'); assert.strictEqual(p.source_url, AF); assert.strictEqual(p.monthly_rent, 1350); });
 t('dispatch', () => { assert.strictEqual(api.extract(Z, ZD).source, 'zillow'); assert.strictEqual(api.extract(O, OD).source, 'opendoor'); assert.strictEqual(api.extract(PR, PRD).source, 'progress_residential'); assert.strictEqual(api.extract(CJ, CJD).source, 'cj_real_estate'); assert.strictEqual(api.extract('https://fb.com/', doc({})), null); });
 t('detect Invitation Homes', () => { assert.strictEqual(api.detect(IH).id, 'invitation_homes'); });
 t('detect nested Invitation Homes route', () => { assert.strictEqual(api.detect(IH_NESTED).id, 'invitation_homes'); });
+t('detect live Invitation Homes route', () => { assert.strictEqual(api.detect(IH_LIVE).id, 'invitation_homes'); });
 t('Zillow minimal', () => { const d = doc(cache({ zpid: 111, address: { streetAddress: '1 Empty St', city: 'Nowhere', state: 'TX' }, price: 1000 })); const p = api.extractZillow(d, Z); assert.ok(p); assert.strictEqual(p.monthly_rent, 1000); assert.strictEqual(p.bedrooms, null); assert.strictEqual(p.security_deposit, null); });
 
 // --- Photo dedup ---

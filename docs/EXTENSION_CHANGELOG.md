@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.13] - 2026-09-29
+### Invitation Homes Live Routes & Progress Residential AEM Reliability
+- **Invitation Homes activation**: Added the current `/houses-for-rent/...` listing route to the canonical extractor, content-script widget detection, and popup supported-listing status so the Save to Pipeline action appears on live listings.
+- **Progress Residential AEM hardening**: Recognize the current property-details container, rent values embedded in image alt text, query-string listing URLs, and the rendered AEM gallery so live listings retain their ID, rent, facts, and photos.
+- **Platform compatibility**: Synchronized Chromium and Orion/Safari packages across Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes.
+- **Release validation**: Rebuilt both downloadable archives and added regression coverage for the current Invitation Homes route and live Progress Residential AEM markup.
+
 ## [v18.0.12] - 2026-09-29
 ### Exact Photo Totals & Same-Tab Listing Refresh Safety
 - **Exact Photo Display**: Replaced the ambiguous thumbnail `+N` remainder with the complete detected photo total, so the current listing's image count is clear.

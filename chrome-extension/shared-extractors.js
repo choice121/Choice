@@ -1206,7 +1206,7 @@
 
   // ── Progress Residential ─────────────────────────────────────
   function extractProgressResidential(doc, url) {
-    const idFromUrl = (url.match(/\/([a-z0-9_-]+)\/?$/i) || [])[1] || 'pr_' + Date.now();
+    const idFromUrl = (url.match(/\/([a-z0-9_-]+)\/?(?:[?#].*)?$/i) || [])[1] || 'pr_' + Date.now();
 
     // 1. Check JSON-LD
     const ld = extractFromJsonLd(doc, url, 'progress_residential');
@@ -1313,9 +1313,9 @@
 
   function extractProgressResidentialDom(doc, url) {
     if (!doc || typeof doc.querySelector !== 'function') return null;
-    const idFromUrl = (url.match(/\/([a-z0-9_-]+)$/i) || [])[1] || 'pr_' + Date.now();
+    const idFromUrl = (url.match(/\/([a-z0-9_-]+)\/?(?:[?#].*)?$/i) || [])[1] || 'pr_' + Date.now();
 
-    const headingEl = doc.querySelector('.property-details-header h1, h1.property-title, .pdp-address, .property-info .address h1, h1');
+    const headingEl = doc.querySelector('.property-details-page-container h1, .property-details-page h1, .property-details-header h1, h1.property-title, .pdp-address, .property-info .address h1, h1');
     const fullHeading = headingEl ? headingEl.textContent.replace(/\s+/g, ' ').trim() : '';
     const m = fullHeading.match(/^([^,]+),\s*([^,]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?/i);
     const street = m ? m[1].trim() : fullHeading;
@@ -1323,8 +1323,10 @@
     const state  = m ? m[3].trim().toUpperCase() : '';
     const zip    = m && m[4] ? m[4].trim() : '';
 
-    const rentEl = doc.querySelector('.property-price, .market-rent, .price-display, [data-testid="rent-price"], .estimated-cost, [class*="rent"], [class*="price"]');
-    const rent = rentEl ? parseRent(rentEl.textContent, null) : null;
+    const rentEl = doc.querySelector('.property-price, .market-rent, .price-display, [data-testid="rent-price"], .estimated-cost, [class*="rent"], [class*="price"], img[alt*="/Mo"], img[alt*="/mo"]');
+    const rent = rentEl
+      ? parseRent(rentEl.textContent || rentEl.getAttribute('alt') || '', null)
+      : null;
 
     let beds = null, baths = null, sqft = null;
     const pageText = doc.body && doc.body.innerText ? doc.body.innerText.replace(/\s+/g, ' ') : '';
@@ -1350,7 +1352,7 @@
     const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(baths, rawDesc);
 
     const photos = [];
-    const imgs = doc.querySelectorAll('.gallery-slider img, .property-photos img, .swiper-slide img, img[src*="rentprogress"], img.testimonial-image, picture source[srcset]');
+    const imgs = doc.querySelectorAll('.property-details-page-container img, .gallery-slider img, .property-photos img, .swiper-slide img, img[data-image-ordinal], img[src*="photos.rentprogress.com"], img[src*="rentprogress"], img.testimonial-image, picture source[srcset]');
     imgs.forEach(img => {
       const raw = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy') ||
         img.getAttribute('srcset') || '';
@@ -1378,7 +1380,7 @@
   // inconsistently, so use it when present and supplement it with the
   // server-rendered address/spec/photo elements.
   function extractInvitationHomes(doc, url) {
-    const routeMatch = url.match(/\/(?:property|homes-for-rent)\/([^?#]+)/i);
+    const routeMatch = url.match(/\/(?:property|homes-for-rent|houses-for-rent)\/([^?#]+)/i);
     const routeParts = routeMatch && routeMatch[1]
       ? routeMatch[1].split('/').filter(Boolean)
       : [];
@@ -1574,7 +1576,7 @@
     },
     {
       id: 'invitation_homes',
-      match: /invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i,
+      match: /invitationhomes\.com\/(?:property|homes-for-rent|houses-for-rent)\/[^/?#]+/i,
       fn: extractInvitationHomes
     },
   ];
@@ -1599,7 +1601,7 @@
     if (/cjproperties\.org|cjrealestate\.com|appfolio\.com/i.test(url)) {
       return { id: 'cj_real_estate', match: /cjproperties|cjrealestate|appfolio/i, fn: extractCJRealEstate };
     }
-    if (/invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i.test(url)) {
+    if (/invitationhomes\.com\/(?:property|homes-for-rent|houses-for-rent)\/[^/?#]+/i.test(url)) {
       return { id: 'invitation_homes', match: /invitationhomes/i, fn: extractInvitationHomes };
     }
     return null;
