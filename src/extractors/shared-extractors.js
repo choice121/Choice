@@ -1009,15 +1009,17 @@
     if (prop.heroImage) addPhoto(prop.heroImage);
     if (prop.primaryPhoto) addPhoto(typeof prop.primaryPhoto === 'string' ? prop.primaryPhoto : (prop.primaryPhoto.url || prop.primaryPhoto.href));
 
-    // Also include DOM & script photos
-    const scriptPhotos = extractPhotosFromHtmlScripts(doc);
-    scriptPhotos.forEach(addPhoto);
-
+    // Prefer listing-owned hydrated and gallery photos. A full-document
+    // script scan can include recommendation assets and make every listing
+    // appear to have the artificial 50-photo cap.
     if (dom && dom.original_image_urls) {
       try {
         const domUrls = JSON.parse(dom.original_image_urls);
         if (Array.isArray(domUrls)) domUrls.forEach(addPhoto);
       } catch (_) {}
+    }
+    if (photos.length === 0) {
+      extractPhotosFromHtmlScripts(doc).forEach(addPhoto);
     }
 
     const rent = parseRent(prop.price || prop.listPrice || prop.estimatedRent || prop.rent, null) || (dom ? dom.monthly_rent : null);
@@ -1139,9 +1141,6 @@
       }
     };
 
-    const scriptPhotos = extractPhotosFromHtmlScripts(doc);
-    scriptPhotos.forEach(addPhoto);
-
     const mediaEls = doc.querySelectorAll('img, picture source, [data-testid*="carousel"] img, [data-testid*="gallery"] img, [data-testid*="photo"] img, [data-testid*="media"] img, button[aria-label*="photo"] img, [class*="gallery"] img, [class*="carousel"] img');
     mediaEls.forEach(el => {
       const src = el.src || el.getAttribute('data-src') || el.getAttribute('srcset') || el.getAttribute('data-srcset');
@@ -1162,6 +1161,13 @@
       const bgM = style.match(/url\(['"]?(https?:\/\/[^'")]+)['"]?\)/i);
       if (bgM) addPhoto(bgM[1]);
     });
+
+    // Only use page-wide script URLs when the rendered gallery has not
+    // exposed any images yet. This prevents unrelated assets from inflating
+    // the displayed count to 50.
+    if (photos.length === 0) {
+      extractPhotosFromHtmlScripts(doc).forEach(addPhoto);
+    }
 
     const validPhotos = photos.filter(u => {
       return !/logo|icon|avatar|favicon|badge|app-store|google-play|map/i.test(u);
@@ -1240,6 +1246,15 @@
         (prop.images || prop.photos || prop.media).forEach(m => {
           addPhoto(typeof m === 'string' ? m : (m.url || m.largeImageUrl || m.href || m.src));
         });
+      }
+      // AEM state can contain listing facts before its image array is
+      // hydrated. Supplement it with the rendered gallery.
+      const dom = extractProgressResidentialDom(doc, url);
+      if (dom && dom.original_image_urls) {
+        try {
+          const domPhotos = JSON.parse(dom.original_image_urls);
+          if (Array.isArray(domPhotos)) domPhotos.forEach(addPhoto);
+        } catch (_) {}
       }
 
       return basePayload('progress_residential', String(prop.id || prop.propertyId || idFromUrl), url, {
@@ -1357,7 +1372,11 @@
   // inconsistently, so use it when present and supplement it with the
   // server-rendered address/spec/photo elements.
   function extractInvitationHomes(doc, url) {
-    const idFromUrl = (url.match(/\/(?:property|homes-for-rent)\/([^/?#]+)/i) || [])[1] ||
+    const routeMatch = url.match(/\/(?:property|homes-for-rent)\/([^?#]+)/i);
+    const routeParts = routeMatch && routeMatch[1]
+      ? routeMatch[1].split('/').filter(Boolean)
+      : [];
+    const idFromUrl = routeParts.length ? routeParts[routeParts.length - 1] :
       (url.match(/\/([^/?#]+)\/?$/i) || [])[1] || 'invh_' + Date.now();
     const ld = extractFromJsonLd(doc, url, 'invitation_homes');
     if (!doc || typeof doc.querySelector !== 'function') return ld;

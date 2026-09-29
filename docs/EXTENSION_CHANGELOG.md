@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.12] - 2026-09-29
+### Exact Photo Totals & Same-Tab Listing Refresh Safety
+- **Exact Photo Display**: Replaced the ambiguous thumbnail `+N` remainder with the complete detected photo total, so the current listing's image count is clear.
+- **Opendoor Accuracy**: Prefer hydrated listing and rendered gallery photos over page-wide recommendation preloads, preventing unrelated assets from inflating listings to the 50-photo cap.
+- **Invitation Homes Coverage**: Preserve the final property identifier on nested `/homes-for-rent/...` routes and expose Invitation Homes in the extension popup's supported-listing check.
+- **Progress Residential Coverage**: Supplement hydrated property data with the rendered gallery when image hydration is delayed, and recognize current `property-details` routes.
+- **Same-Tab Safety**: Re-extract before saving and invalidate pending refreshes on navigation so a stale widget cannot save the previously open property.
+- **Release Validation**: Rebuilt synchronized Chromium and Orion packages with extractor regression coverage for nested Invitation Homes routes and Opendoor recommendation-photo filtering.
+
 ## [v18.0.11] - 2026-09-29
 ### Fast Pipeline Saves & SPA Listing Refresh Reliability
 - **Fast Acknowledgement**: Pipeline imports now return immediately after the property insert while Edge Runtime background work handles ImageKit photo processing and records explicit upload failures.

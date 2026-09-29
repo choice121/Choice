@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v18.0.11)
+# Choice Properties — Universal Chrome Extension (v18.0.12)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -24,6 +24,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 - **Instant 0ms SPA Mount**: Detects client-side navigations and transitions immediately without lag.
 - **Smart Pre-Flight HUD**:
   - Live photo quality indicators ($\ge 6$ photos verified).
+  - Exact detected photo total shown for the current listing (no ambiguous `+N` remainder).
   - Mini photo thumbnail ribbon for instant visual preview.
   - Verified architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.).
   - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
@@ -36,6 +37,7 @@ A browser extension that allows Choice Properties agents to save rental listings
   - **Rule 6B Architectural Classification**: Side-by-side attached units and 1/2 duplexes are auto-classified as `DUPLEX`.
   - **Strict Stripping**: Never outputs lease duration or smoking policies.
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
+- **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
 
 ---
 

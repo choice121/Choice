@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.0.11
+// Choice Properties — Live Content Script v18.0.12
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.11-live';
+  var VERSION  = '18.0.12-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -35,6 +35,8 @@
   var isExpanded = false;
   var isMinimized = false;
   var currentExtractedData = null;
+  var renderedListingSignature = '';
+  var listingGeneration = 0;
   var listingRefreshTimer = null;
   var hydrationRefreshTimers = [];
 
@@ -458,7 +460,7 @@
            /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
            /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
            /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
-           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
+           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|property-details|[^/]+\/[^/]+)/i.test(url) ||
            /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url) ||
            /invitationhomes\.com\/(?:property|homes-for-rent)\/[^/?#]+/i.test(url);
   }
@@ -500,13 +502,15 @@
 
   function scheduleListingRefresh(delay) {
     if (listingRefreshTimer) clearTimeout(listingRefreshTimer);
+    var refreshGeneration = listingGeneration;
     listingRefreshTimer = setTimeout(function () {
       listingRefreshTimer = null;
-      if (!isDetailPage(location.href)) return;
+      if (refreshGeneration !== listingGeneration || !isDetailPage(location.href)) return;
       var next = extractCurrentListing();
       if (!next) return;
-      if (!activeWidget || extractionSignature(next) !== extractionSignature(currentExtractedData)) {
-        injectWidget();
+      var nextSignature = extractionSignature(next);
+      if (!activeWidget || nextSignature !== renderedListingSignature) {
+        injectWidget(next);
       }
     }, delay == null ? 220 : delay);
   }
@@ -569,17 +573,19 @@
       activeWidget.remove();
       activeWidget = null;
     }
+    renderedListingSignature = '';
   }
 
-  function injectWidget() {
+  function injectWidget(extractedOverride) {
     removeWidget();
     if (!isDetailPage(location.href)) return;
 
     injectStyles();
 
     // Run pre-flight extraction
-    var extracted = extractCurrentListing();
+    var extracted = extractedOverride || extractCurrentListing();
     currentExtractedData = extracted;
+    renderedListingSignature = extractionSignature(extracted);
 
     var container = document.createElement('div');
     container.id = 'cp-widget-container';
@@ -774,6 +780,21 @@
         return;
       }
 
+      // Re-read before saving so a same-tab SPA navigation cannot submit the
+      // previous property's data through a stale widget.
+      var liveExtracted = extractCurrentListing();
+      if (!liveExtracted) {
+        setError('Listing is still loading');
+        return;
+      }
+      var liveSignature = extractionSignature(liveExtracted);
+      if (renderedListingSignature && liveSignature !== renderedListingSignature) {
+        currentExtractedData = liveExtracted;
+        injectWidget(liveExtracted);
+        setError('Listing changed; refreshed');
+        return;
+      }
+
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
       if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
         photoUrls = extracted.photo_urls;
@@ -804,7 +825,7 @@
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v18.0.11-live',
+        _import: 'browser-extension-v18.0.12-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1123,6 +1144,7 @@
   function onPageChange() {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      listingGeneration += 1;
       currentExtractedData = null;
       removeWidget();
       scheduleHydrationRefreshes();

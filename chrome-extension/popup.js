@@ -20,7 +20,9 @@
       /apartments\.com\//i.test(tab.url) ||
       /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(tab.url) ||
       /opendoor\.com\/(?:homes|properties|listings)\//i.test(tab.url) ||
-      /rentprogress\.com\/(?:houses-for-rent|homes|properties|rental-homes)\//i.test(tab.url) ||
+      /opendoor\.com\/[^/]+\/[^/]+/i.test(tab.url) ||
+      /rentprogress\.com\/(?:houses-for-rent|homes|properties|rental-homes|property-details)\//i.test(tab.url) ||
+      /invitationhomes\.com\/(?:property|homes-for-rent)\//i.test(tab.url) ||
       /(?:cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(tab.url)
     );
 

@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v18.0.11
+// Choice Properties — Universal Content Script & UI Engine v18.0.12
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.11';
+  var VERSION  = '18.0.12';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -26,6 +26,8 @@
   var isExpanded = false;
   var isMinimized = false;
   var currentExtractedData = null;
+  var renderedListingSignature = '';
+  var listingGeneration = 0;
   var cachedFolders = [];
   var isSaving = false;
   var listingRefreshTimer = null;
@@ -87,13 +89,15 @@
 
   function scheduleListingRefresh(delay) {
     if (listingRefreshTimer) clearTimeout(listingRefreshTimer);
+    var refreshGeneration = listingGeneration;
     listingRefreshTimer = setTimeout(function () {
       listingRefreshTimer = null;
-      if (isSaving || !isDetailPage(location.href)) return;
+      if (refreshGeneration !== listingGeneration || isSaving || !isDetailPage(location.href)) return;
       var next = extractCurrentListing();
       if (!next) return;
-      if (!activeWidget || extractionSignature(next) !== extractionSignature(currentExtractedData)) {
-        injectWidget();
+      var nextSignature = extractionSignature(next);
+      if (!activeWidget || nextSignature !== renderedListingSignature) {
+        injectWidget(next);
       }
     }, delay == null ? 220 : delay);
   }
@@ -211,15 +215,17 @@
       activeWidget.remove();
       activeWidget = null;
     }
+    renderedListingSignature = '';
   }
 
-  function injectWidget() {
+  function injectWidget(extractedOverride) {
     removeWidget();
     if (!isDetailPage(location.href)) return;
 
     // Fast Pre-Flight Extraction
-    var extracted = extractCurrentListing();
+    var extracted = extractedOverride || extractCurrentListing();
     currentExtractedData = extracted;
+    renderedListingSignature = extractionSignature(extracted);
 
     var container = document.createElement('div');
     container.id = 'cp-widget-container';
@@ -308,7 +314,7 @@
                 ${photoUrls.slice(0, 5).map(function (u) {
                   return '<img src="' + escapeHtml(u) + '" class="cp-photo-thumb" alt="thumb" loading="lazy" />';
                 }).join('')}
-                ${photoUrls.length > 5 ? '<span class="cp-photo-more">+' + (photoUrls.length - 5) + '</span>' : ''}
+                ${photoUrls.length > 5 ? '<span class="cp-photo-more">' + photoUrls.length + ' total</span>' : ''}
               </div>
             ` : ''}
 
@@ -499,6 +505,24 @@
 
       if (!extracted) {
         setError('Could not extract listing');
+        isSaving = false;
+        return;
+      }
+
+      // A portal can replace the listing in-place without changing the tab.
+      // Re-read immediately before saving so a stale widget can never submit
+      // the previous property after a same-tab navigation.
+      var liveExtracted = extractCurrentListing();
+      if (!liveExtracted) {
+        setError('Listing is still loading');
+        isSaving = false;
+        return;
+      }
+      var liveSignature = extractionSignature(liveExtracted);
+      if (liveExtracted && renderedListingSignature && liveSignature !== renderedListingSignature) {
+        currentExtractedData = liveExtracted;
+        injectWidget(liveExtracted);
+        setError('Listing changed; refreshed');
         isSaving = false;
         return;
       }
@@ -883,6 +907,7 @@
   function onUrlChange() {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      listingGeneration += 1;
       currentExtractedData = null;
       removeWidget();
       scheduleHydrationRefreshes();
