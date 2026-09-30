@@ -74,11 +74,11 @@ const STRINGS: Record<Locale, Dict> = {
     'app_conf.fee_section':        'Application Fee & Payment',
     'app_conf.fee_heading':        'Application Fee — {fee}',
     'app_conf.fee_body':
-      'A member of our leasing team will contact you within 24 hours via text{phoneSuffix} to coordinate your application fee. Your application will not be reviewed until payment is received and confirmed.',
+      'Choice Properties will send payment instructions using the contact details you provided. Your application will not enter review until any required fee is received and confirmed. Verify payment instructions through our official contact details before paying.',
     'app_conf.next_section':       'What Happens Next',
-    'app_conf.step1':              'Payment Arrangement — Our leasing team will contact you within 24 hours to coordinate your application fee via your preferred payment method.',
+    'app_conf.step1':              'Payment Arrangement — Choice Properties will send the next steps using your selected contact method. No payment is collected through the application form.',
     'app_conf.step2':              'Payment Confirmation — Once your fee is received and confirmed, you will receive an email notification and your application will advance to the review stage.',
-    'app_conf.step3':              'Application Review — Our team will conduct a thorough review within 24–72 hours of payment confirmation. Applicants who complete steps promptly are often prioritized.',
+    'app_conf.step3':              'Application Review — Most reviews are completed within 24–72 hours after fee confirmation. Timing can vary while information is verified; this is an estimate, not a guaranteed decision time. Payment or response speed does not provide review priority.',
     'app_conf.step4':              'Decision Notification — You will be notified of our decision via email. If approved, our leasing team will prepare your lease agreement for signature.',
     'app_conf.save_id_heading':    'Important — Save Your Application ID',
     'app_conf.save_id_body':
@@ -194,11 +194,11 @@ const STRINGS: Record<Locale, Dict> = {
     'app_conf.fee_section':        'Tarifa de Solicitud y Pago',
     'app_conf.fee_heading':        'Tarifa de Solicitud — {fee}',
     'app_conf.fee_body':
-      'Un miembro de nuestro equipo de arrendamiento se comunicará con usted en un plazo de 24 horas por mensaje de texto{phoneSuffix} para coordinar el pago de la tarifa de solicitud. Su solicitud no será revisada hasta que el pago sea recibido y confirmado.',
+      'Choice Properties enviará instrucciones de pago usando los datos de contacto que proporcionó. Su solicitud no pasará a revisión hasta que se reciba y confirme cualquier tarifa requerida. Verifique las instrucciones mediante los canales oficiales de Choice antes de pagar.',
     'app_conf.next_section':       'Qué Sigue',
-    'app_conf.step1':              'Coordinación del Pago — Nuestro equipo se comunicará con usted en 24 horas para coordinar la tarifa con su método de pago preferido.',
+    'app_conf.step1':              'Coordinación del Pago — Choice Properties enviará los siguientes pasos por el método de contacto elegido. El formulario de solicitud no cobra ningún pago.',
     'app_conf.step2':              'Confirmación del Pago — Una vez recibido y confirmado el pago, recibirá un correo y su solicitud avanzará a la etapa de revisión.',
-    'app_conf.step3':              'Revisión de la Solicitud — Nuestro equipo realizará una revisión exhaustiva en un plazo de 24 a 72 horas tras la confirmación del pago. Quienes completen los pasos rápidamente suelen tener prioridad.',
+    'app_conf.step3':              'Revisión de la Solicitud — La mayoría de las revisiones se completa en 24–72 horas después de confirmar la tarifa. El tiempo puede variar mientras se verifica la información; es una estimación, no un plazo garantizado. La rapidez de pago o respuesta no da prioridad.',
     'app_conf.step4':              'Notificación de Decisión — Le notificaremos nuestra decisión por correo. Si es aprobada, nuestro equipo preparará su contrato para la firma.',
     'app_conf.save_id_heading':    'Importante — Guarde el ID de su Solicitud',
     'app_conf.save_id_body':

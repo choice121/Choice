@@ -2,7 +2,7 @@
  * Choice Properties — Canonical UX Copy
  * --------------------------------------
  * Single source of truth for applicant-facing wording across the site.
- * Server-side mirror lives in supabase/functions/_shared/copy.ts and
+ * Server-side mirror lives in supabase/functions/_shared/i18n.ts and
  * GAS-EMAIL-RELAY.gs (COPY block at top of file).
  *
  * The platform follows this exact flow everywhere:
@@ -22,11 +22,11 @@
 
     // ── Review timing ─────────────────────────────────────────────────────
     reviewTime:
-      'Applications are typically processed within 24 to 72 hours after payment is completed.',
+      'Most application reviews are completed within 24 to 72 hours after fee confirmation. Timing can vary; this is an estimate, not a guaranteed decision time.',
     reviewBehavior:
-      'Faster decisions are often made for applicants who complete all steps promptly, provide accurate information, and remain responsive.',
+      'Complete and accurate information can help avoid follow-up requests. Review order is not based on who pays or responds fastest.',
     reviewPriority:
-      'Applicants who act quickly are often prioritized in the review process.',
+      'Paying or responding faster does not provide application review priority or guarantee approval.',
 
     // ── Status framing (replaces "under review") ──────────────────────────
     statusActiveReview: 'In Active Review',
@@ -40,10 +40,10 @@
     demandNotice:
       'Due to demand, multiple applications may be reviewed for the same property.',
     promptUrgency:
-      'Completing steps promptly helps improve your chances of securing the property.',
+      'Complete requested steps when you can; timing does not guarantee a review advantage or outcome.',
     payQueueNotice:
-      'Applicants who complete payment quickly are placed earlier in the review queue.',
-    delayWarning: 'Delayed actions may affect processing priority.',
+      'Payment activates review when required. Payment speed does not determine review priority.',
+    delayWarning: 'Review timing may vary while information is verified or when application volume is high.',
 
     // ── Holding fee ───────────────────────────────────────────────────────
     holdingDefinition:
@@ -86,11 +86,11 @@
     feeReinforcement: 'Las solicitudes solo se activan después de completar el pago.',
 
     reviewTime:
-      'Las solicitudes generalmente se procesan dentro de 24 a 72 horas después de completar el pago.',
+      'La mayoría de las revisiones se completa en 24 a 72 horas después de confirmar la tarifa. El tiempo puede variar; es una estimación, no un plazo garantizado.',
     reviewBehavior:
-      'Las decisiones más rápidas suelen tomarse para quienes completan todos los pasos con prontitud, brindan información precisa y responden a tiempo.',
+      'La información completa y precisa puede evitar solicitudes de seguimiento. El orden de revisión no depende de quién paga o responde más rápido.',
     reviewPriority:
-      'Los solicitantes que actúan rápidamente suelen tener prioridad en el proceso de revisión.',
+      'Pagar o responder más rápido no da prioridad en la revisión ni garantiza la aprobación.',
 
     statusActiveReview: 'En Revisión Activa',
     statusActiveReviewDesc: 'Su solicitud está siendo evaluada para selección.',
@@ -102,10 +102,10 @@
     demandNotice:
       'Debido a la demanda, pueden revisarse varias solicitudes para la misma propiedad.',
     promptUrgency:
-      'Completar los pasos con prontitud ayuda a mejorar sus posibilidades de asegurar la propiedad.',
+      'Complete los pasos solicitados cuando pueda; la rapidez no garantiza ventaja ni resultado.',
     payQueueNotice:
-      'Los solicitantes que completan el pago rápidamente se colocan antes en la cola de revisión.',
-    delayWarning: 'Las demoras pueden afectar la prioridad de procesamiento.',
+      'El pago activa la revisión cuando se requiere. La rapidez del pago no determina la prioridad.',
+    delayWarning: 'El tiempo puede variar mientras se verifica la información o cuando hay muchas solicitudes.',
 
     holdingDefinition:
       'El cargo de reserva retiene temporalmente la propiedad y la retira de la disponibilidad activa mientras se finaliza su contrato.',
