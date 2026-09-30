@@ -79,6 +79,55 @@ export function safeBool(v: unknown): boolean | null {
   return null;
 }
 
+const POSTER_PROFILE_CATEGORIES = new Set([
+  'agent', 'broker', 'brokerage', 'company', 'property_manager', 'property_owner', 'unknown',
+]);
+
+function normalizePosterProfiles(value: unknown, fallback: {
+  strategy: string;
+  profileType: string | null;
+  profileName: string | null;
+  profileImage: string | null;
+  agentName: string | null;
+  agentImage: string | null;
+  brokerName: string | null;
+  brokerImage: string | null;
+}): Array<{ category: string; name: string; image_url: string | null }> {
+  const input = Array.isArray(value) ? value : [];
+  const candidates = input.length ? input : fallback.strategy === 'NO_IDENTITY' ? [] : [
+    ...(fallback.strategy === 'COMPANY_SOURCE'
+      ? [{ category: fallback.profileType || 'company', name: fallback.profileName, image_url: fallback.profileImage }]
+      : [
+          { category: 'agent', name: fallback.agentName || fallback.profileName, image_url: fallback.agentImage || fallback.profileImage },
+          { category: 'brokerage', name: fallback.brokerName, image_url: fallback.brokerImage },
+        ]),
+  ];
+
+  const seen = new Set<string>();
+  const profiles: Array<{ category: string; name: string; image_url: string | null }> = [];
+  for (const item of candidates.slice(0, 6)) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const category = safeStr(row.category)?.toLowerCase() || 'unknown';
+    const name = safeStr(row.name)?.slice(0, 160);
+    if (!POSTER_PROFILE_CATEGORIES.has(category) || !name) continue;
+    const key = `${category}:${name.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    let imageUrl: string | null = null;
+    const rawImage = safeStr(row.image_url);
+    if (rawImage) {
+      try {
+        const parsed = new URL(rawImage);
+        if (parsed.protocol === 'https:') imageUrl = parsed.toString();
+      } catch { /* discard invalid image URLs */ }
+    }
+    profiles.push({ category, name, image_url: imageUrl });
+  }
+  return profiles;
+}
+
 // ── Normalize property_type to UPPER_UNDERSCORE ─────────────────────────
 export function normalizePropType(v: unknown): string | null {
   if (!v) return null;
@@ -205,6 +254,8 @@ export interface PipelineRecordInput {
   broker_name?: string | null;
   agent_image_url?: string | null;
   agent_profile_url?: string | null;
+  broker_image_url?: string | null;
+  poster_profiles?: unknown;
   source_profile_name?: string | null;
   source_profile_image_url?: string | null;
   source_profile_url?: string | null;
@@ -255,14 +306,43 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   // source omitted it; the publish gate will reject a record without one.
   const title = safeStr(body.title);
 
-  const originalData = JSON.stringify({
+  const defaultOriginalData: Record<string, unknown> = {
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
+  };
+  let originalDataValues = defaultOriginalData;
+  const suppliedOriginalData = safeStr(body.original_data);
+  if (suppliedOriginalData) {
+    try {
+      const parsed = JSON.parse(suppliedOriginalData);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        originalDataValues = { ...defaultOriginalData, ...parsed };
+      } else {
+        originalDataValues = { ...defaultOriginalData, _source_original_data: suppliedOriginalData };
+      }
+    } catch {
+      originalDataValues = { ...defaultOriginalData, _source_original_data: suppliedOriginalData };
+    }
+  }
+  const suppliedProfiles = Array.isArray(body.poster_profiles)
+    ? body.poster_profiles
+    : originalDataValues._choice_poster_profiles;
+  const posterProfiles = normalizePosterProfiles(suppliedProfiles, {
+    strategy: identity.identity_strategy,
+    profileType: identity.source_profile_type,
+    profileName: identity.source_profile_name,
+    profileImage: identity.source_profile_image_url,
+    agentName: identity.agent_name,
+    agentImage: identity.agent_image_url,
+    brokerName: identity.broker_name,
+    brokerImage: safeStr(body.broker_image_url),
   });
+  originalDataValues._choice_poster_profiles = posterProfiles;
+  const originalData = JSON.stringify(originalDataValues);
 
   const record: Record<string, unknown> = {
     // Identity
@@ -362,7 +442,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     imported_at:          importedAt,
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
-    original_data:        safeStr(body.original_data) ?? originalData,
+    original_data:        originalData,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,

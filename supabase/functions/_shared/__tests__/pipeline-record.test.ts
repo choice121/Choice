@@ -73,3 +73,27 @@ Deno.test('buildPipelineRecord preserves fractional bathrooms and does not fabri
   assertEquals(record.agent_name, null);
   assertEquals(record.poster_landlord_id, null);
 });
+
+Deno.test('buildPipelineRecord stores safe categorized poster profiles in original_data', () => {
+  const record = buildPipelineRecord({
+    source: 'realtor',
+    source_listing_id: 'R-123',
+    agent_name: 'Jordan Smith',
+    broker_name: 'North Realty',
+    original_data: JSON.stringify({ _choice_poster_profiles: [
+      { category: 'agent', name: 'Jordan Smith', image_url: 'https://images.example.test/jordan.jpg' },
+      { category: 'brokerage', name: 'North Realty', image_url: 'https://images.example.test/north.svg' },
+      { category: 'brokerage', name: 'North Realty', image_url: 'https://images.example.test/duplicate.svg' },
+      { category: 'agent', name: 'Fake Profile', image_url: 'http://images.example.test/insecure.jpg' },
+      { category: 'broker', name: 'Unsupported category', image_url: null },
+    ] }),
+  });
+
+  const originalData = JSON.parse(String(record.original_data));
+  assertEquals(originalData._choice_poster_profiles, [
+    { category: 'agent', name: 'Jordan Smith', image_url: 'https://images.example.test/jordan.jpg' },
+    { category: 'brokerage', name: 'North Realty', image_url: 'https://images.example.test/north.svg' },
+    { category: 'agent', name: 'Fake Profile', image_url: null },
+  ]);
+  assertEquals('poster_profiles' in record, false);
+});

@@ -777,13 +777,21 @@ function renderProperty(p) {
   const strategy = p.identity_strategy;
   const relatedProfile = Array.isArray(p.source_profiles) ? p.source_profiles[0] : p.source_profiles;
   const relatedLandlord = Array.isArray(p.landlords) ? p.landlords[0] : p.landlords;
+  const posterProfiles = Array.isArray(p.poster_profiles) ? p.poster_profiles : [];
+  const agentPoster = posterProfiles.find(profile => profile.category === 'agent');
+  const brokerPoster = posterProfiles.find(profile => profile.category === 'broker');
+  const companyPoster = posterProfiles.find(profile => profile.category === 'company');
+  const brokeragePoster = posterProfiles.find(profile => profile.category === 'brokerage');
   const profileType = strategy === 'COMPANY_SOURCE' ? 'company' : 'agent';
+  const categorizedProfile = agentPoster || companyPoster || brokerPoster || brokeragePoster;
+  const displayProfileType = categorizedProfile
+    ? categorizedProfile.category
+    : (relatedProfile?.profile_type || p.source_profile_type || profileType);
   const sourceIdentity = ['COMPANY_SOURCE', 'AGENT_POSTER'].includes(strategy)
     ? {
-        profile_type: relatedProfile?.profile_type || p.source_profile_type || profileType,
-        display_name: relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
-        image_url: relatedProfile?.image_url || p.source_profile_image_url || p.agent_image_url || null,
-        profile_url: relatedProfile?.profile_url || p.source_profile_url || p.agent_profile_url || null,
+        profile_type: displayProfileType,
+        display_name: categorizedProfile?.name || relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
+        image_url: categorizedProfile?.image_url || relatedProfile?.image_url || p.source_profile_image_url || p.agent_image_url || null,
       }
     : null;
   const landlordIdentity = relatedLandlord && strategy !== 'COMPANY_SOURCE' && strategy !== 'NO_IDENTITY'
@@ -798,11 +806,28 @@ function renderProperty(p) {
     const card = document.getElementById('landlordCard');
     card.style.display = 'flex';
     document.getElementById('landlordName').textContent = name;
-    document.getElementById('landlordTagline').textContent = isSourcePoster
+    const tagline = document.getElementById('landlordTagline');
+    tagline.textContent = isSourcePoster
       ? (profile.profile_type === 'company'
           ? `Rental provider${p.source ? ` · ${p.source}` : ''}`
-          : (p.broker_name ? `Listing agent · ${p.broker_name}` : `Listing agent${p.source ? ` · ${p.source}` : ''}`))
+            : (brokerPoster?.name || brokeragePoster?.name || p.broker_name
+              ? `${brokerPoster?.name ? 'Listing broker' : brokeragePoster?.name ? 'Listing brokerage' : 'Listing agent'} · ${brokerPoster?.name || brokeragePoster?.name || p.broker_name}`
+              : `Listing agent${p.source ? ` · ${p.source}` : ''}`))
       : (landlordIdentity?.tagline || 'Assigned property manager');
+    const officePoster = brokeragePoster;
+    if (isSourcePoster && officePoster?.image_url) {
+      const logoUrl = safeImageUrl(officePoster.image_url);
+      if (logoUrl) {
+        const logo = document.createElement('img');
+        logo.src = logoUrl;
+        logo.alt = `${officePoster.name} logo`;
+        logo.loading = 'lazy';
+        logo.width = 24;
+        logo.height = 24;
+        logo.style.cssText = 'display:inline-block;width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-left:6px';
+        tagline.appendChild(logo);
+      }
+    }
     const avatarEl = document.getElementById('landlordAvatar');
     const imageUrl = (isSourcePoster ? profile?.image_url : null) || landlordIdentity?.avatar_url;
     if (imageUrl) {
@@ -821,11 +846,6 @@ function renderProperty(p) {
     else avatarEl.textContent = name.charAt(0).toUpperCase();
     if ((!isSourcePoster && landlordIdentity?.verified) || (isSourcePoster && p.identity_status === 'confirmed')) {
       document.getElementById('landlordVerified').style.display = 'inline';
-    }
-    const profileUrl = isSourcePoster ? safeExternalUrl(profile?.profile_url) : null;
-    if (profileUrl) {
-      const nameEl = document.getElementById('landlordName');
-      nameEl.innerHTML = `<a href="${esc(profileUrl)}" target="_blank" rel="noopener noreferrer">${esc(name)}</a>`;
     }
   }
 

@@ -4,6 +4,37 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.1.1] - 2026-09-30T12:53:40Z
+### Release hardening for brokerage-only poster profiles
+- **Profile fallback**: Preserve a brokerage as the primary identity when the
+  listing exposes a brokerage but no named agent.
+- **Logo and nested object safety**: Keep provider/company logos and nested
+  profile objects categorized correctly without falling back to generic agent
+  labels.
+- **Renderer consistency**: Prefer the specific categorized poster profile over
+  stale generic “agent” metadata while still retaining the separate office and
+  agent details.
+- **Release validation**: Rebuilt and validated the Chromium + Orion package set
+  with 34 extractor regression cases passing.
+- **Platform compatibility**: Chromium and Orion remain synchronized across
+  Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential,
+  Invitation Homes, and CJ Real Estate.
+
+## [v18.1.0] - 2026-09-30T12:53:40Z
+### Categorized Poster Profiles and Brokerage Logos
+- **Profile extraction**: Preserve nested agent and brokerage names/images as
+  categorized profiles, and use the observed brokerage as the primary identity
+  when no named agent is available.
+- **Company logos**: Match direct-provider organization logos from JSON-LD to the
+  known provider profile instead of treating them as listing photos.
+- **Site rendering**: Prefer a specific categorized poster profile over stale
+  generic agent metadata while retaining separate agent and office details.
+- **Release validation**: Rebuilt Chromium and Orion packages; all 34 extractor
+  regression cases pass.
+- **Platform compatibility**: Chromium and Orion packages remain synchronized
+  across Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress
+  Residential, Invitation Homes, and CJ Real Estate.
+
 ## [v18.0.14] - 2026-09-29
 ### Centralized Source Identity and Provenance Guardrails
 - **Identity strategies**: Synchronized agent/poster, direct company/source,
