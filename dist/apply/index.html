@@ -26,7 +26,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1790684750838"></script>
+  <script src="/js/cp-error-reporter.js?v=1790748360951"></script>
     <meta charset="UTF-8">
       <meta name="description" content="Apply to rent a Choice Properties unit. Complete your rental application online in minutes.">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +35,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=1790684750838">
+    <link rel="stylesheet" href="css/style.css?v=1790748360951">
 </head>
 <body>
 
@@ -253,6 +253,7 @@
 
                 <h2><i class="fas fa-home"></i> <span data-i18n="propertyHeader">Applicant Identification &amp; Property</span></h2>
                 <p class="required-legend"><span>*</span> <span data-i18n="requiredField">Required field</span> &nbsp;·&nbsp; <i class="fas fa-shield-alt" style="color:var(--success);font-size:11px;"></i> &nbsp;<span data-i18n="autoSavedHint">Progress is automatically saved</span></p>
+                <div class="important" role="note"><span data-i18n="applicationWelcome">Every applicant is welcome. Credit challenges, prior evictions or broken leases, nontraditional income, or limited rental history are not automatic approval or denial. Share relevant context; Choice reviews the complete application against this property's criteria.</span></div>
 
                 <h3 data-i18n="propertyInfo">Property Information</h3>
                 <div class="form-group">
@@ -662,6 +663,12 @@
                             <label for="evictedNo" data-i18n="no">No</label>
                         </div>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="applicantContext" data-i18n="applicantContextLabel">Optional context for the review team</label>
+                    <textarea id="applicantContext" name="Applicant Context" rows="3" maxlength="1200" placeholder="Share relevant context about your rental, credit, employment, or income history" data-i18n="applicantContextPlaceholder"></textarea>
+                    <div class="field-hint" data-i18n="applicantContextHint">Optional. Do not include Social Security numbers, account numbers, or medical information.</div>
                 </div>
 
                 <div class="form-group">
@@ -1168,7 +1175,7 @@
     </div>
 
     <script src="config.js"></script>
-      <script src="js/script.js?v=1790684750838"></script>
+      <script src="js/script.js?v=1790748360951"></script>
 
     <style>
         #devTestFillBtn {

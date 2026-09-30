@@ -969,7 +969,7 @@ class RentalApplication {
             const chartIcon = this._icon('fas fa-chart-bar');
             chartIcon.style.color = 'var(--secondary)';
             const title = document.createElement('span');
-            title.textContent = 'Affordability Check';
+            title.textContent = 'Rent-to-income estimate';
             const ratioBadge = document.createElement('span');
             ratioBadge.id = 'incomeRatioBadge';
             ratioBadge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;';
@@ -994,36 +994,24 @@ class RentalApplication {
             const other     = parseFloat(rawOther)  || 0;
             const total     = income + other;
 
-            if (!income) { widget.style.display = 'none'; return; }
+            if (!total) { widget.style.display = 'none'; return; }
 
-            const ratio  = total / rent; // typically landlords require 2.5x–3x
             const pct    = Math.round((rent / total) * 100);
             widget.style.display = 'block';
 
-            let color, bg, label, msg;
-            if (ratio >= 3) {
-                color = '#1b5e20'; bg = '#e8f5e9'; label = '✓ Qualifies';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '), which meets the standard 3× requirement.';
-            } else if (ratio >= 2.5) {
-                color = '#e65100'; bg = '#fff8e1'; label = '⚠ Borderline';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '). Most landlords require 2.5–3×. This may be reviewed closely.';
-            } else {
-                color = '#b71c1c'; bg = '#ffebee'; label = '✗ May Not Qualify';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '). Most landlords require at least 2.5–3×. ' +
-                      (other ? '' : 'Adding any additional income above may help.');
-            }
-
-            widget.style.background  = bg;
-            widget.style.borderColor = color + '55';
-            badge.textContent  = label;
+            const color = '#315c72';
+            widget.style.background = '#f3f8fa';
+            widget.style.borderColor = '#c9dce5';
+            badge.textContent = 'Estimate';
             badge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;background:' + color + ';color:#fff;';
             const muted = document.createElement('span');
             muted.style.color = '#94a3b8';
             muted.textContent = '(' + pct + '% of income goes to rent)';
-            detail.replaceChildren(document.createTextNode(msg + ' '), muted);
+            detail.replaceChildren(
+                document.createTextNode('Based on the monthly income entered, rent is about ' + pct + '% of that amount. This estimate is for planning only, not an eligibility decision. Requirements vary by property; you can include eligible additional income and share context.'),
+                document.createTextNode(' '),
+                muted
+            );
         };
 
         if (incomeEl) { incomeEl.addEventListener('input', updateRatio); incomeEl.addEventListener('change', updateRatio); }
@@ -2340,8 +2328,8 @@ class RentalApplication {
                     : `A representative will contact you using your indicated payment method to coordinate the $${fee} application fee.`,
                 reviewBeginsTitle: 'Screening in Progress',
                 reviewBeginsDesc: freeApp
-                    ? 'Screening typically concludes within 24 to 72 hours. Application status is available online using your Application ID.'
-                    : 'Screening typically concludes within 24 to 72 hours of fee confirmation. Application status is available online using your Application ID.',
+                    ? 'Most reviews are completed within 24 to 72 hours. Timing can vary while information is verified. Track updates using your Application ID.'
+                    : 'Most reviews are completed within 24 to 72 hours after fee confirmation. Timing can vary while information is verified. Track updates using your Application ID.',
                 importantNote: 'Notice:',
                 paymentUrgentText: freeApp
                     ? 'No application fee is required for this property. Your application has been submitted for review.'
@@ -2363,7 +2351,8 @@ class RentalApplication {
                 step2PaymentArranged: freeApp ? '2. Application Received' : '2. Fee Coordination',
                 step2Desc: freeApp ? 'No fee required. Application enters review immediately.' : `A representative contacts you to process the $${fee} fee.`,
                 step3ReviewBegins: '3. Screening & Review',
-                step3Desc: freeApp ? 'Typically completed within 24–72 hours.' : 'Typically completed within 24–72 hours of fee confirmation.',
+                step3Desc: freeApp ? 'Most reviews finish within 24–72 hours; timing can vary.' : 'Most reviews finish within 24–72 hours after fee confirmation; timing can vary.',
+                applicationWelcome: 'Every applicant is welcome. Credit challenges, prior evictions or broken leases, nontraditional income, or limited rental history are not automatic approval or denial. Share relevant context; Choice reviews the complete application against this property’s criteria.',
                 propertyHeader: 'Applicant Identification & Property',
                 propertyInfo: 'Property Information',
                 propertyAddressLabel: 'Property Address',
@@ -2552,6 +2541,9 @@ class RentalApplication {
                 offlineError: 'Connection unavailable. Please check your network and try again.',
                 submissionFailed: 'Submission failed. Please try again.',
                 backgroundQuestions: 'Disclosure Questions',
+                applicantContextLabel: 'Optional context for the review team',
+                applicantContextPlaceholder: 'Share relevant context about your rental, credit, employment, or income history',
+                applicantContextHint: 'Optional. Do not include Social Security numbers, account numbers, or medical information.',
                 ref1RelationshipLabel: 'Relationship to Applicant',
                 ref1RelationshipPlaceholder: 'e.g., Former Landlord, Employer, Colleague',
                 ref2RelationshipLabel: 'Relationship to Applicant (Optional)',
@@ -2646,8 +2638,8 @@ class RentalApplication {
                     : `Un representante lo contactará usando su método de pago indicado para coordinar la tarifa de solicitud de $${fee}.`,
                 reviewBeginsTitle: 'Verificación en Proceso',
                 reviewBeginsDesc: freeApp
-                    ? 'La verificación generalmente concluye en 24 a 72 horas. El estado de la solicitud está disponible en línea usando su ID de Solicitud.'
-                    : 'La verificación generalmente concluye en 24 a 72 horas tras la confirmación del pago. El estado de la solicitud está disponible en línea usando su ID de Solicitud.',
+                    ? 'La mayoría de las revisiones se completan en 24 a 72 horas. El tiempo puede variar mientras se verifica la información. Consulte las actualizaciones con su ID de Solicitud.'
+                    : 'La mayoría de las revisiones se completan en 24 a 72 horas después de confirmar el pago. El tiempo puede variar mientras se verifica la información. Consulte las actualizaciones con su ID de Solicitud.',
                 importantNote: 'Aviso:',
                 paymentUrgentText: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud ha sido enviada para revisión.'
@@ -2669,7 +2661,8 @@ class RentalApplication {
                 step2PaymentArranged: freeApp ? '2. Solicitud Recibida' : '2. Coordinación de Tarifa',
                 step2Desc: freeApp ? 'Sin tarifa. La solicitud entra en revisión de inmediato.' : `Un representante lo contacta para procesar la tarifa de $${fee}.`,
                 step3ReviewBegins: '3. Verificación y Revisión',
-                step3Desc: freeApp ? 'Generalmente concluye en 24–72 horas.' : 'Generalmente concluye en 24–72 horas tras la confirmación del pago.',
+                step3Desc: freeApp ? 'La mayoría se completa en 24–72 horas; el tiempo puede variar.' : 'La mayoría se completa en 24–72 horas después de confirmar el pago; el tiempo puede variar.',
+                applicationWelcome: 'Todas las personas pueden presentar una solicitud. Los problemas de crédito, desalojos o incumplimientos de alquiler anteriores, ingresos no tradicionales o historial limitado no determinan automáticamente la aprobación o el rechazo. Puede compartir contexto relevante; Choice revisa la solicitud completa según los criterios de esta propiedad.',
                 propertyHeader: 'Identificación del Solicitante y Propiedad',
                 propertyInfo: 'Información de la Propiedad',
                 propertyAddressLabel: 'Dirección de la Propiedad',
@@ -2858,6 +2851,9 @@ class RentalApplication {
                 offlineError: 'Conexión no disponible. Verifique su red e intente de nuevo.',
                 submissionFailed: 'Error al enviar. Por favor intente de nuevo.',
                 backgroundQuestions: 'Preguntas de Divulgación',
+                applicantContextLabel: 'Contexto opcional para el equipo de revisión',
+                applicantContextPlaceholder: 'Comparta contexto relevante sobre su historial de alquiler, crédito, empleo o ingresos',
+                applicantContextHint: 'Opcional. No incluya números de Seguro Social, cuentas ni información médica.',
                 ref1RelationshipLabel: 'Relación con el Solicitante',
                 ref1RelationshipPlaceholder: 'ej., Propietario anterior, Empleador, Colega',
                 ref2RelationshipLabel: 'Relación con el Solicitante (Opcional)',

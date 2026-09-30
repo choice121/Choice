@@ -146,3 +146,8 @@ verify_jwt = false
 # verify_jwt must be false so the phone can POST without a Supabase JWT.
 [functions.receive-pipeline-import]
 verify_jwt = false
+
+# The guest route authenticates with an expiring invite token. Admin actions
+# additionally require an admin JWT inside the function.
+[functions.tour-scheduler]
+verify_jwt = false

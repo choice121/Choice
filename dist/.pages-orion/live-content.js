@@ -1,6 +1,6 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.0.9
-// Universal High-Quality Browser Extension UI for seven supported portals
+// Choice Properties — Live Content Script v18.0.14
+// Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
 // 1. Sleek Floating Action Card (Glassmorphism, collision-aware)
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.9-live';
+  var VERSION  = '18.0.14-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -35,6 +35,10 @@
   var isExpanded = false;
   var isMinimized = false;
   var currentExtractedData = null;
+  var renderedListingSignature = '';
+  var listingGeneration = 0;
+  var listingRefreshTimer = null;
+  var hydrationRefreshTimers = [];
 
   // ── Inject Custom Styles ────────────────────────────────────
   function injectStyles() {
@@ -456,12 +460,68 @@
            /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
            /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
            /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
-           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|[^/]+\/[^/]+)/i.test(url) ||
-           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url);
+           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|property-details|[^/]+\/[^/]+)/i.test(url) ||
+           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url) ||
+           /invitationhomes\.com\/(?:property|homes-for-rent|houses-for-rent)\/[^/?#]+/i.test(url);
   }
 
   function isSearchPage(url) {
     return /zillow\.com\/(homes|for_rent|b\/|search)/i.test(url);
+  }
+
+  function extractCurrentListing() {
+    if (!window.CP_Extractors || typeof window.CP_Extractors.extract !== 'function') return null;
+    try {
+      return window.CP_Extractors.extract(location.href, document);
+    } catch (err) {
+      console.warn('[CP] Listing extraction notice:', err);
+      return null;
+    }
+  }
+
+  function extractionSignature(data) {
+    if (!data) return '';
+    var photos = extractPhotoUrls(data.original_image_urls);
+    if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    return [
+      data.source,
+      data.source_listing_id,
+      data.source_url,
+      data.address,
+      data.city,
+      data.state,
+      data.zip,
+      data.monthly_rent != null ? data.monthly_rent : data.rent,
+      data.bedrooms != null ? data.bedrooms : data.beds,
+      data.bathrooms != null ? data.bathrooms : data.baths,
+      data.square_footage != null ? data.square_footage : data.sqft,
+      photos.length,
+      data.description ? String(data.description).length : 0
+    ].join('|');
+  }
+
+  function scheduleListingRefresh(delay) {
+    if (listingRefreshTimer) clearTimeout(listingRefreshTimer);
+    var refreshGeneration = listingGeneration;
+    listingRefreshTimer = setTimeout(function () {
+      listingRefreshTimer = null;
+      if (refreshGeneration !== listingGeneration || !isDetailPage(location.href)) return;
+      var next = extractCurrentListing();
+      if (!next) return;
+      var nextSignature = extractionSignature(next);
+      if (!activeWidget || nextSignature !== renderedListingSignature) {
+        injectWidget(next);
+      }
+    }, delay == null ? 220 : delay);
+  }
+
+  function scheduleHydrationRefreshes() {
+    hydrationRefreshTimers.forEach(function (timer) { clearTimeout(timer); });
+    hydrationRefreshTimers = [0, 250, 800, 1800, 3500].map(function (delay) {
+      return setTimeout(function () {
+        scheduleListingRefresh(0);
+      }, delay);
+    });
   }
 
   // ── Extract Photo URLs Helper ───────────────────────────────
@@ -513,24 +573,19 @@
       activeWidget.remove();
       activeWidget = null;
     }
+    renderedListingSignature = '';
   }
 
-  function injectWidget() {
+  function injectWidget(extractedOverride) {
     removeWidget();
     if (!isDetailPage(location.href)) return;
 
     injectStyles();
 
     // Run pre-flight extraction
-    var extracted = null;
-    try {
-      if (window.CP_Extractors && typeof window.CP_Extractors.extract === 'function') {
-        extracted = window.CP_Extractors.extract(location.href, document);
-      }
-    } catch (err) {
-      console.warn('[CP] Pre-flight extraction notice:', err);
-    }
+    var extracted = extractedOverride || extractCurrentListing();
     currentExtractedData = extracted;
+    renderedListingSignature = extractionSignature(extracted);
 
     var container = document.createElement('div');
     container.id = 'cp-widget-container';
@@ -725,11 +780,36 @@
         return;
       }
 
+      // Re-read before saving so a same-tab SPA navigation cannot submit the
+      // previous property's data through a stale widget.
+      var liveExtracted = extractCurrentListing();
+      if (!liveExtracted) {
+        setError('Listing is still loading');
+        return;
+      }
+      var liveSignature = extractionSignature(liveExtracted);
+      if (renderedListingSignature && liveSignature !== renderedListingSignature) {
+        currentExtractedData = liveExtracted;
+        injectWidget(liveExtracted);
+        setError('Listing changed; refreshed');
+        return;
+      }
+
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
       if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
         photoUrls = extracted.photo_urls;
       }
       photoUrls = dedupePhotoUrls(photoUrls);
+
+      var folderSelect = document.querySelector('#cp-folder-select');
+      var selectedFolderId = folderSelect && folderSelect.value ? folderSelect.value : null;
+      var selectedFolderName = null;
+      if (folderSelect && folderSelect.selectedIndex >= 0) {
+        var selectedOption = folderSelect.options[folderSelect.selectedIndex];
+        selectedFolderName = selectedOption && selectedOption.value
+          ? selectedOption.textContent.replace(/^[^\S\r\n]*[^\w]*\s*/, '').trim()
+          : null;
+      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -754,9 +834,17 @@
         available_date: extracted.available_date,
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
+        folder_id: selectedFolderId,
+        folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v18.0.9-live',
+        _import: 'browser-extension-v18.0.14-live',
       };
+
+      if (!window.CP_Extractors || typeof window.CP_Extractors.buildImportIdentityPayload !== 'function') {
+        setError('Extension identity contract unavailable; refresh the listing and try again');
+        return;
+      }
+      Object.assign(payload, window.CP_Extractors.buildImportIdentityPayload(extracted));
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
         setError('Listing payload is too large');
@@ -774,33 +862,11 @@
       } else if (resp && resp.ok) {
         // Record created successfully!
         saveBtn.style.display = 'none';
-
-        if (photoUrls.length > 0) {
-          progressBox.style.display = 'flex';
-          progressStatus.textContent = 'Uploading photos to ImageKit…';
-
-          uploadPhotosInBackground(photoUrls, function (completed, total) {
-            var percent = Math.round((completed / total) * 100);
-            progressFill.style.width = percent + '%';
-            progressCount.textContent = percent + '%';
-            progressStatus.textContent = 'Uploaded ' + completed + ' of ' + total + ' photos';
-          }).then(function (result) {
-            progressBox.style.display = 'none';
-            successBox.style.display = 'flex';
-            var resultBanner = successBox.querySelector('.cp-success-banner span');
-            if (resultBanner && result.failed > 0) {
-              resultBanner.textContent = 'Saved; ' + result.failed + ' photo' + (result.failed === 1 ? '' : 's') + ' failed';
-            }
-            if (result.uploaded.length > 0) {
-              updatePipelinePhotos(payload, result.uploaded);
-            }
-          }).catch(function () {
-            progressBox.style.display = 'none';
-            successBox.style.display = 'flex';
-          });
-        } else {
-          successBox.style.display = 'flex';
+        var resultBanner = successBox.querySelector('.cp-success-banner span');
+        if (resultBanner && resp.photos_queued) {
+          resultBanner.textContent = 'Saved to Choice Pipeline • Photos processing';
         }
+        successBox.style.display = 'flex';
       } else if (resp && resp.duplicate) {
         saveBtn.innerHTML = '<span>Already in Pipeline</span>';
         saveBtn.style.background = '#b45309';
@@ -1076,29 +1142,46 @@
   }
 
   // ── Navigation & Lifecycle Watcher ──────────────────────────
+  function hookHistoryMethods() {
+    var rawPushState = history.pushState;
+    var rawReplaceState = history.replaceState;
+
+    history.pushState = function () {
+      var result = rawPushState.apply(this, arguments);
+      onPageChange();
+      return result;
+    };
+
+    history.replaceState = function () {
+      var result = rawReplaceState.apply(this, arguments);
+      onPageChange();
+      return result;
+    };
+  }
+
   function onPageChange() {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      listingGeneration += 1;
+      currentExtractedData = null;
       removeWidget();
-      setTimeout(function () {
-        injectWidget();
-        injectSearchCardButtons();
-      }, 350);
+      scheduleHydrationRefreshes();
+      setTimeout(injectSearchCardButtons, 100);
     } else {
+      scheduleListingRefresh();
       updateWidgetPosition();
       injectSearchCardButtons();
     }
   }
 
   function setupWatchers() {
+    hookHistoryMethods();
     window.addEventListener('popstate', onPageChange);
     window.addEventListener('resize', updateWidgetPosition);
     window.addEventListener('scroll', updateWidgetPosition, { passive: true });
 
     var observer = new MutationObserver(function () {
-      if (isDetailPage(location.href) && !document.getElementById('cp-widget-container')) {
-        injectWidget();
-      }
+      scheduleListingRefresh();
       injectSearchCardButtons();
       updateWidgetPosition();
     });
@@ -1112,5 +1195,6 @@
   injectWidget();
   injectSearchCardButtons();
   setupWatchers();
+  scheduleHydrationRefreshes();
   console.log('[Choice Properties] Live extension UI v' + VERSION + ' active');
 })();
