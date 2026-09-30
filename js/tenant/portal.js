@@ -418,8 +418,8 @@ function renderPaymentStatus(app){
     return `<div class="section"><div class="section-label">Payment</div>
       <div class="pay-unpaid-card">
         <div class="pay-unpaid-title">&#128176; Application Fee Due — ${fmtMoney(fee)}</div>
-        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">A $50 application fee is required after submission. Our team will contact you shortly to securely complete payment before your application is reviewed.</p>
-        <p style="color:#1d4ed8;font-size:.78rem;margin-bottom:14px;font-weight:600">Applicants who complete payment quickly are placed earlier in the review queue.</p>
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">The application fee shown for this property is required before review. Choice Properties will send next steps using your selected contact method. Verify payment instructions through our official contact details before paying.</p>
+        <p style="color:#1d4ed8;font-size:.78rem;margin-bottom:14px;font-weight:600">Payment confirms your application can enter review. Paying sooner does not guarantee priority or approval.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="font-size:.76rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Accepted payment methods</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -729,7 +729,7 @@ function nextStepFor(app){
 
   // Default — pending review
   return { tone:'info', eyebrow:'In review', title:'Your application is being reviewed.',
-    sub:'Decisions typically come within 24–72 hours of payment confirmation. Applicants who respond promptly are often prioritized.' };
+    sub:'Most reviews are completed within 24–72 hours after fee confirmation. Timing can vary while information is verified; this is an estimate, not a guaranteed decision time.' };
 }
 
 // ── Countdown badge ──────────────────────────────────────────────────────────
@@ -902,7 +902,7 @@ function renderPortal(app){
       done:['approved','denied'].includes(status),
       active:status==='pending'||status==='waitlisted',
       label:status==='approved'?'You Have Been Selected':status==='denied'?'Application Decision':status==='waitlisted'?'On Waitlist':'In Active Review',
-      sub:status==='approved'?'You have been selected based on your application. This selection is time-sensitive — units are offered on a first-completion basis among approved applicants. Please complete the next steps promptly.':status==='denied'?'Your application was not approved at this time.':status==='waitlisted'?'You are on our waitlist. We will contact you when a unit becomes available.':'Your application is being evaluated for selection. Decisions are typically made within 24 to 72 hours of payment confirmation — applicants who respond promptly are often prioritized.',
+      sub:status==='approved'?'You have been selected based on your application. This selection is time-sensitive — units are offered on a first-completion basis among approved applicants. Please complete the next steps promptly.':status==='denied'?'Your application was not approved at this time.':status==='waitlisted'?'You are on our waitlist. We will contact you when a unit becomes available.':'Your application is being reviewed against the selected property\'s criteria. Most reviews are completed within 24 to 72 hours after fee confirmation; timing can vary while information is verified. Paying or responding faster does not provide review priority.',
     },
     {
       done:['signed','co_signed'].includes(leaseStatus),

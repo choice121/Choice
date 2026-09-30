@@ -108,9 +108,9 @@ function buildNudgeEmail(email: string, token: string, hoursLeft: number, proper
         What happens after you submit?
       </p>
       <ol style="margin:0;padding:0 0 0 18px;color:#6b7280;font-size:13px;line-height:1.7;">
-        <li>Our team reviews your application (usually within 24 hours)</li>
-        <li>We contact you using your preferred payment method to arrange the application fee</li>
-        <li>Once fee is received, your full review begins</li>
+        <li>Choice Properties sends next steps using the contact details you provided</li>
+        <li>If an application fee is required, review begins after it is received and confirmed</li>
+        <li>Most reviews are completed within 24 to 72 hours after fee confirmation; timing can vary while information is verified</li>
       </ol>
     </div>
   </div>
