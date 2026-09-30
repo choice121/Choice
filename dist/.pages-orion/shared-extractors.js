@@ -246,15 +246,18 @@
     }
 
     const agentEvidence = payload.agent_name || payload.agent_profile_url;
+    const brokerEvidence = payload.broker_name;
     if (source === 'zillow' || source === 'realtor' || agentEvidence) {
       return Object.assign(payload, {
         source_type: 'AGENT_PLATFORM',
         identity_strategy: 'AGENT_POSTER',
-        identity_status: agentEvidence ? 'confirmed' : 'unavailable',
-        source_profile_type: 'agent',
-        source_profile_name: payload.agent_name || null,
-        source_profile_image_url: payload.agent_image_url || null,
-        source_profile_url: payload.agent_profile_url || null,
+        identity_status: agentEvidence || brokerEvidence ? 'confirmed' : 'unavailable',
+        source_profile_type: agentEvidence ? 'agent' : brokerEvidence ? (payload.broker_profile_category || 'brokerage') : 'agent',
+        source_profile_name: agentEvidence ? (payload.agent_name || null) : (payload.broker_name || null),
+        source_profile_image_url: agentEvidence
+          ? (payload.agent_image_url || null)
+          : (payload.broker_image_url || null),
+        source_profile_url: agentEvidence ? (payload.agent_profile_url || null) : null,
       });
     }
 
@@ -267,6 +270,65 @@
       source_profile_image_url: null,
       source_profile_url: null,
     });
+  }
+
+  function profileImage(value) {
+    if (typeof value === 'string') return value.startsWith('https://') ? value : null;
+    if (!value || typeof value !== 'object') return null;
+    const url = value.url || value.href || value.src || value.contentUrl || value.imageUrl || value.image_url;
+    return typeof url === 'string' && url.startsWith('https://') ? url : null;
+  }
+
+  function profileName(value) {
+    if (typeof value === 'string') return value.trim() || null;
+    if (!value || typeof value !== 'object') return null;
+    return profileName(value.display_name || value.displayName || value.full_name ||
+      value.fullName || value.name || value.office_name || value.officeName ||
+      value.organizationName || value.companyName);
+  }
+
+  function buildPosterProfiles(payload) {
+    if (payload.identity_strategy === 'NO_IDENTITY') return [];
+
+    const profiles = [];
+    const add = (category, name, imageUrl) => {
+      const cleanName = profileName(name) || '';
+      if (!cleanName) return;
+      const key = `${category}:${cleanName.toLowerCase()}`;
+      if (profiles.some(profile => profile.key === key)) return;
+      profiles.push({
+        key,
+        category,
+        name: cleanName,
+        image_url: profileImage(imageUrl),
+      });
+    };
+
+    if (payload.identity_strategy === 'COMPANY_SOURCE') {
+      add('company', payload.source_profile_name, payload.source_profile_image_url || payload.company_logo_url);
+    } else {
+      add('agent', payload.agent_name,
+        payload.agent_image_url || (payload.agent_name ? payload.source_profile_image_url : null));
+      add(payload.broker_profile_category || 'brokerage', payload.broker_name, payload.broker_image_url);
+    }
+
+    return profiles.map(({ key, ...profile }) => profile);
+  }
+
+  function extractCompanyLogo(doc, expectedName) {
+    const expected = String(expectedName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!expected) return null;
+    for (const item of getJsonLdData(doc)) {
+      if (!item || typeof item !== 'object') continue;
+      const types = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
+      if (!types.some(type => /organization|localbusiness|propertymanagement/i.test(String(type || '')))) continue;
+      const name = profileName(item.name || item.legalName);
+      const normalizedName = String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!normalizedName || normalizedName !== expected) continue;
+      const image = profileImage(item.logo || item.image);
+      if (image) return image;
+    }
+    return null;
   }
   function parseBaths(rawBaths, descText) {
     let baths = rawBaths != null ? parseFloat(rawBaths) : null;
@@ -347,13 +409,16 @@
       virtual_tour_url: null, has_basement: null, has_central_air: null,
       original_image_urls: '[]', agent_name: null, broker_name: null,
       agent_image_url: null, agent_profile_url: null, source_last_updated_at: null,
+      broker_image_url: null, broker_profile_category: 'brokerage',
       source_type: null, identity_strategy: null, identity_status: null,
       source_profile_type: null, source_profile_name: null,
       source_profile_image_url: null, source_profile_url: null,
       company_logo_url: null, poster_landlord_id: null,
       _import: 'browser-extension-v5.0-resilient'
     }, overrides);
-    return applyBrowserIdentityContract(payload);
+    const normalized = applyBrowserIdentityContract(payload);
+    normalized.poster_profiles = buildPosterProfiles(normalized);
+    return normalized;
   }
 
   // ── Zillow Primary NextData Extractor ─────────────────────────
@@ -539,10 +604,11 @@
       has_basement: hasBasement,
       has_central_air: hasCentralAir,
       original_image_urls: JSON.stringify(collectPhotos(prop)),
-      agent_name: ai.agentName || null,
-      broker_name: ai.brokerName || null,
-      agent_image_url: ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || null,
-      agent_profile_url: ai.agentProfileUrl || ai.profileUrl || ai.agentUrl || null,
+      agent_name: profileName(ai.agentName || ai.agent),
+      broker_name: profileName(ai.brokerName || ai.brokerageName || ai.brokerage || ai.broker),
+      agent_image_url: profileImage(ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || ai.agentImage || ai.agent?.image),
+      agent_profile_url: ai.agentProfileUrl || ai.profileUrl || ai.agentUrl || ai.agent?.profileUrl || null,
+      broker_image_url: profileImage(ai.brokerLogoUrl || ai.brokerPictureUrl || ai.brokerPhotoUrl || ai.brokerImage || ai.brokerLogo || ai.brokerage?.logo),
       listed_at: listedAt,
       source_last_updated_at: sourceLastUpdatedAt,
     });
@@ -639,6 +705,8 @@
         ? (seller.url || seller.sameAs || null) : null,
       broker_name: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsOrganization
         ? (seller.name || null) : null,
+      broker_image_url: (sourceName === 'zillow' || sourceName === 'realtor') && sellerIsOrganization
+        ? profileImage(seller.logo || seller.image) : null,
     });
   }
 
@@ -889,6 +957,39 @@
       if (u && !photos.includes(u)) photos.unshift(u);
     }
 
+    const advertisers = prop.advertisers || prop.advertiser || {};
+    const agentValue = prop.agent || prop.listing_agent || prop.listingAgent ||
+      prop.listing_agent_details || advertisers.agent || advertisers.listingAgent || null;
+    const agent = Array.isArray(agentValue) ? agentValue[0] : agentValue;
+    const brokerValue = prop.broker || prop.listing_office || prop.listingOffice ||
+      advertisers.broker || advertisers.office || advertisers.listingOffice || null;
+    const broker = Array.isArray(brokerValue) ? brokerValue[0] : brokerValue;
+    const officeValue = prop.listing_office || prop.listingOffice || advertisers.office || advertisers.listingOffice || null;
+    const office = Array.isArray(officeValue) ? officeValue[0] : officeValue;
+    const agentName = (typeof agent === 'string' ? agent :
+      agent?.name || agent?.full_name || agent?.fullName || agent?.display_name) ||
+      prop.agent_name || prop.agentName || null;
+    const brokerName = (typeof broker === 'string' ? broker :
+      broker?.name || broker?.office_name || broker?.officeName) ||
+      prop.broker_name || prop.brokerName || null;
+    const agentImage = typeof agent === 'object' && agent
+      ? (agent.image_url || agent.imageUrl || agent.photo_url || agent.photoUrl ||
+        agent.photo || agent.image || agent.profile_photo || agent.profilePhoto || null)
+      : null;
+    const agentProfileUrl = typeof agent === 'object' && agent
+      ? (agent.profile_url || agent.profileUrl || agent.agent_url || agent.agentUrl ||
+        agent.url || agent.href || null)
+      : null;
+    const brokerImage = (typeof broker === 'object' && broker
+      ? profileImage(broker.logo || broker.logo_url || broker.logoUrl || broker.image_url ||
+        broker.imageUrl || broker.photo_url || broker.photoUrl || broker.image || broker.photo)
+      : null) || (typeof office === 'object' && office
+        ? profileImage(office.logo || office.logo_url || office.logoUrl || office.image_url || office.imageUrl || office.image)
+        : null);
+    const brokerType = typeof broker === 'object' && broker
+      ? String(broker['@type'] || broker.type || broker.__typename || '')
+      : '';
+
     return basePayload('realtor', String(prop.property_id || prop.rdc_web_url || ''), url, {
       title: buildTitle(beds, propType, city, street),
       address: street, city, state, zip, lat, lng,
@@ -902,6 +1003,12 @@
       county: prop.county || null,
       available_date: parseDate(prop.available_date || prop.date_available),
       virtual_tour_url: prop.virtual_tour_url || null,
+      agent_name: agentName,
+      broker_name: brokerName,
+      agent_image_url: agentImage,
+      agent_profile_url: agentProfileUrl,
+      broker_image_url: brokerImage,
+      broker_profile_category: /person|individual/i.test(brokerType) ? 'broker' : 'brokerage',
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
       ...extractSourceDates(prop),
     });
@@ -1775,7 +1882,17 @@
     }
     try {
       const res = e.fn(d, url);
-      if (res && res.address) return res;
+      if (res && res.address) {
+        if (res.identity_strategy === 'COMPANY_SOURCE' && !res.source_profile_image_url) {
+          const logo = extractCompanyLogo(d, res.source_profile_name);
+          if (logo) {
+            res.company_logo_url = logo;
+            res.source_profile_image_url = logo;
+            res.poster_profiles = buildPosterProfiles(res);
+          }
+        }
+        return res;
+      }
       // Secondary fallback to JSON-LD
       const ldRes = extractFromJsonLd(d, url, e.id);
       return ldRes || res;
@@ -1788,9 +1905,48 @@
     }
   }
 
-  const api = { 
+  const IMPORT_IDENTITY_FIELDS = [
+    'source_type',
+    'identity_strategy',
+    'identity_status',
+    'source_profile_type',
+    'source_profile_name',
+    'source_profile_image_url',
+    'source_profile_url',
+    'agent_name',
+    'broker_name',
+    'agent_image_url',
+    'agent_profile_url',
+    'company_logo_url',
+    'poster_landlord_id',
+    'listed_at',
+    'source_last_updated_at',
+  ];
+
+  function buildImportIdentityPayload(record) {
+    const result = {};
+    const source = record && typeof record === 'object' ? record : {};
+    for (const field of IMPORT_IDENTITY_FIELDS) {
+      result[field] = source[field] == null ? null : source[field];
+    }
+    let originalData = {};
+    if (typeof source.original_data === 'string') {
+      try {
+        const parsed = JSON.parse(source.original_data);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) originalData = parsed;
+      } catch (_) {}
+    }
+    if (Array.isArray(source.poster_profiles)) {
+      originalData._choice_poster_profiles = source.poster_profiles;
+    }
+    result.original_data = JSON.stringify(originalData);
+    return result;
+  }
+
+  const api = {
     detect, 
     extract, 
+    buildImportIdentityPayload,
     extractZillow, 
     extractZillowNextData, 
     extractZillowFromDom, 
