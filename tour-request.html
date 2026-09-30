@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#f1f4ef">
+  <title>Private Property Tour · Choice Properties</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1790748360951">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/tour-request.js?v=1790760000000"></script>
+  <style>
+    :root{--tour-ink:#17332c;--tour-leaf:#236b52;--tour-paper:#f1f4ef;--tour-line:#d8e0d7;--tour-muted:#5c7068;--tour-alert:#86552a}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--tour-paper);color:var(--tour-ink);font-family:'DM Sans',sans-serif}
+    .tour-page{max-width:860px;margin:0 auto;padding:28px 18px 64px}
+    .tour-brand{font:800 12px 'Manrope',sans-serif;color:var(--tour-leaf);letter-spacing:.08em}
+    .tour-head{padding:18px 0 22px;border-bottom:1px solid var(--tour-line)}
+    .tour-head h1{font:800 clamp(26px,5vw,38px)/1.12 'Manrope',sans-serif;margin:10px 0;color:var(--tour-ink)}
+    .tour-head p{margin:0;color:var(--tour-muted);line-height:1.6}
+    .tour-property{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid var(--tour-line)}
+    .tour-property h2{font:700 19px 'Manrope',sans-serif;margin:0 0 5px}
+    .tour-property address{font-style:normal;color:var(--tour-muted);line-height:1.5}
+    .tour-price{text-align:right;font:700 17px 'Manrope',sans-serif;white-space:nowrap}
+    .tour-price small{display:block;color:var(--tour-muted);font:500 12px 'DM Sans',sans-serif;margin-top:4px}
+    .tour-content{padding-top:20px}
+    .tour-panel{border:1px solid var(--tour-line);background:#fff;border-radius:8px;padding:20px;margin:16px 0}
+    .tour-panel h2{font:700 17px 'Manrope',sans-serif;margin:0 0 12px}
+    .tour-form{display:grid;gap:12px}
+    .tour-form label{display:grid;gap:5px;font-size:13px;font-weight:700;color:var(--tour-ink)}
+    .tour-form input,.tour-form textarea,.tour-form button,.tour-message-form textarea{font:inherit}
+    .tour-form input,.tour-form textarea,.tour-message-form textarea{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--tour-line);border-radius:6px;background:#fff;color:var(--tour-ink)}
+    .tour-form textarea,.tour-message-form textarea{min-height:84px;resize:vertical}
+    .tour-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .tour-form button{min-height:44px;border:0;border-radius:6px;background:var(--tour-leaf);color:#fff;font-weight:700;cursor:pointer;padding:10px 16px}
+    .tour-form button:disabled,.tour-message-form button:disabled{opacity:.6;cursor:wait}
+    .tour-helper{font-size:13px;color:var(--tour-muted);line-height:1.6;margin:6px 0 0}
+    .tour-status{padding:14px 16px;border-left:4px solid var(--tour-alert);background:#fbf5e9;border-radius:4px;line-height:1.55}
+    .tour-status.confirmed{border-color:var(--tour-leaf);background:#edf6ef}
+    .tour-status strong{display:block;font:700 16px 'Manrope',sans-serif;margin-bottom:3px}
+    .tour-instructions{white-space:pre-wrap;padding:12px;background:#f5f7f4;border-radius:6px;line-height:1.6}
+    .tour-thread{display:grid;gap:9px}
+    .tour-message{padding:10px 12px;border-radius:6px;background:#f4f6f3;line-height:1.55;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .tour-message.guest{border-left:3px solid #7896b0}.tour-message.admin{border-left:3px solid var(--tour-leaf)}
+    .tour-message small{display:block;color:var(--tour-muted);font-size:11px;margin-bottom:4px}
+    .tour-message-form{display:grid;gap:8px;margin-top:12px}
+    .tour-message-form button{justify-self:start;min-height:40px;border:1px solid var(--tour-line);border-radius:6px;background:#fff;color:var(--tour-ink);font-weight:700;padding:8px 14px;cursor:pointer}
+    .tour-feedback{margin:12px 0;color:var(--tour-leaf);font-size:14px;line-height:1.5}
+    .tour-feedback.error{color:#9b3434}
+    .tour-footer{font-size:12px;color:var(--tour-muted);line-height:1.6;margin-top:20px}
+    @media(max-width:600px){.tour-page{padding:20px 14px 48px}.tour-panel{padding:16px}.tour-slots{grid-template-columns:1fr}.tour-property{grid-template-columns:1fr}.tour-price{text-align:left}}
+  </style>
+</head>
+<body>
+  <main class="tour-page">
+    <div class="tour-brand">CHOICE PROPERTIES</div>
+    <header class="tour-head">
+      <h1>Arrange a property tour</h1>
+      <p>This private page is for an invited guest. Choose a few times that work for you, and our leasing team will confirm one by email.</p>
+    </header>
+    <section id="tour-property" class="tour-property" hidden></section>
+    <div id="tour-feedback" class="tour-feedback" role="status" aria-live="polite">Loading your private tour link…</div>
+    <section id="tour-content" class="tour-content" hidden></section>
+    <p class="tour-footer">Your visit is not scheduled until Choice Properties sends a confirmation with the date, time, and arrival instructions. Keep this private link to view updates or message our team.</p>
+  </main>
+</body>
+</html>
