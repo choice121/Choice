@@ -10,10 +10,13 @@ const cache = (p) => ({ props: { pageProps: { componentProps: { gdpClientCache: 
 
 // --- Fixtures ---
 const Z = 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75201/98765432_zpid/';
-const ZD = doc(cache({ zpid: 98765432, address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' }, price: 1850, bedrooms: 3, bathrooms: 2, livingArea: 1450, yearBuilt: 1998, homeType: 'SINGLE_FAMILY', isPetFriendly: true, walkScore: 78, listingDate: '2026-08-12', lastUpdatedDate: '2026-09-01', responsivePhotos: [{ mixedSources: { jpeg: [{ width: 1024, url: 'https://photos.zillowstatic.com/fp/1.jpg' }] } }], attributionInfo: { agentName: 'Jane Agent', brokerName: 'North Realty', agentPictureUrl: 'https://example.test/jane.jpg', agentProfileUrl: 'https://example.test/agents/jane' }, resoFacts: { dateAvailable: '2026-09-01', securityDeposit: 1850, petsAllowed: true } }));
+const ZD = doc(cache({ zpid: 98765432, address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' }, price: 1850, bedrooms: 3, bathrooms: 2, livingArea: 1450, yearBuilt: 1998, homeType: 'SINGLE_FAMILY', isPetFriendly: true, walkScore: 78, listingDate: '2026-08-12', lastUpdatedDate: '2026-09-01', responsivePhotos: [{ mixedSources: { jpeg: [{ width: 1024, url: 'https://photos.zillowstatic.com/fp/1.jpg' }] } }], attributionInfo: { agentName: 'Jane Agent', brokerName: 'North Realty', agentPictureUrl: 'https://example.test/jane.jpg', brokerLogoUrl: { url: 'https://example.test/north-realty.svg' }, agentProfileUrl: 'https://example.test/agents/jane' }, resoFacts: { dateAvailable: '2026-09-01', securityDeposit: 1850, petsAllowed: true } }));
 
 const R = 'https://www.realtor.com/realestateandhomes-detail/456-Oak-Ave_Austin_TX_78701/M1012345678';
 const RD = doc({ props: { pageProps: { initialReduxState: { propertyDetails: { property_id: '1012345678', address: { line: '456 Oak Ave', city: 'Austin', state_code: 'TX', postal_code: '78701' }, price: 2200, beds: 2, baths: 2, sqft: 1100, prop_type: 'condo', advertisers: { agent: { name: 'Taylor Agent', photo_url: 'https://example.test/taylor.jpg', profile_url: 'https://example.test/agents/taylor' }, office: { name: 'Austin Realty' } }, photos: [{ href: 'https://ar.rdcpix.com/p1.jpg' }], primary_photo: { href: 'https://ar.rdcpix.com/primary.jpg' } } } } } });
+const RD_PROFILE_DATA = JSON.parse(RD.getElementById('__NEXT_DATA__').textContent);
+RD_PROFILE_DATA.props.pageProps.initialReduxState.propertyDetails.advertisers.office.logo_url = 'https://example.test/austin-realty.svg';
+const RD_PROFILE = doc(RD_PROFILE_DATA);
 
 const A = 'https://www.apartments.com/sunset-apartments-houston-tx/abc123/';
 const AD = doc({ props: { pageProps: { listing: { id: 'abc123', address: { street: '789 Pine St', city: 'Houston', state: 'TX', zip: '77002' }, price: 1500, bedrooms: 1, bathrooms: 1, squareFeet: 750, photos: [{ url: 'https://images1.apartments.com/a1.jpg' }], petsAllowed: true, availableDate: '2026-07-15' } } } });
@@ -205,6 +208,49 @@ t('detect CJ Real Estate', () => assert.strictEqual(api.detect(CJ).id, 'cj_real_
 t('detect AppFolio', () => assert.strictEqual(api.detect(AF).id, 'cj_real_estate'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
 t('Zillow payload preserves observed agent profile evidence', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-09-01'); assert.strictEqual(p.listed_at, '2026-08-12'); assert.strictEqual(p.source_last_updated_at, '2026-09-01'); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); assert.strictEqual(p.agent_profile_url, 'https://example.test/agents/jane'); assert.strictEqual(p.agent_image_url, 'https://example.test/jane.jpg'); assert.strictEqual(p.identity_strategy, 'AGENT_POSTER'); assert.strictEqual(p.source_profile_name, 'Jane Agent'); const payload = api.buildImportIdentityPayload(p); assert.strictEqual(payload.agent_profile_url, p.agent_profile_url); assert.strictEqual(payload.source_profile_name, 'Jane Agent'); assert.strictEqual(payload.listed_at, '2026-08-12'); });
+t('Zillow identity transport preserves agent and brokerage thumbnails', () => { const p = api.extractZillow(ZD, Z); assert.deepStrictEqual(p.poster_profiles, [{ category: 'agent', name: 'Jane Agent', image_url: 'https://example.test/jane.jpg' }, { category: 'brokerage', name: 'North Realty', image_url: 'https://example.test/north-realty.svg' }]); assert.deepStrictEqual(JSON.parse(api.buildImportIdentityPayload(p).original_data)._choice_poster_profiles, p.poster_profiles); });
+t('Zillow nested agent and brokerage objects preserve categorized profile images', () => {
+  const d = doc(cache({
+    zpid: 98765432,
+    address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: 1850,
+    attributionInfo: {
+      agent: { name: 'Morgan Agent', image: { url: 'https://example.test/morgan.jpg' }, profileUrl: 'https://example.test/morgan' },
+      brokerage: { name: 'Nested Realty', logo: { url: 'https://example.test/nested.svg' } },
+    },
+  }));
+  const p = api.extractZillow(d, Z);
+  assert.deepStrictEqual(p.poster_profiles, [
+    { category: 'agent', name: 'Morgan Agent', image_url: 'https://example.test/morgan.jpg' },
+    { category: 'brokerage', name: 'Nested Realty', image_url: 'https://example.test/nested.svg' },
+  ]);
+});
+t('Realtor identity captures brokerage logo and preserves both profiles', () => { const p = api.extractRealtor(RD_PROFILE, R); assert.deepStrictEqual(p.poster_profiles, [{ category: 'agent', name: 'Taylor Agent', image_url: 'https://example.test/taylor.jpg' }, { category: 'brokerage', name: 'Austin Realty', image_url: 'https://example.test/austin-realty.svg' }]); });
+t('Realtor without named agent uses the observed brokerage as primary identity', () => {
+  const data = JSON.parse(RD.getElementById('__NEXT_DATA__').textContent);
+  const listing = data.props.pageProps.initialReduxState.propertyDetails;
+  listing.advertisers = { agent: {}, office: { name: 'Austin Realty', logo: { url: 'https://example.test/austin-realty.svg' } } };
+  const p = api.extractRealtor(doc(data), R);
+  assert.strictEqual(p.agent_name, null);
+  assert.strictEqual(p.source_profile_type, 'brokerage');
+  assert.strictEqual(p.source_profile_name, 'Austin Realty');
+  assert.deepStrictEqual(p.poster_profiles, [
+    { category: 'brokerage', name: 'Austin Realty', image_url: 'https://example.test/austin-realty.svg' },
+  ]);
+});
+t('Direct provider JSON-LD logo is attached to its company profile', () => {
+  const d = doc({ props: { pageProps: { property: {
+    id: 'pr-logo', streetAddress: '1 Provider Way', city: 'Columbus', state: 'OH', zip: '43229', marketRent: 1800,
+  } } } });
+  d.querySelectorAll = (selector) => selector === 'script[type="application/ld+json"]'
+    ? [{ textContent: JSON.stringify({ '@type': 'Organization', name: 'Progress Residential', logo: { url: 'https://example.test/progress.svg' } }) }]
+    : [];
+  const p = api.extract(PR, d);
+  assert.strictEqual(p.source_profile_image_url, 'https://example.test/progress.svg');
+  assert.deepStrictEqual(p.poster_profiles, [
+    { category: 'company', name: 'Progress Residential', image_url: 'https://example.test/progress.svg' },
+  ]);
+});
 t('Realtor payload preserves observed agent profile evidence', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); assert.strictEqual(p.agent_name, 'Taylor Agent'); assert.strictEqual(p.broker_name, 'Austin Realty'); assert.strictEqual(p.agent_image_url, 'https://example.test/taylor.jpg'); assert.strictEqual(p.agent_profile_url, 'https://example.test/agents/taylor'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });

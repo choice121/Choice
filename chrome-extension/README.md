@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v18.0.14)
+# Choice Properties — Universal Chrome Extension (v18.1.1)
 
 ## Source identity contract
 
@@ -6,7 +6,9 @@ All imports are normalized by the shared pipeline identity policy before they
 are staged:
 
 - Zillow/Realtor agent-oriented listings preserve observed agent name,
-  brokerage, public profile URL, and profile image when the source exposes them.
+  brokerage, public profile URL, categorized profile images, and brokerage logos
+  when the source exposes them. Brokerage identity remains visible when no agent
+  name is available.
 - Progress Residential, Invitation Homes, Main Street Renewal, and CJ Real
   Estate use a reusable company/source profile and never attach an unrelated
   individual.
@@ -77,6 +79,6 @@ Whenever making modifications to the extension:
    ```
 3. Verify test suite:
    - Compiles all 3 variants (`chrome-extension`, `.pages-orion`, `supabase/functions`).
-   - Executes 20 automated test cases.
+  - Executes the automated extractor regression suite.
    - Bumps version and updates `extension-meta.json` and `public/choice-properties-extension.zip`.
 4. Record all changes in `docs/EXTENSION_CHANGELOG.md`.
