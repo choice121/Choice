@@ -5,7 +5,7 @@
  * Adheres strictly to AGENTS.md Choice Properties rules:
  * - Exact bathroom precision (1.5 decimal preserved, full_bathrooms=1, half_bathrooms=1)
  * - Physical architectural classification (DUPLEX, TOWNHOUSE, APARTMENT)
- * - Price capped at $1200 maximum per user explicit directive
+ * - Price capped at $1,800 maximum for this Zillow batch
  * - Zero security deposit mentions in descriptions (1x monthly rent in DB)
  * - Standardized application fee ($50) and pet-friendly policy (pets_allowed=true)
  * - Duplicate checking: existing records updated in-place to preserve IDs and URLs
@@ -14,6 +14,7 @@
 
 import crypto from 'crypto';
 import { CREDENTIALS_CONFIG } from '../credentials-config.mjs';
+import { capZillowBatchRent } from './zillow_batch_price_cap.mjs';
 
 const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
 const KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
@@ -459,7 +460,7 @@ async function runMasterPublish() {
   const publishedResults = [];
 
   for (let i = 0; i < PROPERTIES_TO_PUBLISH.length; i++) {
-    const item = PROPERTIES_TO_PUBLISH[i];
+    const item = capZillowBatchRent(PROPERTIES_TO_PUBLISH[i]);
     console.log(`\n----------------------------------------------------------------`);
     console.log(`[${i + 1}/${PROPERTIES_TO_PUBLISH.length}] ${item.address}, ${item.city} ${item.state} ${item.zip}`);
     console.log(`    Rent: $${item.monthly_rent}/mo | Beds: ${item.bedrooms} | Baths: ${item.bathrooms} (Half: ${item.half_bathrooms}) | Type: ${item.property_type}`);

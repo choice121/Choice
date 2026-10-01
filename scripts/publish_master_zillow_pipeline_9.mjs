@@ -5,7 +5,7 @@
  * Zillow pipeline properties for Tulsa, OK.
  *
  * Rules Enforced:
- * 1. Price constraint: Rent capped/reduced to $1,200 max per user directive
+ * 1. Price constraint: Rent capped at $1,800 for this Zillow batch
  * 2. Bathroom precision: Accurate decimal representation (1.5 baths for #2 and #9)
  * 3. Architectural typing: DUPLEX vs TOWNHOUSE vs APARTMENT
  * 4. Zero security deposit or leasing restrictions in description narrative
@@ -17,6 +17,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import { CREDENTIALS_CONFIG } from '../credentials-config.mjs';
+import { capZillowBatchRent } from './zillow_batch_price_cap.mjs';
 
 const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
 const SERVICE_KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
@@ -460,7 +461,7 @@ export async function runMasterPublish() {
   const publishedResults = [];
 
   for (let i = 0; i < PROPERTIES_TO_PUBLISH.length; i++) {
-    const item = PROPERTIES_TO_PUBLISH[i];
+    const item = capZillowBatchRent(PROPERTIES_TO_PUBLISH[i]);
     console.log(`\n[${i + 1}/${PROPERTIES_TO_PUBLISH.length}] Processing: ${item.address}, ${item.city} ${item.zip} (${item.pipeline_id})`);
 
     // 1. Fetch raw pipeline data to extract and verify source photos
