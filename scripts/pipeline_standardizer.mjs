@@ -8,6 +8,18 @@
  * 4. Mandatory Choice Properties policies ($50 app fee, pet-friendly, zero security deposit in text, zero lease terms)
  */
 
+const AVAILABILITY_SENTENCE_RE =
+  /\b(?:available|availability|vacant|vacancy|move[-\s]?in[-\s]?ready|ready\s+(?:for\s+)?(?:immediate\s+)?(?:move[-\s]?in|occupancy)|immediate(?:ly)?\s+(?:available|move[-\s]?in|occupancy)|ready\s+(?:now|today)|(?:now|currently)\s+(?:leasing|accepting\s+applications|open)|leasing\s+(?:now|immediately|today)|(?:accepting|taking)\s+(?:applications|applicants)|move[-\s]?in\s*[:=]\s*[^\s.,!?;]+|move[-\s]?in\s+(?:date|starts?|begins?|on|from|by|immediate(?:ly)?|now|today)|occupancy\s+(?:starts?|begins?|on|from|by))\b/i;
+
+function stripAvailabilitySentences(description) {
+  return String(description)
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((sentence) => sentence.trim() && !AVAILABILITY_SENTENCE_RE.test(sentence))
+    .join(" ")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 export function standardizeAndValidateProperty(prop) {
   const result = { ...prop };
 
@@ -108,17 +120,9 @@ export function standardizeAndValidateProperty(prop) {
       .replace(/no smokers[^\n.]*/gi, "")
       .replace(/call today for a private tour[^\n.]*/gi, "")
       .replace(/schedule a showing today[^\n.]*/gi, "")
-      // Strip availability mentions
-      .replace(/(?:is\s+)?available\s+now[^\n.]*/gi, "")
-      .replace(/available\s+(?:immediately|starting|from|on|beginning|soon)[^\n.]*/gi, "")
-      .replace(/immediate(?:ly)?\s+available[^\n.]*/gi, "")
-      .replace(/available\s+for\s+(?:immediate\s+)?(?:move-in|occupancy)[^\n.]*/gi, "")
-      .replace(/move-in\s+ready[^\n.]*/gi, "")
-      .replace(/ready\s+for\s+move-in[^\n.]*/gi, "")
-      .replace(/ready\s+for\s+immediate\s+occupancy[^\n.]*/gi, "")
-      .replace(/availability:?[^\n.]*/gi, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+    result.description = stripAvailabilitySentences(result.description);
   }
 
   return result;

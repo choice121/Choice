@@ -723,18 +723,6 @@ function renderProperty(p) {
   const sbStickyPrice = document.getElementById('sidebarStickyPrice');
   if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>/mo</span>`;
 
-  const _availEl = document.getElementById('sidebarAvail');
-  const _availStickyEl = document.getElementById('sidebarStickyAvail');
-  const availText = availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date);
-  const availColor = availNow ? '#10b981' : '#d4a017';
-  if (_availEl) {
-    _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availEl.style.display = '';
-  }
-  if (_availStickyEl) {
-    _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availStickyEl.style.display = '';
-  }
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
@@ -753,8 +741,7 @@ function renderProperty(p) {
     _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
   }
   // Only show "Available From" in the Costs table when the date is in the future.
-  // If the property is already available (availNow), showing a past date alongside
-  // the "Available Now" chip is contradictory — suppress it (Bug 3 fix).
+  // Suppress past dates so the customer-facing costs do not show stale timing.
   if (p.available_date && !availNow) {
     document.getElementById('sidebarMoveInRow').style.display = '';
     document.getElementById('sidebarMoveIn').textContent = formatDate(p.available_date);
@@ -884,11 +871,6 @@ function renderProperty(p) {
         btn.innerHTML = `<i class="fas fa-ban" style="font-size:14px"></i> ${p.status === 'rented' ? 'No Longer Available' : 'Not Currently Available'}`;
       }
     });
-    const unavailHtml = `<i class="fas fa-circle" style="color:#c0392b"></i> ${p.status === 'rented' ? 'Rented' : 'Unavailable'}`;
-    const _availEl = document.getElementById('sidebarAvail');
-    if (_availEl) _availEl.innerHTML = unavailHtml;
-    const _availStickyEl = document.getElementById('sidebarStickyAvail');
-    if (_availStickyEl) _availStickyEl.innerHTML = unavailHtml;
   }
 
   // Mobile sticky Apply bar — only for active listings
@@ -3353,7 +3335,7 @@ function renderPropFacts(p) {
 
   // ── Cards — only fields NOT already in meta strip or tabs ──────────────
 
-  // Move-in: available (future date only — if now, header chip already says so)
+  // Move-in: show a verified future date only; do not show an "available now" label.
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
   const moveInCard = card('Move-in', 'fa-key', [
     row('Available',   availNow ? 'Immediate' : formatDate(p.available_date)),

@@ -54,6 +54,41 @@ def test_fallback_description_is_generated_from_features():
     assert "Pool" in enriched["description"] or "garage" in enriched["description"].lower()
 
 
+def test_availability_language_is_removed_from_scraped_descriptions():
+    text = (
+        "This 2-bedroom home is available for rent at $1,800 per month. "
+        "The kitchen has updated cabinets. Available from October 4, 2026. "
+        "The home is move-in ready. Move-in: immediate. "
+        "Currently accepting applications."
+    )
+
+    cleaned = module.clean_description(text)
+
+    assert "updated cabinets" in cleaned
+    assert "available" not in cleaned.lower()
+    assert "availability" not in cleaned.lower()
+    assert "move-in" not in cleaned.lower()
+
+
+def test_fallback_description_never_mentions_availability():
+    record = {
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "property_type": "SINGLE_FAMILY",
+        "city": "Austin",
+        "monthly_rent": 1800,
+        "available_date": "2026-10-04",
+        "description": "",
+    }
+
+    enriched = module.rule_based_enrich(record)
+
+    assert enriched["description"]
+    assert "available" not in enriched["description"].lower()
+    assert "availability" not in enriched["description"].lower()
+    assert "move-in" not in enriched["description"].lower()
+
+
 def test_pet_inference_from_spaced_amenity_tag():
     record = {"pets_allowed": None, "amenities": ["Pet Friendly"], "description": ""}
     enriched = module.rule_based_enrich(record)

@@ -18,15 +18,16 @@
 #   5. Strips brokerage/MLS branding
 #   6. Strips corporate fee schedules
 #   7. Strips all security deposit mentions and figures from descriptions
-#   8. Removes individual branded/agent photos from the image list
-#   9. Normalizes heating/cooling from raw MLS blobs
-#  10. Infers missing: laundry, parking, pets, title (omits lease terms)
-#  11. Fetches listing page HTML to fill low-score records
-#  12. Enforces rent consistency (description must match monthly_rent)
-#  13. Normalizes application fee to $50 in description
-#  14. Appends "Apply now at Choice Properties" CTA
-#  15. Validates before publish: ≥6 photos, rent set, no banned language
-#  16. Re-scores every record (0–100 quality score)
+#   8. Strips availability and move-in timing from descriptions
+#   9. Removes individual branded/agent photos from the image list
+#  10. Normalizes heating/cooling from raw MLS blobs
+#  11. Infers missing: laundry, parking, pets, title (omits lease terms)
+#  12. Fetches listing page HTML to fill low-score records
+#  13. Enforces rent consistency (description must match monthly_rent)
+#  14. Normalizes application fee to $50 in description
+#  15. Appends "Apply now at Choice Properties" CTA
+#  16. Validates before publish: ≥6 photos, rent set, no banned language
+#  17. Re-scores every record (0–100 quality score)
 #
 # MANDATORY RULES (never bypass):
 #   - Application fee = $50 always
@@ -34,10 +35,12 @@
 #   - Description must NEVER contain security deposit quotes, amounts, or terms
 #   - Lease terms are permanently omitted: no properties show lease terms or minimum duration
 #   - Pets allowed = Yes (always published as pet-friendly)
+#   - Descriptions must not mention listing availability, move-in timing, or readiness
 #   - Min 6 photos required before publishing
 #   - All photos must be on ImageKit (never external URLs)
 #   - Description must NOT contain: tour language, portal links,
-#     agent names, competitor branding, security deposit, wrong fee amounts
+#     agent names, competitor branding, security deposit, availability,
+#     move-in timing, or wrong fee amounts
 #   - Description MUST end with a Choice Properties apply CTA
 #
 # QUICK REFERENCE: see scraper/RULES.md (short, scannable version)
@@ -48,7 +51,7 @@ Choice Properties -- Enrichment Pipeline (v2)
 =============================================
 Post-processing applied to every scraped record before DB insert:
 
-  1. clean_description                     -- strip TurboTenant / agent boilerplate + screening language
+  1. clean_description                     -- strip boilerplate, screening, and availability language
   1b. strip_external_application_instructions -- remove references to applying via a third-party portal
   1c. replace_owner_manager_references     -- remove property manager / owner / leasing-agent name references
   1d. strip_third_party_branding           -- remove brokerage / MLS / other-platform branding
@@ -150,6 +153,37 @@ _BOILERPLATE_PATTERNS = [
 
 _BOILERPLATE_RE = [re.compile(p, re.IGNORECASE) for p in _BOILERPLATE_PATTERNS]
 
+# Descriptions must not state or imply when a rental is available. Drop the
+# complete sentence/line so partial phrases are not left behind.
+_AVAILABILITY_DESCRIPTION_RE = re.compile(
+    r"\b(?:available|availability|vacant|vacancy|move[-\s]?in[-\s]?ready|"
+    r"ready\s+(?:for\s+)?(?:immediate\s+)?(?:move[-\s]?in|occupancy)|"
+    r"immediate(?:ly)?\s+(?:available|move[-\s]?in|occupancy)|"
+    r"ready\s+(?:now|today)|"
+    r"(?:now|currently)\s+(?:leasing|accepting\s+applications|open)|"
+    r"leasing\s+(?:now|immediately|today)|"
+    r"(?:accepting|taking)\s+(?:applications|applicants)|"
+    r"move[-\s]?in\s*[:=]\s*[^\s.,!?;]+|"
+    r"move[-\s]?in\s+(?:date|starts?|begins?|on|from|by|immediate(?:ly)?|now|today)|"
+    r"occupancy\s+(?:starts?|begins?|on|from|by))\b",
+    re.IGNORECASE,
+)
+
+
+def strip_property_availability_from_description(text):
+    """Remove sentences or lines that mention listing availability or move-in timing."""
+    if not text:
+        return text
+    parts = re.split(r"(?<=[.!?])\s+|\n+", str(text))
+    kept = [part.strip() for part in parts
+            if part.strip() and not _AVAILABILITY_DESCRIPTION_RE.search(part)]
+    cleaned = " ".join(kept)
+    cleaned = re.sub(r"\s+([,;:])", r"\1", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 # Patterns to completely strip security deposit mentions and figures from descriptions
 _DEPOSIT_STRIP_PATTERNS = [
     # 1. Full sentence or bullet starting with security deposit / deposit requirement
@@ -217,7 +251,8 @@ def strip_security_deposit_from_description(text):
 def clean_description(text):
     """
     Strip agent boilerplate, CTA language, screening criteria, for-sale jargon,
-    and security deposit mentions from a scraped listing description.  Returns the cleaned string.
+    security deposit mentions, and property availability language from a scraped
+    listing description. Returns the cleaned string.
     """
     if not text:
         return text
@@ -225,6 +260,7 @@ def clean_description(text):
         text = pat.sub("", text)
     text = strip_for_sale_jargon_from_description(text)
     text = strip_security_deposit_from_description(text)
+    text = strip_property_availability_from_description(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
     return text
@@ -1400,6 +1436,8 @@ def rule_based_enrich(record):
     desc = _normalize_text(record.get("description"))
     if not desc or len(desc) < 200:
         record["description"] = _build_fallback_description(record, existing=desc if desc else None)
+    if record.get("description"):
+        record["description"] = strip_property_availability_from_description(record["description"])
 
     # 10. Permanently omit lease terms — no properties show lease terms
     record["minimum_lease_months"] = None
@@ -1432,7 +1470,6 @@ def _build_fallback_description(record, existing=None):
     laundry = record.get("laundry_type")
     parking = record.get("parking")
     pets    = record.get("pets_allowed")
-    avail   = record.get("available_date")
     basement = record.get("has_basement")
     central_air = record.get("has_central_air")
 
@@ -1492,9 +1529,8 @@ def _build_fallback_description(record, existing=None):
     sentence = opener
     if details:
         sentence += ", " + ", ".join(details)
-    sentence += " is available for rent"
     if rent:
-        sentence += " at ${:,.0f}/month".format(rent)
+        sentence += " has a monthly rent of ${:,.0f}".format(rent)
     sentence += "."
 
     if existing and existing.strip():
@@ -1555,28 +1591,17 @@ def _build_fallback_description(record, existing=None):
                 "The property features " + ", ".join(outdoor[:-1]) + " and " + outdoor[-1] + "."
             )
 
-    # ── Paragraph 4: policies & availability ────────────────────────────────
+    # ── Paragraph 4: pet policy ──────────────────────────────────────────────
     policy = []
     if pets is True:
         policy.append("Pets are welcome")
     elif pets is False:
         policy.append("No pets allowed")
 
-    if avail:
-        try:
-            from datetime import date as _d
-            avail_date = _d.fromisoformat(str(avail))
-            if avail_date <= _d.today():
-                policy.append("Available for immediate move-in")
-            else:
-                policy.append("Available from {}".format(avail_date.strftime("%B %-d, %Y")))
-        except Exception:
-            policy.append("Availability: {}".format(avail))
-
     if policy:
         paragraphs.append(". ".join(policy) + ".")
 
-    return "\n\n".join(p for p in paragraphs if p.strip()) or "A well-maintained rental property available now."
+    return "\n\n".join(p for p in paragraphs if p.strip()) or "A well-maintained rental property with a comfortable, functional layout."
 
 
 # =============================================================================
@@ -1750,7 +1775,7 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
 
     Steps (in order):
       1. Watermark filter       -- drop competitor-branded listings (entire record)
-      2. Description clean      -- strip boilerplate, tour/contact CTAs
+      2. Description clean      -- strip boilerplate, tour/contact CTAs, and availability language
       3. Corporate fee strip    -- remove management company fee blocks
       3b. Photo brand filter    -- strip individual branded/agent photos from image list
       4. HVAC normalize         -- parse raw MLS heating/cooling blobs separately
@@ -1873,6 +1898,7 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         # ends with an invitation to submit an application.
         if rec.get("description"):
             rec["description"] = append_apply_cta(rec["description"])
+            rec["description"] = strip_property_availability_from_description(rec["description"])
 
         # Permanently clear lease terms so no properties display lease duration
         rec["minimum_lease_months"] = None

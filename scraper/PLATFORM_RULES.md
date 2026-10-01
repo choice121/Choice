@@ -85,7 +85,13 @@ required", etc.) must be completely stripped from listing descriptions by
 database stores a structured `security_deposit` field (defaulting to 1× monthly
 rent), listing descriptions must remain 100% free of deposit statements.
 
-### 2f. Lease Terms & Duration — OMIT (Mandatory)
+### 2f. Availability & Move-In Timing — REMOVE (Mandatory)
+Listing descriptions must NEVER state or imply whether or when a rental is
+available, vacant, ready for move-in, or accepting applications. Strip every
+sentence or line containing availability language or a move-in date from the
+description. Keep any verified `available_date` only in its structured field.
+
+### 2g. Lease Terms & Duration — OMIT (Mandatory)
 No property should show lease terms or minimum lease duration. Scrapers,
 enrichment pipelines, and AI assistants must never extract, populate, or
 display lease terms (`lease_terms`, `minimum_lease_months`). All listings must

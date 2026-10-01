@@ -17,6 +17,7 @@
 | Agent / owner / manager names | Strip: "Contact John Smith", "Managed by ABC Realty", "Leasing agent: Jane Doe" |
 | Third-party brokerage branding | Strip: "Listed by Keller Williams", "MLS #12345", "Courtesy of RE/MAX" |
 | Security deposit in description | Strip: listing descriptions must NEVER quote, mention, or state security deposit amounts or terms |
+| Availability in description | Strip any sentence/line mentioning availability, move-in dates/readiness, vacancy, or when the rental can be occupied |
 | Lease terms displayed | Strip / omit: no properties show lease terms or minimum lease duration; omitted from all enrichment and listings |
 | Application fee ≠ $50 | Replace with "Application Fee: $50." — always, no exceptions |
 | "Free application" / "$0 fee" | Replace with "Application Fee: $50." |
@@ -52,17 +53,18 @@ When you call `PipelineOrchestrator.run(criteria)`, the pipeline automatically:
 5. Strips third-party brokerage/MLS branding
 6. Strips corporate fee schedules and marketing blocks (Mynd "RENT WITH MYND" block, Invitation Homes fee blocks, Progress Residential, Tricon)
 7. Strips all security deposit mentions and figures from descriptions
-8. Omits and clears all lease terms so no properties display lease duration
-9. Removes individual branded/agent photos from the image list
-10. Normalizes HVAC fields from raw MLS blobs
-11. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms)
-12. Fills missing available_date, deposit by scraping the listing page (Realtor only; never extracts lease terms)
-13. Enforces rent consistency between description text and `monthly_rent` field
-14. Normalizes application fee to $50 in description text
-15. Appends a "Apply now at Choice Properties" CTA to every description
-16. Validates: photos ≥ 6, rent set, no banned language → blocks publish if any fail
-17. Uploads all photos to ImageKit, verifies URLs, inserts into `property_photos`
-18. Publishes, activates, and returns the live URL
+8. Strips availability and move-in timing from descriptions (structured `available_date` is kept separate)
+9. Omits and clears all lease terms so no properties display lease duration
+10. Removes individual branded/agent photos from the image list
+11. Normalizes HVAC fields from raw MLS blobs
+12. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms)
+13. Fills missing available_date, deposit by scraping the listing page (Realtor only; never extracts lease terms)
+14. Enforces rent consistency between description text and `monthly_rent` field
+15. Normalizes application fee to $50 in description text
+16. Appends a "Apply now at Choice Properties" CTA to every description
+17. Validates: photos ≥ 6, rent set, no banned language → blocks publish if any fail
+18. Uploads all photos to ImageKit, verifies URLs, inserts into `property_photos`
+19. Publishes, activates, and returns the live URL
 
 ---
 

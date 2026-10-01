@@ -22,6 +22,11 @@ from datetime import date, datetime, timezone
 from urllib.parse import urlparse
 
 try:
+    from enrichment import strip_property_availability_from_description
+except ImportError:
+    from .enrichment import strip_property_availability_from_description
+
+try:
     from curl_cffi import requests as _req
     _CURL_CFFI_OK = True
 except ImportError:
@@ -954,10 +959,8 @@ def _build_rental_description(rec, scraped_text=None):
     laundry = rec.get("laundry_type")
     parking = rec.get("parking")
     pets    = rec.get("pets_allowed")
-    avail   = rec.get("available_date")
     basement = rec.get("has_basement")
     central_air = rec.get("has_central_air")
-    vtour   = rec.get("virtual_tour_url")
 
     try:
         appliances = json.loads(rec.get("appliances") or "[]")
@@ -1013,9 +1016,8 @@ def _build_rental_description(rec, scraped_text=None):
         sentence = opening_parts[0]
         if detail_parts:
             sentence += ", " + ", ".join(detail_parts)
-        sentence += " is now available for rent"
         if rent:
-            sentence += " at {}/month".format(_money(rent))
+            sentence += " has a monthly rent of {}".format(_money(rent))
         sentence += "."
 
         # Include short scraped text as a second sentence if present
@@ -1090,30 +1092,12 @@ def _build_rental_description(rec, scraped_text=None):
             para = "The property includes " + ", ".join(outdoor[:-1]) + " and " + outdoor[-1] + "."
         paragraphs.append(para)
 
-    # ── Paragraph 4: policies & availability ─────────────────────────────────
+    # ── Paragraph 4: pet policy ──────────────────────────────────────────────
     policy_parts = []
     if pets is True:
         policy_parts.append("Pets are welcome")
     elif pets is False:
         policy_parts.append("No pets allowed")
-
-    if avail:
-        if avail == "now" or re.match(r"^\d{4}-\d{2}-\d{2}$", str(avail)):
-            from datetime import date as _date
-            try:
-                avail_date = _date.fromisoformat(str(avail))
-                today = _date.today()
-                if avail_date <= today:
-                    policy_parts.append("available for immediate move-in")
-                else:
-                    policy_parts.append("available from {}".format(
-                        avail_date.strftime("%B %-d, %Y")
-                    ))
-            except Exception:
-                policy_parts.append("availability: {}".format(avail))
-
-    if vtour:
-        policy_parts.append("a virtual tour is available")
 
     if policy_parts:
         para = ". ".join(p[0].upper() + p[1:] for p in policy_parts) + "."
@@ -1121,6 +1105,7 @@ def _build_rental_description(rec, scraped_text=None):
 
     # ── Final assembly ────────────────────────────────────────────────────────
     description = "\n\n".join(p for p in paragraphs if p.strip())
+    description = strip_property_availability_from_description(description)
     return description if description.strip() else None
 
 
