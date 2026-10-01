@@ -94,7 +94,7 @@ export function standardizeAndValidateProperty(prop) {
   }
   result.smoking_allowed = false;
 
-  // 5. Strip security deposit mentions from description
+  // 5. Strip security deposit, availability, and prohibited mentions from description
   if (result.description) {
     result.description = result.description
       .replace(/security deposit:?\s*\$?[0-9,]+(\.[0-9]{2})?/gi, "")
@@ -108,6 +108,15 @@ export function standardizeAndValidateProperty(prop) {
       .replace(/no smokers[^\n.]*/gi, "")
       .replace(/call today for a private tour[^\n.]*/gi, "")
       .replace(/schedule a showing today[^\n.]*/gi, "")
+      // Strip availability mentions
+      .replace(/(?:is\s+)?available\s+now[^\n.]*/gi, "")
+      .replace(/available\s+(?:immediately|starting|from|on|beginning|soon)[^\n.]*/gi, "")
+      .replace(/immediate(?:ly)?\s+available[^\n.]*/gi, "")
+      .replace(/available\s+for\s+(?:immediate\s+)?(?:move-in|occupancy)[^\n.]*/gi, "")
+      .replace(/move-in\s+ready[^\n.]*/gi, "")
+      .replace(/ready\s+for\s+move-in[^\n.]*/gi, "")
+      .replace(/ready\s+for\s+immediate\s+occupancy[^\n.]*/gi, "")
+      .replace(/availability:?[^\n.]*/gi, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
   }

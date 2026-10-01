@@ -3,6 +3,7 @@
 ## 1. UI Guidelines
 - **Smoking Policy**: The "smoking" tab / smoking policies are removed from property details pages. Do not show smoking restrictions or information on property pages.
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and listing views. No properties show lease terms or minimum lease duration. Future AIs must never display lease terms on property pages.
+- **No "Available Now" Tag**: The "Available Now" tag / chip is permanently removed from all property details pages, cards, and overview headers. Properties must never display an "Available Now" status. Only explicit future availability dates may be indicated if scheduled.
 
 ## 2. Pipeline Pre-Publishing Rules & Enrichment
 - **Gallery Images Review**: Before publishing any property, review all gallery images to verify that promotional banners, realtor flyers, contact cards, and discount graphic cards are removed — keeping ONLY genuine property photographs.
@@ -12,6 +13,7 @@
 - **Pet Friendly**: Always pet-friendly.
 - **Security Deposit**: Always 1x monthly rent in the structured database field, but **NEVER mentioned in descriptions**. All security deposit amounts, quotes, clauses, and references must be completely stripped from listing descriptions during description enrichment (`strip_security_deposit_from_description`). Listing descriptions must remain 100% free of security deposit mentions.
 - **No Lease Term in Enrichment or Properties**: Lease terms are removed from all enrichment documentation and pipelines so no properties show that. Scrapers, enrichment logic, and AI assistants must never extract, populate, or assign lease terms (`lease_terms`, `minimum_lease_months`). All properties must have lease terms omitted.
+- **Never Mention Availability in Descriptions**: Listing descriptions must never talk about, state, or reference property availability (e.g., "Available Now", "Available immediately", "Available for immediate move-in", "Move-in ready", "Available on [date]", or any availability timeline). All availability mentions, phrases, and clauses must be completely stripped from listing descriptions during enrichment (`strip_availability_from_description`). Listing descriptions must remain 100% free of availability mentions.
 
 ## 3. Post-Publishing Mandatory AI Response Format
 After publishing properties, the AI assistant MUST send the user the published properties link(s) in this exact format in the chat for them to verify:
@@ -280,6 +282,7 @@ Before publishing:
 * Security deposit: Always 1x monthly rent in structured DB, but NEVER mentioned in descriptions.
 * Lease terms: Never display lease terms, durations, or minimum lease length anywhere on property pages or descriptions.
 * Smoking: Never display smoking policies on property pages.
+* Availability: Never display "Available Now" tags on property pages. Never mention availability, move-in readiness, or availability dates in listing descriptions.
 
 ---
 
@@ -362,7 +365,8 @@ Verify:
 ✓ No fabricated information
 ✓ No conflicting prices
 ✓ No outdated information
-✓ No prohibited language (no lease terms, no smoking, no tour/showing language)
+✓ No prohibited language (no lease terms, no smoking, no tour/showing language, no availability mentions in description)
+✓ No "Available Now" tag on property page
 ✓ No third-party application instructions
 ✓ No third-party contact information
 ✓ Correct Choice Properties branding
