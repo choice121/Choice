@@ -1,0 +1,122 @@
+[
+  {
+    "pipeline_id": "PP-4D615BA8",
+    "property_id": "c64d4f0a-230d-450d-a0c8-909e17a24fc3",
+    "address": "1637 Veronica Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63147",
+    "rent": 1725,
+    "beds": 4,
+    "baths": 1.5,
+    "photos_count": 12
+  },
+  {
+    "pipeline_id": "PP-073EC531",
+    "property_id": "6abec156-f39c-4242-bbbf-08391a0d89f1",
+    "address": "4454 N Newstead Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63115",
+    "rent": 1750,
+    "beds": 4,
+    "baths": 2,
+    "photos_count": 41
+  },
+  {
+    "pipeline_id": "PP-5BBE0712",
+    "property_id": "cf104a99-228a-45ee-a34a-fe6c04b2877f",
+    "address": "1237 Shawmut Pl",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63112",
+    "rent": 1800,
+    "beds": 4,
+    "baths": 1.5,
+    "photos_count": 19
+  },
+  {
+    "pipeline_id": "PP-79DCE969",
+    "property_id": "1c100f09-eb22-4983-8e54-b30221099fd2",
+    "address": "3717 Bamberger Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63116",
+    "rent": 1750,
+    "beds": 4,
+    "baths": 2,
+    "photos_count": 16
+  },
+  {
+    "pipeline_id": "PP-45BC66C7",
+    "property_id": "68520fbf-c8aa-4977-ab7f-133420a394d6",
+    "address": "8726 Riverview Blvd",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63147",
+    "rent": 1500,
+    "beds": 4,
+    "baths": 2,
+    "photos_count": 10
+  },
+  {
+    "pipeline_id": "PP-AA933FF3",
+    "property_id": "52acf3f4-bb95-42a3-bdc1-2a5d7ac34656",
+    "address": "3440 Potomac St",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63118",
+    "rent": 1800,
+    "beds": 5,
+    "baths": 2,
+    "photos_count": 12
+  },
+  {
+    "pipeline_id": "PP-6EBC0E3E",
+    "property_id": "64a26379-182f-4d27-bbd8-eba49ab0c81e",
+    "address": "4409 Oakwood Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63121",
+    "rent": 1650,
+    "beds": 4,
+    "baths": 2,
+    "photos_count": 39
+  },
+  {
+    "pipeline_id": "PP-71BF063E",
+    "property_id": "50a964f6-963a-4f20-b91c-f3724df3c507",
+    "address": "3826 Avondale Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63121",
+    "rent": 1695,
+    "beds": 4,
+    "baths": 1.5,
+    "photos_count": 16
+  },
+  {
+    "pipeline_id": "PP-98544C25",
+    "property_id": "c698c238-ac73-49f6-ae3f-6eb1d154fb66",
+    "address": "5626 Hodiamont Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63136",
+    "rent": 1650,
+    "beds": 4,
+    "baths": 1,
+    "photos_count": 16
+  },
+  {
+    "pipeline_id": "PP-69ADE059",
+    "property_id": "6bae5fe6-dec6-4631-9c97-da50dea2db0a",
+    "address": "7037 Theodore Ave",
+    "city": "Saint Louis",
+    "state": "MO",
+    "zip": "63136",
+    "rent": 1650,
+    "beds": 4,
+    "baths": 2,
+    "photos_count": 13
+  }
+]
