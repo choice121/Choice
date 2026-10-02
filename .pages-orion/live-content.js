@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.1.1
+// Choice Properties — Live Content Script v18.1.2
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.1.1-live';
+  var VERSION  = '18.1.2-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -837,7 +837,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v18.1.1-live',
+        _import: 'browser-extension-v18.1.2-live',
       };
 
       if (!window.CP_Extractors || typeof window.CP_Extractors.buildImportIdentityPayload !== 'function') {
@@ -888,16 +888,12 @@
     var lastResponse = null;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
-        if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
-          lastResponse = await new Promise(function (resolve) {
-            EXTENSION_API.runtime.sendMessage({
+        if (window.CP_ExtensionMessaging && window.CP_ExtensionMessaging.available) {
+          lastResponse = await window.CP_ExtensionMessaging.sendMessage({
               type: 'UPLOAD_PAYLOAD',
               payload: payload,
               settings: { offlineQueue: true }
-            }, function (response) {
-              resolve(EXTENSION_API.runtime.lastError ? { ok: false, error: EXTENSION_API.runtime.lastError.message } : response);
-            });
-          });
+            }, 30000);
         } else {
           var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
             method: 'POST',
@@ -974,17 +970,19 @@
           window.postMessage({ type: 'CP_DOWNLOAD_PHOTO', requestId: requestId, url: url }, '*');
           return;
         }
-        EXTENSION_API.runtime.sendMessage(
-          { type: 'DOWNLOAD_PHOTO', url: url },
-          function (response) {
-            var runtimeError = EXTENSION_API.runtime.lastError;
-            if (runtimeError) {
-              resolve(null);
-              return;
-            }
+        if (window.CP_ExtensionMessaging && window.CP_ExtensionMessaging.available) {
+          window.CP_ExtensionMessaging.sendMessage(
+            { type: 'DOWNLOAD_PHOTO', url: url },
+            50000
+          ).then(function (response) {
             resolve(response && response.ok && response.dataUri ? response : null);
-          }
-        );
+          }).catch(function () {
+            resolve(null);
+          });
+          return;
+        }
+
+        resolve(null);
       } catch (e) {
         resolve(null);
       }

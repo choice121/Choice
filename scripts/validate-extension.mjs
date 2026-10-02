@@ -52,7 +52,7 @@ const chromeManifest = checkVersionedPackage('Chromium', 'chrome-extension', [
   'shared-extractors.js', 'test-extractors.js',
 ]);
 const orionManifest = checkVersionedPackage('Orion', '.pages-orion', [
-  'config.js', 'background.js', 'content.js', 'content.css', 'live-content.js',
+  'config.js', 'background.js', 'content.js', 'content.css', 'extension-messaging.js', 'live-content.js',
   'live-shared-extractors.js', 'popup.html', 'popup.js', 'shared-extractors.js',
 ]);
 
