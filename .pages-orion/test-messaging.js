@@ -27,6 +27,25 @@ async function main() {
     await browserPromise.sendMessage({ type: 'UPLOAD_PAYLOAD' }),
     { ok: true, type: 'UPLOAD_PAYLOAD' }
   );
+  let fallbackCalls = 0;
+  const noBackgroundResponse = loadHelper({
+    browser: {
+      runtime: {
+        sendMessage: () => undefined,
+      },
+    },
+  });
+  assert.deepEqual(
+    await noBackgroundResponse.sendMessageWithFallback(
+      { type: 'UPLOAD_PAYLOAD' },
+      () => {
+        fallbackCalls += 1;
+        return Promise.resolve({ ok: true, viaFallback: true });
+      }
+    ),
+    { ok: true, viaFallback: true }
+  );
+  assert.equal(fallbackCalls, 1);
 
   const chromeCallback = loadHelper({
     chrome: {
@@ -70,7 +89,7 @@ async function main() {
 
   const contentScripts = manifest.content_scripts.flatMap((entry) => entry.js || []);
   assert.ok(contentScripts.indexOf('extension-messaging.js') < contentScripts.indexOf('live-content.js'));
-  assert.match(liveContent, /CP_ExtensionMessaging\.sendMessage/);
+  assert.match(liveContent, /CP_ExtensionMessaging\.sendMessageWithFallback/);
 
   console.log('Orion extension messaging tests passed (promise API, callback API, promise-returning Chrome API, errors, manifest wiring).');
 }

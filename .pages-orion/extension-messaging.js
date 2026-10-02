@@ -78,8 +78,26 @@
     });
   }
 
+  function sendMessageWithFallback(message, fallback, timeoutMs) {
+    if (typeof fallback !== 'function') {
+      return Promise.reject(new Error('Extension message fallback is unavailable'));
+    }
+
+    return sendMessage(message, timeoutMs).then(
+      function (response) {
+        return response === undefined || response === null
+          ? fallback(new Error('Extension background returned no response'))
+          : response;
+      },
+      function (error) {
+        return fallback(error);
+      }
+    );
+  }
+
   root.CP_ExtensionMessaging = {
     available: !!api,
     sendMessage: sendMessage,
+    sendMessageWithFallback: sendMessageWithFallback,
   };
 })(window);

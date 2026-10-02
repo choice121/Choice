@@ -884,23 +884,48 @@
     }
   }
 
+  async function submitPayloadDirectly(payload) {
+    var response = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    var body;
+    try {
+      body = await response.json();
+    } catch (_) {
+      body = null;
+    }
+
+    if (!body || typeof body !== 'object') {
+      return {
+        ok: false,
+        httpStatus: response.status,
+        error: 'Server returned an unreadable response (HTTP ' + response.status + ')',
+      };
+    }
+    if (!response.ok) {
+      body.ok = false;
+      body.httpStatus = response.status;
+      body.error = body.error || 'Server rejected import (HTTP ' + response.status + ')';
+    }
+    return body;
+  }
+
   async function submitPayload(payload) {
     var lastResponse = null;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         if (window.CP_ExtensionMessaging && window.CP_ExtensionMessaging.available) {
-          lastResponse = await window.CP_ExtensionMessaging.sendMessage({
-              type: 'UPLOAD_PAYLOAD',
-              payload: payload,
-              settings: { offlineQueue: true }
-            }, 30000);
+          lastResponse = await window.CP_ExtensionMessaging.sendMessageWithFallback({
+            type: 'UPLOAD_PAYLOAD',
+            payload: payload,
+            settings: { offlineQueue: true }
+          }, function () {
+            return submitPayloadDirectly(payload);
+          }, 10000);
         } else {
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          lastResponse = await saveRes.json();
+          lastResponse = await submitPayloadDirectly(payload);
         }
         if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) return lastResponse;
       } catch (err) {
