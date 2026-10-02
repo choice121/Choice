@@ -102,6 +102,13 @@ jobs:
 
           for f in supabase/migrations/*.sql; do
             BASENAME=$(basename "$f")
+
+            # This file is a full production schema snapshot, not an incremental migration.
+            if [ "$BASENAME" = "20260930000000_production_baseline.sql" ]; then
+              echo "Skipping production schema snapshot: $BASENAME"
+              continue
+            fi
+
             QUOTED=$(python3 -c "import sys; print(\"'\" + sys.argv[1].replace(\"'\", \"''\") + \"'\")" "$BASENAME")
 
             # Skip if already successfully applied
