@@ -47,6 +47,21 @@ async function main() {
   );
   assert.equal(fallbackCalls, 1);
 
+  const rejectedBackground = loadHelper({
+    browser: {
+      runtime: {
+        sendMessage: () => Promise.reject(new Error('Background unavailable')),
+      },
+    },
+  });
+  assert.deepEqual(
+    await rejectedBackground.sendMessageWithFallback(
+      { type: 'UPLOAD_PAYLOAD' },
+      () => Promise.resolve({ ok: true, viaFallback: true })
+    ),
+    { ok: true, viaFallback: true }
+  );
+
   const chromeCallback = loadHelper({
     chrome: {
       runtime: {
@@ -90,6 +105,7 @@ async function main() {
   const contentScripts = manifest.content_scripts.flatMap((entry) => entry.js || []);
   assert.ok(contentScripts.indexOf('extension-messaging.js') < contentScripts.indexOf('live-content.js'));
   assert.match(liveContent, /CP_ExtensionMessaging\.sendMessageWithFallback/);
+  assert.match(liveContent, /'x-import-secret': SECRET/);
 
   console.log('Orion extension messaging tests passed (promise API, callback API, promise-returning Chrome API, errors, manifest wiring).');
 }
