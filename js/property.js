@@ -781,6 +781,7 @@ function renderProperty(p) {
         profile_type: displayProfileType,
         display_name: categorizedProfile?.name || relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
         image_url: categorizedProfile?.image_url || relatedProfile?.image_url || p.source_profile_image_url || p.agent_image_url || null,
+        profile_url: categorizedProfile?.profile_url || relatedProfile?.profile_url || p.source_profile_url || p.agent_profile_url || null,
       }
     : null;
   const landlordIdentity = relatedLandlord && strategy !== 'COMPANY_SOURCE' && strategy !== 'NO_IDENTITY'
@@ -795,6 +796,17 @@ function renderProperty(p) {
     const card = document.getElementById('landlordCard');
     card.style.display = 'flex';
     document.getElementById('landlordName').textContent = name;
+    const profileLink = document.getElementById('landlordProfileLink');
+    if (profileLink) {
+      const profileUrl = isSourcePoster ? safeExternalUrl(profile?.profile_url) : null;
+      if (profileUrl) {
+        profileLink.href = profileUrl;
+        profileLink.style.display = 'inline-flex';
+      } else {
+        profileLink.removeAttribute('href');
+        profileLink.style.display = 'none';
+      }
+    }
     const tagline = document.getElementById('landlordTagline');
     tagline.textContent = isSourcePoster
       ? (profile.profile_type === 'company'
