@@ -760,21 +760,23 @@ function renderProperty(p) {
   }
 
   // Keep the scraped poster separate from the landlord assigned to manage the
-  // Choice listing. In particular, never infer a poster for NO_IDENTITY sources.
+  // Choice listing. Prefer the real source poster when it exists, even if the
+  // source strategy is unset, but never infer a poster for NO_IDENTITY rows.
   const strategy = p.identity_strategy;
   const relatedProfile = Array.isArray(p.source_profiles) ? p.source_profiles[0] : p.source_profiles;
   const relatedLandlord = Array.isArray(p.landlords) ? p.landlords[0] : p.landlords;
-  const posterProfiles = Array.isArray(p.poster_profiles) ? p.poster_profiles : [];
+  const posterProfiles = Array.isArray(p.poster_profiles) ? p.poster_profiles.filter(Boolean) : [];
   const agentPoster = posterProfiles.find(profile => profile.category === 'agent');
   const brokerPoster = posterProfiles.find(profile => profile.category === 'broker');
   const companyPoster = posterProfiles.find(profile => profile.category === 'company');
   const brokeragePoster = posterProfiles.find(profile => profile.category === 'brokerage');
+  const hasPosterEvidence = posterProfiles.length > 0 && strategy !== 'NO_IDENTITY';
   const profileType = strategy === 'COMPANY_SOURCE' ? 'company' : 'agent';
   const categorizedProfile = agentPoster || companyPoster || brokerPoster || brokeragePoster;
   const displayProfileType = categorizedProfile
     ? categorizedProfile.category
     : (relatedProfile?.profile_type || p.source_profile_type || profileType);
-  const sourceIdentity = ['COMPANY_SOURCE', 'AGENT_POSTER'].includes(strategy)
+  const sourceIdentity = (['COMPANY_SOURCE', 'AGENT_POSTER'].includes(strategy) || hasPosterEvidence)
     ? {
         profile_type: displayProfileType,
         display_name: categorizedProfile?.name || relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
