@@ -45,7 +45,7 @@ export async function onRequestGet({ request, env }) {
 
   // Look up the row to build the canonical slug.
   const res = await fetch(
-    `${SUPA}/rest/v1/properties?id=eq.${encodeURIComponent(id.toUpperCase())}` +
+    `${SUPA}/rest/v1/properties_public?id=eq.${encodeURIComponent(id.toUpperCase())}` +
       `&status=eq.active&select=id,city,state,bedrooms,property_type`,
     { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } }
   );

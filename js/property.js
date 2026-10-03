@@ -134,8 +134,8 @@ async function loadProperty(id) {
   let prop;
   try {
     const { data, error } = await supabase
-      .from('properties')
-      .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), source_profiles(id, profile_type, display_name, image_url, profile_url, website_url), property_photos(id, url, file_id, display_order, is_hero)')
+      .from('properties_public')
+      .select('*, property_photos(id, url, file_id, display_order, is_hero)')
       .ilike('id', id)
       .single();
     if (error || !data) throw new Error('Not found');
@@ -144,6 +144,14 @@ async function loadProperty(id) {
     console.error('[property] lookup failed for id=', id, e);
     renderUnavailable('not_found');
     return;
+  }
+
+  try {
+    const { data: parties, error: partiesError } = await supabase.rpc('get_public_property_parties', { p_property_id: id });
+    if (!partiesError && Array.isArray(parties)) prop.public_parties = parties;
+    else if (partiesError) console.warn('[property] public party profiles unavailable:', partiesError);
+  } catch (e) {
+    console.warn('[property] public party profile lookup failed:', e);
   }
 
   // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
@@ -759,48 +767,49 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
-  // Keep the scraped poster separate from the landlord assigned to manage the
-  // Choice listing. Prefer the real source poster when it exists, even if the
-  // source strategy is unset, but never infer a poster for NO_IDENTITY rows.
-  const strategy = p.identity_strategy;
-  const relatedProfile = Array.isArray(p.source_profiles) ? p.source_profiles[0] : p.source_profiles;
+  // A source poster, account contact, property owner, and legal lessor are
+  // separate roles. Never promote source-reported identity to owner status.
   const relatedLandlord = Array.isArray(p.landlords) ? p.landlords[0] : p.landlords;
-  const posterProfiles = Array.isArray(p.poster_profiles) ? p.poster_profiles.filter(Boolean) : [];
-  const agentPoster = posterProfiles.find(profile => profile.category === 'agent');
-  const brokerPoster = posterProfiles.find(profile => profile.category === 'broker');
-  const companyPoster = posterProfiles.find(profile => profile.category === 'company');
-  const brokeragePoster = posterProfiles.find(profile => profile.category === 'brokerage');
-  const hasPosterEvidence = posterProfiles.length > 0 && strategy !== 'NO_IDENTITY';
-  const profileType = strategy === 'COMPANY_SOURCE' ? 'company' : 'agent';
-  const categorizedProfile = agentPoster || companyPoster || brokerPoster || brokeragePoster;
-  const displayProfileType = categorizedProfile
-    ? categorizedProfile.category
-    : (relatedProfile?.profile_type || p.source_profile_type || profileType);
-  const sourceIdentity = (['COMPANY_SOURCE', 'AGENT_POSTER'].includes(strategy) || hasPosterEvidence)
-    ? {
-        profile_type: displayProfileType,
-        display_name: categorizedProfile?.name || relatedProfile?.display_name || p.source_profile_name || p.agent_name || null,
-        image_url: categorizedProfile?.image_url || relatedProfile?.image_url || p.source_profile_image_url || p.agent_image_url || null,
-        profile_url: categorizedProfile?.profile_url || relatedProfile?.profile_url || p.source_profile_url || p.agent_profile_url || null,
-      }
-    : null;
-  const landlordIdentity = relatedLandlord && strategy !== 'COMPANY_SOURCE' && strategy !== 'NO_IDENTITY'
-    ? relatedLandlord
-    : null;
-  const posterName = sourceIdentity?.display_name;
-  const landlordName = landlordIdentity?.business_name || landlordIdentity?.contact_name || 'Property Owner';
-  if (sourceIdentity || landlordIdentity) {
-    const profile = sourceIdentity;
-    const name = posterName || landlordName;
-    const isSourcePoster = !!posterName;
+  const publicParties = Array.isArray(p.public_parties) ? p.public_parties : [];
+  const rolePriority = ['legal_lessor', 'owner', 'property_manager', 'listing_agent', 'source_poster', 'account_contact'];
+  const selectedParty = rolePriority
+    .map(role => publicParties.find(party => party.role === role &&
+      (['legal_lessor', 'owner', 'property_manager'].includes(role)
+        ? party.relationship_status === 'authority_verified'
+        : true)))
+    .find(Boolean);
+  const profile = selectedParty || (relatedLandlord ? {
+    profile_id: null,
+    landlord_id: relatedLandlord.id,
+    display_name: relatedLandlord.business_name || relatedLandlord.contact_name || 'Property contact',
+    image_url: relatedLandlord.avatar_url,
+    role: 'account_contact',
+    relationship_status: 'account_claimed',
+  } : null);
+  if (profile) {
+    const roleLabels = {
+      legal_lessor: 'Legal landlord',
+      owner: 'Property owner',
+      property_manager: 'Property manager',
+      listing_agent: 'Listing agent',
+      source_poster: 'Listing contact',
+      account_contact: 'Account contact',
+    };
+    const name = profile.display_name || 'Property contact';
+    const verifiedAuthority = profile.relationship_status === 'authority_verified' &&
+      ['legal_lessor', 'owner', 'property_manager'].includes(profile.role);
     const card = document.getElementById('landlordCard');
     card.style.display = 'flex';
     document.getElementById('landlordName').textContent = name;
+    const label = document.getElementById('landlordLabel');
+    if (label) label.textContent = roleLabels[profile.role] || 'Property contact';
     const profileLink = document.getElementById('landlordProfileLink');
     if (profileLink) {
-      const profileUrl = isSourcePoster ? safeExternalUrl(profile?.profile_url) : null;
-      if (profileUrl) {
-        profileLink.href = profileUrl;
+      if (profile.profile_id) {
+        profileLink.href = `/landlord/profile.html?profile_id=${encodeURIComponent(profile.profile_id)}`;
+        profileLink.style.display = 'inline-flex';
+      } else if (profile.landlord_id) {
+        profileLink.href = `/landlord/profile.html?id=${encodeURIComponent(profile.landlord_id)}`;
         profileLink.style.display = 'inline-flex';
       } else {
         profileLink.removeAttribute('href');
@@ -808,29 +817,13 @@ function renderProperty(p) {
       }
     }
     const tagline = document.getElementById('landlordTagline');
-    tagline.textContent = isSourcePoster
-      ? (profile.profile_type === 'company'
-          ? `Rental provider${p.source ? ` · ${p.source}` : ''}`
-            : (brokerPoster?.name || brokeragePoster?.name || p.broker_name
-              ? `${brokerPoster?.name ? 'Listing broker' : brokeragePoster?.name ? 'Listing brokerage' : 'Listing agent'} · ${brokerPoster?.name || brokeragePoster?.name || p.broker_name}`
-              : `Listing agent${p.source ? ` · ${p.source}` : ''}`))
-      : (landlordIdentity?.tagline || 'Assigned property manager');
-    const officePoster = brokeragePoster;
-    if (isSourcePoster && officePoster?.image_url) {
-      const logoUrl = safeImageUrl(officePoster.image_url);
-      if (logoUrl) {
-        const logo = document.createElement('img');
-        logo.src = logoUrl;
-        logo.alt = `${officePoster.name} logo`;
-        logo.loading = 'lazy';
-        logo.width = 24;
-        logo.height = 24;
-        logo.style.cssText = 'display:inline-block;width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-left:6px';
-        tagline.appendChild(logo);
-      }
-    }
+    tagline.textContent = profile.relationship_status === 'source_reported'
+      ? 'Listing contact · source-reported; property authority not confirmed'
+      : profile.relationship_status === 'account_claimed'
+        ? 'Account contact; property authority not confirmed'
+        : verifiedAuthority ? 'Property relationship verified' : '';
     const avatarEl = document.getElementById('landlordAvatar');
-    const imageUrl = (isSourcePoster ? profile?.image_url : null) || landlordIdentity?.avatar_url;
+    const imageUrl = profile.image_url || null;
     if (imageUrl) {
       let renderedImageUrl = safeImageUrl(imageUrl);
       if (window.CONFIG && typeof window.CONFIG.img === 'function') {
@@ -845,7 +838,7 @@ function renderProperty(p) {
       if (avatarImg) avatarImg.onerror = function() { this.onerror = null; this.src = '/assets/avatar-placeholder.svg'; };
     }
     else avatarEl.textContent = name.charAt(0).toUpperCase();
-    if ((!isSourcePoster && landlordIdentity?.verified) || (isSourcePoster && p.identity_status === 'confirmed')) {
+    if (verifiedAuthority) {
       document.getElementById('landlordVerified').style.display = 'inline';
     }
   }
@@ -3781,7 +3774,7 @@ async function loadSimilarListings(p) {
 
   try {
     const { data } = await supabase
-      .from('properties')
+      .from('properties_public')
       .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
       .eq('status', 'active')
       .eq('city', p.city)

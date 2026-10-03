@@ -289,6 +289,8 @@ function _attachPhotoArrays(row) {
 // Standard select fragment used by every property fetch below.
 const PROPERTIES_SELECT_FULL =
   '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(id, url, file_id, display_order, is_hero)';
+const PROPERTIES_SELECT_PUBLIC =
+  '*, property_photos(id, url, file_id, display_order, is_hero)';
 
 // ── Property type normalization ─────────────────────────────────────────────
 // The scraper writes UPPER_SNAKE values (SINGLE_FAMILY, TOWNHOMES, APARTMENT,
@@ -340,8 +342,8 @@ const Properties = {
     const to   = from + PAGE_SIZE - 1;
 
     let q = sb()
-      .from('properties')
-      .select(PROPERTIES_SELECT_FULL, { count: 'exact' })
+      .from('properties_public')
+      .select(PROPERTIES_SELECT_PUBLIC, { count: 'exact' })
       .eq('status', 'active');
 
     // Text search - uses the GIN-indexed search_tsv generated column.
@@ -512,12 +514,7 @@ const Properties = {
     return _ok((data || []).map(_attachPhotoArrays), error);
   },
   async getOne(id) {
-    // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
-    // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
-    if (data && data.landlords && !data.landlords.avatar_url) {
-      data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
-    }
+    const { data, error } = await sb().from('properties_public').select('*, property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
     if (data) _attachPhotoArrays(data);
     return _ok(data, error);
   },

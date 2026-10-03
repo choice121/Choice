@@ -93,8 +93,8 @@ async function loadMatches() {
     }
 
     const { data: properties, error: propError } = await sb
-      .from('properties')
-      .select('*, landlords(verified), property_photos(url, display_order)')
+      .from('properties_public')
+      .select('*, property_photos(url, display_order)')
       .in('id', collection.property_ids)
       .eq('status', 'active');
 

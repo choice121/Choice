@@ -141,7 +141,7 @@ async function fetchProperty(propertyId){
   try{
     const sb = getSB();
     const { data, error } = await sb
-      .from('properties')
+      .from('properties_public')
       .select('id,address,city,state,zip,bedrooms,bathrooms,property_type,property_photos(url,display_order)')
       .eq('id', propertyId)
       .maybeSingle();

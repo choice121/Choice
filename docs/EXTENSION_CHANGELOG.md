@@ -4,6 +4,30 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.1.5] - 2026-10-02
+### Synchronize source-reported status through Edge extraction
+- **Edge extraction**: The generated Zillow Deno extractor now preserves the
+  `source_reported` status used by the canonical browser and Python classifiers.
+- **Regression coverage**: Added a browser extractor case for agent and company
+  source-reported statuses; all 35 extractor cases pass.
+- **Platform compatibility**: Chromium and Orion remain synchronized across
+  Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential,
+  Invitation Homes, and CJ Real Estate.
+
+## [v18.1.4] - 2026-10-02
+### Separate source-reported identity from verification
+- **Identity semantics**: Scraped agent and provider details are labeled
+  source-reported rather than confirmed; a source listing does not establish
+  identity or authority to rent a property.
+- **Public badge behavior**: Source-reported poster data no longer triggers the
+  landlord verification badge on property pages.
+- **Regression coverage**: Added classifier checks for agent, direct-company,
+  and no-identity cases.
+- **Platform compatibility**: Chromium and Orion remain synchronized across
+  Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential,
+  Invitation Homes, and CJ Real Estate.
+- **Release validation**: 34 extractor regression cases.
+
 ## [v18.1.1] - 2026-09-30T12:53:40Z
 ### Release hardening for brokerage-only poster profiles
 - **Profile fallback**: Preserve a brokerage as the primary identity when the

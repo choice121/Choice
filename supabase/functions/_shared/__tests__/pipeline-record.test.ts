@@ -10,10 +10,12 @@ Deno.test('source identity policy separates agent, company, and Opendoor cases',
   });
   assertEquals(zillow.identity_strategy, 'AGENT_POSTER');
   assertEquals(zillow.source_profile_name, 'Jordan Smith');
+  assertEquals(zillow.identity_status, 'source_reported');
 
   const progress = classifySourceIdentity({ source: 'progress' });
   assertEquals(progress.identity_strategy, 'COMPANY_SOURCE');
   assertEquals(progress.source_profile_name, 'Progress Residential');
+  assertEquals(progress.identity_status, 'source_reported');
   assertEquals(progress.agent_name, null);
 
   const opendoor = classifySourceIdentity({

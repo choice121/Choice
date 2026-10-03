@@ -285,7 +285,7 @@ async function checkDatabase() {
 
   running('properties');
   try {
-    const { data, error, count } = await sb.from('properties').select('id', {count:'exact'}).eq('status','active').limit(1);
+    const { data, error, count } = await sb.from('properties_public').select('id', {count:'exact'}).eq('status','active').limit(1);
     if (error) throw error;
     ok('properties', 'Readable', `${count ?? 0} active listing(s) in database`);
   } catch(e) { fail('properties', 'Failed', e.message); }

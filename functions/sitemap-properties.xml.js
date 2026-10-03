@@ -67,7 +67,7 @@ export async function onRequestGet({ env, request }) {
     // active listings; loop again if we ever blow past that.
     for (let from = 0; from < 5000; from += 1000) {
       const res = await fetch(
-        `${SUPA}/rest/v1/properties?status=eq.active` +
+        `${SUPA}/rest/v1/properties_public?status=eq.active` +
           `&select=id,city,state,bedrooms,property_type,updated_at` +
           `&order=updated_at.desc`,
         {

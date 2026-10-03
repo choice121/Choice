@@ -232,7 +232,7 @@
       return Object.assign(payload, {
         source_type: 'DIRECT_PROPERTY_COMPANY',
         identity_strategy: 'COMPANY_SOURCE',
-        identity_status: 'confirmed',
+        identity_status: 'source_reported',
         source_profile_type: 'company',
         source_profile_name: payload.source_profile_name || directCompanies[source],
         source_profile_image_url: payload.source_profile_image_url || payload.company_logo_url || null,
@@ -251,7 +251,7 @@
       return Object.assign(payload, {
         source_type: 'AGENT_PLATFORM',
         identity_strategy: 'AGENT_POSTER',
-        identity_status: agentEvidence || brokerEvidence ? 'confirmed' : 'unavailable',
+        identity_status: agentEvidence || brokerEvidence ? 'source_reported' : 'unavailable',
         source_profile_type: agentEvidence ? 'agent' : brokerEvidence ? (payload.broker_profile_category || 'brokerage') : 'agent',
         source_profile_name: agentEvidence ? (payload.agent_name || null) : (payload.broker_name || null),
         source_profile_image_url: agentEvidence

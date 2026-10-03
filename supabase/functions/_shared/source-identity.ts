@@ -38,7 +38,7 @@ export interface SourceIdentity {
   source_profile_name: string | null;
   source_profile_image_url: string | null;
   source_profile_url: string | null;
-  identity_status: 'confirmed' | 'unavailable' | 'review';
+  identity_status: 'source_reported' | 'unavailable' | 'review';
   agent_name: string | null;
   broker_name: string | null;
   agent_image_url: string | null;
@@ -170,7 +170,7 @@ export function classifySourceIdentity(input: SourceIdentityInput): SourceIdenti
       source_profile_name: suppliedProfileName || policy.companyName || null,
       source_profile_image_url: suppliedProfileImageUrl || companyLogoUrl,
       source_profile_url: suppliedProfileUrl,
-      identity_status: suppliedProfileName || policy.companyName ? 'confirmed' : 'unavailable',
+      identity_status: suppliedProfileName || policy.companyName ? 'source_reported' : 'unavailable',
       agent_name: null,
       broker_name: policy.companyName || suppliedProfileName || null,
       agent_image_url: null,
@@ -188,7 +188,7 @@ export function classifySourceIdentity(input: SourceIdentityInput): SourceIdenti
       source_profile_name: agentName,
       source_profile_image_url: agentImageUrl,
       source_profile_url: agentProfileUrl,
-      identity_status: agentName || agentProfileUrl ? 'confirmed' : 'unavailable',
+      identity_status: agentName || agentProfileUrl ? 'source_reported' : 'unavailable',
       agent_name: agentName,
       broker_name: brokerName,
       agent_image_url: agentImageUrl,

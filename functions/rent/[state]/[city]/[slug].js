@@ -151,7 +151,7 @@ export async function onRequestGet({ env, params, request }) {
   // 2. Fetch property first (ilike = case-insensitive eq with no wildcards),
   //    then fetch photos using the exact id returned by the DB.
   const propRes = await fetch(
-    `${SUPA}/rest/v1/properties?id=ilike.${encodeURIComponent(propertyIdLower)}` +
+    `${SUPA}/rest/v1/properties_public?id=ilike.${encodeURIComponent(propertyIdLower)}` +
       `&status=eq.active` +
       `&select=id,title,description,address,city,state,zip,lat,lng,property_type,` +
       `bedrooms,bathrooms,square_footage,monthly_rent,security_deposit,available_date,` +

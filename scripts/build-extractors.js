@@ -419,7 +419,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     source_last_updated_at: sourceLastUpdatedAt,
     source_type: 'AGENT_PLATFORM',
     identity_strategy: 'AGENT_POSTER',
-    identity_status: ai.agentName || ai.agentProfileUrl ? 'confirmed' : 'unavailable',
+    identity_status: ai.agentName || ai.agentProfileUrl ? 'source_reported' : 'unavailable',
     source_profile_type: 'agent',
     source_profile_name: ai.agentName || null,
     source_profile_image_url: ai.agentPictureUrl || ai.agentPhotoUrl || ai.photoUrl || ai.profilePhoto || null,

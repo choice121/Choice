@@ -137,12 +137,10 @@
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
 
-    // ── Badge — priority: featured > verified ─────────────────
+    // ── Featured badge only; landlord-level verification is not property authority.
     var badge = '';
     if (p.featured) {
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
-    } else if (p.landlords && p.landlords.verified) {
-      badge = '<div class="property-card-badge badge-verified"><i class="fas fa-shield-halved"></i> Verified</div>';
     }
 
     var tourChipHtml = p.virtual_tour_url

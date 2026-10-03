@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v18.1.3)
+# Choice Properties — Universal Chrome Extension (v18.1.5)
 
 ## Source identity contract
 

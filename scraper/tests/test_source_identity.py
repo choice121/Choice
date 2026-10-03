@@ -25,6 +25,7 @@ def test_direct_company_uses_canonical_company_profile():
     assert result["source"] == "progress_residential"
     assert result["identity_strategy"] == "COMPANY_SOURCE"
     assert result["source_profile_name"] == "Progress Residential"
+    assert result["identity_status"] == "source_reported"
     assert result["agent_name"] is None
 
 
@@ -37,4 +38,5 @@ def test_zillow_keeps_observed_agent_details():
     })
     assert result["identity_strategy"] == "AGENT_POSTER"
     assert result["source_profile_name"] == "Jordan Smith"
+    assert result["identity_status"] == "source_reported"
     assert result["source_profile_image_url"].endswith("jordan.jpg")

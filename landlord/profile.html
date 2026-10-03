@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <meta name="color-scheme" content="light">
-  <title>Landlord Profile — Choice Properties</title>
+  <title>Profile — Choice Properties</title>
   <meta name="description" id="metaDesc" content="Landlord Profile — Choice Properties Nationwide">
   <meta property="og:type"        content="profile">
   <meta property="og:site_name"   content="Choice Properties">
@@ -232,7 +232,7 @@
     }
   </style>
 </head>
-<body data-portal="landlord" data-page-title="Profile" data-page-sub="Public landlord profile">
+<body data-portal="landlord" data-page-title="Profile" data-page-sub="Public profile">
 
 <div class="app">
   <main class="app-content full-bleed">
@@ -342,6 +342,7 @@
 
   const params     = new URLSearchParams(window.location.search);
   const landlordId = params.get('id');
+  const partyProfileId = params.get('profile_id');
 
   const tabProfileSelf = document.getElementById('tabProfileSelf');
   if (tabProfileSelf && landlordId) tabProfileSelf.href = `/landlord/profile.html?id=${landlordId}`;
@@ -355,7 +356,7 @@
     }
   }
 
-  if (!landlordId) { window.location.href = '/index.html'; }
+  if (!landlordId && !partyProfileId) { window.location.href = '/index.html'; }
   else { loadProfile(landlordId); }
 
   // Determine viewer auth and decide chrome visibility
@@ -389,6 +390,11 @@
   })();
 
   async function loadProfile(id) {
+    if (partyProfileId) {
+      await loadPartyProfile(partyProfileId);
+      return;
+    }
+
     const { data: landlord, error } = await supabase
       .from('landlords_public')
       .select('*')
@@ -405,7 +411,7 @@
 
     const [{ data: listings, error: listingsError }, { data: stats, error: statsError }] = await Promise.all([
       supabase
-        .from('properties')
+        .from('properties_public')
         .select('*, property_photos(url,display_order)')
         .eq('landlord_id', id)
         .eq('status', 'active')
@@ -432,6 +438,101 @@
     renderListings(listingRows);
   }
 
+  async function loadPartyProfile(id) {
+    const { data: party, error } = await supabase
+      .from('party_profiles_public')
+      .select('id,profile_kind,category,display_name,image_url,bio,website_url,identity_status,claim_status,created_at')
+      .eq('id', id)
+      .single();
+
+    if (error || !party) {
+      CP.UI.toast('Profile not found.', 'error');
+      setTimeout(() => window.location.href = '/index.html', 2000);
+      return;
+    }
+
+    const categoryLabels = {
+      owner: 'Property contact',
+      property_owner: 'Property contact',
+      property_manager: 'Property manager',
+      agent: 'Listing agent',
+      broker: 'Listing broker',
+      brokerage: 'Brokerage',
+      company: 'Property provider',
+      unknown: 'Listing contact',
+    };
+    const displayName = party.display_name || 'Property contact';
+    const category = categoryLabels[party.category] || 'Listing contact';
+    document.title = `${displayName} — Choice Properties`;
+    document.getElementById('profileName').textContent = displayName;
+
+    const accountTypeBadge = document.getElementById('accountTypeBadge');
+    if (accountTypeBadge) {
+      accountTypeBadge.innerHTML = `<span class="pill pill-info">${esc(category)}</span>`;
+      accountTypeBadge.style.display = '';
+    }
+
+    const tagline = document.getElementById('profileTagline');
+    tagline.textContent = party.claim_status === 'claimed'
+      ? 'Profile claimed by its account holder'
+      : 'Profile assembled from reported listing information';
+    tagline.style.display = '';
+
+    const avatar = document.getElementById('avatarEl');
+    if (party.image_url && window.CONFIG && typeof CONFIG.img === 'function') {
+      avatar.outerHTML = `<img id="avatarEl" class="profile-avatar" src="${esc(CONFIG.img(party.image_url, 'avatar_lg'))}" alt="${esc(displayName)}" loading="lazy">`;
+    } else {
+      avatar.textContent = displayName.charAt(0).toUpperCase();
+    }
+
+    const identityNote = party.identity_status === 'source_reported'
+      ? 'Profile details were reported in listing information. This does not verify property ownership or authority to rent.'
+      : 'Profile identity status does not by itself establish authority over a property.';
+    document.getElementById('infoRows').innerHTML = `
+      <div class="profile-info-row"><div>
+        <div class="profile-info-row-label">Profile status</div>
+        <div class="profile-info-row-val">${esc(identityNote)}</div>
+      </div></div>`;
+    document.querySelector('.profile-info-card-header').textContent = 'Profile details';
+
+    ['statViews', 'statYears', 'statApps'].forEach(statId => {
+      const value = document.getElementById(statId);
+      if (value) value.closest('.profile-stat').style.display = 'none';
+    });
+
+    const { data: propertyIds, error: idsError } = await supabase.rpc('get_public_party_property_ids', { p_profile_id: id });
+    if (idsError) {
+      console.error('[party-profile] listing lookup failed:', idsError);
+      CP.UI.toast('Could not load this profile’s listings.', 'error');
+      renderListings([]);
+      return;
+    }
+
+    const ids = (propertyIds || []).map(row => row.property_id).filter(Boolean);
+    let listings = [];
+    if (ids.length) {
+      const { data, error: listingsError } = await supabase
+        .from('properties_public')
+        .select('*, property_photos(url,display_order)')
+        .in('id', ids)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (listingsError) console.error('[party-profile] property lookup failed:', listingsError);
+      listings = data || [];
+    }
+
+    const listingRows = listings.map(p => ({
+      ...p,
+      photo_urls: (Array.isArray(p.property_photos) ? p.property_photos : [])
+        .slice()
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map(photo => photo.url)
+        .filter(Boolean),
+    }));
+    document.getElementById('statListings').textContent = listingRows.length;
+    renderListings(listingRows);
+  }
+
   function renderProfile(l) {
     const displayName = l.business_name || l.contact_name || 'Property Owner';
     document.title = `${displayName} — Choice Properties`;
@@ -455,8 +556,6 @@
     } else {
       avatarEl.textContent = displayName.charAt(0).toUpperCase();
     }
-
-    if (l.verified) document.getElementById('verifiedBadge').style.display = 'flex';
 
     document.getElementById('profileName').textContent = displayName;
 
@@ -533,10 +632,7 @@
   function renderStats(l, listings, stats) {
     const totalViews = stats && stats.total_views != null ? Number(stats.total_views) : null;
     const totalApps = stats && stats.total_applications != null ? Number(stats.total_applications) : null;
-    const createdYear = l.created_at ? new Date(l.created_at).getFullYear() : NaN;
-    const yearsActive = l.years_experience != null
-      ? Number(l.years_experience)
-      : (Number.isFinite(createdYear) ? Math.max(0, new Date().getFullYear() - createdYear) : null);
+    const yearsActive = l.years_experience != null ? Number(l.years_experience) : null;
 
     document.getElementById('statListings').textContent = listings.length;
     document.getElementById('statViews').textContent    = totalViews == null ? '—' : (totalViews > 999 ? (totalViews/1000).toFixed(1)+'k' : totalViews);
@@ -556,7 +652,7 @@
 
     grid.innerHTML = listings.map(p => {
       const photo    = p.photo_urls?.[0] || '/assets/placeholder-property.jpg';
-      const availNow = !p.available_date || new Date(p.available_date) <= new Date();
+      const futureAvailable = p.available_date && new Date(p.available_date) > new Date();
       const rent = p.monthly_rent == null
         ? 'Contact for pricing'
         : `$${Number(p.monthly_rent).toLocaleString()}<span style="font-size:.75rem;font-weight:500;color:var(--muted)">/mo</span>`;
@@ -582,9 +678,7 @@
               ${p.square_footage ? `<span>${p.square_footage.toLocaleString()} sqft</span>` : ''}
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px">
-              <span class="text-xs ${availNow ? '' : 'muted'}" style="color:${availNow ? 'var(--success, #1a7f5a)' : 'var(--muted)'}">
-                ${availNow ? '● Available Now' : '● Available ' + new Date(p.available_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
-              </span>
+              ${futureAvailable ? `<span class="text-xs muted">Available ${new Date(p.available_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
               <a href="/property.html?id=${p.id}" class="btn btn-ghost btn-sm">View →</a>
             </div>
           </div>
