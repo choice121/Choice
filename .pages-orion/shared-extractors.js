@@ -173,19 +173,116 @@
     }
     return { bathrooms: baths, half_bathrooms: half };
   }
-  function detectPropType(homeType, descText, titleText) {
-    const text = (String(descText || '') + ' ' + String(titleText || '')).toLowerCase();
-    if (text.includes('1/2 duplex') || text.includes('half duplex') || text.includes('half-duplex') || text.includes('duplex') || text.includes('side-by-side')) {
+  function extractFeaturesFromNarrative(desc) {
+    if (!desc || typeof desc !== 'string') return {};
+    const text = desc.toLowerCase();
+    const res = {};
+
+    // 1. Appliances
+    const appSet = new Set();
+    if (/\b(?:gas\s*range|gas\s*stove)\b/i.test(text)) appSet.add('Gas Range');
+    else if (/\b(?:electric\s*range|electric\s*stove|range|stove)\b/i.test(text)) appSet.add('Range / Oven');
+    if (/\b(?:double\s*ovens?)\b/i.test(text)) appSet.add('Double Oven');
+    else if (/\bovens?\b/i.test(text) && !appSet.has('Range / Oven')) appSet.add('Oven');
+    if (/\bdishwashers?\b/i.test(text)) appSet.add('Dishwasher');
+    if (/\b(?:refrigerators?|fridge)\b/i.test(text)) appSet.add('Refrigerator');
+    if (/\bmicrowaves?\b/i.test(text)) appSet.add('Microwave');
+    if (/\b(?:garbage\s*disposal|disposal)\b/i.test(text)) appSet.add('Garbage Disposal');
+    if (/\bfreezer\b/i.test(text)) appSet.add('Freezer');
+    if (/\b(?:full\s*size\s*washer|washer\s*(?:and|&)\s*dryer|washer\s*and\s*dryer\s*units?)\b/i.test(text)) {
+      appSet.add('Washer');
+      appSet.add('Dryer');
+    } else {
+      if (/\bwashers?\b/i.test(text) && !/\bdishwasher/i.test(text)) appSet.add('Washer');
+      if (/\bdryers?\b/i.test(text)) appSet.add('Dryer');
+    }
+    if (appSet.size > 0) res.appliances = Array.from(appSet);
+
+    // 2. Garage / Parking
+    const garageMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*garage\b/i);
+    if (garageMatch) {
+      res.garage_spaces = parseInt(garageMatch[1], 10);
+      res.parking = `${garageMatch[1]}-Car Garage`;
+    } else if (/\b(?:attached\s*garage|2-car\s*garage|garage)\b/i.test(text)) {
+      res.parking = 'Attached Garage';
+    } else if (/\bcarport\b/i.test(text)) {
+      res.parking = 'Carport';
+    } else if (/\b(?:off-street\s*parking|off\s*street\s*parking|driveway)\b/i.test(text)) {
+      res.parking = 'Off-Street Parking';
+    }
+
+    // 3. Laundry
+    if (/\b(?:separate\s*laundry\s*room|laundry\s*room|in-unit\s*washer|in\s*unit\s*washer|washer\s*and\s*dryer\s*in\s*unit)\b/i.test(text)) {
+      res.laundry_type = 'In Unit (Dedicated Laundry Room)';
+    } else if (/\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?)\b/i.test(text)) {
+      res.laundry_type = 'Washer/Dryer Hookups';
+    } else if (/\b(?:shared\s*laundry|on-site\s*laundry)\b/i.test(text)) {
+      res.laundry_type = 'On-Site Laundry';
+    }
+
+    // 4. Flooring
+    const floorSet = new Set();
+    if (/\b(?:hardwood|hardwood\s*floors?|wood\s*floors?)\b/i.test(text)) floorSet.add('Hardwood');
+    if (/\b(?:carpet|carpeted|carpeting)\b/i.test(text)) floorSet.add('Carpet');
+    if (/\b(?:tile|ceramic\s*tile|tiled)\b/i.test(text)) floorSet.add('Tile');
+    if (/\b(?:vinyl|luxury\s*vinyl|lvp|plank)\b/i.test(text)) floorSet.add('Vinyl Plank');
+    if (floorSet.size > 0) res.flooring = Array.from(floorSet);
+
+    // 5. HVAC
+    if (/\b(?:central\s*air|central\s*a\/c|central\s*ac|central\s*cooling)\b/i.test(text)) {
+      res.cooling_type = 'Central Air';
+      res.has_central_air = true;
+    }
+    if (/\b(?:wall\s*furnace|forced\s*air|heat\s*pump|central\s*heat)\b/i.test(text)) {
+      if (/\bwall\s*furnace\b/i.test(text)) res.heating_type = 'Wall Furnace';
+      else if (/\bheat\s*pump\b/i.test(text)) res.heating_type = 'Heat Pump';
+      else res.heating_type = 'Forced Air Heat';
+    }
+
+    // 6. Amenities
+    const extraAmenities = [];
+    if (/\b(?:swimming\s*pool|pool)\b/i.test(text)) extraAmenities.push('Swimming Pool');
+    if (/\b(?:private\s*backyard|backyard|fenced\s*yard|large\s*yard|landscaped\s*backyard)\b/i.test(text)) extraAmenities.push('Private Fenced Yard');
+    if (/\b(?:patio|balcony|deck)\b/i.test(text)) extraAmenities.push('Patio / Outdoor Living Area');
+    if (/\bfireplaces?\b/i.test(text)) extraAmenities.push('Fireplace');
+    if (/\bbasement\b/i.test(text) && !/\bno\s*basement\b/i.test(text)) {
+      extraAmenities.push('Basement Storage');
+      res.has_basement = true;
+    }
+    if (extraAmenities.length > 0) res.amenities = extraAmenities;
+
+    return res;
+  }
+
+  function detectPropType(homeType, descText, titleText, addressText) {
+    const fullText = (String(descText || '') + ' ' + String(titleText || '') + ' ' + String(addressText || '')).toLowerCase();
+    
+    // Strict Duplex check (Rule 6B)
+    if (/\b(?:1\/2\s*duplex|half\s*duplex|half-duplex|duplex|side-by-side|two-family)\b/i.test(fullText)) {
       return 'DUPLEX';
     }
-    if (text.includes('townhouse') || text.includes('townhome') || text.includes('rowhouse')) {
+    // Strict Townhouse check (Rule 6B)
+    if (/\b(?:townhouse|townhome|rowhouse|row-house)\b/i.test(fullText)) {
       return 'TOWNHOUSE';
     }
-    if (text.includes('apartment') || text.includes('unit complex') || text.includes('multi-family')) {
-      if (!text.includes('single family') && !text.includes('single-family')) {
+    
+    // Clean out agent/manager contact signatures before evaluating apartment keywords so broker lines do not trigger false positives
+    const cleanDesc = String(descText || '')
+      .replace(/(?:call|contact|managed by|professionally managed|agent|broker|cell|phone|realtor|showing)[\s\S]{0,120}apartments?/gi, '')
+      .toLowerCase();
+    const combinedDesc = (cleanDesc + ' ' + String(titleText || '')).toLowerCase();
+
+    if (/\b(?:apartment|unit complex|multi-family|high-rise|mid-rise)\b/i.test(combinedDesc)) {
+      if (!/\b(?:single family|single-family|craftsman home|detached house)\b/i.test(combinedDesc)) {
         return 'APARTMENT';
       }
     }
+    
+    // Detached Single Family cues
+    if (/\b(?:single family|single-family|detached single family|detached house|craftsman home)\b/i.test(fullText)) {
+      return 'SINGLE_FAMILY';
+    }
+
     const t = (homeType || '').toUpperCase().replace(/[^A-Z_]/g, '_');
     return TYPE_MAP[t] || t || 'SINGLE_FAMILY';
   }
@@ -307,7 +404,7 @@
     const hood   = prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null;
     const county = prop.county || addr.county || null;
     const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || (prop.view3dHomeId ? 'https://www.zillow.com/view-3d-home/' + prop.view3dHomeId : null) || null;
-    const propType = detectPropType(prop.homeType, rawDesc, prop.title || '');
+    const propType = detectPropType(prop.homeType, rawDesc, prop.title || '', street);
 
     const ctxParts = [];
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
@@ -326,7 +423,16 @@
     if (schoolList.length) ctxParts.push('Schools: ' + schoolList.slice(0, 3).join(', '));
 
     const amenityMap = {};
-    const addA = (v) => { if (v && typeof v === 'string') { const t = v.trim(); if (t) amenityMap[t] = true; } };
+    const addA = (v) => {
+      if (v && typeof v === 'string') {
+        const t = v.trim();
+        if (!t) return;
+        // Rule 1 & Rule 14: Never ingest smoking policies or lease durations as amenity badges
+        if (/smoke|smoking|tobacco/i.test(t)) return;
+        if (/\b(?:\d+[\s-]*month|lease\s*term|month\s*to\s*month)\b/i.test(t)) return;
+        amenityMap[t] = true;
+      }
+    };
     for (const t of (prop.tags || [])) addA(t);
     for (const f of [...(rf.communityFeatures || []), ...(rf.interiorFeatures || []), ...(rf.exteriorFeatures || []), ...(rf.poolFeatures || [])]) addA(f);
 
@@ -343,9 +449,46 @@
     let hasCentralAir = !!(rf.hasCooling || (rf.cooling && rf.cooling.some(c => c.toLowerCase().includes('central'))));
     let heatingType = rf.heating && rf.heating.length ? rf.heating.join(', ') : null;
     let coolingType = rf.cooling && rf.cooling.length ? rf.cooling.join(', ') : null;
-    let appliances = rf.appliances || [];
+    let appliances = rf.appliances ? [...rf.appliances] : [];
     let laundryType = rf.laundryFeatures && rf.laundryFeatures.length ? rf.laundryFeatures.join(', ') : null;
     let lotSizeSqft = null;
+    let flooring = null;
+    if (rf.flooring && Array.isArray(rf.flooring)) flooring = JSON.stringify(rf.flooring);
+    else if (rf.flooring) flooring = JSON.stringify([String(rf.flooring)]);
+
+    // --- Deep traversal of resoFacts.features categories ---
+    if (Array.isArray(rf.features)) {
+      rf.features.forEach(group => {
+        const cat = (group.categoryName || group.name || '').toLowerCase();
+        const items = group.features || group.items || [];
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            const str = typeof item === 'string' ? item : item?.name;
+            if (!str) return;
+            if (cat.includes('appliance')) {
+              if (!appliances.includes(str)) appliances.push(str);
+            } else if (cat.includes('parking') && !parking) {
+              parking = str;
+            } else if (cat.includes('flooring')) {
+              try {
+                const cur = flooring ? JSON.parse(flooring) : [];
+                if (!cur.includes(str)) cur.push(str);
+                flooring = JSON.stringify(cur);
+              } catch (_) {}
+            } else if (cat.includes('laundry') && !laundryType) {
+              laundryType = str;
+            } else if (cat.includes('cooling') && !coolingType) {
+              coolingType = str;
+              if (str.toLowerCase().includes('central')) hasCentralAir = true;
+            } else if (cat.includes('heating') && !heatingType) {
+              heatingType = str;
+            } else {
+              addA(str);
+            }
+          });
+        }
+      });
+    }
 
     // --- Enhanced attribute extraction from attrMap.facts and amenityCategories ---
     const factMap = {};
@@ -368,8 +511,15 @@
     if (factMap['parking']) parking = factMap['parking'];
     if (factMap['lot size']) lotSizeSqft = parseInt(factMap['lot size'].replace(/[^0-9]/g, ''), 10) || lotSizeSqft;
     if (factMap['basement'] && factMap['basement'].toLowerCase() !== 'none') hasBasement = true;
-    if (factMap['appliances']) appliances = factMap['appliances'].split(',').map(s => s.trim());
+    if (factMap['appliances']) {
+      const splitApps = factMap['appliances'].split(',').map(s => s.trim());
+      splitApps.forEach(sa => { if (!appliances.includes(sa)) appliances.push(sa); });
+    }
     if (factMap['laundry']) laundryType = factMap['laundry'];
+    if (factMap['flooring']) {
+      const splitFloors = factMap['flooring'].split(',').map(s => s.trim());
+      flooring = JSON.stringify(splitFloors);
+    }
 
     if (prop.amenityCategories && Array.isArray(prop.amenityCategories)) {
       prop.amenityCategories.forEach(cat => {
@@ -386,6 +536,36 @@
     }
     // -----------------------------------------------------------------------------
 
+    // --- In-Extractor Narrative Fallback Harvesting (Eliminates Feature Blindness) ---
+    let garageSpaces = safeI(prop.garageParkingCapacity || prop.garageSpaces);
+    const harvested = extractFeaturesFromNarrative(rawDesc);
+    if ((!appliances || appliances.length === 0) && harvested.appliances) {
+      appliances = harvested.appliances;
+    }
+    if (!parking && harvested.parking) {
+      parking = harvested.parking;
+    }
+    if (garageSpaces == null && harvested.garage_spaces) {
+      garageSpaces = harvested.garage_spaces;
+    }
+    if (!laundryType && harvested.laundry_type) {
+      laundryType = harvested.laundry_type;
+    }
+    if ((!flooring || flooring === '[]' || flooring.length === 0) && harvested.flooring) {
+      flooring = JSON.stringify(harvested.flooring);
+    }
+    if (!coolingType && harvested.cooling_type) {
+      coolingType = harvested.cooling_type;
+      if (harvested.has_central_air) hasCentralAir = true;
+    }
+    if (!heatingType && harvested.heating_type) {
+      heatingType = harvested.heating_type;
+    }
+    if (harvested.has_basement) hasBasement = true;
+    if (harvested.amenities) {
+      harvested.amenities.forEach(a => addA(a));
+    }
+
     let minLease = null;
     const ltRaw = rf.leaseTerm || rf.leaseTerms || rf.minimumLease || null;
     if (ltRaw) {
@@ -395,11 +575,6 @@
       else if (/month.to.month|m2m|mtm/.test(lt)) minLease = 1;
       else if (/\byear\b|12[\s-]*month|annual/.test(lt)) minLease = 12;
     }
-
-    let flooring = null;
-    if (rf.flooring && Array.isArray(rf.flooring)) flooring = JSON.stringify(rf.flooring);
-    else if (rf.flooring) flooring = JSON.stringify([String(rf.flooring)]);
-    else if (factMap['flooring']) flooring = JSON.stringify(factMap['flooring'].split(',').map(s => s.trim()));
 
     let utilitiesInc = rf.utilities || rf.utilitiesIncluded || [];
     if ((!utilitiesInc || !utilitiesInc.length) && factMap['utilities']) {
@@ -419,7 +594,7 @@
       year_built: yr ? parseInt(String(yr), 10) : null,
       lot_size_sqft: lotSizeSqft,
       floors: safeI(prop.stories || rf.stories),
-      garage_spaces: safeI(prop.garageParkingCapacity || prop.garageSpaces),
+      garage_spaces: garageSpaces,
       total_units: safeI(prop.unitCount),
       property_type: propType,
       description: prop.description || null,
@@ -683,8 +858,9 @@
     if (!address && !price) return null;
 
     const rawDomDesc = (description || '') + ' ' + summaryText;
+    const harvestedDom = extractFeaturesFromNarrative(rawDomDesc);
     const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
-    const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '');
+    const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '', address || '');
     const domTitle = (h1El && h1El.textContent.trim()) || buildTitle(beds, domPropType, city, address, null, state, zip);
 
     return basePayload('zillow', sourceId, url, {
@@ -700,13 +876,20 @@
       total_bathrooms: domBaths,
       square_footage: sqft,
       year_built: yr,
-      heating_type: heatingType,
-      cooling_type: coolingType,
-      parking,
+      heating_type: heatingType || harvestedDom.heating_type || null,
+      cooling_type: coolingType || harvestedDom.cooling_type || null,
+      parking: parking || harvestedDom.parking || null,
+      garage_spaces: harvestedDom.garage_spaces || null,
       lot_size_sqft: lotSizeSqft,
       pets_allowed: pets,
       pet_types_allowed: petTypes.length ? JSON.stringify(petTypes) : null,
       property_type: domPropType,
+      appliances: harvestedDom.appliances ? JSON.stringify(harvestedDom.appliances) : null,
+      flooring: harvestedDom.flooring ? JSON.stringify(harvestedDom.flooring) : null,
+      laundry_type: harvestedDom.laundry_type || null,
+      amenities: harvestedDom.amenities ? JSON.stringify(harvestedDom.amenities) : null,
+      has_basement: harvestedDom.has_basement || false,
+      has_central_air: harvestedDom.has_central_air || false,
       description,
       original_description: description || null,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),

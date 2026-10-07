@@ -4,5 +4,5 @@
 window.CP_CONFIG = {
   IMPORT_SECRET: 'cp_import_7Kx3m9P2w5',
   EDGE_URL: 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import',
-  VERSION: '21.0.0'
+  VERSION: '22.0.0'
 };

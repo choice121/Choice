@@ -87,6 +87,87 @@ export function safeBool(v: unknown): boolean | null {
   return null;
 }
 
+export function extractFeaturesFromNarrative(desc: string | null | undefined): Record<string, any> {
+  if (!desc || typeof desc !== 'string') return {};
+  const text = desc.toLowerCase();
+  const res: Record<string, any> = {};
+
+  // Appliances
+  const appSet = new Set<string>();
+  if (/\b(?:gas\s*range|gas\s*stove)\b/i.test(text)) appSet.add('Gas Range');
+  else if (/\b(?:electric\s*range|electric\s*stove|range|stove)\b/i.test(text)) appSet.add('Range / Oven');
+  if (/\b(?:double\s*ovens?)\b/i.test(text)) appSet.add('Double Oven');
+  else if (/\bovens?\b/i.test(text) && !appSet.has('Range / Oven')) appSet.add('Oven');
+  if (/\bdishwashers?\b/i.test(text)) appSet.add('Dishwasher');
+  if (/\b(?:refrigerators?|fridge)\b/i.test(text)) appSet.add('Refrigerator');
+  if (/\bmicrowaves?\b/i.test(text)) appSet.add('Microwave');
+  if (/\b(?:garbage\s*disposal|disposal)\b/i.test(text)) appSet.add('Garbage Disposal');
+  if (/\bfreezer\b/i.test(text)) appSet.add('Freezer');
+  if (/\b(?:full\s*size\s*washer|washer\s*(?:and|&)\s*dryer|washer\s*and\s*dryer\s*units?)\b/i.test(text)) {
+    appSet.add('Washer');
+    appSet.add('Dryer');
+  } else {
+    if (/\bwashers?\b/i.test(text) && !/\bdishwasher/i.test(text)) appSet.add('Washer');
+    if (/\bdryers?\b/i.test(text)) appSet.add('Dryer');
+  }
+  if (appSet.size > 0) res.appliances = Array.from(appSet);
+
+  // Parking / Garage
+  const garageMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*garage\b/i);
+  if (garageMatch) {
+    res.garage_spaces = parseInt(garageMatch[1], 10);
+    res.parking = `${garageMatch[1]}-Car Garage`;
+  } else if (/\b(?:attached\s*garage|2-car\s*garage|garage)\b/i.test(text)) {
+    res.parking = 'Attached Garage';
+  } else if (/\bcarport\b/i.test(text)) {
+    res.parking = 'Carport';
+  } else if (/\b(?:off-street\s*parking|off\s*street\s*parking|driveway)\b/i.test(text)) {
+    res.parking = 'Off-Street Parking';
+  }
+
+  // Laundry
+  if (/\b(?:separate\s*laundry\s*room|laundry\s*room|in-unit\s*washer|in\s*unit\s*washer|washer\s*and\s*dryer\s*in\s*unit)\b/i.test(text)) {
+    res.laundry_type = 'In Unit (Dedicated Laundry Room)';
+  } else if (/\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?)\b/i.test(text)) {
+    res.laundry_type = 'Washer/Dryer Hookups';
+  } else if (/\b(?:shared\s*laundry|on-site\s*laundry)\b/i.test(text)) {
+    res.laundry_type = 'On-Site Laundry';
+  }
+
+  // Flooring
+  const floorSet = new Set<string>();
+  if (/\b(?:hardwood|hardwood\s*floors?|wood\s*floors?)\b/i.test(text)) floorSet.add('Hardwood');
+  if (/\b(?:carpet|carpeted|carpeting)\b/i.test(text)) floorSet.add('Carpet');
+  if (/\b(?:tile|ceramic\s*tile|tiled)\b/i.test(text)) floorSet.add('Tile');
+  if (/\b(?:vinyl|luxury\s*vinyl|lvp|plank)\b/i.test(text)) floorSet.add('Vinyl Plank');
+  if (floorSet.size > 0) res.flooring = Array.from(floorSet);
+
+  // HVAC
+  if (/\b(?:central\s*air|central\s*a\/c|central\s*ac|central\s*cooling)\b/i.test(text)) {
+    res.cooling_type = 'Central Air';
+    res.has_central_air = true;
+  }
+  if (/\b(?:wall\s*furnace|forced\s*air|heat\s*pump|central\s*heat)\b/i.test(text)) {
+    if (/\bwall\s*furnace\b/i.test(text)) res.heating_type = 'Wall Furnace';
+    else if (/\bheat\s*pump\b/i.test(text)) res.heating_type = 'Heat Pump';
+    else res.heating_type = 'Forced Air Heat';
+  }
+
+  // Amenities
+  const extraAmenities: string[] = [];
+  if (/\b(?:swimming\s*pool|pool)\b/i.test(text)) extraAmenities.push('Swimming Pool');
+  if (/\b(?:private\s*backyard|backyard|fenced\s*yard|large\s*yard|landscaped\s*backyard)\b/i.test(text)) extraAmenities.push('Private Fenced Yard');
+  if (/\b(?:patio|balcony|deck)\b/i.test(text)) extraAmenities.push('Patio / Outdoor Living Area');
+  if (/\bfireplaces?\b/i.test(text)) extraAmenities.push('Fireplace');
+  if (/\bbasement\b/i.test(text) && !/\bno\s*basement\b/i.test(text)) {
+    extraAmenities.push('Basement Storage');
+    res.has_basement = true;
+  }
+  if (extraAmenities.length > 0) res.amenities = extraAmenities;
+
+  return res;
+}
+
 // ── Normalize property_type to UPPER_UNDERSCORE ─────────────────────────
 export function normalizePropType(v: unknown): string | null {
   if (!v) return null;
@@ -261,6 +342,38 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
          (propType ?? 'Rental') +
          (body.city ? ` in ${body.city}` : '')));
 
+  // Ingestion-level Safety Net: Harvest features from narrative if structured fields are missing
+  const rawDescForHarvest = safeStr(body.original_description) ?? safeStr(body.description) ?? '';
+  const harvested = extractFeaturesFromNarrative(rawDescForHarvest);
+
+  let finalAppliances = body.appliances;
+  if (isEmpty(finalAppliances) && harvested.appliances) {
+    finalAppliances = harvested.appliances;
+  }
+  const finalParking = safeStr(body.parking) ?? harvested.parking ?? null;
+  const finalGarageSpaces = safeInt(body.garage_spaces) ?? (harvested.garage_spaces ? safeInt(harvested.garage_spaces) : null);
+  const finalLaundry = safeStr(body.laundry_type) ?? harvested.laundry_type ?? null;
+  let finalFlooring = body.flooring;
+  if (isEmpty(finalFlooring) && harvested.flooring) {
+    finalFlooring = harvested.flooring;
+  }
+  const finalCooling = safeStr(body.cooling_type) ?? harvested.cooling_type ?? null;
+  const finalHeating = safeStr(body.heating_type) ?? harvested.heating_type ?? null;
+  const finalHasCentralAir = safeBool(body.has_central_air) ?? (harvested.has_central_air === true ? true : null);
+  const finalHasBasement = safeBool(body.has_basement) ?? (harvested.has_basement === true ? true : null);
+
+  // Filter out any prohibited smoking tags or lease durations from amenities
+  let cleanedAmenities: string[] = [];
+  try {
+    const rawAm = typeof body.amenities === 'string' ? JSON.parse(body.amenities || '[]') : (body.amenities || []);
+    if (Array.isArray(rawAm)) {
+      cleanedAmenities = rawAm.filter(a => typeof a === 'string' && !/smoke|smoking|tobacco/i.test(a) && !/\b(?:\d+[\s-]*month|lease\s*term)\b/i.test(a));
+    }
+  } catch (_) {}
+  if (harvested.amenities) {
+    harvested.amenities.forEach((a: string) => { if (!cleanedAmenities.includes(a)) cleanedAmenities.push(a); });
+  }
+
   const originalData = JSON.stringify({
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
@@ -301,10 +414,10 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     lot_size_sqft:        safeInt(body.lot_size_sqft),
     year_built:           safeInt(body.year_built),
     floors:               safeInt(body.floors),
-    garage_spaces:        safeInt(body.garage_spaces),
+    garage_spaces:        finalGarageSpaces,
     total_units:          safeInt(body.total_units),
-    has_basement:         safeBool(body.has_basement) === true,
-    has_central_air:      safeBool(body.has_central_air) === true,
+    has_basement:         finalHasBasement === true,
+    has_central_air:      finalHasCentralAir === true,
     virtual_tour_url:     safeStr(body.virtual_tour_url),
 
     // Financials
@@ -335,14 +448,14 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     smoking_allowed:      safeBool(body.smoking_allowed),
 
     // Amenities & features
-    parking:              safeStr(body.parking),
-    amenities:            safeJsonStr(body.amenities) ?? '[]',
-    appliances:           safeJsonStr(body.appliances) ?? '[]',
+    parking:              finalParking,
+    amenities:            safeJsonStr(cleanedAmenities) ?? '[]',
+    appliances:           safeJsonStr(finalAppliances) ?? '[]',
     utilities_included:   safeJsonStr(body.utilities_included) ?? '[]',
-    flooring:             safeJsonStr(body.flooring) ?? '[]',
-    heating_type:         safeStr(body.heating_type),
-    cooling_type:         safeStr(body.cooling_type),
-    laundry_type:         safeStr(body.laundry_type),
+    flooring:             safeJsonStr(finalFlooring) ?? '[]',
+    heating_type:         finalHeating,
+    cooling_type:         finalCooling,
+    laundry_type:         finalLaundry,
 
     // Photos
     original_image_urls:  safeJsonStr(body.original_image_urls) ?? '[]',

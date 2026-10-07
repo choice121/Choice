@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v22.0.0] - 2026-10-07
+### Deep Feature Traversal, Narrative Fallback Extraction, Architectural Precision & Prohibited Badge Blacklist
+- **Deep Zillow resoFacts Traversal**: Added recursive inspection of `resoFacts.features`, `resoFacts.featureCategories`, and `resoFacts.atAGlanceFacts` to capture appliances, parking, garage spaces, flooring, laundry, and HVAC regardless of which nesting level Zillow places them in.
+- **In-Extractor Narrative Fallback (Zero Feature Blindness)**: Added regex-based heuristic extractor for narrative descriptions. If portal tables omit appliances, parking, dedicated laundry rooms, garage capacity, or flooring, the extractor automatically mines them from the raw listing text and populates structured database columns.
+- **Architectural Classification & Contact Signature Isolation**: Sanitizes broker/property manager contact signatures (e.g. "Call X at Y Apartments") prior to classification so single-family houses and craftsman homes are never erroneously classified as apartments. Strictly identifies `DUPLEX`, `TOWNHOUSE`, `SINGLE_FAMILY`, and `APARTMENT` per Rule 6B.
+- **Smoking Badge Blacklist**: Strictly excludes `"Non Smoking"`, `"Smoking Allowed"`, and lease duration tags from entering structured `amenities`, ensuring complete compliance with Choice Properties UI directives.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing (29/29 tests).
+
+---
+
 ## [v21.0.0] - 2026-10-07
 ### Search Card Overlay Cleanup, Authoritative Manifest Versioning & Cache Invalidation
 - **Search Card Overlay Removal**: Completely removed the on-card button overlays (`+ Choice` / `Saved to Tab` / `Open your save...`) from search result property cards across Zillow and supported feeds to eliminate visual clutter and ensure non-intrusive browsing.
