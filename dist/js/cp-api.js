@@ -1021,7 +1021,7 @@ function buildApplyURL(property) {
   // -- Financials ------------------------------------------------------------
   if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
-  p.set('fee', property.application_fee != null ? property.application_fee : 0); // 9C-1: always send fee, even if zero
+  p.set('fee', (property.application_fee != null && Number(property.application_fee) > 0) ? property.application_fee : 50); // Choice Properties standard: always $50
 
   // -- Unit details ----------------------------------------------------------
   if (property.bedrooms  != null) p.set('beds',  property.bedrooms);

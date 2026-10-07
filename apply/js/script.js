@@ -345,31 +345,15 @@ class RentalApplication {
         try {
             const p      = new URLSearchParams(window.location.search);
             const rawFee = p.get('fee');
-            if (rawFee === null) {
-                // No fee param — check if we also have no property context (direct /apply/ visit)
-                const hiddenPropId = document.getElementById('hiddenPropertyId');
-                if (!hiddenPropId || !hiddenPropId.value.trim()) {
-                    // No property context at all — show "To be confirmed" instead of $50
-                    const feeTitle  = document.querySelector('[data-i18n="feeTitle"]');
-                    const feeAmount = document.querySelector('.fee-amount');
-                    if (feeTitle)  feeTitle.textContent  = 'Application Fee: To be confirmed';
-                    if (feeAmount) { feeAmount.textContent = 'TBD'; feeAmount.style.display = ''; }
-                }
-                return;
-            }
-            const fee = parseFloat(rawFee);
-            if (isNaN(fee)) return;      // unparseable — keep default
+            const fee = (rawFee !== null && !isNaN(parseFloat(rawFee)) && parseFloat(rawFee) > 0)
+                ? parseFloat(rawFee)
+                : 50; // Choice Properties standard: always $50
             this.state.applicationFee = fee;
             const feeTitle  = document.querySelector('[data-i18n="feeTitle"]');
             const feeAmount = document.querySelector('.fee-amount');
-            if (fee <= 0) {
-                if (feeTitle)  feeTitle.textContent  = 'Application Fee: Free';
-                if (feeAmount) { feeAmount.textContent = 'Free'; feeAmount.style.display = ''; }
-            } else {
-                const formatted = '$' + fee.toFixed(2);
-                if (feeTitle)  feeTitle.textContent  = 'Application Fee: ' + formatted;
-                if (feeAmount) { feeAmount.textContent = '$' + fee.toFixed(0); feeAmount.style.display = ''; }
-            }
+            const formatted = '$' + fee.toFixed(2);
+            if (feeTitle)  feeTitle.textContent  = 'Application Fee: ' + formatted;
+            if (feeAmount) { feeAmount.textContent = '$' + fee.toFixed(0); feeAmount.style.display = ''; }
             // Patch any hardcoded "$50" references in static HTML that flash before JS-built
             // success content replaces them. Walk all text nodes in the document and replace
             // the literal "$50" with the correct fee so there is never a wrong-fee flash.
