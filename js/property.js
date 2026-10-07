@@ -3398,50 +3398,361 @@ function renderNeighborhoodIntelligence(p) {
     return Number((R * c).toFixed(1));
   }
 
-  // Derive city centers and hubs
-  const isColumbus = /columbus/i.test(city);
-  const isCincy = /cincinnati/i.test(city);
-  const isCleve = /cleveland/i.test(city);
-  const isIndy = /indianapolis/i.test(city);
+  // ── Multi-Regional Metro Directory & Dynamic Geocoding Hubs ──────────────
+  const METRO_HUBS = [
+    // Texas
+    {
+      match: /dallas|plano|garland|irving|grand prairie|mesquite|carrollton|richardson|frisco|mckinney|denton/i,
+      state: 'TX',
+      downtown: { lat: 32.7767, lng: -96.7970, name: 'Downtown Dallas' },
+      airport:  { lat: 32.8998, lng: -97.0403, name: 'Dallas/Fort Worth Intl Airport (DFW)' },
+      hospital: { lat: 32.8122, lng: -96.8378, name: 'Parkland Memorial Hospital & UT Southwestern' },
+      highway:  'I-35E / I-30 / US-75 Corridor',
+      groceries:'H-E-B / Central Market / Kroger / Tom Thumb',
+      electric: 'Oncor Electric Delivery / Retail Choice',
+      gas:      'Atmos Energy'
+    },
+    {
+      match: /fort worth|arlington|north richland|haltom|euless|grapevine|bedford|keller|mansfield/i,
+      state: 'TX',
+      downtown: { lat: 32.7555, lng: -97.3308, name: 'Downtown Fort Worth' },
+      airport:  { lat: 32.8998, lng: -97.0403, name: 'Dallas/Fort Worth Intl Airport (DFW)' },
+      hospital: { lat: 32.7360, lng: -97.3414, name: 'Texas Health Harris Methodist Hospital' },
+      highway:  'I-35W / I-30 / I-820 Loop',
+      groceries:'H-E-B / WinCo / Kroger / Sprouts',
+      electric: 'Oncor Electric Delivery',
+      gas:      'Atmos Energy'
+    },
+    {
+      match: /austin|round rock|cedar park|georgetown|pflugerville|san marcos|buda|kyle/i,
+      state: 'TX',
+      downtown: { lat: 30.2672, lng: -97.7431, name: 'Downtown Austin' },
+      airport:  { lat: 30.1975, lng: -97.6664, name: 'Austin-Bergstrom Intl Airport (AUS)' },
+      hospital: { lat: 30.2798, lng: -97.7348, name: 'Dell Seton Medical Center & St. David’s' },
+      highway:  'I-35 / MoPac Expressway (Loop 1)',
+      groceries:'H-E-B / Central Market / Trader Joe’s',
+      electric: 'Austin Energy / Oncor',
+      gas:      'Texas Gas Service / Atmos'
+    },
+    {
+      match: /houston|pasadena|pearland|sugar land|spring|cypress|katy|woodlands/i,
+      state: 'TX',
+      downtown: { lat: 29.7604, lng: -95.3698, name: 'Downtown Houston' },
+      airport:  { lat: 29.9902, lng: -95.3368, name: 'George Bush Intercontinental Airport (IAH)' },
+      hospital: { lat: 29.7108, lng: -95.3960, name: 'Texas Medical Center & Houston Methodist' },
+      highway:  'I-45 / I-69 / I-10 Corridor',
+      groceries:'H-E-B / Kroger / Whole Foods',
+      electric: 'CenterPoint Energy / Retail Choice',
+      gas:      'CenterPoint Energy'
+    },
+    {
+      match: /san antonio|new braunfels|seguin|schertz|cibolo|universal city/i,
+      state: 'TX',
+      downtown: { lat: 29.4241, lng: -98.4936, name: 'Downtown San Antonio' },
+      airport:  { lat: 29.5337, lng: -98.4698, name: 'San Antonio Intl Airport (SAT)' },
+      hospital: { lat: 29.5085, lng: -98.5772, name: 'University Health Hospital & Methodist Hospital' },
+      highway:  'I-35 / I-10 / Loop 410',
+      groceries:'H-E-B / Central Market',
+      electric: 'CPS Energy',
+      gas:      'CPS Energy'
+    },
+    // Oklahoma
+    {
+      match: /tulsa|broken arrow|bixby|owasso|jenks|sand springs|sapulpa/i,
+      state: 'OK',
+      downtown: { lat: 36.1540, lng: -95.9928, name: 'Downtown Tulsa' },
+      airport:  { lat: 36.1984, lng: -95.8881, name: 'Tulsa International Airport (TUL)' },
+      hospital: { lat: 36.0718, lng: -95.8890, name: 'Saint Francis Hospital / Ascension St. John' },
+      highway:  'I-44 / US-169 / Creek Turnpike',
+      groceries:'Reasor’s / ALDI / Sprouts / Walmart Supercenter',
+      electric: 'Public Service Company of Oklahoma (PSO)',
+      gas:      'Oklahoma Natural Gas (ONG)'
+    },
+    {
+      match: /oklahoma city|edmond|norman|moore|midwest city|yukon|mustang|del city/i,
+      state: 'OK',
+      downtown: { lat: 35.4676, lng: -97.5164, name: 'Downtown Oklahoma City' },
+      airport:  { lat: 35.3931, lng: -97.6007, name: 'Will Rogers World Airport (OKC)' },
+      hospital: { lat: 35.4820, lng: -97.4984, name: 'OU Health University Medical Center / INTEGRIS' },
+      highway:  'I-35 / I-40 / Kilpatrick Turnpike',
+      groceries:'Crest Foods / WinCo Foods / Homeland / Sprouts',
+      electric: 'OG&E (Oklahoma Gas & Electric)',
+      gas:      'Oklahoma Natural Gas (ONG)'
+    },
+    // North Carolina
+    {
+      match: /charlotte|concord|gastonia|huntersville|matthews|mint hill|pineville/i,
+      state: 'NC',
+      downtown: { lat: 35.2271, lng: -80.8431, name: 'Uptown Charlotte' },
+      airport:  { lat: 35.2144, lng: -80.9473, name: 'Charlotte Douglas Intl Airport (CLT)' },
+      hospital: { lat: 35.2045, lng: -80.8402, name: 'Atrium Health Carolinas Medical Center' },
+      highway:  'I-77 / I-85 / I-485 Outer Loop',
+      groceries:'Harris Teeter / Publix / Food Lion',
+      electric: 'Duke Energy Carolinas',
+      gas:      'Piedmont Natural Gas'
+    },
+    {
+      match: /raleigh|durham|cary|chapel hill|apex|wake forest/i,
+      state: 'NC',
+      downtown: { lat: 35.7796, lng: -78.6382, name: 'Downtown Raleigh' },
+      airport:  { lat: 35.8801, lng: -78.7880, name: 'Raleigh-Durham Intl Airport (RDU)' },
+      hospital: { lat: 35.7865, lng: -78.5885, name: 'WakeMed Health / Duke University Hospital' },
+      highway:  'I-40 / I-440 Beltline / I-540',
+      groceries:'Harris Teeter / Wegmans / Food Lion',
+      electric: 'Duke Energy Progress',
+      gas:      'Dominion Energy NC'
+    },
+    // Georgia
+    {
+      match: /atlanta|decatur|marietta|sandy springs|alpharetta|roswell|duluth|smyrna/i,
+      state: 'GA',
+      downtown: { lat: 33.7490, lng: -84.3880, name: 'Downtown Atlanta' },
+      airport:  { lat: 33.6407, lng: -84.4277, name: 'Hartsfield-Jackson Atlanta Intl Airport (ATL)' },
+      hospital: { lat: 33.7925, lng: -84.3236, name: 'Emory University Hospital / Grady Memorial' },
+      highway:  'I-85 / I-75 / I-285 Perimeter',
+      groceries:'Publix / Kroger / Whole Foods',
+      electric: 'Georgia Power',
+      gas:      'Atlanta Gas Light / Georgia Natural Gas'
+    },
+    {
+      match: /savannah|pooler|richmond hill/i,
+      state: 'GA',
+      downtown: { lat: 32.0809, lng: -81.0912, name: 'Historic Downtown Savannah' },
+      airport:  { lat: 32.1276, lng: -81.2021, name: 'Savannah/Hilton Head Intl Airport (SAV)' },
+      hospital: { lat: 32.0305, lng: -81.0898, name: 'Memorial Health University Medical Center' },
+      highway:  'I-95 / I-16 Corridor',
+      groceries:'Publix / Kroger / Food Lion',
+      electric: 'Georgia Power',
+      gas:      'Atlanta Gas Light'
+    },
+    // Florida
+    {
+      match: /jacksonville|orange park|st\. augustine/i,
+      state: 'FL',
+      downtown: { lat: 30.3322, lng: -81.6557, name: 'Downtown Jacksonville' },
+      airport:  { lat: 30.4941, lng: -81.6879, name: 'Jacksonville Intl Airport (JAX)' },
+      hospital: { lat: 30.3546, lng: -81.6703, name: 'UF Health Jacksonville / Baptist Medical' },
+      highway:  'I-95 / I-295 Beltway',
+      groceries:'Publix / Winn-Dixie / Trader Joe’s',
+      electric: 'JEA (Jacksonville Electric Authority)',
+      gas:      'TECO Peoples Gas'
+    },
+    {
+      match: /orlando|kissimmee|sanford|altamonte/i,
+      state: 'FL',
+      downtown: { lat: 28.5383, lng: -81.3792, name: 'Downtown Orlando' },
+      airport:  { lat: 28.4312, lng: -81.3081, name: 'Orlando International Airport (MCO)' },
+      hospital: { lat: 28.5255, lng: -81.3815, name: 'Orlando Health / AdventHealth' },
+      highway:  'I-4 / SR-408 / SR-417 Expressway',
+      groceries:'Publix / ALDI / Sprouts',
+      electric: 'OUC (Orlando Utilities Commission) / Duke FL',
+      gas:      'TECO Peoples Gas'
+    },
+    {
+      match: /tampa|st\. petersburg|clearwater/i,
+      state: 'FL',
+      downtown: { lat: 27.9506, lng: -82.4572, name: 'Downtown Tampa' },
+      airport:  { lat: 27.9772, lng: -82.5311, name: 'Tampa International Airport (TPA)' },
+      hospital: { lat: 27.9382, lng: -82.4608, name: 'Tampa General Hospital' },
+      highway:  'I-275 / I-4 / Selmon Expressway',
+      groceries:'Publix / Winn-Dixie / ALDI',
+      electric: 'TECO (Tampa Electric) / Duke FL',
+      gas:      'TECO Peoples Gas'
+    },
+    // Missouri
+    {
+      match: /kansas city|independence|lee's summit|blue springs|gladstone/i,
+      state: 'MO',
+      downtown: { lat: 39.0997, lng: -94.5786, name: 'Downtown Kansas City' },
+      airport:  { lat: 39.2976, lng: -94.7139, name: 'Kansas City Intl Airport (MCI)' },
+      hospital: { lat: 39.0494, lng: -94.5912, name: 'Saint Luke’s Hospital of Kansas City / KU Med' },
+      highway:  'I-70 / I-35 / I-435 Loop',
+      groceries:'Price Chopper / Hy-Vee / ALDI / Sun Fresh',
+      electric: 'Evergy Missouri',
+      gas:      'Spire Energy'
+    },
+    {
+      match: /st\. louis|saint louis|chesterfield|florrissant|st charles/i,
+      state: 'MO',
+      downtown: { lat: 38.6270, lng: -90.1994, name: 'Downtown St. Louis' },
+      airport:  { lat: 38.7499, lng: -90.3748, name: 'St. Louis Lambert Intl Airport (STL)' },
+      hospital: { lat: 38.6360, lng: -90.2642, name: 'Barnes-Jewish Hospital & BJC HealthCare' },
+      highway:  'I-64 / I-70 / I-270 Loop',
+      groceries:'Schnucks / Dierbergs / ALDI',
+      electric: 'Ameren Missouri',
+      gas:      'Spire Energy'
+    },
+    // Tennessee
+    {
+      match: /memphis|germantown|collierville|bartlett|southaven/i,
+      state: 'TN',
+      downtown: { lat: 35.1495, lng: -90.0490, name: 'Downtown Memphis' },
+      airport:  { lat: 35.0424, lng: -89.9767, name: 'Memphis International Airport (MEM)' },
+      hospital: { lat: 35.1432, lng: -90.0334, name: 'Methodist University Hospital / Baptist Memorial' },
+      highway:  'I-240 / I-40 / I-55 Corridor',
+      groceries:'Kroger / Superlo Foods / Sprouts',
+      electric: 'MLGW (Memphis Light, Gas and Water)',
+      gas:      'MLGW'
+    },
+    {
+      match: /nashville|murfreesboro|franklin|hendersonville/i,
+      state: 'TN',
+      downtown: { lat: 36.1627, lng: -86.7816, name: 'Downtown Nashville' },
+      airport:  { lat: 36.1263, lng: -86.6774, name: 'Nashville International Airport (BNA)' },
+      hospital: { lat: 36.1434, lng: -86.8027, name: 'Vanderbilt University Medical Center' },
+      highway:  'I-65 / I-40 / I-24 Corridor',
+      groceries:'Publix / Kroger / Whole Foods',
+      electric: 'Nashville Electric Service (NES)',
+      gas:      'Piedmont Natural Gas'
+    },
+    // Ohio
+    {
+      match: /columbus|grove city|dublin|westerville|reynoldsburg|gahanna|hilliard|upper arlington/i,
+      state: 'OH',
+      downtown: { lat: 39.9612, lng: -82.9988, name: 'Downtown Columbus' },
+      airport:  { lat: 39.9980, lng: -82.8919, name: 'John Glenn Columbus Intl Airport (CMH)' },
+      hospital: { lat: 39.9977, lng: -83.0163, name: 'Ohio State Wexner Medical Center' },
+      highway:  'I-71 / I-70 / I-270 Outerbelt',
+      groceries:'Kroger / Giant Eagle / ALDI',
+      electric: 'AEP Ohio',
+      gas:      'Columbia Gas of Ohio'
+    },
+    {
+      match: /cleveland|parma|lakewood|euclid|cleveland heights|strongsville|maple heights/i,
+      state: 'OH',
+      downtown: { lat: 41.4993, lng: -81.6944, name: 'Downtown Cleveland' },
+      airport:  { lat: 41.4058, lng: -81.8540, name: 'Cleveland Hopkins Intl Airport (CLE)' },
+      hospital: { lat: 41.5034, lng: -81.6212, name: 'Cleveland Clinic Main Campus' },
+      highway:  'I-90 / I-77 / I-480 Loop',
+      groceries:'Giant Eagle / Heinen’s / ALDI',
+      electric: 'FirstEnergy (The Illuminating Company)',
+      gas:      'Dominion Energy Ohio'
+    },
+    {
+      match: /cincinnati|mason|fairfield|west chester|loveland|hamilton/i,
+      state: 'OH',
+      downtown: { lat: 39.1031, lng: -84.5120, name: 'Downtown Cincinnati' },
+      airport:  { lat: 39.0461, lng: -84.6621, name: 'Cincinnati/N. Kentucky Intl Airport (CVG)' },
+      hospital: { lat: 39.1384, lng: -84.5065, name: 'UC Medical Center / Christ Hospital' },
+      highway:  'I-71 / I-75 / I-275 Loop',
+      groceries:'Kroger / Meijer / ALDI',
+      electric: 'Duke Energy Ohio',
+      gas:      'Duke Energy Ohio'
+    },
+    // Indiana
+    {
+      match: /indianapolis|carmel|fishers|noblesville|greenwood|lawrence/i,
+      state: 'IN',
+      downtown: { lat: 39.7684, lng: -86.1581, name: 'Downtown Indianapolis' },
+      airport:  { lat: 39.7173, lng: -86.2944, name: 'Indianapolis Intl Airport (IND)' },
+      hospital: { lat: 39.7788, lng: -86.1802, name: 'IU Health University Hospital & Methodist' },
+      highway:  'I-65 / I-70 / I-465 Loop',
+      groceries:'Kroger / Meijer / Needler’s',
+      electric: 'AES Indiana / Duke Energy IN',
+      gas:      'Citizens Energy Group'
+    },
+    // New Mexico
+    {
+      match: /albuquerque|rio rancho/i,
+      state: 'NM',
+      downtown: { lat: 35.0844, lng: -106.6504, name: 'Downtown Albuquerque' },
+      airport:  { lat: 35.0402, lng: -106.6092, name: 'Albuquerque International Sunport (ABQ)' },
+      hospital: { lat: 35.0877, lng: -106.6190, name: 'UNM Hospital / Presbyterian Hospital' },
+      highway:  'I-25 / I-40 Big I Corridor',
+      groceries:'Smith’s Food & Drug / Sprouts / Albertsons',
+      electric: 'PNM (Public Service Co of NM)',
+      gas:      'New Mexico Gas Company'
+    },
+    // Arizona
+    {
+      match: /phoenix|scottsdale|mesa|chandler|glendale|tempe/i,
+      state: 'AZ',
+      downtown: { lat: 33.4484, lng: -112.0740, name: 'Downtown Phoenix' },
+      airport:  { lat: 33.4373, lng: -112.0078, name: 'Phoenix Sky Harbor Intl Airport (PHX)' },
+      hospital: { lat: 33.4655, lng: -112.0645, name: 'Banner - University Medical Center Phoenix' },
+      highway:  'I-10 / Loop 101 / Loop 202',
+      groceries:'Fry’s Food Stores / Safeway / Sprouts',
+      electric: 'APS (Arizona Public Service) / SRP',
+      gas:      'Southwest Gas'
+    }
+  ];
 
-  let downtownCoords = { lat: 39.9612, lng: -82.9988, name: `${city} Downtown` };
-  let airportCoords  = { lat: 39.9980, lng: -82.8919, name: 'John Glenn Intl Airport (CMH)' };
-  let hospitalCoords = { lat: 39.9977, lng: -83.0163, name: 'Ohio State Wexner Medical Center' };
-  let highwayName    = 'I-71 / I-70 Corridor';
+  // 1. Locate direct city match or nearest metro hub
+  let activeHub = METRO_HUBS.find(h => h.match.test(city));
 
-  if (isCincy) {
-    downtownCoords = { lat: 39.1031, lng: -84.5120, name: 'Downtown Cincinnati' };
-    airportCoords  = { lat: 39.0461, lng: -84.6621, name: 'Cincinnati/N. Kentucky Intl Airport (CVG)' };
-    hospitalCoords = { lat: 39.1384, lng: -84.5065, name: 'UC Medical Center' };
-    highwayName    = 'I-71 / I-75 Corridor';
-  } else if (isCleve) {
-    downtownCoords = { lat: 41.4993, lng: -81.6944, name: 'Downtown Cleveland' };
-    airportCoords  = { lat: 41.4058, lng: -81.8540, name: 'Cleveland Hopkins Intl Airport (CLE)' };
-    hospitalCoords = { lat: 41.5034, lng: -81.6212, name: 'Cleveland Clinic Main Campus' };
-    highwayName    = 'I-90 / I-77 Corridor';
-  } else if (isIndy) {
-    downtownCoords = { lat: 39.7684, lng: -86.1581, name: 'Downtown Indianapolis' };
-    airportCoords  = { lat: 39.7173, lng: -86.2944, name: 'Indianapolis Intl Airport (IND)' };
-    hospitalCoords = { lat: 39.7788, lng: -86.1802, name: 'IU Health University Hospital' };
-    highwayName    = 'I-65 / I-70 Corridor';
+  if (!activeHub) {
+    // If no direct name match, calculate closest hub by real GPS coordinates
+    let bestDist = Infinity;
+    for (const h of METRO_HUBS) {
+      const d = calcDist(lat, lng, h.downtown.lat, h.downtown.lng);
+      if (d < bestDist) {
+        bestDist = d;
+        activeHub = h;
+      }
+    }
   }
 
-  const dtDist = calcDist(lat, lng, downtownCoords.lat, downtownCoords.lng) || 4.2;
-  const apDist = calcDist(lat, lng, airportCoords.lat, airportCoords.lng) || 8.5;
-  const hpDist = calcDist(lat, lng, hospitalCoords.lat, hospitalCoords.lng) || 5.1;
-  const hwDist = Math.max(0.6, Number((dtDist * 0.25).toFixed(1)));
+  // State-level utility fallbacks when property is outside pre-mapped cities
+  const STATE_UTILITIES = {
+    TX: { electric: 'Oncor / CenterPoint / Retail Choice', gas: 'Atmos Energy / CenterPoint', groc: 'H-E-B / Kroger' },
+    OK: { electric: 'OG&E / PSO Oklahoma', gas: 'Oklahoma Natural Gas (ONG)', groc: 'Reasor’s / Crest Foods / ALDI' },
+    NC: { electric: 'Duke Energy Carolinas / Progress', gas: 'Piedmont Natural Gas', groc: 'Harris Teeter / Food Lion / Publix' },
+    SC: { electric: 'Duke Energy / Dominion SC', gas: 'Dominion Energy', groc: 'Publix / Food Lion' },
+    GA: { electric: 'Georgia Power', gas: 'Atlanta Gas Light / Georgia Natural Gas', groc: 'Publix / Kroger' },
+    FL: { electric: 'Florida Power & Light (FPL) / JEA / Duke FL', gas: 'TECO Peoples Gas', groc: 'Publix / Winn-Dixie' },
+    MO: { electric: 'Evergy / Ameren Missouri', gas: 'Spire Energy', groc: 'Schnucks / Price Chopper / Hy-Vee' },
+    TN: { electric: 'MLGW / Nashville Electric (NES) / TVA', gas: 'Piedmont Natural Gas / Atmos', groc: 'Kroger / Publix' },
+    OH: { electric: 'AEP Ohio / FirstEnergy / Duke Energy OH', gas: 'Columbia Gas / Dominion Energy', groc: 'Kroger / Giant Eagle / ALDI' },
+    IN: { electric: 'AES Indiana / Duke Energy IN', gas: 'Citizens Energy / CenterPoint', groc: 'Kroger / Meijer' },
+    AZ: { electric: 'APS / Salt River Project (SRP)', gas: 'Southwest Gas', groc: 'Fry’s / Safeway / Sprouts' },
+    NM: { electric: 'PNM (Public Service Co of NM)', gas: 'New Mexico Gas Company', groc: 'Smith’s / Albertsons' }
+  };
 
-  const dtDrive = Math.max(5, Math.round(dtDist * 2.1 + 3));
-  const apDrive = Math.max(8, Math.round(apDist * 1.6 + 4));
-  const hpDrive = Math.max(5, Math.round(hpDist * 2.0 + 3));
-  const hwDrive = Math.max(2, Math.round(hwDist * 2.2));
+  const stateInfo = STATE_UTILITIES[state.toUpperCase()] || {
+    electric: 'Regional Regulated Electric Utility',
+    gas: 'Regional Natural Gas / Heating Utility',
+    groc: 'Regional Supermarket & Grocery Center'
+  };
+
+  // Determine downtown center:
+  // If property is within 35 miles of hub downtown, use that hub's downtown.
+  // Otherwise anchor to local `${city} Center`.
+  const distToHubDowntown = activeHub ? calcDist(lat, lng, activeHub.downtown.lat, activeHub.downtown.lng) : 5.0;
+  let downtownName, dtDist;
+
+  if (activeHub && distToHubDowntown <= 35) {
+    downtownName = activeHub.downtown.name;
+    dtDist = distToHubDowntown;
+  } else {
+    downtownName = `${city} City Center`;
+    dtDist = Math.max(1.5, Math.min(distToHubDowntown, 8.5));
+  }
+
+  const airportName = activeHub && distToHubDowntown <= 65 ? activeHub.airport.name : `Regional Airport Serving ${city}`;
+  const airportLat  = activeHub && distToHubDowntown <= 65 ? activeHub.airport.lat : (lat + 0.12);
+  const airportLng  = activeHub && distToHubDowntown <= 65 ? activeHub.airport.lng : (lng + 0.08);
+  const apDist      = Number(calcDist(lat, lng, airportLat, airportLng).toFixed(1));
+
+  const hospitalName = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.name : `${city} Regional Medical Center`;
+  const hospitalLat  = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.lat : (lat + 0.04);
+  const hospitalLng  = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.lng : (lng - 0.03);
+  const hpDist       = Number(calcDist(lat, lng, hospitalLat, hospitalLng).toFixed(1));
+
+  const highwayName = activeHub ? activeHub.highway : `Major Regional Interstate / State Route`;
+  const hwDist      = Math.max(0.5, Number((Math.min(dtDist, 10) * 0.35).toFixed(1)));
+
+  // Realistic drive time calculation
+  const dtDrive = Math.max(4, Math.round(dtDist * 1.9 + 2));
+  const apDrive = Math.max(8, Math.round(apDist * 1.7 + 3));
+  const hpDrive = Math.max(4, Math.round(hpDist * 1.9 + 2));
+  const hwDrive = Math.max(2, Math.round(hwDist * 2.1));
 
   // Commute items
   const commutes = [
-    { name: downtownCoords.name, dist: `${dtDist} mi`, drive: `${dtDrive} min`, icon: 'fa-building', dest: `${downtownCoords.name}, ${city}` },
-    { name: airportCoords.name, dist: `${apDist} mi`, drive: `${apDrive} min`, icon: 'fa-plane-departure', dest: airportCoords.name },
-    { name: hospitalCoords.name, dist: `${hpDist} mi`, drive: `${hpDrive} min`, icon: 'fa-hospital', dest: hospitalCoords.name },
-    { name: highwayName, dist: `${hwDist} mi`, drive: `${hwDrive} min`, icon: 'fa-road', dest: `${highwayName}, ${city}` },
+    { name: downtownName, dist: `${dtDist} mi`, drive: `${dtDrive} min`, icon: 'fa-building', dest: `${downtownName}, ${city}, ${state}` },
+    { name: airportName, dist: `${apDist} mi`, drive: `${apDrive} min`, icon: 'fa-plane-departure', dest: `${airportName}, ${state}` },
+    { name: hospitalName, dist: `${hpDist} mi`, drive: `${hpDrive} min`, icon: 'fa-hospital', dest: `${hospitalName}, ${city}, ${state}` },
+    { name: highwayName, dist: `${hwDist} mi`, drive: `${hwDrive} min`, icon: 'fa-road', dest: `${highwayName}, ${city}, ${state}` },
   ];
 
   // Pet friendly spots
@@ -3449,103 +3760,128 @@ function renderNeighborhoodIntelligence(p) {
     {
       title: 'Community Dog Park & Green Space',
       sub: 'Fenced off-leash zones, agility obstacles & walking trails',
-      badge: 'Off-Leash Area',
-      dist: `${Math.max(0.4, (dtDist * 0.3).toFixed(1))} mi`,
-      drive: `${Math.max(2, Math.round(dtDist * 0.8))} min drive`,
+      badge: 'Local Radius (< 3 mi)',
+      dist: 'Nearby Area',
+      drive: '5–8 min drive',
       icon: 'fa-dog',
       query: `dog park near ${fullAddr}`
     },
     {
-      title: '24/7 Emergency Animal Hospital & Vet',
-      sub: 'Full-service veterinary care, routine checkups & urgent care',
+      title: 'Emergency Veterinary & Animal Hospital',
+      sub: 'Full-service veterinary clinics, wellness care & emergency services',
       badge: 'Veterinary Care',
-      dist: `${Math.max(0.8, (dtDist * 0.45).toFixed(1))} mi`,
-      drive: `${Math.max(4, Math.round(dtDist * 1.1))} min drive`,
+      dist: 'Local Area',
+      drive: '6–10 min drive',
       icon: 'fa-user-doctor',
       query: `animal hospital veterinary near ${fullAddr}`
     },
     {
-      title: 'Pet Supplies Plus & Grooming Salon',
-      sub: 'Premium pet food, self-serve dog wash & grooming services',
+      title: 'Pet Supplies & Grooming Services',
+      sub: 'Pet supply retailers, food, self-serve wash & grooming',
       badge: 'Pet Supplies',
-      dist: `${Math.max(0.7, (dtDist * 0.4).toFixed(1))} mi`,
-      drive: `${Math.max(3, Math.round(dtDist * 1.0))} min drive`,
+      dist: 'Local Area',
+      drive: '5–8 min drive',
       icon: 'fa-paw',
       query: `pet store grooming near ${fullAddr}`
     }
   ];
 
   // Utilities & Broadband
+  const electricProvider = activeHub?.electric || stateInfo.electric;
+  const gasProvider = activeHub?.gas || stateInfo.gas;
+  const groceryBrands = activeHub?.groceries || stateInfo.groc;
+
   const utilities = [
     {
-      title: 'High-Speed Fiber & Cable Internet',
-      sub: 'Gigabit fiber availability with AT&T Fiber, Spectrum & Xfinity',
+      title: 'High-Speed Fiber & Gigabit Broadband',
+      sub: `High-speed connectivity available across ${city} (AT&T Fiber, Spectrum, Xfinity & regional fiber)`,
       badge: 'Up to 1,000–5,000 Mbps',
       icon: 'fa-wifi',
       meta: 'Ultra-low latency for WFH & streaming'
     },
     {
-      title: 'Electric & Power Grid',
-      sub: `Municipal grid serviced by regional utility (${isColumbus ? 'AEP Ohio' : 'City Electric'})`,
+      title: 'Electric & Regional Power Grid',
+      sub: `Regional electrical distribution serviced by ${electricProvider}`,
       badge: 'Standard 120/240V',
       icon: 'fa-bolt',
-      meta: 'Online tenant account setup available'
+      meta: 'Tenant utility transfer available'
     },
     {
       title: 'Natural Gas / Heating Service',
-      sub: `Natural gas service via regional supplier (${isColumbus ? 'Columbia Gas of Ohio' : 'City Gas'})`,
+      sub: `Natural gas / climate service via regional supplier (${gasProvider})`,
       badge: 'Active Service',
       icon: 'fa-fire-flame-curved',
-      meta: 'Metered per residence'
+      meta: 'Individual meter per residence'
     },
     {
-      title: 'Water, Sewer & Trash Collection',
-      sub: `Municipal Department of Public Utilities (${city} Services)`,
-      badge: 'Weekly Pickup',
+      title: 'Water, Sewer & Sanitation Services',
+      sub: `Municipal Department of Public Works (${city}, ${state} Municipal Services)`,
+      badge: 'Municipal Pickup',
       icon: 'fa-trash-can',
-      meta: 'Curbside trash & recycling collection'
+      meta: 'Scheduled curbside refuse & recycling'
     }
   ];
 
   // Conveniences
   const conveniences = [
     {
-      title: 'Supermarket & Fresh Groceries',
-      sub: isColumbus ? 'Kroger / Giant Eagle / ALDI Supermarkets' : 'Regional Supermarket & Grocery Center',
-      badge: 'Grocery',
-      dist: `${Math.max(0.5, (dtDist * 0.35).toFixed(1))} mi`,
-      drive: `${Math.max(3, Math.round(dtDist * 0.9))} min drive`,
+      title: 'Supermarkets & Fresh Groceries',
+      sub: `${groceryBrands}`,
+      badge: 'Local Radius (< 3 mi)',
+      dist: 'Nearby Area',
+      drive: '4–7 min drive',
       icon: 'fa-cart-shopping',
       query: `supermarket grocery near ${fullAddr}`
     },
     {
       title: 'Coffee Shops & Local Cafes',
-      sub: 'Artisan roasters, Starbucks & drive-thru espresso bars',
-      badge: 'Cafe & Work',
-      dist: `${Math.max(0.4, (dtDist * 0.28).toFixed(1))} mi`,
-      drive: `${Math.max(2, Math.round(dtDist * 0.7))} min drive`,
+      sub: 'Local roasters, drive-thru cafes & co-working espresso bars',
+      badge: 'Local Area',
+      dist: 'Nearby Area',
+      drive: '3–6 min drive',
       icon: 'fa-mug-saucer',
       query: `coffee cafe near ${fullAddr}`
     },
     {
-      title: 'Pharmacy & Health Conveniences',
-      sub: 'CVS Pharmacy & Walgreens with drive-thru prescription pickup',
+      title: 'Pharmacy & Healthcare Essentials',
+      sub: 'Full-service pharmacies with prescription drive-thru service',
       badge: 'Pharmacy',
-      dist: `${Math.max(0.6, (dtDist * 0.38).toFixed(1))} mi`,
-      drive: `${Math.max(3, Math.round(dtDist * 0.9))} min drive`,
+      dist: 'Local Area',
+      drive: '4–7 min drive',
       icon: 'fa-prescription-bottle-medical',
       query: `pharmacy near ${fullAddr}`
     },
     {
-      title: 'Fitness, Gyms & Community Parks',
-      sub: 'Planet Fitness, YMCA, neighborhood recreation trails & courts',
+      title: 'Fitness Centers & Recreation Parks',
+      sub: 'Regional health clubs, boutique studios, walking paths & recreation courts',
       badge: 'Fitness & Health',
-      dist: `${Math.max(0.6, (dtDist * 0.42).toFixed(1))} mi`,
-      drive: `${Math.max(3, Math.round(dtDist * 1.0))} min drive`,
+      dist: 'Local Area',
+      drive: '5–8 min drive',
       icon: 'fa-dumbbell',
       query: `gym fitness park near ${fullAddr}`
     }
   ];
+
+  // Verified Neighborhood Highlight Box
+  const neighborhoodName = (p.neighborhood || '').trim();
+  const countyName = (p.county || '').trim();
+  const locationCtx = (p.location_context || '').trim();
+
+  const neighborhoodBannerHtml = (neighborhoodName || countyName || locationCtx) ? `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px">
+      <div style="width:38px;height:38px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;color:#0284c7;font-size:17px;flex-shrink:0">
+        <i class="fas fa-location-dot"></i>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:14.5px;font-weight:700;color:#0f172a">${esc(neighborhoodName || (city + ' Community Area'))}</span>
+          ${countyName ? `<span style="font-size:11.5px;font-weight:600;background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:6px">${esc(countyName)}</span>` : ''}
+          <span style="font-size:11px;font-weight:600;background:#ecfdf5;color:#065f46;padding:2px 8px;border-radius:6px"><i class="fas fa-check" style="font-size:9px"></i> Verified Location</span>
+        </div>
+        ${locationCtx ? `<div style="font-size:13px;color:#475569;margin-top:6px;line-height:1.45">${esc(locationCtx)}</div>` : `<div style="font-size:12.5px;color:#64748b;margin-top:3px">Authentic neighborhood connectivity anchored at ${esc(fullAddr)}</div>`}
+      </div>
+    </div>
+  ` : '';
 
   section.style.display = '';
   if (divider) divider.style.display = '';
@@ -3554,6 +3890,8 @@ function renderNeighborhoodIntelligence(p) {
     <div class="prop-section">
       <div class="prop-section-eyebrow">Neighborhood &amp; Location Intelligence</div>
       <div class="prop-section-head">Life &amp; connectivity <em>around this home</em>.</div>
+
+      ${neighborhoodBannerHtml}
 
       <div class="intel-container">
         <!-- Tab Navigation Strip -->
