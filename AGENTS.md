@@ -53,8 +53,10 @@ The system must complete the entire workflow automatically without requiring add
   - **SINGLE_FAMILY**: Only standalone, detached single-family houses with independent parcel footprints are classified as `SINGLE_FAMILY`.
   - **APARTMENT**: Multi-family apartment complex units are classified as `APARTMENT`.
 
-### C. Exact Original Source Titles
-- **Verbatim Source Title Preservation**: Property titles in `properties.title` and `pipeline_properties.title` must strictly match the original title from Zillow / the original source without artificial downstream re-formatting or synthetic reconstruction.
+### C. Standardized Short & Professional Property Titles
+- **Clean Standard Format**: Property titles in `properties.title` and `pipeline_properties.title` must strictly follow the short, professional, and straightforward address standard:
+  `{Street Address}, {City}, {State} {Zip}` (e.g., `5914 Wilkes Dr, Fort Worth, TX 76119` or `2023 W 93rd St #1, Cleveland, OH 44102`).
+- **No Clutter or Redundant Specs in Titles**: Do not clutter titles with marketing fluff or redundant spec prefixes (e.g. avoid *"Stunning 3 Bedroom 2 Bathroom Single Family Home..."*). The specs (beds, baths, rent, sqft) are prominently rendered in dedicated specification badges immediately beneath the title.
 
 ---
 
@@ -116,17 +118,26 @@ Do not create information simply because a field exists. If information is unava
 
 ---
 
-### 5. Description Enrichment & Context Preservation
+### 5. Description Enrichment & Context Preservation (Deep, Non-Basic Standard)
 - **Original Description Preservation (`original_description`)**: Every property scraped or imported into the pipeline MUST permanently store the raw, unmodified listing text in `original_description`. This field serves as the immutable ground-truth anchor of the property's authentic details.
-- **Context Preservation in Rewrites**: When generating or rewriting descriptions, the enrichment process MUST NEVER lose or discard specific real-world details provided in the original text (such as custom finishes, brand new HVAC/appliances, layout nuances, natural lighting, specific basement details, yard characteristics, or unique architectural accents).
-- **Surgical Cleaning vs Wholesale Replacement**: Enrichment must operate via surgical enhancement:
-  - Clean out prohibited text (broker contacts, agent names/headshots, portal URLs, external showing/application links, security deposit mentions, smoking policies, lease duration clauses, and availability/move-in dates).
+- **Manual AI Verification & Mapping (Simulating Human Due Diligence)**:
+  - Enrichment and verification is strictly an active, manual, deep inspection process carried out by the AI agent handling the pipeline—NEVER an automated, uninspected black-box script.
+  - The AI manually inspects the pipeline record alongside the original Zillow/source listing URL (`source_url`) and raw extracted facts (`original_data`).
+  - If the browser extension omitted any property details, features, or appliances, the AI manually compares both listings, extracts every missing feature (appliances, heating/cooling, laundry type, parking, yard, square footage), and populates them into the pipeline record before publishing.
+- **Deep, Non-Basic Walkthrough Architecture**:
+  - Descriptions must NEVER be basic, brief 2-sentence summaries, nor robotic AI fluff. They must read like comprehensive, high-end real estate walkthroughs that thoroughly articulate everything included:
+    1. **Architecture & Property Setting**: Property style, square footage, neighborhood context, exterior presence.
+    2. **Main Living & Interior Flow**: Living room scale, floor plan connectivity, natural lighting, flooring materials.
+    3. **Kitchen & Dining Details**: Cabinets, countertops, pantry, and a full itemized appliance inventory (refrigerator, range/oven, dishwasher, microwave, disposal).
+    4. **Bedrooms & Bathrooms**: Primary bedroom dimensions/suite features, closet space, secondary bedrooms, full & half bath fixtures, vanities, tile work (with exact decimal bath counts matching structured data).
+    5. **Utility, Basement, Laundry & Comfort**: Finished/unfinished basement storage, laundry connections or in-unit washer/dryer, central heating and air conditioning systems.
+    6. **Outdoor Living, Grounds & Parking**: Yard space, private fencing, patio/deck, driveway, garage capacity (attached/detached).
+    7. **Lease Terms, Inclusions & Choice Closing**: Utilities tenant is responsible for, pet policy (always pet-friendly), application fee (strictly $50), and the official invitation: *"Submit your rental application today at Choice Properties."*
+- **Surgical Cleaning vs Wholesale Replacement**: Enrichment operates via surgical enhancement:
+  - Clean out prohibited text: broker/agent contacts, phone numbers, MLS IDs, portal URLs, external showing/application links, security deposit quotes, smoking policies, lease duration clauses, and availability/move-in dates.
   - Elevate the tone to Choice Properties standards with natural phrasing, active voice, and professional flow.
   - DO NOT replace an authentic, informative description with a generic AI summary template.
 - **Dual-State Availability**: Both the current enriched `description` and the untouched `original_description` must be preserved in the pipeline so admins can compare them side-by-side or revert if necessary.
-- Every property must receive a fully enriched, detailed, natural, property-specific description grounded in verified facts.
-- Richness must come from verified information, not filler.
-- If limited information is available, write naturally using only what is known. Do not artificially lengthen the description.
 
 ---
 
@@ -269,17 +280,16 @@ Before publishing:
 
 ---
 
-### 15. Image Processing
+### 15. Image Processing & Direct Source CDN Ingestion
 For every property:
-* Obtain original listing images.
-* Preserve original image order.
-* Use the first image as the featured image.
-* Upload images to ImageKit.
-* Verify every required ImageKit URL.
-* Publish only ImageKit-hosted images.
-* Do not use synthetic/generated property images.
-* Publish properties regardless of photo count (no 6-photo minimum gate; user pre-screens properties on import).
-* Do not publish duplicate images.
+* **Stop Direct ImageKit Uploads**: Do not upload property images to ImageKit. Direct ImageKit uploads add latency, create edge function timeout risks, and consume unnecessary upload bandwidth.
+* **Direct High-Resolution Source CDN URLs**: Ingest and retain high-resolution source CDN photo URLs (e.g. Zillow CDN `photos.zillowstatic.com`, Realtor CDN `ap.rdcpix.com`, etc.) directly into `original_image_urls`.
+* **Pristine Quality & Global Delivery**: Source CDN images deliver uncompressed 1536px quality globally without conversion artifacts.
+* **Direct Publishing into `property_photos`**: When publishing to the live database, insert the high-resolution source CDN URLs directly into `public.property_photos` with their original display order and hero designation (`is_hero: true` for the first photo).
+* **Preserve Original Image Order**: Use the first image as the primary hero image.
+* **No Synthetic Images**: Do not use synthetic or AI-generated property photos.
+* **No Photo Count Gate**: Publish properties regardless of photo count (user pre-screens listings before import).
+* **Zero Duplicates**: Ensure identical photo URLs are deduplicated.
 
 ---
 
@@ -351,8 +361,8 @@ Verify:
 ✓ No third-party contact information
 ✓ Correct Choice Properties branding
 ✓ $50 application fee
-✓ Images uploaded to ImageKit
-✓ ImageKit URLs verified
+✓ High-resolution source CDN images preserved
+✓ Image order preserved with primary hero image
 ✓ No duplicate images
 ✓ No duplicate property
 

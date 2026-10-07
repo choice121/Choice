@@ -429,6 +429,14 @@ Deno.serve(async (req) => {
     record.folder_serial = nextSerial;
   }
 
+  // Direct Source CDN Mode: bypass remote ImageKit uploads completely.
+  // Source CDN photo URLs are stored directly in original_image_urls for maximum speed,
+  // zero upload failures, and full 1536px resolution preservation.
+  record.photo_import_status = 'completed';
+  record.photo_upload_status = 'ready';
+  record.last_photo_import_at = new Date().toISOString();
+  record.last_photo_import_error = null;
+
   // Insert into pipeline
   const { error: insertErr } = await adminClient
     .schema('pipeline')
@@ -438,144 +446,6 @@ Deno.serve(async (req) => {
   if (insertErr) {
     console.error('Insert error:', insertErr);
     return permissiveJsonErr(500, 'Database insert failed: ' + insertErr.message, req);
-  }
-
-  // Auto-upload images to ImageKit if not already ImageKit. This closure is
-  // scheduled with EdgeRuntime.waitUntil below so the record response is not
-  // held open by remote image downloads.
-  const processImageUploads = async () => {
-  let imagekitUploaded = 0;
-  let imagekitFailed = 0;
-  const imagekitUrls: ImageEntry[] = [];
-  const alreadyImageKit = sourceImageUrls.length > 0 && sourceImageUrls.every((u) => u.includes('ik.imagekit.io'));
-  const IMAGEKIT_PRIVATE_KEY = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
-
-  if (!IMAGEKIT_PRIVATE_KEY && sourceImageUrls.length > 0) {
-    await adminClient
-      .schema('pipeline')
-      .from('pipeline_properties')
-      .update({
-        photo_import_status: 'failed',
-        photo_upload_status: 'failed',
-        last_photo_import_error: 'ImageKit storage is not configured',
-        last_photo_import_at: new Date().toISOString(),
-      })
-      .eq('id', record.id);
-    return;
-  }
-
-  if (alreadyImageKit) {
-    imagekitUrls.push(...sourceImageEntries);
-    imagekitUploaded = sourceImageEntries.length;
-  } else if (IMAGEKIT_PRIVATE_KEY && sourceImageUrls.length > 0) {
-    const alreadyIkEntries = sourceImageEntries.filter((entry) => imageEntryUrl(entry).includes('ik.imagekit.io'));
-    imagekitUrls.push(...alreadyIkEntries);
-    imagekitUploaded = alreadyIkEntries.length;
-
-    const toUpload = sourceImageEntries
-      .filter((entry) => !imageEntryUrl(entry).includes('ik.imagekit.io'))
-      .slice(0, MAX_PHOTOS_TO_UPLOAD);
-    const credentials = btoa(`${IMAGEKIT_PRIVATE_KEY}:`);
-    const folderPath = `/pipeline/${record.id}`;
-
-    async function uploadOne(sourceEntry: ImageEntry, index: number): Promise<ImageEntry | null> {
-      try {
-        const sourceUrl = imageEntryUrl(sourceEntry);
-        const fetchHeaders: Record<string, string> = {
-          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache',
-        };
-        if (source === 'zillow') fetchHeaders['Referer'] = 'https://www.zillow.com/';
-        else if (source === 'realtor') fetchHeaders['Referer'] = 'https://www.realtor.com/';
-        else if (source === 'apartments') fetchHeaders['Referer'] = 'https://www.apartments.com/';
-        else if (source === 'redfin') fetchHeaders['Referer'] = 'https://www.redfin.com/';
-
-        const imgRes = await fetch(sourceUrl, {
-          headers: fetchHeaders,
-          redirect: 'follow',
-          signal: AbortSignal.timeout(FETCH_TIMEOUT),
-        });
-        if (!imgRes.ok) return null;
-
-        const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-        const buffer = await imgRes.arrayBuffer();
-
-        const extMap: Record<string, string> = {
-          'image/jpeg': 'jpg', 'image/jpg': 'jpg',
-          'image/png': 'png', 'image/webp': 'webp',
-        };
-        const mimeBase = contentType.split(';')[0].trim().toLowerCase();
-        const ext = extMap[mimeBase] || 'jpg';
-        const fileName = `photo_${index + 1}.${ext}`;
-
-        const formData = new FormData();
-        formData.append('file', new Blob([buffer], { type: mimeBase }), fileName);
-        formData.append('fileName', fileName);
-        formData.append('folder', folderPath);
-
-        const ikRes = await fetch(IMAGEKIT_UPLOAD_URL, {
-          method: 'POST',
-          headers: { Authorization: `Basic ${credentials}` },
-          body: formData,
-        });
-
-        if (!ikRes.ok) return null;
-
-        const ikData = await ikRes.json();
-        return {
-          url: ikData.url as string,
-          fileId: (ikData.fileId ?? null) as string | null,
-          width: typeof ikData.width === 'number' ? ikData.width : null,
-          height: typeof ikData.height === 'number' ? ikData.height : null,
-        };
-      } catch {
-        return null;
-      }
-    }
-
-    for (let batchStart = 0; batchStart < toUpload.length; batchStart += BATCH_SIZE) {
-      const batch = toUpload.slice(batchStart, batchStart + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map((entry, i) => uploadOne(entry, batchStart + i))
-      );
-      for (const r of results) {
-        if (r) { imagekitUploaded++; imagekitUrls.push(r); }
-        else imagekitFailed++;
-      }
-    }
-
-  }
-
-  await adminClient
-    .schema('pipeline')
-    .from('pipeline_properties')
-    .update(imagekitUrls.length > 0 ? {
-      original_image_urls: JSON.stringify(imagekitUrls),
-      photo_import_status: 'ok',
-      photo_upload_status: 'complete',
-      last_photo_import_at: new Date().toISOString(),
-      last_photo_import_error: null,
-    } : {
-      photo_import_status: 'failed',
-      photo_upload_status: 'failed',
-      last_photo_import_at: new Date().toISOString(),
-      last_photo_import_error: 'No property photos could be uploaded to ImageKit',
-    })
-    .eq('id', record.id);
-  };
-
-  const imageTask = sourceImageUrls.length > 0 ? processImageUploads() : null;
-  if (imageTask) {
-    const edgeRuntime = (globalThis as typeof globalThis & {
-      EdgeRuntime?: { waitUntil: (promise: Promise<unknown>) => void };
-    }).EdgeRuntime;
-    if (edgeRuntime?.waitUntil) {
-      edgeRuntime.waitUntil(imageTask);
-    } else {
-      void imageTask.catch((error) => console.error('[receive-pipeline-import] Background photo processing failed:', error));
-    }
   }
 
   // The extension supplies a cached folder name, so avoid extra reads on the
@@ -592,7 +462,8 @@ Deno.serve(async (req) => {
     title:  String(record.title),
     score:  record.data_quality_score,
     photos: sourceImageUrls.length,
-    photos_queued: Boolean(imageTask),
+    photos_queued: false,
+    source_cdn_photos: sourceImageUrls.length,
     imagekit_photos: 0,
     imagekit_failed: 0,
     city:   safeStr(body.city),

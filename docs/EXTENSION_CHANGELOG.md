@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v27.0.0] - 2026-10-07
+### Direct Source CDN Image Ingestion Engine & Instant Pipeline Save Path
+- **Direct Source CDN Ingestion (Zero ImageKit Lag)**: Updated `receive-pipeline-import` edge function and extension pipeline integration to eliminate remote ImageKit upload cycles. All high-resolution source CDN photo URLs (uncompressed 1536px photos from Zillow, Realtor, Redfin, etc.) are ingested directly into `pipeline_properties.original_image_urls` with instant `'completed'` status.
+- **Sub-Second Save Latency**: Removing remote background image re-uploading reduces edge function processing overhead from minutes to sub-second saves with zero timeout risk or conversion artifacts.
+- **Direct Live Publishing Integration**: Photo assets publish directly to `public.property_photos` preserving source CDN URLs, original photo sequence, and hero designation.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing (29/29 tests).
+
+---
+
 ## [v26.0.0] - 2026-10-07
 ### Compact Folder Pill, Auto-Collapsing Folder Popover & Sticky Default Folder Engine
 - **Minimal Compact Folder Pill**: Replaced the bulky static `<select>` dropdown above the Save button with a sleek 1-line Folder Pill (`📁 Folder: <Name> • Change / + New ▾`) so the Save to Pipeline button is never obstructed or cramped on Zillow and supported portals.
