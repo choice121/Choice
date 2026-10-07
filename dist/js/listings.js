@@ -835,6 +835,7 @@ async function refreshResults() {
   pushURL();
   await fetchAndRender();
 }
+window.refreshResults = refreshResults;
 
 // ── Skeletons ─────────────────────────────────────────────────────────────
 function showSkeletons() {
@@ -1337,7 +1338,7 @@ function renderError(errorMsg = 'Failed to load listings') {
       <p style="color:var(--color-text-secondary);margin-bottom:24px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5">
         ${errorMsg || 'We couldn\'t load listings from the server. Please check your connection and try again.'}
       </p>
-      <button onclick="refreshResults()" style="background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-size:0.9rem;font-weight:500;transition:background 160ms ease">
+      <button onclick="window.refreshResults()" style="background:var(--color-brand);color:#fff;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-size:0.9rem;font-weight:500;transition:background 160ms ease">
         <i class="fas fa-redo" style="margin-right:6px"></i>Retry
       </button>
     </div>`;

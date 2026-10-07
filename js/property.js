@@ -121,7 +121,7 @@ async function loadProperty(id) {
     const { data, error } = await supabase
       .from('properties')
       .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
-      .ilike('id', id)
+      .eq('id', id)
       .single();
     if (error || !data) throw new Error('Not found');
     prop = data;
@@ -216,25 +216,46 @@ async function loadProperty(id) {
 
 function renderUnavailable(status) {
   document.title = 'Listing Unavailable — Choice Properties';
-  document.getElementById('gallery').style.display = 'none';
+  const gallery = document.getElementById('gallery');
+  if (gallery) gallery.style.display = 'none';
   
   let msg = 'This listing has been paused or removed by the landlord.';
   if (status === 'rented') msg = 'This property has already been rented.';
   else if (status === 'not_found') msg = 'We could not find the property you are looking for. It may have been removed or the link is incorrect.';
 
-  document.querySelector('.property-detail').innerHTML = `
-    <div class="container" style="padding:80px 16px;text-align:center;max-width:540px;margin:0 auto">
-      <div style="font-size:48px;margin-bottom:16px;color:var(--m-brand)"><i class="fas fa-house-circle-exclamation"></i></div>
-      <h1 style="font-size:1.5rem;font-weight:700;color:var(--m-ink);margin-bottom:12px">
-        This listing is not currently available.
-      </h1>
-      <p style="color:var(--m-muted);font-size:15px;margin-bottom:32px">
-        ${msg}
-      </p>
-      <a href="/listings.html" class="btn btn-primary" style="display:inline-block">
-        View similar rentals in Columbus
-      </a>
-    </div>`;
+  // Try to extract city from URL for a better suggestion link
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  let citySuggestion = 'Columbus';
+  let searchUrl = '/listings.html';
+  
+  if (pathParts.length >= 3 && pathParts[0] === 'rent') {
+    // URL format: /rent/oh/columbus/...
+    const rawCity = pathParts[2];
+    citySuggestion = rawCity.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    searchUrl = `/listings.html?q=${encodeURIComponent(citySuggestion)}`;
+  }
+
+  const detailEl = document.querySelector('.property-detail') || document.querySelector('.prop-split-content');
+  if (detailEl) {
+    detailEl.innerHTML = `
+      <div class="container" style="padding:80px 16px;text-align:center;max-width:540px;margin:0 auto">
+        <div style="font-size:48px;margin-bottom:16px;color:var(--m-brand)"><i class="fas fa-house-circle-exclamation"></i></div>
+        <h1 style="font-size:1.5rem;font-weight:700;color:var(--m-ink);margin-bottom:12px">
+          This listing is not currently available.
+        </h1>
+        <p style="color:var(--m-muted);font-size:15px;margin-bottom:32px">
+          ${msg}
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+          <a href="${searchUrl}" class="btn btn-primary" style="display:inline-block;width:100%;max-width:300px">
+            View similar rentals in ${citySuggestion}
+          </a>
+          <button onclick="window.location.reload()" class="btn btn-outline" style="display:inline-block;width:100%;max-width:300px;cursor:pointer">
+            <i class="fas fa-redo" style="margin-right:6px"></i>Retry Loading
+          </button>
+        </div>
+      </div>`;
+  }
 }
 
 /* ── Amenity icon helpers ── */
@@ -3153,12 +3174,18 @@ function injectEnrichmentStyles() {
 
     /* Neighborhood & Community Intelligence Styles */
     .intel-container { display:flex; flex-direction:column; gap:16px; margin-top:10px; }
-    .intel-nav-strip { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-    .intel-nav-strip::-webkit-scrollbar { display:none; }
+    .intel-nav-strip { display:flex; gap:6px; flex-wrap:wrap; padding-bottom:4px; }
     .intel-tab-btn {
-      display:inline-flex; align-items:center; gap:7px; padding:8px 14px;
-      border-radius:10px; font-size:12.5px; font-weight:700; border:1px solid var(--m-border);
+      display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px;
+      border-radius:10px; font-size:12px; font-weight:700; border:1px solid var(--m-border);
       background:var(--m-surface); color:var(--m-muted); cursor:pointer; white-space:nowrap; transition:all .15s;
+      flex: 1 1 auto; min-width: calc(33.333% - 6px);
+    }
+    @media (max-width: 600px) {
+      .intel-tab-btn { min-width: calc(50% - 6px); font-size: 11px; padding: 7px 8px; }
+    }
+    @media (max-width: 400px) {
+      .intel-tab-btn { min-width: 100%; }
     }
     .intel-tab-btn:hover { background:var(--m-surface-2); color:var(--m-ink); border-color:var(--m-border-strong); }
     .intel-tab-btn.active {
@@ -3372,8 +3399,8 @@ function renderNeighborhoodIntelligence(p) {
   if (!section) return;
   injectEnrichmentStyles();
 
-  const city = (p.city || 'Columbus').trim();
-  const state = (p.state || 'OH').trim();
+  const city = (p.city || '').trim();
+  const state = (p.state || '').trim();
   const zip = (p.zip || '').trim();
   const fullAddr = `${p.address || ''}, ${city}, ${state} ${zip}`.trim();
   const addrSlug = encodeURIComponent(`${p.address || ''} ${city} ${state}`);
@@ -3383,11 +3410,13 @@ function renderNeighborhoodIntelligence(p) {
     : `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(city + ' ' + state)}&sortBy=distance`;
 
   // Coordinates
-  const lat = parseFloat(p.lat) || 39.9612;
-  const lng = parseFloat(p.lng) || -82.9988;
+  const lat = parseFloat(p.lat);
+  const lng = parseFloat(p.lng);
+  const hasCoords = !isNaN(lat) && !isNaN(lng);
 
   // Haversine distance calculator
   function calcDist(lat1, lon1, lat2, lon2) {
+    if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return null;
     const R = 3958.8; // miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -3678,14 +3707,14 @@ function renderNeighborhoodIntelligence(p) {
   ];
 
   // 1. Locate direct city match or nearest metro hub
-  let activeHub = METRO_HUBS.find(h => h.match.test(city));
+  let activeHub = city ? METRO_HUBS.find(h => h.match.test(city)) : null;
 
-  if (!activeHub) {
+  if (!activeHub && hasCoords) {
     // If no direct name match, calculate closest hub by real GPS coordinates
     let bestDist = Infinity;
     for (const h of METRO_HUBS) {
       const d = calcDist(lat, lng, h.downtown.lat, h.downtown.lng);
-      if (d < bestDist) {
+      if (d !== null && d < bestDist) {
         bestDist = d;
         activeHub = h;
       }
@@ -3709,34 +3738,34 @@ function renderNeighborhoodIntelligence(p) {
   };
 
   const stateInfo = STATE_UTILITIES[state.toUpperCase()] || {
-    electric: 'Regional Regulated Electric Utility',
-    gas: 'Regional Natural Gas / Heating Utility',
-    groc: 'Regional Supermarket & Grocery Center'
+    electric: 'Local Electric Utility',
+    gas: 'Local Natural Gas Service',
+    groc: 'Local Grocery Retailers'
   };
 
   // Determine downtown center:
   // If property is within 35 miles of hub downtown, use that hub's downtown.
   // Otherwise anchor to local `${city} Center`.
-  const distToHubDowntown = activeHub ? calcDist(lat, lng, activeHub.downtown.lat, activeHub.downtown.lng) : 5.0;
+  const distToHubDowntown = (activeHub && hasCoords) ? calcDist(lat, lng, activeHub.downtown.lat, activeHub.downtown.lng) : null;
   let downtownName, dtDist;
 
-  if (activeHub && distToHubDowntown <= 35) {
+  if (activeHub && distToHubDowntown !== null && distToHubDowntown <= 35) {
     downtownName = activeHub.downtown.name;
     dtDist = distToHubDowntown;
   } else {
-    downtownName = `${city} City Center`;
-    dtDist = Math.max(1.5, Math.min(distToHubDowntown, 8.5));
+    downtownName = city ? `${city} City Center` : 'City Center';
+    dtDist = distToHubDowntown !== null ? Math.max(1.5, Math.min(distToHubDowntown, 8.5)) : 2.5;
   }
 
-  const airportName = activeHub && distToHubDowntown <= 65 ? activeHub.airport.name : `Regional Airport Serving ${city}`;
-  const airportLat  = activeHub && distToHubDowntown <= 65 ? activeHub.airport.lat : (lat + 0.12);
-  const airportLng  = activeHub && distToHubDowntown <= 65 ? activeHub.airport.lng : (lng + 0.08);
-  const apDist      = Number(calcDist(lat, lng, airportLat, airportLng).toFixed(1));
+  const airportName = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 65) ? activeHub.airport.name : (city ? `Regional Airport Serving ${city}` : 'Regional Airport');
+  const airportLat  = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 65) ? activeHub.airport.lat : (hasCoords ? lat + 0.12 : null);
+  const airportLng  = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 65) ? activeHub.airport.lng : (hasCoords ? lng + 0.08 : null);
+  const apDist      = hasCoords ? Number(calcDist(lat, lng, airportLat, airportLng).toFixed(1)) : 10.5;
 
-  const hospitalName = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.name : `${city} Regional Medical Center`;
-  const hospitalLat  = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.lat : (lat + 0.04);
-  const hospitalLng  = activeHub && distToHubDowntown <= 45 ? activeHub.hospital.lng : (lng - 0.03);
-  const hpDist       = Number(calcDist(lat, lng, hospitalLat, hospitalLng).toFixed(1));
+  const hospitalName = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 45) ? activeHub.hospital.name : (city ? `${city} Regional Medical Center` : 'Regional Medical Center');
+  const hospitalLat  = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 45) ? activeHub.hospital.lat : (hasCoords ? lat + 0.04 : null);
+  const hospitalLng  = (activeHub && distToHubDowntown !== null && distToHubDowntown <= 45) ? activeHub.hospital.lng : (hasCoords ? lng - 0.03 : null);
+  const hpDist       = hasCoords ? Number(calcDist(lat, lng, hospitalLat, hospitalLng).toFixed(1)) : 4.2;
 
   const highwayName = activeHub ? activeHub.highway : `Major Regional Interstate / State Route`;
   const hwDist      = Math.max(0.5, Number((Math.min(dtDist, 10) * 0.35).toFixed(1)));
@@ -3893,14 +3922,38 @@ function renderNeighborhoodIntelligence(p) {
 
       ${neighborhoodBannerHtml}
 
+      <!-- Score Cards: Always visible & prominent -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px">
+        <a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
+          <div style="width:44px;height:44px;border-radius:10px;background:#e8f0fe;display:flex;
+            align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚶</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div class="score-card-title">Walk Score®</div>
+              ${p.walk_score || p.walkScore ? `<div style="font-weight:800;color:var(--m-brand);font-size:16px">${p.walk_score || p.walkScore}</div>` : ''}
+            </div>
+            <div class="score-card-sub">Walkability, transit &amp; bike friendliness</div>
+            <div class="score-card-cta">View Detailed Scores &rarr;</div>
+          </div>
+        </a>
+        <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
+          <div style="width:44px;height:44px;border-radius:10px;background:#ecfdf5;display:flex;
+            align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏫</div>
+          <div style="flex:1">
+            <div class="score-card-title">Nearby Schools</div>
+            <div class="score-card-sub">Ratings &amp; reviews via GreatSchools</div>
+            <div class="score-card-cta">View School Ratings &rarr;</div>
+          </div>
+        </a>
+      </div>
+
       <div class="intel-container">
         <!-- Tab Navigation Strip -->
         <div class="intel-nav-strip" id="intelNavStrip" role="tablist">
-          <button class="intel-tab-btn active" data-tab="commute" type="button"><i class="fas fa-car-side"></i> Commute &amp; Access</button>
-          <button class="intel-tab-btn" data-tab="pets" type="button"><i class="fas fa-paw"></i> Pet Parks &amp; Vets</button>
-          <button class="intel-tab-btn" data-tab="broadband" type="button"><i class="fas fa-wifi"></i> Fiber &amp; Utilities</button>
-          <button class="intel-tab-btn" data-tab="scores" type="button"><i class="fas fa-person-walking"></i> Walk &amp; School Scores</button>
-          <button class="intel-tab-btn" data-tab="conveniences" type="button"><i class="fas fa-store"></i> Everyday Essentials</button>
+          <button class="intel-tab-btn active" data-tab="commute" type="button"><i class="fas fa-car-side"></i> Commute</button>
+          <button class="intel-tab-btn" data-tab="pets" type="button"><i class="fas fa-paw"></i> Pets</button>
+          <button class="intel-tab-btn" data-tab="broadband" type="button"><i class="fas fa-wifi"></i> Fiber</button>
+          <button class="intel-tab-btn" data-tab="conveniences" type="button"><i class="fas fa-store"></i> Essentials</button>
         </div>
 
         <!-- Tab 1: Commute & Highway Hub -->
@@ -3975,31 +4028,7 @@ function renderNeighborhoodIntelligence(p) {
           </div>
         </div>
 
-        <!-- Tab 4: Walk & Schools Scores -->
-        <div class="intel-tab-content" id="intelTab-scores">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-            <a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
-              <div style="width:44px;height:44px;border-radius:10px;background:#e8f0fe;display:flex;
-                align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚶</div>
-              <div>
-                <div class="score-card-title">Walk &amp; Transit Scores</div>
-                <div class="score-card-sub">Walkability, transit &amp; bike friendliness</div>
-                <div class="score-card-cta">View Walk Score &rarr;</div>
-              </div>
-            </a>
-            <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
-              <div style="width:44px;height:44px;border-radius:10px;background:#ecfdf5;display:flex;
-                align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏫</div>
-              <div>
-                <div class="score-card-title">Nearby Schools</div>
-                <div class="score-card-sub">Ratings &amp; reviews via GreatSchools</div>
-                <div class="score-card-cta">View Schools &rarr;</div>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <!-- Tab 5: Everyday Essentials -->
+        <!-- Tab 4: Everyday Essentials -->
         <div class="intel-tab-content" id="intelTab-conveniences">
           <div class="intel-grid">
             ${conveniences.map(c => `
