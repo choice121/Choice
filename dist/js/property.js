@@ -12,8 +12,16 @@ import { updateNav as _updateNav } from '/js/cp-api.js';
 //   - showToast:      legacy public-page toast, uses #toastContainer
 //   - setupScrollTop: scroll-to-top button wiring (not used on this page,
 //                     but available if needed)
-const esc = CP.UI.esc;
-const showToast = window.showToast;
+const esc = (s) => (window.CP?.UI?.esc ? window.CP.UI.esc(s) : String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'));
+const showToast = (msg, type = 'info') => {
+  if (typeof window.showToast === 'function') {
+    window.showToast(msg, type);
+  } else if (window.CP?.UI?.showToast) {
+    window.CP.UI.showToast(msg, type);
+  } else {
+    console.log('[Toast]', type, msg);
+  }
+};
 
 // Extended nav init — wires both navAuthLink and drawerAuthLink, populates contacts
 async function updateNav() {
@@ -1812,14 +1820,16 @@ document.getElementById('sendInquiryBtn').addEventListener('click', async () => 
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending\u2026';
 
-  // Use CP.Inquiries.submit() so the edge function fires confirmation + landlord emails.
-  const { error } = await CP.Inquiries.submit({
-    property_id:  currentProperty.id,
-    tenant_name:  name,
-    tenant_email: email,
-    tenant_phone: phone || null,
-    message
-  });
+  // Use window.CP.Inquiries.submit() so the edge function fires confirmation + landlord emails.
+  const { error } = (window.CP?.Inquiries?.submit)
+    ? await window.CP.Inquiries.submit({
+        property_id:  currentProperty.id,
+        tenant_name:  name,
+        tenant_email: email,
+        tenant_phone: phone || null,
+        message
+      })
+    : { error: new Error('Inquiries API not ready') };
 
   if (error) {
     showToast('Failed to send. Please try again.', 'error');
@@ -4548,7 +4558,9 @@ function fmtPropType(t) {
 }
 
 /* ── LQIP helper — delegates to CP.UI.lqipUrl (defined in cp-api.js) ── */
-function lqipUrl(url) { return CP.UI.lqipUrl(url); }
+function lqipUrl(url) {
+  return (window.CP?.UI?.lqipUrl ? window.CP.UI.lqipUrl(url) : '') || '';
+}
 
 /* ── Preload ±2 adjacent lightbox images for instant prev/next navigation ── */
 function preloadLightboxAdjacentImages(idx) {
