@@ -4,8 +4,8 @@
 // as part of issue #16 (separate concerns + de-duplicate helpers).
 // Loaded as: <script type="module" src="/js/property.js?v=...">.
 // ============================================================
-import { supabase, sb, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js';
-import { updateNav as _updateNav } from '/js/cp-api.js';
+import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
+import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -25,7 +25,11 @@ const showToast = (msg, type = 'info') => {
 
 // Extended nav init — wires both navAuthLink and drawerAuthLink, populates contacts
 async function updateNav() {
-  await _updateNav();
+  try {
+    await _updateNav();
+  } catch (e) {
+    console.warn('[property] updateNav non-fatal error:', e);
+  }
   // Wire drawerAuthLink to match navAuthLink after _updateNav resolves
   const navLink    = document.getElementById('navAuthLink');
   const drawerLink = document.getElementById('drawerAuthLink');
@@ -83,7 +87,18 @@ let currentProperty  = null;
 let photoIndex       = 0;
 let allPhotos        = [];
 let _isAdminViewer   = false;
-let savedIds = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+function loadSavedPropertyIds() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem('cp_saved') || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter(id => typeof id === 'string') : []);
+  } catch (e) {
+    // Saved-state is optional. Corrupt or unavailable browser storage must not
+    // stop the property module before it starts loading the listing itself.
+    console.warn('[property] saved-state unavailable; continuing without it', e);
+    return new Set();
+  }
+}
+let savedIds = loadSavedPropertyIds();
 
 if (isPreview) {
   // ── Preview mode — load from sessionStorage ──
@@ -130,10 +145,13 @@ async function loadProperty(id) {
   // Phase 1 — DB lookup with deferred-ready client polling
   let prop = null;
   let client = null;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 80; i++) {
     try {
-      client = (typeof sb === 'function' ? sb() : null) || (window.CP && window.CP.sb ? window.CP.sb() : null) || supabase;
-      if (client && typeof client.from === 'function') break;
+      client = (window.CP && typeof window.CP.sb === 'function' ? window.CP.sb() : null) || supabase;
+      if (client && typeof client.from === 'function') {
+        const testFrom = client.from;
+        if (typeof testFrom === 'function') break;
+      }
     } catch (_) {}
     await new Promise(r => setTimeout(r, 50));
   }
@@ -511,7 +529,12 @@ function renderProperty(p) {
 
   // Gallery
   allPhotos = p.photo_urls?.length ? p.photo_urls : ['/assets/placeholder-property.jpg'];
-  renderGallery(allPhotos);
+  try {
+    renderGallery(allPhotos);
+  } catch (e) {
+    console.warn('[property] renderGallery non-fatal error:', e);
+    document.getElementById('gallery')?.classList.remove('skeleton-loading');
+  }
 
   // Move-in special banner — inject between gallery strip and detail content
   if (p.move_in_special) {
@@ -929,10 +952,10 @@ function renderProperty(p) {
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 
   // ── Enrichment sections ──
-  renderRenterRequirements(p);
-  renderPropFacts(p);
-  renderScoresSection(p);
-  loadSimilarListings(p);
+  try { renderRenterRequirements(p); } catch (e) { console.warn('[property] renderRenterRequirements error:', e); }
+  try { renderPropFacts(p); } catch (e) { console.warn('[property] renderPropFacts error:', e); }
+  try { renderScoresSection(p); } catch (e) { console.warn('[property] renderScoresSection error:', e); }
+  try { loadSimilarListings(p); } catch (e) { console.warn('[property] loadSimilarListings error:', e); }
 }
 
 /* ── Leaflet mini-map (lazy-loaded via IntersectionObserver) ── */
