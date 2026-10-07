@@ -4,7 +4,7 @@
 // as part of issue #16 (separate concerns + de-duplicate helpers).
 // Loaded as: <script type="module" src="/js/property.js?v=...">.
 // ============================================================
-import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js';
+import { supabase, sb, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js';
 import { updateNav as _updateNav } from '/js/cp-api.js';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
@@ -56,7 +56,7 @@ if (isEmbedded) {
 // /listings.html because the canonical URL has no ?id=.
 function resolvePropertyId() {
   const fromQuery = (params.get('id') || '').trim();
-  if (fromQuery) return fromQuery;
+  if (fromQuery) return fromQuery.toLowerCase();
   const m = window.location.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
   return m ? m[1].toLowerCase() : '';
 }
@@ -113,20 +113,39 @@ if (isPreview) {
 }
 
 async function loadProperty(id) {
-  // Phase 1 — DB lookup. Only this phase may legitimately raise the
-  // "Property not found." toast + redirect, because only this phase can
-  // tell us the row truly does not exist (or is hidden by RLS).
-  let prop;
+  if (!id) {
+    renderUnavailable('not_found');
+    return;
+  }
+  const cleanId = String(id).trim().toLowerCase();
+
+  // Phase 1 — DB lookup with deferred-ready client polling
+  let prop = null;
+  let client = null;
+  for (let i = 0; i < 40; i++) {
+    try {
+      client = (typeof sb === 'function' ? sb() : null) || (window.CP && window.CP.sb ? window.CP.sb() : null) || supabase;
+      if (client && typeof client.from === 'function') break;
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  if (!client || typeof client.from !== 'function') {
+    console.error('[property] Supabase client failed to initialize after retry');
+    renderUnavailable('not_found');
+    return;
+  }
+
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('properties')
       .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
-      .eq('id', id)
+      .eq('id', cleanId)
       .single();
-    if (error || !data) throw new Error('Not found');
+    if (error || !data) throw new Error(error ? error.message : 'Not found');
     prop = data;
   } catch (e) {
-    console.error('[property] lookup failed for id=', id, e);
+    console.error('[property] lookup failed for id=', cleanId, e);
     renderUnavailable('not_found');
     return;
   }

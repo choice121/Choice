@@ -1461,7 +1461,23 @@ window.CP.UI = Object.assign(window.CP.UI || {}, UI);
 // Landlord pages and property.html import these by name.
 // Each export delegates to the function defined above - no
 // duplicated logic, no separate window.* assignments needed.
-let _supabaseExport = null;
-try { _supabaseExport = sb(); } catch (_) { /* CONFIG/SDK not ready at module init; use CP.sb() for lazy init */ }
-export { _supabaseExport as supabase };
+// Dynamic Proxy for exported supabase object
+// Prevents null reference errors if module evaluates before config.js/supabase.min.js defer scripts
+const supabaseProxy = new Proxy({}, {
+  get(_target, prop) {
+    const client = sb();
+    const val = client[prop];
+    if (typeof val === 'function') {
+      return val.bind(client);
+    }
+    return val;
+  },
+  set(_target, prop, value) {
+    const client = sb();
+    client[prop] = value;
+    return true;
+  }
+});
+
+export { supabaseProxy as supabase, sb };
 export { Properties, deleteCascade, deleteCascadeBulk, SavedProperties, buildApplyURL, incrementCounter, getSession, getLandlordProfile, requireAuth, signIn, signUp, signOut, resetPassword, updateNav };
