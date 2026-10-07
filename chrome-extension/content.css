@@ -22,6 +22,14 @@
   overflow: hidden;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
   box-sizing: border-box;
+  touch-action: none;
+}
+
+#cp-widget-container.cp-dragging {
+  opacity: 0.98;
+  box-shadow: 0 24px 50px -4px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(99, 102, 241, 0.6);
+  transition: none !important;
+  cursor: grabbing !important;
 }
 
 #cp-widget-container * {
@@ -62,8 +70,30 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: rgba(30, 41, 59, 0.6);
+  background: rgba(30, 41, 59, 0.75);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cp-header:active,
+#cp-widget-container.cp-dragging .cp-header {
+  cursor: grabbing;
+}
+
+.cp-drag-grip {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 2px;
+  color: #64748b;
+  opacity: 0.7;
+  cursor: grab;
+}
+
+.cp-header:hover .cp-drag-grip {
+  color: #94a3b8;
+  opacity: 1;
 }
 
 .cp-brand {
@@ -320,49 +350,63 @@
   color: #f8fafc;
 }
 
-/* Save Action Button */
+/* Save Action Button — High Accessibility & Prominent Hit Area */
 .cp-save-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 11px 16px;
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  min-height: 48px;
+  padding: 13px 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 30%, #4f46e5 100%);
   color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-  transition: all 0.18s ease;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  user-select: none;
+}
+
+.cp-save-action-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .cp-save-action-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+  background: linear-gradient(135deg, #059669 0%, #047857 30%, #4338ca 100%);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 10px 28px rgba(16, 185, 129, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
 }
 
 .cp-save-action-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
 .cp-save-action-btn:disabled {
-  opacity: 0.85;
+  opacity: 0.8;
   cursor: not-allowed;
+  transform: none;
 }
 
 .cp-hotkey-hint {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 5px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  margin-left: 4px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  margin-left: auto;
   letter-spacing: 0.05em;
+  color: #e2e8f0;
 }
 
 /* Progress Box */

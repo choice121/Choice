@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v23.0.0
+// Choice Properties — Live Content Script v24.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '23.0.0-live';
+  var VERSION  = '24.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -64,6 +64,13 @@
         overflow: hidden;
         transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
         box-sizing: border-box;
+        touch-action: none;
+      }
+      #cp-widget-container.cp-dragging {
+        opacity: 0.98;
+        box-shadow: 0 24px 50px -4px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(99, 102, 241, 0.6);
+        transition: none !important;
+        cursor: grabbing !important;
       }
       #cp-widget-container * {
         box-sizing: border-box;
@@ -98,8 +105,27 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 16px;
-        background: rgba(30, 41, 59, 0.6);
+        background: rgba(30, 41, 59, 0.75);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .cp-header:active,
+      #cp-widget-container.cp-dragging .cp-header {
+        cursor: grabbing;
+      }
+      .cp-drag-grip {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 2px;
+        color: #64748b;
+        opacity: 0.7;
+        cursor: grab;
+      }
+      .cp-header:hover .cp-drag-grip {
+        color: #94a3b8;
+        opacity: 1;
       }
       .cp-brand {
         display: flex;
@@ -240,20 +266,28 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 10px;
         width: 100%;
-        height: 44px;
-        border: none;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        min-height: 48px;
+        padding: 13px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 30%, #4f46e5 100%);
         color: #ffffff;
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 14.5px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
         cursor: pointer;
-        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-        transition: transform 0.12s, box-shadow 0.12s, background 0.15s, opacity 0.15s;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+        transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         user-select: none;
         touch-action: manipulation;
+      }
+      .cp-save-action-btn svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
       }
       @media (max-width: 480px) {
         #cp-widget-container {
@@ -272,15 +306,16 @@
         }
       }
       .cp-save-action-btn:hover {
-        background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-        transform: translateY(-1px);
+        background: linear-gradient(135deg, #059669 0%, #047857 30%, #4338ca 100%);
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+        transform: translateY(-2px) scale(1.01);
       }
       .cp-save-action-btn:active {
-        transform: scale(0.97);
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
       }
       .cp-save-action-btn:disabled {
-        opacity: 0.85;
+        opacity: 0.8;
         cursor: not-allowed;
         transform: none !important;
       }
@@ -388,7 +423,7 @@
 
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
-    if (!activeWidget) return;
+    if (!activeWidget || activeWidget._userPositioned) return;
     var bottomOffset = 24;
 
     // Check Zillow's sticky bottom bars or action panels
@@ -600,8 +635,15 @@
 
       <!-- Full Body -->
       <div class="cp-full-body">
-        <div class="cp-header">
+        <div class="cp-header" id="cp-header-bar" title="Drag to move widget anywhere on screen">
           <div class="cp-brand">
+            <span class="cp-drag-grip" title="Drag to move">
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                <circle cx="2" cy="7" r="1.5"/><circle cx="8" cy="7" r="1.5"/>
+                <circle cx="2" cy="12" r="1.5"/><circle cx="8" cy="12" r="1.5"/>
+              </svg>
+            </span>
             <div class="cp-logo-icon">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
             </div>
@@ -635,9 +677,9 @@
             </div>
           </div>
 
-          <!-- Main Action Button -->
-          <button class="cp-save-action-btn" id="cp-btn-save">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <!-- Main Action Button with Large Accessible Hit Area -->
+          <button class="cp-save-action-btn" id="cp-btn-save" title="Save to Choice Pipeline (Cmd/Ctrl+Shift+S)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             <span>Save to Pipeline</span>
           </button>
 
@@ -669,6 +711,80 @@
 
     document.body.appendChild(container);
     activeWidget = container;
+
+    // ── Draggable Window Controller (Move anywhere on screen) ──
+    var headerBar = container.querySelector('#cp-header-bar') || container.querySelector('.cp-header');
+    var isDragging = false;
+    var dragStartX = 0, dragStartY = 0;
+    var initLeft = 0, initTop = 0;
+
+    function handleDragStart(clientX, clientY, target) {
+      if (target && target.closest('.cp-header-btn')) return;
+      isDragging = true;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      var rect = container.getBoundingClientRect();
+      initLeft = rect.left;
+      initTop = rect.top;
+      container.classList.add('cp-dragging');
+      container.style.transition = 'none';
+      container.style.bottom = 'auto';
+      container.style.right = 'auto';
+      container.style.left = initLeft + 'px';
+      container.style.top = initTop + 'px';
+      container._userPositioned = true;
+    }
+
+    function handleDragMove(clientX, clientY) {
+      if (!isDragging) return;
+      var dx = clientX - dragStartX;
+      var dy = clientY - dragStartY;
+      var rect = container.getBoundingClientRect();
+      var maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+      var maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+      var newLeft = Math.min(Math.max(8, initLeft + dx), maxLeft);
+      var newTop = Math.min(Math.max(8, initTop + dy), maxTop);
+      container.style.left = newLeft + 'px';
+      container.style.top = newTop + 'px';
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      container.classList.remove('cp-dragging');
+      container.style.transition = '';
+    }
+
+    if (headerBar) {
+      headerBar.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        handleDragStart(e.clientX, e.clientY, e.target);
+        e.preventDefault();
+      });
+
+      headerBar.addEventListener('touchstart', function (e) {
+        if (e.touches && e.touches.length === 1) {
+          handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+        }
+      }, { passive: true });
+    }
+
+    window.addEventListener('mousemove', function (e) {
+      if (isDragging) {
+        handleDragMove(e.clientX, e.clientY);
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('touchmove', function (e) {
+      if (isDragging && e.touches && e.touches.length === 1) {
+        handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
 
     // Attach Event Listeners
     var minimizeBtn = container.querySelector('#cp-btn-minimize');
@@ -823,7 +939,7 @@
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v23.0.0-live',
+        _import: 'browser-extension-v24.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

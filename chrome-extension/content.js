@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v23.0.0
+// Choice Properties — Universal Content Script & UI Engine v24.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '23.0.0';
+  var VERSION  = '24.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -137,7 +137,7 @@
 
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
-    if (!activeWidget) return;
+    if (!activeWidget || activeWidget._userPositioned) return;
     var bottomOffset = 24;
 
     var stickySelectors = [
@@ -284,8 +284,15 @@
 
       <!-- Full Body -->
       <div class="cp-full-body">
-        <div class="cp-header">
+        <div class="cp-header" id="cp-header-bar" title="Drag to move widget anywhere on screen">
           <div class="cp-brand">
+            <span class="cp-drag-grip" title="Drag to move">
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                <circle cx="2" cy="7" r="1.5"/><circle cx="8" cy="7" r="1.5"/>
+                <circle cx="2" cy="12" r="1.5"/><circle cx="8" cy="12" r="1.5"/>
+              </svg>
+            </span>
             <div class="cp-logo-icon">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
             </div>
@@ -344,9 +351,9 @@
             </div>
           </div>
 
-          <!-- Main Action Button with Hotkey Hint -->
-          <button class="cp-save-action-btn" id="cp-btn-save">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <!-- Main Action Button with Large Hit Area & Hotkey Hint -->
+          <button class="cp-save-action-btn" id="cp-btn-save" title="Save to Choice Pipeline (Cmd/Ctrl+Shift+S)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             <span>Save to Pipeline</span>
             <span class="cp-hotkey-hint">${IS_MOBILE ? '' : '⌘⇧S'}</span>
           </button>
@@ -379,6 +386,80 @@
 
     document.body.appendChild(container);
     activeWidget = container;
+
+    // ── Draggable Window Controller (Move anywhere on screen) ──
+    var headerBar = container.querySelector('#cp-header-bar') || container.querySelector('.cp-header');
+    var isDragging = false;
+    var dragStartX = 0, dragStartY = 0;
+    var initLeft = 0, initTop = 0;
+
+    function handleDragStart(clientX, clientY, target) {
+      if (target && target.closest('.cp-header-btn')) return;
+      isDragging = true;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      var rect = container.getBoundingClientRect();
+      initLeft = rect.left;
+      initTop = rect.top;
+      container.classList.add('cp-dragging');
+      container.style.transition = 'none';
+      container.style.bottom = 'auto';
+      container.style.right = 'auto';
+      container.style.left = initLeft + 'px';
+      container.style.top = initTop + 'px';
+      container._userPositioned = true;
+    }
+
+    function handleDragMove(clientX, clientY) {
+      if (!isDragging) return;
+      var dx = clientX - dragStartX;
+      var dy = clientY - dragStartY;
+      var rect = container.getBoundingClientRect();
+      var maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+      var maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+      var newLeft = Math.min(Math.max(8, initLeft + dx), maxLeft);
+      var newTop = Math.min(Math.max(8, initTop + dy), maxTop);
+      container.style.left = newLeft + 'px';
+      container.style.top = newTop + 'px';
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      container.classList.remove('cp-dragging');
+      container.style.transition = '';
+    }
+
+    if (headerBar) {
+      headerBar.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        handleDragStart(e.clientX, e.clientY, e.target);
+        e.preventDefault();
+      });
+
+      headerBar.addEventListener('touchstart', function (e) {
+        if (e.touches && e.touches.length === 1) {
+          handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+        }
+      }, { passive: true });
+    }
+
+    window.addEventListener('mousemove', function (e) {
+      if (isDragging) {
+        handleDragMove(e.clientX, e.clientY);
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('touchmove', function (e) {
+      if (isDragging && e.touches && e.touches.length === 1) {
+        handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
 
     // Attach Event Listeners
     var minimizeBtn = container.querySelector('#cp-btn-minimize');

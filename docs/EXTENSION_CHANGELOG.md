@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v24.0.0] - 2026-10-07
+### Enhanced Accessible Save to Pipeline Button & 360° Draggable Widget Interface
+- **Prominent Accessible Save Button**: Completely overhauled the "Save to Pipeline" action button design. Upgraded with an ergonomic pill shape, large 48px+ click/tap target, high-contrast emerald-indigo gradient (`linear-gradient(135deg, #10b981 0%, #059669 30%, #4f46e5 100%)`), larger 20px action icon, bold 14.5px typography, glowing hover aura, and clear shortcut pill (`⌘⇧S`). Eliminates difficult mouse targeting and provides effortless one-click saves.
+- **360° Draggable Widget Window**: Added full dragging support to the floating extension HUD. Users can click-and-drag or touch-and-drag the top header bar anywhere across the screen (left, right, up, down) with smooth boundary clamping so it never obscures critical listing details. Position is remembered during the session and prevents collision jumps.
+- **Drag Grip Indicator & Cursors**: Added a 6-dot drag grip affordance to the header brand bar, dynamic `cursor: grab` and `cursor: grabbing` states, and smooth drag physics.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing (29/29 tests).
+
+---
+
 ## [v22.0.0] - 2026-10-07
 ### Deep Feature Traversal, Narrative Fallback Extraction, Architectural Precision & Prohibited Badge Blacklist
 - **Deep Zillow resoFacts Traversal**: Added recursive inspection of `resoFacts.features`, `resoFacts.featureCategories`, and `resoFacts.atAGlanceFacts` to capture appliances, parking, garage spaces, flooring, laundry, and HVAC regardless of which nesting level Zillow places them in.
