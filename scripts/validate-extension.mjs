@@ -33,8 +33,8 @@ function checkVersionedPackage(name, relativeDir, requiredFiles) {
   const manifest = manifestResult.value;
   if (!manifest) return null;
   if (manifest.manifest_version !== 3) failures.push(`${name}: manifest_version must be 3`);
-  if (!/^18\.\d+\.\d+$/.test(manifest.version || '')) {
-    failures.push(`${name}: expected a v18 semantic version, got ${manifest.version}`);
+  if (!/^\d+\.\d+\.\d+$/.test(manifest.version || '')) {
+    failures.push(`${name}: expected a semantic version, got ${manifest.version}`);
   }
   for (const file of requiredFiles) requireFile(path.join(relativeDir, file));
   for (const script of manifest.background?.service_worker ? [manifest.background.service_worker] : []) {

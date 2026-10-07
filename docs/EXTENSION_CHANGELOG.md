@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v20.0.0] - 2026-10-07
+### Universal Portal Fidelity, Verbatim Source Titles, 3D Panoramas & Architectural Parity
+- **Verbatim Source Titles**: Property titles strictly preserve authentic source listing titles and headlines without synthetic reconstruction or artificial template tags, aligning with Zillow listing standards.
+- **Universal 3D Virtual Tour & Panorama Extraction**: Extracted 3D tours, Matterport models, Zillow 3D Home/IMX walkthroughs, InsideMaps, and video tours into `virtual_tour_url` across all 8 supported rental portals.
+- **Architectural Property Type Parity**: Standardized property classification (`SINGLE_FAMILY`, `DUPLEX`, `TOWNHOUSE`, `CONDO`, `APARTMENT`) matching source structural reality.
+- **Dual Package & Schema Parity**: Chromium and Orion extensions synchronized with updated pipeline edge ingestion and public display interfaces.
+
 ## [v18.0.14] - 2026-10-07
 ### Zillow Full Fidelity Extraction, Zero Bathroom Truncation & Complete Attribute Forwarding
 - **Full Attribute Ingestion**: Browser extension payload now captures and forwards the complete suite of property details parsed from Zillow (appliances, amenities, flooring, utilities included, heating type, cooling type, laundry type, parking/garage spaces, basement, central air, lot size, stories, and neighborhood).

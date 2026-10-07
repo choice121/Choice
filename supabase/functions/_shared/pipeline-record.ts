@@ -253,9 +253,13 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
 
   const title = safeStr(body.title) ??
-    ((body.bedrooms ? `${body.bedrooms}BR ` : '') +
-     (propType ?? 'Rental') +
-     (body.city ? ` in ${body.city}` : ''));
+    (safeStr(body.address)
+      ? (safeStr(body.city) && safeStr(body.state)
+          ? `${safeStr(body.address)}, ${safeStr(body.city)}, ${safeStr(body.state)}`
+          : safeStr(body.address))
+      : ((body.bedrooms ? `${body.bedrooms}BR ` : '') +
+         (propType ?? 'Rental') +
+         (body.city ? ` in ${body.city}` : '')));
 
   const originalData = JSON.stringify({
     zpid:        body.source_listing_id,

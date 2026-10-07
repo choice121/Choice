@@ -175,11 +175,31 @@
     if (text.includes('townhouse') || text.includes('townhome') || text.includes('rowhouse')) {
       return 'TOWNHOUSE';
     }
+    if (text.includes('apartment') || text.includes('unit complex') || text.includes('multi-family')) {
+      if (!text.includes('single family') && !text.includes('single-family')) {
+        return 'APARTMENT';
+      }
+    }
     const t = (homeType || '').toUpperCase().replace(/[^A-Z_]/g, '_');
     return TYPE_MAP[t] || t || 'SINGLE_FAMILY';
   }
-  function buildTitle(beds, propType, city, street) {
-    return city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : (street || 'Rental Listing');
+  function buildTitle(beds, propType, city, street, rawTitle, state, zip) {
+    if (rawTitle && typeof rawTitle === 'string' && rawTitle.trim().length > 3) {
+      const clean = rawTitle.trim();
+      if (!/^\d+BR\s+(?:SINGLE|APARTMENT|HOUSE|TOWNHOME|CONDO|DUPLEX|Rental)/i.test(clean)) {
+        return clean;
+      }
+    }
+    if (street && typeof street === 'string' && street.trim()) {
+      const s = street.trim();
+      if (city && state) {
+        return `${s}, ${city}, ${state}${zip ? ' ' + zip : ''}`;
+      } else if (city) {
+        return `${s}, ${city}`;
+      }
+      return s;
+    }
+    return city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : 'Rental Listing';
   }
 
   function cleanForSaleText(text) {
@@ -280,7 +300,7 @@
     let yr       = prop.yearBuilt || rf.yearBuilt || null;
     const hood   = prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null;
     const county = prop.county || addr.county || null;
-    const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || null;
+    const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || (prop.view3dHomeId ? 'https://www.zillow.com/view-3d-home/' + prop.view3dHomeId : null) || null;
     const propType = detectPropType(prop.homeType, rawDesc, prop.title || '');
 
     const ctxParts = [];
@@ -381,8 +401,8 @@
     }
 
     const zTitle = (prop.title && String(prop.title).trim()) ||
-      (street ? (city ? street + ', ' + city + ', ' + state + ' ' + zip : street).trim() : null) ||
-      buildTitle(beds, propType, city, street);
+      (street ? (city ? street + ', ' + city + ', ' + state + (zip ? ' ' + zip : '') : street).trim() : null) ||
+      buildTitle(beds, propType, city, street, null, state, zip);
 
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
       title: zTitle,
@@ -659,7 +679,7 @@
     const rawDomDesc = (description || '') + ' ' + summaryText;
     const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
     const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '');
-    const domTitle = (h1El && h1El.textContent.trim()) || buildTitle(beds, domPropType, city, address);
+    const domTitle = (h1El && h1El.textContent.trim()) || buildTitle(beds, domPropType, city, address, null, state, zip);
 
     return basePayload('zillow', sourceId, url, {
       title: domTitle,
@@ -767,8 +787,10 @@
       if (u && !photos.includes(u)) photos.unshift(u);
     }
 
+    const rTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, propType, city, street, null, state, zip);
+
     return basePayload('realtor', String(prop.property_id || prop.rdc_web_url || ''), url, {
-      title: buildTitle(beds, propType, city, street),
+      title: rTitle,
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.list_price, null),
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -776,10 +798,11 @@
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,
       description: prop.description || prop.text || null,
+      original_description: prop.description || prop.text || null,
       neighborhood: prop.neighborhood_name || null,
       county: prop.county || null,
       available_date: parseDate(prop.available_date || prop.date_available),
-      virtual_tour_url: prop.virtual_tour_url || null,
+      virtual_tour_url: prop.virtual_tour_url || prop.tour3d_url || (Array.isArray(prop.virtual_tours) && prop.virtual_tours[0] && (prop.virtual_tours[0].href || prop.virtual_tours[0].url)) || null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -821,9 +844,10 @@
     const yr     = prop.yearBuilt || null;
 
     const photos = collectPhotoUrls(prop, ['photos', 'images']);
+    const aptTitle = (prop.name && String(prop.name).trim()) || (prop.title && String(prop.title).trim()) || buildTitle(beds, 'APARTMENT', city, street, null, state, zip);
 
     return basePayload('apartments', String(prop.id || ''), url, {
-      title: buildTitle(beds, 'APARTMENT', city, street),
+      title: aptTitle,
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.minPrice, null),
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -831,9 +855,11 @@
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: 'APARTMENT',
       description: prop.description || null,
+      original_description: prop.description || null,
       neighborhood: prop.neighborhood || null,
       pets_allowed: prop.petsAllowed != null ? !!prop.petsAllowed : null,
       available_date: parseDate(prop.availableDate || prop.availabilityDate),
+      virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || (Array.isArray(prop.videos) && prop.videos[0] && (prop.videos[0].url || prop.videos[0].src)) || null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -876,9 +902,10 @@
     const propType = detectPropType(prop.propertyType || prop.homeType, rawDesc, prop.title || '');
 
     const photos = collectPhotoUrls(prop, ['photos', 'images', 'media']);
+    const rfTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, propType, city, street, null, state, zip);
 
     return basePayload('redfin', String(prop.propertyId || prop.id || ''), url, {
-      title: buildTitle(beds, propType, city, street),
+      title: rfTitle,
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.rent, null),
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -886,9 +913,10 @@
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,
       description: prop.description || null,
+      original_description: prop.description || null,
       neighborhood: prop.neighborhood || null,
       available_date: parseDate(prop.availableDate || prop.dateAvailable),
-      virtual_tour_url: prop.virtualTourUrl || null,
+      virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1060,8 +1088,10 @@
     const rent = parseRent(prop.price || prop.listPrice || prop.estimatedRent || prop.rent, null) || (dom ? dom.monthly_rent : null);
     const sourceId = String(prop.id || prop.listingId || prop.homeId || idFromUrl);
 
+    const odTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, propType, city, street, null, state, zip);
+
     return basePayload('opendoor', sourceId, url, {
-      title: buildTitle(beds, propType, city, street),
+      title: odTitle,
       address: street, city, state, zip, lat, lng,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -1078,6 +1108,7 @@
       hoa_fee: prop.hoaFee != null ? safeI(prop.hoaFee) : (dom ? dom.hoa_fee : null),
       garage_spaces: prop.garageSpaces != null ? safeI(prop.garageSpaces) : (dom ? dom.garage_spaces : null),
       available_date: parseDate(prop.availableDate || prop.listDate || (dom ? dom.available_date : null)),
+      virtual_tour_url: prop.virtualTourUrl || prop.tour3d || (dom ? dom.virtual_tour_url : null) || null,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1292,8 +1323,10 @@
         } catch (_) {}
       }
 
+      const prTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, 'SINGLE_FAMILY', city, street, null, state, zip);
+
       return basePayload('progress_residential', String(prop.id || prop.propertyId || idFromUrl), url, {
-        title: buildTitle(beds, 'SINGLE_FAMILY', city, street),
+        title: prTitle,
         address: street, city, state, zip,
         monthly_rent: rent,
         bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
@@ -1301,8 +1334,10 @@
         year_built: yr ? parseInt(String(yr), 10) : null,
         property_type: 'SINGLE_FAMILY',
         description: prop.description || prop.overview || null,
+        original_description: prop.description || prop.overview || null,
         pets_allowed: true,
         available_date: parseDate(prop.availableDate || prop.readyDate),
+        virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || (dom ? dom.virtual_tour_url : null) || null,
         original_image_urls: JSON.stringify(photos.slice(0, 50)),
       });
     }
@@ -1391,14 +1426,17 @@
       });
     });
 
+    const prDomTitle = buildTitle(beds, 'SINGLE_FAMILY', city, street, fullHeading, state, zip);
+
     return basePayload('progress_residential', idFromUrl, url, {
-      title: buildTitle(beds, 'SINGLE_FAMILY', city, street),
+      title: prDomTitle,
       address: street, city, state, zip,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft,
       property_type: 'SINGLE_FAMILY',
       description: rawDesc || null,
+      original_description: rawDesc || null,
       pets_allowed: true,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
@@ -1523,14 +1561,17 @@
       if (src && src.startsWith('http') && !photos.includes(src)) photos.push(src);
     });
 
+    const cjTitle = (doc && doc.querySelector && doc.querySelector('.listing-title, .property-title, h1, .rental-title')?.textContent?.trim()) || buildTitle(beds, propType, city, street, fullTitle, state, zip);
+
     return basePayload('cj_real_estate', idFromUrl, url, {
-      title: buildTitle(beds, propType, city, street),
+      title: cjTitle,
       address: street, city, state, zip,
       monthly_rent: rent,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
       square_footage: sqft,
       property_type: propType,
       description: rawDesc || null,
+      original_description: rawDesc || null,
       pets_allowed: true,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });

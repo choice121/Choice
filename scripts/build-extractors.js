@@ -269,10 +269,10 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   else if (typeof rawPrice === 'string') { const d = rawPrice.replace(/[^0-9]/g, ''); rent = d ? parseInt(d, 10) : null; }
   if (!rent && prop.rentZestimate) rent = parseInt(String(prop.rentZestimate), 10) || null;
 
-  // Bathrooms
+  // Bathrooms (Decimal precision without truncation per Rule 6A)
   const bathsRaw = prop.bathrooms ?? prop.baths ?? null;
-  const bathF = bathsRaw != null ? Math.floor(Number(bathsRaw)) : null;
-  const bathH = bathsRaw != null && Number(bathsRaw) !== bathF ? 1 : null;
+  const bathVal = bathsRaw != null ? parseFloat(String(bathsRaw)) : null;
+  const bathH = bathVal != null && (bathVal % 1 !== 0) ? 1 : null;
 
   // Lot size → sqft
   let lotSqft: number | null = null;
@@ -335,10 +335,13 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     if (!t) return 'Rental';
     return t.replace(/_/g, ' ').replace(/\\b\\w/g, (c: string) => c.toUpperCase());
   }
-  const city = addr.city || prop.city || '';
-  const title = city
-    ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city)
-    : (addr.streetAddress || prop.streetAddress || 'Zillow Rental');
+  const streetAddr = addr.streetAddress || prop.streetAddress;
+  const title = (prop.title && String(prop.title).trim()) ||
+    (streetAddr
+      ? (city && (addr.state || prop.state)
+          ? \`\${streetAddr}, \${city}, \${addr.state || prop.state}\${addr.zipcode || prop.zipcode ? ' ' + (addr.zipcode || prop.zipcode) : ''}\`
+          : (city ? \`\${streetAddr}, \${city}\` : streetAddr))
+      : (city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : 'Zillow Rental'));
 
   return {
     source: 'zillow',
@@ -353,9 +356,9 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     lng: prop.longitude || (prop.latLong as Record<string, unknown> | null)?.longitude || null,
     monthly_rent: rent,
     bedrooms: beds != null ? Number(beds) : null,
-    bathrooms: bathF,
+    bathrooms: bathVal,
     half_bathrooms: bathH,
-    total_bathrooms: bathF,
+    total_bathrooms: bathVal,
     square_footage: prop.livingArea || prop.area || null,
     lot_size_sqft: lotSqft,
     year_built: prop.yearBuilt || rf.yearBuilt || null,
@@ -391,7 +394,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     laundry_type: (rf.laundryFeatures as string[] | undefined)?.join(', ') || null,
     has_basement: basement,
     has_central_air: centralAir,
-    virtual_tour_url: prop.virtualTourUrl || prop.threeDimensionalTourUrl || null,
+    virtual_tour_url: prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || null,
     original_image_urls: JSON.stringify(photosCapped),
     agent_name: ai.agentName || null,
     broker_name: ai.brokerName || null,

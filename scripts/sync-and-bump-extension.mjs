@@ -157,6 +157,9 @@ updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
 updateTextFile(path.join(ROOT, 'chrome-extension', 'README.md'), [
   [/^# Choice Properties — Universal Chrome Extension \(v[^)]+\)/m, `# Choice Properties — Universal Chrome Extension (v${newVersion})`],
 ]);
+updateTextFile(path.join(ROOT, 'README.md'), [
+  [/\(v[0-9.]+\s*—\s*1-click stage\)/, `(v${newVersion} — 1-click stage)`],
+]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'live-content.js'), [
   [/browser-extension-v[0-9.]+-live/g, `browser-extension-v${newVersion}-live`],
 ]);
