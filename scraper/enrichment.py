@@ -512,11 +512,14 @@ _FREE_APP_RE = re.compile(
     |   apply\s+for\s+free                                # apply for free
     |   no\s+(?:application\s+|app\s+)?fee               # no application fee, no app fee, no fee
     |   \$\s*0\.?0*\s+(?:application\s+|app\s+)?fee      # $0 application fee, $0.00 fee
+    |   \b0\s+(?:application\s+|app\s+)?fee              # 0 application fee, 0 app fee
     |   zero\s+(?:application\s+|app\s+)?fee              # zero application fee
     |   complimentary\s+application                       # complimentary application
     |   application\s+(?:is\s+)?free                      # application is free, application free
+    |   (?:application|app)\s+fee\s+(?:is\s+|of\s+|:\s*)?0\b # application fee is 0
     |   fee[- ]?free\s+application                        # fee-free application
     |   free\s+application                                # free application
+    |   (?:application\s+|app\s+)?fee\s+(?:will\s+be\s+|is\s+)?waived # fee will be waived
     )
     [^.!?\n]*                                             # rest of the sentence
     [.!?\n]?                                              # optional sentence terminator

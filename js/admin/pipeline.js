@@ -54,24 +54,29 @@
       failures.push('Monthly rent looks incorrect ($' + monthlyRent + ') — please verify');
     }
 
-    // 3. Free-application language in description
-    const freeAppRe = /free\s+(?:to\s+)?apply|apply\s+for\s+free|no\s+(?:application\s+|app\s+)?fee|\$\s*0\.?0*\s+(?:application\s+|app\s+)?fee|zero\s+(?:application\s+)?fee|complimentary\s+application|application\s+(?:is\s+)?free|fee[- ]?free\s+application|free\s+application/i;
+    // 2b. Application fee structured field must be exactly 50
+    if (listing.application_fee != null && Number(listing.application_fee) !== 50) {
+      failures.push('Application fee must be $50 (currently $' + listing.application_fee + ')');
+    }
+
+    // 3. Free-application / zero-fee language in description
+    const freeAppRe = /free\s+(?:to\s+)?apply|apply\s+for\s+free|no\s+(?:application\s+|app\s+)?fee|\$?\s*0\.?0*\s+(?:application\s+|app\s+)?fee|\b0\s+(?:application\s+|app\s+)?fee|zero\s+(?:application\s+)?fee|complimentary\s+application|(?:application|app)\s+fee\s+(?:is\s+|of\s+|:\s*)?0\b|application\s+(?:is\s+)?free|fee[- ]?free\s+application|free\s+application|(?:application\s+|app\s+)?fee\s+(?:will\s+be\s+|is\s+)?waived/i;
     if (freeAppRe.test(desc)) {
-      failures.push('Description contains free-application language (must say "Application Fee: $50")');
+      failures.push('Description contains zero/free/waived application fee language (must say "$50 application fee" or "Application Fee: $50")');
     }
 
     // 4. Non-$50 application fee amount in description
-    // Two patterns: trailing-dollar ("application fee: $35") and
-    //               leading-dollar  ("$35 application fee").
+    // Checks trailing amount ("application fee: $35", "application fee of 35") and
+    // leading amount ("$35 application fee", "35 application fee").
     const _feeAmounts = [];
-    const _feePat1 = /(?:application|app)\s+fee[:\s]+\$?\s*(\d+(?:\.\d{2})?)/gi;
-    const _feePat2 = /\$\s*(\d+(?:\.\d{2})?)\s+(?:application|app)\s+fee/gi;
+    const _feePat1 = /(?:application|app)\s+fee(?:\s+is|\s+of|:|\s+)\s*\$?\s*(\d+(?:\.\d{2})?)/gi;
+    const _feePat2 = /\$?\s*(\d+(?:\.\d{2})?)\s+(?:application|app)\s+fee/gi;
     let _fm;
     while ((_fm = _feePat1.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
     while ((_fm = _feePat2.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
     _feeAmounts.forEach(function(amt) {
       if (Math.abs(amt - 50) > 0.01) {
-        failures.push('Description references a non-$50 application fee ($' + amt + ')');
+        failures.push('Description references a non-$50 application fee (' + (amt === 0 ? 'zero/0' : '$' + amt) + ') — must be $50');
       }
     });
 
