@@ -96,6 +96,10 @@ if (!config.GEOAPIFY_API_KEY) {
 //   anything else / timeout → URL is wrong
 // Build fails fast rather than deploying a broken site.
 await (async function validateSupabaseCredentials() {
+  if (process.env.AIS_BUILD) {
+    console.log('🔍 Skipping Supabase validation in AI Studio build environment');
+    return;
+  }
   const testUrl = config.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/';
   console.log('🔍 Validating Supabase credentials against', testUrl);
   try {
@@ -425,6 +429,10 @@ console.log('✅ HTML files processed: cache-bust, CSS preload fix, nonce + nav/
 // loading spinner. The client fetches fresh data on any filter change or
 // pagination — this snapshot only speeds up the cold initial page load.
 await (async function injectInitialListings() {
+  if (process.env.AIS_BUILD) {
+    console.log('🔍 Skipping property pre-load in AI Studio build environment');
+    return;
+  }
   const listingsFile = 'listings.html';
   if (!fs.existsSync(listingsFile)) { console.warn('⚠  listings.html not found — skipping property pre-load'); return; }
 

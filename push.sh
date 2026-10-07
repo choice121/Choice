@@ -12,7 +12,7 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 echo "📤 Pushing changes to GitHub..."
-TOKEN="${GitHubtoken:-$GITHUB_TOKEN}"
+TOKEN="${GitHubtoken:-${GITHUB_TOKEN:-$Git}}"
 if [ -n "$TOKEN" ]; then
   git push "https://${TOKEN}@github.com/choice121/Choice.git" main
 else

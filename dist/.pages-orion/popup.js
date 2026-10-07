@@ -24,6 +24,7 @@
       /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(tab.url) ||
       /opendoor\.com\/(?:homes|properties|listings)\//i.test(tab.url) ||
       /rentprogress\.com\/(?:houses-for-rent|homes|properties|rental-homes)\//i.test(tab.url) ||
+      /invitationhomes\.com\/(?:property|homes-for-rent|houses-for-rent)\//i.test(tab.url) ||
       /(?:cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(tab.url)
     );
 

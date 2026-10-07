@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v18.0.14] - 2026-10-07
+### Zillow Full Fidelity Extraction, Zero Bathroom Truncation & Complete Attribute Forwarding
+- **Full Attribute Ingestion**: Browser extension payload now captures and forwards the complete suite of property details parsed from Zillow (appliances, amenities, flooring, utilities included, heating type, cooling type, laundry type, parking/garage spaces, basement, central air, lot size, stories, and neighborhood).
+- **Original Description Preservation**: Permanent immutable anchor of the raw, unmodified listing text (`original_description`) is captured and forwarded into the pipeline and public database.
+- **Zero Bathroom Truncation**: Fractional bathroom values (`1.5`, `2.5`, `3.5`) are fully preserved end-to-end without rounding down to integer values, across extractors, pipeline records, database schema, and public rendering.
+- **Pipeline Publish Full Fidelity**: `pipeline_publish` database function now transfers photos directly to `public.property_photos` with display ordering, and transfers `flooring`, `total_bathrooms`, and `original_description` into `public.properties`.
+- **Public Display Resilience**: `js/property.js` safely normalizes amenities, appliances, flooring, and utilities into robust arrays regardless of incoming format (array, string, JSON).
+
 ## [v18.0.13] - 2026-09-29
 ### Invitation Homes Live Routes & Progress Residential AEM Reliability
 - **Invitation Homes activation**: Added the current `/houses-for-rent/...` listing route to the canonical extractor, content-script widget detection, and popup supported-listing status so the Save to Pipeline action appears on live listings.

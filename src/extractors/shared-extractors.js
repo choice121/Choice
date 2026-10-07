@@ -216,7 +216,7 @@
       pet_types_allowed: null, available_date: null, listed_at: null, minimum_lease_months: null,
       smoking_allowed: null, security_deposit: null, pet_deposit: null, admin_fee: null,
       parking_fee: null, application_fee: null, hoa_fee: null, last_months_rent: null,
-      move_in_special: null, parking: null, amenities: null, appliances: null,
+      move_in_special: null, parking: null, amenities: null, appliances: null, flooring: null,
       utilities_included: null, heating_type: null, cooling_type: null, laundry_type: null,
       virtual_tour_url: null, has_basement: null, has_central_air: null,
       original_image_urls: '[]', agent_name: null, broker_name: null,
@@ -287,6 +287,17 @@
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
     if (prop.transitScore != null) ctxParts.push('Transit score: ' + prop.transitScore);
     if (prop.bikeScore    != null) ctxParts.push('Bike score: '    + prop.bikeScore);
+
+    const schoolList = [];
+    if (rf.elementarySchool) schoolList.push('Elementary: ' + rf.elementarySchool);
+    if (rf.middleOrJuniorSchool) schoolList.push('Middle: ' + rf.middleOrJuniorSchool);
+    if (rf.highSchool) schoolList.push('High: ' + rf.highSchool);
+    if (Array.isArray(rf.schools)) {
+      rf.schools.forEach(s => {
+        if (s && s.name) schoolList.push(s.name + (s.level ? ' (' + s.level + ')' : ''));
+      });
+    }
+    if (schoolList.length) ctxParts.push('Schools: ' + schoolList.slice(0, 3).join(', '));
 
     const amenityMap = {};
     const addA = (v) => { if (v && typeof v === 'string') { const t = v.trim(); if (t) amenityMap[t] = true; } };
@@ -359,11 +370,25 @@
       else if (/\byear\b|12[\s-]*month|annual/.test(lt)) minLease = 12;
     }
 
+    let flooring = null;
+    if (rf.flooring && Array.isArray(rf.flooring)) flooring = JSON.stringify(rf.flooring);
+    else if (rf.flooring) flooring = JSON.stringify([String(rf.flooring)]);
+    else if (factMap['flooring']) flooring = JSON.stringify(factMap['flooring'].split(',').map(s => s.trim()));
+
+    let utilitiesInc = rf.utilities || rf.utilitiesIncluded || [];
+    if ((!utilitiesInc || !utilitiesInc.length) && factMap['utilities']) {
+      utilitiesInc = factMap['utilities'].split(',').map(s => s.trim());
+    }
+
+    const zTitle = (prop.title && String(prop.title).trim()) ||
+      (street ? (city ? street + ', ' + city + ', ' + state + ' ' + zip : street).trim() : null) ||
+      buildTitle(beds, propType, city, street);
+
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
-      title: buildTitle(beds, propType, city, street),
+      title: zTitle,
       address: street, city, state, zip, lat, lng,
       monthly_rent: parseRent(prop.price || prop.unformattedPrice, prop.rentZestimate),
-      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH,
+      bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH, total_bathrooms: bathVal,
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       lot_size_sqft: lotSizeSqft,
@@ -372,6 +397,7 @@
       total_units: safeI(prop.unitCount),
       property_type: propType,
       description: prop.description || null,
+      original_description: prop.description || rf.description || null,
       neighborhood: hood, county,
       location_context: ctxParts.length ? ctxParts.join('; ') : null,
       pets_allowed: pets,
@@ -390,7 +416,8 @@
       parking,
       amenities: JSON.stringify(Object.keys(amenityMap)),
       appliances: JSON.stringify(appliances),
-      utilities_included: JSON.stringify(rf.utilities || rf.utilitiesIncluded || []),
+      flooring,
+      utilities_included: JSON.stringify(utilitiesInc),
       heating_type: heatingType,
       cooling_type: coolingType,
       laundry_type: laundryType,
@@ -481,6 +508,7 @@
         ? 'SINGLE_FAMILY'
         : normalizeType(prop['@type'] || 'APARTMENT'),
       description: desc,
+      original_description: desc,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
     });
   }
@@ -628,16 +656,22 @@
 
     if (!address && !price) return null;
 
+    const rawDomDesc = (description || '') + ' ' + summaryText;
+    const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
+    const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '');
+    const domTitle = (h1El && h1El.textContent.trim()) || buildTitle(beds, domPropType, city, address);
+
     return basePayload('zillow', sourceId, url, {
-      title: buildTitle(beds, 'APARTMENT', city, address),
+      title: domTitle,
       address: address || 'Zillow Property',
       city: city || null,
       state: state || null,
       zip: zip || null,
       monthly_rent: price,
       bedrooms: beds,
-      bathrooms: baths ? Math.floor(baths) : null,
-      half_bathrooms: baths && (baths % 1 !== 0) ? 1 : null,
+      bathrooms: domBaths,
+      half_bathrooms: domHalf,
+      total_bathrooms: domBaths,
       square_footage: sqft,
       year_built: yr,
       heating_type: heatingType,
@@ -646,8 +680,9 @@
       lot_size_sqft: lotSizeSqft,
       pets_allowed: pets,
       pet_types_allowed: petTypes.length ? JSON.stringify(petTypes) : null,
-      property_type: 'APARTMENT',
+      property_type: domPropType,
       description,
+      original_description: description || null,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
       _import: 'zillow-dom-deep-scanner'
     });

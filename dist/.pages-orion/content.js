@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Orion Content Bridge v18.0.9
+// Choice Properties — Orion Content Bridge v18.0.14
 //
 // The bundled live UI is loaded by manifest.json before this bridge. Keeping
 // the UI local means an unavailable Pages request cannot disable the extension.
@@ -15,7 +15,7 @@
     var data = event && event.data;
     if (event.source !== window || !data || data.type !== 'CP_DOWNLOAD_PHOTO') return;
     if (!data.requestId || typeof data.url !== 'string') return;
-    if (!/^https:\/\/([a-z0-9-]+\.)?(zillowstatic\.com|rdcpix\.com|apartments\.com|redfin\.com|cdn-redfin\.com|opendoor\.com|cloudinary\.com|rentprogress\.com|fastly\.net|amazonaws\.com|cjproperties\.org|cjrealestate\.com|appfolio\.com)\//i.test(data.url)) return;
+    if (!/^https:\/\/([a-z0-9-]+\.)?(zillowstatic\.com|rdcpix\.com|apartments\.com|redfin\.com|cdn-redfin\.com|opendoor\.com|cloudinary\.com|rentprogress\.com|fastly\.net|amazonaws\.com|cjproperties\.org|cjrealestate\.com|appfolio\.com|invitationhomes\.com)\//i.test(data.url)) return;
     try {
       EXTENSION_API.runtime.sendMessage(
         { type: 'DOWNLOAD_PHOTO', url: data.url },

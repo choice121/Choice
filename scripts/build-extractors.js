@@ -78,6 +78,7 @@ export interface ZillowExtracted {
   bedrooms: number | null;
   bathrooms: number | null;
   half_bathrooms: number | null;
+  total_bathrooms: number | null;
   square_footage: number | null;
   lot_size_sqft: number | null;
   year_built: number | null;
@@ -86,6 +87,7 @@ export interface ZillowExtracted {
   total_units: number | null;
   property_type: string | null;
   description: string | null;
+  original_description: string | null;
   neighborhood: string | null;
   county: string | null;
   location_context: string | null;
@@ -105,6 +107,7 @@ export interface ZillowExtracted {
   parking: string | null;
   amenities: string | null;
   appliances: string | null;
+  flooring: string | null;
   utilities_included: string | null;
   heating_type: string | null;
   cooling_type: string | null;
@@ -352,6 +355,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     bedrooms: beds != null ? Number(beds) : null,
     bathrooms: bathF,
     half_bathrooms: bathH,
+    total_bathrooms: bathF,
     square_footage: prop.livingArea || prop.area || null,
     lot_size_sqft: lotSqft,
     year_built: prop.yearBuilt || rf.yearBuilt || null,
@@ -360,6 +364,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     total_units: prop.unitCount || prop.numberOfUnitsTotal || null,
     property_type: propType,
     description: prop.description || null,
+    original_description: prop.description || rf.description || null,
     neighborhood: prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null,
     county: prop.county || addr.county || null,
     location_context: ctxParts.length ? ctxParts.join('; ') : null,
@@ -379,6 +384,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     parking,
     amenities: JSON.stringify(Object.keys(amenityMap)),
     appliances: JSON.stringify(rf.appliances || []),
+    flooring: rf.flooring ? JSON.stringify(Array.isArray(rf.flooring) ? rf.flooring : [String(rf.flooring)]) : null,
     utilities_included: JSON.stringify(rf.utilities || rf.utilitiesIncluded || []),
     heating_type: (rf.heating as string[] | undefined)?.join(', ') || null,
     cooling_type: (rf.cooling as string[] | undefined)?.join(', ') || null,

@@ -130,8 +130,8 @@
 
     // ── Specs row — beds + baths + sqft (sqft is a key decision factor) ─
     var specParts = [];
-    if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed') + '</span>');
-    if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath</span>');
+    if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed' + (Number(p.bedrooms) === 1 ? '' : 's')) + '</span>');
+    if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath' + (Number(p.bathrooms) === 1 ? '' : 's') + '</span>');
     if (p.square_footage)   specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>' + Number(p.square_footage).toLocaleString() + ' sqft</span>');
     var specsHtml = specParts.map(function (s, i) {
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;

@@ -402,7 +402,6 @@ function renderProperty(p) {
       "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
-    "leaseLength": p.lease_terms?.length ? p.lease_terms.join(", ") : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
     "potentialAction": {
       "@type": "RentAction",
@@ -496,7 +495,8 @@ function renderProperty(p) {
   const metas = [];
   if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
   if (p.bathrooms) {
-    const bathVal = p.half_bathrooms
+    const numBaths = Number(p.bathrooms);
+    const bathVal = (p.half_bathrooms && Number.isInteger(numBaths))
       ? `${p.bathrooms} + ½`
       : p.bathrooms;
     metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
@@ -559,6 +559,25 @@ function renderProperty(p) {
   }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
+
+  const safeArr = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_) {}
+      return val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  p.amenities = safeArr(p.amenities);
+  p.appliances = safeArr(p.appliances);
+  p.flooring = safeArr(p.flooring);
+  p.utilities_included = safeArr(p.utilities_included);
+  p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
     hasAmenities = true;
@@ -710,15 +729,20 @@ function renderProperty(p) {
 
   const _availEl = document.getElementById('sidebarAvail');
   const _availStickyEl = document.getElementById('sidebarStickyAvail');
-  const availText = availNow ? 'Available Now' : 'Available ' + formatDate(p.available_date);
-  const availColor = availNow ? '#10b981' : '#d4a017';
-  if (_availEl) {
-    _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availEl.style.display = '';
-  }
-  if (_availStickyEl) {
-    _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-    _availStickyEl.style.display = '';
+  if (!availNow && p.available_date) {
+    const availText = 'Available ' + formatDate(p.available_date);
+    const availColor = '#d4a017';
+    if (_availEl) {
+      _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
+      _availEl.style.display = '';
+    }
+    if (_availStickyEl) {
+      _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
+      _availStickyEl.style.display = '';
+    }
+  } else {
+    if (_availEl) _availEl.style.display = 'none';
+    if (_availStickyEl) _availStickyEl.style.display = 'none';
   }
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
@@ -2808,7 +2832,6 @@ function buildAdminEditDrawer(prop) {
       half_bathrooms:       int('adwHalfBaths'),
       square_footage:       int('adwSqft'),
       year_built:           int('adwYearBuilt'),
-      minimum_lease_months: int('adwMinLease'),
       laundry_type:         document.getElementById('adwLaundry')?.value || null,
       heating_type:         document.getElementById('adwHeating')?.value || null,
       cooling_type:         document.getElementById('adwCooling')?.value || null,
@@ -3279,11 +3302,13 @@ function renderPropFacts(p) {
 
   // ── Cards — only fields NOT already in meta strip or tabs ──────────────
 
-  // Move-in: available (future date only — if now, header chip already says so)
+  // Move-in: available (future date only — never show "Available Now" or "Immediate")
   const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
-  const moveInCard = card('Move-in', 'fa-key', [
-    row('Available',   availNow ? 'Immediate' : formatDate(p.available_date)),
-  ]);
+  const moveInCard = !availNow && p.available_date
+    ? card('Move-in', 'fa-key', [
+        row('Available', formatDate(p.available_date)),
+      ])
+    : '';
 
   // Interior: heating / cooling / laundry
   // (flooring excluded — already in Amenities tab; beds/baths/sqft excluded — in meta strip)

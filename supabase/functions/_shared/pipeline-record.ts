@@ -66,6 +66,19 @@ export function safeStr(v: unknown): string | null {
   return s || null;
 }
 
+export function safeJsonStr(v: unknown): string | null {
+  if (v === null || v === undefined || v === '') return null;
+  if (Array.isArray(v) || (typeof v === 'object' && v !== null)) {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return null;
+    }
+  }
+  const s = String(v).trim();
+  return s || null;
+}
+
 export function safeBool(v: unknown): boolean | null {
   if (v === null || v === undefined) return null;
   if (typeof v === 'boolean') return v;
@@ -277,9 +290,9 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     // Property details
     property_type:        propType,
     bedrooms:             safeInt(body.bedrooms),
-    bathrooms:            safeInt(body.bathrooms),
+    bathrooms:            safeFloat(body.bathrooms),
     half_bathrooms:       safeInt(body.half_bathrooms),
-    total_bathrooms:      safeFloat(body.bathrooms),
+    total_bathrooms:      safeFloat(body.total_bathrooms) ?? safeFloat(body.bathrooms),
     square_footage:       safeInt(body.square_footage),
     lot_size_sqft:        safeInt(body.lot_size_sqft),
     year_built:           safeInt(body.year_built),
@@ -308,28 +321,28 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     showing_instructions: safeStr(body.showing_instructions),
     available_date:       availDate,
     minimum_lease_months: safeInt(body.minimum_lease_months),
-    lease_terms:          safeStr(body.lease_terms) ?? '[]',
+    lease_terms:          safeJsonStr(body.lease_terms) ?? '[]',
 
     // Pets & policies
     pets_allowed:         safeBool(body.pets_allowed),
-    pet_types_allowed:    safeStr(body.pet_types_allowed) ?? '[]',
+    pet_types_allowed:    safeJsonStr(body.pet_types_allowed) ?? '[]',
     pet_weight_limit:     safeInt(body.pet_weight_limit),
     pet_details:          safeStr(body.pet_details),
     smoking_allowed:      safeBool(body.smoking_allowed),
 
     // Amenities & features
     parking:              safeStr(body.parking),
-    amenities:            safeStr(body.amenities) ?? '[]',
-    appliances:           safeStr(body.appliances) ?? '[]',
-    utilities_included:   safeStr(body.utilities_included) ?? '[]',
-    flooring:             safeStr(body.flooring) ?? '[]',
+    amenities:            safeJsonStr(body.amenities) ?? '[]',
+    appliances:           safeJsonStr(body.appliances) ?? '[]',
+    utilities_included:   safeJsonStr(body.utilities_included) ?? '[]',
+    flooring:             safeJsonStr(body.flooring) ?? '[]',
     heating_type:         safeStr(body.heating_type),
     cooling_type:         safeStr(body.cooling_type),
     laundry_type:         safeStr(body.laundry_type),
 
     // Photos
-    original_image_urls:  safeStr(body.original_image_urls) ?? '[]',
-    local_image_paths:    safeStr(body.local_image_paths) ?? '[]',
+    original_image_urls:  safeJsonStr(body.original_image_urls) ?? '[]',
+    local_image_paths:    safeJsonStr(body.local_image_paths) ?? '[]',
 
     // Agent / broker
     agent_name:           safeStr(body.agent_name),

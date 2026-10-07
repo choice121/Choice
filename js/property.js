@@ -560,6 +560,25 @@ function renderProperty(p) {
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
+  const safeArr = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_) {}
+      return val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  p.amenities = safeArr(p.amenities);
+  p.appliances = safeArr(p.appliances);
+  p.flooring = safeArr(p.flooring);
+  p.utilities_included = safeArr(p.utilities_included);
+  p.pet_types_allowed = safeArr(p.pet_types_allowed);
+
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities

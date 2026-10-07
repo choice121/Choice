@@ -4,15 +4,15 @@
   "private": true,
   "description": "Choice Properties — Nationwide rental property marketplace. Deployed exclusively to Cloudflare Pages.",
   "scripts": {
-    "build": "node generate-config.js && node scripts/copy-static-to-dist.js",
+    "build": "AIS_BUILD=true node generate-config.js && AIS_BUILD=true node scripts/copy-static-to-dist.js",
     "bump-extension": "node scripts/sync-and-bump-extension.mjs",
     "validate-extension": "node scripts/validate-extension.mjs",
     "lint": "node -e \"console.log('Linting passed')\"",
     "setup-credentials": "node scripts/open-setup.mjs",
     "load-credentials": "node scripts/setup-credentials.mjs",
     "setup-direct": "node setup-direct.mjs",
-    "dev": "node serve.js",
-    "start": "node serve.js"
+    "dev": "AIS_BUILD=true node serve.js",
+    "start": "AIS_BUILD=true node serve.js"
   },
   "engines": {
     "node": ">=18"

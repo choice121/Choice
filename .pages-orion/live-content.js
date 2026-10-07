@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v18.0.13
+// Choice Properties — Live Content Script v18.0.14
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '18.0.13-live';
+  var VERSION  = '18.0.14-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -801,6 +801,10 @@
       }
       photoUrls = dedupePhotoUrls(photoUrls);
 
+      var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
+      var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
+      var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
+
       var payload = {
         source: extracted.source || 'zillow',
         source_listing_id: extracted.source_listing_id,
@@ -812,20 +816,47 @@
         zip: extracted.zip,
         lat: extracted.lat,
         lng: extracted.lng,
-        monthly_rent: extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent,
+        monthly_rent: rentVal,
         bedrooms: extracted.bedrooms != null ? extracted.bedrooms : extracted.beds,
-        bathrooms: extracted.bathrooms != null ? extracted.bathrooms : extracted.baths,
+        bathrooms: bathsVal,
         half_bathrooms: extracted.half_bathrooms,
+        total_bathrooms: totalBathsVal,
         square_footage: extracted.square_footage != null ? extracted.square_footage : extracted.sqft,
         lot_size_sqft: extracted.lot_size_sqft != null ? extracted.lot_size_sqft : extracted.lot_sqft,
         year_built: extracted.year_built,
+        floors: extracted.floors,
+        garage_spaces: extracted.garage_spaces,
+        total_units: extracted.total_units,
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
+        original_description: extracted.original_description || extracted.description,
         available_date: extracted.available_date,
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
+        security_deposit: rentVal,
+        last_months_rent: extracted.last_months_rent,
+        move_in_special: extracted.move_in_special,
+        parking_fee: extracted.parking_fee,
+        hoa_fee: extracted.hoa_fee,
+        amenities: typeof extracted.amenities === 'string' ? extracted.amenities : JSON.stringify(extracted.amenities || []),
+        appliances: typeof extracted.appliances === 'string' ? extracted.appliances : JSON.stringify(extracted.appliances || []),
+        flooring: typeof extracted.flooring === 'string' ? extracted.flooring : (extracted.flooring ? JSON.stringify(extracted.flooring) : null),
+        utilities_included: typeof extracted.utilities_included === 'string' ? extracted.utilities_included : JSON.stringify(extracted.utilities_included || []),
+        parking: extracted.parking,
+        heating_type: extracted.heating_type,
+        cooling_type: extracted.cooling_type,
+        laundry_type: extracted.laundry_type,
+        has_basement: extracted.has_basement,
+        has_central_air: extracted.has_central_air,
+        neighborhood: extracted.neighborhood,
+        county: extracted.county,
+        location_context: extracted.location_context,
+        virtual_tour_url: extracted.virtual_tour_url,
+        agent_name: extracted.agent_name,
+        broker_name: extracted.broker_name,
+        listed_at: extracted.listed_at,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v18.0.13-live',
+        _import: 'browser-extension-v18.0.14-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
