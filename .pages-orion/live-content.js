@@ -37,8 +37,130 @@
   var currentExtractedData = null;
   var renderedListingSignature = '';
   var listingGeneration = 0;
+  var cachedFolders = [];
+  var activeDefaultFolder = null;
+  var isSaving = false;
   var listingRefreshTimer = null;
   var hydrationRefreshTimers = [];
+
+  // ── Fast In-Memory, Extension Storage & LocalStorage Folder Cache ───────────────
+  function getCachedFolders() {
+    if (cachedFolders && cachedFolders.length > 0) return cachedFolders;
+    try {
+      var localData = localStorage.getItem('cp_pipeline_folders_cache');
+      if (localData) {
+        var parsed = JSON.parse(localData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedFolders = parsed;
+          return cachedFolders;
+        }
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  function setCachedFolders(folders) {
+    if (!Array.isArray(folders)) return;
+    cachedFolders = folders;
+    try {
+      localStorage.setItem('cp_pipeline_folders_cache', JSON.stringify(folders));
+    } catch (e) {}
+    try {
+      if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
+        EXTENSION_API.storage.local.set({ cp_folders_cache: folders });
+      }
+    } catch (e) {}
+  }
+
+  function getDefaultFolderSync() {
+    if (activeDefaultFolder) return activeDefaultFolder;
+    try {
+      var raw = localStorage.getItem('cp_default_folder');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.id || parsed.name != null)) {
+          activeDefaultFolder = parsed;
+          return activeDefaultFolder;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function setDefaultFolder(folder) {
+    activeDefaultFolder = folder && (folder.id || folder.name != null)
+      ? { id: folder.id || null, name: String(folder.name != null ? folder.name : ''), description: folder.description || '' }
+      : null;
+    try {
+      if (activeDefaultFolder) {
+        localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder));
+      } else {
+        localStorage.removeItem('cp_default_folder');
+      }
+    } catch (e) {}
+    try {
+      if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+        EXTENSION_API.runtime.sendMessage({ type: 'SET_DEFAULT_FOLDER', folder: activeDefaultFolder });
+      }
+    } catch (e) {}
+  }
+
+  async function apiListFolders() {
+    if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          EXTENSION_API.runtime.sendMessage({ type: 'LIST_FOLDERS' }, function (resp) {
+            resolve(EXTENSION_API.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && Array.isArray(bgRes.folders)) {
+        return bgRes.folders;
+      }
+    }
+    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+    var res = await fetch(url);
+    if (res.ok) {
+      var data = await res.json();
+      if (data && Array.isArray(data.folders)) return data.folders;
+    }
+    return null;
+  }
+
+  async function apiCreateFolder(name, description) {
+    var rawName = name != null ? String(name) : '';
+    var rawDesc = description != null ? String(description) : '';
+    if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          EXTENSION_API.runtime.sendMessage({
+            type: 'CREATE_FOLDER',
+            name: rawName,
+            description: rawDesc
+          }, function (resp) {
+            resolve(EXTENSION_API.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && bgRes.id) {
+        return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
+      }
+    }
+    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+      body: JSON.stringify({
+        action: 'create_folder',
+        name: rawName,
+        description: rawDesc
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data && data.ok && data.id) {
+      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
+    }
+    throw new Error((data && data.error) || 'Failed to create folder');
+  }
 
   // ── Inject Custom Styles ────────────────────────────────────
   function injectStyles() {
@@ -261,6 +383,274 @@
       }
       .cp-inspector-item strong {
         color: #e2e8f0;
+      }
+      /* Folder Pill & Auto-Collapsing Folder Popover */
+      .cp-folder-bar {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cp-folder-pill-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 7px 11px;
+        background: rgba(30, 41, 59, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 10px;
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.16s ease;
+        user-select: none;
+        text-align: left;
+      }
+      .cp-folder-pill-trigger:hover {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(99, 102, 241, 0.45);
+      }
+      .cp-folder-pill-trigger.cp-folder-active {
+        background: rgba(99, 102, 241, 0.16);
+        border-color: rgba(129, 140, 248, 0.4);
+      }
+      .cp-folder-pill-left {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        flex: 1;
+      }
+      .cp-folder-pill-icon {
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .cp-folder-pill-text {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .cp-folder-pill-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+      .cp-folder-pill-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-folder-active .cp-folder-pill-name {
+        color: #c7d2fe;
+      }
+      .cp-folder-pill-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #818cf8;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: rgba(99, 102, 241, 0.14);
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+      .cp-folder-pill-trigger:hover .cp-folder-pill-action {
+        background: rgba(99, 102, 241, 0.28);
+        color: #c7d2fe;
+      }
+      .cp-folder-popover {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+      }
+      .cp-folder-popover.cp-open {
+        display: flex;
+      }
+      .cp-folder-popover-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cp-folder-popover-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #a5b4fc;
+      }
+      .cp-folder-popover-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 15px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        line-height: 1;
+      }
+      .cp-folder-popover-close:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .cp-folder-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 135px;
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+      .cp-folder-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 7px 9px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: rgba(30, 41, 59, 0.55);
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+      }
+      .cp-folder-item:hover {
+        background: rgba(51, 65, 85, 0.75);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+      .cp-folder-item.cp-selected {
+        background: rgba(99, 102, 241, 0.22);
+        border-color: rgba(129, 140, 248, 0.45);
+        color: #ffffff;
+        font-weight: 700;
+      }
+      .cp-folder-item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+        flex: 1;
+      }
+      .cp-folder-item-name {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-folder-item-desc {
+        font-size: 10px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 400;
+      }
+      .cp-folder-item-check {
+        color: #34d399;
+        font-size: 12px;
+        font-weight: 800;
+        margin-left: 6px;
+        flex-shrink: 0;
+      }
+      .cp-folder-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 2px 0;
+      }
+      .cp-folder-create-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 8px;
+        border: 1px dashed rgba(129, 140, 248, 0.45);
+        background: rgba(99, 102, 241, 0.1);
+        color: #a5b4fc;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-folder-create-toggle:hover {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: #818cf8;
+        color: #e0e7ff;
+      }
+      .cp-folder-create-form {
+        display: none;
+        flex-direction: column;
+        gap: 7px;
+        padding-top: 2px;
+      }
+      .cp-folder-create-form.cp-open {
+        display: flex;
+      }
+      .cp-folder-input {
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(15, 23, 42, 0.9);
+        color: #f8fafc;
+        font-size: 12px;
+        font-family: inherit;
+        outline: none;
+      }
+      .cp-folder-input::placeholder {
+        color: #64748b;
+      }
+      .cp-folder-input:focus {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+      }
+      .cp-folder-form-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .cp-folder-btn-cancel {
+        flex: 1;
+        padding: 7px 10px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: #cbd5e1;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .cp-folder-btn-submit {
+        flex: 1.5;
+        padding: 7px 12px;
+        border-radius: 7px;
+        border: none;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-folder-btn-submit:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
       }
       .cp-save-action-btn {
         display: flex;
@@ -624,6 +1014,12 @@
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
+    var defaultFolder = getDefaultFolderSync();
+    var currentFolderLabel = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+      ? String(defaultFolder.name)
+      : 'Main Inbox (Default)';
+    var isCustomFolderActive = Boolean(defaultFolder && (defaultFolder.id || (defaultFolder.name != null && String(defaultFolder.name) !== '')));
+
     container.innerHTML = `
       <!-- Minimized State Trigger -->
       <div class="cp-mini-trigger" id="cp-expand-trigger" title="Click to expand Choice Properties importer">
@@ -677,6 +1073,44 @@
             </div>
           </div>
 
+          <!-- Compact Folder Pill & Auto-Collapsing Popover -->
+          <div class="cp-folder-bar">
+            <button type="button" class="cp-folder-pill-trigger ${isCustomFolderActive ? 'cp-folder-active' : ''}" id="cp-folder-pill-btn" title="Click to switch folder or create a new folder">
+              <div class="cp-folder-pill-left">
+                <span class="cp-folder-pill-icon">📁</span>
+                <div class="cp-folder-pill-text">
+                  <span class="cp-folder-pill-label">Folder:</span>
+                  <span class="cp-folder-pill-name" id="cp-folder-pill-name">${escapeHtml(currentFolderLabel)}</span>
+                </div>
+              </div>
+              <span class="cp-folder-pill-action" id="cp-folder-pill-action">Change / + New ▾</span>
+            </button>
+
+            <div class="cp-folder-popover" id="cp-folder-popover">
+              <div class="cp-folder-popover-header">
+                <span class="cp-folder-popover-title">Target Pipeline Folder</span>
+                <button type="button" class="cp-folder-popover-close" id="cp-folder-popover-close" title="Close">×</button>
+              </div>
+
+              <div class="cp-folder-list" id="cp-folder-list"></div>
+
+              <div class="cp-folder-divider"></div>
+
+              <button type="button" class="cp-folder-create-toggle" id="cp-folder-create-toggle">
+                <span>+ Create New Folder</span>
+              </button>
+
+              <div class="cp-folder-create-form" id="cp-folder-create-form">
+                <input type="text" id="cp-new-folder-name" class="cp-folder-input" placeholder="Folder name (e.g. 1, 102, Columbus)" autocomplete="off" />
+                <input type="text" id="cp-new-folder-desc" class="cp-folder-input" placeholder="Description (optional)" autocomplete="off" />
+                <div class="cp-folder-form-actions">
+                  <button type="button" class="cp-folder-btn-cancel" id="cp-folder-btn-cancel">Cancel</button>
+                  <button type="button" class="cp-folder-btn-submit" id="cp-folder-btn-create">Create &amp; Set Default</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Main Action Button with Large Accessible Hit Area -->
           <button class="cp-save-action-btn" id="cp-btn-save" title="Save to Choice Pipeline (Cmd/Ctrl+Shift+S)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -698,7 +1132,7 @@
           <div class="cp-success-box" id="cp-success-box">
             <div class="cp-success-banner">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>Saved to Choice Pipeline!</span>
+              <span id="cp-success-text">Saved to Choice Pipeline!</span>
             </div>
             <div class="cp-success-actions">
               <a class="cp-btn-secondary" id="cp-copy-link-btn" href="javascript:void(0)">Copy Link</a>
@@ -796,6 +1230,193 @@
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
+    // Folder UI Elements
+    var folderPillBtn = container.querySelector('#cp-folder-pill-btn');
+    var folderPillName = container.querySelector('#cp-folder-pill-name');
+    var folderPillAction = container.querySelector('#cp-folder-pill-action');
+    var folderPopover = container.querySelector('#cp-folder-popover');
+    var folderPopoverClose = container.querySelector('#cp-folder-popover-close');
+    var folderListEl = container.querySelector('#cp-folder-list');
+    var folderCreateToggle = container.querySelector('#cp-folder-create-toggle');
+    var folderCreateForm = container.querySelector('#cp-folder-create-form');
+    var newFolderNameInput = container.querySelector('#cp-new-folder-name');
+    var newFolderDescInput = container.querySelector('#cp-new-folder-desc');
+    var folderBtnCancel = container.querySelector('#cp-folder-btn-cancel');
+    var folderBtnCreate = container.querySelector('#cp-folder-btn-create');
+
+    function closeFolderPopover() {
+      if (!folderPopover) return;
+      folderPopover.classList.remove('cp-open');
+      if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+      if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      if (folderPillAction) folderPillAction.textContent = 'Change / + New ▾';
+    }
+
+    function updateFolderPillDisplay() {
+      var def = getDefaultFolderSync();
+      if (def && (def.id || (def.name != null && String(def.name) !== ''))) {
+        if (folderPillName) folderPillName.textContent = String(def.name);
+        if (folderPillBtn) folderPillBtn.classList.add('cp-folder-active');
+      } else {
+        if (folderPillName) folderPillName.textContent = 'Main Inbox (Default)';
+        if (folderPillBtn) folderPillBtn.classList.remove('cp-folder-active');
+      }
+    }
+
+    function renderFolderList() {
+      if (!folderListEl) return;
+      var folders = getCachedFolders();
+      var def = getDefaultFolderSync();
+      var selectedId = def && def.id ? String(def.id) : '';
+      var selectedName = def && def.name != null ? String(def.name) : '';
+
+      var html = '';
+      var isInboxSelected = !selectedId && !selectedName;
+      html += '<button type="button" class="cp-folder-item ' + (isInboxSelected ? 'cp-selected' : '') + '" data-folder-id="" data-folder-name="">' +
+        '<div class="cp-folder-item-main">' +
+          '<div class="cp-folder-item-name">📥 Main Inbox (Default)</div>' +
+          '<div class="cp-folder-item-desc">Unassigned pipeline staging</div>' +
+        '</div>' +
+        (isInboxSelected ? '<span class="cp-folder-item-check">✓</span>' : '') +
+      '</button>';
+
+      folders.forEach(function (f) {
+        if (!f) return;
+        var fId = f.id ? String(f.id) : '';
+        var fName = f.name != null ? String(f.name) : '';
+        var fDesc = f.description != null ? String(f.description) : '';
+        var isSel = (selectedId && fId === selectedId) || (!selectedId && selectedName && fName === selectedName);
+        html += '<button type="button" class="cp-folder-item ' + (isSel ? 'cp-selected' : '') + '" data-folder-id="' + escapeHtml(fId) + '" data-folder-name="' + escapeHtml(fName) + '" data-folder-desc="' + escapeHtml(fDesc) + '">' +
+          '<div class="cp-folder-item-main">' +
+            '<div class="cp-folder-item-name">' + escapeHtml(f.icon || '📁') + ' ' + escapeHtml(fName) + '</div>' +
+            (fDesc ? '<div class="cp-folder-item-desc">' + escapeHtml(fDesc) + '</div>' : '') +
+          '</div>' +
+          (isSel ? '<span class="cp-folder-item-check">✓</span>' : '') +
+        '</button>';
+      });
+
+      folderListEl.innerHTML = html;
+
+      var items = folderListEl.querySelectorAll('.cp-folder-item');
+      items.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var fId = btn.getAttribute('data-folder-id') || '';
+          var fName = btn.getAttribute('data-folder-name') || '';
+          var fDesc = btn.getAttribute('data-folder-desc') || '';
+          if (!fId && !fName) {
+            setDefaultFolder(null);
+          } else {
+            setDefaultFolder({ id: fId || null, name: fName, description: fDesc });
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
+          closeFolderPopover();
+        });
+      });
+    }
+
+    renderFolderList();
+
+    if (folderPillBtn) {
+      folderPillBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = folderPopover && folderPopover.classList.contains('cp-open');
+        if (isOpen) {
+          closeFolderPopover();
+        } else if (folderPopover) {
+          renderFolderList();
+          folderPopover.classList.add('cp-open');
+          if (folderPillAction) folderPillAction.textContent = 'Close ▴';
+        }
+      });
+    }
+
+    if (folderPopoverClose) {
+      folderPopoverClose.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeFolderPopover();
+      });
+    }
+
+    if (folderCreateToggle) {
+      folderCreateToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        folderCreateToggle.style.display = 'none';
+        if (folderCreateForm) {
+          folderCreateForm.classList.add('cp-open');
+          if (newFolderNameInput) newFolderNameInput.focus();
+        }
+      });
+    }
+
+    if (folderBtnCancel) {
+      folderBtnCancel.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+        if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      });
+    }
+
+    [newFolderNameInput, newFolderDescInput].forEach(function (inp) {
+      if (!inp) return;
+      inp.addEventListener('keydown', function (e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (folderBtnCreate) folderBtnCreate.click();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeFolderPopover();
+        }
+      });
+    });
+
+    if (folderBtnCreate) {
+      folderBtnCreate.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        var rawName = newFolderNameInput ? String(newFolderNameInput.value) : '';
+        var rawDesc = newFolderDescInput ? String(newFolderDescInput.value) : '';
+        if (!rawName.length) {
+          rawName = '1';
+        }
+        folderBtnCreate.disabled = true;
+        folderBtnCreate.textContent = 'Creating…';
+        try {
+          var created = await apiCreateFolder(rawName, rawDesc);
+          var folderObj = {
+            id: created && created.id ? created.id : null,
+            name: created && created.name != null ? String(created.name) : rawName,
+            description: rawDesc,
+            icon: '📁'
+          };
+          var existingList = getCachedFolders().filter(function (f) {
+            return f && f.id !== folderObj.id && String(f.name) !== String(folderObj.name);
+          });
+          existingList.unshift(folderObj);
+          setCachedFolders(existingList);
+          setDefaultFolder(folderObj);
+          updateFolderPillDisplay();
+          renderFolderList();
+          if (newFolderNameInput) newFolderNameInput.value = '';
+          if (newFolderDescInput) newFolderDescInput.value = '';
+          closeFolderPopover();
+        } catch (err) {
+          var fallbackObj = { id: null, name: rawName, description: rawDesc, icon: '📁' };
+          var list = getCachedFolders();
+          list.unshift(fallbackObj);
+          setCachedFolders(list);
+          setDefaultFolder(fallbackObj);
+          updateFolderPillDisplay();
+          renderFolderList();
+          closeFolderPopover();
+        } finally {
+          folderBtnCreate.disabled = false;
+          folderBtnCreate.textContent = 'Create & Set Default';
+        }
+      });
+    }
+
     minimizeBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       container.classList.add('cp-minimized');
@@ -834,18 +1455,61 @@
     });
 
     updateWidgetPosition();
+
+    // Sync Default Folder & Revalidate Folders in background
+    (async function fetchFolders() {
+      try {
+        if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+          EXTENSION_API.runtime.sendMessage({ type: 'GET_DEFAULT_FOLDER' }, function (resp) {
+            if (!EXTENSION_API.runtime.lastError && resp && resp.ok) {
+              if (resp.defaultFolder && !activeDefaultFolder) {
+                activeDefaultFolder = resp.defaultFolder;
+                try { localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder)); } catch (_) {}
+                updateFolderPillDisplay();
+                renderFolderList();
+              }
+              if (Array.isArray(resp.folders) && resp.folders.length > 0 && cachedFolders.length === 0) {
+                setCachedFolders(resp.folders);
+                renderFolderList();
+              }
+            }
+          });
+        }
+        var foldersList = await apiListFolders();
+        if (Array.isArray(foldersList) && foldersList.length > 0) {
+          setCachedFolders(foldersList);
+          var def = getDefaultFolderSync();
+          if (def && !def.id && def.name != null) {
+            var matched = foldersList.find(function (f) { return f && String(f.name) === String(def.name); });
+            if (matched && matched.id) {
+              setDefaultFolder({ id: matched.id, name: matched.name, description: matched.description || def.description });
+            }
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
+        }
+      } catch (e) {}
+    })();
   }
 
   // ── Save Execution Flow ─────────────────────────────────────
   async function handleSave() {
+    if (isSaving) return;
     var saveBtn = document.querySelector('#cp-btn-save');
     var progressBox = document.querySelector('#cp-progress-box');
     var progressStatus = document.querySelector('#cp-progress-status');
     var progressCount = document.querySelector('#cp-progress-count');
     var progressFill = document.querySelector('#cp-progress-fill');
     var successBox = document.querySelector('#cp-success-box');
+    var successText = document.querySelector('#cp-success-text');
 
     if (!saveBtn) return;
+    isSaving = true;
+
+    var openPopover = document.querySelector('#cp-folder-popover.cp-open');
+    if (openPopover) {
+      openPopover.classList.remove('cp-open');
+    }
 
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="cp-spinner"></span> <span>Saving to pipeline…</span>';
@@ -860,6 +1524,7 @@
 
       if (!extracted) {
         setError('Could not extract listing');
+        isSaving = false;
         return;
       }
 
@@ -868,6 +1533,7 @@
       var liveExtracted = extractCurrentListing();
       if (!liveExtracted) {
         setError('Listing is still loading');
+        isSaving = false;
         return;
       }
       var liveSignature = extractionSignature(liveExtracted);
@@ -875,6 +1541,7 @@
         currentExtractedData = liveExtracted;
         injectWidget(liveExtracted);
         setError('Listing changed; refreshed');
+        isSaving = false;
         return;
       }
 
@@ -883,6 +1550,20 @@
         photoUrls = extracted.photo_urls;
       }
       photoUrls = dedupePhotoUrls(photoUrls);
+
+      var defaultFolder = getDefaultFolderSync();
+      var selectedFolderId = defaultFolder && defaultFolder.id ? String(defaultFolder.id) : null;
+      var selectedFolderName = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+        ? String(defaultFolder.name)
+        : null;
+
+      if (selectedFolderId || selectedFolderName) {
+        setDefaultFolder({
+          id: selectedFolderId,
+          name: selectedFolderName || '',
+          description: (defaultFolder && defaultFolder.description) || ''
+        });
+      }
 
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
@@ -938,11 +1619,14 @@
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
+        folder_id: selectedFolderId,
+        folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
         _import: 'browser-extension-v26.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+        isSaving = false;
         setError('Listing payload is too large');
         return;
       }
@@ -952,30 +1636,56 @@
 
       if (resp && resp.queued) {
         saveBtn.style.display = 'none';
-        var queuedBanner = successBox.querySelector('.cp-success-banner span');
-        if (queuedBanner) queuedBanner.textContent = 'Queued for pipeline sync';
+        if (successText) successText.textContent = 'Queued for pipeline sync';
         successBox.style.display = 'flex';
+        isSaving = false;
       } else if (resp && resp.ok) {
-        // Record created successfully!
         saveBtn.style.display = 'none';
-        var resultBanner = successBox.querySelector('.cp-success-banner span');
-        if (resultBanner && resp.photos_queued) {
-          resultBanner.textContent = 'Saved to Choice Pipeline • Photos processing';
+        if (resp.folder && resp.folder.name != null) {
+          if (resp.folder.folder_id) {
+            setDefaultFolder({
+              id: resp.folder.folder_id,
+              name: String(resp.folder.name),
+              description: (defaultFolder && defaultFolder.description) || ''
+            });
+          }
+          if (successText) {
+            successText.textContent = 'Saved to ' + resp.folder.name + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+          }
+        }
+        if (resp.photos_queued && successText) {
+          successText.textContent = (successText.textContent || 'Saved to Choice Pipeline') + ' • Photos processing';
         }
         successBox.style.display = 'flex';
+        isSaving = false;
       } else if (resp && resp.duplicate) {
-        saveBtn.innerHTML = '<span>Already in Pipeline</span>';
-        saveBtn.style.background = '#b45309';
+        isSaving = false;
+        if (resp.folder && resp.folder.folder) {
+          if (resp.folder.folder_id) {
+            setDefaultFolder({
+              id: resp.folder.folder_id,
+              name: String(resp.folder.folder),
+              description: (defaultFolder && defaultFolder.description) || ''
+            });
+          }
+          saveBtn.innerHTML = '<span>Updated Folder (' + escapeHtml(String(resp.folder.folder).slice(0, 14)) + ')</span>';
+          saveBtn.style.background = '#059669';
+        } else {
+          saveBtn.innerHTML = '<span>Already in Pipeline</span>';
+          saveBtn.style.background = '#b45309';
+        }
         setTimeout(function () {
           saveBtn.innerHTML = '<span>Save to Pipeline</span>';
           saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
           saveBtn.disabled = false;
         }, 4000);
       } else {
+        isSaving = false;
         setError(resp && resp.error ? resp.error.slice(0, 45) : 'Save failed');
       }
     } catch (e) {
       console.error('[CP] handleSave error:', e);
+      isSaving = false;
       setError('Network connection error');
     }
   }

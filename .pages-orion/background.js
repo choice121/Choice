@@ -488,6 +488,112 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })();
     return true;
   }
+
+  if (msg.type === 'LIST_FOLDERS') {
+    (async () => {
+      try {
+        const res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders', {
+          method: 'GET',
+          headers: { 'x-import-secret': SECRET },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && Array.isArray(data.folders)) {
+          try {
+            if (chrome.storage && chrome.storage.local) {
+              await chrome.storage.local.set({ cp_folders_cache: data.folders });
+            }
+          } catch (_) {}
+          sendResponse({ ok: true, folders: data.folders });
+        } else {
+          sendResponse({ ok: false, error: (data && data.error) || 'Failed to list folders' });
+        }
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === 'CREATE_FOLDER') {
+    (async () => {
+      try {
+        const name = msg.name != null ? String(msg.name) : '';
+        const description = msg.description != null ? String(msg.description) : '';
+        const res = await fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+          body: JSON.stringify({
+            action: 'create_folder',
+            name: name,
+            description: description,
+            color: msg.color || '#6366f1',
+            icon: msg.icon || '📁',
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.ok && data.id) {
+          const newFolder = {
+            id: data.id,
+            name: data.name != null ? String(data.name) : name,
+            description: description,
+            icon: msg.icon || '📁',
+            color: msg.color || '#6366f1',
+          };
+          try {
+            if (chrome.storage && chrome.storage.local) {
+              const stored = await chrome.storage.local.get({ cp_folders_cache: [] });
+              const list = Array.isArray(stored.cp_folders_cache) ? stored.cp_folders_cache : [];
+              const filtered = list.filter(f => f && f.id !== newFolder.id);
+              filtered.unshift(newFolder);
+              await chrome.storage.local.set({
+                cp_folders_cache: filtered,
+                cp_default_folder: { id: newFolder.id, name: newFolder.name, description: newFolder.description }
+              });
+            }
+          } catch (_) {}
+          sendResponse({ ok: true, folder: newFolder, id: newFolder.id, name: newFolder.name });
+        } else {
+          sendResponse({ ok: false, error: (data && data.error) || 'Folder creation failed' });
+        }
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === 'GET_DEFAULT_FOLDER') {
+    (async () => {
+      try {
+        if (chrome.storage && chrome.storage.local) {
+          const data = await chrome.storage.local.get({ cp_default_folder: null, cp_folders_cache: [] });
+          sendResponse({
+            ok: true,
+            defaultFolder: data.cp_default_folder || null,
+            folders: Array.isArray(data.cp_folders_cache) ? data.cp_folders_cache : [],
+          });
+          return;
+        }
+      } catch (_) {}
+      sendResponse({ ok: true, defaultFolder: null, folders: [] });
+    })();
+    return true;
+  }
+
+  if (msg.type === 'SET_DEFAULT_FOLDER') {
+    (async () => {
+      try {
+        const folder = msg.folder || null;
+        if (chrome.storage && chrome.storage.local) {
+          await chrome.storage.local.set({ cp_default_folder: folder });
+        }
+        sendResponse({ ok: true, defaultFolder: folder });
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
 });
 
 // Flush queue when network comes back online
