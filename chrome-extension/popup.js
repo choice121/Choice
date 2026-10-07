@@ -38,39 +38,49 @@
     const versionPill = document.getElementById('ext-version-pill');
     const exportBtn = document.getElementById('export-queue-btn');
 
-    // Default to local manifest first
-    if (versionPill && chrome.runtime && chrome.runtime.getManifest) {
+    // Authoritative installed manifest version
+    let installedVersion = '';
+    if (chrome.runtime && chrome.runtime.getManifest) {
       try {
         const manifest = chrome.runtime.getManifest();
         if (manifest && manifest.version) {
-          versionPill.textContent = 'v' + manifest.version;
+          installedVersion = manifest.version;
+          if (versionPill) versionPill.textContent = 'v' + manifest.version;
         }
       } catch (_) {}
     }
 
-    // Live Cloud Sync: fetch latest version & status from live deployment
-    (async function syncLiveVersion() {
+    // Helper for semver comparison
+    function isSemverGreater(newer, current) {
+      if (!newer || !current) return false;
+      const nParts = String(newer).split('.').map(x => parseInt(x, 10) || 0);
+      const cParts = String(current).split('.').map(x => parseInt(x, 10) || 0);
+      for (let i = 0; i < Math.max(nParts.length, cParts.length); i++) {
+        const n = nParts[i] || 0;
+        const c = cParts[i] || 0;
+        if (n > c) return true;
+        if (n < c) return false;
+      }
+      return false;
+    }
+
+    // Live Cloud Check: notify if a newer version is deployed without overwriting the installed version pill
+    (async function checkCloudUpdates() {
       try {
         const metaRes = await fetch('https://choice-properties-site.pages.dev/extension-meta.json?_t=' + Date.now(), { cache: 'no-store' });
         if (metaRes.ok) {
           const meta = await metaRes.json();
           if (meta && meta.version && versionPill) {
-            versionPill.textContent = 'v' + meta.version;
-            versionPill.title = 'Live synced from Cloud • Updated ' + (meta.updated_at ? new Date(meta.updated_at).toLocaleDateString() : 'recently');
-          }
-        }
-      } catch (_) {
-        // Fallback to raw GitHub if pages is cold
-        try {
-          const ghRes = await fetch('https://raw.githubusercontent.com/choice121/Choice/main/public/extension-meta.json?_t=' + Date.now());
-          if (ghRes.ok) {
-            const meta = await ghRes.json();
-            if (meta && meta.version && versionPill) {
-              versionPill.textContent = 'v' + meta.version;
+            if (isSemverGreater(meta.version, installedVersion)) {
+              versionPill.title = 'New version v' + meta.version + ' available on site';
+              versionPill.style.borderColor = '#f59e0b';
+              versionPill.style.color = '#fbbf24';
+            } else {
+              versionPill.title = 'Choice Properties Extension v' + (installedVersion || meta.version) + ' • Up to date';
             }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     })();
 
     // Get session count from badge (fallback to "—" if API not available)

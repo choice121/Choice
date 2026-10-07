@@ -38,6 +38,17 @@
     const queueError = document.getElementById('queue-error');
     const flushBtn  = document.getElementById('flush-btn');
     const exportBtn = document.getElementById('export-queue-btn');
+    const versionPill = document.getElementById('ext-version-pill');
+
+    // Authoritative installed manifest version
+    if (versionPill && EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.getManifest) {
+      try {
+        const manifest = EXTENSION_API.runtime.getManifest();
+        if (manifest && manifest.version) {
+          versionPill.textContent = 'v' + manifest.version;
+        }
+      } catch (_) {}
+    }
 
     // Get session count from badge (fallback to "—" if API not available)
     let count = 0;

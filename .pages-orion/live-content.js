@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v20.0.0
+// Choice Properties — Live Content Script v21.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '20.0.0-live';
+  var VERSION  = '21.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -368,39 +368,6 @@
       }
       .cp-btn-primary-sm:hover {
         background: #059669;
-      }
-      /* Zillow Search Card Badge */
-      .cp-search-card-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 25;
-        background: rgba(15, 23, 42, 0.88);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 20px;
-        padding: 6px 12px;
-        font-size: 11px;
-        font-weight: 700;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-        transition: all 0.15s ease;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      }
-      .cp-search-card-btn:hover {
-        background: #4f46e5;
-        border-color: #818cf8;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
-      }
-      .cp-search-card-btn.cp-saved {
-        background: #10b981 !important;
-        border-color: #34d399 !important;
       }
       /* Spinner */
       .cp-spinner {
@@ -856,7 +823,7 @@
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v20.0.0-live',
+        _import: 'browser-extension-v21.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1083,77 +1050,6 @@
     } catch (e) {}
   }
 
-  // ── Zillow Search Results Cards Quick-Save ──────────────────
-  function injectSearchCardButtons() {
-    if (!isSearchPage(location.href)) return;
-    var cards = document.querySelectorAll('article[data-test="property-card"], div[class*="StyledPropertyCard"], .photo-cards > li');
-    if (!cards || !cards.length) return;
-
-    cards.forEach(function (card) {
-      if (card.querySelector('.cp-search-card-btn')) return;
-
-      var linkEl = card.querySelector('a[href*="/homedetails/"], a[href*="_zpid"]');
-      if (!linkEl) return;
-      var targetUrl = linkEl.href;
-
-      var btn = document.createElement('button');
-      btn.className = 'cp-search-card-btn';
-      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg> <span>+ Choice</span>';
-      btn.title = 'Save to Choice Properties Pipeline';
-
-      btn.addEventListener('click', async function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        btn.disabled = true;
-        btn.innerHTML = '<span class="cp-spinner"></span> <span>Saving…</span>';
-
-        try {
-          var priceEl = card.querySelector('[data-test="property-card-price"], span[class*="PropertyCardPrice"]');
-          var addrEl = card.querySelector('address, [data-test="property-card-addr"]');
-          var rentMatch = priceEl ? priceEl.textContent.replace(/[^0-9]/g, '') : '';
-          var rent = rentMatch ? parseInt(rentMatch, 10) : null;
-          var address = addrEl ? addrEl.textContent.trim() : 'Zillow Card Listing';
-
-          var cardPayload = {
-            source: 'zillow',
-            source_url: targetUrl,
-            address: address,
-            monthly_rent: rent,
-            pets_allowed: true,
-            application_fee: 50,
-            _import: 'zillow-search-card-v5',
-          };
-
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cardPayload),
-          });
-          var cardResp = await saveRes.json();
-
-          if (cardResp && cardResp.ok) {
-            btn.classList.add('cp-saved');
-            btn.innerHTML = '<span>Saved ✓</span>';
-          } else if (cardResp && cardResp.duplicate) {
-            btn.innerHTML = '<span>Already in DB</span>';
-          } else {
-            var errorMessage = cardResp && cardResp.error ? String(cardResp.error).slice(0, 45) : 'Save failed';
-            btn.innerHTML = '<span>' + escapeHtml(errorMessage) + '</span>';
-            btn.disabled = false;
-          }
-        } catch (err) {
-          btn.innerHTML = '<span>Saved to Tab</span>';
-          window.open(targetUrl, '_blank');
-        }
-      });
-
-      // Inject into card image container or card top
-      var imgWrap = card.querySelector('.property-card-data, [data-test="property-card-link"]') || card;
-      if (card.style.position !== 'absolute') card.style.position = 'relative';
-      card.appendChild(btn);
-    });
-  }
-
   // ── Navigation & Lifecycle Watcher ──────────────────────────
   function hookHistoryMethods() {
     var rawPushState = history.pushState;
@@ -1179,11 +1075,9 @@
       currentExtractedData = null;
       removeWidget();
       scheduleHydrationRefreshes();
-      setTimeout(injectSearchCardButtons, 100);
     } else {
       scheduleListingRefresh();
       updateWidgetPosition();
-      injectSearchCardButtons();
     }
   }
 
@@ -1195,7 +1089,6 @@
 
     var observer = new MutationObserver(function () {
       scheduleListingRefresh();
-      injectSearchCardButtons();
       updateWidgetPosition();
     });
 
@@ -1206,7 +1099,6 @@
 
   // ── Startup ─────────────────────────────────────────────────
   injectWidget();
-  injectSearchCardButtons();
   setupWatchers();
   scheduleHydrationRefreshes();
   console.log('[Choice Properties] Live extension UI v' + VERSION + ' active');

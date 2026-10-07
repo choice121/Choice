@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v21.0.0] - 2026-10-07
+### Search Card Overlay Cleanup, Authoritative Manifest Versioning & Cache Invalidation
+- **Search Card Overlay Removal**: Completely removed the on-card button overlays (`+ Choice` / `Saved to Tab` / `Open your save...`) from search result property cards across Zillow and supported feeds to eliminate visual clutter and ensure non-intrusive browsing.
+- **Authoritative Version Pill**: Refactored `popup.js` to strictly prioritize the local installed `manifest.version` as the authoritative version display. Prevented cloud metadata responses from downgrading or falsely overwriting the installed version number.
+- **Edge Cache Invalidation (`_headers`)**: Added strict `no-cache, no-store, must-revalidate, max-age=0` directives for `choice-properties-extension.zip`, `choice-properties-orion-extension.zip`, `extension-meta.json`, and `extension-updates.xml` on Cloudflare Pages to prevent browsers from downloading stale cached extensions.
+- **Zillow & Detail Page Behavior**: Verified the floating "Save to Pipeline" widget on Zillow listing detail pages, ensuring fast folder selection, high-resolution photo extraction, pre-flight inspection breakdown, and instant pipeline synchronization.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing (29/29 tests).
+
+---
+
 ## [v20.0.0] - 2026-10-07
 ### Universal Portal Fidelity, Verbatim Source Titles, 3D Panoramas & Architectural Parity
 - **Verbatim Source Titles**: Property titles strictly preserve authentic source listing titles and headlines without synthetic reconstruction or artificial template tags, aligning with Zillow listing standards.

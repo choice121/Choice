@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v20.0.0
+// Choice Properties — Universal Content Script & UI Engine v21.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '20.0.0';
+  var VERSION  = '21.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -832,75 +832,6 @@
     } catch (e) {}
   }
 
-  // ── Search Results Cards Quick-Save (All Supported Feeds) ────
-  function injectSearchCardButtons() {
-    if (!isSearchPage(location.href)) return;
-    var cards = document.querySelectorAll('article[data-test="property-card"], div[class*="StyledPropertyCard"], .photo-cards > li, div[data-testid="property-card"]');
-    if (!cards || !cards.length) return;
-
-    cards.forEach(function (card) {
-      if (card.querySelector('.cp-search-card-btn')) return;
-
-      var linkEl = card.querySelector('a[href*="/homedetails/"], a[href*="_zpid"], a[href*="/realestateandhomes-detail/"]');
-      if (!linkEl) return;
-      var targetUrl = linkEl.href;
-
-      var btn = document.createElement('button');
-      btn.className = 'cp-search-card-btn';
-      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg> <span>+ Choice</span>';
-      btn.title = 'Save to Choice Properties Pipeline';
-
-      btn.addEventListener('click', async function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        btn.disabled = true;
-        btn.innerHTML = '<span class="cp-spinner"></span> <span>Saving…</span>';
-
-        try {
-          var priceEl = card.querySelector('[data-test="property-card-price"], span[class*="PropertyCardPrice"]');
-          var addrEl = card.querySelector('address, [data-test="property-card-addr"]');
-          var rentMatch = priceEl ? priceEl.textContent.replace(/[^0-9]/g, '') : '';
-          var rent = rentMatch ? parseInt(rentMatch, 10) : null;
-          var address = addrEl ? addrEl.textContent.trim() : 'Search Card Listing';
-
-          var cardPayload = {
-            source: 'zillow',
-            source_url: targetUrl,
-            address: address,
-            monthly_rent: rent,
-            pets_allowed: true,
-            application_fee: 50,
-            _import: 'search-card-v' + VERSION,
-          };
-
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cardPayload),
-          });
-          var cardResp = await saveRes.json();
-
-          if (cardResp && cardResp.ok) {
-            btn.classList.add('cp-saved');
-            btn.innerHTML = '<span>Saved ✓</span>';
-          } else if (cardResp && cardResp.duplicate) {
-            btn.innerHTML = '<span>In Pipeline</span>';
-          } else {
-            var errorMessage = cardResp && cardResp.error ? String(cardResp.error).slice(0, 45) : 'Save failed';
-            btn.innerHTML = '<span>' + escapeHtml(errorMessage) + '</span>';
-            btn.disabled = false;
-          }
-        } catch (err) {
-          btn.innerHTML = '<span>Saved to Tab</span>';
-          window.open(targetUrl, '_blank');
-        }
-      });
-
-      if (card.style.position !== 'absolute') card.style.position = 'relative';
-      card.appendChild(btn);
-    });
-  }
-
   // ── Global Hotkeys Hook (Cmd/Ctrl+Shift+S) ───────────────────
   function setupGlobalHotkeys() {
     window.addEventListener('keydown', function (e) {
@@ -942,7 +873,6 @@
       currentExtractedData = null;
       removeWidget();
       scheduleHydrationRefreshes();
-      setTimeout(injectSearchCardButtons, 100);
     }
   }
 
@@ -954,7 +884,6 @@
 
     var observer = new MutationObserver(function () {
       scheduleListingRefresh();
-      injectSearchCardButtons();
       updateWidgetPosition();
     });
 
@@ -965,7 +894,6 @@
 
   // ── Startup ─────────────────────────────────────────────────
   injectWidget();
-  injectSearchCardButtons();
   setupWatchers();
   setupGlobalHotkeys();
   scheduleHydrationRefreshes();
