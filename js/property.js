@@ -169,43 +169,42 @@ async function loadProperty(id) {
     prop.photo_file_ids = [];
   }
 
-  // Check admin status early — admin sees all properties regardless of status
-  try {
-    const session = await getSession();
-    if (session?.user) {
-      _isAdminViewer = await (window.CP?.Auth?.isAdmin?.().catch(() => false) ?? false);
-    }
-  } catch(e) { /* non-fatal */ }
-
-  // Guard non-active listings from public view (owner or admin may bypass)
-  if (prop.status !== 'active' && !_isAdminViewer) {
+  // Only wait for authentication when a listing is not public. Active listings
+  // are readable without a session, so auth/session refresh must not hold up
+  // their first render.
+  let viewerSession = null;
+  if (prop.status !== 'active') {
     try {
-      const session    = await getSession();
-      const viewerId   = session?.user?.id || null;
-      const ownerId    = prop.landlords?.user_id || null;
-      const isOwner    = viewerId && ownerId && viewerId === ownerId;
-      if (!isOwner) {
-        renderUnavailable(prop.status, prop.city);
-        return;
+      viewerSession = await getSession();
+      if (viewerSession?.user) {
+        try {
+          _isAdminViewer = !!(await (window.CP?.Auth?.isAdmin?.() ?? false));
+        } catch (_) {
+          _isAdminViewer = false;
+        }
       }
     } catch (e) {
       console.warn('[property] session check failed; treating as anonymous', e);
       renderUnavailable(prop.status, prop.city);
       return;
     }
+
+    if (!_isAdminViewer) {
+      const viewerId = viewerSession?.user?.id || null;
+      const ownerId = prop.landlords?.user_id || null;
+      const isOwner = viewerId && ownerId && viewerId === ownerId;
+      if (!isOwner) {
+        renderUnavailable(prop.status, prop.city);
+        return;
+      }
+    }
   }
 
   currentProperty = prop;
 
-  // Phase 2 — view-counter bump. Pure side-effect; never block render
-  // and never trip the not-found path if the RPC errors out.
-  try {
-    await incrementCounter('properties', id, 'views_count');
-  } catch (e) {
-    console.warn('[property] increment_counter failed (non-fatal)', e);
-  }
-
-  // Phase 3 — render. If anything in renderProperty throws, the row
+  // Render as soon as the public property row is available. Session refreshes
+  // and ancillary analytics are deliberately kept off the critical path.
+  // If anything in renderProperty throws, the row
   // really does exist, so DO NOT show "Property not found." and DO NOT
   // redirect away — that destroys the user's session for what is
   // almost certainly a UI bug. Surface the real error to the console
@@ -220,6 +219,24 @@ async function loadProperty(id) {
     }
     showToast('Some details could not be displayed. Please refresh.', 'error');
   }
+
+  // Admin tools are optional on an active public listing; discover admin
+  // privileges in the background so auth latency cannot hold up the page.
+  if (prop.status === 'active' && !_isAdminViewer) {
+    getSession()
+      .then(session => session?.user ? (window.CP?.Auth?.isAdmin?.() ?? false) : false)
+      .then(isAdmin => {
+        if (isAdmin) {
+          _isAdminViewer = true;
+          initAdminPropertyPanel(prop);
+        }
+      })
+      .catch(e => console.warn('[property] admin status check failed (non-fatal)', e));
+  }
+
+  // View counting is best-effort and must never delay visible property details.
+  incrementCounter('properties', id, 'views_count')
+    .catch(e => console.warn('[property] increment_counter failed (non-fatal)', e));
 
   // Refresh save state from Supabase for authenticated users (non-blocking).
   // Wrapped so a thrown TypeError (e.g. SavedProperties undefined in a
