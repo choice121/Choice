@@ -83,7 +83,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 IMAGEKIT_DOMAIN = "ik.imagekit.io"
 
-MIN_PHOTOS = 6
+MIN_PHOTOS = 0
 URL_CHECK_WORKERS = 8
 URL_CHECK_TIMEOUT = 8     # seconds per HEAD request
 PAGE_SIZE = 200           # listings per Supabase page

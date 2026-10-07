@@ -37,41 +37,14 @@
   }
 
   // ── Pre-publish validation gate ──────────────────────────────────────────────
-  // Mirrors validate_for_publish() in scraper/enrichment.py.
   // Must pass before any pipeline record is promoted to a live listing.
   // Returns { ok: boolean, failures: string[] }.
-  //
-  // Image check:
-  //   - Listing must have at least 6 genuine property photos.
-  //   - If the listing already has a choice_property_id (re-published before),
-  //     fetch real photo count from property_photos (confirmed ImageKit uploads).
-  //   - Otherwise check original_image_urls — source photos must exist (min 6) so
-  //     import-pipeline-photos can transfer them immediately post-publish.
   async function validateForPublish(listing) {
     const failures = [];
     const desc = listing.description || '';
-    const MIN_PHOTOS = 6;
 
-    // 1. Image check — enforce 6-photo minimum
-    const sourceUrls = imageUrls(listing.original_image_urls);
-    const photoCount = sourceUrls.length;
-
-    if (listing.choice_property_id) {
-      // Already published once — count confirmed ImageKit photos.
-      const { data: existingPhotos } = await CP.sb()
-        .from('property_photos')
-        .select('id')
-        .eq('property_id', listing.choice_property_id);
-      const transferred = existingPhotos ? existingPhotos.length : 0;
-      if (transferred < MIN_PHOTOS && photoCount < MIN_PHOTOS) {
-        failures.push(`Requires at least ${MIN_PHOTOS} genuine property photos before publishing (found ${Math.max(transferred, photoCount)})`);
-      }
-    } else {
-      // First publish — source photos must exist with minimum count
-      if (photoCount < MIN_PHOTOS) {
-        failures.push(`Requires at least ${MIN_PHOTOS} genuine property photos before publishing (found ${photoCount})`);
-      }
-    }
+    // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
+    // Listings are pre-screened on import and published regardless of photo count.
 
     // 2. Rent must be set and reasonable
     const monthlyRent = Number(listing.monthly_rent);

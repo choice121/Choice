@@ -175,7 +175,7 @@ SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://choice-properties-site.
 
 IK_UPLOAD_URL = "https://upload.imagekit.io/api/v1/files/upload"
 
-MIN_PHOTOS = 6
+MIN_PHOTOS = 0
 IK_MAX_WORKERS = 10
 IK_MAX_PHOTOS = 50
 IK_MAX_RETRIES = 3

@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v22.0.0
+// Choice Properties — Live Content Script v23.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '22.0.0-live';
+  var VERSION  = '23.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -823,7 +823,7 @@
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v22.0.0-live',
+        _import: 'browser-extension-v23.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

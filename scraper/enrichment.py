@@ -572,31 +572,8 @@ def validate_for_publish(record, transferred_photo_count=None):
     failures = []
     desc = record.get("description") or ""
 
-    # 1. Image check — two-tier:
-    #    Tier A (preferred): caller provides the actual ImageKit transfer count.
-    #    Tier B (fallback):  inspect original_image_urls to verify source photos
-    #                        exist that can be transferred post-publish.
-    MIN_PHOTOS = 6
-    if transferred_photo_count is not None:
-        # Real ImageKit signal — use it directly
-        if transferred_photo_count < MIN_PHOTOS:
-            failures.append(
-                "Only {} photo(s) on ImageKit; minimum is {} before publishing".format(
-                    transferred_photo_count, MIN_PHOTOS)
-            )
-    else:
-        # Fallback: source photos must exist (import-pipeline-photos will
-        # transfer them immediately after publish)
-        raw_urls = record.get("original_image_urls") or "[]"
-        try:
-            urls = raw_urls if isinstance(raw_urls, list) else __import__("json").loads(raw_urls)
-        except Exception:
-            urls = []
-        if len(urls) < MIN_PHOTOS:
-            failures.append(
-                "Only {} source photo(s) found; minimum is {} before publishing".format(
-                    len(urls), MIN_PHOTOS)
-            )
+    # 1. Image check — note: 6-photo minimum gate removed per user preview policy.
+    # Listings are pre-screened on import and published regardless of photo count.
 
     # 2. Description must not imply a free application
     if _FREE_APP_RE.search(desc):

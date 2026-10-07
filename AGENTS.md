@@ -5,9 +5,9 @@
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and listing views. No properties show lease terms or minimum lease duration. Future AIs must never display lease terms on property pages.
 
 ## 2. Pipeline Pre-Publishing Rules & Enrichment
-- **Gallery Images Review**: Before publishing any property, review all gallery images to verify that promotional banners, realtor flyers, contact cards, and discount graphic cards are removed — keeping ONLY genuine property photographs.
 - **Source Details & Amenities Verification**: Verify all property details (address, rent, beds, baths, sqft) and amenities match the original listing from the source, but do not leave anything connected to the original listing (no external URLs, portal IDs, MLS cross-links, or broker contact information). Verification is strictly an internal accuracy requirement.
-- **Minimum Photos**: Must have at least 6 genuine property photographs.
+- **No Photo Count Gate**: The 6 photos gate is removed. Properties with any photo count (including below 6 images) are published, as properties are already pre-screened on import.
+- **Visual Screening Removed**: Automated visual screening and vision audit gating are removed from the pipeline; user previews and screens listings prior to importing into the pipeline.
 - **Application Fee**: Always $50.
 - **Pet Friendly**: Always pet-friendly.
 - **Security Deposit**: Always 1x monthly rent in the structured database field, but **NEVER mentioned in descriptions**. All security deposit amounts, quotes, clauses, and references must be completely stripped from listing descriptions during description enrichment (`strip_security_deposit_from_description`). Listing descriptions must remain 100% free of security deposit mentions.
@@ -25,26 +25,9 @@ After publishing properties, the AI assistant MUST send the user the published p
 
 Numbered sequentially according to the number of properties published in that activity.
 
-## 4. AI Vision Image Filtering & Storage Purge Policy
-Future AI agents modifying the ingestion pipeline MUST adhere to these multimodal vision rules for processing property gallery images:
-
-**A. Harmless Text (KEEP the image):**
-- "Virtually Staged" or "Furniture not included" liability disclaimers.
-- In-world/Diegetic natural text (e.g., street signs, house numbers, appliance brands, text on TVs/posters).
-- Camera timestamps (e.g., 2023-10-12 in the corner).
-- Unbranded floor plans (e.g., "Master Bedroom 12x14").
-
-**B. Harmful Text (DELETE the image):**
-- Promotional flyers, discount banners ("1 Month Free", "$99 Move-In").
-- Competitor/MLS watermarks (faint, transparent, solid, LLC initials).
-- Agent contact info (names, headshots, emails, phone numbers, URLs).
-- Portal UI artifacts (screenshots of "Contact Agent" buttons, arrows).
-
-**C. Property Rejection & Storage Cleanup (CRITICAL):**
-- After filtering harmful images, a property MUST retain at least 6 clean photos.
-- If clean photos drop below 6:
-  1. The property is REJECTED (if scraping) or UNPUBLISHED (if doing a live cleanup).
-  2. ALL images associated with this property MUST be hard-deleted from ImageKit (or any remote photo storage) to prevent orphaned files and storage bloat.
+## 4. User Pre-Screening & Photo Ingestion Policy
+- Visual screening and vision gating are removed from the pipeline because listings are pre-screened before importing.
+- The 6-photo minimum gate is removed from the project code, pipeline, and publishing workflows. If a property is below 6 images, still publish it.
 
 ## 5. Permanent Scraping, Enrichment & Publishing Engine
 
@@ -292,10 +275,8 @@ For every property:
 * Verify every required ImageKit URL.
 * Publish only ImageKit-hosted images.
 * Do not use synthetic/generated property images.
-* Do not publish watermarked images (remove promotional flyers, contact cards, agent headshots, MLS logos).
+* Publish properties regardless of photo count (no 6-photo minimum gate; user pre-screens properties on import).
 * Do not publish duplicate images.
-* Minimum Photos: Must retain at least 6 genuine property photographs. If clean photos drop below 6, the property is rejected or unpublished, and all remote storage images are purged.
-* Do not publish until image requirements pass.
 
 ---
 
@@ -369,8 +350,6 @@ Verify:
 ✓ $50 application fee
 ✓ Images uploaded to ImageKit
 ✓ ImageKit URLs verified
-✓ No watermarks
-✓ Minimum 6 genuine property photos
 ✓ No duplicate images
 ✓ No duplicate property
 

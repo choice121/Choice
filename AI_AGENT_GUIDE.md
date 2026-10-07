@@ -146,8 +146,7 @@ These are enforced automatically by the pipeline. You don't implement them — t
 
 | Rule | What It Means |
 |---|---|
-| **Min 6 photos** | Every listing must have at least 6 source images before publishing |
-| **All photos on ImageKit** | No external/hotlinked photo URLs in final listings |
+| **All photos on ImageKit** | No external/hotlinked photo URLs in final listings (user pre-screens listings; no 6-photo gate) |
 | **Application fee = $50** | Both the `application_fee` field and description must say $50 |
 | **Security deposit = 1x rent (DB only)** | `security_deposit` in the database equals `monthly_rent`; **NEVER** quote or mention deposits in descriptions |
 | **No security deposit in descriptions** | All security deposit mentions, amounts, and clauses are completely stripped from listing descriptions during enrichment |

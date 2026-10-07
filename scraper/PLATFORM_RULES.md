@@ -194,9 +194,6 @@ if not ok:
 *Last updated: 2026-07-14*
 *These rules are enforced in: `scraper/enrichment.py` → `apply_enrichment_pipeline()`*
 
-### AI Vision Image Filtering (Watermarks & Promos)
-Future scrapers and cleanup scripts must use Multimodal AI (Gemini Vision) to audit images before they reach the public site:
-1. **Harmless (Keep):** "Virtually Staged" text, street signs, house numbers, appliance brands, timestamps, unbranded floor plans.
-2. **Harmful (Delete Photo):** Promotional flyers ("1 Month Free"), competitor/MLS watermarks (faint or solid), agent info (headshots, emails, phone numbers, URLs), portal UI screenshots.
-3. **Property Minimums:** If after deletion a property has < 6 clean photos, the property is REJECTED/UNPUBLISHED.
-4. **Storage Purge:** If a property is rejected due to image filtering, ALL associated images must be hard-deleted from ImageKit to prevent storage bloat.
+### Photo Policy & Ingestion
+- Visual screening and vision gating are removed from the pipeline because listings are pre-screened on the user's end before import.
+- The 6-photo minimum gate is removed; listings with any photo count are published.
