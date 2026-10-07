@@ -3540,6 +3540,52 @@ function renderNeighborhoodIntelligence(p) {
         { name: 'Campus International School', rating: '9/10', type: 'Public, K-8' },
         { name: 'Cleveland School of the Arts', rating: '8/10', type: 'Public, 8-12' },
         { name: 'Horizon Science Academy', rating: '7/10', type: 'Charter, K-12' }
+      ],
+      'fort worth': [
+        { name: 'Tanglewood Elementary School', rating: '9/10', type: 'Public, K-5' },
+        { name: 'Fort Worth Academy of Fine Arts', rating: '9/10', type: 'Charter, 3-12' },
+        { name: 'Texas Academy of Biomedical Sciences', rating: '10/10', type: 'Public, 9-12' },
+        { name: 'Marine Creek Collegiate High School', rating: '10/10', type: 'Public, 9-12' }
+      ],
+      'orlando': [
+        { name: 'Orlando Science Elementary Charter', rating: '10/10', type: 'Charter, K-5' },
+        { name: 'Lake Eola Charter School', rating: '9/10', type: 'Charter, K-8' },
+        { name: 'Timber Creek High School', rating: '9/10', type: 'Public, 9-12' },
+        { name: 'Winter Park High School', rating: '8/10', type: 'Public, 9-12' }
+      ],
+      'san antonio': [
+        { name: 'BASIS San Antonio Shavano Campus', rating: '10/10', type: 'Charter, K-12' },
+        { name: 'Health Careers High School', rating: '10/10', type: 'Public, 9-12' },
+        { name: 'Wilderness Oak Elementary School', rating: '9/10', type: 'Public, K-5' },
+        { name: 'Ronald Reagan High School', rating: '9/10', type: 'Public, 9-12' }
+      ],
+      'memphis': [
+        { name: 'Maxine Smith STEAM Academy', rating: '10/10', type: 'Public, 6-8' },
+        { name: 'Campus School', rating: '9/10', type: 'Public, 1-5' },
+        { name: 'White Station High School', rating: '8/10', type: 'Public, 9-12' },
+        { name: 'Germantown High School', rating: '8/10', type: 'Public, 9-12' }
+      ],
+      'kansas city': [
+        { name: 'Lincoln College Preparatory Academy', rating: '10/10', type: 'Public, 6-12' },
+        { name: 'Academie Lafayette', rating: '9/10', type: 'Charter, K-8' },
+        { name: 'Border Star Montessori School', rating: '9/10', type: 'Public, PK-6' },
+        { name: 'St. Teresa\'s Academy', rating: 'Private', type: 'Private, 9-12' }
+      ],
+      'charleston': [
+        { name: 'Academic Magnet High School', rating: '10/10', type: 'Public, 9-12' },
+        { name: 'Charleston County School of the Arts', rating: '10/10', type: 'Public, 6-12' },
+        { name: 'Mount Pleasant Academy', rating: '10/10', type: 'Public, K-5' },
+        { name: 'Buist Academy for Advanced Studies', rating: '10/10', type: 'Public, K-8' }
+      ],
+      'summerville': [
+        { name: 'Rollings Middle School of the Arts', rating: '10/10', type: 'Public, 6-8' },
+        { name: 'Dorchester County District 2 Schools', rating: '9/10', type: 'Public District' },
+        { name: 'Ashley Ridge High School', rating: '8/10', type: 'Public, 9-12' }
+      ],
+      'edison': [
+        { name: 'John P. Stevens High School', rating: '10/10', type: 'Public, 9-12' },
+        { name: 'Edison High School', rating: '9/10', type: 'Public, 9-12' },
+        { name: 'Martin Luther King Elementary', rating: '9/10', type: 'Public, K-5' }
       ]
     };
 
@@ -3685,7 +3731,7 @@ function renderNeighborhoodIntelligence(p) {
     },
     // Georgia
     {
-      match: /atlanta|decatur|marietta|sandy springs|alpharetta|roswell|duluth|smyrna/i,
+      match: /atlanta|decatur|marietta|sandy springs|alpharetta|roswell|duluth|smyrna|douglasville|dallas|acworth|hiram|powder springs|kennesaw|woodstock|lawrenceville|cumming|peachtree/i,
       state: 'GA',
       downtown: { lat: 33.7490, lng: -84.3880, name: 'Downtown Atlanta' },
       airport:  { lat: 33.6407, lng: -84.4277, name: 'Hartsfield-Jackson Atlanta Intl Airport (ATL)' },
@@ -3705,6 +3751,30 @@ function renderNeighborhoodIntelligence(p) {
       groceries:'Publix / Kroger / Food Lion',
       electric: 'Georgia Power',
       gas:      'Atlanta Gas Light'
+    },
+    // South Carolina
+    {
+      match: /charleston|summerville|mount pleasant|north charleston|goose creek|hanahan/i,
+      state: 'SC',
+      downtown: { lat: 32.7765, lng: -79.9311, name: 'Historic Downtown Charleston' },
+      airport:  { lat: 32.8986, lng: -80.0405, name: 'Charleston International Airport (CHS)' },
+      hospital: { lat: 32.7845, lng: -79.9488, name: 'MUSC Health University Medical Center' },
+      highway:  'I-26 / US-17 / Mark Clark Expressway (I-526)',
+      groceries:'Publix / Harris Teeter / Food Lion / Whole Foods',
+      electric: 'Dominion Energy South Carolina / Berkeley Electric',
+      gas:      'Dominion Energy SC'
+    },
+    // New Jersey / NYC Metro
+    {
+      match: /edison|woodbridge|piscataway|new brunswick|metuchen/i,
+      state: 'NJ',
+      downtown: { lat: 40.5187, lng: -74.4121, name: 'Edison / New Brunswick Center' },
+      airport:  { lat: 40.6895, lng: -74.1745, name: 'Newark Liberty Intl Airport (EWR)' },
+      hospital: { lat: 40.4990, lng: -74.4501, name: 'Robert Wood Johnson University Hospital' },
+      highway:  'I-287 / NJ Turnpike / US-1 Corridor',
+      groceries:'ShopRite / Stop & Shop / H Mart / Wegmans',
+      electric: 'PSE&G / JCP&L (FirstEnergy)',
+      gas:      'PSE&G'
     },
     // Florida
     {
@@ -3886,7 +3956,8 @@ function renderNeighborhoodIntelligence(p) {
     OH: { electric: 'AEP Ohio / FirstEnergy / Duke Energy OH', gas: 'Columbia Gas / Dominion Energy', groc: 'Kroger / Giant Eagle / ALDI' },
     IN: { electric: 'AES Indiana / Duke Energy IN', gas: 'Citizens Energy / CenterPoint', groc: 'Kroger / Meijer' },
     AZ: { electric: 'APS / Salt River Project (SRP)', gas: 'Southwest Gas', groc: 'Fry’s / Safeway / Sprouts' },
-    NM: { electric: 'PNM (Public Service Co of NM)', gas: 'New Mexico Gas Company', groc: 'Smith’s / Albertsons' }
+    NM: { electric: 'PNM (Public Service Co of NM)', gas: 'New Mexico Gas Company', groc: 'Smith’s / Albertsons' },
+    NJ: { electric: 'PSE&G / JCP&L (FirstEnergy)', gas: 'PSE&G / New Jersey Natural Gas', groc: 'ShopRite / Stop & Shop / Wegmans' }
   };
 
   const stateInfo = STATE_UTILITIES[state.toUpperCase()] || {
