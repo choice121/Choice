@@ -1029,18 +1029,39 @@ function _initLeafletMap(p) {
   container.innerHTML = '<div id="propertyMiniMap" style="width:100%;height:100%"></div>';
   const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false, touchZoom: true }).setView([lat, lng], 15);
   
-  // Clean, high-performance Carto Light tiles (no API key required)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  // Theme-aware high-performance Carto tiles (Dark Matter or Positron)
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+  L.tileLayer(tileUrl, {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19
   }).addTo(map);
 
+  const markerBg = isDark ? '#ffffff' : '#0f172a';
+  const markerColor = isDark ? '#0f172a' : '#ffffff';
+  const markerBorder = isDark ? '2px solid rgba(0,106,255,0.85)' : '2px solid #ffffff';
+  const markerShadow = isDark ? '0 4px 16px rgba(0,106,255,0.4)' : '0 4px 14px rgba(0,0,0,0.35)';
+
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:#0e0e0f;color:white;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</div>`,
-    iconAnchor: [45, 16], iconSize: [90, 32]
+    html: `<div style="background:${markerBg};color:${markerColor};padding:6px 14px;border-radius:24px;font-weight:800;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:${markerBorder};box-shadow:${markerShadow};display:inline-flex;align-items:center;gap:6px;cursor:pointer"><i class="fas fa-home" style="font-size:10px;color:${isDark ? '#006aff' : '#38bdf8'}"></i> ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Available'}</div>`,
+    iconAnchor: [50, 16], iconSize: [100, 32]
   });
-  L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${esc(p.title || p.address)}</b><br>${esc(p.address)}`);
+
+  const popupHtml = `
+    <div style="font-family:'Plus Jakarta Sans',sans-serif;min-width:180px">
+      <div style="font-weight:800;font-size:13px;color:var(--m-ink,#0f172a);line-height:1.3">${esc(p.title || p.address)}</div>
+      <div style="font-size:11.5px;color:var(--m-muted,#475569);margin-top:2px">${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--m-border,#e2e8f0)">
+        <span style="font-size:10.5px;font-weight:700;color:#059669;background:rgba(16,185,129,0.12);padding:2px 7px;border-radius:4px"><i class="fas fa-check" style="font-size:8px"></i> Verified Location</span>
+        ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
+      </div>
+    </div>
+  `;
+  L.marker([lat, lng], { icon }).addTo(map).bindPopup(popupHtml);
 
   // Wire up "Open in Maps" button with OS-aware deep link
   const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`);
@@ -3281,6 +3302,58 @@ function injectEnrichmentStyles() {
       font-size:12.5px; font-weight:600; color:var(--m-brand); padding:8px 12px;
       border-radius:6px; background:var(--m-brand-pale); border:1px solid rgba(0,106,255,.2); display:none;
     }
+
+    /* Neighborhood Banner & Cards */
+    .neighborhood-banner {
+      background: var(--m-surface-2); border: 1px solid var(--m-border);
+      border-radius: 12px; padding: 14px 18px; margin-bottom: 18px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .nb-icon-box {
+      width: 38px; height: 38px; border-radius: 10px; background: rgba(0,106,255,.12);
+      display: flex; align-items: center; justify-content: center; color: var(--m-brand);
+      font-size: 17px; flex-shrink: 0;
+    }
+    .nb-title { font-size: 14.5px; font-weight: 700; color: var(--m-ink); }
+    .nb-county-tag { font-size: 11.5px; font-weight: 600; background: var(--m-border); color: var(--m-muted); padding: 2px 8px; border-radius: 6px; }
+    .nb-verified-tag { font-size: 11px; font-weight: 600; background: rgba(16,185,129,.14); color: #059669; padding: 2px 8px; border-radius: 6px; }
+    .nb-desc { font-size: 13px; color: var(--m-muted); margin-top: 6px; line-height: 1.45; }
+    .nb-sub { font-size: 12.5px; color: var(--m-soft); margin-top: 3px; }
+
+    /* Pet-friendly banner */
+    .pet-friendly-banner {
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+      border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #059669;
+      display: flex; align-items: center; gap: 8px;
+    }
+    html[data-theme="dark"] .pet-friendly-banner {
+      background: rgba(16,185,129,.14) !important; border-color: rgba(16,185,129,.35) !important; color: #34d399 !important;
+    }
+    html[data-theme="dark"] .nb-verified-tag { color: #34d399 !important; }
+
+    /* School Card Item */
+    .school-card-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--m-surface); padding: 11px 14px; border-radius: 10px;
+      border: 1px solid var(--m-border); text-decoration: none; color: inherit;
+      transition: all .15s ease;
+    }
+    .school-card-item:hover {
+      border-color: var(--m-brand); transform: translateY(-1px);
+      box-shadow: var(--m-shadow-sm);
+    }
+    .school-card-name { font-size: 13px; font-weight: 700; color: var(--m-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .school-card-type { font-size: 11px; color: var(--m-muted); margin-top: 2px; }
+    .school-card-rating { font-size: 13px; font-weight: 800; padding: 2px 8px; border-radius: 6px; display: inline-block; }
+    .school-card-explore { font-size: 10px; font-weight: 700; color: var(--m-brand); margin-top: 3px; opacity: 0.85; }
+    .school-card-item:hover .school-card-explore { opacity: 1; text-decoration: underline; }
+
+    /* Leaflet popup dark theme styling */
+    html[data-theme="dark"] .leaflet-popup-content-wrapper {
+      background: #1e293b !important; color: #f8fafc !important; border: 1px solid #334155 !important;
+    }
+    html[data-theme="dark"] .leaflet-popup-tip { background: #1e293b !important; }
+    html[data-theme="dark"] .leaflet-container { background: #0f172a !important; }
   `;
   document.head.appendChild(s);
 }
@@ -4120,20 +4193,32 @@ function renderNeighborhoodIntelligence(p) {
   const locationCtx = (p.location_context || '').trim();
 
   const neighborhoodBannerHtml = (neighborhoodName || countyName || locationCtx) ? `
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px">
-      <div style="width:38px;height:38px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;color:#0284c7;font-size:17px;flex-shrink:0">
+    <div class="neighborhood-banner">
+      <div class="nb-icon-box">
         <i class="fas fa-location-dot"></i>
       </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:14.5px;font-weight:700;color:#0f172a">${esc(neighborhoodName || (city + ' Community Area'))}</span>
-          ${countyName ? `<span style="font-size:11.5px;font-weight:600;background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:6px">${esc(countyName)}</span>` : ''}
-          <span style="font-size:11px;font-weight:600;background:#ecfdf5;color:#065f46;padding:2px 8px;border-radius:6px"><i class="fas fa-check" style="font-size:9px"></i> Verified Location</span>
+          <span class="nb-title">${esc(neighborhoodName || (city + ' Community Area'))}</span>
+          ${countyName ? `<span class="nb-county-tag">${esc(countyName)}</span>` : ''}
+          <span class="nb-verified-tag"><i class="fas fa-check" style="font-size:9px"></i> Verified Location</span>
         </div>
-        ${locationCtx ? `<div style="font-size:13px;color:#475569;margin-top:6px;line-height:1.45">${esc(locationCtx)}</div>` : `<div style="font-size:12.5px;color:#64748b;margin-top:3px">Authentic neighborhood connectivity anchored at ${esc(fullAddr)}</div>`}
+        ${locationCtx ? `<div class="nb-desc">${esc(locationCtx)}</div>` : `<div class="nb-sub">Authentic neighborhood connectivity anchored at ${esc(fullAddr)}</div>`}
       </div>
     </div>
   ` : '';
+
+  // Walk score descriptor
+  let wsDesc = 'Walkability & transit';
+  if (walkScore) {
+    const num = parseInt(walkScore, 10);
+    if (!isNaN(num)) {
+      if (num >= 90) wsDesc = "Walker's Paradise";
+      else if (num >= 70) wsDesc = "Very Walkable";
+      else if (num >= 50) wsDesc = "Somewhat Walkable";
+      else wsDesc = "Car-Dependent";
+    }
+  }
 
   section.style.display = '';
   if (divider) divider.style.display = '';
@@ -4148,49 +4233,58 @@ function renderNeighborhoodIntelligence(p) {
       <!-- Score Cards: Always visible & prominent -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px">
         <a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
-          <div style="width:44px;height:44px;border-radius:10px;background:#e8f0fe;display:flex;
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(0,106,255,0.12);display:flex;
             align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚶</div>
-          <div style="flex:1">
+          <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div class="score-card-title">Walk Score®</div>
               ${walkScore ? `<div style="font-weight:800;color:var(--m-brand);font-size:16px">${walkScore}</div>` : ''}
             </div>
-            <div class="score-card-sub" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px">
-              ${transitScore ? `<span>Transit: <strong>${transitScore}</strong></span>` : 'Walkability & transit'}
+            <div class="score-card-sub" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
+              <span><strong>${wsDesc}</strong></span>
+              ${transitScore ? `<span>· Transit: <strong>${transitScore}</strong></span>` : ''}
               ${bikeScore ? `<span>· Bike: <strong>${bikeScore}</strong></span>` : ''}
             </div>
-            <div class="score-card-cta">View Details &rarr;</div>
+            <div class="score-card-cta">View Live Index &rarr;</div>
           </div>
         </a>
         <div class="score-card" style="cursor:default">
-          <div style="width:44px;height:44px;border-radius:10px;background:#ecfdf5;display:flex;
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.12);display:flex;
             align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏫</div>
-          <div style="flex:1">
+          <div style="flex:1;min-width:0">
             <div class="score-card-title">Nearby Schools</div>
-            <div class="score-card-sub">Top rated schools in ${esc(city)}</div>
-            <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card-cta" style="text-decoration:none">GreatSchools Ratings &rarr;</a>
+            <div class="score-card-sub">Top rated schools serving ${esc(city)}</div>
+            <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card-cta" style="text-decoration:none;display:inline-block">GreatSchools Ratings &rarr;</a>
           </div>
         </div>
       </div>
 
-      <!-- Schools List: Directly populated in the page as requested -->
+      <!-- Schools List: Interactive exploration grid -->
       <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:14px;padding:16px;margin-bottom:18px">
-        <div style="font-size:11px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-          <i class="fas fa-graduation-cap" style="color:var(--m-brand)"></i> Verified Nearby Schools
+        <div style="font-size:11px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <i class="fas fa-graduation-cap" style="color:var(--m-brand)"></i> Verified Nearby Schools
+          </div>
+          <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--m-brand);text-decoration:none;font-weight:700">Explore District <i class="fas fa-arrow-up-right-from-square" style="font-size:9px"></i></a>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">
-          ${getNearbySchools(p).map(s => `
-            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--m-surface);padding:10px 14px;border-radius:10px;border:1px solid var(--m-border)">
+          ${getNearbySchools(p).map(s => {
+            const isTop = (s.rating || '').includes('10') || (s.rating || '').includes('9');
+            const ratingColor = isTop ? '#059669' : '#0284c7';
+            const ratingBg = isTop ? 'rgba(16,185,129,.12)' : 'rgba(2,132,199,.12)';
+            const schoolSearchUrl = `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(s.name + ' ' + city + ' ' + state)}&sortBy=distance`;
+            return `
+            <a href="${schoolSearchUrl}" target="_blank" rel="noopener noreferrer" class="school-card-item">
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:700;color:var(--m-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.name)}</div>
-                <div style="font-size:11px;color:var(--m-muted);margin-top:1px">${esc(s.type)}</div>
+                <div class="school-card-name">${esc(s.name)}</div>
+                <div class="school-card-type">${esc(s.type)}</div>
               </div>
-              <div style="margin-left:12px;text-align:right">
-                <div style="font-size:14px;font-weight:800;color:#059669">${esc(s.rating)}</div>
-                <div style="font-size:9px;font-weight:700;color:var(--m-soft);text-transform:uppercase">Rating</div>
+              <div style="margin-left:12px;text-align:right;flex-shrink:0">
+                <div class="school-card-rating" style="color:${ratingColor};background:${ratingBg}">${esc(s.rating)}</div>
+                <div class="school-card-explore">Explore <i class="fas fa-arrow-up-right-from-square" style="font-size:9px"></i></div>
               </div>
-            </div>
-          `).join('')}
+            </a>
+          `}).join('')}
         </div>
       </div>
 
@@ -4223,7 +4317,7 @@ function renderNeighborhoodIntelligence(p) {
 
           <!-- Interactive Custom Commute Calculator -->
           <div class="commute-calc-box">
-            <div style="font-weight:700;font-size:13px;color:var(--text,#0f172a);display:flex;align-items:center;gap:6px">
+            <div style="font-weight:700;font-size:13px;color:var(--m-ink,#0f172a);display:flex;align-items:center;gap:6px">
               <i class="fas fa-location-crosshairs" style="color:#006aff"></i> Calculate Commute to Your Workplace
             </div>
             <div class="commute-calc-row">
@@ -4236,8 +4330,8 @@ function renderNeighborhoodIntelligence(p) {
 
         <!-- Tab 2: Pet-Friendly Hub -->
         <div class="intel-tab-content" id="intelTab-pets">
-          <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#065f46;display:flex;align-items:center;gap:8px">
-            <i class="fas fa-shield-heart" style="color:#059669;font-size:15px"></i>
+          <div class="pet-friendly-banner">
+            <i class="fas fa-shield-heart" style="color:#059669;font-size:16px;flex-shrink:0"></i>
             <span><strong>Pet Friendly Community:</strong> Welcome dogs &amp; cats with local greenways and verified veterinary care nearby.</span>
           </div>
           <div class="intel-grid">

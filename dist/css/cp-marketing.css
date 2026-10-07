@@ -2156,6 +2156,25 @@ body[data-portal="public"][data-page="property"] .mosaic-nav-btn { display: none
 body[data-portal="public"][data-page="property"] .mosaic-mobile-count { display: none !important; }
 body[data-portal="public"][data-page="property"] #galleryExpand { display: none; }
 
+/* ── 3D VIRTUAL TOUR FLOATING BUTTON ───────────────────────── */
+body[data-portal="public"][data-page="property"] .mosaic-tour-btn {
+  position: absolute; bottom: var(--m-s-5); left: var(--m-s-5); z-index: 10;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--m-r-lg); padding: 9px 16px;
+  font-family: var(--m-font-base); font-size: 13px; font-weight: 700;
+  color: #fff; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  transition: all 220ms ease;
+}
+body[data-portal="public"][data-page="property"] .mosaic-tour-btn:hover {
+  background: #0284c7; border-color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(2, 132, 199, 0.45);
+}
+
 /* ── GALLERY THUMBNAIL STRIP ─────────────────────────────── */
 body[data-portal="public"][data-page="property"] .gallery-strip {
   display: flex; gap: 6px;
@@ -2844,6 +2863,14 @@ body[data-portal="public"][data-page="property"] .lqip-bg.faded { opacity: 0; }
   body[data-portal="public"][data-page="property"] .mosaic-main { border-radius: var(--m-r-xl); }
   body[data-portal="public"][data-page="property"] .mosaic-main::after {
     background: linear-gradient(to top, rgba(0,0,0,0.30) 0%, transparent 58%);
+  }
+  body[data-portal="public"][data-page="property"] .mosaic-tour-btn {
+    bottom: 12px; left: 12px; right: auto;
+    padding: 7px 13px; font-size: 11.5px;
+    border-radius: 999px;
+    background: rgba(15,23,42,0.78) !important;
+    border-color: rgba(255,255,255,0.3);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
   body[data-portal="public"][data-page="property"] .mosaic-expand-btn {
     opacity: 1; pointer-events: auto; transform: translateY(0);
