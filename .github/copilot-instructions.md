@@ -117,6 +117,7 @@
     All AI systems, Copilot sessions, and scrapers must strictly adhere to the permanent 22 rules defined in `AGENTS.md` (Section 5):
     - **No Lease Term display**: Lease terms, durations, and minimum lengths are completely banned from UI and descriptions.
     - **No Smoking policy display**: Smoking policies are omitted from property pages.
+    - **No Available Date / Move-In display or mentions**: Available dates, availability tables ("Available From"), move-in status, and move-in ready claims are completely banned from UI and descriptions (`strip_availability_from_description`).
     - **Security Deposit**: 1x rent in database, strictly stripped from descriptions (`strip_security_deposit_from_description`).
     - **Photo Filtering**: Min 6 genuine clean property photos; promotional flyers, Realtor contact cards, MLS watermarks stripped. Properties failing photo rules must be rejected/unpublished and remote storage purged.
     - **True Description Uniqueness**: Independent openings, storytelling, paragraph structure, and voice; no templates; cross-batch similarity audit with auto-rewrite loop.

@@ -178,6 +178,23 @@ _FOR_SALE_PATTERNS = [
 ]
 
 
+# Patterns to completely strip availability and move-in mentions from descriptions
+_AVAILABILITY_STRIP_PATTERNS = [
+    # 1. Full sentences or bullet points starting with availability or move-in
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:(?:This\s+)?(?:house|property|home|unit|apartment)\s+(?:is\s+)?)?(?:currently\s+)?available\s+(?:for\s+rent\s+|for\s+move-?in\s+|for\s+lease\s+)?(?:now|immediately|today|soon|as\s+of\s+[^.!?\n]+|on\s+[^.!?\n]+|starting\s+[^.!?\n]+|from\s+[^.!?\n]+|this\s+[^.!?\n]+|in\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)[^.!?\n]*)[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:(?:This\s+)?(?:house|property|home|unit|apartment)\s+is\s+)?(?:very\s+clean\s+and\s+)?move-?in\s+ready\s*(?:and\s+available\s+now)?[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:Available\s+date|Availability\s*date?|Move-?in\s+date)\s*[:=-]\s*[^.!?\n]+[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*Ready\s+(?:for|to)\s+(?:immediate\s+)?(?:move-?in|occupancy|move\s+in)[^.!?\n]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*Immediate\s+(?:move-?in|occupancy)[^.!?\n]*[.!?]?", re.IGNORECASE),
+    # 2. Inline availability and move-in phrases
+    re.compile(r"(?i)(?:,\s*|\s+and\s+)?(?:is\s+)?(?:very\s+clean\s+and\s+)?move-?in\s+ready\s*(?:and\s+available\s+now)?", re.IGNORECASE),
+    re.compile(r"(?i)(?:,\s*|\s+and\s+)?(?:is\s+)?available\s+(?:for\s+rent\s+|for\s+lease\s+|for\s+move-?in\s+)?(?:now|immediately|today|soon)", re.IGNORECASE),
+    re.compile(r"(?i)(?:,\s*|\s+and\s+)?available\s+(?:on|starting|from|as\s+of)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|\d{1,2}/\d{1,2})[^.,!?\n]*", re.IGNORECASE),
+    re.compile(r"(?i)\bavailable\s+for\s+(?:immediate\s+)?(?:move-?in|occupancy)\b", re.IGNORECASE),
+    re.compile(r"(?i)\bmove-?in\s+ready\b", re.IGNORECASE),
+]
+
+
 def strip_for_sale_jargon_from_description(text):
     """
     Remove all for-sale, buyer, lender, mortgage, and escrow jargon from listing descriptions.
@@ -214,10 +231,29 @@ def strip_security_deposit_from_description(text):
     return text.strip()
 
 
+def strip_availability_from_description(text):
+    """
+    Remove all available dates, availability clauses, and move-in status from listing descriptions.
+    Choice Properties listings must never quote or mention available dates or move-in ready in descriptions.
+    """
+    if not text:
+        return text
+    for pat in _AVAILABILITY_STRIP_PATTERNS:
+        text = pat.sub(" ", text)
+    # Clean up punctuation artifacts and excess whitespace
+    text = re.sub(r",\s*\.", ".", text)
+    text = re.sub(r"\band\s*\.", ".", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
+    return text.strip()
+
+
 def clean_description(text):
     """
     Strip agent boilerplate, CTA language, screening criteria, for-sale jargon,
-    and security deposit mentions from a scraped listing description.  Returns the cleaned string.
+    security deposit mentions, and available/move-in dates from a scraped listing description.
+    Returns the cleaned string.
     """
     if not text:
         return text
@@ -225,6 +261,7 @@ def clean_description(text):
         text = pat.sub("", text)
     text = strip_for_sale_jargon_from_description(text)
     text = strip_security_deposit_from_description(text)
+    text = strip_availability_from_description(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
     return text
@@ -617,6 +654,21 @@ def validate_for_publish(record, transferred_photo_count=None):
     # 6. Rent must be set
     if not record.get("monthly_rent"):
         failures.append("monthly_rent is missing")
+
+    # 7. Description must not mention security deposit
+    if re.search(r"(?i)\bsecurity\s+deposit\b", desc):
+        failures.append("Description contains security deposit mention")
+
+    # 8. Description must not mention available dates or move-in ready/dates
+    _AVAIL_CHECK = re.compile(
+        r"available\s+(?:now|immediately|today|soon|on\s+\w+|for\s+rent|from\s+\w+)"
+        r"|move-?in\s+ready"
+        r"|ready\s+for\s+(?:immediate\s+)?move-?in"
+        r"|available\s+date",
+        re.IGNORECASE,
+    )
+    if _AVAIL_CHECK.search(desc):
+        failures.append("Description contains availability date or move-in language")
 
     return (len(failures) == 0, failures)
 
@@ -1781,6 +1833,10 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         if rec.get("description"):
             rec["description"] = strip_security_deposit_from_description(rec["description"])
 
+        # Step 2f: strip all available dates and move-in mentions from description
+        if rec.get("description"):
+            rec["description"] = strip_availability_from_description(rec["description"])
+
         # Step 3: strip corporate fee blocks
         if rec.get("description"):
             rec["description"] = strip_corporate_fees(rec["description"])
@@ -1851,9 +1907,10 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         if rec.get("description"):
             rec["description"] = append_apply_cta(rec["description"])
 
-        # Permanently clear lease terms so no properties display lease duration
+        # Permanently clear lease terms and available date so no properties display lease duration or move-in/available date
         rec["minimum_lease_months"] = None
         rec["lease_terms"] = "[]"
+        rec["available_date"] = None
 
         clean_records.append(rec)
 

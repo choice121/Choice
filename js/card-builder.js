@@ -73,21 +73,6 @@
     return label + ' ' + d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  // ── Availability chip ───────────────────────────────────────
-  // Only shown when the available date is in the future — "Avail. Sep 1".
-  // "Available Now" is implied for any listed property and is omitted.
-  function availChipHtml(p) {
-    if (p.available_date) {
-      var avail = new Date(p.available_date + 'T00:00:00');
-      var diffDays = Math.ceil((avail - Date.now()) / 864e5);
-      if (diffDays > 0) {
-        var label = avail.toLocaleString('en-US', { month: 'short', day: 'numeric' });
-        return '<span class="property-card-avail">Avail. ' + label + '</span>';
-      }
-    }
-    return '';
-  }
-
   // ── Unified card builder ────────────────────────────────────
   /**
    * Build a property card HTML string.
@@ -170,9 +155,6 @@
     // ── Address ───────────────────────────────────────────────
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
-    // ── Availability chip ─────────────────────────────────────
-    var avail = availChipHtml(p);
-
     // ── Pet policy chip — shown when pets are allowed ─────────
     var petChip = '';
     if (p.pets_allowed === true) {
@@ -216,10 +198,9 @@
         '<a href="' + escAttr(propUrl) + '" class="property-card-body" aria-label="' + title + '">' +
           // 1. Title (2-line clamp — most prominent element)
           '<div class="property-card-title">' + title + '</div>' +
-          // 2. Address + availability chip inline
+          // 2. Address inline
           '<div class="property-card-addr">' +
             '<i class="fas fa-location-dot"></i>' + addrLine +
-            (avail ? '<span class="property-card-addr-sep">·</span>' + avail : '') +
             (listedLabel ? '<span class="property-card-addr-sep">·</span><span class="property-card-listed-date">' + listedLabel + '</span>' : '') +
           '</div>' +
           // 3. Specs — beds + baths + sqft

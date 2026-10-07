@@ -46,6 +46,11 @@ function cleanDescription(desc) {
   d = d.replace(/:\s*\$[0-9,]+\s*\([^)]*deposit[^)]*\)/gi, '');
   d = d.replace(/:\s*\$[0-9,]+\s*\(equal\s+to\s+1\s+month's\s+rent\)/gi, '');
   d = d.replace(/:\s*\$[0-9,]+\s*\(Equal\s+to\s+1\s+month's\s+rent\)/gi, '');
+  // Strip available dates and move-in mentions
+  d = d.replace(/(?:•\s*)?(?:Available\s+date|Move-?in\s+date):[^\n•]+/gi, '');
+  d = d.replace(/(?:is\s+)?(?:very\s+clean\s+and\s+)?move-?in\s+ready(?:\s+and\s+available\s+now)?/gi, '');
+  d = d.replace(/(?:is\s+)?available\s+(?:for\s+rent\s+|for\s+lease\s+)?(?:now|immediately|today)/gi, '');
+  d = d.replace(/(?:is\s+)?available\s+(?:for\s+rent\s+)?on\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?/gi, '');
   // Clean empty bullets or duplicate blank lines
   d = d.replace(/•\s*\n/g, '\n').replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
   return d;

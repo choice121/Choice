@@ -18,6 +18,7 @@
 | Third-party brokerage branding | Strip: "Listed by Keller Williams", "MLS #12345", "Courtesy of RE/MAX" |
 | Security deposit in description | Strip: listing descriptions must NEVER quote, mention, or state security deposit amounts or terms |
 | Lease terms displayed | Strip / omit: no properties show lease terms or minimum lease duration; omitted from all enrichment and listings |
+| Available dates / Move-in displayed | Strip / omit: no properties show available dates, move-in status, or "Available From" tables; descriptions must never mention available dates or move-in ready |
 | Application fee ≠ $50 | Replace with "Application Fee: $50." — always, no exceptions |
 | "Free application" / "$0 fee" | Replace with "Application Fee: $50." |
 | Competitor brand in listing | Drop ENTIRE listing: FirstKey, Invitation Homes, Progress Residential, Tricon, Coldwell Banker, Keller Williams, RE/MAX, Century 21, Berkshire Hathaway, Main Street Renewal, AMH, eXp Realty |
@@ -52,11 +53,11 @@ When you call `PipelineOrchestrator.run(criteria)`, the pipeline automatically:
 5. Strips third-party brokerage/MLS branding
 6. Strips corporate fee schedules and marketing blocks (Mynd "RENT WITH MYND" block, Invitation Homes fee blocks, Progress Residential, Tricon)
 7. Strips all security deposit mentions and figures from descriptions
-8. Omits and clears all lease terms so no properties display lease duration
-9. Removes individual branded/agent photos from the image list
-10. Normalizes HVAC fields from raw MLS blobs
-11. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms)
-12. Fills missing available_date, deposit by scraping the listing page (Realtor only; never extracts lease terms)
+8. Strips all available dates, move-in status, and availability mentions from descriptions
+9. Omits and clears all lease terms and available dates so no properties display lease duration or availability dates
+10. Removes individual branded/agent photos from the image list
+11. Normalizes HVAC fields from raw MLS blobs
+12. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms and available dates)
 13. Enforces rent consistency between description text and `monthly_rent` field
 14. Normalizes application fee to $50 in description text
 15. Appends a "Apply now at Choice Properties" CTA to every description

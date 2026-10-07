@@ -3,6 +3,7 @@
 ## 1. UI Guidelines
 - **Smoking Policy**: The "smoking" tab / smoking policies are removed from property details pages. Do not show smoking restrictions or information on property pages.
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and listing views. No properties show lease terms or minimum lease duration. Future AIs must never display lease terms on property pages.
+- **No Available Date / Move-In Display or Tables**: Available dates, availability tables/rows ("Available From"), move-in dates, and move-in status are completely removed from all property details pages, overview cards, sidebar tables, and listing views. No properties show available dates or move-in timelines. Future AIs must never display available dates or move-in tables on property pages.
 
 ## 2. Pipeline Pre-Publishing Rules & Enrichment
 - **Source Details & Amenities Verification**: Verify all property details (address, rent, beds, baths, sqft) and amenities match the original listing from the source, but do not leave anything connected to the original listing (no external URLs, portal IDs, MLS cross-links, or broker contact information). Verification is strictly an internal accuracy requirement.
@@ -12,6 +13,7 @@
 - **Pet Friendly**: Always pet-friendly.
 - **Security Deposit**: Always 1x monthly rent in the structured database field, but **NEVER mentioned in descriptions**. All security deposit amounts, quotes, clauses, and references must be completely stripped from listing descriptions during description enrichment (`strip_security_deposit_from_description`). Listing descriptions must remain 100% free of security deposit mentions.
 - **No Lease Term in Enrichment or Properties**: Lease terms are removed from all enrichment documentation and pipelines so no properties show that. Scrapers, enrichment logic, and AI assistants must never extract, populate, or assign lease terms (`lease_terms`, `minimum_lease_months`). All properties must have lease terms omitted.
+- **No Available Date or Move-In in Enrichment or Descriptions**: All available dates, availability clauses ("available now", "available on [date]", "available immediately", "available for rent"), and move-in status ("move-in ready", "ready for move-in", "move-in date") must be completely stripped from listing descriptions during description enrichment (`strip_availability_from_description`). Listing descriptions must remain 100% free of availability dates and move-in mentions. Scrapers and enrichment logic must omit available dates from pipeline ingestion and public listings (`available_date = None`).
 
 ## 3. Post-Publishing Mandatory AI Response Format
 After publishing properties, the AI assistant MUST send the user the published properties link(s) in this exact format in the chat for them to verify:
@@ -118,7 +120,7 @@ Do not create information simply because a field exists. If information is unava
 - **Original Description Preservation (`original_description`)**: Every property scraped or imported into the pipeline MUST permanently store the raw, unmodified listing text in `original_description`. This field serves as the immutable ground-truth anchor of the property's authentic details.
 - **Context Preservation in Rewrites**: When generating or rewriting descriptions, the enrichment process MUST NEVER lose or discard specific real-world details provided in the original text (such as custom finishes, brand new HVAC/appliances, layout nuances, natural lighting, specific basement details, yard characteristics, or unique architectural accents).
 - **Surgical Cleaning vs Wholesale Replacement**: Enrichment must operate via surgical enhancement:
-  - Clean out prohibited text (broker contacts, agent names/headshots, portal URLs, external showing/application links, security deposit mentions, smoking policies, and lease duration clauses).
+  - Clean out prohibited text (broker contacts, agent names/headshots, portal URLs, external showing/application links, security deposit mentions, smoking policies, lease duration clauses, and availability/move-in dates).
   - Elevate the tone to Choice Properties standards with natural phrasing, active voice, and professional flow.
   - DO NOT replace an authentic, informative description with a generic AI summary template.
 - **Dual-State Availability**: Both the current enriched `description` and the untouched `original_description` must be preserved in the pipeline so admins can compare them side-by-side or revert if necessary.
@@ -263,6 +265,7 @@ Before publishing:
 * Security deposit: Always 1x monthly rent in structured DB, but NEVER mentioned in descriptions.
 * Lease terms: Never display lease terms, durations, or minimum lease length anywhere on property pages or descriptions.
 * Smoking: Never display smoking policies on property pages.
+* Available / Move-in: Never display available dates, move-in status, or "Available From" tables anywhere on property pages or in descriptions.
 
 ---
 
@@ -343,7 +346,7 @@ Verify:
 ✓ No fabricated information
 ✓ No conflicting prices
 ✓ No outdated information
-✓ No prohibited language (no lease terms, no smoking, no tour/showing language)
+✓ No prohibited language (no lease terms, no smoking, no available/move-in dates, no tour/showing language)
 ✓ No third-party application instructions
 ✓ No third-party contact information
 ✓ Correct Choice Properties branding
@@ -418,5 +421,5 @@ The extension extracts listings across 7 platforms directly into the Supabase pi
 
 ### C. Pipeline & Folder Ingestion Invariants
 - **Dynamic Target Folder Dropdown**: The extension widget dynamically queries active pipeline folders from `receive-pipeline-import?action=list_folders`. Selected `folder_id` is passed with the payload for automatic staging assignment.
-- **Rule Ingestion Enforcement**: Auto-$50 application fee, pet-friendly = true, 1x rent security deposit (never in descriptions), zero bathroom truncation (Rule 6A), architectural type classification (Rule 6B), and no lease term displays.
+- **Rule Ingestion Enforcement**: Auto-$50 application fee, pet-friendly = true, 1x rent security deposit (never in descriptions), zero bathroom truncation (Rule 6A), architectural type classification (Rule 6B), no lease term displays, and no available/move-in date displays or description mentions.
 

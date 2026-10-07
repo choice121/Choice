@@ -91,6 +91,14 @@ enrichment pipelines, and AI assistants must never extract, populate, or
 display lease terms (`lease_terms`, `minimum_lease_months`). All listings must
 omit lease term durations so no properties display them on the platform.
 
+### 2g. Available Dates & Move-In — OMIT & STRIP (Mandatory)
+No property should show available dates, move-in status, or "Available From" tables.
+Scrapers, enrichment pipelines, and AI assistants must never extract or display
+available dates. All available dates, "available now", "available on [date]",
+"move-in ready", "move-in date", and availability claims must be completely stripped
+from listing descriptions by `strip_availability_from_description()`. All property
+details pages, overview cards, and listing cards must never display availability dates.
+
 ---
 
 ## 3. Application Fee Normalization (Mandatory)

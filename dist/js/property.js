@@ -812,10 +812,6 @@ function renderProperty(p) {
     mapOpenBtn.style.display = '';
   }
 
-  // Append T00:00:00 so date-only strings are parsed as local midnight, not UTC
-  // midnight — avoids a one-day-off chip in US timezones (Bug 4 fix).
-  const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
-
   // Sidebar
   const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
   const priceHtml = `${rentStr}<span>/month</span>`;
@@ -826,21 +822,8 @@ function renderProperty(p) {
 
   const _availEl = document.getElementById('sidebarAvail');
   const _availStickyEl = document.getElementById('sidebarStickyAvail');
-  if (!availNow && p.available_date) {
-    const availText = 'Available ' + formatDate(p.available_date);
-    const availColor = '#d4a017';
-    if (_availEl) {
-      _availEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-      _availEl.style.display = '';
-    }
-    if (_availStickyEl) {
-      _availStickyEl.innerHTML = `<i class="fas fa-circle" style="color:${availColor}"></i> ${availText}`;
-      _availStickyEl.style.display = '';
-    }
-  } else {
-    if (_availEl) _availEl.style.display = 'none';
-    if (_availStickyEl) _availStickyEl.style.display = 'none';
-  }
+  if (_availEl) _availEl.style.display = 'none';
+  if (_availStickyEl) _availStickyEl.style.display = 'none';
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
@@ -857,13 +840,6 @@ function renderProperty(p) {
   const _feeAmtEl = document.getElementById('applyFeeAmt');
   if (_feeAmtEl) {
     _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
-  }
-  // Only show "Available From" in the Costs table when the date is in the future.
-  // If the property is already available (availNow), showing a past date alongside
-  // the "Available Now" chip is contradictory — suppress it (Bug 3 fix).
-  if (p.available_date && !availNow) {
-    document.getElementById('sidebarMoveInRow').style.display = '';
-    document.getElementById('sidebarMoveIn').textContent = formatDate(p.available_date);
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -3511,14 +3487,6 @@ function renderPropFacts(p) {
 
   // ── Cards — only fields NOT already in meta strip or tabs ──────────────
 
-  // Move-in: available (future date only — never show "Available Now" or "Immediate")
-  const availNow = !p.available_date || new Date(p.available_date + 'T00:00:00') <= new Date();
-  const moveInCard = !availNow && p.available_date
-    ? card('Move-in', 'fa-key', [
-        row('Available', formatDate(p.available_date)),
-      ])
-    : '';
-
   // Interior: heating / cooling / laundry
   // (flooring excluded — already in Amenities tab; beds/baths/sqft excluded — in meta strip)
   const interiorCard = card('Interior', 'fa-house', [
@@ -3540,7 +3508,7 @@ function renderPropFacts(p) {
     row('Parking fee',   p.parking_fee ? '$' + Number(p.parking_fee).toLocaleString() + '/mo' : null),
   ]);
 
-  const hasContent = moveInCard || interiorCard || locationCard || parkingCard;
+  const hasContent = interiorCard || locationCard || parkingCard;
   if (!hasContent) return;
 
   // Show divider between Features tabs and this section when both are visible
@@ -3550,12 +3518,6 @@ function renderPropFacts(p) {
     if (fd) fd.style.display = '';
   }
 
-  // Show "Available From" in Costs table when future available_date is present
-  if (!availNow && p.available_date) {
-    const moveInRow = document.getElementById('sidebarMoveInRow');
-    if (moveInRow) moveInRow.style.display = '';
-  }
-
   section.style.display = '';
   if (divider) divider.style.display = '';
 
@@ -3563,7 +3525,6 @@ function renderPropFacts(p) {
     <div class="prop-section">
       <div class="prop-section-eyebrow">Property details</div>
       <div class="prop-section-head">More about <em>this home</em>.</div>
-      ${moveInCard}
       ${interiorCard}
       ${locationCard}
       ${parkingCard}

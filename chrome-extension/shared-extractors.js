@@ -310,6 +310,7 @@
     let s = String(text);
     s = s.replace(/(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:for\s+sale|listed\s+for\s+sale|on\s+the\s+market|priced\s+to\s+sell|motivated\s+seller|mortgage|down\s*payment|fha|conventional\s+financing|va\s+loan|seller\s+financing|title\s+company|escrow|closing\s+costs?|earnest\s+money|open\s+house|investor\s+special|cash\s+flow|arv\b|opendoor\s+brokerage|make\s+an\s+offer)\b[^\n.!?]*[.!?]?/gi, ' ');
     s = s.replace(/(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?/gi, ' ');
+    s = s.replace(/(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:available\s+(?:now|immediately|today|soon|for\s+rent|on\s+\w+|from\s+\w+)|move-?in\s+ready|ready\s+for\s+(?:immediate\s+)?move-?in|available\s+date)\b[^\n.!?]*[.!?]?/gi, ' ');
     s = s.replace(/,\s*\./g, '.').replace(/\band\s*\./gi, '.').replace(/[ \t]{2,}/g, ' ').replace(/\n\s*\n\s*\n+/g, '\n\n');
     s = s.trim();
     return s || null;
