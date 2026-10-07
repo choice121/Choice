@@ -83,7 +83,18 @@ let currentProperty  = null;
 let photoIndex       = 0;
 let allPhotos        = [];
 let _isAdminViewer   = false;
-let savedIds = new Set(JSON.parse(localStorage.getItem('cp_saved') || '[]'));
+function loadSavedPropertyIds() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem('cp_saved') || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter(id => typeof id === 'string') : []);
+  } catch (e) {
+    // Saved-state is optional. Corrupt or unavailable browser storage must not
+    // stop the property module before it starts loading the listing itself.
+    console.warn('[property] saved-state unavailable; continuing without it', e);
+    return new Set();
+  }
+}
+let savedIds = loadSavedPropertyIds();
 
 if (isPreview) {
   // ── Preview mode — load from sessionStorage ──
