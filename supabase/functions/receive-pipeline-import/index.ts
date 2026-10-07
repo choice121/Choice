@@ -115,13 +115,11 @@ Deno.serve(async (req) => {
 
   // 2. CREATE FOLDER
   if (action === 'create_folder') {
-    const folderName = safeStr(body.name || body.folder_name);
-    const description = safeStr(body.description);
+    const rawName = body.name !== undefined && body.name !== null ? String(body.name) : (body.folder_name !== undefined && body.folder_name !== null ? String(body.folder_name) : '');
+    const folderName = rawName.length > 0 ? rawName : '1';
+    const description = body.description !== undefined && body.description !== null ? String(body.description) : null;
     const color = safeStr(body.color) || '#6366f1';
     const icon = safeStr(body.icon) || '📁';
-    if (!folderName) {
-      return permissiveJsonErr(400, 'Folder name is required', req);
-    }
 
     let folderId: string | null = null;
     let finalName = folderName;
@@ -137,14 +135,14 @@ Deno.serve(async (req) => {
     if (!error && data) {
       const resObj = typeof data === 'string' ? JSON.parse(data) : data;
       folderId = resObj?.id || null;
-      if (resObj?.name) finalName = resObj.name;
+      if (resObj?.name !== undefined && resObj?.name !== null) finalName = String(resObj.name);
     } else {
       // Direct table insert fallback
       const { data: inserted, error: insertErr } = await adminClient
         .schema('pipeline')
         .from('pipeline_folders')
         .insert({
-          name: folderName.trim(),
+          name: folderName,
           description: description || null,
           color: color,
           icon: icon,
@@ -158,7 +156,7 @@ Deno.serve(async (req) => {
           .schema('pipeline')
           .from('pipeline_folders')
           .select('id, name')
-          .ilike('name', folderName.trim())
+          .ilike('name', folderName)
           .maybeSingle();
 
         if (existingF) {
@@ -276,31 +274,35 @@ Deno.serve(async (req) => {
   const existing = existingRows?.[0] ?? null;
 
   if (existing) {
-    // If folder was specified and existing record doesn't have it, we can assign it
-    const reqFolder = safeStr(body.folder_name);
+    // If folder was specified (by folder_id or folder_name), assign/update it
+    const reqFolderId = safeStr(body.folder_id);
+    const reqFolder = body.folder_name !== undefined && body.folder_name !== null ? String(body.folder_name) : '';
     let updatedFolderInfo: Record<string, unknown> | null = null;
-    if (reqFolder) {
+    if (reqFolderId || reqFolder) {
       try {
-        // Resolve or create folder
-        let fId: string | null = null;
-        const { data: foundFolder } = await adminClient
-          .schema('pipeline')
-          .from('pipeline_folders')
-          .select('id, name')
-          .ilike('name', reqFolder.trim())
-          .maybeSingle();
+        let fId: string | null = reqFolderId || null;
+        let fName: string = reqFolder || 'Folder';
+        if (!fId && reqFolder) {
+          const { data: foundFolder } = await adminClient
+            .schema('pipeline')
+            .from('pipeline_folders')
+            .select('id, name')
+            .ilike('name', reqFolder)
+            .maybeSingle();
 
-        if (foundFolder) {
-          fId = foundFolder.id;
-        } else {
-          const { data: created } = await adminClient.rpc('pipeline_folder_create', {
-            p_name: reqFolder.trim(),
-            p_description: null,
-            p_color: '#6366f1',
-            p_icon: '📁',
-          });
-          const cObj = typeof created === 'string' ? JSON.parse(created) : created;
-          if (cObj?.id) fId = cObj.id;
+          if (foundFolder) {
+            fId = foundFolder.id;
+            fName = foundFolder.name;
+          } else {
+            const { data: created } = await adminClient.rpc('pipeline_folder_create', {
+              p_name: reqFolder,
+              p_description: null,
+              p_color: '#6366f1',
+              p_icon: '📁',
+            });
+            const cObj = typeof created === 'string' ? JSON.parse(created) : created;
+            if (cObj?.id) fId = cObj.id;
+          }
         }
 
         if (fId) {
@@ -310,7 +312,7 @@ Deno.serve(async (req) => {
           });
           const addObj = typeof addData === 'string' ? JSON.parse(addData) : addData;
           if (addObj?.ok) {
-            updatedFolderInfo = { folder: reqFolder, serial: addObj.serial, folder_id: fId };
+            updatedFolderInfo = { folder: fName, serial: addObj.serial, folder_id: fId };
           }
         }
       } catch (e) {

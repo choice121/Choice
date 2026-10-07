@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v25.0.0
+// Choice Properties — Universal Content Script & UI Engine v26.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '25.0.0';
+  var VERSION  = '26.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -29,6 +29,7 @@
   var renderedListingSignature = '';
   var listingGeneration = 0;
   var cachedFolders = [];
+  var activeDefaultFolder = null; // { id, name, description } or null for Main Inbox
   var isSaving = false;
   var listingRefreshTimer = null;
   var hydrationRefreshTimers = [];
@@ -111,7 +112,7 @@
     });
   }
 
-  // ── Fast In-Memory & LocalStorage Folder Cache ───────────────
+  // ── Fast In-Memory, Chrome Storage & LocalStorage Folder Cache ───────────────
   function getCachedFolders() {
     if (cachedFolders && cachedFolders.length > 0) return cachedFolders;
     try {
@@ -133,6 +134,101 @@
     try {
       localStorage.setItem('cp_pipeline_folders_cache', JSON.stringify(folders));
     } catch (e) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ cp_folders_cache: folders });
+      }
+    } catch (e) {}
+  }
+
+  function getDefaultFolderSync() {
+    if (activeDefaultFolder) return activeDefaultFolder;
+    try {
+      var raw = localStorage.getItem('cp_default_folder');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.id || parsed.name != null)) {
+          activeDefaultFolder = parsed;
+          return activeDefaultFolder;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function setDefaultFolder(folder) {
+    activeDefaultFolder = folder && (folder.id || folder.name != null)
+      ? { id: folder.id || null, name: String(folder.name != null ? folder.name : ''), description: folder.description || '' }
+      : null;
+    try {
+      if (activeDefaultFolder) {
+        localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder));
+      } else {
+        localStorage.removeItem('cp_default_folder');
+      }
+    } catch (e) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'SET_DEFAULT_FOLDER', folder: activeDefaultFolder });
+      }
+    } catch (e) {}
+  }
+
+  async function apiListFolders() {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          chrome.runtime.sendMessage({ type: 'LIST_FOLDERS' }, function (resp) {
+            resolve(chrome.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && Array.isArray(bgRes.folders)) {
+        return bgRes.folders;
+      }
+    }
+    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+    var res = await fetch(url);
+    if (res.ok) {
+      var data = await res.json();
+      if (data && Array.isArray(data.folders)) return data.folders;
+    }
+    return null;
+  }
+
+  async function apiCreateFolder(name, description) {
+    var rawName = name != null ? String(name) : '';
+    var rawDesc = description != null ? String(description) : '';
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          chrome.runtime.sendMessage({
+            type: 'CREATE_FOLDER',
+            name: rawName,
+            description: rawDesc
+          }, function (resp) {
+            resolve(chrome.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && bgRes.id) {
+        return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
+      }
+    }
+    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+      body: JSON.stringify({
+        action: 'create_folder',
+        name: rawName,
+        description: rawDesc
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data && data.ok && data.id) {
+      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
+    }
+    throw new Error((data && data.error) || 'Failed to create folder');
   }
 
   // ── Smart Layout Collision Avoidance ────────────────────────
@@ -265,13 +361,13 @@
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
-    // Build Folder Options from Instant Cache
+    // Build Folder State from Instant Cache & Sticky Default
     var cached = getCachedFolders();
-    var folderOptionsHtml = '<option value="">(Default / Main Inbox)</option>';
-    cached.forEach(function (f) {
-      folderOptionsHtml += '<option value="' + escapeHtml(f.id) + '">' +
-        escapeHtml(f.icon || '📁') + ' ' + escapeHtml(f.name) + '</option>';
-    });
+    var defaultFolder = getDefaultFolderSync();
+    var currentFolderLabel = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+      ? String(defaultFolder.name)
+      : 'Main Inbox (Default)';
+    var isCustomFolderActive = Boolean(defaultFolder && (defaultFolder.id || (defaultFolder.name != null && String(defaultFolder.name) !== '')));
 
     container.innerHTML = `
       <!-- Minimized State Trigger -->
@@ -338,16 +434,42 @@
             </div>
           </div>
 
-          <!-- Folder Selection Target (Fast Instant Cache) -->
-          <div class="cp-folder-select-row">
-            <label for="cp-folder-select" class="cp-folder-label">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-              <span>Target Folder:</span>
-            </label>
-            <div class="cp-folder-select-wrapper">
-              <select id="cp-folder-select" class="cp-folder-select">
-                ${folderOptionsHtml}
-              </select>
+          <!-- Compact Folder Pill & Auto-Collapsing Popover -->
+          <div class="cp-folder-bar">
+            <button type="button" class="cp-folder-pill-trigger ${isCustomFolderActive ? 'cp-folder-active' : ''}" id="cp-folder-pill-btn" title="Click to switch folder or create a new folder">
+              <div class="cp-folder-pill-left">
+                <span class="cp-folder-pill-icon">📁</span>
+                <div class="cp-folder-pill-text">
+                  <span class="cp-folder-pill-label">Folder:</span>
+                  <span class="cp-folder-pill-name" id="cp-folder-pill-name">${escapeHtml(currentFolderLabel)}</span>
+                </div>
+              </div>
+              <span class="cp-folder-pill-action" id="cp-folder-pill-action">Change / + New ▾</span>
+            </button>
+
+            <!-- Collapsible Folder Management Popover -->
+            <div class="cp-folder-popover" id="cp-folder-popover">
+              <div class="cp-folder-popover-header">
+                <span class="cp-folder-popover-title">Target Pipeline Folder</span>
+                <button type="button" class="cp-folder-popover-close" id="cp-folder-popover-close" title="Close">×</button>
+              </div>
+
+              <div class="cp-folder-list" id="cp-folder-list"></div>
+
+              <div class="cp-folder-divider"></div>
+
+              <button type="button" class="cp-folder-create-toggle" id="cp-folder-create-toggle">
+                <span>+ Create New Folder</span>
+              </button>
+
+              <div class="cp-folder-create-form" id="cp-folder-create-form">
+                <input type="text" id="cp-new-folder-name" class="cp-folder-input" placeholder="Folder name (e.g. 1, 102, Columbus)" autocomplete="off" />
+                <input type="text" id="cp-new-folder-desc" class="cp-folder-input" placeholder="Description (optional)" autocomplete="off" />
+                <div class="cp-folder-form-actions">
+                  <button type="button" class="cp-folder-btn-cancel" id="cp-folder-btn-cancel">Cancel</button>
+                  <button type="button" class="cp-folder-btn-submit" id="cp-folder-btn-create">Create &amp; Set Default</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -471,6 +593,196 @@
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
+    // Folder UI Elements
+    var folderPillBtn = container.querySelector('#cp-folder-pill-btn');
+    var folderPillName = container.querySelector('#cp-folder-pill-name');
+    var folderPillAction = container.querySelector('#cp-folder-pill-action');
+    var folderPopover = container.querySelector('#cp-folder-popover');
+    var folderPopoverClose = container.querySelector('#cp-folder-popover-close');
+    var folderListEl = container.querySelector('#cp-folder-list');
+    var folderCreateToggle = container.querySelector('#cp-folder-create-toggle');
+    var folderCreateForm = container.querySelector('#cp-folder-create-form');
+    var newFolderNameInput = container.querySelector('#cp-new-folder-name');
+    var newFolderDescInput = container.querySelector('#cp-new-folder-desc');
+    var folderBtnCancel = container.querySelector('#cp-folder-btn-cancel');
+    var folderBtnCreate = container.querySelector('#cp-folder-btn-create');
+
+    function closeFolderPopover() {
+      if (!folderPopover) return;
+      folderPopover.classList.remove('cp-open');
+      if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+      if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      if (folderPillAction) folderPillAction.textContent = 'Change / + New ▾';
+    }
+
+    function updateFolderPillDisplay() {
+      var def = getDefaultFolderSync();
+      if (def && (def.id || (def.name != null && String(def.name) !== ''))) {
+        if (folderPillName) folderPillName.textContent = String(def.name);
+        if (folderPillBtn) folderPillBtn.classList.add('cp-folder-active');
+      } else {
+        if (folderPillName) folderPillName.textContent = 'Main Inbox (Default)';
+        if (folderPillBtn) folderPillBtn.classList.remove('cp-folder-active');
+      }
+    }
+
+    function renderFolderList() {
+      if (!folderListEl) return;
+      var folders = getCachedFolders();
+      var def = getDefaultFolderSync();
+      var selectedId = def && def.id ? String(def.id) : '';
+      var selectedName = def && def.name != null ? String(def.name) : '';
+
+      var html = '';
+      var isInboxSelected = !selectedId && !selectedName;
+      html += '<button type="button" class="cp-folder-item ' + (isInboxSelected ? 'cp-selected' : '') + '" data-folder-id="" data-folder-name="">' +
+        '<div class="cp-folder-item-main">' +
+          '<div class="cp-folder-item-name">📥 Main Inbox (Default)</div>' +
+          '<div class="cp-folder-item-desc">Unassigned pipeline staging</div>' +
+        '</div>' +
+        (isInboxSelected ? '<span class="cp-folder-item-check">✓</span>' : '') +
+      '</button>';
+
+      folders.forEach(function (f) {
+        if (!f) return;
+        var fId = f.id ? String(f.id) : '';
+        var fName = f.name != null ? String(f.name) : '';
+        var fDesc = f.description != null ? String(f.description) : '';
+        var isSel = (selectedId && fId === selectedId) || (!selectedId && selectedName && fName === selectedName);
+        html += '<button type="button" class="cp-folder-item ' + (isSel ? 'cp-selected' : '') + '" data-folder-id="' + escapeHtml(fId) + '" data-folder-name="' + escapeHtml(fName) + '" data-folder-desc="' + escapeHtml(fDesc) + '">' +
+          '<div class="cp-folder-item-main">' +
+            '<div class="cp-folder-item-name">' + escapeHtml(f.icon || '📁') + ' ' + escapeHtml(fName) + '</div>' +
+            (fDesc ? '<div class="cp-folder-item-desc">' + escapeHtml(fDesc) + '</div>' : '') +
+          '</div>' +
+          (isSel ? '<span class="cp-folder-item-check">✓</span>' : '') +
+        '</button>';
+      });
+
+      folderListEl.innerHTML = html;
+
+      var items = folderListEl.querySelectorAll('.cp-folder-item');
+      items.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var fId = btn.getAttribute('data-folder-id') || '';
+          var fName = btn.getAttribute('data-folder-name') || '';
+          var fDesc = btn.getAttribute('data-folder-desc') || '';
+          if (!fId && !fName) {
+            setDefaultFolder(null);
+          } else {
+            setDefaultFolder({ id: fId || null, name: fName, description: fDesc });
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
+          closeFolderPopover(); // Auto-collapse immediately once selected
+        });
+      });
+    }
+
+    renderFolderList();
+
+    if (folderPillBtn) {
+      folderPillBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = folderPopover && folderPopover.classList.contains('cp-open');
+        if (isOpen) {
+          closeFolderPopover();
+        } else if (folderPopover) {
+          renderFolderList();
+          folderPopover.classList.add('cp-open');
+          if (folderPillAction) folderPillAction.textContent = 'Close ▴';
+        }
+      });
+    }
+
+    if (folderPopoverClose) {
+      folderPopoverClose.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeFolderPopover();
+      });
+    }
+
+    if (folderCreateToggle) {
+      folderCreateToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        folderCreateToggle.style.display = 'none';
+        if (folderCreateForm) {
+          folderCreateForm.classList.add('cp-open');
+          if (newFolderNameInput) newFolderNameInput.focus();
+        }
+      });
+    }
+
+    if (folderBtnCancel) {
+      folderBtnCancel.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+        if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      });
+    }
+
+    // Stop keydown events inside folder inputs from triggering Zillow or extension hotkeys
+    [newFolderNameInput, newFolderDescInput].forEach(function (inp) {
+      if (!inp) return;
+      inp.addEventListener('keydown', function (e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (folderBtnCreate) folderBtnCreate.click();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeFolderPopover();
+        }
+      });
+    });
+
+    if (folderBtnCreate) {
+      folderBtnCreate.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        // No restrictive input validation — allow numbers, symbols, single digits, etc.
+        var rawName = newFolderNameInput ? String(newFolderNameInput.value) : '';
+        var rawDesc = newFolderDescInput ? String(newFolderDescInput.value) : '';
+        if (!rawName.length) {
+          rawName = '1';
+        }
+        folderBtnCreate.disabled = true;
+        folderBtnCreate.textContent = 'Creating…';
+        try {
+          var created = await apiCreateFolder(rawName, rawDesc);
+          var folderObj = {
+            id: created && created.id ? created.id : null,
+            name: created && created.name != null ? String(created.name) : rawName,
+            description: rawDesc,
+            icon: '📁'
+          };
+          var existingList = getCachedFolders().filter(function (f) {
+            return f && f.id !== folderObj.id && String(f.name) !== String(folderObj.name);
+          });
+          existingList.unshift(folderObj);
+          setCachedFolders(existingList);
+          setDefaultFolder(folderObj);
+          updateFolderPillDisplay();
+          renderFolderList();
+          if (newFolderNameInput) newFolderNameInput.value = '';
+          if (newFolderDescInput) newFolderDescInput.value = '';
+          closeFolderPopover(); // Auto-collapse immediately after creating folder!
+        } catch (err) {
+          // Even if offline, set sticky folder name so backend auto-creates on next property save
+          var fallbackObj = { id: null, name: rawName, description: rawDesc, icon: '📁' };
+          var list = getCachedFolders();
+          list.unshift(fallbackObj);
+          setCachedFolders(list);
+          setDefaultFolder(fallbackObj);
+          updateFolderPillDisplay();
+          renderFolderList();
+          closeFolderPopover();
+        } finally {
+          folderBtnCreate.disabled = false;
+          folderBtnCreate.textContent = 'Create & Set Default';
+        }
+      });
+    }
+
     minimizeBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       container.classList.add('cp-minimized');
@@ -510,34 +822,38 @@
 
     updateWidgetPosition();
 
-    // Revalidate Folders in background (0ms UI latency)
+    // Sync Default Folder & Revalidate Folders in background (0ms UI latency)
     (async function fetchFolders() {
-      var folderSelect = container.querySelector('#cp-folder-select');
-      if (!folderSelect) return;
       try {
-        var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
-        var foldersList = null;
-        try {
-          var res = await fetch(url);
-          if (res.ok) {
-            var data = await res.json();
-            if (data && Array.isArray(data.folders) && data.folders.length > 0) {
-              foldersList = data.folders;
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'GET_DEFAULT_FOLDER' }, function (resp) {
+            if (!chrome.runtime.lastError && resp && resp.ok) {
+              if (resp.defaultFolder && !activeDefaultFolder) {
+                activeDefaultFolder = resp.defaultFolder;
+                try { localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder)); } catch (_) {}
+                updateFolderPillDisplay();
+                renderFolderList();
+              }
+              if (Array.isArray(resp.folders) && resp.folders.length > 0 && cachedFolders.length === 0) {
+                setCachedFolders(resp.folders);
+                renderFolderList();
+              }
             }
-          }
-        } catch (_) {}
-
+          });
+        }
+        var foldersList = await apiListFolders();
         if (Array.isArray(foldersList) && foldersList.length > 0) {
           setCachedFolders(foldersList);
-          var currentVal = folderSelect.value;
-          folderSelect.innerHTML = '<option value="">(Default / Main Inbox)</option>';
-          foldersList.forEach(function (f) {
-            var opt = document.createElement('option');
-            opt.value = f.id;
-            opt.textContent = (f.icon || '📁') + ' ' + f.name;
-            folderSelect.appendChild(opt);
-          });
-          if (currentVal) folderSelect.value = currentVal;
+          // Reconcile default folder ID if matched by name
+          var def = getDefaultFolderSync();
+          if (def && !def.id && def.name != null) {
+            var matched = foldersList.find(function (f) { return f && String(f.name) === String(def.name); });
+            if (matched && matched.id) {
+              setDefaultFolder({ id: matched.id, name: matched.name, description: matched.description || def.description });
+            }
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
         }
       } catch (e) {}
     })();
@@ -573,6 +889,12 @@
 
     if (!saveBtn) return;
     isSaving = true;
+
+    // Auto-collapse folder popover if open when clicking Save
+    var openPopover = document.querySelector('#cp-folder-popover.cp-open');
+    if (openPopover) {
+      openPopover.classList.remove('cp-open');
+    }
 
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="cp-spinner"></span> <span>Saving to pipeline…</span>';
@@ -614,12 +936,19 @@
       }
       photoUrls = dedupePhotoUrls(photoUrls);
 
-      var folderSelect = document.querySelector('#cp-folder-select');
-      var selectedFolderId = folderSelect && folderSelect.value ? folderSelect.value : null;
-      var selectedFolderName = null;
-      if (folderSelect && folderSelect.selectedIndex >= 0) {
-        var selectedOption = folderSelect.options[folderSelect.selectedIndex];
-        selectedFolderName = selectedOption && selectedOption.value ? selectedOption.textContent.replace(/^[^\S\r\n]*[^\w]*\s*/, '').trim() : null;
+      var defaultFolder = getDefaultFolderSync();
+      var selectedFolderId = defaultFolder && defaultFolder.id ? String(defaultFolder.id) : null;
+      var selectedFolderName = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+        ? String(defaultFolder.name)
+        : null;
+
+      // Persist as sticky default folder whenever saving to a folder
+      if (selectedFolderId || selectedFolderName) {
+        setDefaultFolder({
+          id: selectedFolderId,
+          name: selectedFolderName || '',
+          description: (defaultFolder && defaultFolder.description) || ''
+        });
       }
 
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
@@ -699,7 +1028,14 @@
       } else if (resp && resp.ok) {
         saveBtn.style.display = 'none';
 
-        if (resp.folder && resp.folder.name) {
+        if (resp.folder && resp.folder.name != null) {
+          if (resp.folder.folder_id) {
+            setDefaultFolder({
+              id: resp.folder.folder_id,
+              name: String(resp.folder.name),
+              description: (defaultFolder && defaultFolder.description) || ''
+            });
+          }
           if (successText) {
             successText.textContent = 'Saved to ' + resp.folder.name + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
           }
@@ -712,7 +1048,14 @@
       } else if (resp && resp.duplicate) {
         isSaving = false;
         if (resp.folder && resp.folder.folder) {
-          saveBtn.innerHTML = '<span>Updated Folder (' + escapeHtml(resp.folder.folder.slice(0, 14)) + ')</span>';
+          if (resp.folder.folder_id) {
+            setDefaultFolder({
+              id: resp.folder.folder_id,
+              name: String(resp.folder.folder),
+              description: (defaultFolder && defaultFolder.description) || ''
+            });
+          }
+          saveBtn.innerHTML = '<span>Updated Folder (' + escapeHtml(String(resp.folder.folder).slice(0, 14)) + ')</span>';
           saveBtn.style.background = '#059669';
         } else {
           saveBtn.innerHTML = '<span>Already in Pipeline</span>';

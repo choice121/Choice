@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v25.0.0)
+# Choice Properties — Universal Chrome Extension (v26.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -29,7 +29,8 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Verified architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.).
   - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
-- **Instant Folder Selection**: Fast in-memory cached folder selector loads with 0ms network latency.
+- **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch folders or create a new folder (with any name, including numbers, and optional description) directly on Zillow, auto-collapsing immediately once configured.
+- **Sticky Default Folder Persistence**: Any folder created or selected automatically becomes the persistent default folder for all subsequent 1-click "Save to Pipeline" imports until changed.
 - **Global Keyboard Shortcut**: Press `Cmd+Shift+S` (or `Ctrl+Shift+S`) to save immediately from anywhere on the page.
 - **Resilient Auto-Retry Background Worker**: Automatically retries with exponential backoff on transient network drops to guarantee zero dropped listings.
 - **Rule Compliance Enforced**:

@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v26.0.0] - 2026-10-07
+### Compact Folder Pill, Auto-Collapsing Folder Popover & Sticky Default Folder Engine
+- **Minimal Compact Folder Pill**: Replaced the bulky static `<select>` dropdown above the Save button with a sleek 1-line Folder Pill (`📁 Folder: <Name> • Change / + New ▾`) so the Save to Pipeline button is never obstructed or cramped on Zillow and supported portals.
+- **In-Widget Folder Creation (Zero Input Validation)**: Users can now create a new folder directly on Zillow with any folder name (including single digits like `1`, numbers like `102`, or text) and optional description without leaving the page.
+- **Auto-Collapsing Popover**: The folder management popover opens on demand and automatically collapses the instant a folder is created, selected, or when Save to Pipeline is clicked, keeping the HUD minimal and clean.
+- **Sticky Default Folder Persistence**: Creating a folder, selecting a folder, or saving a property to a folder automatically locks that folder as the persistent default across `chrome.storage.local` and `localStorage`. Every subsequent click on "Save to Pipeline" routes directly into that active folder until changed.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing.
+
+---
+
 ## [v24.0.0] - 2026-10-07
 ### Enhanced Accessible Save to Pipeline Button & 360° Draggable Widget Interface
 - **Prominent Accessible Save Button**: Completely overhauled the "Save to Pipeline" action button design. Upgraded with an ergonomic pill shape, large 48px+ click/tap target, high-contrast emerald-indigo gradient (`linear-gradient(135deg, #10b981 0%, #059669 30%, #4f46e5 100%)`), larger 20px action icon, bold 14.5px typography, glowing hover aura, and clear shortcut pill (`⌘⇧S`). Eliminates difficult mouse targeting and provides effortless one-click saves.
