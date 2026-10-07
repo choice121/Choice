@@ -419,9 +419,8 @@ const Properties = {
       case 'price_desc': q = q.order('monthly_rent', { ascending: false }); break;
       case 'beds_desc':  q = q.order('bedrooms', { ascending: false });      break;
       default:
-        // Sort by original source listing date (nulls last), then creation date as fallback
-        q = q.order('listed_at', { ascending: false, nullsFirst: false })
-             .order('created_at', { ascending: false });
+        // High-performance indexed sort by creation date
+        q = q.order('created_at', { ascending: false });
         break;
     }
 
@@ -478,8 +477,7 @@ const Properties = {
       case 'price_desc': q = q.order('monthly_rent', { ascending: false }); break;
       case 'beds_desc':  q = q.order('bedrooms',     { ascending: false }); break;
       default:
-        q = q.order('listed_at', { ascending: false, nullsFirst: false })
-             .order('created_at', { ascending: false });
+        q = q.order('created_at', { ascending: false });
         break;
     }
     q = q.range(from, to);
@@ -501,7 +499,6 @@ const Properties = {
 
   async getAll(filters = {}) {
     let q = sb().from('properties').select(PROPERTIES_SELECT_FULL)
-      .order('listed_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
     if (filters.status)    q = q.eq('status', filters.status);
     if (filters.landlord)  q = q.eq('landlord_id', filters.landlord);
