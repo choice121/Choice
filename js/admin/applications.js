@@ -542,7 +542,7 @@
     if(amount !== 50){ S.toast('Application fee must be recorded as exactly $50.00.', 'error'); return; }
     const method = data.method || null;
     const notes  = data.notes || null;
-    const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes);
+    const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes, { sendEmail:false });
     if(!ok){ S.toast('Error: ' + error, 'error'); return; }
     let receiptNumber = '';
     if(appId){
