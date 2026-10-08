@@ -40,6 +40,7 @@ python3 scraper/run_ai_job.py \
 | File | Why |
 |---|---|
 | `AGENTS.md` | **System Invariants & Permanent Publishing Engine** — Highest Priority Law |
+| `docs/HIGH_TRUST_TENANT_JOURNEY_AND_SMS_SYSTEM.md` | **High-Trust Tenant Journey, Stamped Receipts & Admin SMS Dispatch** |
 | `scraper/PLATFORM_RULES.md` | **Mandatory rules** — never bypass these |
 | `scraper/RULES.md` | Quick reference for what is/isn't allowed |
 | `scraper/PIPELINE_USAGE.md` | How the 13-step pipeline works |
