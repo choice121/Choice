@@ -80,6 +80,7 @@ const filesToCopy = [
   'privacy.html',
   'property.html',
   'rental-application-policy.html',
+  'receipt.html',
   'terms.html',
   'verify-lease.html',
   'matches.html',
