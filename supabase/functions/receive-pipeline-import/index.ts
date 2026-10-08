@@ -433,7 +433,7 @@ Deno.serve(async (req) => {
   // Source CDN photo URLs are stored directly in original_image_urls for maximum speed,
   // zero upload failures, and full 1536px resolution preservation.
   record.photo_import_status = 'completed';
-  record.photo_upload_status = 'ready';
+  record.photo_upload_status = 'complete';
   record.last_photo_import_at = new Date().toISOString();
   record.last_photo_import_error = null;
 

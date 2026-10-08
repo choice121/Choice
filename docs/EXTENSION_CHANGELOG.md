@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v28.0.0] - 2026-10-08
+### Database Check Constraint Resolution on Direct Pipeline Ingestion
+- **Fixed `photo_upload_status` Check Constraint**: Corrected `receive-pipeline-import` edge function to assign `photo_upload_status = 'complete'` (instead of `'ready'`), fully conforming to `pipeline_properties_photo_upload_status_check` (`'none'`, `'uploading'`, `'complete'`, `'failed'`). Eliminates "new row for relation pipeline_properties violates check constraint" failures on save.
+- **Synchronized Artifacts & Test Suite**: Recompiled all distribution archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), manifests, and metadata with 100% test coverage passing (29/29 tests).
+
+---
+
 ## [v27.0.0] - 2026-10-07
 ### Direct Source CDN Image Ingestion Engine & Instant Pipeline Save Path
 - **Direct Source CDN Ingestion (Zero ImageKit Lag)**: Updated `receive-pipeline-import` edge function and extension pipeline integration to eliminate remote ImageKit upload cycles. All high-resolution source CDN photo URLs (uncompressed 1536px photos from Zillow, Realtor, Redfin, etc.) are ingested directly into `pipeline_properties.original_image_urls` with instant `'completed'` status.
