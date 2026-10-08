@@ -29,6 +29,7 @@
     let S;
     let _activeId        = null;     // id of the lease_templates row we're editing
     let _activeStateCode = null;
+    let _dirty           = false;
     let _versions        = [];
     let _states          = [];       // [{state_code, state_name}]
 
@@ -37,6 +38,14 @@
       attorney_reviewed:  'Attorney-reviewed',
       outdated:           'Outdated',
     };
+
+    function setDirty(dirty) {
+      _dirty = dirty;
+      const el = document.getElementById('tpl-dirty-status');
+      if (!el) return;
+      el.dataset.dirty = dirty ? 'true' : 'false';
+      el.textContent = dirty ? 'Unpublished edits' : 'No unpublished edits';
+    }
 
     const VARIABLES = [
       ['tenant_full_name',    'Primary applicant full name'],
@@ -137,6 +146,7 @@
       const sb = CP.sb();
       if (!stateCode) {
         _activeId = null; _activeStateCode = null; _versions = [];
+        setDirty(false);
         document.getElementById('tpl-name').value = '';
         document.getElementById('tpl-state').value = '';
         document.getElementById('tpl-body').value = '';
@@ -168,6 +178,7 @@
 
       if (!tmpl) {
         _activeId = null; _activeStateCode = stateCode; _versions = [];
+        setDirty(false);
         document.getElementById('tpl-name').value = stateCode + ' Standard Residential Lease';
         document.getElementById('tpl-state').value = stateCode;
         document.getElementById('tpl-body').value = '';
@@ -181,6 +192,7 @@
 
       _activeId = tmpl.id;
       _activeStateCode = tmpl.state_code || stateCode;
+      setDirty(false);
       document.getElementById('tpl-name').value = tmpl.name || '';
       document.getElementById('tpl-state').value = tmpl.state_code || stateCode;
       document.getElementById('tpl-body').value = tmpl.template_body || '';
@@ -202,6 +214,10 @@
     }
 
     async function loadVersion(versionId) {
+      if (_dirty) {
+        const discard = await S.confirm({ title:'Replace unpublished edits?', message:'Loading this version will replace the current template draft.', ok:'Replace draft', danger:true });
+        if (!discard) return;
+      }
       const sb = CP.sb();
       const { data: v, error } = await sb.from('lease_template_versions')
         .select('*').eq('id', versionId).single();
@@ -210,6 +226,7 @@
       document.getElementById('tpl-body').value = v.template_body || '';
       document.getElementById('tpl-notes').value = v.notes || '';
       setReviewBadge(v.legal_review_status || 'statute_derived');
+      setDirty(true);
       S.toast(`Loaded v${v.version_number} into editor (not yet saved).`);
     }
 
@@ -270,6 +287,7 @@
 
       _activeId = data.template_id;
       document.getElementById('tpl-notes').value = '';
+      setDirty(false);
       S.toast(`Published v${data.version_number} for ${stateCode}.`, 'success');
       await loadTemplateForState(stateCode);
     }
@@ -301,11 +319,20 @@
       }
 
       S.toast('Generating preview\u2026');
-      const res = await S.callFn('/generate-lease', { app_id: targetAppId, dry_run: true });
+      const templateBody = document.getElementById('tpl-body').value;
+      if (!templateBody || templateBody.length < 100) {
+        S.toast('Enter a complete template before previewing.', 'error');
+        return;
+      }
+      const res = await S.callFn('/generate-lease', {
+        app_id: targetAppId,
+        dry_run: true,
+        template_body_override: templateBody,
+      });
       if (!res) return;
       if (!res.ok || !res.json.preview_url) { S.toast(res.json.error || 'Preview failed', 'error'); return; }
       window.open(res.json.preview_url, '_blank');
-      S.toast('Preview opened. Note: preview reflects the saved active template, not unsaved editor changes.');
+      S.toast('Preview opened with the current editor text and selected-state application data.');
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -319,7 +346,17 @@
 
       document.getElementById('btn-publish').addEventListener('click', publish);
       document.getElementById('btn-preview').addEventListener('click', previewPDF);
-      document.getElementById('state-filter').addEventListener('change', e => loadTemplateForState(e.target.value));
+      document.getElementById('state-filter').addEventListener('change', async e => {
+        const nextState = e.target.value;
+        if (_dirty) {
+          const discard = await S.confirm({ title:'Discard unpublished edits?', message:'Switching states will discard the current template edits.', ok:'Discard edits', danger:true });
+          if (!discard) { e.target.value = _activeStateCode || ''; return; }
+        }
+        await loadTemplateForState(nextState);
+      });
+      ['tpl-name', 'tpl-body', 'tpl-notes'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => setDirty(true));
+      });
       document.addEventListener('click', e => {
         const t = e.target.closest('[data-action="load-version"]');
         if (t) loadVersion(t.dataset.id);

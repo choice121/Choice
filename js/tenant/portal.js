@@ -405,7 +405,9 @@ function renderPaymentStatus(app){
     if(app.payment_method_recorded)lines.push(`<div class="meta-item"><span class="meta-label">Method</span><span class="meta-val">${esc(app.payment_method_recorded)}</span></div>`);
     return `<div class="section"><div class="section-label">Payment</div>
       <div class="payment-card"><div class="payment-title"><span style="font-size:1.1rem">&#10003;</span> Fee Confirmed</div>
-      <div class="meta-grid">${lines.join('')}</div></div></div>`;
+      <div class="meta-grid">${lines.join('')}</div>
+      ${paid?`<a class="btn-sign" href="/receipt.html?app_id=${encodeURIComponent(app.app_id)}&amp;type=application_fee">View official receipt</a>`:''}
+      </div></div>`;
   }
 
   if(refunded){
@@ -444,7 +446,8 @@ function renderPaymentStatus(app){
         <div class="meta-grid">
           ${hfAmt?`<div class="meta-item"><span class="meta-label">Amount</span><span class="meta-val">${fmtMoney(hfAmt)}</span></div>`:''}
           ${app.holding_fee_paid_at?`<div class="meta-item"><span class="meta-label">Received</span><span class="meta-val">${fmtDateShort(app.holding_fee_paid_at)}</span></div>`:''}
-        </div></div></div>`;
+        </div><a class="btn-sign" href="/receipt.html?app_id=${encodeURIComponent(app.app_id)}&amp;type=holding_deposit">View official receipt</a>
+        </div></div>`;
     }
     return `<div class="section"><div class="section-label">Reservation</div>
       <div class="pay-unpaid-card"><div class="pay-unpaid-title">&#128176; Holding Fee Requested${hfAmt?' — '+fmtMoney(hfAmt):''}</div>

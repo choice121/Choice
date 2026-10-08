@@ -34,6 +34,8 @@
     .review-badge.statute_derived{background:rgba(245,158,11,.12);color:#f59e0b;border-color:rgba(245,158,11,.4)}
     .review-badge.attorney_reviewed{background:rgba(16,185,129,.12);color:#10b981;border-color:rgba(16,185,129,.4)}
     .review-badge.outdated{background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.4)}
+    .tpl-dirty-status{font-size:.76rem;color:var(--muted);font-weight:600}
+    .tpl-dirty-status[data-dirty="true"]{color:#b45309}
   </style>
   </head>
   <body data-page-title="Lease Template" data-page-sub="State-aware editor &amp; version history">
@@ -49,7 +51,8 @@
           <select id="state-filter" class="form-input" style="min-width:200px">
             <option value="">— pick a state —</option>
           </select>
-          <button class="btn btn-ghost btn-sm" id="btn-preview">Preview as PDF</button>
+          <span id="tpl-dirty-status" class="tpl-dirty-status" data-dirty="false" role="status">No unpublished edits</span>
+          <button class="btn btn-ghost btn-sm" id="btn-preview">Preview current draft</button>
           <button class="btn btn-primary btn-sm" id="btn-publish">Save &amp; Publish New Version</button>
         </div>
       </div>
@@ -107,7 +110,7 @@
     </main>
   </div>
 
-  <script defer src="/js/admin/lease-template.js?v=1791436268090"></script>
+  <script defer src="/js/admin/lease-template.js?v=20261008_draft_preview"></script>
   </body>
   </html>
   

@@ -322,6 +322,18 @@ export function adminNotificationHtml(
 
     ${adminPaymentSection}
 
+    ${fields?.['Phone'] ? `<div class="section">
+      <div class="section-label">SMS Dispatch — Stage 1</div>
+      <div class="callout" style="white-space:pre-wrap;line-height:1.65;font-family:Arial,sans-serif;">Hello ${firstName}, this is the Choice Properties Leasing Desk regarding your rental application for ${propertyAddress || 'your selected property'} (Ref: #${appId}).
+
+We have received your submission. Your file is queued for underwriting verification. To proceed with processing, your $50 screening fee can be coordinated via your selected method (${fields?.['Primary Payment Method'] || 'preferred method'}).
+
+Please reply directly to this text so I can provide the active routing details for your transaction.
+
+Note: We also dispatched your formal application confirmation to ${email}. If you do not see it in your inbox, please check your spam or promotions folder.</div>
+      <p style="font-size:12px;color:#6b7280;margin-top:8px;">Copy this message into your SMS app. Do not include payment routing details until replying directly to the applicant.</p>
+    </div>` : ''}
+
     <div class="section">
       <div class="section-label">Applicant Overview</div>
       <table class="info-table">
@@ -529,6 +541,8 @@ export function paymentConfirmedHtml(
   phone?: string,
   appId?: string,
   propertyName?: string,
+  receiptNumber?: string,
+  receiptUrl?: string,
 ): string {
   const portal = getTenantLoginUrl(appId);
   const feeDisplay = amount != null ? formatMoney(amount) : '—';
@@ -553,7 +567,7 @@ export function paymentConfirmedHtml(
       <div class="section-label">Payment Confirmation</div>
       <div class="callout green">
         <h4>&#x2713; Payment Successfully Received</h4>
-        ${appId ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${appId}-PMT</span></div>` : ''}
+        ${receiptNumber ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${receiptNumber}</span></div>` : ''}
         ${appId ? `<div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${appId}</span></div>` : ''}
         <div class="financial-row"><span class="f-label">Applicant</span><span class="f-value">${firstName}</span></div>
         ${propertyAddress || propertyName ? `<div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyName || propertyAddress}</span></div>` : ''}
@@ -564,6 +578,8 @@ export function paymentConfirmedHtml(
         <div class="financial-row"><span class="f-label">Status</span><span class="f-value" style="color:#059669;">Under Review</span></div>
       </div>
     </div>
+
+    ${receiptUrl ? `<div class="callout green"><h4>Your official receipt is ready</h4><p><a href="${receiptUrl}" style="color:#176345;font-weight:700;">View or download your stamped receipt PDF</a></p></div>` : ''}
 
     ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
 
@@ -709,6 +725,8 @@ export function holdingFeeReceivedHtml(
   feeAmount?: number | string,
   remainingBalance?: number | string,
   appId?: string,
+  receiptUrl?: string,
+  receiptNumber?: string,
 ): string {
   const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
 
@@ -731,10 +749,13 @@ export function holdingFeeReceivedHtml(
     <div class="callout green">
       <h4>&#x2713; Holding Fee Confirmed — Unit Secured</h4>
       ${feeAmount != null ? `<div class="financial-row"><span class="f-label">Amount Received</span><span class="f-value">${formatMoney(feeAmount)}</span></div>` : ''}
+      ${receiptNumber ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${receiptNumber}</span></div>` : ''}
       <div class="financial-row"><span class="f-label">Applied Toward</span><span class="f-value">Move-In Balance (credited in full)</span></div>
       ${remainingBalance != null ? `<div class="financial-row"><span class="f-label">Remaining Move-In Balance</span><span class="f-value">${formatMoney(remainingBalance)}</span></div>` : ''}
       <div class="financial-row"><span class="f-label">Unit Status</span><span class="f-value" style="color:#059669;">Reserved</span></div>
     </div>
+
+    ${receiptUrl ? `<div class="callout green"><h4>Your official receipt is ready</h4><p><a href="${receiptUrl}" style="color:#176345;font-weight:700;">View or download your stamped receipt PDF</a></p></div>` : ''}
 
     ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
 

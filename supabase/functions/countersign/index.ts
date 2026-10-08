@@ -13,7 +13,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { leaseFullyExecutedHtml, landlordLeaseExecutedHtml } from '../_shared/email.ts';
-import { getTenantLoginUrl, getSiteUrl, getAdminUrl } from '../_shared/config.ts';
+import { getAdminEmails, getTenantLoginUrl, getSiteUrl, getAdminUrl } from '../_shared/config.ts';
+import { buildSmsDispatchEmail } from '../_shared/sms-dispatch.ts';
 import { resolveLeaseTemplate, finalizeAndStorePdf } from '../_shared/lease-render.ts';
 import { fetchAttachedAddenda } from '../_shared/lease-addenda.ts';
 import { mirrorAppToLease } from '../_shared/lease-mirror.ts';
@@ -199,6 +200,16 @@ Deno.serve(async (req: Request) => {
     });
     await logEmail(app_id, 'lease_fully_executed', app.email, execResult.ok ? 'sent' : 'failed', execResult.provider, execResult.ok ? null : (execResult.error || 'failed'));
   } catch (e) { console.error('Fully executed email failed (non-fatal):', (e as Error).message); }
+
+  const smsDispatch = buildSmsDispatchEmail('executed', { app, siteUrl: getSiteUrl() });
+  for (const adminEmail of getAdminEmails()) {
+    try {
+      const result = await sendEmail({ to: adminEmail, subject: smsDispatch.subject, html: smsDispatch.html });
+      await logEmail(app_id, 'admin_sms_executed', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'SMS dispatch email failed'));
+    } catch (e) {
+      console.error('Admin executed-lease SMS dispatch email failed:', (e as Error).message);
+    }
+  }
 
   // Landlord notification — lease is fully executed
   try {

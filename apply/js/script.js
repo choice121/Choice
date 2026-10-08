@@ -2299,7 +2299,7 @@ class RentalApplication {
                 step2Label: 'Residency & Occupancy',
                 step3Label: 'Employment & Income',
                 step4Label: 'References & Emergency Contact',
-                step5Label: 'Contact & Payment',
+                step5Label: 'Resident Billing Allocation',
                 step6Label: 'Review & Submit',
                 stepPrefix: 'Step',
                 stepOf: 'of',
@@ -2483,7 +2483,9 @@ class RentalApplication {
                 additionalInfo: 'Disclosure Questions',
                 evictedLabel: 'Prior Eviction History',
                 smokerLabel: 'Tobacco / Smoking Use',
-                paymentHeader: 'Contact & Payment Preferences',
+                paymentHeader: 'Resident Billing Allocation',
+                paymentNoCollection: 'No payment is collected via this form.',
+                paymentCoordinationNotice: 'Following submission, a coordinator will text you to provide the active payment-routing details. Direct coordination waives convenience surcharges; the $50 application fee still applies.',
                 paymentIntro: freeApp
                     ? 'No application fee is required for this property. Please indicate your preferred contact method for review communications.'
                     : `Indicate your preferred payment method. A representative will use this information to coordinate the $${fee} application fee after submission.`,
@@ -2605,7 +2607,7 @@ class RentalApplication {
                 step2Label: 'Residencia y Ocupación',
                 step3Label: 'Empleo e Ingresos',
                 step4Label: 'Referencias y Contacto de Emergencia',
-                step5Label: 'Preferencias de Pago',
+                step5Label: 'Asignación de Pagos del Residente',
                 step6Label: 'Revisar y Enviar',
                 stepPrefix: 'Paso',
                 stepOf: 'de',
@@ -2789,7 +2791,9 @@ class RentalApplication {
                 additionalInfo: 'Preguntas de Divulgación',
                 evictedLabel: 'Historial de Desalojo',
                 smokerLabel: 'Uso de Tabaco / Cigarrillos',
-                paymentHeader: 'Preferencias de Contacto y Pago',
+                paymentHeader: 'Asignación de Pagos del Residente',
+                paymentNoCollection: 'No se cobra ningún pago mediante este formulario.',
+                paymentCoordinationNotice: 'Después del envío, un coordinador le enviará un mensaje de texto con los datos de pago vigentes. La coordinación directa elimina los cargos por conveniencia; la tarifa de solicitud de $50 sigue vigente.',
                 paymentIntro: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Indique su método de contacto preferido para las comunicaciones de revisión.'
                     : `Indique su método de pago preferido. Un representante usará esta información para coordinar la tarifa de solicitud de $${fee} tras el envío.`,

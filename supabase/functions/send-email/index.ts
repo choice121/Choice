@@ -17,6 +17,8 @@ import {
 import { getAdminEmails, getAdminUrl, getTenantLoginUrl, getTenantPortalUrl, getSiteUrl } from '../_shared/config.ts';
 import { generateMagicLoginUrl } from '../_shared/magic-login.ts';
 import { sendLandlordEmail, getLandlordForProperty } from '../_shared/landlord-notify.ts';
+import { issuePaymentReceipt } from '../_shared/payment-receipts.ts';
+import { buildSmsDispatchEmail, type SmsDispatchStage } from '../_shared/sms-dispatch.ts';
 
 const ADMIN_EMAILS = getAdminEmails();
 const TENANT_PORTAL_URL = getTenantPortalUrl();
@@ -26,13 +28,13 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
 
-async function verifyAdmin(req: Request): Promise<{ ok: boolean; userEmail?: string }> {
+async function verifyAdmin(req: Request): Promise<{ ok: boolean; userId?: string; userEmail?: string }> {
   const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
   if (!token) return { ok: false };
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) return { ok: false };
   const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).single();
-  return { ok: !!role, userEmail: user.email };
+  return { ok: !!role, userId: user.id, userEmail: user.email };
 }
 
 async function logEmail(
@@ -86,6 +88,7 @@ Deno.serve(async (req: Request) => {
     payment_method?: string;
     transaction_ref?: string;
     amount_collected?: number;
+    access_code?: string;
   };
   try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
 
@@ -114,6 +117,9 @@ Deno.serve(async (req: Request) => {
   let subject        = '';
   let html           = '';
   let sendToAdmin    = false;
+  let smsDispatchStage: SmsDispatchStage | null = null;
+  let smsReceiptNumber: string | undefined;
+  let smsReceiptUrl: string | undefined;
 
   // Phase 4A — internal admin review summary (for holding_fee_received)
   let sendAdminReview      = false;
@@ -123,6 +129,7 @@ Deno.serve(async (req: Request) => {
   // ── Build subject + html per type ──────────────────────────────────────────
 
   if (type === 'approved') {
+    smsDispatchStage = 'approved';
     subject = 'Your Application Has Been Approved — Choice Properties';
     html    = statusUpdateHtml(
       app_id,
@@ -203,7 +210,27 @@ Deno.serve(async (req: Request) => {
 
   } else if (type === 'holding_fee_received') {
     subject = `\u{2713} Holding Fee Confirmed — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
-    html    = holdingFeeReceivedHtml(
+    const holdingUpdate: Record<string, unknown> = {
+      holding_fee_paid:    true,
+      holding_fee_paid_at: app.holding_fee_paid_at || now,
+      updated_at:          now,
+    };
+    if (body.fee_amount != null) holdingUpdate.holding_fee_amount = body.fee_amount;
+    const { error: holdingUpdateError } = await supabase.from('applications').update(holdingUpdate).eq('app_id', app_id);
+    if (holdingUpdateError) return jsonErr(500, `Could not record holding payment: ${holdingUpdateError.message}`);
+    Object.assign(app, holdingUpdate);
+
+    let holdingReceipt;
+    try {
+      holdingReceipt = await issuePaymentReceipt(supabase, app as Record<string, unknown>, 'holding_deposit', auth.userId || '');
+    } catch (error) {
+      return jsonErr(500, `Holding payment recorded, but receipt generation failed: ${(error as Error).message}`);
+    }
+    const holdingReceiptUrl = `${getSiteUrl()}/receipt.html?receipt_id=${encodeURIComponent(holdingReceipt.id)}`;
+    smsDispatchStage = 'holding';
+    smsReceiptNumber = holdingReceipt.receipt_number;
+    smsReceiptUrl = holdingReceiptUrl;
+    html = holdingFeeReceivedHtml(
       name,
       prop,
       TENANT_PORTAL_URL,
@@ -211,13 +238,9 @@ Deno.serve(async (req: Request) => {
       body.fee_amount ?? app.holding_fee_amount,
       undefined,
       app_id,
+      holdingReceiptUrl,
+      holdingReceipt.receipt_number,
     );
-
-    await supabase.from('applications').update({
-      holding_fee_paid:    true,
-      holding_fee_paid_at: now,
-      updated_at:          now,
-    }).eq('app_id', app_id);
 
     // Phase 4A — admin review summary
     sendAdminReview    = true;
@@ -231,7 +254,30 @@ Deno.serve(async (req: Request) => {
 
   } else if (type === 'payment_confirmed') {
     subject = `\u{2705} Payment Confirmed — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
-    html    = paymentConfirmedHtml(
+    // FIX: also update payment_status to 'paid' in DB
+    const update: Record<string, unknown> = {
+      payment_confirmed_at: app.payment_confirmed_at || now,
+      payment_status:       'paid',
+      updated_at:           now,
+    };
+    if (body.payment_method   != null) update.payment_method_confirmed  = body.payment_method;
+    if (body.transaction_ref  != null) update.payment_transaction_ref   = body.transaction_ref;
+    if (body.amount_collected != null) update.payment_amount_collected  = body.amount_collected;
+    const { error: paymentUpdateError } = await supabase.from('applications').update(update).eq('app_id', app_id);
+    if (paymentUpdateError) return jsonErr(500, `Could not record payment: ${paymentUpdateError.message}`);
+    Object.assign(app, update);
+
+    let paymentReceipt;
+    try {
+      paymentReceipt = await issuePaymentReceipt(supabase, app as Record<string, unknown>, 'application_fee', auth.userId || '');
+    } catch (error) {
+      return jsonErr(500, `Payment recorded, but receipt generation failed: ${(error as Error).message}`);
+    }
+    const paymentReceiptUrl = `${getSiteUrl()}/receipt.html?receipt_id=${encodeURIComponent(paymentReceipt.id)}`;
+    smsDispatchStage = 'fee';
+    smsReceiptNumber = paymentReceipt.receipt_number;
+    smsReceiptUrl = paymentReceiptUrl;
+    html = paymentConfirmedHtml(
       name,
       prop,
       body.amount_collected ?? app.payment_amount_collected,
@@ -240,18 +286,10 @@ Deno.serve(async (req: Request) => {
       message,
       app.phone || undefined,
       app_id,
+      undefined,
+      paymentReceipt.receipt_number,
+      paymentReceiptUrl,
     );
-
-    // FIX: also update payment_status to 'paid' in DB
-    const update: Record<string, unknown> = {
-      payment_confirmed_at: now,
-      payment_status:       'paid',
-      updated_at:           now,
-    };
-    if (body.payment_method   != null) update.payment_method_confirmed  = body.payment_method;
-    if (body.transaction_ref  != null) update.payment_transaction_ref   = body.transaction_ref;
-    if (body.amount_collected != null) update.payment_amount_collected  = body.amount_collected;
-    await supabase.from('applications').update(update).eq('app_id', app_id);
 
   } else if (type === 'move_in_prep') {
     subject = `Your Move-In Guide — ${prop.split(',')[0]} | Choice Properties (Ref: ${app_id})`;
@@ -280,8 +318,18 @@ Deno.serve(async (req: Request) => {
     html        = leaseExpiryAlertHtml(name, prop, leaseEnd, app_id, app.email || '', app.phone || undefined);
     sendToAdmin = true;
 
+  } else if (type === 'key_handover') {
+    const dispatch = buildSmsDispatchEmail('handover', {
+      app: app as Record<string, unknown>,
+      siteUrl: getSiteUrl(),
+      accessCode: body.access_code,
+    });
+    subject = dispatch.subject;
+    html = dispatch.html;
+    sendToAdmin = true;
+
   } else {
-    return jsonErr(400, `Unsupported email type: "${type}". Supported: approved, denied, waitlisted, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert`);
+    return jsonErr(400, `Unsupported email type: "${type}". Supported: approved, denied, waitlisted, movein_confirmed, holding_fee_request, holding_fee_received, payment_confirmed, move_in_prep, lease_signing_reminder, lease_expiry_alert, key_handover`);
   }
 
   // ── Send ───────────────────────────────────────────────────────────────────
@@ -306,6 +354,20 @@ Deno.serve(async (req: Request) => {
         const result = await sendEmail({ to: adminEmail, subject: adminReviewSubject, html: adminReviewHtml });
         await logEmail(app_id, app.id, 'admin_review_summary', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'admin review send failed'));
         if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'admin review send failed'}`);
+      }
+    }
+
+    if (smsDispatchStage) {
+      const dispatch = buildSmsDispatchEmail(smsDispatchStage, {
+        app: app as Record<string, unknown>,
+        siteUrl: getSiteUrl(),
+        receiptNumber: smsReceiptNumber,
+        receiptUrl: smsReceiptUrl,
+      });
+      for (const adminEmail of ADMIN_EMAILS) {
+        const result = await sendEmail({ to: adminEmail, subject: dispatch.subject, html: dispatch.html });
+        await logEmail(app_id, app.id, `admin_sms_${smsDispatchStage}`, adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'SMS dispatch email failed'));
+        if (!result.ok) failures.push(`${adminEmail}: ${result.error || 'SMS dispatch email failed'}`);
       }
     }
 

@@ -3,7 +3,8 @@ import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
 import { signingEmailHtml } from '../_shared/email.ts';
 import { buildLeasePDF } from '../_shared/pdf.ts';
-import { getSiteUrl } from '../_shared/config.ts';
+import { getAdminEmails, getSiteUrl } from '../_shared/config.ts';
+import { buildSmsDispatchEmail } from '../_shared/sms-dispatch.ts';
 import {
   ensureSnapshotForApp,
   resolveLeaseTemplateDetailed,
@@ -70,11 +71,17 @@ Deno.serve(async (req: Request) => {
   const auth = await verifyAdmin(req);
   if (!auth.ok) return jsonErr(401, auth.error!);
 
-  let body: { app_id: string; lease_data?: Record<string, unknown>; dry_run?: boolean; template_id?: string };
+  let body: { app_id: string; lease_data?: Record<string, unknown>; dry_run?: boolean; template_id?: string; template_body_override?: string };
   try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
 
-  const { app_id, lease_data = {}, dry_run = false, template_id } = body;
+  const { app_id, lease_data = {}, dry_run = false, template_id, template_body_override } = body;
   if (!app_id) return jsonErr(400, 'Missing app_id');
+  if (template_body_override !== undefined && !dry_run) {
+    return jsonErr(400, 'Template body overrides are only accepted for dry-run previews.');
+  }
+  if (template_body_override !== undefined && (template_body_override.length < 100 || template_body_override.length > 100000)) {
+    return jsonErr(400, 'Preview template must be between 100 and 100,000 characters.');
+  }
 
   // 1. Fetch application
   const { data: app, error: appErr } = await supabase
@@ -221,10 +228,11 @@ Deno.serve(async (req: Request) => {
       return jsonErr(500, 'No lease template could be resolved for this application.');
     }
     const tmpl = tmplResult.template;
+    const previewTemplateBody = template_body_override ?? tmpl.template_body;
 
     let pdfBytes: Uint8Array;
     try {
-      pdfBytes = await buildLeasePDF(mergedApp, tmpl.template_body, {
+      pdfBytes = await buildLeasePDF(mergedApp, previewTemplateBody, {
         addenda:             addenda.attached,
         addendaAssetBaseUrl: getSiteUrl(),
       });
@@ -249,6 +257,7 @@ Deno.serve(async (req: Request) => {
           app_id,
           actor:               auth.userEmail || 'admin',
           template_source:     tmpl.source,
+          preview_source:      template_body_override !== undefined ? 'unsaved_editor' : 'published_template',
           template_state_code: tmpl.state_code,
           legal_review_status: tmpl.legal_review_status,
           addenda_count:       addenda.attached.length,
@@ -262,10 +271,11 @@ Deno.serve(async (req: Request) => {
       dry_run:               true,
       preview_url:           signedData.signedUrl,
       app_id,
-      template_source:       tmpl.source,
+      template_source:       template_body_override !== undefined ? 'unsaved_editor' : tmpl.source,
       template_version:      tmpl.version_number,
       template_state_code:   tmpl.state_code,
       legal_review_status:   tmpl.legal_review_status,
+      previewed_unsaved_template: template_body_override !== undefined,
       addenda_attached:      addenda.attached.map(a => ({ slug: a.slug, title: a.title, jurisdiction: a.jurisdiction })),
       addenda_filtered_out:  addenda.filtered_out,
     });
@@ -362,6 +372,16 @@ Deno.serve(async (req: Request) => {
       });
       await logEmail(app_id, 'lease_signing_invite', updatedApp.email, sigResult.ok ? 'sent' : 'failed', sigResult.provider, sigResult.ok ? null : (sigResult.error || 'failed'));
     } catch (e) { console.error('Signing email failed (non-fatal):', (e as Error).message); }
+
+    const dispatch = buildSmsDispatchEmail('lease', { app: updatedApp, siteUrl: getSiteUrl() });
+    for (const adminEmail of getAdminEmails()) {
+      try {
+        const result = await sendEmail({ to: adminEmail, subject: dispatch.subject, html: dispatch.html });
+        await logEmail(app_id, 'admin_sms_lease', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'SMS dispatch email failed'));
+      } catch (e) {
+        console.error('Admin lease SMS dispatch email failed:', (e as Error).message);
+      }
+    }
   }
 
   try {

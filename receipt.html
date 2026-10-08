@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f3f5f4">
+  <title>Payment Receipt | Choice Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css">
+  <style>
+    :root{color-scheme:light;--receipt-ink:#172321;--receipt-muted:#65716d;--receipt-line:#dce3df;--receipt-green:#187354;--receipt-paper:#fff;--receipt-bg:#edf1ef}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--receipt-bg);color:var(--receipt-ink);font-family:'DM Sans',sans-serif}
+    .receipt-toolbar{max-width:860px;margin:24px auto 14px;padding:0 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .receipt-toolbar a{color:#325c50;text-decoration:none;font-size:.9rem;font-weight:600}
+    .receipt-toolbar button{border:0;border-radius:5px;background:#187354;color:#fff;padding:11px 16px;font:700 .9rem 'DM Sans',sans-serif;cursor:pointer}
+    .receipt-toolbar button:hover{background:#125d43}
+    .receipt-paper{position:relative;max-width:824px;min-height:780px;margin:0 auto 36px;padding:54px 62px 38px;background:var(--receipt-paper);box-shadow:0 14px 45px rgba(24,45,37,.12);overflow:hidden}
+    .receipt-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding-bottom:26px;border-bottom:1px solid var(--receipt-line)}
+    .brand-name{font:800 1.02rem 'Manrope',sans-serif;letter-spacing:0;color:#174b3c}
+    .brand-sub{margin-top:5px;color:var(--receipt-muted);font-size:.72rem}
+    .receipt-ref{text-align:right;color:var(--receipt-muted);font-size:.72rem;line-height:1.65}
+    .receipt-ref strong{display:block;color:var(--receipt-ink);font-size:.82rem}
+    .receipt-heading{padding:34px 0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+    .eyebrow{color:var(--receipt-green);font-size:.72rem;font-weight:700;text-transform:uppercase}
+    h1{margin:7px 0 0;font:800 2rem 'Manrope',sans-serif;letter-spacing:0}
+    .status{border:1px solid #acd4c3;background:#eef8f2;color:#176345;padding:7px 11px;border-radius:3px;font-size:.7rem;font-weight:800;letter-spacing:0;text-transform:uppercase;white-space:nowrap}
+    .amount-band{padding:22px 24px;background:#f2f7f4;border-left:3px solid var(--receipt-green);display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+    .amount-label{color:var(--receipt-muted);font-size:.75rem;font-weight:600;text-transform:uppercase}
+    .amount-value{margin-top:5px;font:800 2.05rem 'Manrope',sans-serif;letter-spacing:0}
+    .receipt-kind{max-width:46%;color:#35423d;font-size:.9rem;text-align:right;line-height:1.5}
+    .detail-grid{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:22px 32px}
+    .detail{min-width:0;padding-bottom:13px;border-bottom:1px solid var(--receipt-line)}
+    .detail-label{margin-bottom:6px;color:var(--receipt-muted);font-size:.68rem;font-weight:700;text-transform:uppercase}
+    .detail-value{overflow-wrap:anywhere;font-size:.91rem;font-weight:600;line-height:1.45}
+    .record-note{margin-top:30px;padding:15px 17px;border:1px solid var(--receipt-line);color:#485650;font-size:.8rem;line-height:1.6}
+    .receipt-seal{position:absolute;right:64px;bottom:112px;width:116px;height:116px;opacity:.78;transform:rotate(-12deg)}
+    .receipt-footer{position:absolute;left:62px;right:62px;bottom:34px;padding-top:13px;border-top:1px solid var(--receipt-line);display:flex;justify-content:space-between;gap:20px;color:var(--receipt-muted);font-size:.67rem;line-height:1.5}
+    .state{max-width:824px;margin:40px auto;padding:0 18px;color:#34443e;text-align:center;font-size:.96rem;line-height:1.55}
+    .state a{color:#176345}
+    [hidden]{display:none!important}
+    @media(max-width:620px){
+      .receipt-toolbar{margin:14px auto 10px}
+      .receipt-paper{min-height:720px;margin:0 10px 20px;padding:32px 24px 100px}
+      .receipt-top{gap:12px}.receipt-ref{font-size:.65rem}
+      .receipt-heading{padding:26px 0 20px}h1{font-size:1.55rem}
+      .amount-band{padding:18px 16px}.amount-value{font-size:1.7rem}
+      .detail-grid{gap:17px 18px}.receipt-seal{right:26px;bottom:112px;width:88px;height:88px}
+      .receipt-footer{left:24px;right:24px;bottom:22px}
+    }
+    @media print{
+      @page{size:letter;margin:0}
+      body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .receipt-toolbar,.state{display:none!important}
+      .receipt-paper{width:8.5in;height:11in;min-height:0;max-width:none;margin:0;padding:.68in .72in .55in;box-shadow:none;overflow:hidden}
+      .receipt-footer{left:.72in;right:.72in;bottom:.38in}
+      .receipt-seal{right:.72in;bottom:1.15in}
+    }
+  </style>
+  <script defer src="/config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+  <script defer src="/js/cp-api.js" type="module"></script>
+  <script defer src="/js/tenant/receipt.js"></script>
+</head>
+<body>
+  <div class="receipt-toolbar">
+    <a href="/tenant/portal.html">&larr; Resident portal</a>
+    <button type="button" id="print-receipt" disabled>Download / Print PDF</button>
+  </div>
+  <main id="receipt-paper" class="receipt-paper" hidden aria-live="polite"></main>
+  <div id="receipt-state" class="state" role="status">Loading receipt...</div>
+</body>
+</html>
