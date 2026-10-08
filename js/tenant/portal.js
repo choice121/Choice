@@ -423,14 +423,8 @@ function renderPaymentStatus(app){
         <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">A $50 application fee is required after submission. Our team will contact you shortly to securely complete payment before your application is reviewed.</p>
         <p style="color:#1d4ed8;font-size:.78rem;margin-bottom:14px;font-weight:600">Applicants who complete payment quickly are placed earlier in the review queue.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:.76rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Accepted payment methods</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Venmo</span>
-            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Zelle</span>
-            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Cash App</span>
-            <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Money Order</span>
-          </div>
-          <p style="color:var(--muted);font-size:.76rem;margin-top:6px">Have questions or want to arrange payment now? <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">Call or text 707-706-3137</a></p>
+          <p style="color:var(--muted);font-size:.78rem;line-height:1.55">Active payment-routing instructions are coordinated directly by your assigned billing specialist via text to ensure immediate processing and waive payment surcharges.</p>
+          <p style="color:var(--muted);font-size:.76rem;margin-top:4px">Questions or ready to coordinate? <a href="sms:+17077063137" style="color:#1d4ed8;font-weight:600">Text our leasing desk at 707-706-3137</a></p>
         </div>
       </div></div>`;
   }
@@ -454,14 +448,9 @@ function renderPaymentStatus(app){
       <p style="color:var(--text);font-size:.83rem;margin-bottom:8px;line-height:1.55">
         The holding fee temporarily reserves this property and removes it from active availability while your lease is being finalized.${hfDue?' Please complete by <strong>'+fmtDate(hfDue)+'</strong>.':''}
       </p>
-      <p style="color:#b91c1c;font-size:.78rem;margin-bottom:8px;font-weight:600">Without a holding fee, the property remains available to other approved applicants. Holding requests are time-sensitive and typically must be completed within 24–48 hours.</p>
-      <p style="color:#15803d;font-size:.78rem;margin-bottom:12px;font-weight:600">&#10003; This fee is fully credited toward your move-in costs — it is not an additional charge.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Venmo</span>
-        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Zelle</span>
-        <span style="padding:5px 12px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:.76rem;font-weight:600">Cashier's Check</span>
-      </div>
-      <p style="color:var(--muted);font-size:.76rem">After payment, please call or text us to confirm: <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">707-706-3137</a></p></div></div>`;
+      <p style="color:#15803d;font-size:.78rem;margin-bottom:12px;font-weight:600">&#10003; 100% of this fee is credited toward your move-in balance — it is not an additional charge.</p>
+      <p style="color:var(--muted);font-size:.78rem;line-height:1.55;margin-bottom:8px">Active transaction routing is provided directly by your billing coordinator via secure text to waive payment surcharges.</p>
+      <p style="color:var(--muted);font-size:.76rem">Reply directly to your approval text or contact us: <a href="sms:+17077063137" style="color:#1d4ed8;font-weight:600">Text 707-706-3137</a></p></div></div>`;
   }
 
   return '';
@@ -876,6 +865,95 @@ function renderDocChecklist(grouped){
   }).join('');
 }
 
+// ── Approval & Reservation Agreement (Institutional high-trust view) ──────────
+function renderReservationAgreement(app){
+  if(app.status !== 'approved') return '';
+  const firstName = esc(app.first_name || 'Resident');
+  const address = esc(app.property_address || 'Selected Property');
+  const appId = esc(app.app_id || app.id || '');
+  const holdingPaid = !!app.holding_fee_paid;
+  const holdingAmount = app.holding_fee_amount ? Number(app.holding_fee_amount) : 500;
+  const holdingAmountFmt = fmtMoney(holdingAmount);
+
+  return `
+    <div class="section" id="approval-reservation-agreement" style="margin-bottom:var(--sp-6)">
+      <div class="section-label">Underwriting Decision &amp; Reservation Protocol</div>
+      <div class="card" style="border:1.5px solid ${holdingPaid ? 'var(--acc-success-border)' : '#10b981'};background:linear-gradient(180deg, ${holdingPaid ? 'rgba(240,253,244,.8)' : 'rgba(236,253,245,.85)'} 0%, var(--surface) 100%);padding:var(--sp-6)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-4)">
+          <div>
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--r-pill);background:#065f46;color:#fff;font-size:.68rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
+              &#10003; Official Underwriting Approval
+            </span>
+            <h2 style="font-size:1.35rem;font-weight:750;color:var(--text);margin:0;letter-spacing:-.015em">
+              Property Reservation Protocol
+            </h2>
+            <p style="margin:4px 0 0;font-size:.82rem;color:var(--muted)">
+              Reference: <strong style="font-family:var(--font-mono);color:var(--text)">${appId}</strong> &middot; Property: <strong style="color:var(--text)">${address}</strong>
+            </p>
+          </div>
+          <div style="text-align:right">
+            <span class="badge ${holdingPaid ? 'b-approved' : 'b-pending'}" style="font-size:.74rem;padding:6px 13px">
+              ${holdingPaid ? '✓ Property Exclusively Held' : 'Reservation Window Active'}
+            </span>
+          </div>
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);font-size:.85rem;line-height:1.65;color:var(--text)">
+          <p style="margin:0 0 10px">
+            Congratulations, <strong>${firstName}</strong>! Your rental application for <strong>${address}</strong> has been officially approved by Choice Properties underwriting.
+          </p>
+          <p style="margin:0 0 10px">
+            Under our reservation protocol, this property is eligible to be placed on <strong>exclusive hold in your name</strong> while our leasing desk finalizes your formal state-specific Residential Lease Agreement.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline)">
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <span style="color:#059669;font-weight:700;font-size:1rem">&#10003;</span>
+              <span style="font-size:.8rem;line-height:1.5"><strong>100% Move-In Credit:</strong> Your holding deposit is fully credited toward your first month's rent. It is never an additional charge.</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <span style="color:#059669;font-weight:700;font-size:1rem">&#10003;</span>
+              <span style="font-size:.8rem;line-height:1.5"><strong>Off-Market Guarantee:</strong> Once recorded, the listing is officially taken off the market and reserved exclusively for you.</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <span style="color:#059669;font-weight:700;font-size:1rem">&#10003;</span>
+              <span style="font-size:.8rem;line-height:1.5"><strong>Direct Text Routing:</strong> To waive payment surcharges, reservation details are coordinated via secure text with your leasing coordinator.</span>
+            </div>
+          </div>
+        </div>
+
+        ${holdingPaid ? `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r-md);padding:14px 18px">
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:#166534">&#10003; Holding Escrow Deposit Confirmed</div>
+              <div style="font-size:.76rem;color:#15803d;margin-top:2px">Amount: ${holdingAmountFmt} &middot; Recorded to operating ledger &middot; Credited to move-in</div>
+            </div>
+            <a href="/receipt.html?app_id=${encodeURIComponent(appId)}&amp;type=holding_deposit" class="btn-sign" style="padding:9px 16px;font-size:.8rem;background:#15803d;text-decoration:none">
+              View Stamped Escrow Receipt
+            </a>
+          </div>
+        ` : `
+          <div style="background:#fefce8;border:1px solid #fde047;border-radius:var(--r-md);padding:14px 18px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:.82rem;font-weight:700;color:#854d0e">&#9888; Holding Coordination in Progress</div>
+                <div style="font-size:.77rem;color:#713f12;margin-top:2px">Reservation Hold: <strong>${holdingAmountFmt}</strong> (100% credited to move-in). Reply to your approval SMS or text below to receive active routing details.</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a href="sms:+17077063137?body=Hello, I received my approval for ${encodeURIComponent(address)} (Ref: ${encodeURIComponent(appId)}) and would like to coordinate my reservation hold." class="btn-sign" style="padding:9px 16px;font-size:.8rem;background:#15803d;text-decoration:none">
+                  Text Coordinator to Complete Hold
+                </a>
+                <button type="button" class="btn-download" onclick="window.print()" style="padding:9px 14px;font-size:.8rem">
+                  Print Approval Notice
+                </button>
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
 // ── Portal render ─────────────────────────────────────────────────────────────
 function renderPortal(app){
   const name=esc(((app.first_name||'')+' '+(app.last_name||'')).trim())||'Applicant';
@@ -1012,9 +1090,12 @@ function renderPortal(app){
       </div></div>`
     :'';
 
+  const reservationAgreementHtml = renderReservationAgreement(app);
+
   return `
     <div id="prop-hero-slot"><div class="prop-hero"><div class="prop-hero-skel"></div></div></div>
     ${heroHtml}
+    ${reservationAgreementHtml}
     <div class="section">
       <div class="section-label">Your Application</div>
       <div class="card">
@@ -1029,10 +1110,7 @@ function renderPortal(app){
         <div class="meta-grid">
           <div class="meta-item"><span class="meta-label">App ID</span><span class="meta-val" style="font-family:monospace;font-size:.78rem">${esc(app.app_id||app.id)}</span></div>
           <div class="meta-item"><span class="meta-label">Submitted</span><span class="meta-val">${fmtDateShort(app.created_at)}</span></div>
-          ${app.lease_start_date?`<div class="meta-item"><span class="meta-label">Lease Start</span><span class="meta-val">${fmtDateShort(app.lease_start_date)}</span></div>`:''}
-          ${app.lease_end_date?`<div class="meta-item"><span class="meta-label">Lease End</span><span class="meta-val">${fmtDateShort(app.lease_end_date)}</span></div>`:''}
           ${app.monthly_rent?`<div class="meta-item"><span class="meta-label">Monthly Rent</span><span class="meta-val">${fmtMoney(app.monthly_rent)}</span></div>`:''}
-          ${app.security_deposit?`<div class="meta-item"><span class="meta-label">Security Deposit</span><span class="meta-val">${fmtMoney(app.security_deposit)}</span></div>`:''}
         </div>
         <hr class="divider">
         <div class="pipeline-label">Application Status</div>
@@ -1055,7 +1133,7 @@ function renderPortal(app){
       <span><svg class="ico"><use href="#i-spark"/></svg>Live updates from your team</span>
     </div>
     <div class="portal-footer">
-      Questions? <a href="mailto:support@choiceproperties.com">support@choiceproperties.com</a> &middot; <a href="tel:7077063137">707-706-3137</a>
+      Questions? Text our leasing team: <a href="tel:7077063137">707-706-3137 (Text Only)</a>
     </div>`;
 }
 
@@ -1088,8 +1166,7 @@ async function withdrawApplication(){
   if(error){
     const ct=document.getElementById('portal-content');
     if(ct)ct.innerHTML=`<div class="error-card">We couldn't process your withdrawal automatically. Please contact us directly:<br><br>
-      <a href="tel:7077063137" style="color:#1d4ed8;font-weight:700">&#128222; 707-706-3137</a> &nbsp;&middot;&nbsp;
-      <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">support@choiceproperties.com</a><br><br>
+      <a href="tel:7077063137" style="color:#1d4ed8;font-weight:700">&#128222; 707-706-3137 (Text Only)</a><br><br>
       Reference: <span style="font-family:monospace">${esc(window._portalAppId||'')}</span></div>`;
     return;
   }
@@ -1101,7 +1178,7 @@ async function withdrawApplication(){
       fetch(CONFIG.SUPABASE_URL+'/functions/v1/send-email',{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-        body:JSON.stringify({type:'custom',to:'support@choiceproperties.com',subject:'Application Withdrawn — '+window._portalAppId,html:`<p>Application <strong>${window._portalAppId}</strong> has been withdrawn by the tenant (${esc(session.user?.email||'')}).</p>`}),
+        body:JSON.stringify({type:'custom',subject:'Application Withdrawn — '+window._portalAppId,html:`<p>Application <strong>${window._portalAppId}</strong> has been withdrawn by the tenant (${esc(session.user?.email||'')}).</p>`}),
       }).catch(()=>{});
     }
   }catch(_){}
@@ -1129,9 +1206,53 @@ async function autoClaimApplications(sb, userEmail){
 
 function getRequestedAppId(){
   const params=new URLSearchParams(window.location.search);
-  const appId=(params.get('app_id')||sessionStorage.getItem('pendingPortalAppId')||'').trim();
+  const appId=(params.get('app_id')||params.get('app')||sessionStorage.getItem('pendingPortalAppId')||'').trim();
   if(appId)sessionStorage.setItem('pendingPortalAppId',appId);
   return appId;
+}
+
+async function loadGuestApplication(appId){
+  const loading=document.getElementById('portal-loading');
+  const content=document.getElementById('portal-content');
+  const errorEl=document.getElementById('portal-error');
+
+  try{
+    const res=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/get-tenant-portal-app',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':CONFIG.SUPABASE_ANON_KEY,
+      },
+      body:JSON.stringify({app_id:appId}),
+    });
+    if(!res.ok) return false;
+    const d=await res.json().catch(()=>({}));
+    if(!d||!d.success||!d.app) return false;
+
+    const fullApp=d.app;
+    window._portalAppId=appId;
+    window._activeGuestApp=fullApp;
+
+    if(loading)loading.style.display='none';
+    if(content){
+      content.style.display='block';
+      content.innerHTML=renderPortal(fullApp);
+      startCountdownTickers(content);
+      populateDocChecklist(appId, d.docs||[]);
+      loadSubmittedDocs(appId);
+      setupDropzone();
+
+      if(d.property){
+        const prop=Object.assign({},d.property,{_photo:d.property.property_photos?.[0]?.url||null});
+        const slot=document.getElementById('prop-hero-slot');
+        if(slot)slot.innerHTML=renderPropertyHero(fullApp,prop);
+      }
+    }
+    return true;
+  }catch(e){
+    console.warn('Guest portal load exception:',e);
+    return false;
+  }
 }
 
 async function signOutAndRetry(){
@@ -1165,7 +1286,7 @@ function renderWrongAccount(userEmail, requestedAppId, message){
     ${requestedAppId?`<p style="margin-top:12px;font-size:.78rem;color:var(--muted)">Application: <span style="font-family:monospace">${esc(requestedAppId)}</span></p>`:''}
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px"><strong style="color:var(--text)">Co-applicant?</strong> Sign in with the email address listed for you on the application.</p>
-      <p style="font-size:.78rem;color:var(--muted)">Need help? <a href="tel:7077063137" style="color:#1d4ed8">707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">support@choiceproperties.com</a></p>
+      <p style="font-size:.78rem;color:var(--muted)">Need help? <a href="tel:7077063137" style="color:#1d4ed8">707-706-3137 (Text Only)</a></p>
     </div>
   </div>`;
 }
@@ -1319,10 +1440,12 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const activeSession = magicSession || session;
 
   if(!activeSession){
+    if(requestedAppId){
+      const loaded = await loadGuestApplication(requestedAppId);
+      if(loaded) return;
+    }
     const loginUrl = new URL('/tenant/login.html', window.location.origin);
     if(requestedAppId) loginUrl.searchParams.set('app_id', requestedAppId);
-    // Distinguish expired sessions from fresh visits so login page can show
-    // a helpful "your session expired" message instead of a blank form.
     loginUrl.searchParams.set('reason', 'session_expired');
     location.href = loginUrl.pathname + loginUrl.search;
     return;
@@ -1403,7 +1526,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:left">
         <p style="font-size:.79rem;color:var(--muted);margin-bottom:6px"><strong style="color:var(--text)">Co-applicant?</strong> Sign in with the email address listed for you on the application, not the primary applicant's email.</p>
-        <p style="font-size:.79rem;color:var(--muted)">Still need help? <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">Call or text 707-706-3137</a> &middot; <a href="mailto:support@choiceproperties.com" style="color:#1d4ed8">Email us</a></p>
+        <p style="font-size:.79rem;color:var(--muted)">Still need help? <a href="tel:7077063137" style="color:#1d4ed8;font-weight:600">Call or text 707-706-3137 (Text Only)</a></p>
       </div>
     </div>`;
     return;

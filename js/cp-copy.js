@@ -76,7 +76,7 @@
     processClaim: 'A clear, structured process with transparent steps.',
 
     // ── Identity ──────────────────────────────────────────────────────────
-    supportEmail: 'support@choiceproperties.com',
+    supportEmail: '',
     supportPhone: '707-706-3137',
   };
 
@@ -133,7 +133,7 @@
       'En expansión nacional con propiedades activas en mercados seleccionados.',
     processClaim: 'Un proceso claro y estructurado con pasos transparentes.',
 
-    supportEmail: 'support@choiceproperties.com',
+    supportEmail: '',
     supportPhone: '707-706-3137',
   };
 

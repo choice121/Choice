@@ -1,7 +1,7 @@
 <!DOCTYPE html>
   <html lang="en">
   <head>
-  <script src="/js/cp-error-reporter.js?v=1791436268090"></script>
+  <script src="/js/cp-error-reporter.js?v=1791470066980"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0a0f1e">
@@ -15,12 +15,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1791436268090">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1791470066980">
   <script defer src="/config.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-  <script defer src="/js/cp-api.js?v=1791436268090" type="module"></script>
-  <script defer src="/js/cp-chrome.js?v=1791436268090"></script>
-  <script defer src="/js/cp-shell.js?v=1791436268090"></script>
+  <script defer src="/js/cp-api.js?v=1791470066980" type="module"></script>
+  <script defer src="/js/cp-chrome.js?v=1791470066980"></script>
+  <script defer src="/js/cp-shell.js?v=1791470066980"></script>
   <style>
     .tpl-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
     @media(max-width:900px){.tpl-grid{grid-template-columns:1fr}}
@@ -34,6 +34,8 @@
     .review-badge.statute_derived{background:rgba(245,158,11,.12);color:#f59e0b;border-color:rgba(245,158,11,.4)}
     .review-badge.attorney_reviewed{background:rgba(16,185,129,.12);color:#10b981;border-color:rgba(16,185,129,.4)}
     .review-badge.outdated{background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.4)}
+    .tpl-dirty-status{font-size:.76rem;color:var(--muted);font-weight:600}
+    .tpl-dirty-status[data-dirty="true"]{color:#b45309}
   </style>
   </head>
   <body data-page-title="Lease Template" data-page-sub="State-aware editor &amp; version history">
@@ -49,7 +51,8 @@
           <select id="state-filter" class="form-input" style="min-width:200px">
             <option value="">— pick a state —</option>
           </select>
-          <button class="btn btn-ghost btn-sm" id="btn-preview">Preview as PDF</button>
+          <span id="tpl-dirty-status" class="tpl-dirty-status" data-dirty="false" role="status">No unpublished edits</span>
+          <button class="btn btn-ghost btn-sm" id="btn-preview">Preview current draft</button>
           <button class="btn btn-primary btn-sm" id="btn-publish">Save &amp; Publish New Version</button>
         </div>
       </div>
@@ -107,7 +110,7 @@
     </main>
   </div>
 
-  <script defer src="/js/admin/lease-template.js?v=1791436268090"></script>
+  <script defer src="/js/admin/lease-template.js?v=1791470066980_draft_preview"></script>
   </body>
   </html>
   

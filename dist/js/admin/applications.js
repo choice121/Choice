@@ -123,6 +123,7 @@
         ${hfPaid                     ? `<button class="btn-act btn-hf-undo"  data-action="hf-undo" ${ds} title="Undo: mark holding fee unpaid"><svg class="i i-sm"><use href="#i-refresh"/></svg> Undo holding paid</button>` : ''}
 
         <button class="btn-act btn-email" data-action="resend" ${ds} title="Resend any notification email"><svg class="i i-sm"><use href="#i-mail"/></svg> Resend</button>
+        ${!isArchived ? `<button class="btn-act" data-action="sms-dispatch" data-sms-app-id="${S.esc(app.app_id||app.id)}" data-sms-first-name="${S.esc(app.first_name||name.split(' ')[0])}" data-sms-address="${S.esc(app.property_address||prop)}" data-sms-phone="${S.esc(app.phone||'')}" data-sms-email="${S.esc(app.email||'')}" data-sms-method="${S.esc(app.primary_payment_method||'preferred method')}" data-sms-sign-token="${S.esc(app.tenant_sign_token||'')}" title="Prepare a stage-specific tenant text"><i class="fas fa-comment-sms" aria-hidden="true"></i> Quick SMS</button>` : ''}
         <button class="btn-act"           data-action="toggle" ${ds}>Details</button>
       </div>
 
@@ -252,6 +253,8 @@
           ${row('Method', app.payment_method_recorded)}
           ${row('Date', fmtDate(app.payment_date))}
           ${row('Notes', app.payment_notes)}
+          ${isPaid ? `<div class="detail-row"><span class="detail-key">Receipt</span><span class="detail-val"><button class="btn-act" data-action="receipt" data-app-id="${S.esc(app.app_id||app.id)}" data-receipt-type="application_fee">Generate / View</button></span></div>` : ''}
+          ${hfPaid ? `<div class="detail-row"><span class="detail-key">Receipt</span><span class="detail-val"><button class="btn-act" data-action="receipt" data-app-id="${S.esc(app.app_id||app.id)}" data-receipt-type="holding_deposit">Generate / View</button></span></div>` : ''}
         </div>
       </div>
       <div class="detail-section">
@@ -517,7 +520,7 @@
       title: 'Mark as paid · ' + name,
       submit: 'Mark as paid',
       fields: [
-        { name:'amount', label:'Amount collected ($)', type:'number', placeholder:'e.g. 50.00' },
+        { name:'amount', label:'Application fee collected ($50.00)', type:'number', value:'50.00', placeholder:'50.00' },
         { name:'method', label:'Payment method', type:'select', value:'', options:[
           { value:'', label:'(none selected)' },
           // Mirrors the application form (apply/index.html) — keep in sync.
@@ -535,11 +538,21 @@
       ]
     });
     if(!data) return;
-    const amount = data.amount ? parseFloat(data.amount) : null;
+    const amount = data.amount ? parseFloat(data.amount) : 50;
+    if(amount !== 50){ S.toast('Application fee must be recorded as exactly $50.00.', 'error'); return; }
     const method = data.method || null;
     const notes  = data.notes || null;
-    const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes);
+    const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes, { sendEmail:false });
     if(!ok){ S.toast('Error: ' + error, 'error'); return; }
+    let receiptNumber = '';
+    if(appId){
+      try {
+        const receipt = await requestReceipt(appId, 'application_fee');
+        receiptNumber = receipt.receipt_number || '';
+      } catch(e) {
+        S.toast('Payment saved, but receipt generation failed: ' + e.message, 'warn');
+      }
+    }
     if(data.send_email && appId){
       try {
         const session = await CP.Auth.getSession();
@@ -558,7 +571,7 @@
         else S.toast('Payment confirmation email sent.');
       } catch(e){ S.toast('Email error: ' + e.message, 'warn'); }
     }
-    S.toast('Payment recorded.','success');
+    S.toast(receiptNumber ? 'Payment recorded. Receipt ' + receiptNumber + ' issued.' : 'Payment recorded.','success');
     await loadApps();
   }
 
@@ -702,6 +715,105 @@
     await autoSendEmail(appId, data.type, data.message || undefined);
   }
 
+  function openSmsDispatch(details){
+    document.getElementById('sms-dispatch-dialog')?.remove();
+    const appId = details.appId || '';
+    const firstName = details.firstName || 'there';
+    const address = details.address || 'your property';
+    const phone = details.phone || '';
+    const email = details.email || 'your email address';
+    const method = details.method || 'preferred method';
+    const portalUrl = `${window.location.origin}/tenant/portal.html?app=${encodeURIComponent(appId)}`;
+    const signingUrl = details.signToken
+      ? `${window.location.origin}/lease-sign.html?token=${encodeURIComponent(details.signToken)}`
+      : portalUrl;
+    const templates = {
+      intake: `Hello ${firstName}, this is the Choice Properties Leasing Desk regarding your rental application for ${address} (Ref: #${appId}).\n\nWe have received your submission. Your file is queued for underwriting verification. To proceed with processing, your $50 screening fee can be coordinated via your selected method (${method}).\n\nPlease reply directly to this text so I can provide the active routing details for your transaction.\n\nNote: We also dispatched your formal application confirmation to ${email}. If you do not see it in your inbox, please check your spam or promotions folder.`,
+      fee: `Hello ${firstName}, your $50 application screening fee for ${address} has been received and verified.\n\nYour official stamped corporate ledger receipt has been generated. You can access your file and view your receipt directly in your resident portal here:\n${portalUrl}\n\nYour full file is now with our underwriting department. We have also emailed a copy of your receipt to ${email} (please check your spam/junk folder if not visible).`,
+      approved: `Congratulations ${firstName}! Your rental application for ${address} has been officially APPROVED by Choice Properties underwriting.\n\nUnder our reservation protocol, this property is eligible to be held exclusively in your name while we prepare your lease documents. Your holding deposit is 100% credited toward your move-in balance.\n\nPlease review your Approval & Reservation Agreement here:\n${portalUrl}\n\nWe also sent your official approval packet to ${email}. Please check your inbox and spam folder. Reply to this text to coordinate your reservation holding details.`,
+      holding: `Great news ${firstName}! Your reservation holding deposit for ${address} has been verified and posted to your account ledger.\n\nThe home is now officially off the market and secured for your upcoming move-in! Your stamped receipt is now available in your portal:\n${portalUrl}\n\nOur leasing team is currently preparing your official Residential Lease Agreement. We have also emailed your receipt to ${email} (please check spam if needed).`,
+      lease: `Hello ${firstName}, your official Residential Lease Agreement for ${address} is prepared and ready for electronic signature!\n\nPlease review and execute your agreement securely using your signing link:\n${signingUrl}\n\nA direct signing copy was also dispatched to ${email}. Because this contains formal legal contracts, some email providers filter it—please inspect your spam, junk, or promotions folder. Feel free to text me here once signed!`,
+      executed: `Welcome home, ${firstName}! Your lease for ${address} has been fully countersigned and finalized by Choice Properties management.\n\nYour complete, executed legal lease package and initial move-in orientation guide are now available in your resident portal:\n${portalUrl}\n\nWe also emailed your executed documents to ${email} (check your spam folder if not in primary inbox). Our move-in coordination team will reach out with your key handover protocol as your move-in date approaches!`,
+      handover: `Hello ${firstName}, today is your official move-in day for ${address}!\n\nYour electronic lockbox / keypad access code is: [ENTER_CODE]\n(Code activates at 9:00 AM local time).\n\nPlease remember to complete your 48-Hour Move-In Condition Checklist in your portal to document initial property condition and protect your deposit:\n${portalUrl}\n\nFull move-in packet and emergency maintenance contacts have been emailed to ${email} (check spam if needed). Welcome to Choice Properties!`,
+    };
+    const stages = [
+      ['intake', 'Stage 1 · New application'],
+      ['fee', 'Stage 2 · Application fee received'],
+      ['approved', 'Stage 3 · Approved'],
+      ['holding', 'Stage 4 · Holding payment received'],
+      ['lease', 'Stage 5 · Lease ready to sign'],
+      ['executed', 'Stage 6 · Lease fully executed'],
+      ['handover', 'Stage 7 · Key handover'],
+    ];
+    const overlay = document.createElement('div');
+    overlay.id = 'sms-dispatch-dialog';
+    overlay.innerHTML = `<style>
+      #sms-dispatch-dialog{position:fixed;inset:0;z-index:10000;background:rgba(15,25,22,.58);display:grid;place-items:center;padding:18px}
+      #sms-dispatch-dialog .sms-panel{width:min(100%,620px);max-height:min(90dvh,760px);overflow:auto;background:#fff;border-radius:7px;box-shadow:0 24px 80px rgba(0,0,0,.28);padding:22px;color:#172321}
+      #sms-dispatch-dialog .sms-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+      #sms-dispatch-dialog h2{margin:0;font-size:1.1rem;font-weight:750;letter-spacing:0}
+      #sms-dispatch-dialog .sms-sub{margin:5px 0 0;color:#65716d;font-size:.8rem}
+      #sms-dispatch-dialog label{display:block;margin:12px 0 6px;font-size:.73rem;font-weight:700;color:#42514b}
+      #sms-dispatch-dialog input,#sms-dispatch-dialog select,#sms-dispatch-dialog textarea{width:100%;border:1px solid #ccd6d1;border-radius:4px;background:#fff;color:#172321;padding:10px 11px;font:500 .88rem 'DM Sans',sans-serif}
+      #sms-dispatch-dialog textarea{min-height:240px;resize:vertical;line-height:1.55}
+      #sms-dispatch-dialog .sms-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+      #sms-dispatch-dialog .sms-actions{display:flex;align-items:center;gap:8px}
+      #sms-dispatch-dialog button,#sms-dispatch-dialog a{min-height:38px;border:0;border-radius:4px;padding:9px 13px;font:700 .82rem 'DM Sans',sans-serif;text-decoration:none;cursor:pointer}
+      #sms-dispatch-dialog .sms-copy{background:#176345;color:#fff}
+      #sms-dispatch-dialog .sms-native{background:#edf3ef;color:#234b3b}
+      #sms-dispatch-dialog .sms-close{padding:7px 10px;background:#f0f3f1;color:#394841}
+      #sms-dispatch-dialog .sms-count{color:#65716d;font-size:.72rem}
+      @media(max-width:520px){#sms-dispatch-dialog{padding:0;align-items:end}#sms-dispatch-dialog .sms-panel{width:100%;max-height:94dvh;border-radius:8px 8px 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom))}#sms-dispatch-dialog textarea{min-height:34dvh}}
+    </style>
+    <section class="sms-panel" role="dialog" aria-modal="true" aria-labelledby="sms-title">
+      <header class="sms-head"><div><h2 id="sms-title">Quick SMS Dispatch</h2><p class="sms-sub">${S.esc(firstName)} · ${S.esc(address)}</p></div><button type="button" class="sms-close" data-sms-close aria-label="Close SMS dispatch"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+      <label for="sms-stage">Milestone</label><select id="sms-stage">${stages.map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select>
+      <label for="sms-phone">Applicant phone</label><input id="sms-phone" type="tel" value="${S.esc(phone)}" autocomplete="tel">
+      <label for="sms-message">Message</label><textarea id="sms-message" maxlength="1600"></textarea>
+      <footer class="sms-foot"><span id="sms-count" class="sms-count"></span><div class="sms-actions"><a id="sms-native" class="sms-native" href="#" hidden><i class="fas fa-message" aria-hidden="true"></i> Open Messages</a><button type="button" class="sms-copy" id="sms-copy"><i class="fas fa-copy" aria-hidden="true"></i> Copy message</button></div></footer>
+    </section>`;
+    document.body.appendChild(overlay);
+    const stageSelect = overlay.querySelector('#sms-stage');
+    const messageField = overlay.querySelector('#sms-message');
+    const phoneField = overlay.querySelector('#sms-phone');
+    const nativeLink = overlay.querySelector('#sms-native');
+    const count = overlay.querySelector('#sms-count');
+
+    function updateNativeLink(){
+      const digits = phoneField.value.replace(/[^+\d]/g, '');
+      nativeLink.hidden = !digits;
+      nativeLink.href = digits ? `sms:${digits}?body=${encodeURIComponent(messageField.value)}` : '#';
+      count.textContent = `${messageField.value.length} characters`;
+    }
+    function setStage(){ messageField.value = templates[stageSelect.value]; updateNativeLink(); }
+    stageSelect.addEventListener('change', setStage);
+    messageField.addEventListener('input', updateNativeLink);
+    phoneField.addEventListener('input', updateNativeLink);
+    overlay.addEventListener('click', event => {
+      if(event.target === overlay || event.target.closest('[data-sms-close]')) overlay.remove();
+    });
+    overlay.querySelector('#sms-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(messageField.value);
+        S.toast('SMS copied to clipboard.', 'success');
+      } catch {
+        messageField.focus();
+        messageField.select();
+        const copied = document.execCommand('copy');
+        S.toast(copied ? 'SMS copied to clipboard.' : 'Select and copy the message.', copied ? 'success' : 'warn');
+      }
+    });
+    const onEscape = event => {
+      if(event.key === 'Escape'){
+        overlay.remove();
+        document.removeEventListener('keydown', onEscape);
+      }
+    };
+    document.addEventListener('keydown', onEscape);
+    setStage();
+    stageSelect.focus();
+  }
+
   // ───── Notes ─────
   async function saveNotes(id){
     const ta = document.getElementById('notes-' + id);
@@ -735,6 +847,35 @@
     window.open(data.signedUrl, '_blank');
   }
 
+  async function requestReceipt(appId, receiptType){
+    const session = await CP.Auth.getSession();
+    if(!session?.access_token) throw new Error('Session expired. Please sign in again.');
+    const response = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/issue-payment-receipt', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'apikey':CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + session.access_token },
+      body:JSON.stringify({ app_id:appId, receipt_type:receiptType })
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok || !result.receipt?.id) throw new Error(result.error || 'Could not issue receipt.');
+    return result.receipt;
+  }
+
+  async function issueReceipt(appId, receiptType){
+    const receiptWindow = window.open('about:blank', '_blank');
+    try {
+      const receipt = await requestReceipt(appId, receiptType);
+      if(receiptWindow){
+        receiptWindow.opener = null;
+        receiptWindow.location.replace('/receipt.html?receipt_id=' + encodeURIComponent(receipt.id));
+      } else {
+        S.toast('Receipt issued: ' + receipt.receipt_number, 'success');
+      }
+    } catch(error) {
+      if(receiptWindow) receiptWindow.close();
+      S.toast('Receipt error: ' + (error.message || 'Could not issue receipt.'), 'error');
+    }
+  }
+
   // ───── Init ─────
   document.addEventListener('DOMContentLoaded', async () => {
     try { await waitReady(8000); }
@@ -759,6 +900,16 @@
     S.on('docs',         (t) => loadDocs(t.dataset.id, t.dataset.appId));
     S.on('save-notes',   (t) => saveNotes(t.dataset.id));
     S.on('download-doc', (t) => downloadDoc(t.dataset.path));
+    S.on('receipt',      (t) => issueReceipt(t.dataset.appId, t.dataset.receiptType));
+    S.on('sms-dispatch', (t) => openSmsDispatch({
+      appId:t.dataset.smsAppId,
+      firstName:t.dataset.smsFirstName,
+      address:t.dataset.smsAddress,
+      phone:t.dataset.smsPhone,
+      email:t.dataset.smsEmail,
+      method:t.dataset.smsMethod,
+      signToken:t.dataset.smsSignToken,
+    }));
     S.on('reload-apps',  () => loadApps());
     // Bulk-action handlers (Batch B #4)
     S.on('bulk-status',  (t) => bulkSetStatus(t.dataset.set));

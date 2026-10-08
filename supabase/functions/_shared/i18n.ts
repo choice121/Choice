@@ -45,7 +45,7 @@ const STRINGS: Record<Locale, Dict> = {
 
     // Footer
     'footer.address_line1':        '2265 Livernois, Suite 500 · Troy, MI 48083',
-    'footer.address_line2':        '707-706-3137 (Text Only) · support@choiceproperties.com',
+    'footer.address_line2':        '707-706-3137 (Text Only)',
     'footer.tagline':              'Your trust is our standard.',
     'footer.policies':             'Policy Framework',
     'footer.terms':                'Terms',
@@ -165,7 +165,7 @@ const STRINGS: Record<Locale, Dict> = {
 
     // Footer
     'footer.address_line1':        '2265 Livernois, Suite 500 · Troy, MI 48083',
-    'footer.address_line2':        '707-706-3137 (Solo Texto) · support@choiceproperties.com',
+    'footer.address_line2':        '707-706-3137 (Solo Texto)',
     'footer.tagline':              'Su confianza es nuestro estándar.',
     'footer.policies':             'Marco de Políticas',
     'footer.terms':                'Términos',

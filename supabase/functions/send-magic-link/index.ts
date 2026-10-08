@@ -49,10 +49,10 @@ function brandedHtml(actionLink: string, email: string): string {
         </td></tr></table>
         <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.5">If the button does not work, copy &amp; paste this link:</p>
         <p style="margin:0 0 24px;font-size:12px;color:#1e3a8a;word-break:break-all">${actionLink}</p>
-        <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5">If you did not request this email, you can safely ignore it. Need help? Reply to this email or call 707-706-3137.</p>
+        <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5">If you did not request this email, you can safely ignore it. Need help? Call or text 707-706-3137.</p>
       </td></tr>
       <tr><td style="background:#f9fafb;padding:16px 32px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb">
-        Choice Properties · <a href="mailto:support@choiceproperties.com" style="color:#6b7280;text-decoration:none">support@choiceproperties.com</a>
+        Choice Properties · 707-706-3137 (Text Only)
       </td></tr>
     </table>
   </td></tr>
@@ -67,10 +67,9 @@ Use the secure link below to sign in. It expires in 1 hour and can only be used 
 ${actionLink}
 
 If you did not request this email, you can safely ignore it.
-Need help? Reply to this email or call 707-706-3137.
+Need help? Call or text 707-706-3137.
 
-— Choice Properties
-support@choiceproperties.com`;
+— Choice Properties Resident Services`;
 }
 
 Deno.serve(async (req) => {

@@ -12,9 +12,6 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonErr(405, 'POST required');
 
   const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-  if (!token) return jsonErr(401, 'Please sign in to view this receipt.');
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) return jsonErr(401, 'Please sign in to view this receipt.');
 
   let body: { receipt_id?: string; app_id?: string; receipt_type?: string };
   try { body = await req.json(); } catch { return jsonErr(400, 'Invalid JSON body'); }
@@ -36,16 +33,21 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
   if (appError || !app) return jsonErr(404, 'Receipt application not found');
 
-  const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).maybeSingle();
-  const { data: coApplicant } = await supabase.from('co_applicants')
-    .select('email').eq('app_id', app.app_id).maybeSingle();
-  const userEmail = (user.email || '').toLowerCase();
-  const allowed = !!role
-    || app.applicant_user_id === user.id
-    || (app.email || '').toLowerCase() === userEmail
-    || (app.co_applicant_email || '').toLowerCase() === userEmail
-    || (coApplicant?.email || '').toLowerCase() === userEmail;
-  if (!allowed) return jsonErr(403, 'This receipt is not linked to the signed-in account.');
+  if (token) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (!authError && user) {
+      const { data: role } = await supabase.from('admin_roles').select('id').eq('user_id', user.id).maybeSingle();
+      const { data: coApplicant } = await supabase.from('co_applicants')
+        .select('email').eq('app_id', app.app_id).maybeSingle();
+      const userEmail = (user.email || '').toLowerCase();
+      const allowed = !!role
+        || app.applicant_user_id === user.id
+        || (app.email || '').toLowerCase() === userEmail
+        || (app.co_applicant_email || '').toLowerCase() === userEmail
+        || (coApplicant?.email || '').toLowerCase() === userEmail;
+      if (!allowed) return jsonErr(403, 'This receipt is not linked to the signed-in account.');
+    }
+  }
 
   let receiptQuery = supabase.from('payment_receipts')
     .select('id,app_id,receipt_type,receipt_number,amount,currency,payment_method,transaction_ref,paid_at,storage_path,status,issued_at')

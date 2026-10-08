@@ -405,7 +405,7 @@ Deno.serve(async (req: Request) => {
 <p>Hi ${landlordInfo.contact_name || 'there'},</p>
 <p>Move-in for <strong>${app.first_name || ''} ${app.last_name || ''}</strong> at <strong>${app.property_address || ''}</strong> has been confirmed for <strong>${moveDate}</strong>.</p>
 <p>Reference: <code>${app_id}</code></p>
-<p style="font-size:12px;color:#888">Choice Properties &middot; support@choiceproperties.com</p>
+<p style="font-size:12px;color:#888">Choice Properties &middot; 707-706-3137 (Text Only)</p>
 </div>`,
           });
         }

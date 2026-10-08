@@ -58,13 +58,13 @@ export const ESIGN_DISCLOSURE: ESignDisclosure = {
     'consent. We will switch you to paper delivery within 5 business days.',
 
   paper_copy_procedure:
-    'Email support@choiceproperties.com or call 707-706-3137 with your ' +
+    'Call or text 707-706-3137 with your ' +
     'application reference number.',
 
   withdrawal_procedure:
-    'Email support@choiceproperties.com or call 707-706-3137 stating ' +
+    'Call or text 707-706-3137 stating ' +
     'your intent to withdraw E-SIGN consent.',
 
-  contact_email: 'support@choiceproperties.com',
+  contact_email: '',
   contact_phone: '707-706-3137',
 };

@@ -110,7 +110,7 @@ const EMAIL_FOOTER = `
     <div class="footer-name">Choice Properties</div>
     <div class="footer-details">
       2265 Livernois, Suite 500 &middot; Troy, MI 48083<br>
-      707-706-3137 (Text Only) &middot; support@choiceproperties.com<br>
+      707-706-3137 (Text Only)<br>
       Your trust is our standard.
     </div>
     <div class="footer-details" style="margin-top:12px;font-size:11px;line-height:1.6;">
@@ -138,7 +138,7 @@ function buildEmailHeader(title: string, appId?: string): string {
   </div>`;
 }
 
-const CONTACT_ROW = `<div class="contact-row"><strong>Questions?</strong> &nbsp; Text: 707-706-3137 &nbsp;&middot;&nbsp; support@choiceproperties.com</div>`;
+const CONTACT_ROW = `<div class="contact-row"><strong>Questions?</strong> &nbsp; Text: 707-706-3137 &nbsp;&middot;&nbsp; Choice Properties Resident Services</div>`;
 
 // ─── Template 1: Application Confirmation (Tenant) ────────────────────────────
 
@@ -267,7 +267,7 @@ export function applicationConfirmationHtml(
     <div class="email-closing">
       <p class="closing-text">Should you have any questions prior to hearing from our team, please do not hesitate to reach out. We are committed to making this process as clear and straightforward as possible.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -436,28 +436,23 @@ export function statusUpdateHtml(
     ${propertyLabel ? `<p style="font-size:13px;color:#64748b;margin:-4px 0 16px;">Property: <strong>${propertyLabel}</strong></p>` : ''}
 
     ${isApproved ? `
-    <p class="intro-text">We are delighted to inform you that your rental application with Choice Properties has been <strong>approved</strong>. This decision reflects our confidence in your application, and we look forward to welcoming you as a resident.</p>
+    <p class="intro-text">We are pleased to inform you that your rental application with Choice Properties has been officially <strong>approved</strong> by underwriting. Under our reservation protocol, this home is eligible to be held exclusively in your name while our leasing desk finalizes your formal lease documents.</p>
     <div class="callout green">
-      <h4>&#x2713; Application Approved</h4>
-      <p>Your application has met all of our criteria. Our leasing team will be in contact with you shortly to prepare and deliver your lease agreement for electronic signature. Please ensure your phone and email remain accessible.</p>
+      <h4>&#x2713; Application Approved — Reservation Window Open</h4>
+      <p>Your application has satisfied our review criteria. Under our protocol, placing your reservation holding deposit secures the property exclusively in your name and formally removes it from the market. <strong>100% of your holding deposit is credited directly toward your move-in balance.</strong></p>
     </div>
     <div class="section">
-      <div class="section-label">Your Next Steps</div>
+      <div class="section-label">Reservation &amp; Move-In Protocol</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span><strong>Lease Agreement</strong> — Our team will prepare a formal lease agreement and send it to you shortly. Please review it carefully in its entirety before signing.</span></li>
-        <li><span class="step-num">2</span><span><strong>Electronic Signature</strong> — You will sign your lease electronically. Your signature is legally binding under the ${eSignText}.</span></li>
-        <li><span class="step-num">3</span><span><strong>Move-In Costs</strong> — Prior to receiving your keys, the move-in total (first month's rent plus security deposit) must be paid in full. This will be clearly outlined in your lease.</span></li>
-        <li><span class="step-num">4</span><span><strong>Key Handoff</strong> — Once all documents and payments are complete, our team will coordinate your move-in date.</span></li>
+        <li><span class="step-num">1</span><span><strong>Property Reservation Hold</strong> — Coordinate your holding deposit with your leasing specialist to place the property on exclusive hold. This is fully credited toward your first month's rent.</span></li>
+        <li><span class="step-num">2</span><span><strong>Lease Document Preparation</strong> — Once your reservation hold is recorded, our legal desk prepares your official state-specific Residential Lease Agreement.</span></li>
+        <li><span class="step-num">3</span><span><strong>Electronic Signature</strong> — Review and execute your lease electronically with legally binding digital signatures under the ${eSignText}.</span></li>
+        <li><span class="step-num">4</span><span><strong>Move-In &amp; Key Handover</strong> — On move-in day at 9:00 AM, receive your electronic lockbox access code and complete your 48-Hour Move-In Condition Checklist.</span></li>
       </ul>
     </div>
-    <div class="callout amber">
-      <h4>Important — Please Respond Promptly</h4>
-      <p>Approval qualifies you to move forward, but the unit is not yet held in your name. Units are secured on a <strong>first-completion basis</strong> among approved applicants — the next steps (holding fee, then lease signing within 48 hours) are what formally remove this property from the market. Delays may result in the unit being awarded to another approved applicant.</p>
-    </div>
-
     <div class="callout">
-      <h4>Why We Move Quickly at This Stage</h4>
-      <p style="font-size:13px;color:#555;line-height:1.65;">Approved listings often have multiple qualified applicants. Moving promptly through the holding-fee and signing steps is how we make sure the right unit is secured for the right resident — without leaving anyone in limbo. Our team is available throughout to answer questions before you commit.</p>
+      <h4>Billing &amp; Transaction Routing</h4>
+      <p style="font-size:13px;color:#555;line-height:1.65;">To protect against unauthorized transactions and eliminate convenience surcharges, reservation holding details are coordinated directly with your assigned leasing specialist via secure text at <strong>707-706-3137</strong>. Please reply directly to your approval text to receive active transaction routing.</p>
     </div>
     ` : isWaitlisted ? `
     <p class="intro-text">Thank you for your application for <strong>${propertyLabel}</strong>. We have reviewed your application and have added you to our active waitlist for this property.</p>
@@ -496,7 +491,7 @@ export function statusUpdateHtml(
     `}
 
     <div class="cta-wrap">
-      <a href="${portal}" class="cta-btn">View My Application</a>
+      <a href="${portal}" class="cta-btn">${isApproved ? 'Review Approval &amp; Reservation Agreement' : isWaitlisted ? 'View Available Properties' : 'View Application Details'}</a>
     </div>
 
     ${CONTACT_ROW}
@@ -504,7 +499,7 @@ export function statusUpdateHtml(
     <div class="email-closing">
       <p class="closing-text">${isApproved ? 'Congratulations once more. We look forward to having you as part of the Choice Properties community.' : isWaitlisted ? 'Thank you for your patience. We will be in touch as soon as an opportunity arises.' : 'Thank you again for your interest in Choice Properties. We wish you all the best.'}</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -606,7 +601,7 @@ export function paymentConfirmedHtml(
     <div class="email-closing">
       <p class="closing-text">We appreciate your patience as we complete our review. Should you have any questions in the interim, please do not hesitate to contact our leasing team.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -706,7 +701,7 @@ export function holdingFeeRequestHtml(
     <div class="email-closing">
       <p class="closing-text">Please act promptly to secure your unit. Our team is here to answer any questions you may have about this step.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -784,7 +779,7 @@ export function holdingFeeReceivedHtml(
     <div class="email-closing">
       <p class="closing-text">We look forward to welcoming you as a Choice Properties resident.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -870,7 +865,7 @@ export function signingEmailHtml(
     <div class="email-closing">
       <p class="closing-text">If you have any questions about the lease terms prior to signing, please contact our leasing team. We are available to clarify any aspect of the agreement.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -938,7 +933,7 @@ export function signedConfirmHtml(
     <div class="email-closing">
       <p class="closing-text">We appreciate your patience during this final step. Our team will process your countersignature promptly. If you have any questions in the meantime, please don't hesitate to reach out.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1004,7 +999,7 @@ export function leaseFullyExecutedHtml(
     <div class="email-closing">
       <p class="closing-text">We look forward to welcoming you to your new home. Our team is here to ensure a smooth and enjoyable move-in experience.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1065,7 +1060,7 @@ export function moveinEmailHtml(
     <div class="email-closing">
       <p class="closing-text">We are thrilled to welcome you to your new home. If you have any questions before your move-in, please don't hesitate to reach out.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1149,7 +1144,7 @@ export function moveInPrepHtml(
     <div class="email-closing">
       <p class="closing-text">We're thrilled to welcome you to your new home. Our team is here to help make your move-in smooth and stress-free.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1204,7 +1199,7 @@ export function leaseSigningReminderHtml(
     <div class="email-closing">
       <p class="closing-text">We're excited to have you as a resident and look forward to getting your home ready. Please don't hesitate to reach out if you have any questions before signing.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1417,7 +1412,7 @@ export function coApplicantInviteHtml(
     <div class="email-closing">
       <p class="closing-text">If you did not expect this email, or believe you were listed as a co-applicant in error, please contact us immediately and do <strong>not</strong> sign.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1455,7 +1450,7 @@ export function coApplicantSignedHtml(coFirstName: string, propertyAddress: stri
 
     <div class="email-closing">
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1510,7 +1505,7 @@ export function amendmentRequestHtml(
 
     <div class="email-closing">
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1552,7 +1547,7 @@ export function amendmentSignedHtml(
 
     <div class="email-closing">
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1612,7 +1607,7 @@ export function renewalNudgeHtml(
     <div class="email-closing">
       <p class="closing-text">If you have already been in touch with our team about your renewal, please disregard this automated reminder.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1686,7 +1681,7 @@ export function rentIncreaseNoticeHtml(
     <div class="email-closing">
       <p class="closing-text">Thank you for your continued tenancy.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1768,7 +1763,7 @@ export function terminationNoticeHtml(
     <div class="email-closing">
       <p class="closing-text">If you have questions about the legal basis for this notice or your rights under your state's tenant-protection statute, please contact our office at the number above.</p>
       <div class="sign-off">Choice Properties Leasing Team</div>
-      <div class="sign-company">support@choiceproperties.com</div>
+      <div class="sign-company">707-706-3137 &middot; Choice Properties Resident Services</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -1917,7 +1912,7 @@ export function landlordNewApplicationHtml(
       <div class="row"><span class="lbl">Status</span><span class="val">Under review</span></div>
     </div>
     <a href="${adminUrl}" class="cta">View in Admin Portal</a>
-    <p style="font-size:12px;color:#888;margin-top:16px;line-height:1.6">You will receive another notification once the application is approved or denied. Questions? Contact us at support@choiceproperties.com</p>
+    <p style="font-size:12px;color:#888;margin-top:16px;line-height:1.6">You will receive another notification once the application is approved or denied. Questions? Text our leasing desk at 707-706-3137</p>
   </div>`);
 }
 

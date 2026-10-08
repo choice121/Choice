@@ -19,6 +19,7 @@
       if(mi !== 'pending')   actions.push('<button class="btn btn-ghost btn-sm" data-action="set-mi" data-id="'+S.esc(app.id)+'" data-set="pending">Reset</button>');
       actions.push('<button class="btn btn-ghost btn-sm" data-action="send-prep" data-app-id="'+S.esc(app.app_id||app.id)+'">Send prep guide</button>');
       actions.push('<button class="btn btn-ghost btn-sm" data-action="edit-mi" data-id="'+S.esc(app.id)+'" data-date="'+S.esc(app.move_in_date_actual||'')+'" data-notes="'+S.esc(app.move_in_notes||'')+'">Date / notes</button>');
+      if(mi === 'confirmed') actions.push('<button class="btn btn-primary btn-sm" data-action="handover-sms" data-app-id="'+S.esc(app.app_id||app.id)+'" data-name="'+S.esc(name.trim())+'">Stage 7 SMS</button>');
       return ''
         + '<div class="mi-card" id="mi-'+S.esc(app.id)+'">'
         +   '<div class="row-flex between" style="align-items:flex-start">'
@@ -70,8 +71,8 @@
       list.innerHTML = rows.map(card).join('');
     }
 
-    async function sendEmail(appId, type){
-      const res = await AdminShell.callFn('/send-email', { app_id: appId, type });
+    async function sendEmail(appId, type, extra = {}){
+      const res = await AdminShell.callFn('/send-email', { ...extra, app_id: appId, type });
       if(!res || !res.ok){
         const msg = (res && res.json && res.json.error) || 'Email request failed';
         throw new Error(msg);
@@ -117,6 +118,23 @@
         if(!ok) return;
         try { await sendEmail(appId, 'move_in_prep'); AdminShell.toast('Prep guide sent','success'); }
         catch(e){ AdminShell.toast('Failed: '+e.message,'error'); }
+      });
+
+      AdminShell.on('handover-sms', async (target) => {
+        const appId = target.getAttribute('data-app-id');
+        const name = target.getAttribute('data-name') || 'this resident';
+        const data = await AdminShell.formSheet({
+          title:'Stage 7 · Key handover SMS', submit:'Prepare admin dispatch',
+          fields:[
+            { name:'access_code', label:'Lockbox / keypad access code', type:'text', required:true, placeholder:'Enter the move-in access code' },
+          ]
+        });
+        if(!data) return;
+        if(!String(data.access_code || '').trim()) { AdminShell.toast('Enter the access code first.','error'); return; }
+        try {
+          await sendEmail(appId, 'key_handover', { access_code:String(data.access_code).trim() });
+          AdminShell.toast('Stage 7 SMS dispatch emailed to the admin team for '+name+'.','success');
+        } catch(e) { AdminShell.toast('Dispatch failed: '+e.message,'error'); }
       });
 
       AdminShell.on('edit-mi', async (target) => {

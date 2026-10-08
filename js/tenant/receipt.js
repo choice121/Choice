@@ -105,19 +105,20 @@
       await new Promise(resolve => setTimeout(resolve, 60));
     }
 
-    const session = await CP.Auth.getSession();
-    if (!session?.access_token) {
-      showError('Sign in to view this receipt.');
-      return;
+    let session = null;
+    try { session = await CP.Auth.getSession(); } catch(_) {}
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': CONFIG.SUPABASE_ANON_KEY,
+    };
+    if (session?.access_token) {
+      headers['Authorization'] = 'Bearer ' + session.access_token;
     }
 
     const receiptResponse = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/download-payment-receipt', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': CONFIG.SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + session.access_token,
-      },
+      headers,
       body: JSON.stringify(receiptId ? { receipt_id: receiptId } : { app_id: appId, receipt_type: type }),
     });
     const receiptResult = await receiptResponse.json().catch(() => ({}));
