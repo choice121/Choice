@@ -574,9 +574,7 @@ function renderProperty(p) {
     document.getElementById('detailAddress').insertAdjacentElement('afterend', chipRow);
   }
 
-  // Listed-by attribution is shown via #landlordCard below — no duplicate text needed
-
-  // Neighborhood / location context — shown below the address/attribution
+  // Neighborhood / location context — shown below the address
   if (p.neighborhood || p.location_context) {
     const nbrEl = document.createElement('div');
     nbrEl.style.cssText = 'font-size:13px;color:#64748b;margin-top:5px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;align-items:center';
@@ -584,8 +582,7 @@ function renderProperty(p) {
     if (p.neighborhood)     parts.push(`<span><i class="fas fa-location-dot" style="color:#c9a55c;margin-right:3px;font-size:11px"></i>${esc(p.neighborhood)}</span>`);
     if (p.location_context) parts.push(`<span>${esc(p.location_context)}</span>`);
     nbrEl.innerHTML = parts.join('<span style="color:#cbd5e1;margin:0 2px">·</span>');
-    const _listedBy = document.querySelector('.detail-listed-by');
-    (_listedBy || document.getElementById('detailAddress')).insertAdjacentElement('afterend', nbrEl);
+    document.getElementById('detailAddress').insertAdjacentElement('afterend', nbrEl);
   }
 
   // Meta row
@@ -855,23 +852,7 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
-  // Landlord card
-  if (p.landlords) {
-    const ll = p.landlords;
-    const name = ll.business_name || ll.contact_name;
-    const card = document.getElementById('landlordCard');
-    card.style.display = 'flex';
-    document.getElementById('landlordName').textContent = name;
-    if (ll.tagline) document.getElementById('landlordTagline').textContent = ll.tagline;
-    const avatarEl = document.getElementById('landlordAvatar');
-    if (ll.avatar_url) {
-      avatarEl.innerHTML = `<img src="${esc(CONFIG.img(ll.avatar_url,'avatar'))}" alt="${esc(name)}" loading="lazy">`;
-      const avatarImg = avatarEl.querySelector('img');
-      if (avatarImg) avatarImg.onerror = function() { this.onerror = null; this.src = '/assets/avatar-placeholder.svg'; };
-    }
-    else avatarEl.textContent = name.charAt(0).toUpperCase();
-    if (ll.verified) document.getElementById('landlordVerified').style.display = 'inline';
-  }
+
 
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {

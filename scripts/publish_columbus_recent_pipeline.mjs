@@ -3,7 +3,7 @@ import https from 'https';
 
 const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
 const KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
-const LANDLORD_ID = 'b8d3aea0-f466-49f2-ac07-2b2b40793cc9';
+const LANDLORD_ID = null;
 const SITE_URL = 'https://choice-properties-site.pages.dev';
 
 const HEADERS = {

@@ -37,7 +37,7 @@ import { CREDENTIALS_CONFIG } from '../credentials-config.mjs';
 
 const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
 const KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
-const LANDLORD_ID = 'dabe7d4a-8a92-4fb4-9de9-0dcda47391c1'; // Choice Properties LLC
+const LANDLORD_ID = null;
 
 const HEADERS = {
   apikey: KEY,
