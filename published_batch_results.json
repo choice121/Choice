@@ -1,0 +1,74 @@
+[
+  {
+    "choiceId": "e1a5bbff-88c4-4d1f-95b3-4aee0e7d3f4d",
+    "pipelineId": "PP-791FE85F",
+    "address": "4371 NE 83rd Ter",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64119",
+    "rent": 1475,
+    "beds": 3,
+    "baths": 2.5,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=e1a5bbff-88c4-4d1f-95b3-4aee0e7d3f4d"
+  },
+  {
+    "choiceId": "15784f48-86f2-4c1e-890e-60cf090b2c3e",
+    "pipelineId": "PP-00078BF2",
+    "address": "4202 Flora Ave",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64110",
+    "rent": 1425,
+    "beds": 4,
+    "baths": 2,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=15784f48-86f2-4c1e-890e-60cf090b2c3e"
+  },
+  {
+    "choiceId": "912b9777-f2d1-400c-a754-37a82668d4dd",
+    "pipelineId": "PP-27ABE035",
+    "address": "3331 Bridge Manor Dr",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64137",
+    "rent": 1495,
+    "beds": 4,
+    "baths": 3,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=912b9777-f2d1-400c-a754-37a82668d4dd"
+  },
+  {
+    "choiceId": "33087b11-30b2-487f-adaf-d1d10fd57b0c",
+    "pipelineId": "PP-D12B824E",
+    "address": "5243 N Lydia Ave",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64118",
+    "rent": 1495,
+    "beds": 4,
+    "baths": 2.5,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=33087b11-30b2-487f-adaf-d1d10fd57b0c"
+  },
+  {
+    "choiceId": "291882a2-eee1-4766-8416-d8aa2872987f",
+    "pipelineId": "PP-7E30F5EE",
+    "address": "11121 Herrick Ave",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64134",
+    "rent": 1450,
+    "beds": 4,
+    "baths": 2,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=291882a2-eee1-4766-8416-d8aa2872987f"
+  },
+  {
+    "choiceId": "87fbf708-cf12-4f36-8cb1-6288d5c1e789",
+    "pipelineId": "PP-A7266BC3",
+    "address": "3364 N 60th Ter",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66104",
+    "rent": 1485,
+    "beds": 4,
+    "baths": 3,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=87fbf708-cf12-4f36-8cb1-6288d5c1e789"
+  }
+]
