@@ -35,7 +35,7 @@ export const TULSA_BATCH = [
     county: 'Tulsa County',
     lat: 36.138187,
     lng: -95.93698,
-    property_type: 'DUPLEX',
+    property_type: 'SINGLE_FAMILY',
     bedrooms: 1,
     bathrooms: 1.0,
     half_bathrooms: 0,
@@ -60,7 +60,7 @@ export const TULSA_BATCH = [
     flooring: ['Hardwood Flooring', 'Tile'],
     amenities: [
       'Original Hardwood Flooring',
-      'Spacious 895 Sq Ft Midtown Duplex Layout',
+      'Spacious 895 Sq Ft Midtown Single-Family Home',
       'Detached Garage & Off-Street Driveway Parking',
       'In-Unit Washer & Dryer Hookups',
       'Forced Air Heat & Air Conditioning Units',
@@ -72,7 +72,7 @@ export const TULSA_BATCH = [
       'Range / Oven',
       'Washer/Dryer Hookups'
     ],
-    description: `Located in Midtown Tulsa near the Expo Square and University of Tulsa corridors, 1630 South Knoxville Avenue offers an 895-square-foot duplex home that combines classic architectural charm with convenient residential living.
+    description: `Located in Midtown Tulsa near the Expo Square and University of Tulsa corridors, 1630 South Knoxville Avenue offers an 895-square-foot single-family home that combines classic architectural charm with convenient residential living.
 
 The interior showcases warm, original hardwood flooring that runs continuously through the sunlit living room and dedicated dining area. The kitchen is outfitted with ample cabinetry, solid countertops, a gas range with oven, and a refrigerator. Adjoining the kitchen, dedicated utility connections provide in-unit washer and dryer hookups for everyday laundry ease.
 
