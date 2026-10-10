@@ -341,5 +341,34 @@ AI (you):
 
 ---
 
-*Last updated: 2026-08-12*
-*For the complete technical reference, see `scraper/PIPELINE_USAGE.md`*
+## Dynamic Description Architecture & Pre-Flight Compliance Linter
+
+Every listing description generated in Choice Properties uses the modular fact-mining engine in `scripts/description-generator.mjs`:
+
+### 1. Ground-Truth Fact Mining (`extractMinedFacts`)
+- Extracts authentic textures, finishes (hardwood, LVP, tile, quartz), layout details (split bedrooms, walkout basements, tray ceilings), and itemized appliances directly from `original_description`.
+- Eliminates hallucinations by grounding all claims in verified source text.
+
+### 2. Dynamic Length Tiers (Zero Artificial Padding)
+- **COMPACT (120–180 words, 1–2 paragraphs)**: For smaller layouts, duplexes, and 1–2 bedroom homes. Direct, punchy, and scannable.
+- **STANDARD (220–300 words, 3 paragraphs)**: For typical 3–4 bedroom residences. Balanced neighborhood and room-by-room flow.
+- **SHOWCASE (350–450+ words, 4–5 paragraphs)**: For large multi-tier residences with finished basements, expansive lot acreage, or luxury suite appointments.
+
+### 3. Story Archetypes & Narrative Rotation
+- `culinary_hub`: Prioritizes kitchen island, counter prep space, and entertaining connectivity.
+- `multi_tier_retreat`: Prioritizes multi-level separation, finished lower-level suite, and flex work/media spaces.
+- `single_level_ease`: Prioritizes accessible single-story ranch layouts, seamless gathering spaces, and fenced yard privacy.
+- `townhome_sanctuary`: Prioritizes end-unit privacy, upper-level suite sanctuaries, and private patio living.
+- `expansive_grounds`: Prioritizes acreage, outdoor decks, mature trees, and private recreation.
+
+### 4. Pre-Flight Compliance Linter (`lintDescription`)
+- **Zero Deposit Mentions**: Strictly confirms security deposits are 100% absent from text.
+- **Zero Lease Terms**: Strictly confirms lease lengths/durations are omitted.
+- **Zero Smoking / Move-In Dates**: Prohibits smoking policies and availability clauses.
+- **Mandatory Statements**: Verifies exact `$50 application fee` and `Pet-Friendly (Dogs & Cats Welcome)`.
+- **Decimal Precision**: Confirms description bathroom count decimal aligns with database record.
+
+---
+
+*Last updated: 2026-10-10*
+*For the complete technical reference, see `scraper/PIPELINE_USAGE.md` and `scripts/description-generator.mjs`*
