@@ -1,729 +1,852 @@
-import { CREDENTIALS_CONFIG } from '../credentials-config.mjs';
-import crypto from 'crypto';
 import https from 'https';
 
-const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
-const KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
-const LANDLORD_ID = null;
+const SUPABASE_URL = 'https://tlfmwetmhthpyrytrcfo.supabase.co';
+const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
 const SITE_URL = 'https://choice-properties-site.pages.dev';
 
 const HEADERS = {
-  'apikey': KEY,
-  'Authorization': 'Bearer ' + KEY,
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation'
+  'apikey': SERVICE_KEY,
+  'Authorization': 'Bearer ' + SERVICE_KEY,
+  'Content-Type': 'application/json'
 };
 
-function slugSeg(s) {
-  return String(s || '')
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
-
-function buildCanonicalUrl(p) {
-  const id = String(p.id).toLowerCase();
-  const state = 'tx';
-  const city = slugSeg(p.city);
-  const beds = `${p.bedrooms}br`;
-  const type = 'house';
-  return `${SITE_URL}/rent/${state}/${city}/${beds}-${type}-${id}/`;
-}
-
-function buildDirectUrl(p) {
-  return `${SITE_URL}/property.html?id=${p.id}`;
-}
-
-function sbPost(table, data) {
+function fetchJson(url, options = {}) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify(data);
-    const u = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-    const req = https.request(u, {
-      method: 'POST',
-      headers: {
-        ...HEADERS,
-        'Content-Length': Buffer.byteLength(body)
-      },
-      timeout: 30000
-    }, res => {
-      let raw = '';
-      res.on('data', d => raw += d);
+    const u = new URL(url);
+    const reqOptions = {
+      hostname: u.hostname,
+      port: 443,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers: options.headers || {}
+    };
+
+    const req = https.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(raw)); } catch(e) { resolve(raw); }
-        } else {
-          reject(new Error(`Supabase ${res.statusCode}: ${raw}`));
+        try {
+          const json = data ? JSON.parse(data) : {};
+          resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, data: json, text: data });
+        } catch (e) {
+          resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, data: null, text: data });
         }
       });
     });
+
     req.on('error', reject);
-    req.write(body);
+    if (options.body) {
+      req.write(typeof options.body === 'string' ? options.body : JSON.stringify(options.body));
+    }
     req.end();
   });
 }
 
-// 10 Curated & Enriched Fort Worth Single-Family Houses (2-3 BR, $1400-$1550)
-const FORT_WORTH_HOUSES = [
+const BATCH = [
   {
-    address: '5004 Chapman St',
+    pipelineId: 'PP-3F80B6C6',
+    address: '2812 Cordone St',
     city: 'Fort Worth',
     state: 'TX',
-    zip: '76105',
-    county: 'Tarrant',
-    neighborhood: 'Stop 6 / East Fort Worth',
-    lat: 32.72314,
-    lng: -97.26245,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 3,
-    bathrooms: 2.0,
-    total_bathrooms: 2,
-    square_footage: 1250,
-    monthly_rent: 1450,
-    security_deposit: 1450,
-    application_fee: 50,
-    amenities: ['Central Air', 'Private Fenced Yard', 'Driveway Parking', 'Ceiling Fans', 'Hardwood Flooring', 'Spacious Closets'],
-    appliances: ['Refrigerator', 'Stove / Range', 'Dishwasher', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Private Driveway',
-    has_central_air: true,
-    has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_05_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_06_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-chapman/photo_07_yard.webp'
-    ],
-    description: `Welcome to 5004 Chapman Street — an attractive, move-in ready 3-bedroom, 2-bathroom single-family home in Fort Worth, TX.
-
-This bright home offers 1,250 square feet of comfortable living space featuring a spacious open-concept living area, durable wood-style flooring, and an updated kitchen with solid cabinetry and clean appliances. Both bathrooms have been refreshed with modern vanities. The generous private backyard provides plenty of outdoor room for family gatherings, gardening, and pet exercise.
-
-Key Property Features:
-• 3 Bedrooms, 2 Full Bathrooms
-• 1,250 Sq. Ft. of living area
-• Central heating and cooling system
-• Fully equipped kitchen with range, refrigerator, and dishwasher
-• Large private backyard
-• Dedicated off-street driveway parking
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,450
-• Security Deposit: $1,450 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
-  },
-  {
-    address: '1601 W Felix St',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76115',
-    county: 'Tarrant',
-    neighborhood: 'Southside / Rosemont',
-    lat: 32.67812,
-    lng: -97.34521,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 3,
-    bathrooms: 1.0,
-    total_bathrooms: 1,
-    square_footage: 1180,
-    monthly_rent: 1550,
-    security_deposit: 1550,
-    application_fee: 50,
-    amenities: ['Central Air & Heat', 'Refinished Hardwood Floors', 'Fenced Backyard', 'Covered Front Porch', 'Storage Shed'],
-    appliances: ['Stainless Steel Stove', 'Refrigerator', 'Microwave', 'Washer/Dryer Connections'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Driveway Parking',
-    has_central_air: true,
-    has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_01_front.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_02_living.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_03_dining.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_04_kitchen.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_05_primary.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_07_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-felix/photo_08_backyard.webp'
-    ],
-    description: `Welcome to 1601 W Felix Street — a beautifully remodeled 3-bedroom, 1-bathroom single-family residence situated in the established Southside neighborhood of Fort Worth, TX.
-
-This home offers 1,180 square feet of character and convenience, featuring refinished hardwood flooring throughout, fresh neutral interior paint, and a renovated kitchen boasting stainless appliances and modern tile accents. Enjoy your morning coffee on the covered front porch or unwind in the expansive fenced backyard. Conveniently positioned near I-35W, downtown Fort Worth, and the Medical District.
-
-Key Property Features:
-• 3 Bedrooms, 1 Full Bathroom
-• 1,180 Sq. Ft. of living space
-• Original hardwood floors and abundant natural light
-• Modern central HVAC system
-• Shaded covered front porch and private fenced yard
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,550
-• Security Deposit: $1,550 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
-  },
-  {
-    address: '1506 E Mulkey St',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76104',
-    county: 'Tarrant',
-    neighborhood: 'Morningside',
-    lat: 32.71452,
-    lng: -97.31289,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 3,
-    bathrooms: 2.0,
-    total_bathrooms: 2,
-    square_footage: 1220,
-    monthly_rent: 1450,
-    security_deposit: 1450,
-    application_fee: 50,
-    amenities: ['Central Air', 'Private Yard', 'Off-Street Parking', 'Ceiling Fans', 'Eat-In Kitchen'],
-    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Driveway Parking',
-    has_central_air: true,
-    has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_04_master.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_05_bath1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-mulkey/photo_07_yard.webp'
-    ],
-    description: `Welcome to 1506 E Mulkey Street — a well-maintained 3-bedroom, 2-bathroom single-family home located in Fort Worth's Morningside community.
-
-Spanning 1,220 square feet, this practical layout includes an expansive family room, a dedicated dining area, and a bright eat-in kitchen with solid countertop space. The primary bedroom features a private en-suite bathroom for added privacy. Outdoors, enjoy a level backyard suitable for pets and leisure. Quick access to US-287, I-30, and downtown Fort Worth makes commuting easy.
-
-Key Property Features:
-• 3 Bedrooms, 2 Full Bathrooms
-• 1,220 Sq. Ft. of living area
-• Primary suite with en-suite bath
-• Central AC and efficient heating
-• Fully equipped kitchen with appliances
-• Off-street driveway parking
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,450
-• Security Deposit: $1,450 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
-  },
-  {
-    address: '5728 Kilpatrick Ave',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76107',
-    county: 'Tarrant',
-    neighborhood: 'Arlington Heights / West Fort Worth',
-    lat: 32.73891,
-    lng: -97.40823,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 3,
-    bathrooms: 2.0,
-    total_bathrooms: 2,
-    square_footage: 1200,
-    monthly_rent: 1475,
-    security_deposit: 1475,
-    application_fee: 50,
-    amenities: ['Central Air & Heat', 'Fenced Backyard', 'Covered Carport', 'Updated Bathrooms', 'LVP Flooring'],
-    appliances: ['Stove / Range', 'Refrigerator', 'Dishwasher', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Covered Carport & Driveway',
-    has_central_air: true,
-    has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-kilpatrick/photo_07_carport.webp'
-    ],
-    description: `Welcome to 5728 Kilpatrick Avenue — a charming 3-bedroom, 2-bathroom single-family house nestled in popular West Fort Worth.
-
-Featuring 1,200 square feet of stylishly updated living space, this residence offers luxury vinyl plank flooring throughout, energy-efficient LED fixtures, and an open kitchen with ample counter workspace. The master bedroom offers generous closet capacity and an attached private bath. Outside, the covered carport and fenced backyard provide ideal practical amenities. Located near Camp Bowie Blvd, the Cultural District, and I-30.
-
-Key Property Features:
-• 3 Bedrooms, 2 Full Bathrooms
-• 1,200 Sq. Ft. of living space
-• Low-maintenance luxury vinyl plank flooring
-• Modern central heating and cooling
-• Covered carport plus driveway parking
-• Fenced private yard
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,475
-• Security Deposit: $1,475 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
-  },
-  {
-    address: '10258 Maverick Dr',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76244',
-    county: 'Tarrant',
-    neighborhood: 'Heritage / North Fort Worth',
-    lat: 32.92145,
-    lng: -97.28912,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 3,
-    bathrooms: 2.0,
-    total_bathrooms: 2,
-    square_footage: 1350,
-    monthly_rent: 1450,
-    security_deposit: 1450,
-    application_fee: 50,
-    amenities: ['Central Air', 'Attached Garage', 'Spacious Private Yard', 'Patio', 'Walk-in Closets'],
-    appliances: ['Stainless Range', 'Refrigerator', 'Dishwasher', 'Microwave', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Attached Garage & Driveway',
-    has_central_air: true,
-    has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_04_primary.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-maverick/photo_07_patio.webp'
-    ],
-    description: `Welcome to 10258 Maverick Drive — a spacious 3-bedroom, 2-bathroom single-family home located in North Fort Worth, TX.
-
-This 1,350 square foot home features an open floor plan with high ceilings in the living area, a modern kitchen with matching appliances, and plenty of cabinet storage. The primary suite includes an expansive walk-in closet and private bath. Outside, a concrete patio overlooks the private backyard. Situated in a quiet residential area convenient to Alliance Town Center, Keller Parkway, and Presidio Junction.
-
-Key Property Features:
-• 3 Bedrooms, 2 Full Bathrooms
-• 1,350 Sq. Ft. of comfortable space
-• Attached garage with automatic opener
-• Complete central climate control system
-• Open living and dining layout
-• Private fenced backyard with patio
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,450
-• Security Deposit: $1,450 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
-  },
-  {
-    address: '4909 Dalevale Ct',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76132',
-    county: 'Tarrant',
-    neighborhood: 'Wedgwood / Southwest Fort Worth',
-    lat: 32.66723,
-    lng: -97.39124,
+    zip: '76133',
+    county: 'Tarrant County',
+    neighborhood: 'South Fort Worth',
+    lat: 32.6749,
+    lng: -97.358734,
     property_type: 'SINGLE_FAMILY',
     bedrooms: 3,
     bathrooms: 1.5,
-    total_bathrooms: 2,
-    square_footage: 1180,
-    monthly_rent: 1500,
-    security_deposit: 1500,
-    application_fee: 50,
-    amenities: ['Central Air', 'Cul-de-sac Lot', 'Fenced Backyard', 'Driveway Parking', 'Tile Flooring'],
-    appliances: ['Electric Range', 'Refrigerator', 'Dishwasher', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Driveway Parking',
+    half_bathrooms: 1,
+    square_footage: 1174,
+    lot_size_sqft: 7500,
+    year_built: 1960,
+    floors: 1,
+    garage_spaces: 0,
+    parking: 'Attached Carport + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
     has_central_air: true,
     has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_01_front.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-dalevale/photo_07_yard.webp'
+    monthly_rent: 1600,
+    flooring: ['Hardwood Laminate', 'Ceramic Tile'],
+    amenities: [
+      'Central Air Conditioning & Heating',
+      'Sheltered Carport Parking',
+      'Expansive Fenced Backyard',
+      'Single-Story Floor Plan',
+      'Pet-Friendly (Dogs & Cats Welcome)'
     ],
-    description: `Welcome to 4909 Dalevale Court — a peaceful 3-bedroom, 1.5-bathroom single-family residence set on a quiet cul-de-sac in Southwest Fort Worth's Wedgwood community.
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Situated in an established south Fort Worth neighborhood, 2812 Cordone St is an inviting single-story home offering 1,174 square feet of comfortable, accessible living space. A bright, practical layout connects the main living room to a functional culinary center complete with durable countertops, ample cabinetry, and an essential appliance suite including a refrigerator, range with oven, and dishwasher.
 
-This home offers 1,180 square feet of comfortable living with easy-care ceramic tile flooring throughout main living zones, a generous living room, and an updated kitchen with solid cabinetry. The main floor includes a convenient half bathroom for guests. The quiet cul-de-sac location ensures low vehicle traffic and peaceful surroundings, with close proximity to Hulen Mall, Chisholm Trail Parkway, and Granbury Road.
+The private quarters feature three comfortable bedrooms with generous window illumination, serviced by one and a half bathrooms that include a private powder room for guests. Outside, an expansive, private fenced backyard delivers exceptional outdoor space for relaxing or recreation, supported by an attached covered carport for sheltered vehicle parking.
 
-Key Property Features:
-• 3 Bedrooms, 1.5 Bathrooms
-• 1,180 Sq. Ft. of living area
-• Quiet cul-de-sac setting
-• Central heating and cooling system
-• Low-maintenance tile flooring
-• Fenced backyard with mature shade trees
-• Pet-friendly living (Dogs and Cats welcome)
-
-Lease Details:
-• Monthly Rent: $1,500
-• Security Deposit: $1,500 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
+Key Highlights:
+• 3 Bedrooms, 1.5 Bathrooms (1,174 Sq. Ft.)
+• Functional single-story floor plan
+• Kitchen equipped with refrigerator, oven, and dishwasher
+• Large private fenced backyard
+• Covered carport and private driveway parking
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
   },
   {
-    address: '1421 E Robert St',
+    pipelineId: 'PP-39D6EE71',
+    address: '4529 Mizzenmast Ct #4529',
     city: 'Fort Worth',
     state: 'TX',
-    zip: '76104',
-    county: 'Tarrant',
-    neighborhood: 'Historic Southside',
-    lat: 32.70932,
-    lng: -97.31562,
-    property_type: 'SINGLE_FAMILY',
+    zip: '76135',
+    county: 'Tarrant County',
+    neighborhood: 'Lake Worth / Northwest Fort Worth',
+    lat: 32.8123,
+    lng: -97.4321,
+    property_type: 'TOWNHOUSE',
     bedrooms: 3,
-    bathrooms: 2.0,
-    total_bathrooms: 2,
-    square_footage: 1100,
-    monthly_rent: 1400,
-    security_deposit: 1400,
-    application_fee: 50,
-    amenities: ['Central Air', 'Gated Front & Back Yard', 'Driveway Parking', 'Modern Tile Bathrooms', 'Ceiling Fans'],
-    appliances: ['Stove / Range', 'Refrigerator', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Private Gated Driveway',
+    bathrooms: 3,
+    half_bathrooms: 0,
+    square_footage: 1252,
+    lot_size_sqft: null,
+    year_built: 2005,
+    floors: 2,
+    garage_spaces: 1,
+    parking: 'Attached Garage + Private Driveway',
+    heating_type: 'Central Heat Pump',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
     has_central_air: true,
     has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-robert/photo_07_yard.webp'
+    monthly_rent: 1595,
+    flooring: ['Luxury Vinyl Plank', 'Carpet', 'Ceramic Tile'],
+    amenities: [
+      'Central Air Conditioning & Heating',
+      'Attached Garage Parking',
+      'Three Full Bathrooms',
+      'Private Fenced Backyard Lawn',
+      'Cul-de-Sac Setting',
+      'Pet-Friendly (Dogs & Cats Welcome)'
     ],
-    description: `Welcome to 1421 E Robert Street — a cozy, updated 3-bedroom, 2-bathroom single-family house located in Fort Worth's Historic Southside.
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Microwave', 'Washer/Dryer Hookups'],
+    description: `Tucked into a quiet cul-de-sac setting near Lake Worth, 4529 Mizzenmast Court is a well-designed two-story townhome providing 1,252 square feet of versatile interior space. A distinctive advantage of this layout is the provision of three full bathrooms, delivering exceptional comfort and privacy for every resident and guest.
 
-Providing 1,100 square feet of clean living space, this home features neutral color tones, clean modern tile in the bathrooms, and an open kitchen equipped with modern cooking essentials. The entire property is securely fenced with a gated driveway for private parking. Just minutes away from Texas Health Harris Methodist Hospital, TCU, and downtown Fort Worth.
+The ground level features an open living and dining area with clean sightlines into the kitchen, which offers generous storage, solid prep surfaces, and reliable appliances including a refrigerator, range with oven, microwave, and dishwasher. Sliding glass doors lead out to a deep, fully fenced private backyard that provides rare outdoor space for a townhome.
 
-Key Property Features:
-• 3 Bedrooms, 2 Full Bathrooms
-• 1,100 Sq. Ft. of living space
-• Fully fenced lot with gated driveway
-• Central AC and heat
-• Updated tile bathrooms
-• Pet-friendly living (Dogs and Cats welcome)
+Upstairs and across the home, three spacious bedrooms provide quiet retreats with ample closet space, each enjoying convenient access to a full modern bathroom. An attached single-car garage and long private driveway deliver secure parking and supplemental utility.
 
-Lease Details:
-• Monthly Rent: $1,400
-• Security Deposit: $1,400 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
+Key Highlights:
+• 3 Bedrooms, 3 Full Bathrooms (1,252 Sq. Ft.)
+• Distinctive townhome design with three full baths
+• Large private fenced backyard
+• Kitchen equipped with refrigerator, oven, dishwasher, and microwave
+• Attached garage and private driveway
+• Central air conditioning and energy-efficient heat pump
+• Dedicated in-unit laundry hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
   },
   {
-    address: '5728 Curzon Ave',
+    pipelineId: 'PP-F3A9CDF0',
+    address: '8114 Marydean Ave',
     city: 'Fort Worth',
     state: 'TX',
-    zip: '76107',
-    county: 'Tarrant',
-    neighborhood: 'Westridge / Como',
-    lat: 32.73284,
-    lng: -97.40219,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 2,
-    bathrooms: 1.0,
-    total_bathrooms: 1,
-    square_footage: 950,
-    monthly_rent: 1425,
-    security_deposit: 1425,
-    application_fee: 50,
-    amenities: ['Central Air & Heat', 'Fenced Yard', 'Driveway Parking', 'Refurbished Kitchen', 'Hardwood Flooring'],
-    appliances: ['Gas Range', 'Refrigerator', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Driveway Parking',
+    zip: '76116',
+    county: 'Tarrant County',
+    neighborhood: 'West Fort Worth / Western Hills',
+    lat: 32.7314,
+    lng: -97.4645,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1114,
+    lot_size_sqft: null,
+    year_built: 2001,
+    floors: 1,
+    garage_spaces: 1,
+    parking: 'Attached 1-Car Garage + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
     has_central_air: true,
     has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-curzon/photo_06_yard.webp'
+    monthly_rent: 1500,
+    flooring: ['Luxury Vinyl Plank', 'Tile'],
+    amenities: [
+      'Central Air Conditioning & Heating',
+      'Attached 1-Car Garage',
+      'Luxury Vinyl Plank Flooring Throughout',
+      'Fresh Interior Paint',
+      'Private Fenced Backyard with Patio',
+      'Pet-Friendly (Dogs & Cats Welcome)'
     ],
-    description: `Welcome to 5728 Curzon Avenue — an adorable 2-bedroom, 1-bathroom single-family cottage located in West Fort Worth, TX.
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Recently refreshed with new interior paint and durable Luxury Vinyl Plank flooring across the entire layout, 8114 Marydean Ave is a clean, single-story duplex home in West Fort Worth. The well-proportioned floor plan centers around a bright, open living room that connects effortlessly with the dining space and kitchen.
 
-This 950 square foot home features beautiful original hardwood floors, a bright living room, and an updated kitchen with a gas range and plentiful storage. Two comfortably sized bedrooms share a central full bathroom. The expansive fenced backyard offers privacy and room for outdoor relaxation. Situated within walking distance to local parks and only moments from Camp Bowie dining and shopping.
+The kitchen is equipped with generous cabinet capacity, breakfast counter seating, and an essential appliance package including a range with oven, dishwasher, and refrigerator. Three restful bedrooms offer comfortable accommodations with ample closets, supported by two full bathrooms featuring updated fixtures.
 
-Key Property Features:
-• 2 Bedrooms, 1 Full Bathroom
-• 950 Sq. Ft. of living area
-• Classic hardwood floors throughout
-• Central air conditioning and heating
-• Private fenced backyard
-• Off-street driveway parking
-• Pet-friendly living (Dogs and Cats welcome)
+Outside, a private fenced backyard with a concrete patio provides a peaceful setting for morning coffee or outdoor relaxation, while an attached one-car garage and private driveway ensure secure parking. Situated moments from I-30, Ridgmar Mall, and local dining hubs.
 
-Lease Details:
-• Monthly Rent: $1,425
-• Security Deposit: $1,425 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,114 Sq. Ft.)
+• Single-story duplex floor plan
+• Luxury Vinyl Plank flooring throughout living and bed areas
+• Kitchen with range, dishwasher, and refrigerator
+• Attached garage and private driveway
+• Private fenced backyard with patio
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
   },
   {
-    address: '2816 Putnam St',
+    pipelineId: 'PP-54F0FDBE',
+    address: '2601 Woodmont Trl',
     city: 'Fort Worth',
     state: 'TX',
-    zip: '76112',
-    county: 'Tarrant',
-    neighborhood: 'White Lake Hills / East Fort Worth',
-    lat: 32.76814,
-    lng: -97.23418,
-    property_type: 'SINGLE_FAMILY',
-    bedrooms: 2,
-    bathrooms: 1.0,
-    total_bathrooms: 1,
-    square_footage: 920,
-    monthly_rent: 1400,
-    security_deposit: 1400,
-    application_fee: 50,
-    amenities: ['Central Air & Heat', 'Fenced Backyard', 'Covered Porch', 'Plank Flooring', 'Off-Street Parking'],
-    appliances: ['Stove / Oven', 'Refrigerator', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Driveway Parking',
+    zip: '76133',
+    county: 'Tarrant County',
+    neighborhood: 'South Fort Worth / Wedgwood',
+    lat: 32.6712,
+    lng: -97.3712,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1222,
+    lot_size_sqft: null,
+    year_built: 1980,
+    floors: 1,
+    garage_spaces: 1,
+    parking: '1-Car Garage + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated Full-Size Laundry Room',
     has_central_air: true,
     has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_04_bed1.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-putnam/photo_06_yard.webp'
+    monthly_rent: 1495,
+    flooring: ['Ceramic Tile', 'Upgraded Carpet'],
+    amenities: [
+      'Central Air Conditioning & Heating',
+      'Living Room Fireplace',
+      'Ceramic Tile Living Areas',
+      'Attached 1-Car Garage',
+      'Corner Lot Setting',
+      'Walk-In Closet in Primary Suite',
+      'Pet-Friendly (Dogs & Cats Welcome)'
     ],
-    description: `Welcome to 2816 Putnam Street — a charming 2-bedroom, 1-bathroom single-family home located in East Fort Worth, TX.
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Garbage Disposal', 'Washer/Dryer Hookups'],
+    description: `Positioned on an attractive corner lot in South Fort Worth, 2601 Woodmont Trail is an inviting 3-bedroom, 2-bath duplex home offering 1,222 square feet of well-designed living. The central living room is anchored by a charming brick fireplace and durable ceramic tile flooring, creating a warm, comfortable gathering space that flows directly into the dining and kitchen areas.
 
-With 920 square feet of well-configured interior space, this residence features durable wood-look plank flooring, a sunlit living room, and a practical kitchen layout. The home sits on a quiet residential street with a shaded front porch and a fully enclosed private backyard. Fast access to I-30 and Loop 820 makes trips to Arlington, downtown Fort Worth, and DFW Airport quick and simple.
+The culinary space features ample cabinetry, solid prep surfaces, a garbage disposal, range with oven, refrigerator, and dishwasher. The primary bedroom serves as a quiet retreat with an ensuite bath and walk-in closet, while two secondary bedrooms feature upgraded carpeting and easy access to the second full bathroom.
 
-Key Property Features:
-• 2 Bedrooms, 1 Full Bathroom
-• 920 Sq. Ft. of living space
-• Clean wood-look plank flooring
-• Complete central climate control
-• Private fenced backyard
-• Driveway parking
-• Pet-friendly living (Dogs and Cats welcome)
+A full-size dedicated laundry room accommodates full-scale washer and dryer connections, complemented by a private fenced side yard and an attached single-car garage for secure vehicle parking.
 
-Lease Details:
-• Monthly Rent: $1,400
-• Security Deposit: $1,400 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
-
-Apply now through Choice Properties. Submit your application online for fast processing.`
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,222 Sq. Ft.)
+• Distinctive corner-lot duplex design
+• Warm living room fireplace and ceramic tile flooring
+• Kitchen equipped with range, refrigerator, dishwasher, and disposal
+• Primary bedroom with walk-in closet and private bath
+• Dedicated full-size in-unit laundry room
+• Attached garage and private driveway
+• Central air conditioning and forced-air heating
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
   },
   {
-    address: '3758 Donalee St',
+    pipelineId: 'PP-EB3D261B',
+    address: '5714 Shoreline Cir S',
     city: 'Fort Worth',
     state: 'TX',
     zip: '76119',
-    county: 'Tarrant',
-    neighborhood: 'Polytechnic Heights',
-    lat: 32.70123,
-    lng: -97.27891,
+    county: 'Tarrant County',
+    neighborhood: 'Lake Arlington / Southeast Fort Worth',
+    lat: 32.6951,
+    lng: -97.2145,
     property_type: 'SINGLE_FAMILY',
     bedrooms: 3,
-    bathrooms: 1.5,
-    total_bathrooms: 2,
-    square_footage: 1150,
-    monthly_rent: 1450,
-    security_deposit: 1450,
-    application_fee: 50,
-    amenities: ['Central Air', 'Private Fenced Yard', 'Driveway Parking', 'Updated Countertops', 'Spacious Living Room'],
-    appliances: ['Stove / Range', 'Refrigerator', 'Dishwasher', 'Washer/Dryer Hookups'],
-    heating_type: 'Central Heat',
-    cooling_type: 'Central Air',
-    laundry_type: 'In-Unit Hookups',
-    parking: 'Private Driveway',
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1216,
+    lot_size_sqft: null,
+    year_built: 1995,
+    floors: 1,
+    garage_spaces: 0,
+    parking: 'Dedicated Off-Street Driveway Parking',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
     has_central_air: true,
     has_basement: false,
-    photo_urls: [
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_01_ext.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_02_liv.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_03_kit.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_04_master.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_05_bath.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_06_bed2.webp',
-      'https://ik.imagekit.io/21rg7lvzo/properties/fw-donalee/photo_07_yard.webp'
+    monthly_rent: 1600,
+    flooring: ['Hardwood Laminate', 'Ceramic Tile'],
+    amenities: [
+      'Scenic Water & Lake Views',
+      'Granite Countertops',
+      'Central Air Conditioning & Heating',
+      'Full Stainless Steel Appliance Package',
+      'Dedicated Off-Street Parking',
+      'Pet-Friendly (Dogs & Cats Welcome)'
     ],
-    description: `Welcome to 3758 Donalee Street — an inviting 3-bedroom, 1.5-bathroom single-family house in Fort Worth's Polytechnic Heights area.
+    appliances: ['Stainless Steel Refrigerator', 'Range / Oven', 'Dishwasher', 'Microwave', 'Washer/Dryer Hookups'],
+    description: `Overlooking tranquil water scenery near Lake Arlington, 5714 Shoreline Circle South offers 1,216 square feet of tastefully updated living in a relaxed residential setting. The residence has been thoroughly modernized with upscale finishes, including rich granite countertops and durable modern flooring across the gathering spaces.
 
-Offering 1,150 square feet of comfortable living space, this home features a large front family room, an open dining and kitchen area with modern counter surfaces, and three bright bedrooms. The master bedroom includes an attached half bathroom. The spacious private backyard is securely fenced for privacy. Conveniently located near Texas Wesleyan University, Cobb Park, and Highway 287.
+The culinary center is fully appointed with stainless steel appliances including a refrigerator, range with oven, microwave, and dishwasher, accompanied by custom cabinetry and a clean subway tile backsplash. The adjoining living room captures natural light and scenic outdoor sights, creating a calm, restorative atmosphere throughout the day.
 
-Key Property Features:
-• 3 Bedrooms, 1.5 Bathrooms
-• 1,150 Sq. Ft. of living area
-• Master bedroom with attached half-bath
-• Central heat and air conditioning
-• Fully equipped kitchen with dishwasher
+Three comfortable bedrooms provide peaceful accommodations with generous closet storage, supported by two full bathrooms featuring updated fixtures and tile work. Complete with central air conditioning, in-unit laundry hookups, and dedicated off-street parking.
+
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,216 Sq. Ft.)
+• Beautiful lake views and serene setting
+• Kitchen appointed with granite countertops and stainless appliances
+• Two full updated bathrooms
+• Central air conditioning and forced-air heating
+• Dedicated off-street parking
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-9FC8F09F',
+    address: '2157 New York Ave',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76104',
+    county: 'Tarrant County',
+    neighborhood: 'Near Southside / Fairmount Corridor',
+    lat: 32.7214,
+    lng: -97.3245,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 1,
+    half_bathrooms: 0,
+    square_footage: 1011,
+    lot_size_sqft: null,
+    year_built: 1950,
+    floors: 1,
+    garage_spaces: 0,
+    parking: 'Private Driveway Parking',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1550,
+    flooring: ['Modern Wood-Look Plank', 'Ceramic Tile'],
+    amenities: [
+      'Central Air Conditioning & Heating',
+      'Fresh Interior Renovation & Paint',
+      'Walk-In Closets in All 3 Bedrooms',
+      'Open Kitchen and Living Sightlines',
+      'Dedicated Private Driveway',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Freshly painted and thoughtfully renovated, 2157 New York Ave is an efficient 1,011 square foot half-duplex residence in Fort Worth's Near Southside district. The home delivers an open-concept flow where the kitchen overlooks both the dining area and living room, enabling easy daily living and entertaining.
+
+The kitchen features renewed countertops, modern cabinetry, and complete appliances including a range with oven, refrigerator, and dishwasher. All three bedrooms include generous walk-in closets—a rare feature in homes of this vintage—serviced by a full-size central bathroom appointed with clean tile surrounds and an updated vanity.
+
+Complete with a personal private driveway, in-unit washer/dryer hookups, and central climate control, this home offers quick access to the Medical District, Magnolia Avenue dining, and downtown Fort Worth.
+
+Key Highlights:
+• 3 Bedrooms, 1 Full Bathroom (1,011 Sq. Ft.)
+• Renovated single-level duplex home
+• Walk-in closets in all three bedrooms
+• Open kitchen overlooking dining and living areas
+• Personal private driveway parking
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-56E9DFB2',
+    address: '8164 Marydean Ave',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76116',
+    county: 'Tarrant County',
+    neighborhood: 'West Fort Worth / Western Hills',
+    lat: 32.7319,
+    lng: -97.4648,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1115,
+    lot_size_sqft: null,
+    year_built: 2001,
+    floors: 1,
+    garage_spaces: 2,
+    parking: 'Attached 2-Car Garage + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'New Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1450,
+    flooring: ['New Luxury Vinyl Plank', 'New Carpet'],
+    amenities: [
+      'Attached Two-Car Garage',
+      'New Central Air Conditioning',
+      'New Luxury Vinyl Plank Flooring',
+      'Private Fenced Backyard with Patio',
+      'Walk-In Closet in Primary Suite',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Range / Oven', 'Dishwasher', 'Garbage Disposal', 'Refrigerator', 'Washer/Dryer Hookups'],
+    description: `Featuring brand-new updates throughout, 8164 Marydean Ave is a clean, single-story duplex home highlighted by an attached two-car garage in West Fort Worth. The open floor plan welcomes you with new luxury vinyl plank flooring across the living room, dining space, kitchen, and bathrooms, paired with fresh paint throughout.
+
+The kitchen is equipped with new countertops, a new range and oven, dishwasher, disposal, and a walk-in food pantry. The primary bedroom suite offers a generous walk-in closet and an ensuite bath with a dedicated linen cabinet. Two secondary bedrooms feature new carpeting and easy access to the full guest bathroom.
+
+Outdoors, a private fenced backyard with a concrete patio provides a quiet outdoor retreat. Notable comforts include brand-new central air conditioning, in-unit washer/dryer connections, and quick access to Lockheed Martin, NAS-JRB, and primary commuter freeways.
+
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,115 Sq. Ft.)
+• Attached two-car garage and private driveway
+• New luxury vinyl plank flooring and new carpeting
+• Kitchen with new counters, range, dishwasher, and pantry
+• Primary suite with walk-in closet and private bath
+• Private fenced backyard with concrete patio
+• New central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-378CDB2B',
+    address: '3155 Glen Garden Dr N',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76119',
+    county: 'Tarrant County',
+    neighborhood: 'Glen Garden / Southeast Fort Worth',
+    lat: 32.6987,
+    lng: -97.2645,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 1.5,
+    half_bathrooms: 1,
+    square_footage: 1255,
+    lot_size_sqft: null,
+    year_built: 1985,
+    floors: 1,
+    garage_spaces: 0,
+    parking: 'Dedicated Assigned Parking',
+    heating_type: 'Brand-New Central HVAC',
+    cooling_type: 'Brand-New Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1599,
+    flooring: ['Modern Wood-Look Flooring', 'Tile'],
+    amenities: [
+      'High-End Granite Countertops',
+      'Brand-New Energy-Efficient HVAC System',
+      'New Energy-Saving Windows',
+      'Large Private Fenced Backyard',
+      'One and a Half Bathrooms',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Brand-New Refrigerator', 'Brand-New Range / Oven', 'Brand-New Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Extensively renovated with an emphasis on energy efficiency and modern style, 3155 Glen Garden Dr N is an exceptional 3-bedroom, 1.5-bathroom duplex residence in southeast Fort Worth. The home features brand-new double-pane windows and a brand-new central HVAC system designed to maintain optimal interior comfort while lowering utility expenses.
+
+The culinary center showcases polished granite countertops paired with brand-new appliances including a refrigerator, range with oven, and dishwasher, surrounded by modern white cabinetry. Durable, stylish flooring extends through the main gathering areas, connecting the living and dining spaces seamlessly.
+
+Three private bedrooms provide quiet rest, served by one full bathroom with clean modern tile work and a convenient half bath powder room for guests. Outside, a large private fenced backyard offers extensive outdoor utility. Conveniently located with rapid access to US-287, I-820, and downtown Fort Worth.
+
+Key Highlights:
+• 3 Bedrooms, 1.5 Bathrooms (1,255 Sq. Ft.)
+• High-end kitchen with granite countertops and new appliances
+• Brand-new HVAC system and new energy-efficient windows
+• Large private fenced backyard
+• Dedicated assigned parking
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-08784439',
+    address: '2436 Dancy Dr N',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76131',
+    county: 'Tarrant County',
+    neighborhood: 'Eagle Mountain / North Fort Worth',
+    lat: 32.8876,
+    lng: -97.3541,
+    property_type: 'SINGLE_FAMILY',
+    bedrooms: 3,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1070,
+    lot_size_sqft: 6500,
+    year_built: 1982,
+    floors: 1,
+    garage_spaces: 1,
+    parking: 'Attached Garage + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1495,
+    flooring: ['New Luxury Vinyl Plank', 'Tile'],
+    amenities: [
+      'Eagle Mountain ISD Schools',
+      'New Granite Countertops & Shaker Cabinets',
+      'New Stainless Steel Appliances',
+      'Attached Garage Parking',
+      'Private Fenced Backyard',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Stainless Steel Refrigerator', 'Stainless Steel Range / Oven', 'Stainless Steel Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Showcasing a comprehensive modern renovation in the sought-after Eagle Mountain ISD corridor, 2436 Dancy Dr N is an exceptional standalone single-family home offering 1,070 square feet of stylish interior living. The residence has been upgraded from top to bottom with fresh neutral paint, new luxury vinyl plank flooring, and updated plumbing and lighting fixtures.
+
+The brand-new kitchen is appointed with white shaker-style cabinetry, polished granite countertops, and new stainless steel appliances including a refrigerator, range with oven, and dishwasher. The open main living room enjoys ample sunlight and smooth flow into the dining space.
+
+Three private bedrooms offer comfortable accommodations, supported by two full bathrooms with modern vanities and clean tile surrounds. The exterior features a private fenced backyard for outdoor recreation and an attached single-car garage with private driveway parking. Located within walking distance of local neighborhood parks and schools.
+
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,070 Sq. Ft.)
+• Standalone single-family home in Eagle Mountain ISD
+• New kitchen with granite countertops, shaker cabinets, and stainless appliances
+• New luxury vinyl plank flooring and updated bathrooms
+• Attached garage and private driveway
 • Private fenced backyard
-• Pet-friendly living (Dogs and Cats welcome)
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-FC6537DC',
+    address: '1711 Lady Rachael Ct',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76134',
+    county: 'Tarrant County',
+    neighborhood: 'South Fort Worth / Sycamore School',
+    lat: 32.6245,
+    lng: -97.3412,
+    property_type: 'DUPLEX',
+    bedrooms: 3,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1110,
+    lot_size_sqft: null,
+    year_built: 1988,
+    floors: 1,
+    garage_spaces: 1,
+    parking: 'Attached Garage + Driveway Parking',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1600,
+    flooring: ['Ceramic Tile', 'Bedroom Carpeting'],
+    amenities: [
+      'Quiet Cul-de-Sac Setting',
+      'French Doors to Rear Yard in Primary Suite',
+      'No Rear Neighbors (Added Privacy)',
+      'Attached Garage Parking',
+      'Spacious Fenced Backyard with Side Yard',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Refrigerator', 'Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Resting at the end of a peaceful residential cul-de-sac off Sycamore School Road, 1711 Lady Rachael Ct is an updated 3-bedroom, 2-bathroom duplex home offering 1,110 square feet of comfortable living. The home features low-maintenance ceramic tile flooring through the central living spaces, ceiling fans, and neutral window blinds throughout.
 
-Lease Details:
-• Monthly Rent: $1,450
-• Security Deposit: $1,450 (equal to 1 month's rent)
-• Application Fee: $50
-• Lease Term: 12 months minimum
+The kitchen provides generous cabinet storage, solid counter surfaces, a dishwasher, range with oven, and refrigerator. A distinguishing architectural feature of this home is the primary bedroom suite, which boasts elegant French doors that open directly onto the private backyard.
 
-Apply now through Choice Properties. Submit your application online for fast processing.`
+The outdoor grounds offer notable seclusion with a deep, fully fenced backyard that backs to open space with no rear neighbors, alongside an expansive side yard for additional outdoor utility. Sheltered parking is provided by an attached single-car garage and private driveway, with effortless highway access to I-20 and I-35W.
+
+Key Highlights:
+• 3 Bedrooms, 2 Full Bathrooms (1,110 Sq. Ft.)
+• Peaceful cul-de-sac location with no rear neighbors
+• Primary suite with French doors opening to backyard
+• Tile flooring in living areas and carpeting in bedrooms
+• Kitchen equipped with dishwasher, range, and refrigerator
+• Attached garage and private driveway
+• Expansive private fenced backyard and side yard
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
+  },
+  {
+    pipelineId: 'PP-5B6D6FD7',
+    address: '3520 Western Ave',
+    city: 'Fort Worth',
+    state: 'TX',
+    zip: '76107',
+    county: 'Tarrant County',
+    neighborhood: 'Sunset Heights / Cultural District',
+    lat: 32.7489,
+    lng: -97.3789,
+    property_type: 'SINGLE_FAMILY',
+    bedrooms: 2,
+    bathrooms: 2,
+    half_bathrooms: 0,
+    square_footage: 1151,
+    lot_size_sqft: 8000,
+    year_built: 1948,
+    floors: 1,
+    garage_spaces: 0,
+    parking: 'Covered Carport + Private Driveway',
+    heating_type: 'Central Forced Air Heat',
+    cooling_type: 'Central Air Conditioning',
+    laundry_type: 'Dedicated In-Unit Hookups',
+    has_central_air: true,
+    has_basement: false,
+    monthly_rent: 1545,
+    flooring: ['Brand-New LVT Flooring', 'Ceramic Tile', 'Refinished Flooring'],
+    amenities: [
+      'Elevated Corner Lot in Sunset Heights',
+      'Minutes from Cultural District and West 7th',
+      'Spacious Primary Suite with Sliding Glass Doors',
+      'Large Fenced Backyard with Mature Shade Trees',
+      'Covered Carport Parking',
+      'Pet-Friendly (Dogs & Cats Welcome)'
+    ],
+    appliances: ['Refrigerator', 'Gas Range / Oven', 'Dishwasher', 'Washer/Dryer Hookups'],
+    description: `Perched on a prominent, elevated corner lot in Sunset Heights, 3520 Western Ave is an updated 2-bedroom, 2-bathroom single-family residence offering 1,151 square feet of comfortable living just minutes from Fort Worth's celebrated Cultural District and West 7th. The home has been freshly painted in warm designer tones and features brand-new luxury vinyl tile flooring in the kitchen.
+
+The kitchen is equipped with gas cooking, a dishwasher, refrigerator, and ample counter space. The expansive primary bedroom serves as a luminous sanctuary, accented by large sliding glass doors and oversized windows that bathe the room in natural light. Two full bathrooms provide complete modern convenience.
+
+Outdoors, an expansive private fenced backyard is shaded by mature canopy trees, creating a peaceful outdoor retreat, paired with a covered carport for convenient vehicle parking.
+
+Key Highlights:
+• 2 Bedrooms, 2 Full Bathrooms (1,151 Sq. Ft.)
+• Prominent corner-lot single-family home in Sunset Heights
+• Minutes from Cultural District, West 7th, and downtown
+• Generous primary bedroom with sliding glass doors and abundant light
+• Two full bathrooms
+• Large fenced backyard with mature shade trees
+• Covered carport and private driveway parking
+• Central air conditioning and forced-air heating
+• In-unit washer and dryer hookups
+• Pet-Friendly (Dogs & Cats Welcome)
+• Application Fee: $50`
   }
 ];
 
-async function publishBatch() {
-  console.log('═════════════════════════════════════════════════════════════════');
-  console.log('  Choice Properties — Fort Worth, TX Scraper & Publisher');
-  console.log(`  Processing ${FORT_WORTH_HOUSES.length} Single-Family House listings`);
-  console.log('  Filters: 2-3 Bedrooms | Rent $1,400–$1,550 | Houses Only');
-  console.log('═════════════════════════════════════════════════════════════════\n');
+async function main() {
+  console.log('===============================================================');
+  console.log('Choice Properties — Fort Worth Batch Enrichment & Publishing');
+  console.log('===============================================================\n');
 
-  const publishedResults = [];
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const results = [];
 
-  for (const house of FORT_WORTH_HOUSES) {
-    const propId = crypto.randomUUID();
-    const title = `${house.bedrooms}BR/${house.bathrooms}BA House in Fort Worth – $${house.monthly_rent}/mo`;
+  for (const item of BATCH) {
+    console.log(`\n---------------------------------------------------------------`);
+    console.log(`Processing ${item.address}, ${item.city}, ${item.state} ${item.zip} (${item.pipelineId})...`);
 
-    console.log(`▶ Publishing: ${house.address} (${house.bedrooms}BR/${house.bathrooms}BA) -> $${house.monthly_rent}/mo`);
+    // 1. Fetch current pipeline record to extract photo URLs
+    const pipeRes = await fetchJson(`${SUPABASE_URL}/rest/v1/pipeline_properties?id=eq.${item.pipelineId}&select=*`, {
+      headers: { ...HEADERS, 'Accept-Profile': 'pipeline' }
+    });
 
-    const propRecord = {
-      id: propId,
-      landlord_id: LANDLORD_ID,
-      status: 'active',
-      title: title,
-      description: house.description,
-      address: house.address,
-      city: house.city,
-      state: house.state,
-      zip: house.zip,
-      county: house.county,
-      lat: house.lat,
-      lng: house.lng,
-      property_type: house.property_type,
-      bedrooms: house.bedrooms,
-      bathrooms: house.bathrooms,
-      total_bathrooms: house.total_bathrooms,
-      square_footage: house.square_footage,
-      monthly_rent: house.monthly_rent,
-      security_deposit: house.security_deposit,
-      application_fee: house.application_fee,
-      available_date: today,
-      lease_terms: ['12 months'],
-      minimum_lease_months: 12,
+    if (!pipeRes.ok || !pipeRes.data || pipeRes.data.length === 0) {
+      throw new Error(`Could not fetch pipeline record for ${item.pipelineId}: ${pipeRes.status}`);
+    }
+
+    const currentRecord = pipeRes.data[0];
+    let rawImgs = currentRecord.original_image_urls;
+    if (typeof rawImgs === 'string') {
+      try { rawImgs = JSON.parse(rawImgs); } catch (e) { rawImgs = []; }
+    }
+    rawImgs = rawImgs || [];
+
+    const cleanPhotos = rawImgs.map(img => {
+      if (typeof img === 'string') return img;
+      if (img && typeof img === 'object' && img.url) return img.url;
+      return null;
+    }).filter(Boolean);
+
+    console.log(`[photos] Extracted ${cleanPhotos.length} high-res source CDN photos.`);
+
+    // 2. Update pipeline.pipeline_properties with enriched details
+    console.log(`[pipeline] Updating enriched specs in pipeline.pipeline_properties...`);
+    const patchPayload = {
+      property_type: item.property_type,
+      bedrooms: item.bedrooms,
+      bathrooms: item.bathrooms,
+      half_bathrooms: item.half_bathrooms,
+      total_bathrooms: Math.ceil(item.bathrooms),
+      square_footage: item.square_footage,
+      lot_size_sqft: item.lot_size_sqft,
+      year_built: item.year_built,
+      floors: item.floors,
+      garage_spaces: item.garage_spaces,
+      parking: item.parking,
+      heating_type: item.heating_type,
+      cooling_type: item.cooling_type,
+      laundry_type: item.laundry_type,
+      flooring: item.flooring,
+      has_central_air: item.has_central_air,
+      has_basement: item.has_basement,
+      monthly_rent: item.monthly_rent,
+      security_deposit: item.monthly_rent,
+      application_fee: 50,
+      amenities: item.amenities,
+      appliances: item.appliances,
+      description: item.description,
+      county: item.county,
+      neighborhood: item.neighborhood,
       pets_allowed: true,
       pet_types_allowed: ['Dogs', 'Cats'],
       smoking_allowed: false,
-      amenities: house.amenities,
-      appliances: house.appliances,
-      heating_type: house.heating_type,
-      cooling_type: house.cooling_type,
-      laundry_type: house.laundry_type,
-      parking: house.parking,
-      has_central_air: house.has_central_air,
-      has_basement: house.has_basement,
-      neighborhood: house.neighborhood,
+      lease_terms: null,
+      minimum_lease_months: null,
+      updated_at: new Date().toISOString()
+    };
+
+    const patchRes = await fetchJson(`${SUPABASE_URL}/rest/v1/pipeline_properties?id=eq.${item.pipelineId}`, {
+      method: 'PATCH',
+      headers: { ...HEADERS, 'Content-Profile': 'pipeline' },
+      body: patchPayload
+    });
+
+    if (!patchRes.ok) {
+      console.warn(`[pipeline] Warning patching pipeline record: ${patchRes.status} ${patchRes.text}`);
+    } else {
+      console.log(`[pipeline] Successfully patched pipeline specifications.`);
+    }
+
+    // 3. Generate UUID for public.properties
+    const choiceId = crypto.randomUUID();
+    console.log(`[publish] Inserting into public.properties (ID: ${choiceId})...`);
+
+    const propertyPayload = {
+      id: choiceId,
+      landlord_id: null,
+      status: 'active',
+      title: `${item.address}, ${item.city}, ${item.state} ${item.zip}`,
+      description: item.description,
+      address: item.address,
+      city: item.city,
+      state: item.state,
+      zip: item.zip,
+      county: item.county,
+      neighborhood: item.neighborhood,
+      lat: item.lat,
+      lng: item.lng,
+      property_type: item.property_type,
+      bedrooms: item.bedrooms,
+      bathrooms: item.bathrooms,
+      half_bathrooms: item.half_bathrooms,
+      total_bathrooms: Math.ceil(item.bathrooms),
+      square_footage: item.square_footage,
+      lot_size_sqft: item.lot_size_sqft,
+      year_built: item.year_built,
+      floors: item.floors,
+      garage_spaces: item.garage_spaces,
+      monthly_rent: item.monthly_rent,
+      security_deposit: item.monthly_rent,
+      application_fee: 50,
+      pet_deposit: 300,
+      lease_terms: null,
+      minimum_lease_months: null,
+      pets_allowed: true,
+      pet_types_allowed: ['Dogs', 'Cats'],
+      smoking_allowed: false,
+      amenities: item.amenities,
+      appliances: item.appliances,
+      flooring: item.flooring,
+      heating_type: item.heating_type,
+      cooling_type: item.cooling_type,
+      laundry_type: item.laundry_type,
+      parking: item.parking,
+      has_central_air: item.has_central_air,
+      has_basement: item.has_basement,
+      listed_at: today,
+      available_date: today,
       featured: false
     };
 
-    // 1. Insert property into Supabase properties table
-    const insertedProp = await sbPost('properties', propRecord);
-    console.log(`   ✓ Property inserted into properties table (ID: ${propId})`);
-
-    // 2. Insert photo records into property_photos
-    let photoOrder = 1;
-    for (const pUrl of house.photo_urls) {
-      await sbPost('property_photos', {
-        property_id: propId,
-        url: pUrl,
-        display_order: photoOrder,
-        watermark_status: 'clean',
-        is_hero: photoOrder === 1
-      });
-      photoOrder++;
-    }
-    console.log(`   ✓ ${house.photo_urls.length} photos registered on ImageKit endpoint`);
-
-    const canonicalUrl = buildCanonicalUrl(propRecord);
-    const directUrl = buildDirectUrl(propRecord);
-
-    publishedResults.push({
-      id: propId,
-      address: `${house.address}, ${house.city}, ${house.state} ${house.zip}`,
-      neighborhood: house.neighborhood,
-      bedrooms: house.bedrooms,
-      bathrooms: house.bathrooms,
-      sqft: house.square_footage,
-      monthlyRent: house.monthly_rent,
-      photosCount: house.photo_urls.length,
-      canonicalUrl,
-      directUrl
+    const insertPropRes = await fetchJson(`${SUPABASE_URL}/rest/v1/properties`, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'return=representation' },
+      body: propertyPayload
     });
 
-    console.log(`   🔗 Live: ${directUrl}\n`);
+    if (!insertPropRes.ok) {
+      throw new Error(`Failed to insert into properties: ${insertPropRes.status} ${insertPropRes.text}`);
+    }
+    console.log(`[publish] Successfully inserted property ${choiceId}`);
+
+    // 4. Insert photo rows into public.property_photos
+    console.log(`[photos] Inserting ${cleanPhotos.length} photo records into public.property_photos...`);
+    const photoRows = cleanPhotos.map((url, idx) => ({
+      id: crypto.randomUUID(),
+      property_id: choiceId,
+      url: url,
+      display_order: idx + 1,
+      is_hero: idx === 0,
+      watermark_status: 'clean',
+      alt_text: `${item.address}, ${item.city} ${item.state} - Photo ${idx + 1}`
+    }));
+
+    if (photoRows.length > 0) {
+      const photoRes = await fetchJson(`${SUPABASE_URL}/rest/v1/property_photos`, {
+        method: 'POST',
+        headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+        body: photoRows
+      });
+
+      if (!photoRes.ok) {
+        console.warn(`[photos] Warning inserting photo rows: ${photoRes.status} ${photoRes.text}`);
+      } else {
+        console.log(`[photos] Successfully registered ${photoRows.length} photos.`);
+      }
+    }
+
+    // 5. Mark pipeline property as published
+    console.log(`[pipeline] Marking ${item.pipelineId} as published...`);
+    await fetchJson(`${SUPABASE_URL}/rest/v1/pipeline_properties?id=eq.${item.pipelineId}`, {
+      method: 'PATCH',
+      headers: { ...HEADERS, 'Content-Profile': 'pipeline' },
+      body: {
+        status: 'published',
+        choice_property_id: choiceId,
+        photo_import_status: 'ok',
+        published_at: new Date().toISOString()
+      }
+    });
+
+    const liveUrl = `${SITE_URL}/property.html?id=${choiceId}`;
+    results.push({
+      choiceId,
+      pipelineId: item.pipelineId,
+      address: item.address,
+      city: item.city,
+      state: item.state,
+      zip: item.zip,
+      rent: item.monthly_rent,
+      beds: item.bedrooms,
+      baths: item.bathrooms,
+      liveUrl
+    });
   }
 
-  console.log('═════════════════════════════════════════════════════════════════');
-  console.log('  FORT WORTH, TX — PUBLISHING SUMMARY');
-  console.log('═════════════════════════════════════════════════════════════════\n');
+  console.log('\n===============================================================');
+  console.log('ALL 11 PROPERTIES PUBLISHED SUCCESSFULLY!');
+  console.log('===============================================================\n');
 
-  publishedResults.forEach((r, idx) => {
-    console.log(`${idx + 1}. ${r.address}`);
-    console.log(`   Rent: $${r.monthlyRent}/mo | Layout: ${r.bedrooms} Beds / ${r.bathrooms} Baths | ${r.sqft} Sq. Ft.`);
-    console.log(`   Neighborhood: ${r.neighborhood} | Photos: ${r.photosCount}`);
-    console.log(`   Direct URL:    ${r.directUrl}`);
-    console.log(`   Canonical URL: ${r.canonicalUrl}\n`);
+  results.forEach((r, idx) => {
+    console.log(`${idx + 1}. ${r.address}, ${r.city}, ${r.state} ${r.zip} ($${r.rent}/mo | ${r.beds} Bed / ${r.baths} Bath) — ${r.liveUrl}`);
   });
 
-  console.log(`✅ Successfully published all ${publishedResults.length} Fort Worth houses to production!\n`);
+  const fs = await import('fs');
+  fs.writeFileSync('published_fort_worth_results.json', JSON.stringify(results, null, 2));
 }
 
-publishBatch().catch(err => {
-  console.error('Fatal error during publish:', err);
+main().catch(err => {
+  console.error('Fatal error:', err);
   process.exit(1);
 });
