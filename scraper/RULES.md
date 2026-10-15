@@ -1,0 +1,125 @@
+# Choice Properties — Enrichment Rules Quick Reference
+
+> ### ⚠️ CRITICAL TEMPORARY DIRECTIVE — ADDRESS CHANGING & IMAGE REORDERING DISABLED
+> **STATUS: TEMPORARILY DISABLED ACROSS ENTIRE PROJECT & PIPELINE — STRICTLY PROHIBITED FOR ALL FUTURE AIS AND USERS UNTIL EXPLICITLY PERMITTED BY THE OWNER**
+> 
+> 1. **Address Changing / Aliasing Disabled**:
+>    - Address changing, same-block aliasing (+8 offset), synthetic relocation, and address alteration are **TEMPORARILY DISABLED** across the entire pipeline, scraper scripts, admin tools, and publishing workflows.
+>    - **Do NOT remove the code**: The underlying functions (`aliasAddress`, `relocateProperty`, relocation modals, etc.) must remain in the project so the capability exists, but they must NOT be used or executed for now.
+>    - **Authentic Original Addresses Mandatory**: All properties ingested, processed in the pipeline, or published to the live database must retain and display their authentic, original source address (`address`, `city`, `state`, `zip`, and `title`).
+>    - **No future AI or developer may use or enable address changing/relocation until the owner explicitly gives permission.**
+> 
+> 2. **Image Reordering Disabled — Strict Original Order**:
+>    - Automated image reordering is **COMPLETELY DISABLED**.
+>    - **All images must be ordered exactly as they came from the original source.**
+>    - The first image from the original listing/feed must remain the primary hero cover photo (`display_order: 0` / `is_hero: true`).
+
+> **For AI assistants:** These rules are enforced automatically by `enrichment.py`
+> via `apply_enrichment_pipeline()`. You do NOT need to implement them — just call
+> the pipeline correctly (see `PIPELINE_USAGE.md`). This file is here so you know
+> what is and isn't allowed in a published listing.
+
+---
+
+## 🚫 Things That Are NEVER Allowed on a Published Listing
+
+| Rule | What to do |
+|---|---|
+| For-Sale & Financing Jargon | Strip: "For sale", "mortgage", "down payment", "FHA/VA loan", "escrow", "closing costs", "open house", "investor special", "cap rate", "Opendoor brokerage", "make an offer" |
+| Tour / showing language | Strip: "Schedule a tour", "Book a showing", "Open house", "Contact for viewing" |
+| External application portals | Strip: TurboTenant, Zillow application, Apartments.com application, RentSpree, AppFolio, Property ID references |
+| Agent / owner / manager names | Strip: "Contact John Smith", "Managed by ABC Realty", "Leasing agent: Jane Doe" |
+| Third-party brokerage branding | Strip: "Listed by Keller Williams", "MLS #12345", "Courtesy of RE/MAX" |
+| Security deposit in description | Strip: listing descriptions must NEVER quote, mention, or state security deposit amounts or terms |
+| Lease terms displayed | Strip / omit: no properties show lease terms or minimum lease duration; omitted from all enrichment and listings |
+| Available dates / Move-in displayed | Strip / omit: no properties show available dates, move-in status, or "Available From" tables; descriptions must never mention available dates or move-in ready |
+| Application fee ≠ $50 | Replace with "Application Fee: $50." — always, no exceptions |
+| "Free application" / "$0 fee" | Replace with "Application Fee: $50." |
+| Competitor brand in listing | Drop ENTIRE listing: FirstKey, Invitation Homes, Progress Residential, Tricon, Coldwell Banker, Keller Williams, RE/MAX, Century 21, Berkshire Hathaway, Main Street Renewal, AMH, eXp Realty |
+| Fewer than 6 photos | Do NOT publish — minimum 6 source images required |
+| External / hotlinked photo URLs | All photos MUST be on ImageKit before publishing |
+| Conflicting rent in description | Description price must match published monthly_rent |
+| Missing monthly_rent | Do NOT publish — rent is required |
+
+---
+
+## ✅ Things That Are ALWAYS Required
+
+| Rule | What it looks like |
+|---|---|
+| Pets allowed = Yes | Every listing is published as pet-friendly |
+| Security deposit = 1× rent (DB only) | `security_deposit` = `monthly_rent` in DB record; NEVER mentioned in descriptions |
+| Application fee = $50 | `application_fee` field = 50, description says "Application Fee: $50." |
+| Apply CTA at end of description | Ends with "Apply now through Choice Properties…" or similar |
+| All photos on ImageKit | `property_photos.url` = `https://ik.imagekit.io/21rg7lvzo/…` |
+| Photos in original order | First photo = hero / featured image |
+
+---
+
+## ✅ What the Pipeline Does Automatically (You Don't Need to Implement These)
+
+When you call `PipelineOrchestrator.run(criteria)`, the pipeline automatically:
+
+1. Drops competitor-branded listings (watermark check)
+2. Strips tour/showing/contact language from descriptions
+3. Strips external portal application instructions
+4. Strips agent/owner/broker name references
+5. Strips third-party brokerage/MLS branding
+6. Strips corporate fee schedules and marketing blocks (Mynd "RENT WITH MYND" block, Invitation Homes fee blocks, Progress Residential, Tricon)
+7. Strips all security deposit mentions and figures from descriptions
+8. Strips all available dates, move-in status, and availability mentions from descriptions
+9. Omits and clears all lease terms and available dates so no properties display lease duration or availability dates
+10. Removes individual branded/agent photos from the image list
+11. Normalizes HVAC fields from raw MLS blobs
+12. Infers missing laundry, parking, pets, title, deposit from amenity tags (omits lease terms and available dates)
+13. Enforces rent consistency between description text and `monthly_rent` field
+14. Normalizes application fee to $50 in description text
+15. Appends a "Apply now at Choice Properties" CTA to every description
+16. Validates: photos ≥ 6, rent set, no banned language → blocks publish if any fail
+17. Uploads all photos to ImageKit, verifies URLs, inserts into `property_photos`
+18. Publishes, activates, and returns the live URL
+
+---
+
+## Property Type Allowed Values
+
+| Use this string | Meaning |
+|---|---|
+| `"SINGLE_FAMILY"` | Houses / single-family homes |
+| `"TOWNHOMES"` | Townhouses |
+| `"APARTMENT"` | Apartments |
+| `"CONDOS"` | Condos |
+| `"MULTI_FAMILY"` | Multi-family units |
+
+> For houses-only batches: `allowed_types = {"SINGLE_FAMILY"}`
+
+---
+
+## Scraping Source
+
+- **Realtor.com via HomeHarvest** — works from Replit, no IP restriction
+- **Zillow** — requires residential IP, does NOT work from Replit
+- Always use `--source realtor` (the default) when running from Replit
+
+---
+
+## Credentials Location
+
+All credentials are in `scraper/.env` — already committed, no setup needed.
+
+```
+SUPABASE_URL=https://tlfmwetmhthpyrytrcfo.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+IMAGEKIT_PRIVATE_KEY=...
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/21rg7lvzo
+```
+
+---
+
+## The One Command That Runs Everything
+
+```bash
+python3 scraper/<city>_batch.py --target 10 --past-days 90
+```
+
+All 16 rules above are enforced automatically. You only define the city, bedrooms, bathrooms, rent range, and property type.

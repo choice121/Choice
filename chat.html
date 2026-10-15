@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1792099446200"></script>
+  <script nonce="__CSP_NONCE__">
+    (function(){
+      try {
+        var t = localStorage.getItem('cp-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="/manifest.json">
+  <title>Contact Us — Choice Properties</title>
+  <meta name="description" content="Contact Choice Properties directly via WhatsApp, iMessage, or Text for rental search assistance.">
+  <link rel="canonical" href="https://choice-properties-site.pages.dev/chat.html">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --cp-primary: #006aff;
+      --cp-primary-hover: #0056cc;
+      --cp-bg: #f8fafc;
+      --cp-card-bg: #ffffff;
+      --cp-text-main: #0f172a;
+      --cp-text-muted: #64748b;
+      --cp-border: #e2e8f0;
+      --cp-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      --wa-color: #25d366;
+      --imessage-color: #34c759;
+      --sms-color: #006aff;
+    }
+
+    [data-theme="dark"] {
+      --cp-bg: #0b1120;
+      --cp-card-bg: #1e293b;
+      --cp-text-main: #f8fafc;
+      --cp-text-muted: #94a3b8;
+      --cp-border: #334155;
+      --cp-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--cp-bg);
+      color: var(--cp-text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-emblem {
+      width: 56px;
+      height: 56px;
+      background: var(--cp-primary);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px -4px rgba(0, 106, 255, 0.35);
+    }
+
+    .logo-emblem svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--cp-text-main);
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      background: rgba(0, 106, 255, 0.08);
+      color: var(--cp-primary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    [data-theme="dark"] .brand-badge {
+      background: rgba(0, 106, 255, 0.2);
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 16px;
+      margin-bottom: 4px;
+      color: var(--cp-text-main);
+    }
+
+    .page-sub {
+      font-size: 14px;
+      color: var(--cp-text-muted);
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    .actions-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--cp-card-bg);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      text-decoration: none;
+      color: var(--cp-text-main);
+      box-shadow: var(--cp-shadow);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.12);
+      border-color: var(--cp-primary);
+    }
+
+    .action-card:active {
+      transform: scale(0.98);
+    }
+
+    .icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .icon-whatsapp {
+      background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    }
+
+    .icon-imessage {
+      background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
+    }
+
+    .icon-sms {
+      background: linear-gradient(135deg, #006aff 0%, #004dc7 100%);
+    }
+
+    .text-content {
+      flex: 1;
+      text-align: left;
+    }
+
+    .action-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.25;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-desc {
+      font-size: 13px;
+      color: var(--cp-text-muted);
+      margin-top: 2px;
+    }
+
+    .action-arrow {
+      color: var(--cp-text-muted);
+      font-size: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .action-card:hover .action-arrow {
+      transform: translateX(3px);
+      color: var(--cp-primary);
+    }
+
+    .footer-note {
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--cp-text-muted);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="brand-header">
+      <div class="logo-emblem">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.95"/>
+          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.9)"/>
+        </svg>
+      </div>
+      <div class="brand-name">Choice Properties</div>
+      <div class="brand-badge">
+        <i class="fas fa-check-circle"></i> Direct Support
+      </div>
+      <h1 class="page-title">Reach Out to Us</h1>
+      <p class="page-sub">Tap below to connect directly with our team on your preferred app.</p>
+    </div>
+
+    <div class="actions-list">
+      <!-- 1. WhatsApp - Official Business link (no phone number exposed) -->
+      <a href="https://wa.me/message/5XR52B4HCBT2D1" class="action-card" id="waLink" target="_blank" rel="noopener noreferrer">
+        <div class="icon-wrapper icon-whatsapp">
+          <i class="fab fa-whatsapp"></i>
+        </div>
+        <div class="text-content">
+          <div class="action-title">WhatsApp</div>
+          <div class="action-desc">Chat with us instantly</div>
+        </div>
+        <i class="fas fa-chevron-right action-arrow"></i>
+      </a>
+
+      <!-- 2. iMessage - Apple Messages protocol (no email exposed) -->
+      <a href="imessage://choiceproperties@icloud.com" class="action-card" id="imessageLink">
+        <div class="icon-wrapper icon-imessage">
+          <i class="fab fa-apple"></i>
+        </div>
+        <div class="text-content">
+          <div class="action-title">iMessage</div>
+          <div class="action-desc">For iPhone, iPad &amp; Mac</div>
+        </div>
+        <i class="fas fa-chevron-right action-arrow"></i>
+      </a>
+
+      <!-- 3. Text Message (SMS) - No digits exposed on screen -->
+      <a href="sms:+17077063137" class="action-card" id="smsLink">
+        <div class="icon-wrapper icon-sms">
+          <i class="fas fa-comment-dots"></i>
+        </div>
+        <div class="text-content">
+          <div class="action-title">Text Message (SMS)</div>
+          <div class="action-desc">Send a mobile text message</div>
+        </div>
+        <i class="fas fa-chevron-right action-arrow"></i>
+      </a>
+    </div>
+
+    <div class="footer-note">
+      <i class="fas fa-shield-alt"></i> Choice Properties • Fast &amp; Direct Response
+    </div>
+  </div>
+
+  <script nonce="__CSP_NONCE__">
+    (function() {
+      // Smart device handling for iMessage
+      var imessageBtn = document.getElementById('imessageLink');
+      if (imessageBtn) {
+        imessageBtn.addEventListener('click', function(e) {
+          var isApple = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform);
+          if (!isApple) {
+            // Seamless fallback for Android / Windows devices
+            this.href = 'mailto:choiceproperties@icloud.com';
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

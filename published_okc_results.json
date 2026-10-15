@@ -1,0 +1,110 @@
+[
+  {
+    "choiceId": "17519ed8-7da5-42c9-9146-ff9fce091e78",
+    "pipelineId": "PP-6B29E289",
+    "address": "2426 NW 11th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73107",
+    "rent": 675,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=17519ed8-7da5-42c9-9146-ff9fce091e78"
+  },
+  {
+    "choiceId": "ec204316-3371-4fb5-a8e2-cca6a795e43a",
+    "pipelineId": "PP-D35FB19F",
+    "address": "215 SE 38th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73129",
+    "rent": 650,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=ec204316-3371-4fb5-a8e2-cca6a795e43a"
+  },
+  {
+    "choiceId": "3c559ca3-9407-4539-9891-2ec7323e9078",
+    "pipelineId": "PP-BA61908F",
+    "address": "2522 W Park Pl",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73107",
+    "rent": 680,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=3c559ca3-9407-4539-9891-2ec7323e9078"
+  },
+  {
+    "choiceId": "8af525d8-eef1-45de-97eb-f12a197188e1",
+    "pipelineId": "PP-E32649E2",
+    "address": "1128 NW 11th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73106",
+    "rent": 640,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=8af525d8-eef1-45de-97eb-f12a197188e1"
+  },
+  {
+    "choiceId": "b226750a-bb59-4b2c-8432-137948989693",
+    "pipelineId": "PP-26211A91",
+    "address": "2935 NW 21st St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73107",
+    "rent": 660,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=b226750a-bb59-4b2c-8432-137948989693"
+  },
+  {
+    "choiceId": "02bc7892-2775-4c36-ae78-85c39a9fd511",
+    "pipelineId": "PP-1FB4A218",
+    "address": "504 NW 45th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73118",
+    "rent": 695,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=02bc7892-2775-4c36-ae78-85c39a9fd511"
+  },
+  {
+    "choiceId": "59c9625b-cd95-407c-b417-e9166723839c",
+    "pipelineId": "PP-0C716A14",
+    "address": "2819 SW 33rd St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73119",
+    "rent": 625,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=59c9625b-cd95-407c-b417-e9166723839c"
+  },
+  {
+    "choiceId": "619cf512-a219-485a-bfaa-14d3ae9c1281",
+    "pipelineId": "PP-E4EDA7CE",
+    "address": "814.5 East Dr",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73105",
+    "rent": 650,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=619cf512-a219-485a-bfaa-14d3ae9c1281"
+  },
+  {
+    "choiceId": "e40de247-f007-4d99-af0f-def61cf70901",
+    "pipelineId": "PP-BCDB68A0",
+    "address": "125 NW 25th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73103",
+    "rent": 690,
+    "beds": 1,
+    "baths": 1,
+    "liveUrl": "https://choice-properties-site.pages.dev/property.html?id=e40de247-f007-4d99-af0f-def61cf70901"
+  }
+]

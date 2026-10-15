@@ -1,0 +1,98 @@
+[
+  {
+    "n": 1,
+    "id": "b63fb774-b20a-4c9e-991d-4059834be823",
+    "address": "4609 Carlisle Blvd NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87109",
+    "rent": 1195,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=b63fb774-b20a-4c9e-991d-4059834be823"
+  },
+  {
+    "n": 2,
+    "id": "a1eb6775-2129-4fd2-b47d-d29b0a5da279",
+    "address": "1408 Pennsylvania St NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87110",
+    "rent": 1150,
+    "beds": 3,
+    "baths": 1.5,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=a1eb6775-2129-4fd2-b47d-d29b0a5da279"
+  },
+  {
+    "n": 3,
+    "id": "af72b52b-c837-48f8-9c46-4f57a1eb20ce",
+    "address": "4208 Montgomery Blvd NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87109",
+    "rent": 1199,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=af72b52b-c837-48f8-9c46-4f57a1eb20ce"
+  },
+  {
+    "n": 4,
+    "id": "3330b01e-ce40-4189-a0e8-1c70c3286818",
+    "address": "208 Figueroa St NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87123",
+    "rent": 1185,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=3330b01e-ce40-4189-a0e8-1c70c3286818"
+  },
+  {
+    "n": 5,
+    "id": "ad8e8221-4d9e-47d3-aa4b-b8df92a62653",
+    "address": "309 Western Skies Dr SE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87123",
+    "rent": 988,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=ad8e8221-4d9e-47d3-aa4b-b8df92a62653"
+  },
+  {
+    "n": 6,
+    "id": "f73048e5-86d7-4a26-8a10-b218644e8a99",
+    "address": "9008 Zuni Rd SE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87123",
+    "rent": 1125,
+    "beds": 3,
+    "baths": 1,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=f73048e5-86d7-4a26-8a10-b218644e8a99"
+  },
+  {
+    "n": 7,
+    "id": "84ea269a-862c-457a-a0f6-ce63764a7abc",
+    "address": "7311 Montgomery Blvd NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87109",
+    "rent": 1175,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=84ea269a-862c-457a-a0f6-ce63764a7abc"
+  },
+  {
+    "n": 8,
+    "id": "17dbdf31-0611-49a8-ab03-0cec8a0b623b",
+    "address": "12029 Skyline Rd NE",
+    "city": "Albuquerque",
+    "state": "NM",
+    "zip": "87123",
+    "rent": 1190,
+    "beds": 3,
+    "baths": 2,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=17dbdf31-0611-49a8-ab03-0cec8a0b623b"
+  }
+]

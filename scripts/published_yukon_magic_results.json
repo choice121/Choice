@@ -1,0 +1,98 @@
+{
+  "share_id": "df9f06e9-1003-4bc6-a2ce-2c6bde801360",
+  "token": "GIt-LBsiUULCpTvGmeZ0LNkkAeeO1aJmhw9VCwP30KM",
+  "magic_link": "https://choice-properties-site.pages.dev/listings.html#share=GIt-LBsiUULCpTvGmeZ0LNkkAeeO1aJmhw9VCwP30KM",
+  "expires_at": "2027-01-13T16:31:41.892Z",
+  "properties": [
+    {
+      "id": "201e238c-7ee7-4538-8585-e3b52c5dd505",
+      "title": "3600 Janus, Yukon, OK 73099",
+      "rent": 850,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 2292,
+      "photosCount": 16
+    },
+    {
+      "id": "908fc150-6749-4b2f-920c-0f88f4f88dde",
+      "title": "11011 SW 5th St, Yukon, OK 73099",
+      "rent": 875,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1323,
+      "photosCount": 7
+    },
+    {
+      "id": "45f4764a-b7be-47bf-9dee-e9fabe73ce82",
+      "title": "10620 SW 16th Ter, Yukon, OK 73099",
+      "rent": 895,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1216,
+      "photosCount": 16
+    },
+    {
+      "id": "406600fb-bd97-4499-a4c4-71a811d356b6",
+      "title": "3804 Matthew Dr, Yukon, OK 73099",
+      "rent": 925,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1092,
+      "photosCount": 31
+    },
+    {
+      "id": "1060d6e4-6ad8-4701-b723-c5186c289fa7",
+      "title": "9118 McLendon Ct, Yukon, OK 73099",
+      "rent": 950,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1215,
+      "photosCount": 15
+    },
+    {
+      "id": "24f3a1ee-2de3-4a27-bfd3-02850e33395f",
+      "title": "405 Yukon Ave, Yukon, OK 73099",
+      "rent": 975,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1800,
+      "photosCount": 24
+    },
+    {
+      "id": "4d708cec-ff50-4101-a9fd-0f157cf0a19a",
+      "title": "900 Coles Crk, Yukon, OK 73099",
+      "rent": 995,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1350,
+      "photosCount": 14
+    },
+    {
+      "id": "7d6adb97-ceb4-4390-b3ec-7008b22d38af",
+      "title": "9428 NW 122nd Ter, Yukon, OK 73099",
+      "rent": 1025,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1256,
+      "photosCount": 9
+    },
+    {
+      "id": "16f1dd40-8709-4de7-adc1-7c83b2cefe19",
+      "title": "9321 NW 124th St, Yukon, OK 73099",
+      "rent": 1050,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1275,
+      "photosCount": 20
+    },
+    {
+      "id": "c3192058-796e-41a0-8856-2c829b08d29e",
+      "title": "316 Ash Ave, Yukon, OK 73099",
+      "rent": 1095,
+      "beds": 3,
+      "baths": 2.5,
+      "sqft": 1342,
+      "photosCount": 36
+    }
+  ]
+}

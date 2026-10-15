@@ -1,0 +1,90 @@
+[
+  {
+    "address": "3441 Braden Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28216",
+    "rent": 1650,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "property_id": "e6c7a32b-b3d6-470f-8534-f98c4716805c",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=e6c7a32b-b3d6-470f-8534-f98c4716805c"
+  },
+  {
+    "address": "2939 Gray Feather Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28262",
+    "rent": 1695,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "property_id": "448e89c7-d722-4f73-882b-2db0a8995476",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=448e89c7-d722-4f73-882b-2db0a8995476"
+  },
+  {
+    "address": "6415 Saint Bernard Way",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28269",
+    "rent": 1675,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "property_id": "a43ec5c2-2fa0-4e45-b779-11cde478eac0",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=a43ec5c2-2fa0-4e45-b779-11cde478eac0"
+  },
+  {
+    "address": "5720 Prescott Ct",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28269",
+    "rent": 1695,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "property_id": "250ea423-81f9-40b1-99b3-62aa5784d116",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=250ea423-81f9-40b1-99b3-62aa5784d116"
+  },
+  {
+    "address": "3053 Summerfield Ridge Ln",
+    "city": "Matthews",
+    "state": "NC",
+    "zip": "28105",
+    "rent": 1695,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "property_id": "0adba84a-ebf1-493c-bb12-9aba542724b7",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=0adba84a-ebf1-493c-bb12-9aba542724b7"
+  },
+  {
+    "address": "3823 Rosehaven Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28205",
+    "rent": 1600,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "property_id": "b6f9267c-f1aa-4759-93f6-d3262714fa12",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=b6f9267c-f1aa-4759-93f6-d3262714fa12"
+  },
+  {
+    "address": "2343 Crosscut Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28214",
+    "rent": 1625,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "property_id": "bf1c6fdb-6a58-4479-8539-56f6b0414e56",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=bf1c6fdb-6a58-4479-8539-56f6b0414e56"
+  },
+  {
+    "address": "9128 Treyburn Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": "28216",
+    "rent": 1700,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "property_id": "b4ec8aa3-5390-4289-9b1b-4c8f3c5b5fc2",
+    "url": "https://choice-properties-site.pages.dev/property.html?id=b4ec8aa3-5390-4289-9b1b-4c8f3c5b5fc2"
+  }
+]

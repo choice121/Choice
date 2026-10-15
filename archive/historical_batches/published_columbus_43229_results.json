@@ -1,0 +1,122 @@
+[
+  {
+    "num": 1,
+    "address": "840 E Lincoln Ave",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1835,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "073101b2-9325-4c35-ac6a-bfff62661384",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=073101b2-9325-4c35-ac6a-bfff62661384"
+  },
+  {
+    "num": 2,
+    "address": "1806 Balsamridge Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1995,
+    "beds": 3,
+    "baths": 2.5,
+    "id": "5e2623b6-aad4-4972-b4de-19db8366bae4",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=5e2623b6-aad4-4972-b4de-19db8366bae4"
+  },
+  {
+    "num": 3,
+    "address": "4705 Heatherton Dr",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1855,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "89900624-a6b9-478b-a083-a48df628a6c3",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=89900624-a6b9-478b-a083-a48df628a6c3"
+  },
+  {
+    "num": 4,
+    "address": "6069 Endicott Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1820,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "db7d4ba2-fe0b-416b-a49e-e50f0ddb785a",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=db7d4ba2-fe0b-416b-a49e-e50f0ddb785a"
+  },
+  {
+    "num": 5,
+    "address": "1950 Faymeadow Ave",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1945,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "91fef1f6-29ff-4636-a05e-c5dac6a3a02f",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=91fef1f6-29ff-4636-a05e-c5dac6a3a02f"
+  },
+  {
+    "num": 6,
+    "address": "1487 Thurell Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1915,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "8b7f9b2b-4c13-43c2-a679-fcb2216268ba",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=8b7f9b2b-4c13-43c2-a679-fcb2216268ba"
+  },
+  {
+    "num": 7,
+    "address": "6660 Skywae Dr",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1965,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "24c2fd48-c8d2-4c69-8112-d9757c106d1b",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=24c2fd48-c8d2-4c69-8112-d9757c106d1b"
+  },
+  {
+    "num": 8,
+    "address": "4865 Heaton Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1875,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "08358b36-7d6f-4397-855e-c623f6e5e174",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=08358b36-7d6f-4397-855e-c623f6e5e174"
+  },
+  {
+    "num": 9,
+    "address": "1675 Norma Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1925,
+    "beds": 3,
+    "baths": 2.0,
+    "id": "afd223fe-22b8-43ed-87c1-b76056fcde8f",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=afd223fe-22b8-43ed-87c1-b76056fcde8f"
+  },
+  {
+    "num": 10,
+    "address": "5152 Sassafras Rd",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43229",
+    "rent": 1895,
+    "beds": 3,
+    "baths": 2.5,
+    "id": "5501d98e-8926-49c2-8474-27b366646190",
+    "link": "https://choice-properties-site.pages.dev/property.html?id=5501d98e-8926-49c2-8474-27b366646190"
+  }
+]

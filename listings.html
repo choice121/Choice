@@ -1,0 +1,499 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  STATIC SITE — AI AGENTS AND TOOLS: READ BEFORE ANY ACTION  ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  DO NOT: run npm install, start a server, create config.js  ║
+  ║  DO NOT: connect to any local database or run migrations     ║
+  ║  DO NOT: configure workflows, runtimes, or environments      ║
+  ║                                                              ║
+  ║  DEPLOY PATH ONLY: edit → push to GitHub → Cloudflare Pages ║
+  ║  FULL RULES: .agents/instructions.md                        ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1792099446200"></script>
+  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="/manifest.json">
+  <title>Browse Rentals — Choice Properties</title>
+  <meta name="description" content="Browse verified rental listings across the United States. Filter by price, bedrooms, and more. Apply online in minutes.">
+  <link rel="canonical" href="https://choice-properties-site.pages.dev/listings.html">
+  <meta property="og:title" content="Browse Rentals — Choice Properties">
+  <meta property="og:description" content="Verified rental listings nationwide. Apartments, houses, condos — apply in 15 minutes.">
+  <meta property="og:image" content="/assets/og-cover.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://choice-properties-site.pages.dev/listings.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Browse Rentals — Choice Properties">
+  <meta name="twitter:description" content="Verified rental listings nationwide. Apply online in minutes.">
+  <meta name="twitter:image" content="/assets/og-cover.jpg">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792099446200">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792099446200">
+  <style>
+    /* ── CRITICAL CSS — above-fold paint for listings.html ───────────────────
+       Minimal subset of cp-marketing.css needed for: nav slot reservation,
+       page header background, sticky filter bar baseline, card grid skeleton.
+    ─────────────────────────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body[data-portal="public"]{
+      margin:0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:#f7f9fc;color:#1f2937;line-height:1.6;font-size:15.5px;
+    }
+    #site-nav{min-height:64px;display:block}
+    .listings-page-header{background:#fff;border-bottom:1px solid #e4e8ef;padding:28px 0 20px;margin-top:64px}
+    .filter-bar{background:#fff;border-bottom:1px solid #e4e8ef}
+    .property-grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .property-card{display:flex;flex-direction:row;overflow:hidden;background:#fff;border-radius:18px}
+    .property-card-img{position:relative;width:280px;flex-shrink:0;height:210px;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%);border-radius:18px 0 0 18px}
+    @media(max-width:599px){
+      .property-card{flex-direction:column}
+      .property-card-img{width:100%;height:auto;aspect-ratio:3/2;border-radius:18px 18px 0 0}
+    }
+  </style>
+<script defer src="/config.js?v=1792099446200"></script>
+<script defer src="/js/supabase.min.js?v=1792099446200"></script>
+<script defer src="/js/cp-ui.js?v=1792099446200"></script>
+<script type="module" src="/js/cp-api.js?v=1792099446200"></script>
+<script defer src="/js/components.js?v=1792099446200"></script>
+<script defer src="/js/card-builder.js?v=1792099446200"></script>
+
+  <!-- I-060: CollectionPage structured data for listings page -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Rental Listings — Choice Properties",
+    "description": "Browse verified rental listings across the United States. Filter by price, bedrooms, and more.",
+    "url": "https://choice-properties-site.pages.dev/listings.html",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Choice Properties",
+      "url": "https://choice-properties-site.pages.dev/"
+    }
+  }
+  </script>
+<script nonce="__CSP_NONCE__">window.__INITIAL_LISTINGS__={"rows":[{"id":"076bd349-f982-4709-b5d0-f09c751e1d0c","title":"3BR TOWNHOMES in Tulsa","address":"1130 S Florence Ave","city":"Tulsa","state":"OK","zip":"74104","bedrooms":3,"bathrooms":1,"square_footage":900,"monthly_rent":1200,"property_type":"DUPLEX","parking":"Off-Street Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.147274,"lng":-95.9449,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/7e16178a528ff6572f3e54a492c54265-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/469eab90a17e532c8b0dc6ad32f74b98-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4af0d2bba8e56e877e65b5be51079bcd-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e18f1e7fc1bfe52243d416c1cf4eb2d6-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/23908d490db4abe4bce7b4a833b8cd0d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9c70f18f82bf99667983c815478e4012-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4eb15d2a0100eb8edc3f4272c1d2a4d0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5294ff23fe5b20ad4592faf06cf0588e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d4946227b3d08ddfd76d8ff9d2492f1f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f5999f5ca8fee11cc7b591a06dc6151e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/db98fd82c17eb8a3ca9277eba6b24c27-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/82c56dbb12e44125a208f311807cb8ac-uncropped_scaled_within_1536_1152.jpg"]},{"id":"08a477db-6b21-4f30-be5b-9df18da3e067","title":"3BR TOWNHOMES in Tulsa","address":"1206 S 110th Ave E #13-C","city":"Tulsa","state":"OK","zip":"74128","bedrooms":3,"bathrooms":2,"square_footage":1177,"monthly_rent":1195,"property_type":"TOWNHOUSE","parking":"Attached Garage Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.14576,"lng":-95.854416,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/81e0a7855c3bcf753adab5c2efde1c08-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5ca4914fc926f900bbdf11fe68f5d84a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3a909c0819a411ba7eeba2fe60b006bb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2e73b3402dfcd047ed542318e074c1c1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4e078d3a7dca794d66d85b245997e3b1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fced6a6800d846114367f52b00e2e07f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8a230c3e7392941f2ab845d91afcf4ec-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/699a59863cb6c9ebfb33b7a739a58c10-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9240cb8c2097b01879dfba1563cc48d7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/907f8a5c5a8d8451f6ec71471b459882-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d0a323f464d19e33537bca0081df0706-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9f94cfbfafbc699ee73fc2b9ba98a426-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b641e1a5aafb71cc35eca7f88c865072-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/474240941cdd7c5d7b0b84e8800eba31-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/36d4d20d7c2c8b9bcc68053091176a92-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e197fb6b1f36c3885b9089189def43f9-uncropped_scaled_within_1536_1152.jpg"]},{"id":"dbd3229e-bdbe-4334-8358-ac710895c74c","title":"3BR TOWNHOMES in Tulsa","address":"1551 E 66th Pl","city":"Tulsa","state":"OK","zip":"74136","bedrooms":3,"bathrooms":2,"square_footage":1300,"monthly_rent":1200,"property_type":"DUPLEX","parking":"Attached Garage & Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.067696,"lng":-95.96982,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/25ff4f1e721f45680d354e681c3c1bfb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/97de9c3b51054cfef095bdd49a774936-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/373895394e6467ca252abe6d6962829b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/83da9a4fdfebc2f696f084751bc54e77-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/cbcbcb5479906c73ba836d50c5c94705-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/074f2f3cb7892a44475a023d00a929b5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6fe8f5472e281e5adad90d5826c73c50-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1ce1b1833c672af2e5b9efbcbc612523-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1af734cf846c7311659a8db529409ff9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0bceca8bc5041b1bd6465ce42d8a60d0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/02642a160adf561beb23867938fdc330-uncropped_scaled_within_1536_1152.jpg"]},{"id":"7c7c8846-19ce-424b-a3de-0ddfac3d6213","title":"2BR TOWNHOMES in Tulsa","address":"10814 E 15th Pl","city":"Tulsa","state":"OK","zip":"74128","bedrooms":2,"bathrooms":1,"square_footage":946,"monthly_rent":1050,"property_type":"TOWNHOUSE","parking":"Dedicated Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.14175,"lng":-95.856995,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/976bf086fe3d9322938c94d4d8867c00-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f7c5583473bdaf9a8e52df9de3ad25f1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/201cde306e6046084489122648304fcf-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/81bd946983beabd5a97cd3339b25b80c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/48651929e7dd566b396c46fd14bb3fb5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9c7436089642cbac821afc0f33007ac9-uncropped_scaled_within_1536_1152.jpg"]},{"id":"ec1148c6-f985-4af7-bf9b-08712566b52a","title":"2BR TOWNHOMES in Tulsa","address":"102 S Zunis Ave","city":"Tulsa","state":"OK","zip":"74104","bedrooms":2,"bathrooms":1.5,"square_footage":924,"monthly_rent":1200,"property_type":"TOWNHOUSE","parking":"Dedicated Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.158783,"lng":-95.962296,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/298d7769e148139007bff3fb17a43cee-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/918c34496fa4e54d6a78336f5fcf14ac-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6a45ea888aac5b889894f7e752b9a9e9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8c7690131592942ba5c03054c56f0daa-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/24e3dcfeb864efab6fbc892f0dc9f962-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1c0a86f89edc13c9855895f3cef90204-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e4d91bdc8d60f50ec834d0631595de87-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4ec72116330c8cb075e32e352e485acb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d425b8eb92ca24257ef1764f5b3b2eb9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b1e13c58a450c729635b6a5cbfc65efc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/dd85e12980f4b0be5e595eedb4f15478-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/21f94a6428ac53aa61befaccceb2eca8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a20d66a77da78b1bf8f6a6790890e28d-uncropped_scaled_within_1536_1152.jpg"]},{"id":"f54b377c-fa69-4185-96f7-a951e0963e59","title":"2BR TOWNHOMES in Tulsa","address":"2732 E 29th Pl N","city":"Tulsa","state":"OK","zip":"74110","bedrooms":2,"bathrooms":1,"square_footage":858,"monthly_rent":1000,"property_type":"DUPLEX","parking":"Dedicated Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.19659,"lng":-95.95293,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/42a621b082140b90688e2c321763eee0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8bf6402ef6605dd20f66e26384a0d609-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/bd0141d55d12530c836ddb89841603bb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7811df4f56420878fc6489678fec2c3f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f6c0d087a238dc17ce086f7fd7b25e32-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4749bc57ac21e6a1531162ad13b85381-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d84dfac83c2c61ac1b15646d3d7f6a83-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/73cb0bc3b9b1de027f98e67efeb71016-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/078c169650e4c963821cfce0da6c31cb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/da1d2a487fdfc090868e4062f45ca4fe-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/995f5d802327229fe24822e2753b4141-uncropped_scaled_within_1536_1152.jpg"]},{"id":"bb363db4-2200-4c3c-9d4f-ac7a204cde5c","title":"3BR Single Family in Tulsa","address":"3703 E Ute St","city":"Tulsa","state":"OK","zip":"74115","bedrooms":3,"bathrooms":1,"square_footage":1300,"monthly_rent":1100,"property_type":"SINGLE_FAMILY","parking":"Attached 2-Car Garage & Driveway","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1837,"lng":-95.93488,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/fbd10e2280c2e306843f9f3444137b1f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/89e87ef66da60821c786b0d1239e0441-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1612bf4fd4d9aef672e9a102459895fc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/44c33990ae81622446e9b7c11574b972-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8f8d2b88fadee1c5143c9e98eb4dc2bd-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/47a934646d2ce25a9c6ccf7974e03f30-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5f04cb702e7f896ef5ecb9e1f4246edc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e4244dbb44ce36688aa90f136be7fa4d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/dedf24315489db4618605b62a5c771bb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2c1f1d033b9fff2d830d017776545534-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3368ea81dbb95dde60b0af3ec58d0ff2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b1de9ea4af5bd62e473944cf6842e03d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b03401fd6d6a7921003e1e38e75acd55-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3d3b9e664fbe99a0815e27972abc280b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7641b7d4a400a3637a342f68f41d1e97-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/dfaecc44ce52cb88942791198408dff8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/20d55154079210db9ee289dbea0d5d0d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/73423dd781c992fbaf220bb423b73dcf-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/df02a34c8c9789becf34b0f7f48d7d28-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/10435a220d063ba534e03ef63ea923e7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9217de0dd092d6b2240c657ba827baf1-uncropped_scaled_within_1536_1152.jpg"]},{"id":"5ac8a8bb-281e-418c-a2ba-9b798de201af","title":"2BR Single Family in Tulsa","address":"10111 E 30th St","city":"Tulsa","state":"OK","zip":"74129","bedrooms":2,"bathrooms":1,"square_footage":1059,"monthly_rent":1200,"property_type":"SINGLE_FAMILY","parking":"Attached Garage & Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1186,"lng":-95.86221,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/6bf412a74af68ce17aee12dacbec2dde-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/57d1c597332825c9a04f63ffd3987574-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/c5a83c5044c5b28ddbcee5f2d1885023-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b597c86d4e40c32d62d248bf3e33f365-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/614a2eb86c89eb667abc5af9a88cc05d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/72e8d6293ec22323d7700cfcc700447e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fcf7a018b112c961f63be393ba1d5d9f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/bf9defa27383b9891e77edb8d509bf11-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3b30183beeeb942c1bc6f3cdfcc53fc3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d0a3fe6102d45c35e6457908efdc8daa-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/099db05b6646632230fd9d100486db54-uncropped_scaled_within_1536_1152.jpg"]},{"id":"3952666b-93bc-43ba-b75c-a5b64d03b9e8","title":"3BR Single Family in Tulsa","address":"150 W 50th Pl N","city":"Tulsa","state":"OK","zip":"74126","bedrooms":3,"bathrooms":1,"square_footage":864,"monthly_rent":1095,"property_type":"SINGLE_FAMILY","parking":"Private Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.2269,"lng":-95.99222,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/3dd8337bf35d6b59f8836de2ff42ccde-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a29126a1a254c52f87d9993927332bc1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d9e495e7da2cb50a7d895a2c7a8d3332-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/15497a6c693f8e8138c02486cb26acf2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/93a8e1c5a1307d52263009136fb00e8b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5e11c7926bc55f5f160383203aaf1ffa-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/79413f907cad776044fa3ff6dbf25459-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ae61c299fb74e5ed49f9e23346001693-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8092229400c7369ff4e81b1790dc4194-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/80baddc430aa1075883f7f4b9d3ab176-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b72e7cf1dfcf80977f045f5f7705d5a3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/24dc080ed70cda1b8f062ec3464b29c1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fcfd0376b91b05cd12d6bb891c46c07e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/bdb4efc28d77c8c30771830c692c3741-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/08525637fdd98115120f6d4824896a59-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/aaccf69c47978e76836e504ae47d76c4-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fae38b1c2b5cc9b739a067fc21942356-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fedf96416fc763e0dec6b840431eda45-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0e68ac65a1e75b83fca6b5a046d1ba01-uncropped_scaled_within_1536_1152.jpg"]},{"id":"af5448f3-6f83-4d61-84e7-5bc2bfb4821c","title":"2BR Single Family in Tulsa","address":"1017 N College Ave","city":"Tulsa","state":"OK","zip":"74110","bedrooms":2,"bathrooms":1,"square_footage":1115,"monthly_rent":1050,"property_type":"SINGLE_FAMILY","parking":"Off-Street Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1685,"lng":-95.95286,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/c35b635507790e4009eee40077126938-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/18b00934735f67e1730e8f901d4cd557-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f47ec41d9d06926e4c29e66ea11fa1cd-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e978a1efa2d7e24bfa891cedbe3ae38a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/efc51e96a79cbdc29fe7945819bb3e64-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f1d431ff889e8468bd0f4a300508ebff-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/76018a5b6649f9056e54db25d5e2d54d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7d0858367364297bcf7a8ef6de781da4-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a3def43be8e59447b4438f0ea3bca6ca-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/aa5847830debd5468297601f40afd742-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e57600ea656cd8a84371ebeeeeb3de04-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/28ade13b6f9b4f4170ddb818d5ecd50f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0233612c4b33d2d4f8ccaa6e74502fdd-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a53ce495fb89bfdba7da522739c44101-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d8ee8995e78059f8b2c9201a421333c7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f6211a6405eac66d8fba059f59adad6e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4054f78223d0ccc6a907678eeb61e836-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5f973f16b20a6a7c6cfb5d4c4e1149bf-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1164f596a2770c47a190417c111b9e3f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4df009c10d9cabca81604be1c78209ca-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/42cb0c595a1182629e2917ef2bc14afd-uncropped_scaled_within_1536_1152.jpg"]},{"id":"e71fa27b-0804-4592-8478-75d3d1f31300","title":"3BR SINGLE FAMILY in Del City","address":"4812 SE 89th Ter","city":"Del City","state":"OK","zip":"73135","bedrooms":3,"bathrooms":2,"square_footage":1470,"monthly_rent":1195,"property_type":"SINGLE_FAMILY","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/87cb4fe9729f68ecd4fcb04f4e3759d5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/57166a70c0d296a3724d6f4ac86b8bbe-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fe10f57f8523af4370b81511492f9fea-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6ae504e1acde51f3c5ced78e686a5c01-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/c0ff57be2c3cb1a0cfd2101461cd8b46-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4b9c9bdb6ba595fb6a6121bae0b5b928-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/578f3ac063d29b4aa1716ba34f1b6386-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/88bdd03d191f84b4c8d574f8b2b74522-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/069a065e9555457930fe44e71ceaf857-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/481ade7662f3ca7496ad6c0e3d77a2a5-uncropped_scaled_within_1536_1152.jpg"]},{"id":"60a16b1d-9ffc-432b-9ad5-532c25e83239","title":"3BR SINGLE FAMILY in Oklahoma City","address":"4332 Siena Ridge Blvd","city":"Oklahoma City","state":"OK","zip":"73179","bedrooms":3,"bathrooms":2,"square_footage":1360,"monthly_rent":1200,"property_type":"SINGLE_FAMILY","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/aab0a460a05f87a3a0830cf2dc4f8e1d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b74774cb5c5cbcaa67ae57ef90807425-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/762293c283aaf4b30720a6622c2cf1b0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0a1f887fd86d62afeb4b0b3204f492b6-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7321b4bcdaa60b396b2261ad5ebbb94b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5511f36d3604540499c5979d5f72690a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/391bdb8854e06eedfd862fa4bef7443c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4fed5da091e747db8f51ace16bb3bdcc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b4b9eb63f0648297b5959a31e13634a8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/58aac1f6f38ff1b0fd1713c5a0e051a7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/032d5f84c7e3e9367a7defd3db4fd24b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/221bb499c5ea0e229ff93d2a5c3d79cb-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/559a5ca1534b11cf37be2db0a11281ab-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/925f9bd0d67c0e29a14547999c9f0ad7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ab57e35fff5362baff74928ad2820d73-uncropped_scaled_within_1536_1152.jpg"]},{"id":"7c07f1f5-9149-41cb-8372-47385536daf0","title":"3BR SINGLE FAMILY in Oklahoma City","address":"12606 Abbotts Way","city":"Oklahoma City","state":"OK","zip":"73142","bedrooms":3,"bathrooms":2,"square_footage":1438,"monthly_rent":1195,"property_type":"DUPLEX","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/b6d131935b1b2db257b08810f0f754ba-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/62bc6ec2ab050a858d8dce6536ba2468-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/29a4c02deed68549970e5df02de7d6d8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b6169eac73eb4a33f84fc987ef8a4d1f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/419d222b77be7ddf89dd48b70706d228-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/306ff5c9518f1e19f8cc8dcd9e12d7fc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/647e822ebf5ef20e7de5bfa797069ab2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f1741f4f1b1fc9179610fea4771c485c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5e948bd017e4d82c4e0135d1a0a0436d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fb4dd1fe00b8329389bd8789e9d9f449-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ed259934f97f7444ff998b493ba4ce75-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8a9162f8d4d7b694511caf5e70c81e2f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/357b748aa9c971960a600a80a5dd3574-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9da055aebefdd68db4d7c49b902e9c9b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2755d696cc49bd7128de6715a7952e31-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2b4d3157349efced8cc34821a897ebc3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/34d4002f68559cab7813f49f9d3f15d7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2ccaeb4691a857e8ff709ec549358fc0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3c3e50f02334c411e4e17dd4d52422a7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/67266b03e3f40bbca36cb680c7ed0cae-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/bc529efdc6c40f487afa7a0c26a9699b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b471c84d966513c49d09fbb2281d384f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3581fd8e455dc85316075dc2641d10a1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7f772a9cbf85fe71e8661fe3f2d9826f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/236f08176ab973abacfebe0fcda84b8f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/385b50b2f7c68aff6a44f5cfe1b03c41-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3b8eb52da23bdd1a4a88601ee0263275-uncropped_scaled_within_1536_1152.jpg"]},{"id":"489f6567-7eec-48a6-8b1b-518a08843ceb","title":"3BR SINGLE FAMILY in Oklahoma City","address":"9604 SW 17th St","city":"Oklahoma City","state":"OK","zip":"73128","bedrooms":3,"bathrooms":2,"square_footage":1300,"monthly_rent":1195,"property_type":"DUPLEX","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/9cd02fa2530a85af67b2835c352a478b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7f6f623f2ed9dcd5ed3c905456048879-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ba1af8cb9df4ae6f14eb7c050c91d6a8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/105d5ab34e0f0a508badd2fb1bf5501d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/722988d26b0dae705262bcdb03316357-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0ec8bf4f24b96a1fb5f4de0681f63c90-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/599b119bc99cd4b3ffedcf41c44d731c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/72818bc6941e813ccaac5ecc2b0c59b1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f02c79e3d3cccd9079e8a19e5e632647-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f033f1403f9f6d0da0a9f944fdd4d0dc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1553171221d9c76a0d398df68839691f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2d789d360642278e3bf6f3bfe2a4a5e9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/613eb3453127b3e6bc2a6490ae37250e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3dee5dfcf10de3122bbcc63d816c8a7a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/15c5f7e9191a56c972b7e838f4ad6a48-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/776d137af76527d301c0c4fc0cc85e3c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a9db4427490fc90c5b7491e047be6110-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/96513179102dc6142a4b73308b90623f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/be09687050a931d92ab6f75e215e5792-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d47024e8cef5ea2a3f9b4fee957f149e-uncropped_scaled_within_1536_1152.jpg"]},{"id":"5edb0250-bbfd-4c2c-9233-ea511a788194","title":"3BR SINGLE FAMILY in Oklahoma City","address":"4101 Siena Ridge Blvd","city":"Oklahoma City","state":"OK","zip":"73179","bedrooms":3,"bathrooms":2,"square_footage":1520,"monthly_rent":1200,"property_type":"SINGLE_FAMILY","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/eb3f04981b417aa943e90b727f6ee25e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0fb2822a47fc5b55e45129e131a3113d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d36c204762d6855ee0be8caa846025fe-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3fef40b5e6ac73c5aaa414b0397dec45-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7cca1d5fe17b0647386f872cf663f521-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/273ee268cbe01d6c7d763b833d8440f2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2801d10b03af541a4c4ebe30a43d2e66-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/961686847c685fe5a942b214ddfec612-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/24384e15127dbcdef08e35b6cd057eb4-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6c8fe366fafd20761fe83030ec407b08-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f2d6638d723b9e3d9c27222e4dd3c0b2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/af2e6bda44d073e432f5629bf525c133-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f849b988097cbe67638d77001f14a8ad-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/8d8d8a065c21499f84560c5c85de1921-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/45d90bc8a224ebddd8a3fec70d1df3a3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1fc5ccee3d7a47206e44077a9dd2ede1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7ded910b52dc8b1e00afa176b95c4bfb-uncropped_scaled_within_1536_1152.jpg"]},{"id":"b4fc49b6-a930-4f43-8a87-8134ba65ac21","title":"3BR SINGLE FAMILY in Oklahoma City","address":"6101 Gaelic Glen Dr","city":"Oklahoma City","state":"OK","zip":"73142","bedrooms":3,"bathrooms":2.5,"square_footage":1500,"monthly_rent":1195,"property_type":"DUPLEX","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/95bb53767551f8603073b4c46e78d716-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ede669f6b66a9706e2ea924c19179885-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f15961bdc8d02775824cec433714d842-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/64d2c320a5a8a708a8640053db0a98d4-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/900bee4b5613891f089f9b4bc5df40d7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/eae201004a8d9124e43de7ef6a0a292a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5672e820f524b59ea7f22399843087e8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fe675f71d2a4d89ed78fbeb6d9d74298-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/09ebb740c74748bb434d1aa77a5ad87d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/da815d5fe4602b478b3219ed81fa0dcc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/68f7620f86fad8de933c6aa07f05b190-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/aefcfd6c749a7175fdd440095d6d0f93-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3b378a86d6364c9f7e14ef28bb140c98-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3563529d0414c144f80d4321e8d5a329-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0bf7a0355c324f8a1dc55078fef12d9e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/956d46026fc7fe95fbcaa99e1b428650-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/727a8bbf7e27a0d64fcc70410ac0aaae-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a0d145856088d717d86e399e1c402357-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/199678e91d6f4a86bc8c1afcd9ced02b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f91f21a3401300afb74d7fab4085eb0a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9cedbea00179418186a6238cd33d4bc2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7b5c86f052474a3acf3a1b0f00845ba2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/701f06d1b701fe5100fc08aec2aeaf79-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b7b692e765f51ea52ee2c1b47f778b63-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/cc436e57ca07af50d319f5157c84211f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f8394794fc0f8cc931c71edcabeb6d71-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5cacaa85141379c2bd540becb01b09ec-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/66352c776f107a970f810e7cd02c6f63-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6c066196c6a4039ff67c7ea8012dfd1f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/85da38730ccb5f55540ae50eb53c7823-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/c8c2300f0242bd682e0460dd3abcf50f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2002499ea3bc8e8f40a40aed0d2b3ee8-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/10161f0b2cabdbce01aaf339dad294da-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a3fc76c93847c550c49d3ff69326d648-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/71c19a3e01753f5c751f007ed1901758-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/72b5b19ebc6d7de73aac6fd779182fa9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2e792353dc61cea0b22cc8e116c7d6b9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e72a3005063b9d3a79bceac77a264faa-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3a7056c8fc786a6bd65713d333219c13-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f4736b029517a51138f7adec5c7df2af-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/10127c70b6ab1ed9f7d5a4ae4b805a6c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3426d6095c0c4d5435c1487c07ed970f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1ceedb5b8ada6fe35cb4900f2a5594cc-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6943f042a31ebdb387b0cfe4529f9ca5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a37b27e2477f19350af1e0f77ddd1b68-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/546ffc9672fd12bd6d41310b8d87de70-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e350494ee37e1bcabf0fc4f7bc257b26-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e887a9bc62debd42e8c97adf9f4808ba-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ede3d9e0ec574d44e476d47b16b9d9c9-uncropped_scaled_within_1536_1152.jpg"]},{"id":"fc3f5e7e-50bb-4467-baf1-55724e386d7d","title":"3BR SINGLE FAMILY in Oklahoma City","address":"808 N Markwell Ave","city":"Oklahoma City","state":"OK","zip":"73127","bedrooms":3,"bathrooms":2,"square_footage":1268,"monthly_rent":1150,"property_type":"SINGLE_FAMILY","parking":"Attached, Garage","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":null,"lng":null,"status":"active","listed_at":"2026-09-21","landlords":null,"photo_urls":["https://photos.zillowstatic.com/fp/595f85431dde1f04e183e4b7ee15f927-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/d8f7d4430f7201bec4b03004d86b24ab-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7d7278ff7abcd2b4a170a656fb16d857-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/03934d0ceb423a9a982587eb784d4600-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0caa2c49fca3dd33d0bb8ebc2da64e28-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0d90b6c7ff246ee000546ec468f8ff0a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/769d8ad0837423a1ecee7fb97d1390b3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f222e5970243aa3a5e2ac0669037eee0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b8b8b60a59c8e7366ffa90c29e1bf3bf-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/81706de78af52e58a11e537a95f7ec73-uncropped_scaled_within_1536_1152.jpg"]},{"id":"cfa206c2-137b-460e-8c08-30fac0b599e9","title":"2BR Single Family in Tulsa","address":"5518 E 2nd St","city":"Tulsa","state":"OK","zip":"74112","bedrooms":2,"bathrooms":1,"square_footage":728,"monthly_rent":1050,"property_type":"SINGLE_FAMILY","parking":"Private Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1585,"lng":-95.91508,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/5d649c4834461652614a08e5dbcf53c3-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/c1238a7ff5f29488ca35b5a681a175d5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/2fa041a11bf883d122458b9e583e3fd1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7da4a2a3c0bdd55ee9db9cc4853e1e98-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1ea1fbeff4cdb3eaae218d5525f70b21-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9e99489e3ec4704b5948d98972ed69d7-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/c6b30a007a50bef49c2b6460790fd26c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5883981bc9253e70c3e6595baa4a1610-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/02b3f0489c737c324d77b84e6588125a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/987cde745d1903a6c48dc547b8de9d34-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/03f68cd03aaeb884e47a63e39148cdf3-uncropped_scaled_within_1536_1152.jpg"]},{"id":"70011a30-8995-48c3-a074-807987ac8b67","title":"2BR Duplex in Tulsa","address":"1207 S 74th East Ave","city":"Tulsa","state":"OK","zip":"74112","bedrooms":2,"bathrooms":1.5,"square_footage":832,"monthly_rent":1000,"property_type":"DUPLEX","parking":"Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.11862,"lng":-95.89416,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/bea42c7549d107f75d752832c1e7e653-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a5fff746546bc5b6a2033f649288b30a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1e34dfec4471245db98dbe3c0f800a7a-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/32d65dc9149f86d883ed42fa3f0ce03c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9b8bd1d6538291b2c248d2fcb1f621fa-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/80b62c3bea8587cc1a056e01af003752-uncropped_scaled_within_1536_1152.jpg"]},{"id":"032f563e-bb43-40e4-b1d8-3597e81bcf6a","title":"1BR Apartment in Tulsa","address":"2230 W Newton St","city":"Tulsa","state":"OK","zip":"74127","bedrooms":1,"bathrooms":1,"square_footage":963,"monthly_rent":975,"property_type":"APARTMENT","parking":"Community Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.17272,"lng":-96.01567,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_01_67b57e93.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_02_04a4617b.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_03_2b2dde87.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_04_fe55613d.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_05_15a34955.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_06_39eccb5b.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_07_48ce3083.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_08_b7e82357.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_09_48ff31ee.jpg","https://ik.imagekit.io/21rg7lvzo/properties/032f563e-bb43-40e4-b1d8-3597e81bcf6a/photo_10_5c9e48cc.jpg"]},{"id":"08904684-b5ec-484f-88b1-70f9ceb8e73d","title":"2BR Duplex in Tulsa","address":"1302 S Birmingham Ave #2","city":"Tulsa","state":"OK","zip":"74104","bedrooms":2,"bathrooms":1,"square_footage":1150,"monthly_rent":1200,"property_type":"DUPLEX","parking":"Dedicated Off-Street Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.12436,"lng":-95.9533,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_01_67e4986a.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_02_0d0bb030.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_03_3e157c8b.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_04_cbac088d.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_05_febcfcc2.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_06_61420401.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_07_acb22b0f.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_08_7917ee6a.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_09_d6ea7425.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_10_04e3614b.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_11_15938733.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_12_04dcd849.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_13_43a3d159.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_14_fc1c2920.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_15_74c2deb9.jpg","https://ik.imagekit.io/21rg7lvzo/properties/08904684-b5ec-484f-88b1-70f9ceb8e73d/photo_16_6ad73fd6.jpg"]},{"id":"acff7c20-6898-4909-aaca-a499bd6c168b","title":"2BR Single Family in Tulsa","address":"1020 E Apache St","city":"Tulsa","state":"OK","zip":"74106","bedrooms":2,"bathrooms":1,"square_footage":744,"monthly_rent":1100,"property_type":"SINGLE_FAMILY","parking":"Off-Street Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1969,"lng":-95.97864,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/bbe4dd0e90c3bc8e8505896eafdf65ff-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/efc099580cfc5b13f14d844369442f9e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3f2efa1bdf210c4e7431c5c876f3375c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/cd70abc5ee77ed7572c0bcfaae092614-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6735ce202bb111fb269567f10a590d63-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/891c016341de22da0e92af63223e6ee0-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3def42c049e76528c1181e95554ef904-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/709c5b8608e8684cfa53e58cbc0a5c2f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/347b2faa645268c3e00b7f7f5f8f3847-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b2a5624882678ceb866e2110c0a502d1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3a462ec29d9c187eda812bdaa1a9c296-uncropped_scaled_within_1536_1152.jpg"]},{"id":"54a1748f-e194-4d46-a4ce-cdf18ae1dbd3","title":"3BR Single Family in Tulsa","address":"1552 E 54th St N","city":"Tulsa","state":"OK","zip":"74126","bedrooms":3,"bathrooms":1,"square_footage":996,"monthly_rent":1125,"property_type":"SINGLE_FAMILY","parking":"Dedicated Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.2307,"lng":-95.96914,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/5688ad3d2820220296592796ac643a8b-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/6e0229507a09b38fb12c5fdf4c7862ab-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/04a6aa93d58199dfb4ae012ef6e17733-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/db20f1cf5dcd738170dfcbc6c36f4e4f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/820da0d778416f6e0f409785f7f5fa63-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/7657b817d45366a85f7516cd01130a98-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/e37b12c5366d7e6f31eeb9723774c0e9-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/21e42f2d8755b92ac109a5dbb21eb040-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/5ca82dd26fc76b259049cfd351dd6427-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/331ee5bb530a39cbf8f6f0119df4f2a4-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a0750d447617593e7962a6f8ff9c7985-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b8347dc42aba7b60bc1053c83e9bf134-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f4a40c41e5c1bf45747527de3f4ae33d-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f10173b317d5481d2b6cdb8efc76022f-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/fa538eab5c326a2ac8cf5c79885ad939-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/0c4071b23e47167ba73795caae25a6bf-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/50fd717b9a596c39fe2d9b44fc69a427-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/74cc58b9c0cd1b80f1c3554f870e1520-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/b158dc337bcfca8f2b7a0856e4aa4500-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/f0abdcaf01f9835c2f0db3a4f56666d5-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/a217fc6a37adfaa6f7ab9a02dad4d775-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4a1fbc32fd0f310a1fbb26a0e29d4125-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/9c8e1142b33b8acec7491cdf726b5678-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/ccd56815d1b6e7afe3d24b248df648c4-uncropped_scaled_within_1536_1152.jpg"]},{"id":"82c617a5-877a-46e7-822f-2f1778e71a9a","title":"2BR Single Family in Tulsa","address":"608 E Zion St","city":"Tulsa","state":"OK","zip":"74106","bedrooms":2,"bathrooms":1,"square_footage":708,"monthly_rent":1200,"property_type":"SINGLE_FAMILY","parking":"Dedicated Off-Street Driveway Parking","pets_allowed":true,"available_date":"2026-09-21","utilities_included":null,"lat":36.1894,"lng":-95.98636,"status":"active","listed_at":"2026-09-21","landlords":{"verified":false},"photo_urls":["https://photos.zillowstatic.com/fp/4b6d4e17ba077d67135b0607c28cb81e-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/1aab6d85bfa4ffddb801408920574052-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/3cbae827e6c5e5ad7864e3a91705a2a1-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/40a9d0a79424d2e065d82d7b6fca8fba-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/bdc042a6ec22d582d56b42f7734a81b2-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/34a2d277cc807e02e474e11069a9518c-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/63dd28006918173458c7b6b311ac5055-uncropped_scaled_within_1536_1152.jpg","https://photos.zillowstatic.com/fp/4e8d1c7f47246ff32f10ddbf44cc5c12-uncropped_scaled_within_1536_1152.jpg"]}],"total":6643,"page":1,"per_page":24,"total_pages":277};window.__INITIAL_LISTINGS_TS__=1790008001145;</script>
+</head>
+<body data-portal="public" data-page="listings">
+
+<!-- Nav slot — hydrated by /js/components.js (components/nav.html) -->
+<div id="site-nav" data-server-injected="1"><div class="nav-drawer-overlay" id="drawerOverlay"></div>
+
+<!-- ── Mobile Drawer ── -->
+<nav class="nav-drawer mv2-nav-drawer" id="navDrawer">
+  <div class="nav-drawer-header mv2-nav-drawer-header">
+    <a href="/index.html" class="nav-logo mv2-nav-logo">
+      <div class="nav-logo-emblem">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text-wrap">
+        <div class="nav-logo-name mv2-nav-logo-name">Choice Properties</div>
+        <div class="nav-logo-tagline mv2-nav-logo-tagline">Rental Marketplace</div>
+      </div>
+    </a>
+    <button class="nav-drawer-close" id="drawerClose" aria-label="Close menu">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="nav-drawer-body mv2-nav-drawer-body">
+    <a href="/listings.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings.html"><i class="fas fa-home"></i> Browse Listings</a>
+    <a href="/listings/" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings/"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
+    <a href="/how-to-apply.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
+    <a href="/faq.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
+    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>    <a href="/landlord/register.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
+    <div class="nav-drawer-divider"></div>
+    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
+    <a href="/about.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
+    <a href="#" class="nav-drawer-link mv2-nav-drawer-link nav-drawer-theme-toggle" data-theme-toggle role="button" aria-pressed="false">
+        <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
+        <i class="fas fa-sun theme-toggle__icon theme-toggle__icon--sun"></i>
+        <span class="nav-drawer-theme-toggle__label">Toggle dark mode</span>
+      </a>
+  
+  </div>
+  <div class="nav-drawer-cta">
+    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
+  </div>
+  <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="tel:7077063137">707-706-3137 (Text Only)</a></div>
+</nav>
+
+<!-- ── Main Navigation ── -->
+<nav class="nav mv2-nav" id="mainNav">
+  <div class="nav-inner mv2-nav-inner">
+    <a href="/index.html" class="nav-logo mv2-nav-logo">
+      <div class="nav-logo-emblem">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.9"/>
+          <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.8)"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text-wrap">
+        <div class="nav-logo-name mv2-nav-logo-name">Choice Properties</div>
+        <div class="nav-logo-tagline mv2-nav-logo-tagline">Rental Marketplace</div>
+      </div>
+    </a>
+
+    <div class="nav-links mv2-nav-links">
+      <a href="/listings.html" class="nav-link mv2-nav-link" data-nav-path="/listings.html">Browse Listings</a>
+      <a href="/how-to-apply.html" class="nav-link mv2-nav-link" data-nav-path="/how-to-apply.html">How to Apply</a>
+      <a href="/faq.html" class="nav-link mv2-nav-link" data-nav-path="/faq.html">FAQ</a>
+      <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
+        <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
+      </a>
+      <a href="/landlord/register.html" class="nav-link mv2-nav-link nav-link--landlord mv2-nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
+    </div>
+      <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
+          <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"></i>
+          <i class="fas fa-sun theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true"></i>
+          <span class="visually-hidden">Toggle theme</span>
+        </button>
+  
+
+    <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navDrawer">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</nav>
+</div>
+<!-- ── Page Header (Phase 9.8 mv2 refresh) ── -->
+<div class="listings-page-header mv2-listings-header">
+  <div class="mv2-listings-header__bg" aria-hidden="true"></div>
+  <div class="container mv2-listings-header__inner">
+    <p class="mv2-eyebrow mv2-listings-header__eyebrow">Browse our listings</p>
+    <h1 class="listings-page-title mv2-listings-header__title">
+      Find your <em>next place</em>.
+    </h1>
+    <p class="mv2-listings-header__subtitle">
+      Verified homes from real landlords. Filter by what matters,
+      apply in about fifteen minutes.
+    </p>
+    <div class="listings-search-row mv2-search-row">
+      <div class="search-field sf-text mv2-search-field mv2-search-field--text">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput"
+          placeholder="City, zip code, or neighborhood…"
+          autocomplete="off" aria-label="Search listings">
+      </div>
+      <div class="search-field sf-select mv2-search-field mv2-search-field--select">
+        <i class="fas fa-bed"></i>
+        <select id="bedroomsFilter" aria-label="Bedrooms">
+          <option value="">Any beds</option>
+          <option value="0">Studio</option>
+          <option value="1">1 Bed</option>
+          <option value="2">2 Beds</option>
+          <option value="3">3 Beds</option>
+          <option value="4">4+ Beds</option>
+        </select>
+      </div>
+      
+      <div class="search-field sf-select mv2-search-field mv2-search-field--select">
+          <i class="fas fa-dollar-sign"></i>
+          <select id="maxRentFilter" aria-label="Max Rent">
+            <option value="">Any price</option>
+            <option value="800">Under $800</option>
+            <option value="1000">Under $1,000</option>
+            <option value="1500">Under $1,500</option>
+            <option value="2000">Under $2,000</option>
+            <option value="2500">Under $2,500</option>
+            <option value="3000">Under $3,000</option>
+            <option value="4000">Under $4,000</option>
+          </select>
+        </div>
+        <button class="listings-search-btn mv2-search-btn" id="searchBtn" aria-label="Search">
+        <i class="fas fa-search"></i> Search
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter Bar (Phase 9.8 mv2 polish) ── -->
+<div class="filter-bar mv2-filter-bar">
+  <div class="filter-bar-inner">
+    <!-- Mobile-only Filters button (Fix 2) -->
+      <button class="mobile-filters-btn" id="mobileFiltersBtn">
+        <i class="fas fa-sliders-h"></i> Filters
+        <span class="mobile-filters-badge" id="mobileFiltersBadge" style="display:none"></span>
+      </button>
+      <!-- Clear All pill — desktop, shown when filters active (Fix 3) -->
+      <button class="filter-pill filter-pill-clear" id="clearAllPill" style="display:none">
+        <i class="fas fa-times-circle"></i> Clear all
+      </button>
+      <button class="filter-pill active" data-filter="all"><i class="fas fa-th"></i> All</button>
+    <button class="filter-pill" data-filter="apartment"><i class="fas fa-building"></i> Apartments</button>
+    <button class="filter-pill" data-filter="house"><i class="fas fa-home"></i> Houses</button>
+    <button class="filter-pill" data-filter="condo"><i class="fas fa-city"></i> Condos</button>
+    <button class="filter-pill" data-filter="townhouse"><i class="fas fa-house-user"></i> Townhomes</button>
+    <div class="filter-divider"></div>
+    <button class="filter-pill" data-filter="pets"><i class="fas fa-paw"></i> Pet Friendly</button>
+    <button class="filter-pill" data-filter="parking"><i class="fas fa-car"></i> Parking</button>
+
+    <div class="filter-dropdown-wrap" id="moreFiltersWrap">
+      <button class="filter-pill" id="moreFiltersBtn">
+        <i class="fas fa-sliders-h"></i> More Filters
+        <span class="filter-active-badge" id="filterActiveBadge" style="display:none"></span>
+      </button>
+      <div class="filter-dropdown" id="moreFiltersDropdown">
+        <div class="filter-dropdown-mobile-header">
+            <span class="filter-dropdown-title">Advanced Filters</span>
+            <button class="filter-dropdown-clear-all" id="clearAllMobile">
+              <i class="fas fa-times-circle"></i> Clear all
+            </button>
+          </div>
+        <div class="filter-dropdown-row">
+          <label>Min Bedrooms</label>
+          <select id="advMinBeds">
+            <option value="">Any</option>
+            <option value="0">Studio</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Min Bathrooms</label>
+          <select id="advMinBaths">
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="1.5">1.5+</option>
+            <option value="2">2+</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Min Price</label>
+          <input type="number" id="advMinRent" placeholder="e.g. 800" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Max Price</label>
+          <input type="number" id="advMaxRent" placeholder="e.g. 1500" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Laundry</label>
+          <select id="advLaundryFilter">
+            <option value="">Any</option>
+            <option value="in-unit">In-Unit W/D</option>
+            <option value="hookups">W/D Hookups</option>
+            <option value="shared">Shared Laundry</option>
+            <option value="laundromat">Laundromat Nearby</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Heating</label>
+          <select id="advHeatingFilter">
+            <option value="">Any</option>
+            <option value="gas-forced-air">Gas Forced Air</option>
+            <option value="electric">Electric</option>
+            <option value="baseboard">Baseboard</option>
+            <option value="radiant">Radiant</option>
+            <option value="heat-pump">Heat Pump</option>
+            <option value="boiler">Boiler</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Pet Type</label>
+          <select id="advPetTypeFilter">
+            <option value="">Any</option>
+            <option value="Dogs">Dogs</option>
+            <option value="Cats">Cats</option>
+            <option value="Birds">Birds</option>
+            <option value="Small Animals">Small Animals</option>
+            <option value="Reptiles">Reptiles</option>
+          </select>
+        </div>
+        <div class="filter-dropdown-actions">
+          <button class="filter-btn-clear" id="clearAdvFilters">Clear</button>
+          <button class="filter-btn-apply" id="applyAdvFilters">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-count" id="filterCount"></div>
+  </div>
+</div>
+
+<!-- ── Listings (Phase 9.8 mv2 polish) ── -->
+<section class="listings-section mv2-listings-section" id="listings">
+  <div class="container">
+    <div class="listings-header">
+      <div class="listings-header-left">
+        <h2 class="listings-heading mv2-listings-heading" id="listingsHeading">Results</h2>
+      </div>
+      <div class="listings-controls">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="btnListView" aria-label="Grid view">
+            <i class="fas fa-th-large"></i> Grid
+          </button>
+          <button class="view-toggle-btn" id="btnMapView" aria-label="Map view">
+            <i class="fas fa-map"></i> Map
+          </button>
+        </div>
+        <div class="listings-sort">
+          <select id="sortSelect" aria-label="Sort by">
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
+            <option value="beds_desc">Most Beds</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid View -->
+    <div id="listPanel">
+      <div class="property-grid property-list-view" id="propertyGrid">
+        <!-- Skeleton loaders -->
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:35%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
+            <div class="skeleton skeleton-line" style="width:55%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:40%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:38%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
+            <div class="skeleton skeleton-line" style="width:60%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:45%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:32%"></div>
+            <div class="skeleton skeleton-line" style="width:85%"></div>
+            <div class="skeleton skeleton-line" style="width:50%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:42%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:40%"></div>
+            <div class="skeleton skeleton-line" style="width:78%"></div>
+            <div class="skeleton skeleton-line" style="width:58%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:38%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:36%"></div>
+            <div class="skeleton skeleton-line" style="width:82%"></div>
+            <div class="skeleton skeleton-line" style="width:52%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:43%;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="property-card property-card-skeleton">
+          <div class="property-card-img skeleton-img skeleton"></div>
+          <div class="property-card-body" style="gap:10px;padding:20px">
+            <div class="skeleton skeleton-line" style="height:26px;width:34%"></div>
+            <div class="skeleton skeleton-line" style="width:76%"></div>
+            <div class="skeleton skeleton-line" style="width:62%"></div>
+            <div class="skeleton skeleton-line" style="height:12px;width:46%;margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="mapPanel">
+      <div id="listingsMap"></div>
+      <div id="mapLoadingSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; align-items: center; justify-content: center; flex-direction: column; gap: 12px;">
+        <div class="spinner" style="width: 40px; height: 40px;"></div>
+        <p style="color: var(--color-text-muted); font-size: 13px; margin: 0;">Loading map...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="paginationBar" style="margin: 32px 0 8px; display:flex; justify-content:center;"></div>
+  </div>
+</section>
+
+<!-- Footer slot — hydrated by /js/components.js (components/footer.html) -->
+<div id="site-footer" data-server-injected="1"><footer class="footer mv2-footer">
+    <div class="container">
+      <div class="footer-grid mv2-footer-grid">
+        <div>
+          <div class="footer-logo mv2-footer-logo">
+            <div class="footer-logo-mark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.92"/>
+                <circle cx="12" cy="11" r="2.5" fill="rgba(0,106,255,0.9)"/>
+              </svg>
+            </div>
+            <div class="footer-logo-text mv2-footer-logo-text">Choice Properties</div>
+          </div>
+          <p class="footer-desc mv2-footer-desc">A clear, structured rental marketplace. Connecting quality tenants with verified landlords — expanding nationwide with active listings in select markets.</p>
+          <a href="tel:7077063137" class="footer-link mv2-footer-link" style="display:inline-flex;align-items:center;gap:6px" data-cfg-phone><i class="fas fa-phone"></i> 707-706-3137</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Renters</div>
+          <a href="/listings.html" class="footer-link mv2-footer-link">Browse Listings</a>
+          <a href="/listings/" class="footer-link mv2-footer-link">Browse by City</a>
+          <a href="/how-to-apply.html" class="footer-link mv2-footer-link">How to Apply</a>
+          <a href="/faq.html" class="footer-link mv2-footer-link">FAQ</a>
+          <a href="/tenant/portal.html" class="footer-link mv2-footer-link" target="_blank" rel="noopener noreferrer">Track Application</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Landlords</div>
+          <a href="/landlord/register.html" class="footer-link mv2-footer-link">List a Property</a>
+          <a href="/landlord/login.html" class="footer-link mv2-footer-link">Landlord Login</a>
+          <a href="/how-it-works.html" class="footer-link mv2-footer-link">How It Works</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Company</div>
+          <a href="/about.html" class="footer-link mv2-footer-link">About Us</a>
+          <a href="/privacy.html" class="footer-link mv2-footer-link">Privacy Policy</a>
+          <a href="/terms.html" class="footer-link mv2-footer-link">Terms of Service</a>
+          <a href="tel:7077063137" class="footer-link mv2-footer-link" data-cfg-phone>Contact</a>
+        </div>
+        <div>
+          <div class="footer-col-title mv2-footer-col-title">Legal &amp; Policies</div>
+          <a href="/policies.html" class="footer-link mv2-footer-link"><strong>Complete Policy Framework</strong></a>
+          <a href="/rental-application-policy.html" class="footer-link mv2-footer-link">Rental Application Policy</a>
+          <a href="/application-credit-policy.html" class="footer-link mv2-footer-link">Application Credit Policy</a>
+          <a href="/holding-deposit-policy.html" class="footer-link mv2-footer-link">Holding Deposit Policy</a>
+          <a href="/fair-housing.html" class="footer-link mv2-footer-link">Fair Housing Policy</a>
+          <a href="/policy-changelog.html" class="footer-link mv2-footer-link">Policy Changelog</a>
+        </div>
+      </div>
+      <div class="footer-bottom mv2-footer-bottom">
+        <span class="footer-legal mv2-footer-legal">&copy; 2026 Choice Properties. All rights reserved.</span>
+        <span class="footer-eq mv2-footer-eq"><i class="fas fa-home" aria-hidden="true"></i> Equal Housing Opportunity</span>
+        <div class="footer-bottom-links mv2-footer-bottom-links">
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="/fair-housing.html">Fair Housing</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  </div>
+
+<div class="toast-container" id="toastContainer"></div>
+<button class="scroll-top" id="scrollTopBtn" aria-label="Back to top"><i class="fas fa-chevron-up"></i></button>
+
+<!-- Leaflet loaded lazily when user switches to Map View -->
+
+<script type="module" src="/js/listings.js?v=1792099446200"></script>
+</body>
+</html>
