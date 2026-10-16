@@ -2604,7 +2604,6 @@ body[data-portal="public"][data-page="property"] .map-container {
   border: 1px solid var(--m-border);
 }
 body[data-portal="public"][data-page="property"] #propertyMiniMap { width: 100%; height: 100%; }
-body[data-portal="public"][data-page="property"] .leaflet-control-attribution { display: none !important; }
 body[data-portal="public"][data-page="property"] .map-open-btn {
   display: inline-flex; align-items: center; gap: 7px;
   margin-top: 10px; padding: 9px 18px;

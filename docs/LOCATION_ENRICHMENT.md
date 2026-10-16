@@ -81,12 +81,15 @@ Migration `20261015000002_property_location_intelligence.sql` and the
 Supabase workflow for the location fix (`140a25b`). The Cloudflare enforcement
 and Pages build/deployment workflows also completed successfully for that
 commit. The property page and its JavaScript asset are served by production.
-The function response and cache were verified end to end, but an interactive
-browser test could not be run in the verification environment (no browser or
-Playwright installation is available). A private-placement request without a
-share token returned HTTP 404; a valid share-token request remains untested.
+The function response and cache were verified end to end. A local-source
+Playwright test now passes using Chromium and an active geocoded listing: it
+checks nearby-place content, Geoapify attribution, straight-line distance text,
+nearby map markers, visible OpenStreetMap attribution, fully loaded map tiles,
+and browser page errors, and saves a map screenshot. Production map behavior
+still needs verification after the current map changes deploy. A
+private-placement request without a share token returned HTTP 404; a valid
+share-token request remains untested.
 
-Remaining verification: open an active property's details page in a browser to
-confirm nearby-place labels, attribution, and map markers render as expected.
-Then test a private-placement listing with a valid share token, in addition to
+Remaining verification: rerun the visual test against production after deploy,
+then test a private-placement listing with a valid share token in addition to
 the already verified no-token denial.

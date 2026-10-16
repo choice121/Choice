@@ -92,6 +92,8 @@ supabase/supabase/.temp/
 dist/
 build/
 out/
+test-results/
+playwright-report/
 
 # Logs
 *.log

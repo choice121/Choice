@@ -1122,17 +1122,14 @@ function _initLeafletMap(p) {
   _propertyMap = map;
   _propertyLatLng = [lat, lng];
   
-  // Theme-aware high-performance Carto tiles (Dark Matter or Positron)
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   L.tileLayer(tileUrl, {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
 
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const markerBg = isDark ? '#ffffff' : '#0f172a';
   const markerColor = isDark ? '#0f172a' : '#ffffff';
   const markerBorder = isDark ? '2px solid rgba(0,106,255,0.85)' : '2px solid #ffffff';
@@ -1273,7 +1270,8 @@ function renderMap(p) {
         // Load the interactive map only when the map section is near the viewport.
         loadLeaflet()
           .then(() => _initLeafletMap(p))
-          .catch(() => {
+          .catch((error) => {
+            console.warn('[property] Interactive map failed to initialize; showing address card.', error);
             const _errAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`);
             container.innerHTML = _mapAddressCard(p, _errAddr);
           });
