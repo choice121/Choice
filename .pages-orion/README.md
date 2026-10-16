@@ -4,17 +4,27 @@ One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
-## One-tap mobile save — v28.0.6 (2026-10-16 09:10 UTC)
+## One-tap mobile save — v28.0.6 (2026-10-16)
 
-On phones, the importer opens as a compact property-and-rent bar with a direct Save action, keeping Zillow usable without opening the full panel. Failed saves expand the panel and provide a retry action. Saves retain original source photo URLs and order; the unused legacy image re-upload code was removed from the mobile content script.
+On phones, the importer opens as a compact property-and-rent bar with a touch-friendly **Save** action. You do not need to open the full panel or refresh Zillow before saving. Failed saves expand the panel and offer a retry action.
 
-## Mobile navigation and performance — v28.0.5 (2026-10-16 09:01 UTC)
+The extension checks for single-page property navigation at a short interval and updates the compact summary when the same listing finishes loading more facts. Before saving, it checks that the listing ID and address are available and retries extraction briefly; it will not send the previous listing after a Zillow navigation.
 
-Property navigation is detected without relying only on page-world history hooks. The widget refreshes listing facts as mobile pages hydrate, waits briefly for required details when saving, and avoids repeated extraction and layout work during heavy page updates and scrolling.
+Listing data and photos are sent as source facts and source CDN URLs. The mobile content script does not download, base64-encode, optimize, or re-upload listing photos; their source order is preserved, with the first photo remaining first. This avoids making photo processing part of the save tap.
 
-## Mobile save recovery — v28.0.4 (2026-10-16 07:05 UTC)
+### Mobile save and troubleshooting
 
-If the Orion background message bridge does not respond or times out, saving now retries directly against the authenticated pipeline import endpoint. Server-side validation errors are shown instead of being reduced to a generic failure message.
+1. Open a supported property detail page. The compact Choice bar should appear without a manual refresh.
+2. Check the displayed address and rent, then tap **Save**.
+3. Wait for **Saved**, **Queued**, or a duplicate result. If saving fails, the panel expands with an error and a **Retry** action.
+4. If the listing is still loading, wait for the page facts to appear and tap **Retry**. If the property changed, the extension refreshes its summary and requires a save for the current listing.
+5. Open the [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to confirm the staged record.
+
+The extension first asks its background worker to save. If that message bridge does not respond, it tries the import endpoint directly. A network outage can be queued for later synchronization; a server validation error is shown for correction rather than reported as a successful save.
+
+### v28.0.6 verification
+
+The automated browser test in `tests/visual/orion-mobile-widget.spec.js` simulates an iPhone viewport and Zillow single-page navigation, checks that the compact bar updates without a reload, and verifies that one tap submits the new listing's ID, address, and rent. This test uses a mocked import endpoint; it does not replace testing the installed extension on a physical iPhone in Orion.
 
 ## How it works
 
@@ -33,39 +43,18 @@ The shared property details experience can now display cached Geoapify nearby-pl
 ## Features
 
 - **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes (per-site extractors in `shared-extractors.js`)
-- **Offline queue** — if the pipeline is unreachable, the listing is queued in `chrome.storage.local` and auto-synced when back online (badge shows amber count; "Sync now" button in popup)
+- **Offline queue** — if a network failure prevents a save, the listing can be queued in extension local storage and retried when connectivity returns
 - **Settings** — enable/disable Download-to-PC and Offline queue from the popup
 
 ---
 
-## Install (takes ~30 seconds)
+## Install on Orion for iPhone
 
-### Step 1 — Generate icons (one time only)
+Download the packaged Orion build:
 
-```bash
-cd .pages-orion
-node generate-icons.js
-```
+[choice-properties-orion-extension.zip](https://choice-properties-site.pages.dev/choice-properties-orion-extension.zip)
 
-This creates `icons/icon16.png`, `icon32.png`, `icon48.png`, `icon128.png`.
-
-### Step 2 — Load into the browser
-
-1. Open the browser's extension manager
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select the `.pages-orion/` folder from this project
-5. Done ✓
-
-The extension icon appears in your Chrome toolbar.
-
-### Step 3 — Use it
-
-1. Browse to any supported listing detail page
-   *(Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, or Invitation Homes)*
-2. Click the purple **↓ Save to Pipeline** button (bottom-right corner)
-3. The button confirms the save and reports the result.
-4. Open your [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to review and publish
+Install or enable the ZIP using Orion's extension manager, then reload the listing tab so the new content script is active. Orion's exact install prompts can vary by app version. Chromium desktop users should install the separate `chrome-extension/` package instead.
 
 ---
 
@@ -94,13 +83,12 @@ Photos retain their source URLs and original order through publication; the firs
 
 ## Updating
 
-The extension lives in this repo under `.pages-orion/`. To update:
+For an installed Orion package, download the latest ZIP above and update/reload it using Orion's extension manager. For repository development:
 
-1. Edit `live-content.js`, `content.js`, or `content.css`
-2. Reload the extension from the browser's extension manager
-3. Reload any open listing tabs
-
-No reinstall needed for code changes — just refresh.
+1. Edit the canonical extractor in `src/extractors/shared-extractors.js`, or Orion UI files in `.pages-orion/`.
+2. Run `node scripts/sync-and-bump-extension.mjs --patch` to rebuild synchronized artifacts and packages.
+3. Run `node .pages-orion/test-extractors.js`, `node scripts/validate-extension.mjs`, and `npx playwright test tests/visual/orion-mobile-widget.spec.js`.
+4. Reload the updated extension and reload open listing tabs.
 
 ---
 
@@ -118,7 +106,7 @@ No reinstall needed for code changes — just refresh.
 | `manifest.json` | Extension config (MV3) |
 | `shared-extractors.js` | Multi-site extractor registry (Zillow, Realtor, Apartments, Redfin) |
 | `content.js` | Extension bridge for photo downloads and bundled runtime startup |
-| `live-content.js` | Injected UI, save flow, retry handling, and photo upload progress |
+| `live-content.js` | Injected mobile UI, listing navigation detection, save flow, and retry handling |
 | `content.css` | Floating button styles |
 | `background.js` | Service worker — session count, offline queue flush, badge |
 | `popup.html` / `popup.js` | Toolbar popup — session count, queue status, settings toggles |
