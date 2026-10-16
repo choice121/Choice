@@ -32,7 +32,7 @@ test('active property shows nearby places and Geoapify map markers', async ({ pa
     }
   });
   page.on('response', (response) => {
-    if (response.url().includes('cartocdn.com') || response.url().includes('tile.openstreetmap.org')) basemapStatuses.push(response.status());
+    if (response.url().includes('arcgisonline.com') || response.url().includes('cartocdn.com') || response.url().includes('tile.openstreetmap.org')) basemapStatuses.push(response.status());
     if (response.url().includes('leaflet.min.')) leafletFailures.push(`HTTP ${response.status()}`);
   });
   page.on('requestfailed', (request) => {
@@ -64,7 +64,7 @@ test('active property shows nearby places and Geoapify map markers', async ({ pa
   await expect.poll(() => nearbyMarkers.count()).toBeGreaterThan(0);
   const attribution = map.locator('.leaflet-control-attribution');
   await expect(attribution).toBeVisible();
-  await expect(attribution).toContainText('OpenStreetMap contributors');
+  await expect(attribution).toContainText(/Esri|OpenStreetMap/);
   await expect.poll(() => map.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
     const visibleTiles = [...element.querySelectorAll('img.leaflet-tile')].filter((tile) => {

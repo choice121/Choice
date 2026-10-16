@@ -1217,8 +1217,8 @@ let isFetchingBounds = false;
 function initMap(props, isBoundsUpdate = false) {
   if (!mapInstance) {
     mapInstance = L.map('listingsMap', { zoomControl: false }).setView([39.5, -98.35], 4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', maxZoom: 18
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ', maxZoom: 18
     }).addTo(mapInstance);
     L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
 

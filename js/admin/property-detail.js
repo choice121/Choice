@@ -433,8 +433,8 @@
   function _doInitMap(container, lat, lng, rent) {
     container.innerHTML = '<div id="pd-mini-map" style="width:100%;height:100%"></div>';
     const map = L.map('pd-mini-map', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ', maxZoom: 19
     }).addTo(map);
     const icon = L.divIcon({
       className: '',
