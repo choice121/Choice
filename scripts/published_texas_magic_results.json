@@ -1,0 +1,2044 @@
+{
+  "timestamp": "2026-10-16T20:39:37.731Z",
+  "share_token": "M282hRfY3Wg9tBMR7Cmx3HH4zC_vUVrJTJYqUBk5Hfg",
+  "share_id": "3924941b-5440-4ff4-88b5-d53eea3e15ac",
+  "share_url": "https://choice-properties-site.pages.dev/listings.html#share=M282hRfY3Wg9tBMR7Cmx3HH4zC_vUVrJTJYqUBk5Hfg",
+  "properties": [
+    {
+      "id": "10c7f9b3-d2cd-4dc9-be99-b0036969c8d7",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "712 S Crockett St, Sherman, TX 75090",
+      "description": "Constructed with historic character and completely updated with modern interior appointments, 712 S Crockett St is an attractive single-family home offering 1,412 square feet of single-story living in Sherman along the North Texas US-75 growth corridor. A broad covered front veranda greets visitors, opening into an expansive open-concept living and dining space enriched by recessed LED lighting, neutral color palettes, and durable wood-look plank flooring.\n\nThe kitchen features quartz countertops, white shaker cabinets, modern hardware, and a stainless steel appliance suite including a refrigerator, electric range and oven, dishwasher, and microwave. Two full bathrooms have been comprehensively remodeled with contemporary vanities, polished chrome fixtures, and custom ceramic tile surrounds. Both bedrooms offer peaceful layouts with abundant natural lighting and sizable closets. Dedicated washer and dryer hookups are located in a private utility room.\n\nOutside, the property occupies a generous quarter-acre parcel (11,025 square feet) with mature perimeter shade trees, a private concrete driveway, and an expansive fenced backyard ideal for pets and outdoor living. Situated within easy walking distance of local shops, dining, and Austin College, this home offers classic charm with modern convenience. Application Fee: $50. Pet-Friendly.",
+      "address": "712 S Crockett St",
+      "city": "Sherman",
+      "state": "TX",
+      "zip": "75090",
+      "county": "Grayson County",
+      "neighborhood": "Downtown Historic Corridor / Sherman",
+      "lat": 33.629748,
+      "lng": -96.609183,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1900,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "half_bathrooms": 0,
+      "total_bathrooms": 2,
+      "square_footage": 1412,
+      "lot_size_sqft": 11025,
+      "garage_spaces": 1,
+      "monthly_rent": 1250,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Private Driveway Parking",
+      "parking_fee": null,
+      "amenities": [
+        "Fully Modernized Historic Architecture",
+        "High-Efficiency Central HVAC",
+        "Two Full Contemporary Bathrooms",
+        "Quartz Countertops & Shaker Cabinets",
+        "Wood-Look Plank Flooring Throughout",
+        "Substantial 11,025 Sq. Ft. Homesite (0.25 Acres)",
+        "Covered Front Veranda with Decorative Railing",
+        "Expansive Fenced Rear Yard",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Stainless Steel Refrigerator",
+        "Electric Range / Oven",
+        "Dishwasher",
+        "Built-In Microwave",
+        "Washer/Dryer Hookups"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "Hookups",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:38.087629+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "6a5091e4-76e3-4c24-a938-99fb9cbee2e1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/ec8fac65-c7bc-4358-ab21-b9cd0ef0a9a2.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "b40f7fbc-dc21-4b10-9d66-a5705f06fc1a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d46449b5-6cff-48ec-98da-b1111fefe819.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "6cde0f7c-95fb-4089-8f17-82db2d123f3c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/3b540002-1592-43a2-a621-ae8cdc0fc872.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "1cacf4f9-3ae6-439c-a651-1143dc4755e0",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b6f21463-1414-44e5-a29b-17030e6615ed.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "960ee84f-f38d-4478-85e7-42dab6e6536f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d741468f-603d-4e70-9676-17721afb26d1.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "a11f6477-3e4a-4ce8-9a74-840670ed8b86",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/40434d11-60e4-4488-9dce-93ef3ac583bc.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "0a1ae598-db81-4ff9-92d2-36e59728e323",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e826f861-0926-45ab-ba37-e44bddb60575.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "26fc9f5a-4ff9-413a-90d7-e0702db32895",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/aa760d03-f4d0-4b6b-a16d-44132e5a9246.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "8d0f0c90-7fb0-4203-92f6-395b11e7f5db",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5d695c76-2154-444f-8a2a-90bfb898a988.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "5efe98e5-6c78-43a4-9f82-fcd5b38374b6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/9e7a134f-c1b2-4f95-8747-bc6d6f5a9771.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "599edeaa-ce9f-4933-a0e8-9a0eda57d6f6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/86c1a6d2-2b10-4752-a125-8b3d916d5b16.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "31d6b48f-c42a-4e2f-9a4c-15170edeeb92",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5970e435-772b-4762-a876-410db9c78ea2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "149bcc9e-9186-4063-9985-945021f6dc2e",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/37f1be8f-a6cf-4e20-a3dc-80f39c62a25d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        }
+      ]
+    },
+    {
+      "id": "2dff5464-7bbc-4921-b0ae-9f2b46a9384f",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "2832 Avenue I, Fort Worth, TX 76105",
+      "description": "Full of authentic architectural charm and modernized for daily comfort, 2832 Avenue I is an inviting single-family bungalow offering 902 square feet of functional living space in Fort Worth. A wide covered front porch extends a warm welcome, leading directly into an airy living room highlighted by gleaming hardwood floors, crisp trim, and tall double-hung windows that capture bright southwestern exposure throughout the afternoon.\n\nThe kitchen is organized with generous wood cabinetry, durable laminate countertops, a classic tile backsplash, and appliances including a refrigerator, gas range and oven, and overhead vent hood. The eat-in dining nook connects seamlessly to the cooking area for casual meals. Two restful bedrooms feature original hardwood flooring, ceiling fans, and well-proportioned wardrobe closets. The central bathroom offers clean ceramic tilework, an updated modern vanity, and a shower-tub combination. Dedicated laundry hookups are located in a convenient rear utility alcove.\n\nOutside, the property provides an expansive 6,247-square-foot parcel complete with perimeter fencing, mature trees, and a detached garage/workshop suitable for vehicle parking, gear storage, or creative projects. Located minutes from Texas Wesleyan University, downtown Fort Worth, and I-287, this detached residence delivers outstanding privacy and character. Application Fee: $50. Pet-Friendly.",
+      "address": "2832 Avenue I",
+      "city": "Fort Worth",
+      "state": "TX",
+      "zip": "76105",
+      "county": "Tarrant County",
+      "neighborhood": "Historic Polytechnic / Fort Worth",
+      "lat": 32.727871,
+      "lng": -97.283909,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1928,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "half_bathrooms": 0,
+      "total_bathrooms": 1,
+      "square_footage": 902,
+      "lot_size_sqft": 6247,
+      "garage_spaces": 1,
+      "monthly_rent": 1300,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Private Driveway + Detached Garage/Workshop",
+      "parking_fee": null,
+      "amenities": [
+        "Classic Craftsman Single-Family Architecture",
+        "Central Climate Control System",
+        "Refinished Hardwood Flooring",
+        "Covered Front Rocking-Chair Porch",
+        "Spacious Eat-In Kitchen",
+        "Expansive 6,247 Sq. Ft. Fenced Backyard",
+        "Detached Garage & Storage Space",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Refrigerator",
+        "Gas Range / Oven",
+        "Vent Hood",
+        "Washer/Dryer Hookups"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "Hookups",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:37.342252+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "abb45690-bbc4-4731-aa6f-c1dcaa7263a2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/22aeadee-dc6e-4e58-8753-66f55c674d6f.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "5709a8be-19a1-47a6-8079-8f209eb24857",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/092c25c0-6b29-4d65-95c7-041dc1794922.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "ea2f612b-d356-42bd-b2cc-bea4cb7efa57",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/ada05113-211b-47a8-a0ac-11cc998b6af2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "b2c435b0-5cb4-4507-8718-54913c7ea035",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/982bd082-6f4c-4c8f-8f02-256751d5962a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "016a272d-c991-4ff2-97fd-0f1b17d77a85",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2ab193a1-f307-427f-bcc1-098039232593.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "c6f08ee6-d7fb-4056-9353-f3b7ac6dc0e6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2faae812-6574-4128-9c93-32325f82bbad.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "5556d9f8-a09f-4119-8503-c3eec60f96b4",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4b8cfd32-c2e1-4bfa-a85f-b94b7cc139c0.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "d37d7738-1864-46da-9da0-2e64c71c3573",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/44a7bd6e-37b3-4919-90e4-9b1218e71f28.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "4b41c4d2-3d4b-4fd6-b1ff-95975d1b557b",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/033c4c48-5f07-40ce-af02-2f3756138207.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "51274f8e-f972-4164-842f-7339295212a1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e6e0f4f7-1b35-4f19-a55b-309a56096e6e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "543996be-c3b8-48f6-a030-7cd1805146a7",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/dccda256-dd01-4a7a-b455-54f20d69b39c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "523cf749-6fc7-4966-91a4-fe6e59d7dae1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5ad09cdd-7274-4bac-be4d-2386ffa74da5.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "63773357-378a-43a0-8a4d-7cf9f70e37d7",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/38cac567-a00e-4e72-a9a5-16c75eef763b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "fb5fd4c3-e340-4fe6-adf1-14516bd02bff",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7a4dcdda-e4d8-4968-91a9-afe36407d944.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "17b667ab-63c5-4cf2-9ebb-20cf39c7cc1a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/863dc6c5-ef0b-403b-a277-7b5e04674b67.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "24ab5b06-78e5-41e9-a602-338b94631ecb",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/af15b393-5f6d-4d98-aab3-e0e454cc63f3.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        }
+      ]
+    },
+    {
+      "id": "2e3100cf-2783-4828-a99e-5405bff53b85",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "5624 Shady Springs Trl, Fort Worth, TX 76179",
+      "description": "Situated in a quiet residential neighborhood in North Fort Worth near Saginaw, 5624 Shady Springs Trl is a single-story ranch residence providing 1,170 square feet of comfortable living area. The open floor plan unfolds into a vaulted living room with high architectural ceilings, low-maintenance wood-look vinyl plank flooring, and a handsome central fireplace that creates an inviting centerpiece for leisure and entertainment.\n\nThe kitchen features ample prep countertops, solid wood cabinets, a stainless steel sink overlooking the yard, and a complete appliance package including a refrigerator, electric range with oven, built-in microwave, and multi-cycle dishwasher. The adjoining dining area opens through sliding glass doors to the rear grounds. Both bedrooms feature ceiling fans and generous closet storage, while the central bathroom offers an updated vanity and a tub-shower combination. A separate utility space provides full washer and dryer connections.\n\nExterior highlights include a fully fenced backyard with established shade trees and an open lawn perfect for outdoor dining and pets, alongside an attached two-car garage offering secure vehicle parking and overhead storage. With quick access to Loop 820, US-287, and local community parks, this detached single-family home offers everyday convenience. Application Fee: $50. Pet-Friendly.",
+      "address": "5624 Shady Springs Trl",
+      "city": "Fort Worth",
+      "state": "TX",
+      "zip": "76179",
+      "county": "Tarrant County",
+      "neighborhood": "Saginaw / North Fort Worth",
+      "lat": 32.854827,
+      "lng": -97.407432,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1987,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "half_bathrooms": 0,
+      "total_bathrooms": 1,
+      "square_footage": 1170,
+      "lot_size_sqft": 5000,
+      "garage_spaces": 2,
+      "monthly_rent": 1250,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached 2-Car Garage + Private Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Single-Story Ranch Architecture",
+        "Central Air Conditioning & Forced-Air Heat",
+        "Soaring Vaulted Living Room Ceilings",
+        "Central Masonry Fireplace",
+        "Wood-Look Luxury Vinyl Flooring",
+        "Attached Two-Car Garage",
+        "Private Fenced Backyard Lawn with Shade Trees",
+        "Open Kitchen and Dining Layout",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Refrigerator",
+        "Electric Range / Oven",
+        "Dishwasher",
+        "Built-In Microwave",
+        "Full Washer/Dryer Hookups"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "Hookups",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:37.606219+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "d1e37130-4865-451a-9036-b8bfa37b6d69",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/46f5d0c9-6469-49ff-87e4-4708510e315b.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "d863613c-68bb-4d1d-8ab5-0607af646827",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b61f6e87-023f-4cc8-9ca7-1c7e69d41042.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "2977ce50-bcb8-4123-82f4-51e86d238550",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c6a4502a-aefd-4f35-9e3c-067e72b1b86e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "7f50bdf4-a3e6-4491-b051-eb058c81344a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/805acb23-f3f5-41da-9501-43ed49e6b224.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "efd1e63a-55a8-4035-8fce-c87d9cf9da14",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/a259b70a-3a3a-4eba-bfdb-6b502b0a01f7.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "069a16b9-87be-49bf-a988-0994a8f6bb08",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/47f589bd-d9d7-4961-954e-02fafcf056de.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "e2817bce-4449-4f3c-85c9-ef012a0d0944",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2a623287-4a58-403d-8944-96f22fd289bb.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "565dbec7-c0ae-4ebf-bab4-e1a4190edb02",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/944bbb2c-7a76-42bb-a165-70a817ed782a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "3d54df40-1269-424f-b50a-95365cde4f40",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/9918b26f-c7eb-4133-806c-11ddb0e7b28f.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "c5e6b273-d05b-4033-8c87-5fd978588f41",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/8e06e010-4a09-4349-af18-4f09e647bf81.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "44a94807-34fd-4571-84c4-e594539bd833",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d9315a9c-6d2b-4c99-998c-62456e684ab3.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "e003861d-07c3-4a2b-8ff1-c55793d70ceb",
+          "url": "https://images.opendoor.com/source/s3/cabinet-assets/production/storage/4c1cc067-0aba-4ae3-84ea-a17f0d4bab0b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "ffa49125-dcef-4c41-9608-8e96058ddef6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/0dfe660b-aff5-464e-ba00-38326425f812.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "daa2f4e1-7c80-428c-a345-4a0815bfd39f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e3e5c316-aa3c-43d1-9a8b-0f632701ddf5.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "ccc44498-318d-46b3-96ef-915124d5c91e",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/9cafe102-6d8a-4d9e-bb90-c94508401579.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        }
+      ]
+    },
+    {
+      "id": "51053988-73b0-469c-8dc0-bc9f9788c309",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "1856 Carl St, Fort Worth, TX 76103",
+      "description": "Set on a remarkable 0.3-acre parcel (13,000 square feet) in historic Meadowbrook, 1856 Carl St is a beautifully modernized craftsman cottage offering 1,338 square feet of single-level living. The home retains its architectural warmth while showcasing contemporary upgrades, beginning with an inviting covered front porch and an expansive living room featuring fresh designer paint and continuous wood-look flooring.\n\nThe renovated kitchen features quartz countertops, classic shaker cabinetry, custom tile backsplashes, and stainless steel appliances including a refrigerator, gas cooktop and oven, dishwasher, and microwave. Uniquely offering two full modernized bathrooms, the home ensures complete privacy with custom tilework, modern vanity mirrors, and upgraded plumbing fixtures. Both bedrooms are generously sized with ceiling fans and ample wardrobe storage. An interior laundry area includes an in-unit washer and dryer.\n\nThe exterior grounds are a rare standout, boasting an expansive fenced yard with mature native trees, an open concrete rear patio, and a covered carport accessible via a private gated driveway. Conveniently positioned near Meadowbrook Golf Course, I-30, and downtown Fort Worth, this home offers exceptional space and privacy. Application Fee: $50. Pet-Friendly.",
+      "address": "1856 Carl St",
+      "city": "Fort Worth",
+      "state": "TX",
+      "zip": "76103",
+      "county": "Tarrant County",
+      "neighborhood": "Historic Meadowbrook / Fort Worth",
+      "lat": 32.750076,
+      "lng": -97.255584,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1928,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "half_bathrooms": 0,
+      "total_bathrooms": 2,
+      "square_footage": 1338,
+      "lot_size_sqft": 13000,
+      "garage_spaces": 1,
+      "monthly_rent": 1300,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Covered Carport + Gated Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Renovated Craftsman Cottage Architecture",
+        "Central Heating & Air Conditioning",
+        "Oversized 0.3-Acre Homesite (13,000 Sq. Ft. Lot)",
+        "Two Full Renovated Bathrooms",
+        "Quartz Kitchen Countertops with Designer Tile",
+        "Covered Front Porch & Rear Entertaining Patio",
+        "Gated Driveway with Sheltered Carport",
+        "In-Unit Washer and Dryer Included",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Stainless Steel Refrigerator",
+        "Gas Cooktop & Oven",
+        "Dishwasher",
+        "Over-the-Range Microwave",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:37.820469+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "3896f480-be71-4599-8b70-9b98895fb4e4",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/a31a6828-fe87-408c-b4bc-ae29ed33e57e.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "9ca7d365-e62b-4368-9b52-24bb31c31808",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d69f3510-a3de-4278-9fe9-d5e36c265992.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "5f970803-e33e-4234-82bb-afbd60a6b3d5",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4de44d1a-be3c-4e78-b1c1-df75a2b974ff.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "c1f1bf92-aa7f-4f98-9e31-6135f6a81322",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/27886bbd-ea4c-430b-86e6-82bbede9e458.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "57f664e0-f9cb-47af-b3cb-4d319c09c55c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/31df5ad4-cd95-440a-bde3-83ae206e72c2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "31ee0577-5b93-4e04-9a7a-92f0e328fd15",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/09c39357-9f13-45b2-b850-63d5c250fc00.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "afeafd30-abc0-4dac-810b-7c364ea94490",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/80c898ce-e84e-416d-a89b-665c4d5c857a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "5cea3f22-cf25-4e45-9980-3843c881c46a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e662695c-5c2b-40a3-ad22-1b38d2cea851.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "6c4081fe-a82c-4c75-aa43-7116c9e1efab",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/31f0f565-8403-423e-80f4-dd7524475bfb.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "c84d229a-7d40-49c9-aa00-5763df84ebab",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/620926ec-1409-4811-940f-0f82b260b007.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "981a3e83-03f4-4e64-880b-af5ccfc6dbdd",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5352cffb-1ab1-4e0e-bc3c-dcf184eaa043.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "49bd096c-7e32-4cd3-8ca4-f8dd27674176",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/453215d7-bc3a-44dc-873d-cf0083c5eb41.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "583764c1-d0f8-48d7-ade6-9c3d05de8003",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/33e7962d-22cf-4d4e-baaf-f1acceda1e50.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "5c4bd15c-e9e5-497a-8d84-ec9e3aa357fc",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7ec44dbd-06cb-4964-bae9-31d9dcfdb189.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "fa9205b7-50ae-4830-beab-a6e6ba866edc",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/a96acf28-754e-4135-ba5f-85570be2469b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "71d785ad-ded4-4fdd-ba6f-eb2f2d19acef",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/044322af-8527-4972-89d4-b1028f63b0ab.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        },
+        {
+          "id": "0f0f56dd-1c30-46fd-991a-e083450c05d8",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/3da9abdb-f5ce-4a29-a852-567fc653ba51.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 17
+        }
+      ]
+    },
+    {
+      "id": "6177a40e-6d04-4bad-bed2-053bf2fa3e47",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "421 N 3rd St, Jacksboro, TX 76458",
+      "description": "Characterized by welcoming traditional architecture, 421 N 3rd St is a spacious two-story single-family home providing 1,478 square feet of finished living space in Jacksboro. A generous covered front porch extends across the facade, leading into a light-filled living room featuring durable wood-look laminate flooring, large sash windows, and an easy flow toward the formal dining and kitchen spaces.\n\nThe kitchen is equipped with ample prep counters, solid wood cabinetry, a dual-basin sink, and appliances including a refrigerator, electric range with oven, dishwasher, and microwave. The home features two full bathrooms plus an additional main-level half-bath for guests. Each bedroom offers private en-suite bathroom access, generous closet storage, and ceiling fans. A dedicated laundry room provides washer and dryer hookups with supplemental utility shelving.\n\nOutside, the 8,233-square-foot homesite features mature pecan trees, a covered parking carport, and a spacious rear yard suitable for outdoor gatherings and pets. Positioned moments from the town square, Fort Richardson State Historic Site, and TX-199, this home offers spacious residential comfort in North Texas. Application Fee: $50. Pet-Friendly.",
+      "address": "421 N 3rd St",
+      "city": "Jacksboro",
+      "state": "TX",
+      "zip": "76458",
+      "county": "Jack County",
+      "neighborhood": "Historic Jacksboro / North Texas",
+      "lat": 33.222495,
+      "lng": -98.167531,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1930,
+      "floors": 2,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2.5,
+      "half_bathrooms": 1,
+      "total_bathrooms": 2.5,
+      "square_footage": 1478,
+      "lot_size_sqft": 8233,
+      "garage_spaces": 1,
+      "monthly_rent": 1300,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Covered Carport + Private Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Two-Story Traditional Single-Family Home",
+        "Central Climate Control System",
+        "Two Full En-Suite Bathrooms plus Guest Half-Bath",
+        "Wood-Look Laminate Flooring",
+        "Covered Front Veranda with Ceiling Fan",
+        "Generous 8,233 Sq. Ft. Homesite",
+        "Covered Parking Carport",
+        "Dedicated Interior Laundry Room",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Refrigerator",
+        "Electric Range / Oven",
+        "Dishwasher",
+        "Over-the-Range Microwave",
+        "Washer/Dryer Hookups"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "Hookups",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:38.301705+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "e0f2b1ad-0743-403d-a5e9-a8f303070044",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/ba1c6c15-bc0e-4178-8679-00009c4bb2fb.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "2c44f86e-dd9a-4244-b2e4-4e747d8c51e2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2e4337a4-c86d-466a-a554-ab8bdebf9348.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "7e96f8e6-5953-44a4-843f-4a90aeda3ffe",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/785d743e-d001-4e16-8e15-e6e267077f15.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "719ca2d6-d13b-4a82-85fa-534534ccbcb3",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/da2ed923-460c-44d8-8f53-de9fd19c35a1.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "35b8ae59-dae2-496a-96c7-d94452ac9dfc",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d96606fc-2c17-4f09-b599-39940528e4c7.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "aea191e5-dbfc-4f64-af78-c90352588d53",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/00963a75-3214-4975-8562-c6abcc38e241.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "504afc42-4a7c-4bf8-b59f-6d75466f6eb0",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/1de12dfb-0eeb-4cf6-88fd-a80d30ba9646.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "d1ce7894-8f08-4b21-a5ee-c03b673c29d0",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/ad76731f-0d0c-4661-8630-9046b82fcbe1.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "0d32feec-0a43-49d2-ae49-db5913ecd7e2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b138642e-26ba-42d7-8c9c-2b47f8a937ff.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "9c8abc45-e5e1-4fa5-b17b-1b68bbf9a953",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/0f194e1c-b1f5-487c-8f57-b2861a043779.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "e6a49df2-284f-4f04-8ecd-311fdba6ada8",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/69d62bfa-368c-4e7d-8423-b1b5c13bbca9.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "334c76e2-de26-4c4c-9f5e-453300aab660",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/0b140aff-fdee-46f9-ad72-845ad701586b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "f4c5eed2-e732-4aa3-82ad-0a4ba49aefe5",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c546f10a-9c76-49df-9862-fa616e4b46ca.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "c13e3f2a-8a57-4cbc-89a6-0b31166c2808",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/662fdcec-70c3-4304-a2bc-062a4d124add.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "3502a71f-07c4-41f4-ba66-d55d6a3cf16c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6cdd81fa-650e-4bc4-aa92-1c2a5d40ba7e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "468bac59-1ad0-4add-8674-64671785e261",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7b338555-7920-4ab4-be03-f9e46fcc21ca.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        },
+        {
+          "id": "a6c98341-12ce-402f-b861-ba17bb52949c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/70e0c250-c927-4095-882a-fb5f6c3aef69.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 17
+        },
+        {
+          "id": "a0d9582c-c435-400f-b7ad-e63fc21afa26",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2fafff16-cf59-498d-bafb-297dd3a2481a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 18
+        },
+        {
+          "id": "eaceae8a-553c-498b-8f92-694732fb4682",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/f1b262c1-638e-4b33-8155-324740f6e80f.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 19
+        }
+      ]
+    },
+    {
+      "id": "7642f69c-7df9-4c6f-8aa8-516b433b10fd",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "2739 April Hill Ln, Dallas, TX 75287",
+      "description": "Offering 1,283 square feet of comfortable single-story living in the sought-after North Dallas corridor near Plano and Addison, 2739 April Hill Ln presents a versatile two-bedroom residence. The interior flow centers around an expansive living room defined by dramatic vaulted ceilings, wood-style flooring, and a handsome brick hearth fireplace that anchors the gathering space. Generous front windows draw natural daylight across the room, transitioning easily toward the open dining area and bright culinary kitchen.\n\nThe kitchen is equipped with expansive countertop space, crisp cabinetry, and an itemized appliance inventory including refrigerator, electric range and oven, dishwasher, microwave, and garbage disposal. Two full bathrooms offer modern fixtures, generous vanity mirrors, and shower-tub combinations. Both bedrooms deliver spacious dimensions with deep closet storage, highlighted by a quiet primary suite overlooking the private rear grounds. A dedicated interior laundry space comes fully equipped with in-unit washer and dryer.\n\nOutdoors, the expansive 8,280-square-foot homesite features an enclosed backyard with wood privacy fencing and a poured concrete patio ideal for outdoor relaxation. An attached two-car garage provides secure vehicle parking and supplemental workshop storage. Situated moments from the Dallas North Tollway, President George Bush Turnpike, and premier dining destinations, this home pairs convenience with residential tranquility. Application Fee: $50. Pet-Friendly.",
+      "address": "2739 April Hill Ln",
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75287",
+      "county": "Dallas County",
+      "neighborhood": "Far North Dallas / Plano Corridor",
+      "lat": 33.009778,
+      "lng": -96.863001,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 1983,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "half_bathrooms": 0,
+      "total_bathrooms": 2,
+      "square_footage": 1283,
+      "lot_size_sqft": 8280,
+      "garage_spaces": 2,
+      "monthly_rent": 1250,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached 2-Car Garage + Private Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Central Air Conditioning & Forced-Air Heating",
+        "Vaulted Living Room Ceilings with Exposed Beam Accent",
+        "Wood-Burning Brick Fireplace",
+        "Attached Two-Car Garage",
+        "Private Fenced Backyard with Concrete Patio",
+        "Hardwood-Style Flooring",
+        "Primary Suite with Dedicated Walk-In Closet",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Refrigerator",
+        "Dishwasher",
+        "Electric Range / Oven",
+        "Microwave",
+        "Garbage Disposal",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:36.069635+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "26d704e3-a48b-4de7-851e-bd49f0751092",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/8b7353e5-0b18-4ca5-8d30-fb2edb981b15.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "da8d0759-5017-49f3-8383-bf5e667f1a7c",
+          "url": "https://images.opendoor.com/source/s3/cabinet-assets/production/storage/487a6cc6-8396-5104-b7e5-43153c91bdaf.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "c461766e-442b-44f3-b3c7-410211e97ecf",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7cd82c43-d611-45c2-a155-d39b9c31c582.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "9c3096b2-75d5-46d1-b60f-5d6b1cc16902",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/a4562115-e4ca-4440-a9cf-738c22aaa620.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "ca4808c1-aba0-4107-a86f-205a502001d2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/72e94bdc-14e0-43bf-8352-ab108caeadb1.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "7aa2b97d-8660-4ffc-87f0-1e9076044330",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4c5ea2bb-e057-4d37-b5f6-5e07a103bf12.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "48e7c535-337d-43b9-95de-03ba46192be4",
+          "url": "https://images.opendoor.com/source/s3/cabinet-assets/production/storage/380ce556-9abe-5c56-b362-c4e62241e9d2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "f761d420-445e-4417-a5de-16ac76ed945a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/0f7a9133-5c7d-40fe-98e6-6b5c13aafd52.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "7537b2c8-7c4a-4c61-8961-bd9ab92617fa",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5b41dfea-fa75-427e-a409-6beac4c1e81e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "cbbf024e-08b0-40e4-b3a5-098f5e73502a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4ddc9e9d-6771-444f-8a6f-04143ccdae0b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "5c338ec8-1224-402d-a6c3-95f19322afe8",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/bc967edc-c0e1-4cf6-8fb7-f7ef2f7f685c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "a7db5646-c24a-456f-92c1-bffd1093c6ee",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5ee14246-0e55-48ea-96bd-4643df2b3dac.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "7f359b7d-4506-4a05-8940-fc63aa51f744",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/255d3cc3-b64b-47cf-a406-4f726c002ca6.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "71070db0-ff3b-4742-b136-dc3c99ba4ea2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4ec47566-e634-4500-804b-6dc66e54b8ec.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        }
+      ]
+    },
+    {
+      "id": "8055441a-6243-4ef9-bf8b-a268d5f16a7c",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "13324 Pandora Cir, Dallas, TX 75238",
+      "description": "Nestled in the Lake Highlands enclave bordering Richardson, 13324 Pandora Cir is an architectural two-story townhome offering 1,589 square feet of thoughtfully arranged living space. The main level welcomes you into an open living room centered around a clean contemporary fireplace, recessed display shelving, and tall sliding glass doors that open directly onto a private walled courtyard patio. Crisp neutral paint pairs smoothly with durable wood-plank flooring throughout the core living and dining zones.\n\nThe kitchen is designed for seamless meal preparation, featuring clean solid countertops, abundant upper and lower cabinetry, and complete appliances including a stainless steel refrigerator, electric range and oven, multi-cycle dishwasher, and built-in microwave. A convenient powder room vanity serves visitors on the ground level. Upstairs, two expansive dual-primary suites each feature dedicated private full en-suite bathrooms, oversized mirrored vanities, and deep walk-in closet space. In-unit washer and dryer units are positioned in an upstairs laundry closet.\n\nExterior living highlights a tranquil paved courtyard garden patio connecting the home directly to an attached two-car garage with automated entry. Located minutes from White Rock Lake, Lake Highlands town center, and North Central Expressway (US-75), this residence offers effortless access across the Dallas-Fort Worth metroplex. Application Fee: $50. Pet-Friendly.",
+      "address": "13324 Pandora Cir",
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75238",
+      "county": "Dallas County",
+      "neighborhood": "Lake Highlands / Richardson Border",
+      "lat": 32.87335,
+      "lng": -96.690668,
+      "property_type": "TOWNHOUSE",
+      "year_built": 1985,
+      "floors": 2,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2.5,
+      "half_bathrooms": 1,
+      "total_bathrooms": 2.5,
+      "square_footage": 1589,
+      "lot_size_sqft": 3904,
+      "garage_spaces": 2,
+      "monthly_rent": 1300,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached 2-Car Garage",
+      "parking_fee": null,
+      "amenities": [
+        "Multi-Level Townhome Architecture",
+        "Central Air Conditioning & Heating",
+        "Dual Primary Bedroom En-Suite Baths",
+        "Ground-Floor Powder Room",
+        "Wood Plank Style Flooring",
+        "Wood-Burning Living Room Fireplace",
+        "Private Enclosed Courtyard Patio",
+        "Attached Two-Car Garage",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Stainless Steel Refrigerator",
+        "Dishwasher",
+        "Electric Range / Oven",
+        "Built-In Microwave",
+        "Garbage Disposal",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:36.644835+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "a10683a2-ceb3-44d6-973c-6dcdbe2a4172",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e891aade-4135-400c-b830-6a858cd2fdde.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "bbd46d54-6b29-4ac1-a9dc-d5da25d33b56",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6c66434d-a1ad-45bb-9e29-4562c70cdd76.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "c36b0628-a115-4b82-af55-6fcc26a2d885",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/61219623-55ee-4930-9e4f-dc60ef1248c2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "27b04b7e-e222-4923-bc70-32b0cb1a23b4",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6f5e879c-20c8-497e-9843-b0cead11ee10.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "339c5939-acbf-413a-a051-30f434eb6a25",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/49d1f41c-f3d8-4f99-9a8c-16c3ff480eb9.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "27c0f1e1-a1b8-4e99-a25f-9cae3015d6b0",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c744206b-3986-4ab2-a1ec-e4370b9c6dc4.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "ec15aa2a-e929-414d-ade1-f569da4fabf1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b7867f85-c7d7-47ca-b0e5-39c744e4a05d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "87f3fd40-dce8-463d-8706-004dd1bce475",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/a80295c7-8a15-4797-97ca-07d3f3f67dc8.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "f2fba24f-3229-475a-b51b-a3f3070b995e",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d950c841-2590-4f68-9d92-78b62e2b41e0.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "b17b1e12-fad3-4e41-998c-268bbc8ee668",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/26543880-a58b-496c-a34f-25ff4f857e1c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "37614e4b-8128-4705-8e1a-250edd76f0d1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/21c23159-98a5-4696-9a69-b8f3c24a5114.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "717ebc4b-cff5-4181-83b7-1274b516d493",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/fe6a63d6-7536-424c-a05f-cd88bbb8c294.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "675e3c47-c876-4a85-879a-d51777096084",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/792bea06-2fc6-4ca6-b1a4-ede06d1ce022.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "843409c5-3dc8-43ae-836a-e32a8ffc21c3",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7831d8cb-0f92-4bc3-964b-785b7dadf490.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "14421fed-0097-40cb-88a0-f31118b0ceb6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/77e95740-8d10-4841-be19-29d8cb84c8de.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "54ab5493-5782-4564-a091-0bc91a0b3c93",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c2cb1519-2d66-46f6-907f-3658d1eb3769.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        },
+        {
+          "id": "c105ff26-a905-448e-8c66-3bc47ec279c9",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7754b1b6-f2dc-4293-a7c4-af9d60663502.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 17
+        }
+      ]
+    },
+    {
+      "id": "92f0c2a1-3e14-4d3c-ba3b-ac2e555c85a2",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "3326 Briaroaks Dr, Garland, TX 75044",
+      "description": "Positioned along the vibrant Richardson-Garland border just minutes from CityLine and Spring Creek Forest Preserve, 3326 Briaroaks Dr is a well-maintained two-story townhome featuring 1,161 square feet of efficient living space. Entering the home, dramatic two-story vaulted ceilings elevate the primary living room, where a corner brick fireplace creates an inviting focal point alongside wide sliding glass doors that look out across the private back patio.\n\nThe adjoining kitchen features bright white cabinetry, durable tile flooring, breakfast bar seating, and a complete appliance lineup including a stainless steel refrigerator, electric range and oven, built-in dishwasher, and microwave. A main-floor powder room provides exceptional guest convenience. On the second floor, two sizable bedrooms offer ample natural light, ceiling fans, and deep double-door closets, serviced by a well-appointed full bathroom with an updated vanity and tiled shower-tub surround. An interior utility closet hosts an in-unit washer and dryer.\n\nOutdoor spaces include a fully fenced backyard with a poured concrete patio suitable for morning coffee or pet play, paired with an attached garage and private driveway. With direct connectivity to President George Bush Turnpike (SH-190) and Firewheel Town Center, this property combines modern comfort with superb commuter convenience. Application Fee: $50. Pet-Friendly.",
+      "address": "3326 Briaroaks Dr",
+      "city": "Garland",
+      "state": "TX",
+      "zip": "75044",
+      "county": "Dallas County",
+      "neighborhood": "North Garland / Richardson Border",
+      "lat": 32.934804,
+      "lng": -96.680048,
+      "property_type": "TOWNHOUSE",
+      "year_built": 1984,
+      "floors": 2,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 1.5,
+      "half_bathrooms": 1,
+      "total_bathrooms": 1.5,
+      "square_footage": 1161,
+      "lot_size_sqft": 4051,
+      "garage_spaces": 1,
+      "monthly_rent": 1250,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached Garage + Private Concrete Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Two-Story Townhouse Layout",
+        "High-Efficiency Central HVAC",
+        "Dramatic Vaulted Living Room Ceilings",
+        "Corner Brick Fireplace",
+        "Modern Wood-Look & Ceramic Tile Flooring",
+        "Private Fenced Yard with Walkout Patio",
+        "Attached 1-Car Garage + Driveway Parking",
+        "Upper-Level Bedrooms with Spacious Closets",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Stainless Steel Refrigerator",
+        "Multi-Cycle Dishwasher",
+        "Electric Range / Oven",
+        "Over-the-Range Microwave",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:36.95952+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "1d16b138-35ca-450b-8fbc-4748576ae5db",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/bc7838f9-23b3-4992-bbaa-d60274d1fae0.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "044eb57a-e431-4a65-a2cf-170bee7609e6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/73d52b8e-acac-4f35-88e2-08a9df36ac32.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "7206932c-1103-4fef-8fda-86f6a44f4dd2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/8e41a00c-48e9-436a-886e-5514f2678c97.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "7999eb1f-73a7-435c-a623-08a0973d62b3",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/1c2139de-be47-47fb-9180-be73914e21df.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "96569aad-cedd-440c-ab35-6c29bee09b17",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c40bcb93-d098-4682-8881-31dc0fe3815e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "fcf29d18-6460-4553-a5ca-b71c93faca4f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6a5d56d5-9497-4c30-82f8-69313d03e042.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "81926902-81bc-4325-8831-1964d33b4ca4",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5b9b9409-19d1-4d8c-b665-6c45f9923b41.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "deee10ea-5d91-472a-8f7c-6139acfc3941",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/395c47c7-3d54-4db7-8214-c92e951a7161.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "573814fe-a14a-47ed-b42f-b2af074dbc4b",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/40410998-adae-490e-8b2c-5be332054ab1.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "5daeba00-964e-42ad-9dad-d904bdab4d4f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/3f6cb478-4262-4079-b834-bc252c6891f5.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "fd16c1f7-b257-4b6f-895f-7256d42d98b1",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/26881645-483f-4dea-92f6-eeef15a03705.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "9f6ed6e4-a901-4519-8bc2-01833d39a73a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/27a5903f-d829-4557-8cc0-ebc3baadce31.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "f2852624-4952-42aa-8f5a-1772c2645934",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/f576a588-7eb9-499b-933d-288c59ea1d16.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "33112629-8db8-438f-a3db-35d8a6651901",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c601bf3e-6117-4c9e-974e-5d5ea6cfa92a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "0d5bbec1-b25f-40ee-9172-c8734fa63746",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d52e3ecc-a2e4-4cc8-9bf2-50330fdb00a7.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "415dce78-10b7-40e9-b6e1-1c726a63dd1d",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2de2c60e-e558-45c4-ae87-5a0d3887ef4b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        },
+        {
+          "id": "39c9ea0e-6772-48a1-8919-0c9770134ebd",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c493304d-3aa1-4583-a0ec-547f12eb1fc2.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 17
+        },
+        {
+          "id": "67488284-bc53-4f6d-aa08-206ba0b28a93",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/739b0283-e30f-48f2-93cd-4b470c9bfd3a.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 18
+        },
+        {
+          "id": "0e7ffab8-6023-44f6-a58c-9b202554410c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4458e6e0-3fef-4ce2-b4bb-d3b9719ac902.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 19
+        },
+        {
+          "id": "7192ef2f-c934-4ed3-814b-b3d25ff5e820",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/1e31d0f9-2790-40d6-8580-822f26a9cf9b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 20
+        },
+        {
+          "id": "c100c56c-bed6-4a47-aaa8-6df8c5fa1633",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4eacba78-793d-40cf-bf4b-1b64e408edf9.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 21
+        },
+        {
+          "id": "a3d7366d-cee4-45d9-bf9c-6d136f3a8aaf",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/dc53110d-f8c0-4374-a443-953e27a07e77.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 22
+        },
+        {
+          "id": "acd19200-373a-45ba-9d5b-e4f059bd3c7a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/dbfa8626-a942-4a41-8c82-311b55eee694.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 23
+        }
+      ]
+    },
+    {
+      "id": "c8b641da-896c-4c9a-adcf-94ccae0d054c",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "205 Private Road 6980, Alba, TX 75410",
+      "description": "Resting on nearly two pristine wooded acres (84,245 square feet) in Alba near world-renowned Lake Fork, 205 Private Road 6980 is a custom single-story country home delivering 1,736 square feet of peaceful residential living. Built in 2005, the interior opens into an impressive great room accentuated by soaring vaulted ceilings, rustic exposed cedar beams, and expansive picture windows framing panoramic woodland views.\n\nThe culinary center features an open layout with an expansive prep island, solid oak cabinetry, ceramic tile floors, and a complete appliance package including refrigerator, electric range and oven, dishwasher, and built-in microwave. The primary suite serves as a serene private retreat, complete with a walk-in wardrobe and an en-suite bath featuring a deep garden soaking tub, separate shower, and double vanity. The secondary bedroom is equally generous, supported by a full hall bathroom. An interior laundry room comes equipped with an in-unit washer and dryer.\n\nExterior living is defined by total privacy, offering covered front and rear verandas surrounded by mature pine and hardwood trees, alongside an attached two-car garage with extensive parking for vehicles, boats, and outdoor gear. Located just off US-69, this property offers unmatched acreage living. Application Fee: $50. Pet-Friendly.",
+      "address": "205 Private Road 6980",
+      "city": "Alba",
+      "state": "TX",
+      "zip": "75410",
+      "county": "Wood County",
+      "neighborhood": "Lake Fork Woodland Retreat / Alba",
+      "lat": 32.717185,
+      "lng": -95.606255,
+      "property_type": "SINGLE_FAMILY",
+      "year_built": 2005,
+      "floors": 1,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "half_bathrooms": 0,
+      "total_bathrooms": 2,
+      "square_footage": 1736,
+      "lot_size_sqft": 84245,
+      "garage_spaces": 2,
+      "monthly_rent": 1250,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached 2-Car Garage + Oversized Paved Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "Custom Single-Story Home on 1.93 Wooded Acres (84,245 Sq. Ft.)",
+        "High-Efficiency Central Air Conditioning & Heating",
+        "Dramatic Vaulted Ceilings with Exposed Cedar Beams",
+        "Open Great Room with Center Island Kitchen",
+        "Attached Two-Car Garage with Ample Workshop Space",
+        "Large Primary Bedroom Suite with Garden Soaking Tub",
+        "Covered Front and Rear Patios Overlooking Natural Woods",
+        "Minutes from Renowned Lake Fork Waters",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Refrigerator",
+        "Electric Range / Oven",
+        "Dishwasher",
+        "Built-In Microwave",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:38.501162+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "a238859d-fe29-455d-a178-c7926aa84322",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/54911908-2869-482b-b999-a53aafbef0f4.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "e5a8edfa-eff8-4a06-ae36-5f9bf1776a5f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2bf35fbd-d6a9-4938-a954-020ceceba6cd.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "ed540eb2-0a67-42d5-9953-3416387ae0f8",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/f4ceb67e-5709-41bd-bd23-4816c92356d5.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "98e40faa-12e8-4908-b0bb-7a2b4358e73c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/572227a6-6bcb-4c47-9c0c-c74fb4631155.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "d901db16-a112-41d2-8003-f84633b1c371",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4c502f83-22ee-49d9-9321-1f1113b49761.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "acb8d02c-6dcb-40cd-847c-08cba306b16a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/39135e04-3586-4442-96e0-aaca6f18fcdd.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "bcff86c1-514e-4a4c-bd22-06e187bcbdde",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4d815bfc-ead9-4b12-b7b8-ba9ddcd9a527.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "c8883096-9647-405e-8779-5430820b8425",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/bf275604-52de-46d1-a503-081d04ec8d3d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "181a5dcc-02d0-4786-837b-37338fd7f351",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/54d53d07-8717-45d7-afc7-e603e9829d2c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "d41b35d2-7244-47c5-8c17-6c23a1660e13",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/3b1c2a8d-ef7d-4084-9688-f813ee6dfa94.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "dc53e71f-88f9-4d53-b08f-1cc90d41b4fa",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/914644a5-8c9e-478a-94fa-9e972d4026a9.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "261c508c-b7db-4a91-ad10-4eaef59ca2e3",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/154b8970-c26b-4452-a8b0-72a67465eb0d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "1afe7369-eca3-4a7a-9f10-d11ea409cc45",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2e70e4da-6cb5-4e4d-b52a-22859905d406.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "2a4d747f-6939-4c3f-8664-e46fba31948c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2f3f4039-68ca-40df-b2af-2ea89ceb473e.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "a19b4beb-c50f-4260-96c2-c9ce6eaede61",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/739d063f-3b9f-46d0-9abb-248b49298ff8.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        }
+      ]
+    },
+    {
+      "id": "c9e0f34c-8707-48f3-85aa-1dd2847f80a9",
+      "landlord_id": null,
+      "status": "private_placement",
+      "title": "172 Prairie Springs Loop, Georgetown, TX 78626",
+      "description": "Constructed in 2021 with contemporary flair, 172 Prairie Springs Loop is a sleek two-story townhome featuring 1,056 square feet of energy-efficient living in Georgetown. The ground floor showcases an open-concept great room with clean modern walls, recessed lighting, and durable luxury vinyl plank flooring that extends across the living, dining, and kitchen areas.\n\nThe kitchen is equipped with polished granite countertops, crisp white cabinetry, a white subway tile backsplash, a pantry closet, and stainless steel appliances including a refrigerator, smooth-top electric range, dishwasher, and microwave. Upstairs, two expansive bedroom suites each feature their own dedicated private full bathroom, plush neutral carpeting, and generous walk-in closets. A dedicated upstairs laundry closet includes an in-unit washer and dryer for everyday convenience.\n\nOutdoors, enjoy a private fenced backyard with a covered patio for quiet evenings, as well as an attached single-car garage and private driveway. Positioned moments from historic Georgetown Square, Southwestern University, and I-35, this 2021 townhome provides low-maintenance living with modern style. Application Fee: $50. Pet-Friendly.",
+      "address": "172 Prairie Springs Loop",
+      "city": "Georgetown",
+      "state": "TX",
+      "zip": "78626",
+      "county": "Williamson County",
+      "neighborhood": "Prairie Springs / Georgetown Corridor",
+      "lat": 30.660677,
+      "lng": -97.65391,
+      "property_type": "TOWNHOUSE",
+      "year_built": 2001,
+      "floors": 2,
+      "unit_number": null,
+      "total_units": null,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "half_bathrooms": 0,
+      "total_bathrooms": 2,
+      "square_footage": 1056,
+      "lot_size_sqft": 5702,
+      "garage_spaces": 1,
+      "monthly_rent": 1300,
+      "application_fee": 50,
+      "pet_deposit": null,
+      "admin_fee": null,
+      "move_in_special": null,
+      "pets_allowed": true,
+      "pet_details": null,
+      "pet_weight_limit": null,
+      "pet_types_allowed": [
+        "Dogs",
+        "Cats"
+      ],
+      "parking": "Attached 1-Car Garage + Private Driveway",
+      "parking_fee": null,
+      "amenities": [
+        "2021 Contemporary Townhome Construction",
+        "High-Efficiency Central HVAC & Programmable Thermostat",
+        "Granite Kitchen Countertops with Ceramic Subway Backsplash",
+        "Luxury Vinyl Plank Flooring on Main Level",
+        "Two Full En-Suite Bathrooms on Upper Level",
+        "Private Fenced Rear Yard with Covered Patio",
+        "Attached 1-Car Garage with Automated Door Opener",
+        "In-Unit Washer and Dryer Included",
+        "Pet-Friendly (Dogs & Cats Welcome)"
+      ],
+      "appliances": [
+        "Stainless Steel Refrigerator",
+        "Smooth-Top Electric Range",
+        "Dishwasher",
+        "Over-the-Range Microwave",
+        "In-Unit Washer & Dryer"
+      ],
+      "utilities_included": null,
+      "flooring": null,
+      "heating_type": "Central Heat",
+      "cooling_type": "Central Air Conditioning",
+      "laundry_type": "In Unit",
+      "location_context": null,
+      "virtual_tour_url": null,
+      "has_basement": false,
+      "has_central_air": true,
+      "listed_at": null,
+      "imported_at": null,
+      "created_at": "2026-10-16T18:13:38.717218+00:00",
+      "featured": false,
+      "minimum_income_multiplier": null,
+      "minimum_credit_score": null,
+      "landlords": null,
+      "property_photos": [
+        {
+          "id": "dc831abf-9491-49cb-ba25-706a2e40da83",
+          "url": "https://images.opendoor.com/source/s3/cabinet-assets/production/storage/f6d1f689-1bbc-4d40-ad4c-edca60fe3532.jpg",
+          "file_id": null,
+          "is_hero": true,
+          "display_order": 1
+        },
+        {
+          "id": "5066ee4d-3e6c-42a6-855d-69620cecfbf2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/d5d34f83-d797-40b6-843a-be280c58169d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 2
+        },
+        {
+          "id": "68537dab-b4f4-47e3-857b-703d04c774c6",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/5826e0e7-e17a-436d-a946-7e10bb808be6.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 3
+        },
+        {
+          "id": "a10a59c2-8c56-4220-8d74-7b9b6f91975c",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6c75ec84-7c0b-49c6-91c9-28728421c3ab.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 4
+        },
+        {
+          "id": "6af2012c-dce0-4bed-b5af-99712f821468",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/bf25622b-cddb-412b-9b75-b67a2c556735.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 5
+        },
+        {
+          "id": "3808010a-027b-488e-827a-6fb58f081265",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e8aae4bf-94a5-4b75-88ce-263a1a762b06.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 6
+        },
+        {
+          "id": "429f0788-befc-4b41-b62e-3d36c0edfd42",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b8c5f966-7e36-4c1e-8ae3-2514638abe53.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 7
+        },
+        {
+          "id": "2d677041-d133-40e2-a2e6-011f1f1284d8",
+          "url": "https://images.opendoor.com/source/s3/cabinet-assets/production/storage/2b61510a-002c-45a5-ab2c-960595b9effb.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 8
+        },
+        {
+          "id": "fda12343-e1f0-44f2-b391-b23e9cc8975f",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/cfa027e2-adff-43d6-8c3a-cf206a626be7.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 9
+        },
+        {
+          "id": "7ff32578-08ac-4d25-8045-9ce24dac2e43",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/6d5e4ffb-8639-4f0c-b458-6d357c79214f.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 10
+        },
+        {
+          "id": "c7429947-c125-4744-8127-0f589d1e4983",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/31fc53fb-1ed1-40d2-bdec-8fe224684951.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 11
+        },
+        {
+          "id": "bc3343a6-069e-417e-a690-a3bc316fc064",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/4019135c-fc65-4ead-9990-070e24770bbe.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 12
+        },
+        {
+          "id": "40202211-55ba-4823-88c9-6a90cb9a1950",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2b4bc510-a801-4b3a-a758-d44769b38564.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 13
+        },
+        {
+          "id": "0f446f27-1f8c-411e-8831-d3813df64035",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/46c63b59-26b6-40a1-9c63-3c4724b663a4.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 14
+        },
+        {
+          "id": "10b58699-3dc7-4693-8948-c58703461057",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/7c8f251d-0c32-448c-b46a-7e0d38295e6b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 15
+        },
+        {
+          "id": "d39f2597-2d17-4403-8f41-b8fbf877edf2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/52479767-b24d-46aa-b27c-3fa5b2455ffc.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 16
+        },
+        {
+          "id": "ea14e404-64c1-4ee2-8277-135b764416e2",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/532805f8-f451-4646-8ff6-b81b6eea3163.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 17
+        },
+        {
+          "id": "799d0ac0-fefe-4880-a847-297cf0f45011",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/bc223734-a080-4671-a9c6-924d8d3adaf5.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 18
+        },
+        {
+          "id": "9268ca93-3a79-44db-b4bb-a85035d51cbb",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/8c8defbe-d1ec-444e-9a05-220f715807e7.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 19
+        },
+        {
+          "id": "e4dd4fab-28c1-4467-9d2a-e3e49c6d8978",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/03676437-01aa-4131-b17e-addec860b2fe.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 20
+        },
+        {
+          "id": "fddf7aed-be17-4e19-a6aa-11e1912ea9ff",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/3bffb827-098f-4d97-b92b-191bdcd38e3c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 21
+        },
+        {
+          "id": "bd8f93d7-58ac-475f-84ce-d64b47c3a3ea",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2d746aad-7296-457f-9589-10ed2e6ea466.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 22
+        },
+        {
+          "id": "9fdc102f-8c82-4450-8782-d57dc223294b",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/37424fd9-5a33-4af5-81ff-5847e342d273.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 23
+        },
+        {
+          "id": "ec5f3954-332c-4826-be1e-a54bda7f6156",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/be7a2701-f13c-45ce-a5dc-2cc5957327ee.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 24
+        },
+        {
+          "id": "64686b40-867b-49cd-b71e-190504e3629a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b2e0a460-3f7b-4233-b42c-6ab12d7e9d42.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 25
+        },
+        {
+          "id": "019684ff-2a65-4a79-9e6e-292e97639914",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/2e1edd4f-1058-4b94-9910-9a32bffb7cac.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 26
+        },
+        {
+          "id": "8bc86a20-2687-402c-87e4-88ca075c9653",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/b8517929-6ca1-4ae4-b273-6c33f2eef54b.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 27
+        },
+        {
+          "id": "3a752cb8-c818-4927-bb19-b55c75e33ca7",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/ac3a3bba-7309-4d8c-b524-1ef1e7c23f42.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 28
+        },
+        {
+          "id": "e81be755-f21e-4236-a547-8aec57f597e0",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/e4b6d4be-4b96-4cfe-bc8e-c4f8354bba9d.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 29
+        },
+        {
+          "id": "90c15408-5649-4425-bbab-ee7d10463c3a",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/70001be5-2c7c-4ea5-a7dc-28e60553224c.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 30
+        },
+        {
+          "id": "cba2305f-7754-4637-93bf-189948b34ec9",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/c2ab5cbc-199d-45b2-9f5a-15ebf5b52772.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 31
+        },
+        {
+          "id": "a52e9a46-ae46-45f0-84cc-b557bf40ae01",
+          "url": "https://images.opendoor.com/pre/cosmos-gallery-xl/dfe8bf07-83c1-45ef-ad9b-da04d3d3ebcf.jpg",
+          "file_id": null,
+          "is_hero": false,
+          "display_order": 32
+        }
+      ]
+    }
+  ]
+}
