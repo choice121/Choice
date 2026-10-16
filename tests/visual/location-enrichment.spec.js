@@ -32,7 +32,7 @@ test('active property shows nearby places and Geoapify map markers', async ({ pa
     }
   });
   page.on('response', (response) => {
-    if (response.url().includes('tile.openstreetmap.org')) basemapStatuses.push(response.status());
+    if (response.url().includes('cartocdn.com') || response.url().includes('tile.openstreetmap.org')) basemapStatuses.push(response.status());
     if (response.url().includes('leaflet.min.')) leafletFailures.push(`HTTP ${response.status()}`);
   });
   page.on('requestfailed', (request) => {

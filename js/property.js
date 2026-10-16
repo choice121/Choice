@@ -1122,14 +1122,16 @@ function _initLeafletMap(p) {
   _propertyMap = map;
   _propertyLatLng = [lat, lng];
   
-  const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
   L.tileLayer(tileUrl, {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
   }).addTo(map);
-
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const markerBg = isDark ? '#ffffff' : '#0f172a';
   const markerColor = isDark ? '#0f172a' : '#ffffff';
   const markerBorder = isDark ? '2px solid rgba(0,106,255,0.85)' : '2px solid #ffffff';
@@ -3693,7 +3695,7 @@ async function loadPropertyLocationIntelligence(p) {
     const mapNeighborhood = document.getElementById('mapNeighborhood');
     const mapNeighborhoodText = document.getElementById('mapNeighborhoodText');
     if (neighborhoodText && mapNeighborhood && mapNeighborhoodText) {
-      mapNeighborhoodText.textContent = `Approximate neighborhood: ${neighborhoodText}. Source: Geoapify reverse geocoding. This is not an official neighborhood boundary.`;
+      mapNeighborhoodText.textContent = `Approximate neighborhood: ${neighborhoodText}`;
       mapNeighborhood.style.display = 'block';
     }
 
