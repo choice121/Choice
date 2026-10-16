@@ -4,11 +4,21 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v28.0.6] - 2026-10-16 09:10 UTC
+### One-Tap Mobile Pipeline Save
+- **Compact Property Bar**: On phones, the importer starts as a small address/rent bar with a one-tap Save button, avoiding the full floating panel over Zillow's listing content.
+- **Clear Save Feedback**: The compact button shows saving, saved, queued, duplicate, and retry states. Errors expand the panel so the user can see the failure and retry.
+- **Touch-Friendly Layout**: Preserves a 42px minimum save target and truncates long addresses rather than widening the bar across the screen.
+- **Less Image Work**: Removed unused client-side image download, base64 conversion, and ImageKit re-upload code; the import path continues to send original source CDN URLs in original order.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
 ## [v28.0.5] - 2026-10-16 09:01 UTC
 ### Orion Mobile Navigation and Performance
 - **Automatic SPA Listing Detection**: Added lightweight URL-change checks for browsers where page-world History API hooks are isolated, so navigating to a property no longer depends on manually refreshing.
 - **Hydration-Aware Saving**: Waits briefly for required listing identity and address facts to load; saves refreshed facts for the same property while still blocking stale data after navigation.
-- **Lower Mobile Workload**: Throttles DOM-triggered extraction, ignores mutations inside the extension widget, removes repeated layout scans from page mutation callbacks, and batches scroll-position updates per animation frame.
+- **Lower Mobile Workload**: Throttles DOM-triggered extraction, ignores mutations inside the extension widget and image-only DOM changes, removes repeated layout scans from page mutation callbacks, and batches scroll-position updates per animation frame.
 - **Reduced Mobile Rendering Cost**: Disables backdrop blur and uses a lighter shadow on narrow screens.
 - **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
 

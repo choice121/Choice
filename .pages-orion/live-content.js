@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v28.0.5
+// Choice Properties — Live Content Script v28.0.6
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,11 +23,9 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '28.0.5-live';
+  var VERSION  = '28.0.6-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
-  var MAX_PHOTOS = IS_MOBILE ? 20 : 50;
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
   var LISTING_REFRESH_DELAY = IS_MOBILE ? 850 : 220;
 
@@ -220,6 +218,34 @@
         font-size: 13px;
         font-weight: 600;
         color: #e2e8f0;
+      }
+      .cp-mini-trigger > span {
+        max-width: min(44vw, 230px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #cp-mini-save-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        margin-left: 4px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        white-space: nowrap;
+        touch-action: manipulation;
+      }
+      #cp-mini-save-btn:disabled {
+        opacity: 0.75;
+      }
+      #cp-widget-container.cp-mobile-save-compact #cp-mini-save-btn {
+        display: inline-flex;
       }
       #cp-widget-container.cp-minimized .cp-mini-trigger {
         display: flex !important;
@@ -691,6 +717,15 @@
           box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
           transition: opacity 0.15s ease;
         }
+        #cp-widget-container.cp-minimized {
+          width: auto;
+          max-width: calc(100vw - 20px);
+          border-radius: 26px;
+        }
+        #cp-widget-container.cp-mobile-save-compact .cp-mini-trigger {
+          gap: 8px;
+          padding: 6px 7px 6px 10px;
+        }
         .cp-header {
           padding: 8px 10px;
         }
@@ -714,37 +749,6 @@
         opacity: 0.8;
         cursor: not-allowed;
         transform: none !important;
-      }
-      /* Integrated Progress State */
-      .cp-progress-box {
-        display: none;
-        flex-direction: column;
-        gap: 8px;
-        padding: 10px;
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-      }
-      .cp-progress-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: 11px;
-        font-weight: 600;
-        color: #cbd5e1;
-      }
-      .cp-progress-bar-track {
-        width: 100%;
-        height: 6px;
-        background: rgba(255, 255, 255, 0.12);
-        border-radius: 999px;
-        overflow: hidden;
-      }
-      .cp-progress-bar-fill {
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(90deg, #6366f1, #10b981);
-        border-radius: 999px;
-        transition: width 0.25s ease;
       }
       /* Success State */
       .cp-success-box {
@@ -907,6 +911,34 @@
     ].join('|');
   }
 
+  function updateWidgetSnapshot(data) {
+    if (!activeWidget || !data) return;
+    var address = data.address || 'Detected Listing';
+    if (data.city && data.state) address += ', ' + data.city + ', ' + data.state;
+    var rent = data.monthly_rent != null ? data.monthly_rent : data.rent;
+    var rentText = rent != null ? '$' + Number(rent).toLocaleString() + '/mo' : 'Rent pending';
+    var beds = data.bedrooms != null ? data.bedrooms : data.beds;
+    var baths = data.bathrooms != null ? data.bathrooms : data.baths;
+    var specs = [beds != null ? beds + ' bd' : '', baths != null ? baths + ' ba' : ''].filter(Boolean).join(' • ');
+    var sqft = data.square_footage != null ? data.square_footage : data.sqft;
+    if (sqft) specs += (specs ? ' • ' : '') + Number(sqft).toLocaleString() + ' sqft';
+    var photos = extractPhotoUrls(data.original_image_urls);
+    if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    var compactSummary = activeWidget.querySelector('#cp-mini-summary');
+    var addressLine = activeWidget.querySelector('#cp-address-line');
+    var rentChip = activeWidget.querySelector('#cp-rent-chip');
+    var specsChip = activeWidget.querySelector('#cp-specs-chip');
+    var photosChip = activeWidget.querySelector('#cp-photos-chip');
+    if (compactSummary) compactSummary.textContent = address + ' • ' + rentText;
+    if (addressLine) {
+      addressLine.textContent = address;
+      addressLine.title = address;
+    }
+    if (rentChip) rentChip.textContent = rentText;
+    if (specsChip) specsChip.textContent = specs || 'Listing details';
+    if (photosChip) photosChip.textContent = '📸 ' + photos.length + ' photos';
+  }
+
   function scheduleListingRefresh(delay) {
     var refreshGeneration = listingGeneration;
     if (listingRefreshTimer) {
@@ -920,8 +952,20 @@
       var next = extractCurrentListing();
       if (!next) return;
       var nextSignature = extractionSignature(next);
-      if (!activeWidget || nextSignature !== renderedListingSignature) {
+      if (!activeWidget) {
         injectWidget(next);
+      } else if (nextSignature !== renderedListingSignature) {
+        var isSameListing = currentExtractedData
+          && currentExtractedData.source === next.source
+          && currentExtractedData.source_listing_id
+          && currentExtractedData.source_listing_id === next.source_listing_id;
+        if (isSameListing) {
+          currentExtractedData = next;
+          renderedListingSignature = nextSignature;
+          updateWidgetSnapshot(next);
+        } else {
+          injectWidget(next);
+        }
       }
     }, delay == null ? LISTING_REFRESH_DELAY : delay);
     listingRefreshTimer = { id: timerId, generation: refreshGeneration };
@@ -1046,7 +1090,8 @@
         <div class="cp-logo-icon">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         </div>
-        <span>${escapeHtml(rentStr)} • Choice Import</span>
+        <span id="cp-mini-summary">${escapeHtml(addressStr)} • ${escapeHtml(rentStr)}</span>
+        <button type="button" id="cp-mini-save-btn" aria-label="Save this property to the pipeline">Save</button>
       </div>
 
       <!-- Full Body -->
@@ -1074,11 +1119,11 @@
 
         <div class="cp-body">
           <div class="cp-property-snapshot">
-            <div class="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
+            <div class="cp-address-line" id="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
             <div class="cp-chips-row">
-              <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
-              <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
-              <span class="cp-chip cp-chip-photos">📸 ${escapeHtml(photoCount)} photos</span>
+              <span class="cp-chip cp-chip-price" id="cp-rent-chip">${escapeHtml(rentStr)}</span>
+              <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
+              <span class="cp-chip cp-chip-photos" id="cp-photos-chip">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
@@ -1138,16 +1183,6 @@
           </button>
 
           <!-- Integrated Progress Box -->
-          <div class="cp-progress-box" id="cp-progress-box">
-            <div class="cp-progress-header">
-              <span id="cp-progress-status">Uploading photos to ImageKit…</span>
-              <span id="cp-progress-count">0%</span>
-            </div>
-            <div class="cp-progress-bar-track">
-              <div class="cp-progress-bar-fill" id="cp-progress-fill"></div>
-            </div>
-          </div>
-
           <!-- Success State -->
           <div class="cp-success-box" id="cp-success-box">
             <div class="cp-success-banner">
@@ -1163,6 +1198,10 @@
       </div>
     `;
 
+    if (IS_MOBILE) {
+      container.classList.add('cp-mobile-save-compact', 'cp-minimized');
+      isMinimized = true;
+    }
     document.body.appendChild(container);
     activeWidget = container;
 
@@ -1244,6 +1283,7 @@
     var minimizeBtn = container.querySelector('#cp-btn-minimize');
     var closeBtn = container.querySelector('#cp-btn-close');
     var expandTrigger = container.querySelector('#cp-expand-trigger');
+    var miniSaveBtn = container.querySelector('#cp-mini-save-btn');
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
@@ -1465,6 +1505,12 @@
     });
 
     saveBtn.addEventListener('click', handleSave);
+    if (miniSaveBtn) {
+      miniSaveBtn.addEventListener('click', function (event) {
+        event.stopPropagation();
+        handleSave();
+      });
+    }
 
     copyLinkBtn.addEventListener('click', function () {
       if (navigator.clipboard) {
@@ -1516,15 +1562,16 @@
   async function handleSave() {
     if (isSaving) return;
     var saveBtn = document.querySelector('#cp-btn-save');
-    var progressBox = document.querySelector('#cp-progress-box');
-    var progressStatus = document.querySelector('#cp-progress-status');
-    var progressCount = document.querySelector('#cp-progress-count');
-    var progressFill = document.querySelector('#cp-progress-fill');
     var successBox = document.querySelector('#cp-success-box');
     var successText = document.querySelector('#cp-success-text');
 
     if (!saveBtn) return;
     isSaving = true;
+    var miniSaveBtn = activeWidget && activeWidget.querySelector('#cp-mini-save-btn');
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = true;
+      miniSaveBtn.textContent = 'Saving…';
+    }
 
     var openPopover = document.querySelector('#cp-folder-popover.cp-open');
     if (openPopover) {
@@ -1570,6 +1617,7 @@
         }
         currentExtractedData = extracted;
         renderedListingSignature = extractionSignature(extracted);
+        updateWidgetSnapshot(extracted);
       }
 
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
@@ -1649,7 +1697,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v28.0.5-live',
+        _import: 'browser-extension-v28.0.6-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1663,11 +1711,13 @@
 
       if (resp && resp.queued) {
         saveBtn.style.display = 'none';
+        if (miniSaveBtn) miniSaveBtn.textContent = 'Queued';
         if (successText) successText.textContent = 'Queued for pipeline sync';
         successBox.style.display = 'flex';
         isSaving = false;
       } else if (resp && resp.ok) {
         saveBtn.style.display = 'none';
+        if (miniSaveBtn) miniSaveBtn.textContent = 'Saved ✓';
         if (resp.folder && resp.folder.name != null) {
           if (resp.folder.folder_id) {
             setDefaultFolder({
@@ -1687,6 +1737,10 @@
         isSaving = false;
       } else if (resp && resp.duplicate) {
         isSaving = false;
+        if (miniSaveBtn) {
+          miniSaveBtn.disabled = false;
+          miniSaveBtn.textContent = 'Already saved';
+        }
         if (resp.folder && resp.folder.folder) {
           if (resp.folder.folder_id) {
             setDefaultFolder({
@@ -1705,6 +1759,7 @@
           saveBtn.innerHTML = '<span>Save to Pipeline</span>';
           saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
           saveBtn.disabled = false;
+          if (miniSaveBtn) miniSaveBtn.textContent = 'Save';
         }, 4000);
       } else {
         isSaving = false;
@@ -1794,156 +1849,29 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
+    var miniSaveBtn = document.querySelector('#cp-mini-save-btn');
+    if (IS_MOBILE && activeWidget && activeWidget.classList.contains('cp-minimized')) {
+      activeWidget.classList.remove('cp-minimized');
+      isMinimized = false;
+    }
     saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = false;
+      miniSaveBtn.textContent = 'Retry';
+      miniSaveBtn.title = msg;
+    }
     setTimeout(function () {
       if (saveBtn) {
         saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
         saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
       }
+      if (miniSaveBtn && miniSaveBtn.textContent === 'Retry') {
+        miniSaveBtn.textContent = 'Save';
+        miniSaveBtn.title = '';
+      }
     }, 4000);
-  }
-
-  // ── Photo Upload Pipeline ───────────────────────────────────
-  async function uploadPhotosInBackground(photoUrls, progressCallback) {
-    var uploaded = [];
-    var failed = 0;
-    var urls = dedupePhotoUrls(photoUrls);
-    var limit = Math.min(urls.length, MAX_PHOTOS);
-    var total = limit;
-
-    for (var i = 0; i < limit; i += PHOTO_BATCH_SIZE) {
-      var batch = urls.slice(i, i + PHOTO_BATCH_SIZE);
-      if (progressCallback) progressCallback(Math.min(i, total), total);
-      var results = await Promise.all(batch.map(function (url, batchIndex) {
-        return uploadOnePhoto(url, i + batchIndex);
-      }));
-      for (var j = 0; j < results.length; j++) {
-        if (results[j]) uploaded.push(results[j]);
-        else failed++;
-        if (progressCallback) progressCallback(Math.min(i + j + 1, total), total);
-      }
-    }
-    return { uploaded: uploaded, failed: failed, total: total };
-  }
-
-  async function downloadViaBackground(url) {
-    return new Promise(function (resolve) {
-      try {
-        if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
-          var requestId = 'cp-photo-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-          var timer = setTimeout(function () {
-            window.removeEventListener('message', onResult);
-            resolve(null);
-          }, 25000);
-          function onResult(event) {
-            var data = event && event.data;
-            if (event.source !== window || !data ||
-                data.type !== 'CP_DOWNLOAD_PHOTO_RESULT' ||
-                data.requestId !== requestId) return;
-            clearTimeout(timer);
-            window.removeEventListener('message', onResult);
-            resolve(data.ok && data.dataUri ? data : null);
-          }
-          window.addEventListener('message', onResult);
-          window.postMessage({ type: 'CP_DOWNLOAD_PHOTO', requestId: requestId, url: url }, '*');
-          return;
-        }
-        EXTENSION_API.runtime.sendMessage(
-          { type: 'DOWNLOAD_PHOTO', url: url },
-          function (response) {
-            var runtimeError = EXTENSION_API.runtime.lastError;
-            if (runtimeError) {
-              resolve(null);
-              return;
-            }
-            resolve(response && response.ok && response.dataUri ? response : null);
-          }
-        );
-      } catch (e) {
-        resolve(null);
-      }
-    });
-  }
-
-  async function downloadViaDirectFetch(url) {
-    try {
-      var imgRes = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
-      });
-      if (!imgRes.ok) return null;
-      var blob = await imgRes.blob();
-      var base64 = await blobToBase64(blob);
-      var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
-      if (ext === 'jpeg') ext = 'jpg';
-      return {
-        dataUri: base64,
-        contentType: blob.type || 'image/jpeg',
-        ext: ext,
-        size: blob.size,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function uploadOnePhoto(url, index) {
-    try {
-      var photo = await downloadViaBackground(url);
-      if (!photo) photo = await downloadViaDirectFetch(url);
-      if (!photo) return null;
-
-      var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-import-secret': SECRET
-        },
-        body: JSON.stringify({
-          fileData: photo.dataUri,
-          fileName: 'photo_' + (index + 1) + '.' + photo.ext,
-          folder: '/pipeline/temp'
-        })
-      });
-      var ikData = await ikRes.json();
-      if (!ikData || !ikData.url) return null;
-
-      return {
-        url: ikData.url,
-        fileId: ikData.fileId || null,
-        width: ikData.width || null,
-        height: ikData.height || null,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function blobToBase64(blob) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () { resolve(reader.result); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function updatePipelinePhotos(originalPayload, uploadedPhotos) {
-    try {
-      if (!uploadedPhotos || !uploadedPhotos.length) return;
-      var updatePayload = Object.assign({}, originalPayload, {
-        _update_photos_only: true,
-        original_image_urls: JSON.stringify(uploadedPhotos),
-      });
-      await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatePayload),
-      });
-    } catch (e) {}
   }
 
   // ── Navigation & Lifecycle Watcher ──────────────────────────
@@ -1999,7 +1927,7 @@
         }
         var nodes = Array.from(record.addedNodes || []).concat(Array.from(record.removedNodes || []));
         return nodes.some(function (node) {
-          if (node.nodeType !== 1) return true;
+          if (node.nodeType !== 1 || node.matches('img, picture, source, svg, path')) return false;
           return node.id !== 'cp-widget-container'
             && !(node.closest && node.closest('#cp-widget-container'))
             && !(node.querySelector && node.querySelector('#cp-widget-container'));

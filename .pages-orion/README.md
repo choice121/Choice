@@ -4,6 +4,10 @@ One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
+## One-tap mobile save — v28.0.6 (2026-10-16 09:10 UTC)
+
+On phones, the importer opens as a compact property-and-rent bar with a direct Save action, keeping Zillow usable without opening the full panel. Failed saves expand the panel and provide a retry action. Saves retain original source photo URLs and order; the unused legacy image re-upload code was removed from the mobile content script.
+
 ## Mobile navigation and performance — v28.0.5 (2026-10-16 09:01 UTC)
 
 Property navigation is detected without relying only on page-world history hooks. The widget refreshes listing facts as mobile pages hydrate, waits briefly for required details when saving, and avoids repeated extraction and layout work during heavy page updates and scrolling.
