@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v28.0.5] - 2026-10-16 09:01 UTC
+### Orion Mobile Navigation and Performance
+- **Automatic SPA Listing Detection**: Added lightweight URL-change checks for browsers where page-world History API hooks are isolated, so navigating to a property no longer depends on manually refreshing.
+- **Hydration-Aware Saving**: Waits briefly for required listing identity and address facts to load; saves refreshed facts for the same property while still blocking stale data after navigation.
+- **Lower Mobile Workload**: Throttles DOM-triggered extraction, ignores mutations inside the extension widget, removes repeated layout scans from page mutation callbacks, and batches scroll-position updates per animation frame.
+- **Reduced Mobile Rendering Cost**: Disables backdrop blur and uses a lighter shadow on narrow screens.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
 ## [v28.0.4] - 2026-10-16 07:05 UTC
 ### Orion Mobile Save Bridge Recovery
 - **Background Message Fallback**: If the Orion background service worker returns no response, reports a messaging failure, or times out, the listing save retries directly against the authenticated import endpoint instead of ending with the generic "Save failed" message.

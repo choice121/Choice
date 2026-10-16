@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v28.0.4
+// Choice Properties — Live Content Script v28.0.5
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,12 +23,13 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '28.0.4-live';
+  var VERSION  = '28.0.5-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
   var MAX_PHOTOS = IS_MOBILE ? 20 : 50;
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
+  var LISTING_REFRESH_DELAY = IS_MOBILE ? 850 : 220;
 
   var lastUrl = location.href;
   var activeWidget = null;
@@ -40,6 +41,7 @@
   var cachedFolders = [];
   var activeDefaultFolder = null;
   var isSaving = false;
+  var positionUpdateScheduled = false;
   var listingRefreshTimer = null;
   var hydrationRefreshTimers = [];
 
@@ -684,6 +686,10 @@
           width: calc(100vw - 20px);
           max-width: calc(100vw - 20px);
           right: 10px;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+          transition: opacity 0.15s ease;
         }
         .cp-header {
           padding: 8px 10px;
@@ -843,6 +849,15 @@
     activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
   }
 
+  function scheduleWidgetPositionUpdate() {
+    if (positionUpdateScheduled) return;
+    positionUpdateScheduled = true;
+    requestAnimationFrame(function () {
+      positionUpdateScheduled = false;
+      updateWidgetPosition();
+    });
+  }
+
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
     return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
@@ -893,9 +908,13 @@
   }
 
   function scheduleListingRefresh(delay) {
-    if (listingRefreshTimer) clearTimeout(listingRefreshTimer);
     var refreshGeneration = listingGeneration;
-    listingRefreshTimer = setTimeout(function () {
+    if (listingRefreshTimer) {
+      if (listingRefreshTimer.generation === refreshGeneration) return;
+      clearTimeout(listingRefreshTimer.id);
+      listingRefreshTimer = null;
+    }
+    var timerId = setTimeout(function () {
       listingRefreshTimer = null;
       if (refreshGeneration !== listingGeneration || !isDetailPage(location.href)) return;
       var next = extractCurrentListing();
@@ -904,12 +923,13 @@
       if (!activeWidget || nextSignature !== renderedListingSignature) {
         injectWidget(next);
       }
-    }, delay == null ? 220 : delay);
+    }, delay == null ? LISTING_REFRESH_DELAY : delay);
+    listingRefreshTimer = { id: timerId, generation: refreshGeneration };
   }
 
   function scheduleHydrationRefreshes() {
     hydrationRefreshTimers.forEach(function (timer) { clearTimeout(timer); });
-    hydrationRefreshTimers = [0, 250, 800, 1800, 3500].map(function (delay) {
+    hydrationRefreshTimers = [0, 500, 1500, 3200].map(function (delay) {
       return setTimeout(function () {
         scheduleListingRefresh(0);
       }, delay);
@@ -1516,33 +1536,40 @@
     saveBtn.style.background = '#6366f1';
 
     try {
-      var extractor = window.CP_Extractors && window.CP_Extractors.detect(location.href);
-      var extracted = currentExtractedData;
-      if (!extracted && window.CP_Extractors) {
-        extracted = window.CP_Extractors.extract(location.href, document);
+      var saveUrl = location.href;
+      var extracted = extractCurrentListing();
+      for (var extractAttempt = 0;
+        (!extracted || !extracted.source_listing_id || !extracted.address) && extractAttempt < 5;
+        extractAttempt++) {
+        await new Promise(function (resolve) { setTimeout(resolve, 350); });
+        if (location.href !== saveUrl) {
+          setError('Listing changed; open the new listing and save again');
+          isSaving = false;
+          return;
+        }
+        extracted = extractCurrentListing();
       }
-
-      if (!extracted) {
-        setError('Could not extract listing');
+      if (!extracted || !extracted.source_listing_id || !extracted.address) {
+        setError('Listing details are still loading; try again');
         isSaving = false;
         return;
       }
 
-      // Re-read before saving so a same-tab SPA navigation cannot submit the
-      // previous property's data through a stale widget.
-      var liveExtracted = extractCurrentListing();
-      if (!liveExtracted) {
-        setError('Listing is still loading');
-        isSaving = false;
-        return;
-      }
-      var liveSignature = extractionSignature(liveExtracted);
-      if (renderedListingSignature && liveSignature !== renderedListingSignature) {
-        currentExtractedData = liveExtracted;
-        injectWidget(liveExtracted);
-        setError('Listing changed; refreshed');
-        isSaving = false;
-        return;
+      // The page may hydrate facts after the widget appears. Accept fresher
+      // data for the same listing, but never submit data after SPA navigation.
+      if (currentExtractedData && extractionSignature(currentExtractedData) !== extractionSignature(extracted)) {
+        var sameListing = currentExtractedData.source === extracted.source
+          && currentExtractedData.source_listing_id
+          && currentExtractedData.source_listing_id === extracted.source_listing_id;
+        if (!sameListing) {
+          currentExtractedData = extracted;
+          injectWidget(extracted);
+          setError('Listing changed; refreshed');
+          isSaving = false;
+          return;
+        }
+        currentExtractedData = extracted;
+        renderedListingSignature = extractionSignature(extracted);
       }
 
       var photoUrls = extractPhotoUrls(extracted.original_image_urls);
@@ -1622,7 +1649,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v28.0.4-live',
+        _import: 'browser-extension-v28.0.5-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1946,19 +1973,40 @@
       scheduleHydrationRefreshes();
     } else {
       scheduleListingRefresh();
-      updateWidgetPosition();
+      scheduleWidgetPositionUpdate();
     }
+  }
+
+  function checkUrlChange() {
+    if (location.href !== lastUrl) onPageChange();
   }
 
   function setupWatchers() {
     hookHistoryMethods();
     window.addEventListener('popstate', onPageChange);
-    window.addEventListener('resize', updateWidgetPosition);
-    window.addEventListener('scroll', updateWidgetPosition, { passive: true });
+    window.addEventListener('pageshow', checkUrlChange);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkUrlChange();
+    });
+    window.addEventListener('resize', scheduleWidgetPositionUpdate);
+    window.addEventListener('scroll', scheduleWidgetPositionUpdate, { passive: true });
+    setInterval(checkUrlChange, 750);
 
-    var observer = new MutationObserver(function () {
+    var observer = new MutationObserver(function (records) {
+      var pageChanged = records.some(function (record) {
+        if (record.target.nodeType === 1 && record.target.closest && record.target.closest('#cp-widget-container')) {
+          return false;
+        }
+        var nodes = Array.from(record.addedNodes || []).concat(Array.from(record.removedNodes || []));
+        return nodes.some(function (node) {
+          if (node.nodeType !== 1) return true;
+          return node.id !== 'cp-widget-container'
+            && !(node.closest && node.closest('#cp-widget-container'))
+            && !(node.querySelector && node.querySelector('#cp-widget-container'));
+        });
+      });
+      if (!pageChanged) return;
       scheduleListingRefresh();
-      updateWidgetPosition();
     });
 
     if (document.body) {
