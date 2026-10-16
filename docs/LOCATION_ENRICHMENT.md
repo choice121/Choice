@@ -41,19 +41,17 @@ circle filter, proximity bias, the supported categories, and a maximum of 100
 results. Returned places are normalized and their distances are calculated
 before the snapshot is cached.
 
-The latest source change updates the Places request to this documented GET
-format. A live request against an active listing previously received HTTP 400
-from Places and HTTP 401 from reverse geocoding. The updated function could not
-be deployed during that check because the deployment environment could not
-resolve the npm registry while bundling. Therefore, the live endpoint has not
-yet been verified with the updated request implementation.
+The current `property-location` function is deployed. A live request against
+an active listing confirmed the Places request no longer returns the earlier
+HTTP 400, but both Geoapify requests currently return HTTP 401. No snapshot is
+cached until the provider requests succeed, so the location experience has not
+yet been verified with live nearby-place data.
 
-## Deployment checklist
+## Deployment and verification
 
-1. Confirm migration `20261015000002_property_location_intelligence.sql` is
-   applied to the target Supabase project.
-2. Deploy the `property-location` Edge Function from this repository.
-3. Request location data for an active property with stored coordinates.
-4. Confirm the endpoint returns the snapshot and a corresponding cache record
-   is created; then verify the nearby places and map markers on the property
-   details page.
+Migration `20261015000002_property_location_intelligence.sql` and the
+`property-location` Edge Function are deployed to the target Supabase project.
+After the provider requests succeed, request location data for an active
+property with stored coordinates, confirm a snapshot and cache record are
+created, and verify the nearby places and map markers on the property details
+page.
