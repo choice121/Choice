@@ -52,6 +52,11 @@ const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
 const isEmbedded = params.get('embedded') === 'true';
 const shareToken = params.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
+let _propertyMap = null;
+let _nearbyMarkerLayer = null;
+let _nearbyLegendControl = null;
+let _locationSnapshot = null;
+let _propertyLatLng = null;
 if (isEmbedded) {
   document.body.setAttribute('data-embedded', 'true');
 }
@@ -1114,6 +1119,8 @@ function _initLeafletMap(p) {
 
   container.innerHTML = '<div id="propertyMiniMap" style="width:100%;height:100%"></div>';
   const map = L.map('propertyMiniMap', { zoomControl: true, scrollWheelZoom: false, touchZoom: true }).setView([lat, lng], 15);
+  _propertyMap = map;
+  _propertyLatLng = [lat, lng];
   
   // Theme-aware high-performance Carto tiles (Dark Matter or Positron)
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1142,12 +1149,13 @@ function _initLeafletMap(p) {
       <div style="font-weight:800;font-size:13px;color:var(--m-ink,#0f172a);line-height:1.3">${esc(p.title || p.address)}</div>
       <div style="font-size:11.5px;color:var(--m-muted,#475569);margin-top:2px">${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--m-border,#e2e8f0)">
-        <span style="font-size:10.5px;font-weight:700;color:#059669;background:rgba(16,185,129,0.12);padding:2px 7px;border-radius:4px"><i class="fas fa-check" style="font-size:8px"></i> Verified Location</span>
+        <span style="font-size:10.5px;font-weight:700;color:#475569;background:rgba(148,163,184,0.16);padding:2px 7px;border-radius:4px">Map location</span>
         ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
       </div>
     </div>
   `;
   L.marker([lat, lng], { icon }).addTo(map).bindPopup(popupHtml);
+  if (_locationSnapshot) _renderNearbyMapMarkers(_locationSnapshot);
 
   // Wire up "Open in Maps" button with OS-aware deep link
   const mapAddr = encodeURIComponent(`${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`);
@@ -1159,24 +1167,80 @@ function _initLeafletMap(p) {
   const openBtn = document.getElementById('mapOpenBtn');
   if (openBtn) { openBtn.href = mapsUrl; openBtn.style.display = 'inline-flex'; }
 
-  // Reverse geocode neighbourhood
-  const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
-  if (_geoKey) {
-    fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${_geoKey}&format=json`)
-      .then(r => r.json())
-      .then(data => {
-        const hit = data?.results?.[0];
-        const nbName = hit?.suburb || hit?.neighbourhood || hit?.district || hit?.county;
-        const cityName = hit?.city || hit?.town;
-        const label = [nbName, cityName].filter(Boolean).join(', ');
-        if (label) {
-          const nbText = document.getElementById('mapNeighborhoodText');
-          const nbSection = document.getElementById('mapNeighborhood');
-          if (nbText && nbSection) { nbText.textContent = `Located in ${label}`; nbSection.style.display = 'block'; }
-        }
-      })
-      .catch(() => {});
+}
+
+function _renderNearbyMapMarkers(snapshot) {
+  if (!_propertyMap || !window.L || !Array.isArray(snapshot?.places)) return;
+  if (_nearbyMarkerLayer) _nearbyMarkerLayer.remove();
+  if (_nearbyLegendControl) _nearbyLegendControl.remove();
+  _nearbyMarkerLayer = L.layerGroup();
+  const colors = {
+    school: '#2563eb',
+    park: '#16a34a',
+    shopping: '#d97706',
+    healthcare: '#dc2626',
+    transit: '#7c3aed',
+  };
+  snapshot.places.forEach((place) => {
+    const lat = Number(place.lat);
+    const lng = Number(place.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const marker = L.circleMarker([lat, lng], {
+      radius: 8,
+      color: '#fff',
+      weight: 2,
+      fillColor: colors[place.category] || '#475569',
+      fillOpacity: 0.95,
+    });
+    const distance = _formatStraightLineDistance(place.distance_m);
+    marker.bindPopup(`<strong>${esc(place.name)}</strong><br>${esc(_nearbyCategoryLabel(place.category))} · about ${esc(distance)} direct distance`);
+    marker.addTo(_nearbyMarkerLayer);
+  });
+  _nearbyMarkerLayer.addTo(_propertyMap);
+
+  const categories = [...new Set(snapshot.places.map((place) => place.category).filter((category) => colors[category]))];
+  if (categories.length) {
+    _nearbyLegendControl = L.control({ position: 'bottomright' });
+    _nearbyLegendControl.onAdd = () => {
+      const legend = L.DomUtil.create('div');
+      legend.setAttribute('aria-label', 'Nearby map marker legend');
+      legend.style.cssText = 'padding:7px 9px;background:var(--m-surface,#fff);border-radius:7px;box-shadow:0 1px 5px rgba(0,0,0,.28);font:11px/1.5 system-ui,sans-serif;color:#1e293b';
+      legend.innerHTML = categories.map((category) => `
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${colors[category]};display:inline-block"></span>
+          ${esc(_nearbyCategoryLabel(category))}
+        </div>`).join('');
+      return legend;
+    };
+    _nearbyLegendControl.addTo(_propertyMap);
   }
+
+  const boundsPoints = snapshot.places
+    .map((place) => [Number(place.lat), Number(place.lng)])
+    .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+  if (_propertyLatLng) boundsPoints.push(_propertyLatLng);
+  if (boundsPoints.length > 1) {
+    _propertyMap.fitBounds(boundsPoints, { padding: [28, 28], maxZoom: 15 });
+  }
+}
+
+function _nearbyCategoryLabel(category) {
+  return ({
+    school: 'School',
+    park: 'Park',
+    shopping: 'Shopping',
+    healthcare: 'Healthcare',
+    transit: 'Public transit',
+  })[category] || 'Nearby place';
+}
+
+function _formatStraightLineDistance(distanceMeters) {
+  const meters = Number(distanceMeters);
+  if (!Number.isFinite(meters) || meters < 0) return 'distance unavailable';
+  const miles = meters / 1609.344;
+  return miles < 0.1
+    ? `${Math.round(meters * 3.28084 / 10) * 10} ft`
+    : `${miles.toFixed(1)} mi`;
 }
 
 function _mapAddressCard(p, addr) {
@@ -1206,17 +1270,7 @@ function renderMap(p) {
         if (!entries[0].isIntersecting) return;
         obs.disconnect();
 
-        // Show Geoapify static map immediately — no blank grey flash while Leaflet loads
-        const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
-        if (_geoKey) {
-          const staticUrl = `https://maps.geoapify.com/v1/staticmap?style=positron&width=800&height=300`
-            + `&center=lonlat:${lng},${lat}&zoom=14`
-            + `&marker=lonlat:${lng},${lat};type:circle;color:%230e0e0f;size:x-large`
-            + `&apiKey=${_geoKey}`;
-          container.innerHTML = `<img src="${staticUrl}" alt="Property location" style="width:100%;height:100%;object-fit:cover;display:block">`;
-        }
-
-        // Load Leaflet over the static preview
+        // Load the interactive map only when the map section is near the viewport.
         loadLeaflet()
           .then(() => _initLeafletMap(p))
           .catch(() => {
@@ -3510,201 +3564,61 @@ function renderNeighborhoodIntelligence(p) {
 
   const city = (p.city || '').trim();
   const state = (p.state || '').trim();
-  const zip = (p.zip || '').trim();
-  const fullAddr = `${p.address || ''}, ${city}, ${state} ${zip}`.trim();
   const addrSlug = encodeURIComponent(`${p.address || ''} ${city} ${state}`);
   const wsUrl = `https://www.walkscore.com/score/${addrSlug}`;
-  const gsUrl = zip
-    ? `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(zip)}&sortBy=distance`
-    : `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(city + ' ' + state)}&sortBy=distance`;
 
   // Coordinates
   const lat = parseFloat(p.lat);
   const lng = parseFloat(p.lng);
-  const hasCoords = !isNaN(lat) && !isNaN(lng);
 
   // Parse Scores from location_context (scraper format: "Walk score: 88; Transit score: 72; Bike score: 60")
-  let walkScore = p.walk_score || p.walkScore;
-  let transitScore = p.transit_score || p.transitScore;
-  let bikeScore = p.bike_score || p.bikeScore;
+  let walkScore = p.walk_score ?? p.walkScore;
+  let transitScore = p.transit_score ?? p.transitScore;
+  let bikeScore = p.bike_score ?? p.bikeScore;
 
-  if (p.location_context && typeof p.location_context === 'string') {
-    const wsMatch = p.location_context.match(/Walk score:\s*(\d+)/i);
+  const locationCtx = typeof p.location_context === 'string' ? p.location_context.trim() : '';
+  if (locationCtx) {
+    const wsMatch = locationCtx.match(/Walk score:\s*(\d+)/i);
     if (wsMatch) walkScore = wsMatch[1];
-    const tsMatch = p.location_context.match(/Transit score:\s*(\d+)/i);
+    const tsMatch = locationCtx.match(/Transit score:\s*(\d+)/i);
     if (tsMatch) transitScore = tsMatch[1];
-    const bsMatch = p.location_context.match(/Bike score:\s*(\d+)/i);
+    const bsMatch = locationCtx.match(/Bike score:\s*(\d+)/i);
     if (bsMatch) bikeScore = bsMatch[1];
   }
 
-  // ── Schools Data Provider ────────────────────────────────────────────────
-  function getNearbySchools(p) {
-    const city = (p.city || '').trim().toLowerCase();
-    const schools = [];
+  const parseScore = (value) => {
+    if (value == null || value === '') return null;
+    const score = Number(value);
+    return Number.isInteger(score) && score >= 0 && score <= 100 ? score : null;
+  };
+  walkScore = parseScore(walkScore);
+  transitScore = parseScore(transitScore);
+  bikeScore = parseScore(bikeScore);
+  const qualifiedLocationCtx = locationCtx.replace(
+    /(^|;\s*)Schools:\s*([^;]+)/gi,
+    '$1Listing-reported school names (not independently verified): $2',
+  );
 
-    // Fallback data for major cities (sourced from GreatSchools benchmarks)
-    const CITY_SCHOOLS = {
-      'columbus': [
-        { name: 'Robert Louis Stevenson Elementary', rating: '10/10', type: 'Public, K-5' },
-        { name: 'Clinton Elementary School', rating: '8/10', type: 'Public, K-5' },
-        { name: 'Grandview Heights High School', rating: '9/10', type: 'Public, 9-12' },
-        { name: 'Metro Early College High School', rating: '8/10', type: 'Public, 6-12' }
-      ],
-      'dallas': [
-        { name: 'Sudie L. Williams Talented and Gifted Academy', rating: '10/10', type: 'Public, 4-8' },
-        { name: 'William B. Travis Academy', rating: '10/10', type: 'Public, 4-8' },
-        { name: 'School for the Talented and Gifted', rating: '10/10', type: 'Public, 9-12' }
-      ],
-      'houston': [
-        { name: 'Debakey H S For Health Prof', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'T.H. Rogers School', rating: '10/10', type: 'Public, PK-12' },
-        { name: 'West University Elementary School', rating: '9/10', type: 'Public, K-5' }
-      ],
-      'austin': [
-        { name: 'Liberal Arts & Science Academy (LASA)', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Canyon Creek Elementary School', rating: '10/10', type: 'Public, PK-5' },
-        { name: 'Richards School for Young Women Leaders', rating: '9/10', type: 'Public, 6-12' }
-      ],
-      'charlotte': [
-        { name: 'Metrolina Regional Scholars Academy', rating: '10/10', type: 'Charter, K-8' },
-        { name: 'Polo Ridge Elementary', rating: '9/10', type: 'Public, K-5' },
-        { name: 'Providence High School', rating: '9/10', type: 'Public, 9-12' }
-      ],
-      'atlanta': [
-        { name: 'Brandon Elementary School', rating: '9/10', type: 'Public, K-5' },
-        { name: 'North Atlanta High School', rating: '7/10', type: 'Public, 9-12' },
-        { name: 'Sutton Middle School', rating: '6/10', type: 'Public, 6-8' }
-      ],
-      'indianapolis': [
-        { name: 'Merle Sidener Gifted Academy', rating: '10/10', type: 'Public, 2-8' },
-        { name: 'Center For Inquiry School 84', rating: '9/10', type: 'Public, K-8' },
-        { name: 'Herron High School', rating: '9/10', type: 'Public, 9-12' }
-      ],
-      'phoenix': [
-        { name: 'Madison Heights Elementary School', rating: '10/10', type: 'Public, PK-4' },
-        { name: 'Arizona School For The Arts', rating: '9/10', type: 'Charter, 5-12' },
-        { name: 'Xavier College Preparatory', rating: 'Private', type: 'Private, 9-12' }
-      ],
-      'st. louis': [
-        { name: 'Gateway Science Academy', rating: '9/10', type: 'Charter, K-12' },
-        { name: 'Metro Academic and Classical High School', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Kennard CJA Elementary', rating: '10/10', type: 'Public, PK-5' }
-      ],
-      'oklahoma city': [
-        { name: 'Classen High School of Advanced Studies', rating: '10/10', type: 'Public, 6-12' },
-        { name: 'Belle Isle Middle School', rating: '9/10', type: 'Public, 5-8' },
-        { name: 'Cleveland Elementary School', rating: '8/10', type: 'Public, PK-4' }
-      ],
-      'tulsa': [
-        { name: 'Booker T. Washington High School', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Carver Middle School', rating: '9/10', type: 'Public, 6-8' },
-        { name: 'Eisenhower International Elementary School', rating: '9/10', type: 'Public, K-5' }
-      ],
-      'cincinnati': [
-        { name: 'Walnut Hills High School', rating: '10/10', type: 'Public, 7-12' },
-        { name: 'Kilgour Elementary School', rating: '9/10', type: 'Public, PK-6' },
-        { name: 'Sands Montessori Elementary School', rating: '8/10', type: 'Public, PK-6' }
-      ],
-      'cleveland': [
-        { name: 'Campus International School', rating: '9/10', type: 'Public, K-8' },
-        { name: 'Cleveland School of the Arts', rating: '8/10', type: 'Public, 8-12' },
-        { name: 'Horizon Science Academy', rating: '7/10', type: 'Charter, K-12' }
-      ],
-      'fort worth': [
-        { name: 'Tanglewood Elementary School', rating: '9/10', type: 'Public, K-5' },
-        { name: 'Fort Worth Academy of Fine Arts', rating: '9/10', type: 'Charter, 3-12' },
-        { name: 'Texas Academy of Biomedical Sciences', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Marine Creek Collegiate High School', rating: '10/10', type: 'Public, 9-12' }
-      ],
-      'orlando': [
-        { name: 'Orlando Science Elementary Charter', rating: '10/10', type: 'Charter, K-5' },
-        { name: 'Lake Eola Charter School', rating: '9/10', type: 'Charter, K-8' },
-        { name: 'Timber Creek High School', rating: '9/10', type: 'Public, 9-12' },
-        { name: 'Winter Park High School', rating: '8/10', type: 'Public, 9-12' }
-      ],
-      'san antonio': [
-        { name: 'BASIS San Antonio Shavano Campus', rating: '10/10', type: 'Charter, K-12' },
-        { name: 'Health Careers High School', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Wilderness Oak Elementary School', rating: '9/10', type: 'Public, K-5' },
-        { name: 'Ronald Reagan High School', rating: '9/10', type: 'Public, 9-12' }
-      ],
-      'memphis': [
-        { name: 'Maxine Smith STEAM Academy', rating: '10/10', type: 'Public, 6-8' },
-        { name: 'Campus School', rating: '9/10', type: 'Public, 1-5' },
-        { name: 'White Station High School', rating: '8/10', type: 'Public, 9-12' },
-        { name: 'Germantown High School', rating: '8/10', type: 'Public, 9-12' }
-      ],
-      'kansas city': [
-        { name: 'Lincoln College Preparatory Academy', rating: '10/10', type: 'Public, 6-12' },
-        { name: 'Academie Lafayette', rating: '9/10', type: 'Charter, K-8' },
-        { name: 'Border Star Montessori School', rating: '9/10', type: 'Public, PK-6' },
-        { name: 'St. Teresa\'s Academy', rating: 'Private', type: 'Private, 9-12' }
-      ],
-      'charleston': [
-        { name: 'Academic Magnet High School', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Charleston County School of the Arts', rating: '10/10', type: 'Public, 6-12' },
-        { name: 'Mount Pleasant Academy', rating: '10/10', type: 'Public, K-5' },
-        { name: 'Buist Academy for Advanced Studies', rating: '10/10', type: 'Public, K-8' }
-      ],
-      'summerville': [
-        { name: 'Rollings Middle School of the Arts', rating: '10/10', type: 'Public, 6-8' },
-        { name: 'Dorchester County District 2 Schools', rating: '9/10', type: 'Public District' },
-        { name: 'Ashley Ridge High School', rating: '8/10', type: 'Public, 9-12' }
-      ],
-      'edison': [
-        { name: 'John P. Stevens High School', rating: '10/10', type: 'Public, 9-12' },
-        { name: 'Edison High School', rating: '9/10', type: 'Public, 9-12' },
-        { name: 'Martin Luther King Elementary', rating: '9/10', type: 'Public, K-5' }
-      ]
-    };
-
-    if (CITY_SCHOOLS[city]) {
-      return CITY_SCHOOLS[city];
-    }
-
-    // Try to extract from description if not in city list
-    const desc = (p.description || '').toLowerCase();
-    const schoolMatches = desc.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Elementary|Middle|High|School|Academy|District))/g);
-    if (schoolMatches) {
-      schoolMatches.forEach(name => {
-        if (!schools.find(s => s.name === name)) {
-          schools.push({ name: name, rating: 'Top Rated', type: 'Verified District' });
-        }
-      });
-    }
-
-    // Default placeholder if nothing else
-    if (schools.length === 0) {
-      schools.push({ name: `Local Schools serving ${p.city || 'this area'}`, rating: 'Highly Rated', type: 'Public/Charter' });
-    }
-
-    return schools.slice(0, 4);
-  }
-
-  // Verified Neighborhood Highlight Box
   const neighborhoodName = (p.neighborhood || '').trim();
   const countyName = (p.county || '').trim();
-  const locationCtx = (p.location_context || '').trim();
 
-  const neighborhoodBannerHtml = (neighborhoodName || countyName || locationCtx) ? `
+  const neighborhoodBannerHtml = (neighborhoodName || countyName) ? `
     <div class="neighborhood-banner">
       <div class="nb-icon-box">
         <i class="fas fa-location-dot"></i>
       </div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="nb-title">${esc(neighborhoodName || (city + ' Community Area'))}</span>
+          ${neighborhoodName ? `<span class="nb-title">${esc(neighborhoodName)}</span>` : ''}
           ${countyName ? `<span class="nb-county-tag">${esc(countyName)}</span>` : ''}
-          <span class="nb-verified-tag"><i class="fas fa-check" style="font-size:9px"></i> Verified Location</span>
         </div>
-        ${locationCtx ? `<div class="nb-desc">${esc(locationCtx)}</div>` : `<div class="nb-sub">Authentic neighborhood connectivity anchored at ${esc(fullAddr)}</div>`}
+        ${qualifiedLocationCtx ? `<div class="nb-desc">${esc(qualifiedLocationCtx)}</div>` : ''}
       </div>
     </div>
   ` : '';
 
-  // Walk score descriptor
-  let wsDesc = 'Walkability & transit';
-  if (walkScore) {
+  let wsDesc = '';
+  if (walkScore != null) {
     const num = parseInt(walkScore, 10);
     if (!isNaN(num)) {
       if (num >= 90) wsDesc = "Walker's Paradise";
@@ -3724,64 +3638,100 @@ function renderNeighborhoodIntelligence(p) {
 
       ${neighborhoodBannerHtml}
 
-      <!-- Score Cards: Always visible & prominent -->
+      <!-- Only render scores that were actually captured. -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px">
-        <a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
+        ${(walkScore != null || transitScore != null || bikeScore != null) ? `<a href="${wsUrl}" target="_blank" rel="noopener noreferrer" class="score-card">
           <div style="width:44px;height:44px;border-radius:10px;background:rgba(0,106,255,0.12);display:flex;
             align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚶</div>
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;justify-content:space-between">
-              <div class="score-card-title">Walk Score®</div>
-              ${walkScore ? `<div style="font-weight:800;color:var(--m-brand);font-size:16px">${walkScore}</div>` : ''}
+              <div class="score-card-title">Listing-reported walkability scores</div>
+              ${walkScore != null ? `<div style="font-weight:800;color:var(--m-brand);font-size:16px">${walkScore}</div>` : ''}
             </div>
             <div class="score-card-sub" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
-              <span><strong>${wsDesc}</strong></span>
-              ${transitScore ? `<span>· Transit: <strong>${transitScore}</strong></span>` : ''}
-              ${bikeScore ? `<span>· Bike: <strong>${bikeScore}</strong></span>` : ''}
+              ${wsDesc ? `<span><strong>${wsDesc}</strong></span>` : ''}
+              ${transitScore != null ? `<span>· Transit: <strong>${transitScore}</strong></span>` : ''}
+              ${bikeScore != null ? `<span>· Bike: <strong>${bikeScore}</strong></span>` : ''}
             </div>
-            <div class="score-card-cta">View Live Index &rarr;</div>
+            <div class="score-card-cta">Explore walkability &rarr;</div>
           </div>
-        </a>
-        <div class="score-card" style="cursor:default">
-          <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.12);display:flex;
-            align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏫</div>
-          <div style="flex:1;min-width:0">
-            <div class="score-card-title">Nearby Schools</div>
-            <div class="score-card-sub">Top rated schools serving ${esc(city)}</div>
-            <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" class="score-card-cta" style="text-decoration:none;display:inline-block">GreatSchools Ratings &rarr;</a>
-          </div>
-        </div>
+        </a>` : ''}
       </div>
-
-      <!-- Schools List: Interactive exploration grid -->
-      <div style="background:var(--m-surface-2);border:1px solid var(--m-border);border-radius:14px;padding:16px;margin-bottom:18px">
-        <div style="font-size:11px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <i class="fas fa-graduation-cap" style="color:var(--m-brand)"></i> Verified Nearby Schools
-          </div>
-          <a href="${gsUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--m-brand);text-decoration:none;font-weight:700">Explore District <i class="fas fa-arrow-up-right-from-square" style="font-size:9px"></i></a>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">
-          ${getNearbySchools(p).map(s => {
-            const isTop = (s.rating || '').includes('10') || (s.rating || '').includes('9');
-            const ratingColor = isTop ? '#059669' : '#0284c7';
-            const ratingBg = isTop ? 'rgba(16,185,129,.12)' : 'rgba(2,132,199,.12)';
-            const schoolSearchUrl = `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(s.name + ' ' + city + ' ' + state)}&sortBy=distance`;
-            return `
-            <a href="${schoolSearchUrl}" target="_blank" rel="noopener noreferrer" class="school-card-item">
-              <div style="flex:1;min-width:0">
-                <div class="school-card-name">${esc(s.name)}</div>
-                <div class="school-card-type">${esc(s.type)}</div>
-              </div>
-              <div style="margin-left:12px;text-align:right;flex-shrink:0">
-                <div class="school-card-rating" style="color:${ratingColor};background:${ratingBg}">${esc(s.rating)}</div>
-                <div class="school-card-explore">Explore <i class="fas fa-arrow-up-right-from-square" style="font-size:9px"></i></div>
-              </div>
-            </a>
-          `}).join('')}
-        </div>
+      <div id="nearbyPlacesPanel" class="score-card" style="display:block;margin-top:12px;cursor:default">
+        <div style="font-weight:700;color:var(--m-ink)">Nearby places</div>
+        <div id="nearbyPlacesContent" class="score-card-sub" style="margin-top:6px">Nearby place information loads when this section is viewed.</div>
       </div>
     </div>`;
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries, obs) => {
+      if (!entries[0]?.isIntersecting) return;
+      obs.disconnect();
+      loadPropertyLocationIntelligence(p);
+    }, { rootMargin: '250px' });
+    observer.observe(section);
+  } else {
+    loadPropertyLocationIntelligence(p);
+  }
+}
+
+async function loadPropertyLocationIntelligence(p) {
+  const panel = document.getElementById('nearbyPlacesContent');
+  if (!panel || !p?.id || isPreview) return;
+  if (p.lat == null || p.lng == null || !Number.isFinite(Number(p.lat)) || !Number.isFinite(Number(p.lng))) {
+    panel.textContent = 'Nearby place information is unavailable because this listing has no coordinates.';
+    return;
+  }
+  try {
+    const client = (window.CP && typeof window.CP.sb === 'function' ? window.CP.sb() : null) || supabase;
+    const { data, error } = await client.functions.invoke('property-location', {
+      body: { property_id: String(p.id), share_token: shareToken || undefined },
+    });
+    if (error) throw error;
+    if (!data || !Array.isArray(data.places)) throw new Error('Location service returned an invalid response');
+
+    _locationSnapshot = data;
+    _renderNearbyMapMarkers(data);
+    const neighborhoodText = [data.neighborhood, data.city].filter(Boolean).join(', ');
+    const mapNeighborhood = document.getElementById('mapNeighborhood');
+    const mapNeighborhoodText = document.getElementById('mapNeighborhoodText');
+    if (neighborhoodText && mapNeighborhood && mapNeighborhoodText) {
+      mapNeighborhoodText.textContent = `Approximate neighborhood: ${neighborhoodText}. Source: Geoapify reverse geocoding. This is not an official neighborhood boundary.`;
+      mapNeighborhood.style.display = 'block';
+    }
+
+    const groups = [
+      ['school', 'Schools'],
+      ['park', 'Parks'],
+      ['shopping', 'Shopping'],
+      ['healthcare', 'Healthcare'],
+      ['transit', 'Public transit'],
+    ];
+    const rows = groups.map(([category, label]) => {
+      const places = data.places.filter((place) => place.category === category);
+      if (!places.length) return '';
+      const items = places.map((place) => `
+        <li style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--m-border,#e2e8f0)">
+          <span>${esc(place.name)}</span>
+          <span style="white-space:nowrap">${esc(_formatStraightLineDistance(place.distance_m))}</span>
+        </li>`).join('');
+      return `<div style="margin-top:10px"><strong>${label}</strong><ul style="list-style:none;padding:0;margin:4px 0 0">${items}</ul></div>`;
+    }).filter(Boolean).join('');
+    const freshness = data.fetched_at
+      ? `Updated ${new Date(data.fetched_at).toLocaleDateString()}.`
+      : '';
+    const stale = data.stale ? ' Showing the last saved snapshot while refresh is unavailable.' : '';
+    const partial = data.status === 'partial' ? ' Some location sources did not respond.' : '';
+    panel.innerHTML = `
+      ${rows || '<div>No nearby place records were returned for this address.</div>'}
+      <div style="margin-top:10px;font-size:11px;line-height:1.5;color:var(--m-muted)">
+        ${esc(data.distance_note || 'Distances are approximate straight-line distances, not walking or driving routes.')}
+        ${esc(freshness)}${esc(stale)}${esc(partial)}
+        <br>${esc(data.attribution || '© Geoapify · © OpenStreetMap contributors')}
+      </div>`;
+  } catch (error) {
+    console.warn('[property] Nearby place lookup failed:', error);
+    panel.textContent = 'Nearby place information is temporarily unavailable.';
+  }
 }
 
 /* ── Similar Listings (async) ────────────────────────────────────────────── */
@@ -3894,5 +3844,3 @@ function preloadLightboxAdjacentImages(idx) {
     }
   });
 }
-
-

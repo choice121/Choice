@@ -6,9 +6,17 @@ The Orion build uses bundled UI and extractor files from this directory, so the 
 
 ## How it works
 
-When you open any supported listing detail page, the extension injects a purple **"Save to Pipeline"** button in the bottom-right corner. Click it and the listing — every field and every photo — is sent directly to your Choice Properties pipeline.
+When you open any supported listing detail page, the extension injects a purple **"Save to Pipeline"** button in the bottom-right corner. Click it to send the fields the extractor can verify from the page and the source photo URLs to your Choice Properties pipeline.
 
 **Why it never gets blocked:** The extension reads the page's embedded JSON (`__NEXT_DATA__` / Redux state) directly from the already-loaded page (same data your browser is already displaying). No outbound fetch to the listing site, no datacenter IP, nothing to block.
+
+## Latest data-accuracy update — v28.0.2 (2026-10-15 23:33 UTC)
+
+Zillow's generic cooling flags and window units are not treated as central air, explicit "No basement" facts are retained as false, and missing feature facts remain unknown. The release covers Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes.
+
+## Location enrichment integration — v28.0.3 (2026-10-15 23:49 UTC)
+
+The shared property details experience can now display cached Geoapify nearby-place results and approximate neighborhood context through a Supabase Edge Function. It does not infer school ratings, attendance boundaries, Walk Score, or route times. See [`docs/LOCATION_ENRICHMENT.md`](../docs/LOCATION_ENRICHMENT.md) for the source, cache, and deployment details.
 
 ## Features
 
@@ -44,7 +52,7 @@ The extension icon appears in your Chrome toolbar.
 1. Browse to any supported listing detail page
    *(Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, or Invitation Homes)*
 2. Click the purple **↓ Save to Pipeline** button (bottom-right corner)
-3. Button turns green: "✓ Saved! 24 photos · San Francisco · Q:88/100"
+3. The button confirms the save and reports the result.
 4. Open your [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to review and publish
 
 ---
@@ -58,17 +66,17 @@ The extension icon appears in your Chrome toolbar.
 | Rent, deposit, fees | `price`, `resoFacts.*` |
 | Beds, baths, sqft, lot, year built | Direct fields |
 | Property type | `homeType` → normalized |
-| Available date | `resoFacts.dateAvailable` |
 | Description | `description` |
-| Pets, smoking policy | `isPetFriendly`, `resoFacts.petsAllowed` |
+| Pets | Choice policy: pet-friendly |
 | HVAC, laundry, parking | `resoFacts.heating/cooling/laundry/parking` |
 | Appliances, amenities, utilities | `resoFacts.appliances/communityFeatures/…` |
 | Walk / transit / bike scores | `walkScore`, `transitScore`, `bikeScore` |
+| Availability, lease terms, smoking policy | Intentionally omitted |
 | Virtual tour URL | `virtualTourUrl` |
 | All photos (up to 50) | `responsivePhotosOriginalRatio` (full-res JPEG) |
 | Agent / broker name | `attributionInfo` |
 
-Photos are stored as source URLs and transferred to ImageKit automatically when you publish the listing from the pipeline.
+Photos retain their source URLs and original order through publication; the first source photo remains the hero image.
 
 ---
 

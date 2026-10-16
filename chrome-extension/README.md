@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v28.0.0)
+# Choice Properties — Universal Chrome Extension (v28.0.3)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -23,10 +23,10 @@ A browser extension that allows Choice Properties agents to save rental listings
 
 - **Instant 0ms SPA Mount**: Detects client-side navigations and transitions immediately without lag.
 - **Smart Pre-Flight HUD**:
-  - Live photo quality indicators ($\ge 6$ photos verified).
+  - Shows the detected photo count; listings are not blocked based on photo count.
   - Exact detected photo total shown for the current listing (no ambiguous `+N` remainder).
   - Mini photo thumbnail ribbon for instant visual preview.
-  - Verified architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.).
+  - Detected architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.) for review.
   - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
 - **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch folders or create a new folder (with any name, including numbers, and optional description) directly on Zillow, auto-collapsing immediately once configured.
@@ -39,6 +39,8 @@ A browser extension that allows Choice Properties agents to save rental listings
   - **Strict Stripping**: Never outputs lease duration or smoking policies.
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 - **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
+- **Source-Fact Accuracy**: Zillow estimates are not substituted for asking rent, and unavailable, lease-term, and smoking-policy fields are omitted from imports. Unknown feature facts stay unknown; generic cooling/window units do not imply central air, while explicit "No basement" wording is captured as false.
+- **Location Intelligence Integration**: Property pages can load cached, server-side Geoapify nearby places and approximate neighborhood context. Details are documented in [`docs/LOCATION_ENRICHMENT.md`](../docs/LOCATION_ENRICHMENT.md); no school ratings, attendance boundaries, or walk/travel times are inferred.
 
 ---
 

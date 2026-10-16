@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v28.0.0
+// Choice Properties — Live Content Script v28.0.3
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '28.0.0-live';
+  var VERSION  = '28.0.3-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -1046,7 +1046,7 @@
             <span class="cp-brand-title">Choice Properties</span>
           </div>
           <div class="cp-header-badges">
-            <span class="cp-badge-verified">${escapeHtml(sourceLabel)} Verified</span>
+            <span class="cp-badge-verified">${escapeHtml(sourceLabel)} capture</span>
             <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
             <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
           </div>
@@ -1594,7 +1594,7 @@
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
-        available_date: extracted.available_date,
+        available_date: null,
         pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
         security_deposit: rentVal,
@@ -1622,7 +1622,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v28.0.0-live',
+        _import: 'browser-extension-v28.0.3-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

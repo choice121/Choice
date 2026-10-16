@@ -4,6 +4,39 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v28.0.3] - 2026-10-15 23:49 UTC
+### Cached, Source-Qualified Property Location Intelligence
+- **Nearby Places & Neighborhood Context**: Added a Supabase Edge Function that can retrieve nearby schools, parks, shopping, healthcare, and public transit from Geoapify and reverse-geocode an approximate neighborhood.
+- **Property Detail Map**: Adds interactive nearby-place markers and distance summaries; distances are explicitly labeled as straight-line estimates, not walking or driving routes.
+- **Privacy & Cost Controls**: Provider calls run server-side, use stored property coordinates, and cache successful snapshots for 14 days (partial responses for six hours). Private-placement requests require a valid share token.
+- **Accuracy Boundaries**: Does not claim school ratings, school-assignment boundaries, or Walk Score. Provider attribution, retrieval date, partial results, and stale results are shown.
+- **Pipeline Cleanup**: Removed an unused embedded Geoapify fallback value from the import Edge Function; provider access uses configured environment secrets.
+- **Synchronized Artifacts & Tests**: Rebuilt both extension packages and shared extractor variants as v28.0.3; location normalization assertions pass.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
+## [v28.0.2] - 2026-10-15 23:33 UTC
+### Zillow Feature Fact Precision
+- **Explicit Negatives vs Unknowns**: Zillow basement wording such as "No basement" is recognized as an explicit false; absent feature evidence remains unknown (`null`).
+- **Central Air Accuracy**: Generic cooling indicators and window units are no longer treated as proof of central air. Central air is set only from explicit central-cooling evidence.
+- **Regression Coverage**: Added matching Chromium and Orion cases for explicit basement and non-central cooling facts.
+- **Synchronized Artifacts & Tests**: Rebuilt extractor variants and both v28.0.2 extension packages; Chromium extractor tests and package validation pass.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
+## [v28.0.1] - 2026-10-15 23:25 UTC
+### Zillow Fact Accuracy and Location Display Corrections
+- **Asking Rent Integrity**: Zillow `rentZestimate` is no longer used as the asking rent when a listing price is absent.
+- **Policy-Safe Imports**: Availability dates, lease terms, and smoking-policy fields are omitted from new pipeline records and public publish payloads; these fields no longer affect data-quality scores.
+- **Unknown Feature Preservation**: Missing basement and central-air facts remain unknown rather than being stored as false.
+- **Location Display Accuracy**: Removed fabricated city-based school names/ratings from the public details UI. Listing-reported school names are explicitly qualified, and no ratings, assignment, or proximity claims are invented. Removed unsupported "Verified Location" labeling and hide empty location scores.
+- **Synchronized Artifacts & Tests**: Rebuilt both Chromium and Orion v28.0.1 packages and extractor bundles; extractor regression tests pass for both builds.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
 ## [v28.0.0] - 2026-10-08
 ### Database Check Constraint Resolution on Direct Pipeline Ingestion
 - **Fixed `photo_upload_status` Check Constraint**: Corrected `receive-pipeline-import` edge function to assign `photo_upload_status = 'complete'` (instead of `'ready'`), fully conforming to `pipeline_properties_photo_upload_status_check` (`'none'`, `'uploading'`, `'complete'`, `'failed'`). Eliminates "new row for relation pipeline_properties violates check constraint" failures on save.
