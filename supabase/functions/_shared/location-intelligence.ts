@@ -14,7 +14,7 @@ const CATEGORY_RULES: Array<[NearbyCategory, RegExp]> = [
   ['school', /^education\.(school|college|university|kindergarten)(\.|$)/i],
   ['park', /^leisure\.(park|nature_reserve)(\.|$)/i],
   ['shopping', /^commercial\.(supermarket|shopping_mall|marketplace)(\.|$)/i],
-  ['healthcare', /^healthcare\.(hospital|clinic)(\.|$)/i],
+  ['healthcare', /^healthcare(?:\.|$)/i],
   ['transit', /^public_transport(?:\.|$)/i],
   ['transit', /^public_transportation(?:\.|$)/i],
 ];

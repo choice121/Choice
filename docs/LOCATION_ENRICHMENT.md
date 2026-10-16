@@ -41,17 +41,53 @@ circle filter, proximity bias, the supported categories, and a maximum of 100
 results. Returned places are normalized and their distances are calculated
 before the snapshot is cached.
 
-The current `property-location` function is deployed. A live request against
-an active listing confirmed the Places request no longer returns the earlier
-HTTP 400, but both Geoapify requests currently return HTTP 401. No snapshot is
-cached until the provider requests succeed, so the location experience has not
-yet been verified with live nearby-place data.
+The current `property-location` function is deployed. Latest verification on
+2026-10-16 used the production site and one active listing with stored
+coordinates:
+
+- The public listing lookup succeeded, but the deployed function returned
+  HTTP 502 (`location_provider_unavailable`); its Places and reverse-geocoding
+  requests both returned HTTP 401.
+- Replaying the function's exact Places parameters with the key from the
+  production browser config returned HTTP 400. The provider identified
+  `healthcare.clinic` as unsupported. Each other configured category returned
+  HTTP 200 independently. Replacing that category with Geoapify's supported
+  `healthcare` umbrella returned HTTP 200 with nearby-place results, including
+  healthcare subcategories such as `healthcare.clinic_or_praxis`. The function
+  and category normalizer have now been updated to use and accept that
+  supported category; production deployment and live function verification
+  are still pending.
+- The tested property's location-cache query succeeded but returned no row.
+  No successful snapshot has been verified, so customer-facing nearby results
+  and map markers remain unverified.
+- The Geoapify key present in the production browser config was tested against
+  autocomplete, Places, and reverse geocoding from a server request without a
+  `Referer`; all three returned HTTP 200. This does not establish that this is
+  the same value configured as the Supabase Edge Function secret.
+- A private-placement request without a share token returned HTTP 404 as
+  intended. A valid share-token request was not tested.
+
+The unsupported category explained the Places HTTP 400 and has been corrected
+in source. The deployed Edge Function's Geoapify credential or its
+provider-side restrictions remain unresolved: both function requests still
+returned HTTP 401 during the live test. The Supabase CLI is not
+available in the verification environment, and secret values were not read or
+printed; inspect the `GEOAPIFY_API_KEY` secret configuration in Supabase using
+an authorized secret-management interface. Do not print the value, send it in
+chat, or spoof a browser `Referer` to bypass a restriction.
 
 ## Deployment and verification
 
 Migration `20261015000002_property_location_intelligence.sql` and the
-`property-location` Edge Function are deployed to the target Supabase project.
-After the provider requests succeed, request location data for an active
-property with stored coordinates, confirm a snapshot and cache record are
-created, and verify the nearby places and map markers on the property details
-page.
+`property-location` Edge Function deployment completed successfully in the
+Supabase workflow for commit `389c6268`. The Cloudflare build and deployment
+workflow also completed successfully for current `main` (`2f7d9dd`). The
+property page and its JavaScript asset are served by production, but an
+interactive browser test could not be run in the verification environment
+(no browser or Playwright installation is available).
+
+After the Supabase secret issue is resolved, request location data for an
+active property with stored coordinates, confirm a snapshot and cache record
+are created, and verify the nearby places, attribution, and map markers on the
+property details page. Then test a private-placement listing with a valid share
+token as well as without one.

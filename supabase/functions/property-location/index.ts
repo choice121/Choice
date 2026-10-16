@@ -15,8 +15,7 @@ const GEOAPIFY_CATEGORIES = [
   "leisure.park",
   "commercial.supermarket",
   "commercial.shopping_mall",
-  "healthcare.hospital",
-  "healthcare.clinic",
+  "healthcare",
   "public_transport",
 ];
 

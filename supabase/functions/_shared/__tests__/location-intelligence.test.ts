@@ -10,6 +10,8 @@ Deno.test('categorizeNearbyPlace maps supported location groups and ignores unre
   assertEquals(categorizeNearbyPlace(['leisure.park']), 'park');
   assertEquals(categorizeNearbyPlace(['commercial.supermarket']), 'shopping');
   assertEquals(categorizeNearbyPlace(['healthcare.hospital']), 'healthcare');
+  assertEquals(categorizeNearbyPlace(['healthcare.clinic_or_praxis']), 'healthcare');
+  assertEquals(categorizeNearbyPlace(['healthcare']), 'healthcare');
   assertEquals(categorizeNearbyPlace(['public_transport']), 'transit');
   assertEquals(categorizeNearbyPlace(['commercial.restaurant']), null);
 });
