@@ -47,7 +47,8 @@ coordinates:
 
 - The public listing lookup succeeded, but the deployed function returned
   HTTP 502 (`location_provider_unavailable`); its Places and reverse-geocoding
-  requests both returned HTTP 401.
+  requests both returned HTTP 401 before the Supabase Edge Function secret was
+  updated.
 - Replaying the function's exact Places parameters with the key from the
   production browser config returned HTTP 400. The provider identified
   `healthcare.clinic` as unsupported. Each other configured category returned
@@ -56,9 +57,10 @@ coordinates:
   healthcare subcategories such as `healthcare.clinic_or_praxis`. The function
   and category normalizer were updated to use and accept that supported
   category, then deployed in commit `140a25b`.
-- The tested property's location-cache query succeeded but returned no row.
-  No successful snapshot has been verified, so customer-facing nearby results
-  and map markers remain unverified.
+- After the new `GEOAPIFY_API_KEY` was saved in Supabase, the deployed function
+  returned HTTP 200 with `status: "ok"`, 12 nearby places, and `stale: false`.
+  A service-authorized cache check confirmed one snapshot row for the tested
+  listing.
 - The Geoapify key present in the production browser config was tested against
   autocomplete, Places, and reverse geocoding from a server request without a
   `Referer`; all three returned HTTP 200. This does not establish that this is
@@ -67,14 +69,10 @@ coordinates:
   intended. A valid share-token request was not tested.
 
 The unsupported category explained the Places HTTP 400 and has been corrected
-in production. A post-deployment request still returned HTTP 502 from the Edge
-Function, with both provider requests returning HTTP 401. The deployed Edge
-Function's Geoapify credential or its provider-side restrictions remain
-unresolved. The Supabase CLI is not
-available in the verification environment, and secret values were not read or
-printed; inspect the `GEOAPIFY_API_KEY` secret configuration in Supabase using
-an authorized secret-management interface. Do not print the value, send it in
-chat, or spoof a browser `Referer` to bypass a restriction.
+in production. Updating the Supabase Edge Function secret resolved the
+provider 401s. Secret values were not read or printed. Keep the server-side
+Supabase secret separate from the key injected into public browser config for
+address autocomplete.
 
 ## Deployment and verification
 
@@ -82,12 +80,13 @@ Migration `20261015000002_property_location_intelligence.sql` and the
 `property-location` Edge Function deployment completed successfully in the
 Supabase workflow for the location fix (`140a25b`). The Cloudflare enforcement
 and Pages build/deployment workflows also completed successfully for that
-commit. The property page and its JavaScript asset are served by production,
-but an interactive browser test could not be run in the verification
-environment (no browser or Playwright installation is available).
+commit. The property page and its JavaScript asset are served by production.
+The function response and cache were verified end to end, but an interactive
+browser test could not be run in the verification environment (no browser or
+Playwright installation is available). A private-placement request without a
+share token returned HTTP 404; a valid share-token request remains untested.
 
-After the Supabase secret issue is resolved, request location data for an
-active property with stored coordinates, confirm a snapshot and cache record
-are created, and verify the nearby places, attribution, and map markers on the
-property details page. Then test a private-placement listing with a valid share
-token as well as without one.
+Remaining verification: open an active property's details page in a browser to
+confirm nearby-place labels, attribution, and map markers render as expected.
+Then test a private-placement listing with a valid share token, in addition to
+the already verified no-token denial.
