@@ -3715,18 +3715,7 @@ async function loadPropertyLocationIntelligence(p) {
         </li>`).join('');
       return `<div style="margin-top:10px"><strong>${label}</strong><ul style="list-style:none;padding:0;margin:4px 0 0">${items}</ul></div>`;
     }).filter(Boolean).join('');
-    const freshness = data.fetched_at
-      ? `Updated ${new Date(data.fetched_at).toLocaleDateString()}.`
-      : '';
-    const stale = data.stale ? ' Showing the last saved snapshot while refresh is unavailable.' : '';
-    const partial = data.status === 'partial' ? ' Some location sources did not respond.' : '';
-    panel.innerHTML = `
-      ${rows || '<div>No nearby place records were returned for this address.</div>'}
-      <div style="margin-top:10px;font-size:11px;line-height:1.5;color:var(--m-muted)">
-        ${esc(data.distance_note || 'Distances are approximate straight-line distances, not walking or driving routes.')}
-        ${esc(freshness)}${esc(stale)}${esc(partial)}
-        <br>${esc(data.attribution || '© Geoapify · © OpenStreetMap contributors')}
-      </div>`;
+    panel.innerHTML = rows || '<div>No nearby place records were returned for this address.</div>';
   } catch (error) {
     console.warn('[property] Nearby place lookup failed:', error);
     panel.textContent = 'Nearby place information is temporarily unavailable.';

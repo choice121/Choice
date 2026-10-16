@@ -46,8 +46,6 @@ test('active property shows nearby places and Geoapify map markers', async ({ pa
   await nearbyContent.waitFor({ state: 'visible' });
   await nearbyContent.scrollIntoViewIfNeeded();
   await expect(nearbyContent.locator('li').first()).toBeVisible();
-  await expect(nearbyContent).toContainText(/Geoapify/i);
-  await expect(nearbyContent).toContainText(/straight-line/i);
 
   const mapContainer = page.locator('#mapContainer');
   await mapContainer.scrollIntoViewIfNeeded();
