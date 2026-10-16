@@ -54,9 +54,8 @@ coordinates:
   HTTP 200 independently. Replacing that category with Geoapify's supported
   `healthcare` umbrella returned HTTP 200 with nearby-place results, including
   healthcare subcategories such as `healthcare.clinic_or_praxis`. The function
-  and category normalizer have now been updated to use and accept that
-  supported category; production deployment and live function verification
-  are still pending.
+  and category normalizer were updated to use and accept that supported
+  category, then deployed in commit `140a25b`.
 - The tested property's location-cache query succeeded but returned no row.
   No successful snapshot has been verified, so customer-facing nearby results
   and map markers remain unverified.
@@ -68,9 +67,10 @@ coordinates:
   intended. A valid share-token request was not tested.
 
 The unsupported category explained the Places HTTP 400 and has been corrected
-in source. The deployed Edge Function's Geoapify credential or its
-provider-side restrictions remain unresolved: both function requests still
-returned HTTP 401 during the live test. The Supabase CLI is not
+in production. A post-deployment request still returned HTTP 502 from the Edge
+Function, with both provider requests returning HTTP 401. The deployed Edge
+Function's Geoapify credential or its provider-side restrictions remain
+unresolved. The Supabase CLI is not
 available in the verification environment, and secret values were not read or
 printed; inspect the `GEOAPIFY_API_KEY` secret configuration in Supabase using
 an authorized secret-management interface. Do not print the value, send it in
@@ -80,11 +80,11 @@ chat, or spoof a browser `Referer` to bypass a restriction.
 
 Migration `20261015000002_property_location_intelligence.sql` and the
 `property-location` Edge Function deployment completed successfully in the
-Supabase workflow for commit `389c6268`. The Cloudflare build and deployment
-workflow also completed successfully for current `main` (`2f7d9dd`). The
-property page and its JavaScript asset are served by production, but an
-interactive browser test could not be run in the verification environment
-(no browser or Playwright installation is available).
+Supabase workflow for the location fix (`140a25b`). The Cloudflare enforcement
+and Pages build/deployment workflows also completed successfully for that
+commit. The property page and its JavaScript asset are served by production,
+but an interactive browser test could not be run in the verification
+environment (no browser or Playwright installation is available).
 
 After the Supabase secret issue is resolved, request location data for an
 active property with stored coordinates, confirm a snapshot and cache record
