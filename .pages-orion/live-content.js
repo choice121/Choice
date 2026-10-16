@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v28.0.3
+// Choice Properties — Live Content Script v28.0.4
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '28.0.3-live';
+  var VERSION  = '28.0.4-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 2 : 12;
@@ -1622,7 +1622,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v28.0.3-live',
+        _import: 'browser-extension-v28.0.4-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1691,34 +1691,77 @@
   }
 
   async function submitPayload(payload) {
-    var lastResponse = null;
-    for (var attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
-          lastResponse = await new Promise(function (resolve) {
-            EXTENSION_API.runtime.sendMessage({
-              type: 'UPLOAD_PAYLOAD',
-              payload: payload,
-              settings: { offlineQueue: true }
-            }, function (response) {
-              resolve(EXTENSION_API.runtime.lastError ? { ok: false, error: EXTENSION_API.runtime.lastError.message } : response);
-            });
+    var canMessageBackground = EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage;
+    var bridgeError = null;
+
+    if (canMessageBackground) {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          var response = await new Promise(function (resolve, reject) {
+            var responseTimer = setTimeout(function () {
+              resolve({ ok: false, error: 'Background save timed out', bridgeFailure: true });
+            }, 8000);
+            try {
+              EXTENSION_API.runtime.sendMessage({
+                type: 'UPLOAD_PAYLOAD',
+                payload: payload,
+                settings: { offlineQueue: true }
+              }, function (backgroundResponse) {
+                clearTimeout(responseTimer);
+                var runtimeError = EXTENSION_API.runtime.lastError;
+                resolve(runtimeError
+                  ? { ok: false, error: runtimeError.message, bridgeFailure: true }
+                  : backgroundResponse);
+              });
+            } catch (error) {
+              clearTimeout(responseTimer);
+              reject(error);
+            }
           });
-        } else {
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          lastResponse = await saveRes.json();
+          if (response && (response.ok || response.duplicate || response.queued)) return response;
+          if (!response || response.bridgeFailure) {
+            bridgeError = response && response.error
+              ? response.error
+              : 'Background save returned no response';
+            break;
+          }
+          if (response && response.error && !response.bridgeFailure
+            && !/network|fetch|connection|receiving end|message port/i.test(response.error)) {
+            return response;
+          }
+          bridgeError = response.error || 'Background save failed';
+          if (attempt < 2) await new Promise(function (resolve) { setTimeout(resolve, 600 * (attempt + 1)); });
+        } catch (err) {
+          bridgeError = err && err.message ? err.message : 'Background save failed';
+          break;
         }
-        if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) return lastResponse;
-      } catch (err) {
-        lastResponse = { ok: false, error: err.message || 'Network connection error' };
       }
-      if (attempt < 2) await new Promise(function (resolve) { setTimeout(resolve, 600 * (attempt + 1)); });
     }
-    return lastResponse || { ok: false, error: 'Network connection error' };
+
+    try {
+      var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+        body: JSON.stringify(payload),
+      });
+      var body = await saveRes.json().catch(function () { return null; });
+      if (!saveRes.ok) {
+        return {
+          ok: false,
+          error: body && body.error ? body.error : 'Server rejected import (HTTP ' + saveRes.status + ')'
+        };
+      }
+      if (!body || typeof body !== 'object') {
+        return { ok: false, error: 'Import service returned an invalid response' };
+      }
+      return body;
+    } catch (err) {
+      var directError = err && err.message ? err.message : 'Network connection error';
+      return {
+        ok: false,
+        error: bridgeError ? bridgeError + '; direct retry failed: ' + directError : directError
+      };
+    }
   }
 
   function setError(msg) {

@@ -4,6 +4,10 @@ One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
+## Mobile save recovery — v28.0.4 (2026-10-16 07:05 UTC)
+
+If the Orion background message bridge does not respond or times out, saving now retries directly against the authenticated pipeline import endpoint. Server-side validation errors are shown instead of being reduced to a generic failure message.
+
 ## How it works
 
 When you open any supported listing detail page, the extension injects a purple **"Save to Pipeline"** button in the bottom-right corner. Click it to send the fields the extractor can verify from the page and the source photo URLs to your Choice Properties pipeline.

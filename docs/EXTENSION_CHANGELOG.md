@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v28.0.4] - 2026-10-16 07:05 UTC
+### Orion Mobile Save Bridge Recovery
+- **Background Message Fallback**: If the Orion background service worker returns no response, reports a messaging failure, or times out, the listing save retries directly against the authenticated import endpoint instead of ending with the generic "Save failed" message.
+- **Actionable Save Errors**: Server errors are preserved for the UI, and a failed direct retry reports both the background and direct-request errors.
+- **Safe Retry Behavior**: The import endpoint's existing source-listing duplicate check prevents a second pipeline record if the background request completed but its response was lost.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
 ## [v28.0.3] - 2026-10-15 23:49 UTC
 ### Cached, Source-Qualified Property Location Intelligence
 - **Nearby Places & Neighborhood Context**: Added a Supabase Edge Function that can retrieve nearby schools, parks, shopping, healthcare, and public transit from Geoapify and reverse-geocode an approximate neighborhood.
