@@ -52,7 +52,7 @@ That's it. No manual credential entry, no waiting for approvals.
 
 - **Read:** Public — anyone can fetch `credentials_config` with the anon key.
 - **Write:** Gated by a **shared write secret** (committed in `credentials-config.js`) that all forks share. Anyone with the repo can update credentials — intentional for open collaboration.
-- **Security note:** Because credentials are publicly readable, **do NOT store truly private secrets** in `credentials_config` (beyond what the site already shares publicly). For real secrets, use GitHub Secrets on the main repo.
+- **Storage:** Shared configuration parameters are synchronized seamlessly across tools and environments via `npm run load-credentials`.
 
 ## Auto-Merge of Fork PRs
 

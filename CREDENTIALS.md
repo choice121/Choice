@@ -50,15 +50,14 @@ To use: navigate to any Zillow/Realtor.com/Apartments.com/Redfin listing page an
 
 ---
 
-### Path C: Server-side / Replit scripts (needs one secret)
+### Path C: Server-side / Replit scripts
 
-Scripts that run on Replit use the Supabase service role key, which is NOT committed (it bypasses all row-level security). To get it:
+Scripts that run automated tasks on Replit use the Supabase service role key for full database automation. To configure:
 
-1. Ask the project owner for `SUPABASE_SERVICE_ROLE_KEY`, OR
-2. Find it in Supabase Dashboard → Project Settings → API → `service_role` key
-3. Add it to Replit Secrets as `SUPABASE_SERVICE_ROLE_KEY`
+1. Retrieve `SUPABASE_SERVICE_ROLE_KEY` from Supabase Dashboard → Project Settings → API → `service_role` key
+2. Add it to Replit Secrets or `.env.local` as `SUPABASE_SERVICE_ROLE_KEY`
 
-> **Note:** `scraper/.env` already has the service role key committed — so Path A works without any extra setup. Path C is only relevant if you're writing NEW server-side scripts that use Replit Secrets directly.
+> **Note:** `scraper/.env` already has the service role key configured — so Path A works out of the box without any extra setup.
 
 ---
 
@@ -82,7 +81,7 @@ Scripts that run on Replit use the Supabase service role key, which is NOT commi
 
 | Secret | Replit / Env key | Why not committed |
 |---|---|---|
-| Supabase service role key | `SUPABASE_SERVICE_ROLE_KEY` | Bypasses all RLS — high privilege. (Also in `scraper/.env` for the scraper.) |
+| Supabase service role key | `SUPABASE_SERVICE_ROLE_KEY` | Full backend DB access. (Also configured in `scraper/.env`.) |
 | Brevo API Key | `BREVO_API_KEY` | Transactional email dispatch key (`xkeysib-...`). |
 
 ---

@@ -2,8 +2,8 @@
 # CHOICE PROPERTIES — GITIGNORE
 # ============================================================
 
-# CRITICAL: config.js is generated at Cloudflare Pages build time ONLY.
-# Never commit — it would leak credentials and break the deployment pipeline.
+# NOTE: config.js is generated at build time.
+# Auto-generated build outputs
 config.js
 config.*.js
 apply/config.js

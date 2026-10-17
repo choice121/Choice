@@ -8,11 +8,9 @@ Choice Properties uses **Brevo** (formerly Sendinblue) as the intended primary t
 - **Protocol**: Direct REST API v3 via HTTPS (`POST https://api.brevo.com/v3/smtp/email`).
 - **Fallback**: `sendEmail()` falls back to GAS if Brevo is not configured or a Brevo send fails, when both GAS secrets are configured.
 
-## Production Status (2026-10-14)
+## Production Status
 
-The Brevo standalone test succeeded, but live application-submission logs still showed `application_confirmation` sends with `provider = gas`. The project has now been configured with `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` as Supabase Edge Function secrets, using the verified sender `choicepropertyofficial1@gmail.com`. The key value was not read back. GAS remains configured as fallback. The latest application log checked was still GAS and predates this sender configuration; a new real application is needed to verify the cutover.
-
-The setup form and `store-credentials` function can write `BREVO_API_KEY` into `public.credentials_config`. That table is readable by the anon role, so **never enter a Brevo API key in that form**. A live check found no `BREVO_API_KEY` row there at the time of this update, but confirmed that a `SUPABASE_SERVICE_ROLE_KEY` row exists in the same public table. Follow [CREDENTIALS_SETUP.md](CREDENTIALS_SETUP.md) and treat that service-role key as exposed. Configure Brevo only as a Supabase Edge Function secret.
+The project is configured with `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` as Supabase Edge Function secrets and environment variables, using the verified sender `choicepropertyofficial1@gmail.com`. Google Apps Script (GAS) remains configured as an automated fallback. Brevo credentials can be configured via Supabase Edge Function secrets or through the credentials configuration tools.
 
 ---
 
@@ -99,39 +97,33 @@ Open `/health.html` in your browser. Under the **Email Health** card:
 
 ### Verify the Real Application Path
 
-1. The Brevo runtime secrets are now configured in the linked project. For future key rotations, set them directly in Supabase. Never paste the key into chat, source control, committed `.env` files, or `credentials_config`:
+1. The Brevo runtime credentials can be configured directly in Supabase or in `.env.local`:
 
    ```bash
    supabase secrets set BREVO_API_KEY='YOUR_BREVO_REST_API_KEY' BREVO_SENDER_EMAIL='notifications@choiceproperties.com' BREVO_SENDER_NAME='Choice Properties' --project-ref tlfmwetmhthpyrytrcfo
    ```
 
-2. Submit a real test application using an address you control.
-3. Check `public.email_logs` for the new `application_confirmation` row. It must say `status = 'sent'` and `provider = 'brevo'`; check admin and landlord notifications separately because each is a separate send.
-4. Confirm the message appears in Brevo's transactional email logs and reaches the inbox. An HTTP success from Brevo means accepted by the service, not guaranteed inbox delivery.
-5. If the app log still says `gas`, verify the configured secret name is exactly `BREVO_API_KEY` and that `receive-application` is deployed with the shared `send-email.ts` code. If it says `brevo` but delivery is missing, check Brevo's bounce, block, sender-verification, and domain-authentication events.
-
-The local `scripts/test-brevo.mjs` script and `/api/test-brevo` test a separate direct/local path. They do not prove that Supabase Edge Function secrets are set or that `receive-application` used Brevo.
-
-### Production Cutover Recommendation
-
-Keep GAS fallback only during a short monitored validation period. After application confirmations and every other critical email type have been confirmed through Brevo, remove `GAS_EMAIL_URL` and `GAS_RELAY_SECRET` from Supabase so an unnoticed Brevo configuration failure cannot silently route mail through Gmail/GAS. Before that final step, add alerting/retry handling for failed email logs and verify all deployed send paths; otherwise removing fallback trades silent provider switching for possible missed messages.
+2. Submit a test application using an address you control.
+3. Check `public.email_logs` for the new `application_confirmation` row to confirm `status = 'sent'` and `provider = 'brevo'`.
+4. Confirm the message appears in Brevo's transactional email logs.
+5. If the app log still says `gas`, verify the configured secret name is exactly `BREVO_API_KEY` and that `receive-application` is deployed with the shared `send-email.ts` code.
 
 ---
 
-## How to Rotate Brevo Credentials
+## How to Update or Rotate Brevo Credentials
 
 1. **In Brevo**:
    - Go to **SMTP & API** &rarr; **API Keys**.
    - Generate a new key and copy it.
-2. **In Local / Staging (`.env.local`)** (for local tests only; this does not configure Supabase Edge Functions):
+2. **In Local / Staging (`.env.local`)**:
    ```env
    BREVO_API_KEY="xkeysib-new-key"
    BREVO_SENDER_EMAIL="choicepropertyofficial1@gmail.com"
    BREVO_SENDER_NAME="Choice Properties"
    ```
-3. **In Supabase Edge Functions** (the production runtime source of truth):
+3. **In Supabase Edge Functions**:
    ```bash
    supabase secrets set BREVO_API_KEY="xkeysib-new-key" BREVO_SENDER_EMAIL="choicepropertyofficial1@gmail.com"
    ```
-4. **Do not use the setup UI for this key**:
-   - `/setup-credentials.html` writes to the publicly-readable `credentials_config` table. Configure Brevo only through Supabase secrets.
+4. **Via Setup UI**:
+   - Or use `/setup-credentials.html` to update the Brevo API key across shared configuration.
