@@ -139,18 +139,10 @@ export async function onRequestPost(context) {
   try {
     const body = await context.request.json();
     const { property, targetQuery, mode } = body;
-    const RELOCATION_DISABLED_MSG = 'Address relocation is disabled for this project. Use the private-placement share flow only.';
 
     if (!property) {
       return new Response(JSON.stringify({ ok: false, error: 'Property is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (mode === 'same_block_alias' || mode === 'cross_location' || typeof targetQuery === 'string' || body.apply === false) {
-      return new Response(JSON.stringify({ ok: false, error: RELOCATION_DISABLED_MSG }), {
-        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

@@ -26,8 +26,7 @@
 name: Auto-merge fork PRs
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch: # Disabled automatic fork PR merging; manual review and approval required
 
 permissions:
   contents: write

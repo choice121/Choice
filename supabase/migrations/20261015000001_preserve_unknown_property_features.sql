@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION public.pipeline_publish(
   p_id          text,
   p_landlord_id uuid DEFAULT NULL,
-  p_status      text DEFAULT 'private_placement'
+  p_status      text DEFAULT 'active'
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -23,13 +23,7 @@ DECLARE
   v_height      int;
   v_order       int := 1;
   v_pub_status  property_status;
-  v_status_key  text;
 BEGIN
-  v_status_key := lower(trim(COALESCE(p_status, 'private_placement')));
-  IF v_status_key NOT IN ('active', 'private_placement') THEN
-    v_status_key := 'private_placement';
-  END IF;
-
   SELECT * INTO p FROM pipeline.pipeline_properties WHERE id = p_id;
   IF NOT FOUND THEN
     RETURN json_build_object('ok', false, 'error', 'Listing not found in pipeline');
@@ -40,7 +34,7 @@ BEGIN
     RETURN json_build_object('ok', false, 'error', 'Required fields missing');
   END IF;
 
-  IF v_status_key = 'private_placement' THEN
+  IF p_status = 'private_placement' THEN
     v_pub_status := 'private_placement'::property_status;
   ELSE
     v_pub_status := 'active'::property_status;

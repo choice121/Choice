@@ -107,3 +107,20 @@ __pycache__/
 .mypy_cache/
 venv/
 .venv/
+
+# Scratch & test scripts
+test_*.js
+update_descriptions.js
+restore_prop.js
+print_*.js
+fetch_*.js
+get_pipeline*.js
+check_*.js
+fix_*.js
+fix_*.py
+run_batch.py
+search_redfin.js
+pipeline_9_properties.json
+props.json
+published_*_results.json
+vision_audit_report.json

@@ -724,12 +724,7 @@
       if(pubBtn) pubBtn.addEventListener('click', () => doPublish(l.id));
 
       const relocateBtn = panel.querySelector('#pl-relocate-btn');
-      if (relocateBtn) {
-        relocateBtn.disabled = true;
-        relocateBtn.setAttribute('aria-disabled', 'true');
-        relocateBtn.title = 'Address relocation is disabled. Private placement is the only supported listing access path.';
-        relocateBtn.onclick = null;
-      }
+      if(relocateBtn) relocateBtn.addEventListener('click', () => openRelocateModal(l));
 
       const compareBtn = panel.querySelector('#pl-compare-desc-btn');
       if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
@@ -1140,9 +1135,6 @@ function wirePanelPhotoActions(){
 
   // ── Relocate & Synthetic Address Generation Modal ──────────────────────────
   function openRelocateModal(l){
-    S.toast('Address relocation is disabled. Private placement is the only supported listing access path.', 'error');
-    return;
-
     const modal = document.createElement('div');
     modal.id = 'pl-relocate-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -1836,18 +1828,10 @@ function wirePanelPhotoActions(){
     if(btn) btn.addEventListener('click', openImportModal);
 
     const bulkRelocateBtn = document.getElementById('pl-bulk-relocate-btn');
-    if (bulkRelocateBtn) {
-      bulkRelocateBtn.disabled = true;
-      bulkRelocateBtn.setAttribute('aria-disabled', 'true');
-      bulkRelocateBtn.title = 'Address relocation is disabled. Private placement is the only supported listing access path.';
-      bulkRelocateBtn.onclick = null;
-    }
+    if(bulkRelocateBtn) bulkRelocateBtn.addEventListener('click', openBulkRelocateModal);
   }
 
   function openBulkRelocateModal(){
-    S.toast('Address relocation is disabled. Private placement is the only supported listing access path.', 'error');
-    return;
-
     const selectedIds = Array.from(_selected);
     const count = selectedIds.length;
     const targetListings = count > 0 
