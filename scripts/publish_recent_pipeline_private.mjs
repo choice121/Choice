@@ -43,7 +43,7 @@ Equal Housing Opportunity`,
 
   'PP-93486427': `Remodeled 3-bedroom, 2-bath single-family house with full basement and 1-car garage. Features plenty of storage, a private fenced-in backyard, and central heating. Situated in a quiet residential neighborhood with convenient access to regional commuter corridors and shopping.
 
-Rent: $1,700/month. Application fee: $50 per adult applicant.
+Rent: $1,500/month. Application fee: $50 per adult applicant.
 
 Submit your rental application today at Choice Properties.`,
 
@@ -96,7 +96,7 @@ const VERIFIED_SPECS = {
     total_bathrooms: 2,
     property_type: 'TOWNHOUSE',
     square_footage: 1950,
-    monthly_rent: 1650,
+    monthly_rent: 1500,
     pets_allowed: true,
     pet_types_allowed: ['Dogs', 'Cats'],
     parking: 'Off-Street Parking',
@@ -112,7 +112,7 @@ const VERIFIED_SPECS = {
     total_bathrooms: 2,
     property_type: 'SINGLE_FAMILY',
     square_footage: 1500,
-    monthly_rent: 1700,
+    monthly_rent: 1500,
     pets_allowed: true,
     pet_types_allowed: ['Dogs', 'Cats'],
     parking: '1-Car Attached Garage',
@@ -128,7 +128,7 @@ const VERIFIED_SPECS = {
     total_bathrooms: 1.5,
     property_type: 'DUPLEX',
     square_footage: 1144,
-    monthly_rent: 1600,
+    monthly_rent: 1500,
     pets_allowed: true,
     pet_types_allowed: ['Dogs', 'Cats'],
     parking: 'Off-Street Parking',
