@@ -398,10 +398,9 @@ function buildAuthenticDescription(targetLoc, beds, baths, sqft, yearBuilt, gara
 • High-efficiency central heating and air conditioning
 • Private yard and rear leisure space
 • In-unit laundry hookups
-• Pet friendly (dogs and cats welcome)
 • Application Fee: $50 per applicant
 
-Pet friendly. Submit your rental application today at Choice Properties.`;
+Submit your rental application today at Choice Properties.`;
 
   return `${intro}\n\n${flowKitchen}\n\n${bedroomsBathrooms}\n\n${outdoorComfort}\n\n${highlights}`;
 }
@@ -467,13 +466,6 @@ async function main() {
       if (!u.toLowerCase().includes(cleanLoc)) continue;
     }
 
-    const isLocalCandidate = isCharlotteMarket && u.toLowerCase().includes('charlotte-nc');
-
-    // Skip destination state if not an intended in-market candidate
-    if (!isLocalCandidate && targetState && targetState.length === 2 && u.includes(`-${targetState.toUpperCase()}-`)) {
-      continue;
-    }
-
     try {
       const p = await fetchOpendoor(u);
       if (!p || !p.bedrooms || !p.bathrooms) continue;
@@ -481,8 +473,15 @@ async function main() {
       // Zero Photo Count Gate: Any photo count is accepted
       if (!p.photos || p.photos.length === 0) continue;
 
-      // Skip if state matches target state unless local candidate
-      if (!isLocalCandidate && p.state && targetState && p.state.toUpperCase() === targetState.toUpperCase()) continue;
+      // In-State Area Separation Protocol:
+      // If candidate is in the same destination state, ensure it is NOT from the exact mandated target ZIP
+      const isSameState = p.state && targetState && p.state.toUpperCase() === targetState.toUpperCase();
+      if (isSameState) {
+        const candidateZip = (p.zip || '').trim();
+        if (targetZip && candidateZip && targetZip === candidateZip) {
+          continue; // Enforce in-state area separation: skip candidate from the exact same target ZIP
+        }
+      }
 
       // Apply spec filters if requested
       const bedsNum = Number(p.bedrooms);
@@ -518,10 +517,31 @@ async function main() {
   const publishedIds = [];
   const today = new Date().toISOString().slice(0, 10);
 
+  const availableTargetPool = [...finalVerifiedAddresses];
+
   for (let i = 0; i < COUNT; i++) {
     const item = validProps[i];
     const sourceProp = item.prop;
-    const targetLoc = finalVerifiedAddresses[i];
+
+    // In-State Area Separation Protocol:
+    // If sourcing in-state, guarantee the target address is in a distinct ZIP/corridor
+    const isInState = sourceProp.state && targetState && 
+      sourceProp.state.trim().toUpperCase() === targetState.trim().toUpperCase();
+    const sourceZip = (sourceProp.zip || '').trim();
+    const sourceCity = (sourceProp.city || '').trim().toLowerCase();
+
+    let poolIdx = 0;
+    if (isInState && sourceZip) {
+      const diffAreaIdx = availableTargetPool.findIndex(loc => loc.zip !== sourceZip && (!sourceCity || loc.city.toLowerCase() !== sourceCity));
+      if (diffAreaIdx !== -1) {
+        poolIdx = diffAreaIdx;
+      } else {
+        const diffZipIdx = availableTargetPool.findIndex(loc => loc.zip !== sourceZip);
+        if (diffZipIdx !== -1) poolIdx = diffZipIdx;
+      }
+    }
+
+    const targetLoc = availableTargetPool.splice(poolIdx, 1)[0] || finalVerifiedAddresses[i];
 
     const beds = Number(sourceProp.bedrooms) || 4;
     const baths = Number(sourceProp.bathrooms) || 2.5;
@@ -535,6 +555,9 @@ async function main() {
     console.log(`\n  Property [${i + 1}/${COUNT}]:`);
     console.log(`    Source: ${sourceProp.street}, ${sourceProp.city} ${sourceProp.state} (${beds}b/${baths}ba, ${sourceProp.photos?.length} photos)`);
     console.log(`    Relocated To: ${targetLoc.address}, ${targetLoc.city}, ${targetLoc.state} ${targetLoc.zip} ($${rent}/mo)`);
+    if (isInState) {
+      console.log(`    [IN-STATE AREA SEPARATION]: Source (${sourceProp.city} ${sourceZip}) relocated to distinct corridor (${targetLoc.city} ${targetLoc.zip})`);
+    }
     console.log(`    US Census TIGER Coordinates: Lat ${targetLoc.lat}, Lng ${targetLoc.lng}`);
 
     // Strict original photo order
@@ -598,12 +621,11 @@ async function main() {
           'Stainless Steel Appliances',
           'Primary Bedroom Suite',
           'Walk-In Closets',
-          'In-Unit Washer/Dryer Hookups',
-          'Pet Friendly (Dogs & Cats Welcome)'
+          'In-Unit Washer/Dryer Hookups'
         ],
         appliances: ['Refrigerator', 'Dishwasher', 'Range / Oven', 'Microwave', 'Washer/Dryer Hookups'],
-        pets_allowed: true,
-        pet_types_allowed: ['Dogs', 'Cats'],
+        pets_allowed: null,
+        pet_types_allowed: null,
         smoking_allowed: false,
         lease_terms: null,
         minimum_lease_months: null,
@@ -651,11 +673,11 @@ async function main() {
         monthly_rent: rent,
         security_deposit: rent,
         application_fee: 50,
-        pet_deposit: 300,
+        pet_deposit: null,
         lease_terms: null,
         minimum_lease_months: null,
-        pets_allowed: true,
-        pet_types_allowed: ['Dogs', 'Cats'],
+        pets_allowed: null,
+        pet_types_allowed: null,
         smoking_allowed: false,
         amenities: [
           'Central Air Conditioning & Heating',
@@ -664,8 +686,7 @@ async function main() {
           'Stainless Steel Appliances',
           'Primary Bedroom Suite',
           'Walk-In Closets',
-          'In-Unit Washer/Dryer Hookups',
-          'Pet Friendly (Dogs & Cats Welcome)'
+          'In-Unit Washer/Dryer Hookups'
         ],
         appliances: ['Refrigerator', 'Dishwasher', 'Range / Oven', 'Microwave', 'Washer/Dryer Hookups'],
         flooring: ['Hardwood Laminate', 'Carpet', 'Ceramic Tile'],

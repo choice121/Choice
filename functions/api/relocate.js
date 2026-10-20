@@ -205,8 +205,22 @@ export async function onRequestPost(context) {
       if (zipFiltered.length > 0) pool = zipFiltered;
     }
 
+    // In-State Area Separation Enforcement:
+    // If relocating within the same state, guarantee a distinct ZIP code and non-colliding area
+    const isSameState = origState && pool[0] && origState.toUpperCase() === pool[0].state.toUpperCase();
+    let eligiblePool = pool;
+    if (isSameState && origZip) {
+      const diffAreaPool = pool.filter(l => l.zip !== origZip && (!origCity || l.city.toLowerCase() !== origCity.toLowerCase()));
+      if (diffAreaPool.length > 0) {
+        eligiblePool = diffAreaPool;
+      } else {
+        const diffZipPool = pool.filter(l => l.zip !== origZip);
+        if (diffZipPool.length > 0) eligiblePool = diffZipPool;
+      }
+    }
+
     // 2. Pick a verified municipal residential location
-    const loc = pool[Math.floor(Math.random() * pool.length)];
+    const loc = eligiblePool[Math.floor(Math.random() * eligiblePool.length)];
     let finalAddress = loc.address;
     let finalCity = loc.city;
     let finalState = loc.state;

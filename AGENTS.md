@@ -6,10 +6,10 @@
 > 1. **Universal Multi-City Verified Municipal Protocol (ANY US City / ANY State)**:
 >    - Relocation is universal across all 50 states and any municipality (e.g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
 >    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official **US Census Bureau TIGER-line geocoder**, paired with exact live rooftop coordinates. Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
-> 2. **STRICT Cross-Location Sourcing Rule (Out-of-Market Sourcing)**:
->    - **NEVER** scrape properties from the destination location/state itself.
->    - Always scrape from an external source municipality or state (e.g. scrape from TX, GA, CO, AZ, FL, etc., when relocating to NC or OK).
->    - This guarantees that local prospective tenants cannot reverse-lookup local MLS records or local addresses in that market, ensuring complete authenticity and zero search collisions.
+> 2. **Flexible In-State & Out-of-State Sourcing with In-State Area Separation Protocol**:
+>    - Sourcing may be out-of-state OR within the same destination state depending on the operator target.
+>    - **In-State Area Separation Enforcement**: When sourcing properties within the same destination state, the system strictly enforces publishing to a distinct geographic area/corridor.
+>    - The relocated address must NEVER share the same ZIP code (`target_zip !== source_zip`) or immediate local neighborhood/street block as the original source listing, ensuring complete privacy and preventing local collision.
 > 3. **Multi-ZIP Geographic Distribution Rule**:
 >    - When publishing or relocating to any destination municipality, you must **NOT** dump all properties into a single ZIP code.
 >    - Distribute properties across the valid residential ZIP codes covering that municipality and its adjacent residential corridors, unless the user explicitly mandates a single specified ZIP code (e.g. "all in 75217").
@@ -20,7 +20,7 @@
 >      # Advanced filters: beds, baths, sqft, price targeting, and status
 >      node scripts/publish-relocated.mjs --source opendoor --target "Matthews, NC" --beds 4 --baths-min 2 --baths-max 3 --sqft-min 2000 --sqft-max 2500 --status private_placement --count 5
 >      ```
->    - The runner automatically enforces strict cross-location sourcing, Census TIGER geocoding, multi-ZIP distribution, original image sequence preservation, zero photo count gate, realistic regional market rent calculation, and Choice platform rule enforcement.
+>    - The runner automatically enforces flexible sourcing with in-state area separation, Census TIGER geocoding, multi-ZIP distribution, original image sequence preservation, zero photo count gate, realistic regional market rent calculation, and Choice platform rule enforcement.
 
 > ### 🚀 DIRECTIVE 2 — STRICT ORIGINAL IMAGE ORDER & DIRECT SOURCE CDN INGESTION
 > 1. **Zero Photo Count Gate (Complete Removal of Photo Count Restrictions Across Entire Project)**:
@@ -40,7 +40,7 @@
 Every property across the database, pipeline, and public site must adhere to these absolute rules:
 
 - **Application Fee**: Always exactly $50. Structured DB field must be `application_fee: 50`. In listing descriptions, state strictly "$50 application fee" or "Application Fee: $50." Descriptions must NEVER state "$0 fee", "free application", or "fee is waived".
-- **Pet Friendly**: Always 100% pet-friendly (`pets_allowed: true`). Dogs and cats welcome.
+- **No Pet Information Display**: Pet information, pet policies, and pet deposits are completely removed from property details pages, overview cards, and descriptions (`pets_allowed: null`, `pet_types_allowed: null`, `pet_deposit: null`). Never display pet policies on property pages.
 - **Security Deposit**: Always exactly 1x monthly rent in the structured DB field (`security_deposit: monthly_rent`), but **STRICTLY ZERO MENTIONS IN DESCRIPTIONS**. All deposit amounts, clauses, and quotes must be stripped from listing descriptions during enrichment (`strip_security_deposit_from_description`).
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and descriptions (`lease_terms: null`, `minimum_lease_months: null`). Never display lease terms anywhere.
 - **No Available Date / Move-In Display or Tables**: Available dates, availability tables ("Available From"), move-in dates, and move-in status are completely removed from all property pages, overview cards, sidebar tables, and descriptions (`strip_availability_from_description`). Never display available dates or move-in timelines.
