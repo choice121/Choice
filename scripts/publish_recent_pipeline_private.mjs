@@ -21,31 +21,15 @@ const HEADERS_PIPELINE = {
 };
 
 // Verified and sanitized descriptions for the 5 properties:
-// Preserves original narrative and features while removing prohibited words (security deposit mentions,
-// third-party application portals, extra fees, move-in days, showing schedules, and smoking policies).
+// Stripped of criteria lists, minimum income/credit, renter insurance, and boilerplate.
 const CLEANED_DESCRIPTIONS = {
   'PP-E6E3682A': `Welcome to 285 S. Champion Avenue, a charming 3-bedroom, 2-bath townhome conveniently located near downtown Columbus. This home features beautiful wood-style flooring, exposed brick accents, spacious living areas, ceiling fans, and a kitchen with plenty of counter space. Enjoy the character of this unique home while being just minutes from downtown dining, shopping, entertainment, and regional commuter corridors.
 
-Tenant is responsible for all utilities. Application fee: $50 per adult applicant.
-
-Rental Criteria:
-1). Gross monthly income must be at least 3 times the rent
-2). No evictions or balances due to any landlord in the last 5 years
-3). No active bankruptcies or foreclosures
-4). 2 years of good verifiable rental history
-5). Standard background screening
-6). No recent collections or late payments on credit in the last two years
-7). Minimum credit score of 580 required
-Renter's insurance is required.
-
-Submit your rental application today at Choice Properties.
-Equal Housing Opportunity`,
+Tenant is responsible for all utilities. Application fee: $50 per adult applicant.`,
 
   'PP-93486427': `Remodeled 3-bedroom, 2-bath single-family house with full basement and 1-car garage. Features plenty of storage, a private fenced-in backyard, and central heating. Situated in a quiet residential neighborhood with convenient access to regional commuter corridors and shopping.
 
-Rent: $1,500/month. Application fee: $50 per adult applicant.
-
-Submit your rental application today at Choice Properties.`,
+Rent: $1,500/month. Application fee: $50 per adult applicant.`,
 
   'PP-38376A79': `Spacious 3BR/1.5BA duplex unit with original hardwood floors in Columbus's South Side.
 
@@ -62,29 +46,19 @@ The full basement provides laundry hookups and bonus storage space. Covered fron
 Location:
 Located in Columbus's South Side, steps from local markets, restaurants, and transit. Deshler Park, a beautiful tree-lined neighborhood park, is just a short walk away. Nationwide Children's Hospital is close by, with convenient access to regional commuter corridors and shopping.
 
-Tenant responsible for gas and electric utilities, yard maintenance, and snow removal. Application fee: $50 per adult applicant. Submit your rental application today at Choice Properties.`,
+Tenant responsible for gas and electric utilities, yard maintenance, and snow removal. Application fee: $50 per adult applicant.`,
 
   'PP-1177CFF1': `Completely updated kitchen, bath, flooring, roof, furnace, and central AC. Three-bedroom ranch with first-floor laundry, 1.5 baths, large backyard, and an oversized 2.5 car garage with extra storage area. Convenient to shopping, schools, and commuter corridors.
 
-Rent: $1,425/month. Minimum gross household income of $4,500/month required to qualify. Renter's insurance is required. Tenant pays all utilities, including water. Application fee: $50 per adult applicant.
-
-Submit your rental application today at Choice Properties.`,
+Rent: $1,425/month. Tenant pays all utilities, including water. Application fee: $50 per adult applicant.`,
 
   'PP-E2FE6CAA': `Charming 3-bedroom, 1.5-bathroom single-family home for rent. This home features central air conditioning, a fenced backyard, and a private driveway for off-street parking. The kitchen includes a stainless steel stove and refrigerator, and washer/dryer hookups are located in the full basement. Conveniently located with easy access to downtown Columbus, regional commuter corridors, shopping, schools, and public transit.
 
 Tenant is responsible for providing their own washer and dryer and for paying all utilities, lawn care, and weed control.
 
-Qualifications:
-- Monthly household take-home pay of $4,485/month ($53,820/year).
-- 600+ credit score.
-- Online rent payment capability.
-- No prior evictions.
-
 Financial Details:
 - Rent: $1,495/month.
-- Application fee: $50 per adult applicant.
-
-Submit your rental application today at Choice Properties.`
+- Application fee: $50 per adult applicant.`
 };
 
 // Verified specifications from original source listings:
