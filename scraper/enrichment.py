@@ -1344,8 +1344,9 @@ def rule_based_enrich(record):
             record["available_date"] = date.today().isoformat()
         # Otherwise leave as None — don't mislead with today's date
 
-    # 3. Default security_deposit to 1x rent if missing
-    if not record.get("security_deposit"):
+    # 3. Default security_deposit to 1x rent only when the source does not
+    # provide any value; never overwrite explicit source facts.
+    if record.get("security_deposit") in (None, "", 0):
         rent = record.get("monthly_rent")
         if rent and isinstance(rent, (int, float)) and rent > 0:
             record["security_deposit"] = int(rent)
@@ -1433,10 +1434,10 @@ def rule_based_enrich(record):
     if not desc or len(desc) < 200:
         record["description"] = _build_fallback_description(record, existing=desc if desc else None)
 
-    # 10. Permanently omit lease terms — no properties show lease terms
-    record["minimum_lease_months"] = None
-    record["lease_terms"] = "[]"
-
+    # Preserve explicit source lease terms. Leave them alone if the raw listing
+    # already supplied a value; only normalize missing values to null/empty.
+    if record.get("lease_terms") in (None, "", "[]", [], ()):
+        record["lease_terms"] = "[]"
     return record
 
 
@@ -1734,10 +1735,9 @@ def regex_extract_missing(record, verbose=False):
                 except Exception:
                     pass
 
-    # Permanently omit lease terms — no properties show lease terms
-    record["minimum_lease_months"] = None
-    record["lease_terms"] = "[]"
-
+    # Preserve explicit source lease terms when a listing already provides them.
+    if record.get("lease_terms") in (None, "", "[]", [], ()):
+        record["lease_terms"] = "[]"
     # laundry_type (only if not already inferred from amenities)
     if not record.get("laundry_type"):
         for pat, label in _LAUNDRY_RULES:
@@ -1910,10 +1910,12 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         if rec.get("description"):
             rec["description"] = append_apply_cta(rec["description"])
 
-        # Permanently clear lease terms and available date so no properties display lease duration or move-in/available date
-        rec["minimum_lease_months"] = None
-        rec["lease_terms"] = "[]"
-        rec["available_date"] = None
+        # Preserve source-provided lifecycle dates and lease metadata. Only
+        # normalize empty fields instead of clobbering valid source facts.
+        if rec.get("lease_terms") in (None, "", "[]", [], ()):
+            rec["lease_terms"] = "[]"
+        if rec.get("available_date") in (None, "", " "):
+            rec["available_date"] = None
 
         clean_records.append(rec)
 
