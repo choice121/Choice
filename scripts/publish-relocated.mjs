@@ -416,15 +416,18 @@ async function main() {
   else if (RENT_MIN && RENT_MAX) console.log(`Price Target: Range $${RENT_MIN} - $${RENT_MAX}/mo`);
   console.log('=============================================================================\n');
 
-  const targetState = parseCityState(TARGETS[0]).state;
+  const primaryTarget = parseCityState(TARGETS[0]);
+  const targetCity = primaryTarget.city;
+  const targetState = primaryTarget.state;
+  const targetZip = primaryTarget.zip;
 
   // 1. Dynamic US Census Address Discovery for Destination(s)
   console.log(`[1/4] Resolving Census-verified residential parcels for targets: ${TARGETS.join(', ')}...`);
   const verifiedAddresses = [];
   const perTargetCount = Math.ceil(COUNT / TARGETS.length);
   for (const t of TARGETS) {
-    const { city: targetCity, state: targetState } = parseCityState(t);
-    const addrs = await discoverVerifiedAddresses(targetCity, targetState, perTargetCount);
+    const tLoc = parseCityState(t);
+    const addrs = await discoverVerifiedAddresses(tLoc.city, tLoc.state, perTargetCount);
     verifiedAddresses.push(...addrs);
   }
   const finalVerifiedAddresses = verifiedAddresses.slice(0, COUNT);
@@ -447,9 +450,16 @@ async function main() {
 
   const isCharlotteMarket = TARGETS.some(t => t.toLowerCase().includes('charlotte')) || (SOURCE_LOCATION && SOURCE_LOCATION.toLowerCase().includes('charlotte'));
   
-  // If Charlotte market is targeted, prioritize Charlotte listings from Opendoor
+  // Prioritize source location or target market listings from Opendoor
   const candidateUrlsToScan = [...candidateUrls];
-  if (isCharlotteMarket) {
+  if (SOURCE_LOCATION) {
+    const cleanLoc = SOURCE_LOCATION.toLowerCase().replace(/[\s,]+/g, '-');
+    candidateUrlsToScan.sort((a, b) => {
+      const aMatch = a.toLowerCase().includes(cleanLoc);
+      const bMatch = b.toLowerCase().includes(cleanLoc);
+      return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
+    });
+  } else if (isCharlotteMarket) {
     candidateUrlsToScan.sort((a, b) => {
       const aChar = a.toLowerCase().includes('charlotte-nc');
       const bChar = b.toLowerCase().includes('charlotte-nc');
@@ -459,7 +469,7 @@ async function main() {
 
   const validProps = [];
   console.log(`  Scanning sitemap for active homes (beds: ${FILTER_BEDS || (FILTER_BEDS_MIN + '-' + FILTER_BEDS_MAX) || 'any'}, Zero photo count gate)...`);
-  for (const u of candidateUrlsToScan.slice(0, 2500)) {
+  for (const u of candidateUrlsToScan) {
     // If source-location filter was requested, match URL
     if (SOURCE_LOCATION) {
       const cleanLoc = SOURCE_LOCATION.toLowerCase().replace(/[\s,]+/g, '-');
