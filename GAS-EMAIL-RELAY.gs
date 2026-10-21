@@ -593,12 +593,14 @@ function send(to, cc, subject, htmlBody, cfg) {
     opts.cc = Array.isArray(cc) ? cc.join(',') : cc;
   }
 
-  // Anti-spoofing header alignment:
-  // If sending from a @gmail.com account, setting an external domain (e.g. support@choiceproperties.com)
-  // in the Reply-To header causes Google's spam filter to flag the message as phishing/impersonation.
-  // Only set replyTo if sending from a custom Workspace domain matching companyEmail.
-  var isGmailSender = activeEmail.toLowerCase().endsWith('@gmail.com');
-  if (!isGmailSender && cfg.companyEmail && cfg.companyEmail !== activeEmail) {
+  // Only use a Reply-To address on the same domain as the actual sender.
+  // Public Apps Script deployments may not expose the active account email;
+  // an unknown sender must not be paired with an unrelated company domain.
+  var activeDomain = activeEmail.indexOf('@') >= 0 ? activeEmail.split('@').pop().toLowerCase() : '';
+  var replyDomain = (cfg.companyEmail || '').indexOf('@') >= 0
+    ? cfg.companyEmail.split('@').pop().toLowerCase()
+    : '';
+  if (activeDomain && replyDomain && activeDomain === replyDomain && cfg.companyEmail.toLowerCase() !== activeEmail.toLowerCase()) {
     opts.replyTo = cfg.companyEmail;
   }
 

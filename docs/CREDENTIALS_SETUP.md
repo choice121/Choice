@@ -10,7 +10,7 @@ This guide explains how project credentials and secrets are configured and share
 - ✅ Supabase Service Role Key
 - ✅ Supabase API Token
 - ✅ GitHub Personal Access Token
-- ✅ Brevo API Key
+- ✅ GAS email relay URL and HMAC secret (configured in Supabase Edge Function Secrets)
 
 ## Seamless Collaboration Model
 
@@ -40,7 +40,6 @@ The setup utility accepts:
 3. **Supabase Service Role Key** — Settings → API → Service role key
 4. **Supabase API Token** — Settings → API → Personal Access Token
 5. **GitHub Personal Access Token** — GitHub Developer Settings → Personal Access Tokens
-6. **Brevo API Key** — Brevo Dashboard → SMTP & API → API Keys
 7. **Write Secret** — Found in `credentials-config.mjs`
 
 ### Step 3: Submit

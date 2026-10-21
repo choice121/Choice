@@ -74,15 +74,16 @@ Scripts that run automated tasks on Replit use the Supabase service role key for
 | Supabase anon key | `chrome-extension/config.js` | Public/safe. Protected by RLS. |
 | Import secret | `chrome-extension/config.js` | Sent as `x-import-secret` header to the Edge Function |
 | ImageKit public key | `chrome-extension/config.js` | Client-side upload auth |
-| Brevo API Key | `.env.local` / Edge Secrets | `BREVO_API_KEY` (starts with `xkeysib-`) |
-| Brevo Sender Email | `.env.local` / Edge Secrets | `BREVO_SENDER_EMAIL` (`choicepropertyofficial1@gmail.com`) |
+| GAS email relay URL | Supabase Edge Function Secrets | `GAS_EMAIL_URL` |
+| GAS relay HMAC secret | Supabase Edge Function Secrets | `GAS_RELAY_SECRET` |
 
 ### What lives in Replit / Staging Secrets only (server-side)
 
 | Secret | Replit / Env key | Why not committed |
 |---|---|---|
 | Supabase service role key | `SUPABASE_SERVICE_ROLE_KEY` | Full backend DB access. (Also configured in `scraper/.env`.) |
-| Brevo API Key | `BREVO_API_KEY` | Transactional email dispatch key (`xkeysib-...`). |
+| GAS email relay URL | `GAS_EMAIL_URL` | Google Apps Script Web App URL. |
+| GAS relay HMAC secret | `GAS_RELAY_SECRET` | Signs Edge Function requests to the relay. |
 
 ---
 
