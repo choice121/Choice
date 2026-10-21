@@ -56,3 +56,37 @@ Deno.test("uses the visible rental label when Zillow omits a status field", () =
   const page = pageFor({ zpid: 123, price: "$2,800" }, "House for rent");
   assert(isExplicitZillowRentalPage(page, "123"), "Expected the explicit rental page label to pass.");
 });
+
+Deno.test("rejects conflicting sale and rental status fields", () => {
+  const page = pageFor({
+    zpid: 123,
+    homeStatus: "FOR_SALE",
+    listingStatus: "FOR_RENT",
+    price: 2800,
+  });
+  assert(
+    !isExplicitZillowRentalPage(page, "123"),
+    "A sale status must win over a conflicting rental status.",
+  );
+});
+
+Deno.test("keeps only HTTPS Zillow image CDN URLs", () => {
+  const page = pageFor({
+    zpid: 123,
+    homeStatus: "FOR_RENT",
+    price: 2800,
+    responsivePhotos: [
+      { url: "https://photos.zillowstatic.com/fp/house.jpg" },
+      { url: "https://photos.zillowstatic.com.attacker.example/fp/fake.jpg" },
+      { url: "http://photos.zillowstatic.com/fp/insecure.jpg" },
+    ],
+  });
+  const extracted = extractVerifiedZillowRental(page, "123");
+  assert(extracted, "Expected valid rental data to be extracted.");
+  const photos = JSON.parse(String(extracted.original_image_urls));
+  assert(photos.length === 1, "Rejected non-Zillow image hosts and insecure URLs.");
+  assert(
+    photos[0] === "https://photos.zillowstatic.com/fp/house.jpg",
+    "Kept the trusted Zillow photo URL.",
+  );
+});

@@ -73,7 +73,10 @@ The system auto-assigns the next serial number.
 > "Publish everything in folder Wisdom"
 > "Publish all properties in Columbus"
 
-**Maps to:** `pipeline_folder_publish(p_folder_id: '<resolved>', p_property_ids: NULL)`
+**Maps to:** Load the folder's pipeline records, validate each listing, then call
+`pipeline_publish(p_id: '<id>', p_landlord_id: NULL, p_status: 'draft')` for
+each valid record. Do not call the legacy `pipeline_folder_publish` RPC from a
+browser session; its definition is not maintained in this repository.
 
 ### Publish a Specific Property in a Folder
 > "Publish property 3 in folder Wisdom"
@@ -81,7 +84,7 @@ The system auto-assigns the next serial number.
 
 **Maps to:**
 1. Look up property by serial: `SELECT id FROM pipeline_properties WHERE folder_id = '<folder>' AND folder_serial = 3`
-2. Call `pipeline_publish(p_id: '<property id>')`
+2. Call `pipeline_publish(p_id: '<property id>', p_landlord_id: NULL, p_status: 'draft')`
 
 ### Delete a Folder
 > "Delete folder Wisdom"

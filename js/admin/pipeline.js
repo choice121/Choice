@@ -40,59 +40,10 @@
   // Must pass before any pipeline record is promoted to a live listing.
   // Returns { ok: boolean, failures: string[] }.
   async function validateForPublish(listing) {
-    const failures = [];
-    const desc = listing.description || '';
-
-    // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
-    // Listings are pre-screened on import and published regardless of photo count.
-
-    // 2. Rent must be set and reasonable
-    const monthlyRent = Number(listing.monthly_rent);
-    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
-      failures.push('Monthly rent is not set');
-    } else if (monthlyRent > 100000) {
-      failures.push('Monthly rent looks incorrect ($' + monthlyRent + ') — please verify');
+    if (!window.PipelineValidation) {
+      throw new Error('Pipeline publishing validation is unavailable.');
     }
-
-    // 2b. Application fee structured field must be exactly 50
-    if (listing.application_fee != null && Number(listing.application_fee) !== 50) {
-      failures.push('Application fee must be $50 (currently $' + listing.application_fee + ')');
-    }
-
-    // 3. Free-application / zero-fee language in description
-    const freeAppRe = /free\s+(?:to\s+)?apply|apply\s+for\s+free|no\s+(?:application\s+|app\s+)?fee|\$?\s*0\.?0*\s+(?:application\s+|app\s+)?fee|\b0\s+(?:application\s+|app\s+)?fee|zero\s+(?:application\s+)?fee|complimentary\s+application|(?:application|app)\s+fee\s+(?:is\s+|of\s+|:\s*)?0\b|application\s+(?:is\s+)?free|fee[- ]?free\s+application|free\s+application|(?:application\s+|app\s+)?fee\s+(?:will\s+be\s+|is\s+)?waived/i;
-    if (freeAppRe.test(desc)) {
-      failures.push('Description contains zero/free/waived application fee language (must say "$50 application fee" or "Application Fee: $50")');
-    }
-
-    // 4. Non-$50 application fee amount in description
-    // Checks trailing amount ("application fee: $35", "application fee of 35") and
-    // leading amount ("$35 application fee", "35 application fee").
-    const _feeAmounts = [];
-    const _feePat1 = /(?:application|app)\s+fee(?:\s+is|\s+of|:|\s+)\s*\$?\s*(\d+(?:\.\d{2})?)/gi;
-    const _feePat2 = /\$?\s*(\d+(?:\.\d{2})?)\s+(?:application|app)\s+fee/gi;
-    let _fm;
-    while ((_fm = _feePat1.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
-    while ((_fm = _feePat2.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
-    _feeAmounts.forEach(function(amt) {
-      if (Math.abs(amt - 50) > 0.01) {
-        failures.push('Description references a non-$50 application fee (' + (amt === 0 ? 'zero/0' : '$' + amt) + ') — must be $50');
-      }
-    });
-
-    // 5. Tour / showing / contact CTA language
-    const tourRe = /schedule\s+a\s+(?:tour|showing|viewing)|book\s+a\s+(?:tour|showing)|open\s+house|contact\s+(?:us|the\s+agent|the\s+landlord|owner)/i;
-    if (tourRe.test(desc)) {
-      failures.push('Description contains tour/showing/contact CTA language');
-    }
-
-    // 6. External portal application instructions
-    const portalRe = /turbotenant|zillow\s+application|apartments\.com|apply\s+on\s+\w+|listing\s*id\s*#?\s*\d+/i;
-    if (portalRe.test(desc)) {
-      failures.push('Description references an external application portal');
-    }
-
-    return { ok: failures.length === 0, failures };
+    return window.PipelineValidation.validateForPublish(listing);
   }
 
   function qsClass(score){ if(score == null) return ''; return score >= 80 ? 'qs-high' : score >= 60 ? 'qs-mid' : 'qs-low'; }
@@ -1481,7 +1432,11 @@ function wirePanelPhotoActions(){
     const deleteOnPublishEl = panel.querySelector('#pf-delete-on-publish');
     const deleteOnPublish = deleteOnPublishEl && deleteOnPublishEl.checked;
     const rpcName = deleteOnPublish ? 'pipeline_publish_and_delete' : 'pipeline_publish';
-    const { data, error } = await CP.sb().rpc(rpcName, { p_id: id, p_landlord_id: null });
+    const { data, error } = await CP.sb().rpc(rpcName, {
+      p_id: id,
+      p_landlord_id: null,
+      p_status: 'draft'
+    });
     if(btn){ btn.disabled = false; btn.textContent = 'Publish as draft →'; }
     if(error){ S.toast('Publish failed: ' + error.message, 'error'); return; }
     const res = typeof data === 'string' ? JSON.parse(data) : data;
@@ -1543,7 +1498,11 @@ function wirePanelPhotoActions(){
           continue;
         }
 
-        const { data, error } = await CP.sb().rpc('pipeline_publish', { p_id: id, p_landlord_id: null });
+        const { data, error } = await CP.sb().rpc('pipeline_publish', {
+          p_id: id,
+          p_landlord_id: null,
+          p_status: 'draft'
+        });
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;
         if(!res?.ok) throw new Error(res?.error || 'unknown');
@@ -2412,21 +2371,62 @@ function wirePanelPhotoActions(){
     if(!_activeFolder) return;
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder) return;
+    const candidates = _pageData.filter(l => l.status !== 'published' && l.status !== 'archived');
+    if(!candidates.length){
+      S.toast('This folder has no unpublished listings to publish.', 'info');
+      return;
+    }
+
+    const blocked = [];
+    for(const listing of candidates){
+      const validation = await validateForPublish(listing);
+      if(!validation.ok) blocked.push({ listing, failures: validation.failures });
+    }
+    if(blocked.length){
+      console.warn('[pipeline] folder publish blocked by validation', blocked);
+      S.toast(
+        `Folder not published: ${blocked.length} listing${blocked.length === 1 ? '' : 's'} need review first.`,
+        'error'
+      );
+      return;
+    }
+
     const ok = await S.confirm(
-      `Publish all in "${folder.name}"?`,
-      `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`
+      `Publish ${candidates.length} listings in "${folder.name}" as drafts?`,
+      'Each listing will be checked again by the server before it is created as a draft property.'
     );
     if(!ok) return;
+
+    const button = document.getElementById('pl-banner-publish-folder-btn');
+    if(button){ button.disabled = true; button.textContent = 'Publishing…'; }
+    let published = 0;
+    let failed = 0;
     try {
-      const { data, error } = await CP.sb().rpc('pipeline_folder_publish', { p_folder_id: _activeFolder });
-      if(error) throw error;
-      const res = typeof data === 'string' ? JSON.parse(data) : data;
-      if(!res?.ok) throw new Error(res?.error || 'Failed to publish folder');
-      S.toast(`${res.published} published, ${res.failed} failed`, res.failed > 0 ? 'info' : 'success');
+      for(const listing of candidates){
+        try {
+          const { data, error } = await CP.sb().rpc('pipeline_publish', {
+            p_id: listing.id,
+            p_landlord_id: null,
+            p_status: 'draft'
+          });
+          if(error) throw error;
+          const result = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!result?.ok) throw new Error(result?.error || 'Publish was rejected');
+          published++;
+        } catch(error){
+          failed++;
+          console.error('[pipeline] folder item publish failed', listing.id, error);
+        }
+      }
+      _cClear();
       await loadFolders();
-      selectFolder(_activeFolder);
-    } catch(e){
-      S.toast('Publish failed: ' + e.message, 'error');
+      await selectFolder(_activeFolder);
+      S.toast(
+        `${published} published as drafts, ${failed} failed.`,
+        failed > 0 ? 'info' : 'success'
+      );
+    } finally {
+      if(button){ button.disabled = false; button.textContent = 'Publish folder'; }
     }
   }
 

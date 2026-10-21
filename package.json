@@ -6,6 +6,7 @@
   "scripts": {
     "build": "AIS_BUILD=true node generate-config.js && AIS_BUILD=true node scripts/copy-static-to-dist.js",
     "test:location-visual": "playwright test",
+    "test:pipeline-validation": "node --test tests/pipeline-validation.test.cjs",
     "bump-extension": "node scripts/sync-and-bump-extension.mjs",
     "validate-extension": "node scripts/validate-extension.mjs",
     "lint": "node -e \"console.log('Linting passed')\"",

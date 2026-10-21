@@ -1,5 +1,6 @@
 const ZILLOW_HOSTS = new Set(["zillow.com", "www.zillow.com"]);
 const DETAIL_PATH_RE = /^\/homedetails\/.+\/(\d+)_zpid\/?$/i;
+const ZILLOW_PHOTO_DOMAIN = "zillowstatic.com";
 
 export type ZillowDetailUrlResult =
   | { ok: true; url: URL; zpid: string }
@@ -101,8 +102,8 @@ function hasRentStatus(property: Record<string, unknown>, html: string): boolean
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.toUpperCase().replace(/[\s-]+/g, "_"));
 
-  if (statuses.some((status) => /FOR_RENT|RENTAL/.test(status))) return true;
   if (statuses.some((status) => /FOR_SALE|SOLD|NOT_FOR_RENT|OFF_MARKET/.test(status))) return false;
+  if (statuses.some((status) => /FOR_RENT|RENTAL/.test(status))) return true;
 
   const visibleText = html
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
@@ -169,8 +170,23 @@ function featureStrings(value: unknown): string[] {
   return value.map(textValue).filter((item): item is string => !!item);
 }
 
+function trustedZillowPhotoUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (
+      url.protocol !== "https:" ||
+      (host !== ZILLOW_PHOTO_DOMAIN && !host.endsWith(`.${ZILLOW_PHOTO_DOMAIN}`))
+    ) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function photoUrl(value: unknown): string | null {
-  if (typeof value === "string") return value.startsWith("https://") ? value : null;
+  if (typeof value === "string") return trustedZillowPhotoUrl(value);
   const photo = objectValue(value);
   const mixedSources = objectValue(photo.mixedSources);
   const jpegPhotos = Array.isArray(mixedSources.jpeg) ? mixedSources.jpeg : [];
@@ -182,7 +198,7 @@ function photoUrl(value: unknown): string | null {
       Number(candidate.width || 0) > Number(largest.width || 0)
     ) largest = candidate;
   }
-  return textValue(largest?.url || photo.url || photo.href || photo.src);
+  return trustedZillowPhotoUrl(largest?.url || photo.url || photo.href || photo.src);
 }
 
 /**
