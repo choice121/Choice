@@ -193,7 +193,7 @@
   <div class="card">
     <div class="card-header">Email Health</div>
     <div class="check" id="chk-email-relay">
-      <div><div class="check-label">Email delivery (Brevo / Relay)</div><div class="check-detail" id="det-email-relay">—</div></div>
+      <div><div class="check-label">Email delivery (GAS relay)</div><div class="check-detail" id="det-email-relay">—</div></div>
       <span class="badge pending" id="bdg-email-relay">Waiting</span>
     </div>
     <div class="check" id="chk-email-logs">
@@ -348,20 +348,17 @@ async function checkEmailHealth() {
       }
     }
 
-    // Email provider: infer from last email_logs entry provider field (Brevo or GAS)
+    // Historical provider labels remain in email_logs; report the newest send only.
     if (logs && logs.length > 0) {
-      const brevoEntries = logs.filter(l => l.provider === 'brevo' && l.status === 'sent');
-      const gasEntries   = logs.filter(l => l.provider === 'gas' && l.status === 'sent');
+      const latestLog    = logs[0];
       const failedSends  = logs.filter(l => l.status === 'failed');
 
-      if (brevoEntries.length > 0) {
-        ok('email-relay', 'Brevo API active', `${brevoEntries.length} of last ${logs.length} sends delivered via Brevo (Free Plan)`);
-      } else if (gasEntries.length > 0) {
-        ok('email-relay', 'GAS relay active', `${gasEntries.length} of last ${logs.length} sends succeeded via GAS relay`);
-      } else if (failedSends.length > 0) {
-        warn('email-relay', 'Recent sends failed', `Last ${logs.length} entries show failed sends (${failedSends.length} failed). Check BREVO_API_KEY / GAS_EMAIL_URL.`);
+      if (latestLog?.provider === 'gas' && latestLog?.status === 'sent') {
+        ok('email-relay', 'GAS relay active', `Latest logged send succeeded via GAS at ${latestLog.created_at || 'unknown time'}`);
+      } else if (latestLog?.status === 'failed' || failedSends.length > 0) {
+        warn('email-relay', 'Recent sends failed', `Last ${logs.length} entries show failed sends (${failedSends.length} failed). Check GAS_EMAIL_URL, GAS_RELAY_SECRET, and Apps Script execution logs.`);
       } else {
-        warn('email-relay', 'No data', 'Cannot determine email provider status — email_logs empty');
+        warn('email-relay', 'No recent GAS confirmation', `Latest logged provider is ${latestLog?.provider || 'unknown'}; send a test transaction after the GAS switch.`);
       }
     } else {
       warn('email-relay', 'No data', 'email_logs is empty');

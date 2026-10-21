@@ -62,14 +62,13 @@ Choice Properties is a modern rental listing platform with integrated client por
 
 ---
 
-## Email Infrastructure (Brevo / Bravo)
+## Email Infrastructure (Google Apps Script)
 
-Transactional emails (inquiries, applications, lease signatures, receipts, and magic link logins) are delivered using **Brevo REST API v3** with automated Google Apps Script (GAS) failover:
-- **Provider**: Brevo (formerly Sendinblue) via HTTPS `POST https://api.brevo.com/v3/smtp/email`
-- **Authorized Sender**: `choicepropertyofficial1@gmail.com`
-- **Sender Name**: `Choice Properties`
-- **Guide & Setup**: See [docs/BREVO_EMAIL_SETUP.md](docs/BREVO_EMAIL_SETUP.md) for configuration details, testing instructions, and template architecture.
-- **CLI Test Tool**: `node scripts/test-brevo.mjs [recipient-email]`
+Transactional emails are sent through the Google Apps Script relay. Supabase Edge Functions call the shared `gasSend()` helper, which signs payloads with HMAC and sends them to `GAS_EMAIL_URL`; Apps Script sends through the Google account that owns the web app.
+- **Provider**: Google Apps Script relay + `GmailApp` (with `MailApp` fallback)
+- **Configuration**: Supabase Edge Function secrets `GAS_EMAIL_URL` and `GAS_RELAY_SECRET`
+- **Guide and deliverability**: [docs/GAS_EMAIL_SETUP_AND_DELIVERABILITY.md](docs/GAS_EMAIL_SETUP_AND_DELIVERABILITY.md)
+- **Domain note**: `choice-properties-site.pages.dev` is a web host, not a sender domain you control; it cannot be used for SPF/DKIM/DMARC alignment.
 
 ---
 
@@ -77,5 +76,5 @@ Transactional emails (inquiries, applications, lease signatures, receipts, and m
 
 - **`AGENTS.md`**: Highest-priority system law covering all ingestion, enrichment, publishing, and extension versioning rules.
 - **`AI_AGENT_GUIDE.md`**: Guide for running Python batch scraping jobs.
-- **`docs/BREVO_EMAIL_SETUP.md`**: Complete Brevo transactional email guide and API setup.
+- **`docs/GAS_EMAIL_SETUP_AND_DELIVERABILITY.md`**: GAS relay setup and deliverability guidance.
 - **`docs/EXTENSION_CHANGELOG.md`**: Detailed changelog of every Chrome extension version.
