@@ -261,6 +261,7 @@ export interface PipelineRecordInput {
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
+  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
