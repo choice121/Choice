@@ -401,12 +401,13 @@ class RentalApplication {
             const city  = p.get('city') || '';
             const state = p.get('state') || '';
             const rent  = p.get('rent') || '';
+            const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
 
             // Nothing useful in the URL — show manual-entry prompt and return
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
 
             // Store context on instance for later use (success page, etc.)
-            this.state.propertyContext = { id, name, addr, city, state, rent };
+            this.state.propertyContext = { id, name, addr, city, state, rent, shareToken };
 
             // Populate hidden inputs so FormData serialises them automatically
             const setHidden = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -3343,6 +3344,10 @@ class RentalApplication {
 
             const form = document.getElementById('rentalApplication');
             const formData = new FormData(form);
+            const shareToken = this.state.propertyContext?.shareToken || '';
+            if (/^[A-Za-z0-9_-]{43}$/.test(shareToken)) {
+                formData.set('_share_token', shareToken);
+            }
 
             // Idempotency key — server uses this to dedupe accidental double-submits
             // (network retries, double-clicks, etc.). Generate once per attempt; if the

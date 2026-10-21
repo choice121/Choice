@@ -450,7 +450,7 @@ function renderProperty(p) {
 
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
-  const applyURL = buildApplyURL(p);
+  const applyURL = buildApplyURL(p, shareToken);
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';

@@ -1071,7 +1071,7 @@ function esc(str) {
 // Defined here so they live in one place and are accessible
 // via both window.CP (inline scripts) and ES named exports below.
 
-function buildApplyURL(property) {
+function buildApplyURL(property, shareToken = '') {
   // -- Layer 1: sessionStorage (same-origin only) ----------------------------
   // Stores full context for same-origin use. Legacy cross-origin forms
   // cannot read sessionStorage - they rely entirely on the URL params below.
@@ -1211,7 +1211,11 @@ function buildApplyURL(property) {
     : '/apply';
 
   // 9C-2: pass current page URL so apply form can show 'Back to listing' link
-  try { p.set('source', window.location.href.substring(0, 300)); } catch (_) {}
+  try {
+    const sourceUrl = new URL(window.location.href);
+    sourceUrl.hash = '';
+    p.set('source', sourceUrl.toString().substring(0, 300));
+  } catch (_) {}
 
     // B2: Guard URL length — if over 7000 chars, drop optional free-text fields and retry
       let _finalUrl = `${base}?${p.toString()}`;
@@ -1222,6 +1226,9 @@ function buildApplyURL(property) {
         if (_finalUrl.length > 7000) {
           console.warn('[buildApplyURL] URL still ' + _finalUrl.length + ' chars after reduction — may truncate on some browsers');
         }
+      }
+      if (/^[A-Za-z0-9_-]{43}$/.test(shareToken)) {
+        _finalUrl += `#share=${encodeURIComponent(shareToken)}`;
       }
       return _finalUrl;
     }

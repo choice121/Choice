@@ -832,16 +832,6 @@ async function fetchAndRender() {
   if (isLoading) return;
   isLoading = true;
 
-  // ── Always load the live listing set ───────────────────────────────────
-  // listings.html may contain a build-time snapshot for crawlers and fast
-  // first paint, but that snapshot can outlive rows that were removed or
-  // replaced in Supabase. Rendering it as interactive data makes cards link
-  // to listings that now correctly resolve as unavailable. Keep the snapshot
-  // out of the interactive path and use the live active-listings query below.
-  // Discard any embedded snapshot so it cannot be reused after a filter
-  // change or browser navigation.
-  if (window.__INITIAL_LISTINGS__) window.__INITIAL_LISTINGS__ = null;
-
   showSkeletons();
 
   // Swap min/max rent if user entered them backwards — prevents silent empty results

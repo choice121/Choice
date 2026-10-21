@@ -23,11 +23,9 @@ Future AI agents, engineers, and administrators must maintain these standards ac
    - *Temporary Directive*: Automated image reordering is disabled. All images must be ordered exactly as they came from the original source.
    - The photo reordering logic in `js/property.js`, `js/card-builder.js`, and `scripts/pipeline_standardizer.mjs` is preserved in the codebase but inactive.
 
-4. **Client-Side Anti-Google Lens Shield**:
-   - High-resolution source CDN photos are loaded with `referrerpolicy="no-referrer"` to bypass CDN hotlinking restrictions.
-   - Photos are protected against mobile long-press Google Lens searches via `.mosaic-touch-shield` with `-webkit-touch-callout: none !important;` and `pointer-events: none;` on `<img>` elements.
-   - Context menus (`contextmenu`) and dragging (`dragstart`) are disabled across all gallery and card image containers.
-   - Subtle CSS micro-filters (`filter: contrast(101.5%) brightness(99.5%) saturate(101%)`) modify pixel hashes against automated screenshot reverse-image matchers.
+4. **Photo interaction deterrents are not access control**:
+   - `referrerpolicy="no-referrer"`, gallery overlays, disabled context menus, and CSS filters only affect browser behavior. They do not make a public CDN image private or prevent direct URL access.
+   - Treat a listing as private only when its data and assets are served through a validated share flow. Never rely on image overlays or fingerprint changes for confidentiality.
 
 ---
 
@@ -36,19 +34,17 @@ Future AI agents, engineers, and administrators must maintain these standards ac
 ### A. Database Status and Share Authorization
 - Public marketplace queries and the `get_properties_by_ids` RPC return only `status = 'active'` rows.
 - Client shares use `property_shares` and `property_share_properties`. The browser receives a 256-bit random token; only its SHA-256 hash is stored in the database.
-- `property-share` requires an admin session to create a share. Resolution checks the token hash, expiry, revocation state, and membership before returning the associated public-safe listing fields.
+- Share creation must be restricted to authenticated admins. Resolution must check the token hash, expiry, revocation state, and property membership before returning an explicit client-safe field list. Do not use `select('*')` for shared property responses.
 - Share tokens expire after 90 days. Anyone who possesses the link can use it; the link is a bearer credential and is not bound to a verified client identity.
-- The token is placed in the URL fragment so it is not sent in HTTP requests or referrer headers. The listings page and property detail page both resolve through the Edge Function; property details are limited to the share membership.
+- The token is placed in the URL fragment so it is not sent in HTTP requests or referrer headers. Property-to-application navigation preserves the fragment and submits the token in the POST body, not a query parameter.
+- The `receive-application` Edge Function validates expiry, revocation, and property membership for `private_placement` before accepting an application. It receives the token in the POST body; never put it in a query parameter.
+- Never embed listing data in static HTML. Property status can change after a build; public pages must fetch current active rows, while private rows must come only from a validated share response.
 - `property.html` allows private-placement viewing only through a valid share, with the existing authenticated admin/owner access path retained.
 
-### B. Badging & Authority
-- Listing cards render `<div class="property-card-badge badge-private">...</div>` with the "Verified Private Placement" shield.
-- Property details pages display a high-trust dark-slate pill badge:
-  ```html
-  <div id="privatePlacementBadge">
-    <i class="fas fa-shield-alt" style="color:#38bdf8"></i> Verified Private Placement
-  </div>
-  ```
+### B. Visibility and publishing
+- `active` means publicly discoverable; `private_placement` means hidden from public browse and available only through an authorized share or admin/owner access.
+- Never bulk-promote `private_placement` rows to fill public search results. Change status only for listings explicitly approved for public release.
+- Do not display a private-placement badge or banner to clients. The share link is the access mechanism; UI labels do not enforce privacy.
 
 ### C. Application Confirmation Email Template
 - Application submissions for all properties strictly require the **$50.00 application fee**.
@@ -71,3 +67,11 @@ Future AI agents, engineers, and administrators must maintain these standards ac
 3. **Share Link**:
    - Format: `https://choice-properties-site.pages.dev/listings.html#share={token}`
    - When the client opens this link, the site shows their tailored collection in the standard marketplace layout without any awkward "curated" framing.
+   - Before release, verify that creating a share requires an admin, revoked/expired tokens fail resolution, and private applications are rejected unless the submitted token includes that property.
+
+## 4. Release Checklist
+- Confirm `generate-config.js` does not serialize property rows into `listings.html`.
+- Confirm `/property.html` metadata lookup filters `status=active`.
+- Confirm private apply links preserve the fragment token and the deployed application server validates it against `property_shares` and `property_share_properties`.
+- Run the focused property/share and application tests before deploying the Edge Function and static site.
+- Deploy the Edge Functions after merge with `supabase functions deploy property-share --project-ref tlfmwetmhthpyrytrcfo` and `supabase functions deploy receive-application --project-ref tlfmwetmhthpyrytrcfo`; verify both deploys before relying on the new checks.

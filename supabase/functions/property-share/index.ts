@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
         .from("property_shares")
         .select("id, expires_at")
         .eq("token_hash", tokenHash)
+        .is("revoked_at", null)
         .single();
 
       if (shareError || !shareData) {
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
         .in("property_id", propertyIds)
         .order("display_order", { ascending: true });
 
-      const photoMap = {};
+      const photoMap: Record<string, Array<Record<string, unknown>>> = {};
       if (photos) {
         photos.forEach(ph => {
           photoMap[ph.property_id] = photoMap[ph.property_id] || [];
@@ -118,6 +119,41 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create") {
+      const bearer = req.headers.get("authorization") || "";
+      const tokenMatch = bearer.match(/^Bearer\s+(.+)$/i);
+      if (!tokenMatch) {
+        return new Response(
+          JSON.stringify({ error: "admin_auth_required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
+      if (authError || !authData.user) {
+        return new Response(
+          JSON.stringify({ error: "admin_auth_required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: adminRole, error: adminError } = await supabase
+        .from("admin_roles")
+        .select("user_id")
+        .eq("user_id", authData.user.id)
+        .maybeSingle();
+      if (adminError) {
+        return new Response(
+          JSON.stringify({ error: "admin_check_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: "admin_required" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const propertyIds = body.property_ids;
       if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
         return new Response(
@@ -194,8 +230,9 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
