@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.pipeline_publish(
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pipeline
+SET search_path = pg_catalog
 AS $$
 DECLARE
   p             pipeline.pipeline_properties%ROWTYPE;
@@ -22,7 +22,8 @@ DECLARE
   v_width       int;
   v_height      int;
   v_order       int := 1;
-  v_pub_status  property_status;
+  v_pub_status  public.property_status;
+  v_fee_amount  numeric;
 BEGIN
   -- Browser calls must come from a signed-in administrator. Server-side
   -- service-role jobs remain supported.
@@ -45,10 +46,22 @@ BEGIN
     RETURN json_build_object('ok', false, 'error', 'Listing not found in pipeline');
   END IF;
 
-  IF p.title IS NULL OR p.address IS NULL OR p.city IS NULL
-     OR p.state IS NULL OR p.zip IS NULL
-     OR p.monthly_rent IS NULL OR p.monthly_rent <= 0 THEN
+  IF p.status = 'published' OR p.choice_property_id IS NOT NULL THEN
+    RETURN json_build_object('ok', false, 'error', 'Listing has already been published');
+  END IF;
+
+  IF NULLIF(btrim(p.title), '') IS NULL
+     OR NULLIF(btrim(p.address), '') IS NULL
+     OR NULLIF(btrim(p.city), '') IS NULL
+     OR NULLIF(btrim(p.state), '') IS NULL
+     OR NULLIF(btrim(p.zip), '') IS NULL
+     OR p.monthly_rent IS NULL OR p.monthly_rent <= 0 OR p.monthly_rent > 100000 THEN
     RETURN json_build_object('ok', false, 'error', 'Required fields missing or invalid');
+  END IF;
+
+  IF btrim(p.title) IS DISTINCT FROM
+     btrim(p.address) || ', ' || btrim(p.city) || ', ' || btrim(p.state) || ' ' || btrim(p.zip) THEN
+    RETURN json_build_object('ok', false, 'error', 'Title must match the full property address');
   END IF;
 
   IF p.application_fee IS DISTINCT FROM 50 THEN
@@ -56,6 +69,7 @@ BEGIN
   END IF;
 
   IF p.description IS NULL
+     OR btrim(p.description) = ''
      OR p.description !~* '(\$50[[:space:]]+application[[:space:]]+fee|application[[:space:]]+fee[[:space:]]*:[[:space:]]*\$?50([.]0{1,2})?([^0-9]|$))' THEN
     RETURN json_build_object(
       'ok', false,
@@ -63,17 +77,37 @@ BEGIN
     );
   END IF;
 
-  IF p.description ~* '(\msecurity[[:space:]-]+deposit\M|\mdeposit\M|\mavailable\M|\mavailability\M|\mmove[[:space:]-]*in\M|\mlease\M|\mpets?\M|\mcats?\M|\mdogs?\M|\msmok(e|ing|er)\M|free[[:space:]]+(to[[:space:]]+)?apply|apply[[:space:]]+for[[:space:]]+free|no[[:space:]]+(application[[:space:]]+|app[[:space:]]+)?fee|\m(turbotenant|zillow|apartments\.com|rentspree|rentcafe|appfolio)\M|schedule[[:space:]]+(a[[:space:]]+)?(tour|showing|viewing)|book[[:space:]]+(a[[:space:]]+)?(tour|showing|viewing)|open[[:space:]]+house|contact[[:space:]]+(us|the[[:space:]]+agent|the[[:space:]]+landlord|owner)|listing[[:space:]]*id)' THEN
+  IF p.description ~* '(\msecurity[[:space:]-]+deposit\M|\mdeposit\M|\mavailable\M|\mavailability\M|\mmove[[:space:]-]*in\M|\mlease\M|\mpets?\M|\mcats?\M|\mdogs?\M|\msmok(e|ing|er)\M|free[[:space:]]+(to[[:space:]]+)?apply|free[[:space:]]+application|apply[[:space:]]+for[[:space:]]+free|no[[:space:]]+(application[[:space:]]+|app[[:space:]]+)?fee|zero[[:space:]]+(application[[:space:]]+)?fee|complimentary[[:space:]]+application|application[[:space:]]+(is[[:space:]]+)?free|fee[- ]?free[[:space:]]+application|(^|[^0-9])\$?[[:space:]]*0([.]0*)?[[:space:]]+(application[[:space:]]+|app[[:space:]]+)?fee|(application[[:space:]]+|app[[:space:]]+)?fee([[:space:]]+will[[:space:]]+be|[[:space:]]+is)?[[:space:]]+waived|\m(turbotenant|zillow|apartments\.com|rentspree|rentcafe|appfolio)\M|listing[[:space:]]*id|apply[[:space:]]+on[[:space:]]+[[:alnum:]_-]+|https?://|www\.|schedule[[:space:]]+(a[[:space:]]+)?(tour|showing|viewing)|book[[:space:]]+(a[[:space:]]+)?(tour|showing|viewing)|open[[:space:]]+house|(call|text|contact)[[:space:]]+(the[[:space:]]+)?(agent|broker|owner|landlord|manager)|contact[[:space:]]+(us|the[[:space:]]+landlord)|[0-9]{3}([-.]|[[:space:]]|[)])?[0-9]{3}([-.]|[[:space:]])[0-9]{4}|[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,})' THEN
     RETURN json_build_object(
       'ok', false,
       'error', 'Description contains source terms that must be reviewed before publishing'
     );
   END IF;
 
+  FOR v_fee_amount IN
+    SELECT (matches)[1]::numeric
+    FROM regexp_matches(
+      p.description,
+      '(?:application|app)[[:space:]]+fee(?:[[:space:]]+is|[[:space:]]+of|:|[[:space:]]+)[[:space:]]*\$?[[:space:]]*([0-9]+(?:[.][0-9]+)?)',
+      'gi'
+    ) AS matches
+    UNION ALL
+    SELECT (matches)[1]::numeric
+    FROM regexp_matches(
+      p.description,
+      '\$?[[:space:]]*([0-9]+(?:[.][0-9]+)?)[[:space:]]+(?:application|app)[[:space:]]+fee',
+      'gi'
+    ) AS matches
+  LOOP
+    IF abs(v_fee_amount - 50) > 0.01 THEN
+      RETURN json_build_object('ok', false, 'error', 'Description references a non-$50 application fee');
+    END IF;
+  END LOOP;
+
   IF COALESCE(p_status, '') NOT IN ('active', 'draft', 'private_placement') THEN
     RETURN json_build_object('ok', false, 'error', 'Unsupported listing status');
   END IF;
-  v_pub_status := p_status::property_status;
+  v_pub_status := p_status::public.property_status;
 
   BEGIN
     IF p.listed_at IS NOT NULL AND p.listed_at <> '' THEN
@@ -86,7 +120,7 @@ BEGIN
   END;
 
   v_imported_at := COALESCE(p.imported_at, p.scraped_at, now());
-  new_id := 'prop_' || encode(gen_random_bytes(6), 'hex');
+  new_id := 'prop_' || left(replace(pg_catalog.gen_random_uuid()::text, '-', ''), 12);
 
   INSERT INTO public.properties (
     id, landlord_id, status,
@@ -152,14 +186,16 @@ BEGIN
   );
 
   v_photos := NULL;
-  IF p.local_image_paths IS NOT NULL AND p.local_image_paths <> '' AND p.local_image_paths <> '[]' THEN
-    BEGIN v_photos := p.local_image_paths::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
+  IF p.original_image_urls IS NOT NULL AND p.original_image_urls <> '' AND p.original_image_urls <> '[]' THEN
+    BEGIN v_photos := p.original_image_urls::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
   END IF;
+  IF v_photos IS NOT NULL AND jsonb_typeof(v_photos) <> 'array' THEN v_photos := NULL; END IF;
   IF v_photos IS NULL OR jsonb_array_length(v_photos) = 0 THEN
-    IF p.original_image_urls IS NOT NULL AND p.original_image_urls <> '' AND p.original_image_urls <> '[]' THEN
-      BEGIN v_photos := p.original_image_urls::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
+    IF p.local_image_paths IS NOT NULL AND p.local_image_paths <> '' AND p.local_image_paths <> '[]' THEN
+      BEGIN v_photos := p.local_image_paths::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
     END IF;
   END IF;
+  IF v_photos IS NOT NULL AND jsonb_typeof(v_photos) <> 'array' THEN v_photos := NULL; END IF;
 
   IF v_photos IS NOT NULL AND jsonb_typeof(v_photos) = 'array' THEN
     v_order := 1;
@@ -183,11 +219,14 @@ BEGIN
         END IF;
       END IF;
 
-      IF v_url IS NOT NULL AND length(v_url) > 5 THEN
+      v_url := NULLIF(btrim(v_url), '');
+      IF v_url IS NOT NULL
+         AND v_url ~* '^https://([a-z0-9-]+\.)*[a-z0-9-]+(:443)?([/?#]|$)'
+         AND length(v_url) > 8 THEN
         INSERT INTO public.property_photos (
           id, property_id, url, file_id, width, height, display_order, is_hero, watermark_status, created_at
         ) VALUES (
-          gen_random_uuid(),
+          pg_catalog.gen_random_uuid(),
           new_id,
           v_url,
           v_file_id,
@@ -228,7 +267,7 @@ CREATE OR REPLACE FUNCTION public.pipeline_publish_and_delete(
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pipeline
+SET search_path = pg_catalog
 AS $$
 DECLARE
   v_result json;

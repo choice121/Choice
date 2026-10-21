@@ -22,7 +22,8 @@ export function parseZillowDetailUrl(value: unknown): ZillowDetailUrlResult {
     input.protocol !== "https:" ||
     !ZILLOW_HOSTS.has(input.hostname.toLowerCase()) ||
     input.username ||
-    input.password
+    input.password ||
+    input.port
   ) {
     return { ok: false, error: "Only HTTPS Zillow listing URLs are supported." };
   }
@@ -37,7 +38,11 @@ export function parseZillowDetailUrl(value: unknown): ZillowDetailUrlResult {
   return { ok: true, url, zpid: match[1] };
 }
 
-function findPropertyByZpid(root: unknown, zpid: string): Record<string, unknown> | null {
+function findPropertyByZpid(
+  root: unknown,
+  zpid: string,
+  predicate: (property: Record<string, unknown>) => boolean = () => true,
+): Record<string, unknown> | null {
   const stack: unknown[] = [root];
   const visited = new Set<object>();
   let nodesVisited = 0;
@@ -66,7 +71,9 @@ function findPropertyByZpid(root: unknown, zpid: string): Record<string, unknown
 
     if (!Array.isArray(current)) {
       const object = current as Record<string, unknown>;
-      if (object.zpid != null && String(object.zpid) === zpid) return object;
+      if (object.zpid != null && String(object.zpid) === zpid && predicate(object)) {
+        return object;
+      }
     }
 
     for (const value of Object.values(current)) stack.push(value);
@@ -80,7 +87,13 @@ function parsePositiveNumber(value: unknown): number | null {
     return Number.isFinite(value) && value > 0 ? value : null;
   }
   if (typeof value !== "string") return null;
-  const amount = Number(value.replace(/[^0-9.]/g, ""));
+  const normalized = value.trim()
+    .replace(/^\$\s*/, "")
+    .replace(/,\s*/g, "")
+    .replace(/\s*(?:\/\s*mo(?:nth)?|per\s+month)$/i, "")
+    .trim();
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const amount = Number(normalized);
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
@@ -129,12 +142,11 @@ function verifiedRentalProperty(html: string, zpid: string): Record<string, unkn
 
   try {
     const root = JSON.parse(nextData[1]) as unknown;
-    const property = findPropertyByZpid(root, zpid);
-    return property &&
-        hasPositiveAskingPrice(property) &&
-        hasRentStatus(property, html)
-      ? property
-      : null;
+    return findPropertyByZpid(
+      root,
+      zpid,
+      (property) => hasPositiveAskingPrice(property) && hasRentStatus(property, html),
+    );
   } catch {
     return null;
   }
@@ -177,6 +189,9 @@ function trustedZillowPhotoUrl(value: unknown): string | null {
     const host = url.hostname.toLowerCase();
     if (
       url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.port ||
       (host !== ZILLOW_PHOTO_DOMAIN && !host.endsWith(`.${ZILLOW_PHOTO_DOMAIN}`))
     ) return null;
     return url.toString();
@@ -222,14 +237,9 @@ export function extractVerifiedZillowRental(
   const bedrooms = numericValue(property.bedrooms ?? property.beds);
   const bathrooms = numericValue(property.bathrooms ?? property.baths);
   const propertyType = textValue(property.homeType || property.propertyType);
-  const title = textValue(property.title) ||
-    (street && city && state
-      ? `${street}, ${city}, ${state}${zip ? ` ${zip}` : ""}`
-      : street && city
-      ? `${street}, ${city}`
-      : city
-      ? `${bedrooms ? `${bedrooms}BR ` : ""}${propertyType || "Rental"} in ${city}`
-      : street);
+  const title = street && city && state && zip
+    ? `${street}, ${city}, ${state} ${zip}`
+    : null;
 
   const photos: string[] = [];
   for (const collection of [

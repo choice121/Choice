@@ -71,6 +71,9 @@
   function photoUrls(l){
     return imageUrls(l.original_image_urls);
   }
+  function usesDirectSourceCdn(listing){
+    return ['zillow', 'realtor', 'opendoor'].includes(String(listing?.source || '').toLowerCase());
+  }
   // Convert a stored JSON array to a user-editable comma-separated string
   function jArrToText(v){
     if(!v || v === '[]') return '';
@@ -244,7 +247,7 @@
           ${folderBadge}
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
           ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
-          ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
+          ${isPublished && l.photo_import_status === 'failed' && !usesDirectSourceCdn(l) ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
           ${l.source_status && l.source_status !== 'available' ? `<span class="qs-badge ${l.source_status === 'pending' ? 'qs-mid' : 'qs-low'}" title="Source site status: ${S.esc(l.source_status)}">${l.source_status === 'pending' ? '⏳ Pending' : l.source_status === 'rented' ? '🔒 Rented' : '⚠ ' + S.esc(l.source_status)}</span>` : ''}
         </div>
       </div>
@@ -263,7 +266,7 @@
         ${!isArchived ? `<button class="btn btn-sm btn-ghost pl-arc-btn" data-id="${S.esc(l.id)}" title="Archive">Archive</button>` : '<span class="pill pill-muted" style="font-size:.68rem">Archived</span>'}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-primary pl-pub-btn" data-id="${S.esc(l.id)}" title="Publish to site">Publish →</button>` : ''}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-ghost pl-del-btn" data-id="${S.esc(l.id)}" title="Delete from pipeline" style="color:var(--danger)">Delete</button>` : ''}
-        ${l.photo_import_status === 'failed' && !isArchived ? `<button class="btn btn-sm btn-outline pl-retry-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id || '')}" title="Retry downloading photos to ImageKit">Retry photos</button>` : ''}
+        ${l.photo_import_status === 'failed' && !isArchived && !usesDirectSourceCdn(l) ? `<button class="btn btn-sm btn-outline pl-retry-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id || '')}" title="Retry photo transfer">Retry photos</button>` : ''}
         ${isPublished && l.choice_property_id ? `<a class="btn btn-sm btn-ghost" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}" target="_blank" onclick="event.stopPropagation()">Edit ↗</a>` : ''}
       </div>
     </div>`;
@@ -315,7 +318,10 @@
         
         if(!error && Array.isArray(photos) && photos.length){
           const urls = photos.map(p => p.url).filter(Boolean);
-          return renderPhotoStatus(l) + renderGallery(urls, 'on ImageKit');
+          return renderPhotoStatus(l) + renderGallery(
+            urls,
+            usesDirectSourceCdn(l) ? 'from source CDN' : 'on ImageKit',
+          );
         }
       } catch(err){
         console.warn('[pipeline] property photo query failed; using source photos', err);
@@ -370,9 +376,12 @@
     const imported = Boolean(l.choice_property_id);
     const status = l.photo_import_status;
     const labels = [];
+    const directSource = usesDirectSourceCdn(l);
 
     if (imported) {
-      if (status === 'failed') {
+      if (directSource) {
+        labels.push('<div class="pl-panel-alert pl-panel-alert-success">Source CDN photos are kept in their original order; no upload transfer is used.</div>');
+      } else if (status === 'failed') {
         labels.push(`<div class="pl-panel-alert pl-panel-alert-warning">Photo transfer to ImageKit failed. <button class="btn btn-sm btn-outline" id="pl-transfer-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id)}">Retry transfer</button></div>`);
       } else if (status === 'pending') {
         labels.push('<div class="pl-panel-alert pl-panel-alert-info">Photo transfer is pending. It may take a few minutes to complete.</div>');
@@ -380,7 +389,7 @@
         labels.push('<div class="pl-panel-alert pl-panel-alert-success">Photos are stored on ImageKit and ready for the live listing.</div>');
       }
     } else if (hasSource) {
-      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. They will be transferred after publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
+      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. ${directSource ? 'They will remain linked directly in source order.' : 'They will be transferred after publish.'} <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
     } else {
       labels.push('<div class="pl-panel-alert pl-panel-alert-warning">No source photos found. Add at least one photo before publishing.</div>');
     }
@@ -1361,6 +1370,10 @@ function wirePanelPhotoActions(){
   // Transfer source photos to ImageKit in the background after publish
   async function doTransferPhotos(pipelineId, propertyId){
     const listing = _pageData.find(l => l.id === pipelineId);
+    if(listing && usesDirectSourceCdn(listing)){
+      S.toast('Source CDN photos stay linked directly and are not uploaded to ImageKit.', 'info');
+      return;
+    }
     const urls = listing ? (parseJSON(listing.original_image_urls) || []) : [];
     if(!urls.length) return;
 
@@ -1420,7 +1433,7 @@ function wirePanelPhotoActions(){
     const desc = [l.address, l.city, l.state].filter(Boolean).join(', ');
     const ok = await S.confirm(
       'Publish "' + desc + '" as a draft?',
-      'A draft property will be created in your listings. Photos will be transferred to ImageKit automatically.'
+      'A draft property will be created in your listings. Source photos are kept in their original order.'
     );
     if(!ok) return;
     _cClear();
@@ -1447,9 +1460,6 @@ function wirePanelPhotoActions(){
     removeCard(id);
     closePanel();
     fetchCounts().catch(()=>{});
-
-    // Transfer photos in background (non-blocking)
-    doTransferPhotos(id, propId);
 
     // Open edit page
     setTimeout(() => {

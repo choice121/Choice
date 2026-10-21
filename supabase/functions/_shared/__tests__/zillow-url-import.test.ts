@@ -36,6 +36,8 @@ Deno.test("rejects non-Zillow hosts, HTTP URLs, and search pages", () => {
   assert(!parseZillowDetailUrl("https://zillow.com.evil.example/homedetails/x/1_zpid/").ok, "Rejected host.");
   assert(!parseZillowDetailUrl("http://www.zillow.com/homedetails/x/1_zpid/").ok, "Rejected HTTP.");
   assert(!parseZillowDetailUrl("https://www.zillow.com/homes/for_rent/").ok, "Rejected search page.");
+  assert(!parseZillowDetailUrl("https://user@www.zillow.com/homedetails/x/1_zpid/").ok, "Rejected URL credentials.");
+  assert(!parseZillowDetailUrl("https://www.zillow.com:8443/homedetails/x/1_zpid/").ok, "Rejected nonstandard port.");
 });
 
 Deno.test("requires matching property ID, rental status, and asking price", () => {
@@ -50,6 +52,8 @@ Deno.test("requires matching property ID, rental status, and asking price", () =
 
   const estimateOnly = pageFor({ zpid: 123, homeStatus: "FOR_RENT", rentZestimate: 2800 });
   assert(!isExplicitZillowRentalPage(estimateOnly, "123"), "Rejected a rent estimate without asking price.");
+  const negativePrice = pageFor({ zpid: 123, homeStatus: "FOR_RENT", price: "-$2,800" });
+  assert(!isExplicitZillowRentalPage(negativePrice, "123"), "Rejected a negative formatted asking price.");
 });
 
 Deno.test("uses the visible rental label when Zillow omits a status field", () => {
@@ -79,6 +83,8 @@ Deno.test("keeps only HTTPS Zillow image CDN URLs", () => {
       { url: "https://photos.zillowstatic.com/fp/house.jpg" },
       { url: "https://photos.zillowstatic.com.attacker.example/fp/fake.jpg" },
       { url: "http://photos.zillowstatic.com/fp/insecure.jpg" },
+      { url: "https://user@photos.zillowstatic.com/fp/credential.jpg" },
+      { url: "https://photos.zillowstatic.com:8443/fp/custom-port.jpg" },
     ],
   });
   const extracted = extractVerifiedZillowRental(page, "123");
@@ -89,4 +95,22 @@ Deno.test("keeps only HTTPS Zillow image CDN URLs", () => {
     photos[0] === "https://photos.zillowstatic.com/fp/house.jpg",
     "Kept the trusted Zillow photo URL.",
   );
+});
+
+Deno.test("uses the standardized address title and parses monthly price labels", () => {
+  const page = pageFor({
+    zpid: 123,
+    homeStatus: "FOR_RENT",
+    price: "$2,800/mo",
+    title: "Luxury home with stunning upgrades",
+    address: {
+      streetAddress: "123 Main St",
+      city: "Austin",
+      state: "TX",
+      zipcode: "78701",
+    },
+  });
+  const extracted = extractVerifiedZillowRental(page, "123");
+  assert(extracted?.monthly_rent === 2800, "Parsed the explicit monthly asking rent.");
+  assert(extracted?.title === "123 Main St, Austin, TX 78701", "Used the standardized address title.");
 });

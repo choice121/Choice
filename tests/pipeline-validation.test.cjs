@@ -49,6 +49,23 @@ test('blocks tour, portal, and agent-contact details', () => {
   assert.ok(result.failures.some((failure) => failure.includes('agent contact')));
 });
 
+test('blocks URL instructions and every non-$50 fee amount', () => {
+  for (const description of [
+    'Apply on another rental site. $50 application fee.',
+    'Visit https://rent.example/listing to apply. $50 application fee.',
+    'Application fee is $0. $50 application fee.',
+    'Application fee of $35. $50 application fee.',
+    '$50.50 application fee. $50 application fee.',
+    'Application fee waived. $50 application fee.',
+  ]) {
+    assert.equal(
+      validateForPublish({ ...validListing, description }).ok,
+      false,
+      `Expected to block: ${description}`,
+    );
+  }
+});
+
 test('blocks invalid rent', () => {
   assert.equal(validateForPublish({ ...validListing, monthly_rent: 0 }).ok, false);
   assert.equal(validateForPublish({ ...validListing, monthly_rent: 200000 }).ok, false);

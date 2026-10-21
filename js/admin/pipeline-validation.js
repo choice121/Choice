@@ -6,8 +6,8 @@
   const REQUIRED_FEE_MENTION_RE =
     /(?:\$50\s+application\s+fee|application\s+fee\s*:\s*\$?50\b)/i;
   const APPLICATION_FEE_PATTERNS = [
-    /(?:application|app)\s+fee(?:\s+is|\s+of|:|\s+)\s*\$?\s*(\d+(?:\.\d{2})?)/gi,
-    /\$?\s*(\d+(?:\.\d{2})?)\s+(?:application|app)\s+fee/gi,
+    /(?:application|app)\s+fee(?:\s+is|\s+of|:|\s+)\s*\$?\s*(\d+(?:\.\d+)?)/gi,
+    /\$?\s*(\d+(?:\.\d+)?)\s+(?:application|app)\s+fee/gi,
   ];
   const PROHIBITED_DESCRIPTION_RULES = [
     {
@@ -32,7 +32,7 @@
     },
     {
       label: 'third-party application instructions',
-      pattern: /\b(?:turbotenant|zillow|apartments\.com|rentspree|rentcafe|appfolio)\b|listing\s*id/i,
+      pattern: /\b(?:turbotenant|zillow|apartments\.com|rentspree|rentcafe|appfolio)\b|listing\s*id|\bapply\s+on\s+[\w-]+|https?:\/\/|www\./i,
     },
     {
       label: 'tour, showing, or contact instructions',

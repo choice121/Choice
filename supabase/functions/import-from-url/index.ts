@@ -62,6 +62,32 @@ async function readHtml(response: Response): Promise<string> {
   return new TextDecoder().decode(bytes);
 }
 
+async function readRequestBody(req: Request): Promise<string | null> {
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_REQUEST_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
 async function fetchZillowListing(url: URL, zpid: string): Promise<ImportResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -85,6 +111,11 @@ async function fetchZillowListing(url: URL, zpid: string): Promise<ImportResult>
         if (!location || redirects === MAX_REDIRECTS) {
           return { ok: false, error: "Zillow redirected too many times." };
         }
+        try {
+          await response.body?.cancel();
+        } catch {
+          // The redirect response is discarded before the next constrained request.
+        }
         const redirected = parseZillowDetailUrl(new URL(location, current).toString());
         if (!redirected.ok || redirected.zpid !== zpid) {
           return { ok: false, error: "Zillow redirected away from the requested listing." };
@@ -103,7 +134,8 @@ async function fetchZillowListing(url: URL, zpid: string): Promise<ImportResult>
       if (!response.ok) {
         return { ok: false, error: `Zillow returned HTTP ${response.status}.` };
       }
-      if (!(response.headers.get("content-type") || "").toLowerCase().includes("text/html")) {
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
         return { ok: false, error: "Zillow did not return a listing page." };
       }
 
@@ -141,8 +173,8 @@ Deno.serve(async (req) => {
 
   let body: Record<string, unknown>;
   try {
-    const rawBody = await req.text();
-    if (rawBody.length > MAX_REQUEST_BYTES) {
+    const rawBody = await readRequestBody(req);
+    if (rawBody === null) {
       return json({ error: "Request body is too large." }, 413, origin);
     }
     const parsed = JSON.parse(rawBody);
@@ -243,12 +275,14 @@ Deno.serve(async (req) => {
     !extracted.address ||
     !extracted.city ||
     !extracted.state ||
+    !extracted.zip ||
+    !extracted.title ||
     !Number.isFinite(Number(extracted.monthly_rent)) ||
     Number(extracted.monthly_rent) <= 0
   ) {
     return json({
       ok: false,
-      error: "The Zillow page is missing an address, location, or asking rent required for staging.",
+      error: "The Zillow page is missing a complete address, ZIP code, or asking rent required for staging.",
     }, 200, origin);
   }
 
