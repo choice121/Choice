@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1792700539323"></script>
+  <script src="/js/cp-error-reporter.js?v=1792706594436"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0a0f1e">
@@ -13,12 +13,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1792700539323">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792706594436">
   <script defer src="/config.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-  <script defer src="/js/cp-api.js?v=1792700539323" type="module"></script>
-  <script defer src="/js/cp-chrome.js?v=1792700539323"></script>
-  <script defer src="/js/cp-shell.js?v=1792700539323"></script>
+  <script defer src="/js/cp-api.js?v=1792706594436" type="module"></script>
+  <script defer src="/js/cp-chrome.js?v=1792706594436"></script>
+  <script defer src="/js/cp-shell.js?v=1792706594436"></script>
   <style>
     :root {
       --as-radius: 12px;
@@ -589,6 +589,13 @@
             <button class="as-action-chip" data-prompt="Can I get an update on the status of my application?">Application Status Check</button>
           </div>
 
+          <div style="margin-top: 12px; margin-bottom: 8px;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;">
+              💬 Live Operator Guidance & Custom Instructions (Optional)
+            </label>
+            <input type="text" id="operator-notes-input" class="as-search-input" placeholder="Tell the AI how to respond on the fly (e.g. 'Offer a private showing this Thursday at 2 PM')..." style="font-size: 0.85rem; width: 100%; box-sizing: border-box;">
+          </div>
+
           <textarea id="incoming-message-input" class="as-prompt-textarea" placeholder="Paste incoming customer message here (SMS, web message, or TikTok inquiry)..."></textarea>
 
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -836,6 +843,6 @@
   </main>
 </div>
 
-<script defer src="/js/admin/inquiry-assistant.js?v=1792700539323"></script>
+<script defer src="/js/admin/inquiry-assistant.js?v=1792706594436"></script>
 </body>
 </html>

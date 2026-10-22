@@ -1,7 +1,7 @@
 {
   "customers": {
-    "203cd6af-4e57-4b94-be42-8a5d164d8461": {
-      "id": "203cd6af-4e57-4b94-be42-8a5d164d8461",
+    "7c1a0cf9-634e-4459-8bcf-e8be665cc4c7": {
+      "id": "7c1a0cf9-634e-4459-8bcf-e8be665cc4c7",
       "phone_last4": "8376",
       "alias": "Riley",
       "full_name": null,
@@ -29,12 +29,12 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:18.418Z",
-      "updated_at": "2026-10-22T19:34:18.691Z",
-      "last_activity_at": "2026-10-22T19:34:18.691Z"
+      "created_at": "2026-10-22T22:03:27.483Z",
+      "updated_at": "2026-10-22T22:03:27.758Z",
+      "last_activity_at": "2026-10-22T22:03:27.758Z"
     },
-    "9449d2ba-78cb-4c6b-af7d-7c7c4844457f": {
-      "id": "9449d2ba-78cb-4c6b-af7d-7c7c4844457f",
+    "a6fe94ab-a63a-4dd7-8f1a-1871640444f9": {
+      "id": "a6fe94ab-a63a-4dd7-8f1a-1871640444f9",
       "phone_last4": "1954",
       "alias": "Suited",
       "full_name": null,
@@ -62,12 +62,12 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:18.441Z",
-      "updated_at": "2026-10-22T19:34:18.441Z",
-      "last_activity_at": "2026-10-22T19:34:19.149Z"
+      "created_at": "2026-10-22T22:03:27.516Z",
+      "updated_at": "2026-10-22T22:03:27.516Z",
+      "last_activity_at": "2026-10-22T22:03:28.196Z"
     },
-    "4ab1851d-48cf-47f4-9235-d9b859598e39": {
-      "id": "4ab1851d-48cf-47f4-9235-d9b859598e39",
+    "28e6bf90-cd50-4b9e-b3d6-6fa818d49b41": {
+      "id": "28e6bf90-cd50-4b9e-b3d6-6fa818d49b41",
       "phone_last4": "8376",
       "alias": "Marcus",
       "full_name": null,
@@ -95,12 +95,12 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:18.697Z",
-      "updated_at": "2026-10-22T19:34:18.697Z",
-      "last_activity_at": "2026-10-22T19:34:18.697Z"
+      "created_at": "2026-10-22T22:03:27.764Z",
+      "updated_at": "2026-10-22T22:03:27.764Z",
+      "last_activity_at": "2026-10-22T22:03:27.764Z"
     },
-    "8d34ed7f-cd02-4492-ad9a-e6fcd7182549": {
-      "id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+    "9f8c5d79-deb8-4958-a168-64e54190a5f2": {
+      "id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
       "phone_last4": "9182",
       "alias": "Client 9182",
       "full_name": null,
@@ -128,13 +128,13 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:19.681Z",
-      "updated_at": "2026-10-22T19:34:20.470Z",
-      "last_activity_at": "2026-10-22T19:34:20.470Z",
+      "created_at": "2026-10-22T22:03:28.696Z",
+      "updated_at": "2026-10-22T22:03:29.497Z",
+      "last_activity_at": "2026-10-22T22:03:29.497Z",
       "is_voucher_holder": true
     },
-    "cab8ee51-5cfb-454d-a5bf-84321f408617": {
-      "id": "cab8ee51-5cfb-454d-a5bf-84321f408617",
+    "da186ddb-ea29-45fb-9469-6c158617efd4": {
+      "id": "da186ddb-ea29-45fb-9469-6c158617efd4",
       "phone_last4": null,
       "alias": "New Renter",
       "full_name": null,
@@ -162,13 +162,13 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:19.939Z",
-      "updated_at": "2026-10-22T19:34:20.078Z",
-      "last_activity_at": "2026-10-22T19:34:20.078Z",
+      "created_at": "2026-10-22T22:03:28.958Z",
+      "updated_at": "2026-10-22T22:03:29.079Z",
+      "last_activity_at": "2026-10-22T22:03:29.079Z",
       "has_cosigner": true
     },
-    "a7e51ab0-7adb-4499-b626-34e3dff934b9": {
-      "id": "a7e51ab0-7adb-4499-b626-34e3dff934b9",
+    "ec5e8a37-23da-4900-9d46-470af561cb9d": {
+      "id": "ec5e8a37-23da-4900-9d46-470af561cb9d",
       "phone_last4": null,
       "alias": "New Renter",
       "full_name": null,
@@ -196,13 +196,13 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:20.084Z",
-      "updated_at": "2026-10-22T19:34:20.210Z",
-      "last_activity_at": "2026-10-22T19:34:20.210Z",
+      "created_at": "2026-10-22T22:03:29.083Z",
+      "updated_at": "2026-10-22T22:03:29.209Z",
+      "last_activity_at": "2026-10-22T22:03:29.209Z",
       "is_property_owner": true
     },
-    "a807efb2-cade-42e7-ab04-d6dc5ea942b5": {
-      "id": "a807efb2-cade-42e7-ab04-d6dc5ea942b5",
+    "7ce64f6f-1b38-4284-8ffc-df34a9937485": {
+      "id": "7ce64f6f-1b38-4284-8ffc-df34a9937485",
       "phone_last4": null,
       "alias": "New Renter",
       "full_name": null,
@@ -230,171 +230,171 @@
       "eviction_history": null,
       "income_notes": null,
       "additional_notes": null,
-      "created_at": "2026-10-22T19:34:20.215Z",
-      "updated_at": "2026-10-22T19:34:20.345Z",
-      "last_activity_at": "2026-10-22T19:34:20.345Z"
+      "created_at": "2026-10-22T22:03:29.221Z",
+      "updated_at": "2026-10-22T22:03:29.357Z",
+      "last_activity_at": "2026-10-22T22:03:29.357Z"
     }
   },
   "conversations": {
-    "203cd6af-4e57-4b94-be42-8a5d164d8461": [
+    "7c1a0cf9-634e-4459-8bcf-e8be665cc4c7": [
       {
-        "id": "4d676dbe-6f98-40c6-b571-66268e3187bc",
-        "customer_id": "203cd6af-4e57-4b94-be42-8a5d164d8461",
+        "id": "8415ad91-93b0-436a-b680-9476ac3c1bf4",
+        "customer_id": "7c1a0cf9-634e-4459-8bcf-e8be665cc4c7",
         "sender": "customer",
         "message_text": "Hello, looking for a 3-bedroom in Charlotte under 1800",
         "channel": "tiktok",
         "status": "received",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:18.428Z"
+        "created_at": "2026-10-22T22:03:27.500Z"
       }
     ],
-    "9449d2ba-78cb-4c6b-af7d-7c7c4844457f": [],
-    "4ab1851d-48cf-47f4-9235-d9b859598e39": [],
-    "8d34ed7f-cd02-4492-ad9a-e6fcd7182549": [
+    "a6fe94ab-a63a-4dd7-8f1a-1871640444f9": [],
+    "28e6bf90-cd50-4b9e-b3d6-6fa818d49b41": [],
+    "9f8c5d79-deb8-4958-a168-64e54190a5f2": [
       {
-        "id": "0606721b-c853-44c1-8bee-a01b30f251a8",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "ab82c32e-2de6-4018-85ef-46022795f3cb",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "customer",
         "message_text": "Hi, I need a 3 bedroom house in Dallas under $1,800. We have an ESA dog.",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:19.684Z"
+        "created_at": "2026-10-22T22:03:28.698Z"
       },
       {
-        "id": "8a113a8c-ef10-4d03-9e5f-ed6155187a70",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "f373d727-4e6e-42c1-a4ac-fe861b22944e",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "assistant",
         "message_text": "Thank you for reaching out to Choice Properties! To help us find available homes that match what you're looking for, could you share your target move-in timeframe?",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:19.798Z"
+        "created_at": "2026-10-22T22:03:28.819Z"
       },
       {
-        "id": "1536aa9b-f738-4967-bf37-17bff033df09",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "d0fd60be-c477-4fe8-aef1-7814ba117d71",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "customer",
         "message_text": "Do you guys accept Section 8 or housing vouchers?",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:19.809Z"
+        "created_at": "2026-10-22T22:03:28.831Z"
       },
       {
-        "id": "f00feee7-53ce-4f94-b0d6-78671e49dc8f",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "3b7cecb5-a7df-4214-b9bf-e2b03124cc1c",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "assistant",
         "message_text": "We welcome Housing Choice Vouchers and Section 8 participants! Voucher acceptance is coordinated directly with participating property owners and the local housing authority based on the property's rent limits and payment standards. We will review our active participating options in Dallas matching your 3-bedroom voucher.",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:19.936Z"
+        "created_at": "2026-10-22T22:03:28.952Z"
       },
       {
-        "id": "e201b56a-1f9e-4664-a210-c5bf53d9d5e5",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "c26f83e4-ecac-4526-8a98-3a4db121969e",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "customer",
         "message_text": "follow up",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.350Z"
+        "created_at": "2026-10-22T22:03:29.367Z"
       },
       {
-        "id": "10135c3c-3c0d-4c3b-b60c-879ac220fa20",
-        "customer_id": "8d34ed7f-cd02-4492-ad9a-e6fcd7182549",
+        "id": "f5086078-7878-41e3-880d-2ba50ffa22df",
+        "customer_id": "9f8c5d79-deb8-4958-a168-64e54190a5f2",
         "sender": "assistant",
         "message_text": "Just touching base to see if you had any questions on the rental process or if you're still looking for a home in Dallas. Let us know how we can help!",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.470Z"
+        "created_at": "2026-10-22T22:03:29.497Z"
       }
     ],
-    "cab8ee51-5cfb-454d-a5bf-84321f408617": [
+    "da186ddb-ea29-45fb-9469-6c158617efd4": [
       {
-        "id": "2ef97ca6-1459-4c27-9e23-88ea88f03347",
-        "customer_id": "cab8ee51-5cfb-454d-a5bf-84321f408617",
+        "id": "fbf8c489-2f59-443c-8de2-62152c284aa5",
+        "customer_id": "da186ddb-ea29-45fb-9469-6c158617efd4",
         "sender": "customer",
         "message_text": "Marcus (555-4321): Can my dad co-sign for me?",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:19.941Z"
+        "created_at": "2026-10-22T22:03:28.960Z"
       },
       {
-        "id": "c1c2670d-b54c-480c-8879-22e27417b204",
-        "customer_id": "cab8ee51-5cfb-454d-a5bf-84321f408617",
+        "id": "5cd9fc79-69bf-4a83-825a-7d46b69d53e8",
+        "customer_id": "da186ddb-ea29-45fb-9469-6c158617efd4",
         "sender": "assistant",
         "message_text": "Yes, co-signers and guarantors are welcome to apply alongside you to help strengthen your application!\n\nYour co-signer simply submits a standard application with the standard $50 application fee so our underwriting team can review their information alongside yours.",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.078Z"
+        "created_at": "2026-10-22T22:03:29.079Z"
       }
     ],
-    "a7e51ab0-7adb-4499-b626-34e3dff934b9": [
+    "ec5e8a37-23da-4900-9d46-470af561cb9d": [
       {
-        "id": "62474a4e-efc0-47a1-9058-ebb5c326db61",
-        "customer_id": "a7e51ab0-7adb-4499-b626-34e3dff934b9",
+        "id": "c5d9f6b3-0aa0-4496-ad8a-0a4acffac9f5",
+        "customer_id": "ec5e8a37-23da-4900-9d46-470af561cb9d",
         "sender": "customer",
         "message_text": "I own 2 rental properties in Charlotte and want to list them with Choice Properties",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.086Z"
+        "created_at": "2026-10-22T22:03:29.086Z"
       },
       {
-        "id": "159794ad-cb99-4b3e-87e2-f223844e3460",
-        "customer_id": "a7e51ab0-7adb-4499-b626-34e3dff934b9",
+        "id": "b7af4a73-35ac-423a-b117-a3f071f868cd",
+        "customer_id": "ec5e8a37-23da-4900-9d46-470af561cb9d",
         "sender": "assistant",
         "message_text": "Choice Properties partners directly with independent owners, landlords, and property management firms across our markets to market residential rentals, conduct applicant intake, and assist with placements.\n\nCould you share the location (city/state) and target rent of your property? We'll have our property onboarding team connect with you with partnership details.",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.210Z"
+        "created_at": "2026-10-22T22:03:29.209Z"
       }
     ],
-    "a807efb2-cade-42e7-ab04-d6dc5ea942b5": [
+    "7ce64f6f-1b38-4284-8ffc-df34a9937485": [
       {
-        "id": "3f812516-cd35-4ec9-a7f3-7c8f154a4c32",
-        "customer_id": "a807efb2-cade-42e7-ab04-d6dc5ea942b5",
+        "id": "d43af4f3-52f8-4b50-890f-3b70ed1611fe",
+        "customer_id": "7ce64f6f-1b38-4284-8ffc-df34a9937485",
         "sender": "customer",
         "message_text": "Who is Choice Properties? Is this a legit company?",
         "channel": "mobile",
         "status": "sent",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.216Z"
+        "created_at": "2026-10-22T22:03:29.222Z"
       },
       {
-        "id": "6cf97ee9-3b78-4e4d-a540-d06a116ba6bd",
-        "customer_id": "a807efb2-cade-42e7-ab04-d6dc5ea942b5",
+        "id": "eedfe1a6-da2a-4865-9897-f5b24a61ec3d",
+        "customer_id": "7ce64f6f-1b38-4284-8ffc-df34a9937485",
         "sender": "assistant",
         "message_text": "Choice Properties is a residential rental marketplace and housing placement coordinator. We work alongside property owners, investors, and management companies across multiple markets to help renters find verified homes and streamline the application process.\n\nAll applications are processed securely with our standard $50 application fee and standard 24 to 72 hour review. Let us know how we can assist with your housing search!",
         "channel": "mobile",
         "status": "draft",
         "metadata": {},
-        "created_at": "2026-10-22T19:34:20.345Z"
+        "created_at": "2026-10-22T22:03:29.357Z"
       }
     ]
   },
   "notes": {
-    "203cd6af-4e57-4b94-be42-8a5d164d8461": [],
-    "9449d2ba-78cb-4c6b-af7d-7c7c4844457f": [
+    "7c1a0cf9-634e-4459-8bcf-e8be665cc4c7": [],
+    "a6fe94ab-a63a-4dd7-8f1a-1871640444f9": [
       {
-        "id": "ebfc9a3a-4716-401c-a166-8eae1d06051d",
-        "customer_id": "9449d2ba-78cb-4c6b-af7d-7c7c4844457f",
+        "id": "d323ec23-db68-4936-881e-f8c841d6b091",
+        "customer_id": "a6fe94ab-a63a-4dd7-8f1a-1871640444f9",
         "note_text": "Secret internal note: applicant is waiting for tax refund",
         "author": "Staff",
-        "created_at": "2026-10-22T19:34:19.149Z"
+        "created_at": "2026-10-22T22:03:28.196Z"
       }
     ],
-    "4ab1851d-48cf-47f4-9235-d9b859598e39": [],
-    "8d34ed7f-cd02-4492-ad9a-e6fcd7182549": [],
-    "cab8ee51-5cfb-454d-a5bf-84321f408617": [],
-    "a7e51ab0-7adb-4499-b626-34e3dff934b9": [],
-    "a807efb2-cade-42e7-ab04-d6dc5ea942b5": []
+    "28e6bf90-cd50-4b9e-b3d6-6fa818d49b41": [],
+    "9f8c5d79-deb8-4958-a168-64e54190a5f2": [],
+    "da186ddb-ea29-45fb-9469-6c158617efd4": [],
+    "ec5e8a37-23da-4900-9d46-470af561cb9d": [],
+    "7ce64f6f-1b38-4284-8ffc-df34a9937485": []
   },
-  "saved_at": "2026-10-22T19:34:20.470Z"
+  "saved_at": "2026-10-22T22:03:29.497Z"
 }

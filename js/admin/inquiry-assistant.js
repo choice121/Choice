@@ -47,6 +47,7 @@
 
   // Generator DOM
   const msgInput = document.getElementById('incoming-message-input');
+  const operatorNotesInput = document.getElementById('operator-notes-input');
   const generateBtn = document.getElementById('btn-generate-ai');
   const modelTag = document.getElementById('ai-model-tag');
   const draftSlot = document.getElementById('draft-output-slot');
@@ -513,7 +514,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: currentCustomer.id,
-          incomingMessage: incoming
+          incomingMessage: incoming,
+          operatorNotes: operatorNotesInput ? operatorNotesInput.value.trim() : ''
         })
       });
 
