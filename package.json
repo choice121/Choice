@@ -19,6 +19,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "@vitejs/plugin-react": "^6.1.2",
     "apify-client": "^2.25.0",
     "clsx": "^2.1.1",

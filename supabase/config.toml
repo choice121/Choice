@@ -3,6 +3,3 @@ verify_jwt = false
 
 [functions.receive-pipeline-import]
 verify_jwt = false
-
-[functions.import-from-url]
-verify_jwt = true

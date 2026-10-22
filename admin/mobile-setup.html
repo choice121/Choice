@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1792696547029"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex, nofollow">
+  <title>iPhone & Mobile Copilot Setup · Choice Properties</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792696547029">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/cp-chrome.js?v=1792696547029"></script>
+  <script defer src="/js/cp-shell.js?v=1792696547029"></script>
+  <style>
+    :root {
+      --mobile-accent: #006aff;
+      --mobile-success: #10b981;
+      --mobile-surface: #10172a;
+      --mobile-surface-2: #1e293b;
+      --mobile-border: rgba(255, 255, 255, 0.08);
+      --mobile-text: #f8fafc;
+      --mobile-muted: #94a3b8;
+    }
+
+    .setup-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 16px 80px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(0, 106, 255, 0.12), rgba(16, 185, 129, 0.08));
+      border: 1px solid var(--mobile-border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 106, 255, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(0, 106, 255, 0.3);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .step-card {
+      background: var(--mobile-surface);
+      border: 1px solid var(--mobile-border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--mobile-accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--mobile-text);
+      margin: 0;
+    }
+
+    .code-box {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 10px 0;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .copy-btn:hover {
+      background: var(--mobile-accent);
+    }
+
+    .workflow-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--mobile-surface-2);
+      color: var(--mobile-text);
+      border: 1px solid var(--mobile-border);
+      margin: 4px;
+    }
+
+    /* Interactive Simulator */
+    .sim-card {
+      background: #0d1322;
+      border: 1px solid rgba(0, 106, 255, 0.3);
+      border-radius: 14px;
+      padding: 22px;
+      margin-top: 24px;
+    }
+
+    .sim-textarea {
+      width: 100%;
+      height: 90px;
+      background: #080c16;
+      border: 1px solid var(--mobile-border);
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-top: 8px;
+    }
+    .sim-textarea:focus {
+      outline: none;
+      border-color: var(--mobile-accent);
+    }
+
+    .sim-btn {
+      background: var(--mobile-accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sim-btn:hover {
+      background: #0056d6;
+    }
+
+    .sim-result {
+      margin-top: 16px;
+      padding: 14px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-container">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <a href="/admin/inquiry-assistant.html" class="cp-btn" style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.1); text-decoration: none; padding: 6px 14px; border-radius: 8px; font-size: 13px;">
+        ← Back to Inquiry Assistant
+      </a>
+      <span style="font-size: 13px; color: var(--mobile-muted);">Choice Properties Mobile System</span>
+    </div>
+
+    <div class="hero-card">
+      <span class="badge-tag">iPhone Native Copilot</span>
+      <h1 style="margin: 0 0 10px; font-size: 26px; font-weight: 800; color: #fff;">
+        Reply to Renters from iPhone Without Opening a Browser
+      </h1>
+      <p style="margin: 0; color: var(--mobile-muted); font-size: 15px; line-height: 1.5;">
+        Works seamlessly across <strong>Google Voice</strong>, <strong>WhatsApp</strong>, and <strong>iMessage</strong>. 
+        Copy any text from a client, double-tap the back of your phone, and paste the professional Choice Properties response in 2 seconds.
+      </p>
+      <div style="margin-top: 16px;">
+        <span class="workflow-pill">📱 Google Voice</span>
+        <span class="workflow-pill">💬 WhatsApp</span>
+        <span class="workflow-pill">✉️ iMessage</span>
+        <span class="workflow-pill">🧠 Auto Memory & Preferences</span>
+        <span class="workflow-pill">🛡️ Strict $50 Fee Guarantee</span>
+      </div>
+    </div>
+
+    <!-- Step 1: Endpoint & Shortcut -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <h2 class="step-title">Your Mobile Webhook URL</h2>
+      </div>
+      <p style="color: var(--mobile-muted); font-size: 14px; margin: 0 0 8px;">
+        This is your dedicated mobile endpoint. It takes copied customer messages, automatically saves preferences into memory, and returns a copy-ready response.
+      </p>
+      <div class="code-box">
+        <span id="endpointUrl">https://choice-properties-site.pages.dev/api/assistant/quick-draft?format=text</span>
+        <button class="copy-btn" onclick="copyEndpoint()">Copy URL</button>
+      </div>
+      <p style="font-size: 12px; color: #64748b; margin: 4px 0 0;">
+        💡 You can also use your live custom domain or AI Studio URL.
+      </p>
+    </div>
+
+    <!-- Step 2: 60-Second Apple Shortcut Setup -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <h2 class="step-title">60-Second Setup in the iOS Shortcuts App</h2>
+      </div>
+      <ol style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 14px; line-height: 1.7;">
+        <li>Open the <strong>Shortcuts</strong> app on your iPhone.</li>
+        <li>Tap the <strong>+</strong> button in the top right to create a new shortcut. Name it <strong>"Choice AI"</strong>.</li>
+        <li>Add Action 1: <strong>Get Clipboard</strong></li>
+        <li>Add Action 2: <strong>Get Contents of URL</strong>:
+          <ul style="margin-top: 4px; color: #94a3b8;">
+            <li>URL: Paste the URL from Step 1 above.</li>
+            <li>Method: <strong>POST</strong></li>
+            <li>Request Body: <strong>JSON</strong></li>
+            <li>Add field: Key = <code>text</code>, Value = <code>Clipboard</code></li>
+          </ul>
+        </li>
+        <li>Add Action 3: <strong>Copy to Clipboard</strong> (Set input to <em>Contents of URL</em>).</li>
+        <li>Add Action 4 (Optional): <strong>Show Notification</strong> (to preview the text).</li>
+        <li>Tap <strong>Done</strong>.</li>
+      </ol>
+    </div>
+
+    <!-- Step 3: Trigger with iPhone Back Tap -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <h2 class="step-title">Enable 2-Tap Trigger (Back Tap or Action Button)</h2>
+      </div>
+      <p style="color: var(--mobile-muted); font-size: 14px; margin: 0 0 10px;">
+        To trigger this without ever leaving Google Voice, WhatsApp, or iMessage:
+      </p>
+      <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px; border: 1px solid var(--mobile-border);">
+        <h4 style="margin: 0 0 6px; color: #38bdf8; font-size: 14px;">How to set up Back Tap on iPhone:</h4>
+        <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.6;">
+          Go to iPhone <strong>Settings</strong> ➔ <strong>Accessibility</strong> ➔ <strong>Touch</strong> ➔ <strong>Back Tap</strong> ➔ 
+          Choose <strong>Double Tap</strong> ➔ Scroll down to Shortcuts and select <strong>Choice AI</strong>.
+        </p>
+      </div>
+      <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px; border: 1px solid var(--mobile-border); margin-top: 10px;">
+        <h4 style="margin: 0 0 6px; color: #38bdf8; font-size: 14px;">If you have iPhone 15 Pro / 16 (Action Button):</h4>
+        <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.6;">
+          Go to iPhone <strong>Settings</strong> ➔ <strong>Action Button</strong> ➔ Swipe to <strong>Shortcut</strong> ➔ Choose <strong>Choice AI</strong>.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 4: Daily Workflow in Action -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <h2 class="step-title">How It Works in Real Life</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 10px;">
+        <div style="background: #090d16; padding: 14px; border-radius: 10px; border: 1px solid var(--mobile-border);">
+          <strong style="color: #60a5fa; font-size: 13px;">1. Client Messages You</strong>
+          <p style="margin: 6px 0 0; font-size: 12px; color: #94a3b8;">
+            In Google Voice, WhatsApp, or iMessage, tap and hold their text and tap <strong>Copy</strong>.
+          </p>
+        </div>
+        <div style="background: #090d16; padding: 14px; border-radius: 10px; border: 1px solid var(--mobile-border);">
+          <strong style="color: #60a5fa; font-size: 13px;">2. Double-Tap iPhone Back</strong>
+          <p style="margin: 6px 0 0; font-size: 12px; color: #94a3b8;">
+            Double tap your phone's back. The shortcut executes in 1 second and saves preferences to memory.
+          </p>
+        </div>
+        <div style="background: #090d16; padding: 14px; border-radius: 10px; border: 1px solid var(--mobile-border);">
+          <strong style="color: #60a5fa; font-size: 13px;">3. Paste & Send</strong>
+          <p style="margin: 6px 0 0; font-size: 12px; color: #94a3b8;">
+            Tap into your message box, hit <strong>Paste</strong>, and send the perfect human reply.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Interactive Tester -->
+    <div class="sim-card">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #fff;">
+          🧪 Test Mobile Copilot Right Now
+        </h3>
+        <span style="font-size: 12px; color: var(--mobile-success);">Live Endpoint Active</span>
+      </div>
+      <p style="font-size: 13px; color: var(--mobile-muted); margin: 6px 0 12px;">
+        Simulate an incoming text from Google Voice, WhatsApp, or iMessage. Include a 4-digit ID or name if you want to link to a customer:
+      </p>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+        <button type="button" class="cp-btn" style="font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.06); color: #94a3b8;" onclick="setSimText('8376: Hi! Do you accept Section 8 or housing vouchers in Dallas?')">
+          Section 8 Voucher
+        </button>
+        <button type="button" class="cp-btn" style="font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.06); color: #94a3b8;" onclick="setSimText('Marcus: My credit is around 570 from old medical bills. Can I still qualify?')">
+          Credit Inquiry
+        </button>
+        <button type="button" class="cp-btn" style="font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.06); color: #94a3b8;" onclick="setSimText('I own 2 houses in Charlotte that I want to list with you guys')">
+          Landlord Partnership
+        </button>
+        <button type="button" class="cp-btn" style="font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.06); color: #94a3b8;" onclick="setSimText('Who is Choice Properties? Is this a legit company?')">
+          Company Background
+        </button>
+      </div>
+
+      <textarea id="simInput" class="sim-textarea" placeholder="Paste incoming text (e.g. 8376: Need 3 beds in Dallas under $1,800)"></textarea>
+
+      <button id="simSubmitBtn" class="sim-btn" onclick="runSim()">
+        <span>⚡ Generate Copilot Reply</span>
+      </button>
+
+      <div id="simResultBox" class="sim-result">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <strong style="color: #10b981; font-size: 13px;">✅ Response Ready for Clipboard:</strong>
+          <button class="copy-btn" onclick="copySimReply()">Copy Text</button>
+        </div>
+        <div id="simReplyText" style="color: #fff; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"></div>
+        <div id="simMeta" style="margin-top: 10px; font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="__CSP_NONCE__">
+    // Set current domain in URL box
+    window.addEventListener('DOMContentLoaded', () => {
+      const origin = window.location.origin;
+      const urlEl = document.getElementById('endpointUrl');
+      if (urlEl) {
+        urlEl.textContent = `${origin}/api/assistant/quick-draft?format=text`;
+      }
+    });
+
+    function copyEndpoint() {
+      const url = document.getElementById('endpointUrl').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Copied Webhook URL to clipboard!');
+      });
+    }
+
+    function setSimText(txt) {
+      document.getElementById('simInput').value = txt;
+    }
+
+    async function runSim() {
+      const text = document.getElementById('simInput').value.trim();
+      if (!text) {
+        alert('Please enter or paste an incoming message');
+        return;
+      }
+
+      const btn = document.getElementById('simSubmitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Processing...</span>';
+
+      try {
+        const res = await fetch('/api/assistant/quick-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, channel: 'mobile-test' })
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+          document.getElementById('simResultBox').style.display = 'block';
+          document.getElementById('simReplyText').textContent = data.reply;
+          
+          let metaHtml = `Customer: <strong>${data.customer.alias}</strong>`;
+          if (data.customer.phone_last4) metaHtml += ` (Suffix: ${data.customer.phone_last4})`;
+          if (data.detectedUpdates && Object.keys(data.detectedUpdates).length > 0) {
+            metaHtml += ` | Auto-Saved Preferences: <code>${JSON.stringify(data.detectedUpdates)}</code>`;
+          }
+          document.getElementById('simMeta').innerHTML = metaHtml;
+        } else {
+          alert('Error: ' + (data.error || 'Failed to generate reply'));
+        }
+      } catch (err) {
+        alert('Connection error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡ Generate Copilot Reply</span>';
+      }
+    }
+
+    function copySimReply() {
+      const text = document.getElementById('simReplyText').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied response to clipboard!');
+      });
+    }
+  </script>
+</body>
+</html>

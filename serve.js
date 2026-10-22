@@ -26,8 +26,15 @@ const MIME_TYPES = {
   '.map': 'application/json; charset=utf-8'
 };
 
+const { handleAssistantApi } = require('./lib/assistant-router');
+
 const server = http.createServer((req, res) => {
   let cleanUrl = req.url.split('?')[0];
+
+  // Route /api/assistant endpoints
+  if (cleanUrl.startsWith('/api/assistant')) {
+    return handleAssistantApi(req, res);
+  }
 
   // Handle /api/relocate endpoint
   if (cleanUrl === '/api/relocate' && req.method === 'POST') {
