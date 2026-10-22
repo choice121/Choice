@@ -131,6 +131,13 @@ Any future AI agent modifying the Chrome Extension (`chrome-extension/`, `.pages
 
 ---
 
+## 🚀 DIRECTIVE 3 — LIVE SERVER HEARTBEAT & VERSION INDICATOR PROTOCOL
+Any future AI agent making changes to backend API routes (`serve.js`, `lib/assistant-router.js`, `lib/inquiry-assistant-engine.mjs`) MUST adhere to:
+1. **Never Assume Deployment State**: Always maintain and respect the live heartbeat endpoint (`GET /api/assistant/version`) and the visual version indicator banners in the admin/setup consoles (`/admin/mobile-setup.html`, `/admin/inquiry-assistant.html`).
+2. **Version Bumping & Verification**: When modifying backend logic or AI prompts, update the version string in `lib/assistant-router.js` (e.g. `v2.5.0` ➔ `v2.6.0`), run `compile_applet`, run test suites (`node scripts/test-inquiry-assistant.mjs && node scripts/test-mobile-assistant.mjs`), and verify the heartbeat indicator.
+
+---
+
 ## 7. Quality Audit & Automated Workflow
 Every property follows this complete lifecycle:
 **Scrape → Census Verify → Deduplicate → Enrich → Clean → Process Images → Synchronize Data → Generate Description → Validate → Auto-Correct → Publish**
