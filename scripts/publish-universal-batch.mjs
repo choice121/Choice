@@ -36,64 +36,18 @@ async function fetchJson(url, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// Custom Deep Architectural Walkthrough Builder adhering strictly to all Choice Platform Rules
+// Authentic Source Description Preservation with Basic Privacy Scrubbing
 function buildArchitecturalWalkthrough(p, mined, specs) {
-  const address = p.address;
-  const city = p.city;
-  const state = p.state;
-  const zip = p.zip;
-  const beds = p.bedrooms;
-  const baths = p.bathrooms;
-  const sqft = p.square_footage ? `${Number(p.square_footage).toLocaleString()} square feet` : null;
-  const yearBuilt = specs.year_built;
-  const lotDesc = specs.lot_size_sqft ? `spacious ${(specs.lot_size_sqft / 43560).toFixed(2)}-acre parcel` : 'private landscaped grounds';
-  const parkingDesc = specs.parking;
-  const laundryDesc = specs.laundry_type === 'In Unit' ? 'in-unit washer and dryer included' : 'dedicated in-unit washer and dryer hookups';
-  const applianceList = specs.appliances.join(', ');
-
-  const paragraphs = [];
-
-  // Paragraph 1: Setting & Architecture
-  paragraphs.push(
-    `Situated in a desirable residential setting in ${city}, ${state} ${zip}, ${address} is a thoughtfully maintained single-family residence presenting classic architectural curb appeal on a ${lotDesc}. Encompassing ${sqft ? `${sqft} of well-proportioned interior living space` : 'a spacious and functional floor plan'}${yearBuilt ? ` originally crafted in ${yearBuilt}` : ''}, this home delivers an inviting atmosphere complemented by crisp neutral paint and abundant natural light throughout.`
-  );
-
-  // Paragraph 2: Living Flow & Interior Spaces
-  const flooringDesc = specs.flooring.join(' and ');
-  paragraphs.push(
-    `The primary entry leads into an expansive main living room framed by large picture windows that capture gentle morning and afternoon exposure. Featuring quality ${flooringDesc || 'modern flooring'} across the main living zones, the layout provides effortless circulation between the central living area and the adjacent dining space, ideal for both everyday comfort and casual hosting.`
-  );
-
-  // Paragraph 3: Kitchen & Dining
-  paragraphs.push(
-    `At the heart of the home, the fully equipped kitchen offers generous preparation countertops, expansive cabinet storage, and clean architectural finishes. The culinary suite is comprehensively equipped with ${applianceList}, ensuring seamless meal preparation and dependable everyday utility.`
-  );
-
-  // Paragraph 4: Bedrooms & Bathrooms
-  paragraphs.push(
-    `Private living quarters consist of ${beds} generously proportioned bedrooms, including a primary owner's suite with ample closet capacity. The residence features ${baths} full bathrooms appointed with contemporary vanity fixtures, updated lighting, and clean tile surrounds.`
-  );
-
-  // Paragraph 5: Utility, Mechanicals & Outdoor Living
-  paragraphs.push(
-    `Outdoor living is highlighted by a private backyard lawn suited for recreation and relaxation, alongside ${parkingDesc} providing secure vehicle accommodation. Mechanical systems include high-efficiency central air conditioning, central forced-air heating, and ${laundryDesc}.`
-  );
-
-  // Mandatory Inclusions & Choice Closing
-  paragraphs.push(
-    `Property Inclusions & Application Details:\n` +
-    `• ${beds} Bedrooms, ${baths} Bathrooms${sqft ? ` (${sqft})` : ''}\n` +
-    `• Kitchen includes: ${applianceList}\n` +
-    `• Parking: ${parkingDesc}\n` +
-    `• Climate: Central Air Conditioning & Central Heating\n` +
-    `• Laundry: ${specs.laundry_type === 'In Unit' ? 'In-Unit Washer & Dryer' : 'In-Unit Washer/Dryer Hookups'}\n` +
-    `• Pet-Friendly (Pets welcome)\n` +
-    `• Application Fee: $50\n\n` +
-    `Pet friendly. Submit your rental application today at Choice Properties.`
-  );
-
-  const fullDescription = paragraphs.join('\n\n');
-  return fullDescription;
+  const rawText = p.original_description || p.description || '';
+  const sanitized = stripProhibitedContent(rawText);
+  if (!sanitized) {
+    return 'Application Fee: $50. Submit your rental application today at Choice Properties.';
+  }
+  let desc = sanitized;
+  if (!desc.includes('Application Fee: $50') && !desc.includes('$50 application fee')) {
+    desc += '\n\nApplication Fee: $50. Submit your rental application today at Choice Properties.';
+  }
+  return desc;
 }
 
 async function run() {

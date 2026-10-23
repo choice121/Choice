@@ -26,46 +26,18 @@ This document establishes the permanent, human-grade manual verification, surgic
 
 ---
 
-## 2. The Deep Walkthrough Description Architecture
+## 2. Authentic Source Description Preservation Protocol
 
-Descriptions must be rich, structured, and informative. Before writing, review the original description (`original_description`) and raw source data (`original_data`). Structure the description using the following multi-paragraph flow:
+The legacy "Deep Walkthrough" rewriting architecture is completely decommissioned. Listing descriptions must preserve authentic human-written source text directly from the listing source (MLS, Zillow, Opendoor) without synthetic multi-paragraph rewriting:
 
-### Paragraph 1: Property Style, Architecture & Neighborhood Setting
-- Introduce the home by its architectural type (Single-Family, Townhouse, Duplex, or Apartment complex).
-- State the total interior living area (square footage) and physical location/neighborhood.
-- Mention curb appeal, exterior finishes (brick, stone, siding), or private entryway.
-
-### Paragraph 2: Interior Flow, Main Living & Natural Light
-- Walk through the main living area: open layout, ceiling height, large picture windows, or dedicated foyer.
-- Detail the flooring throughout the main level (hardwood, luxury vinyl plank, ceramic tile, carpet).
-- Describe the transition into dining spaces or common living zones.
-
-### Paragraph 3: Kitchen & Dining (Full Appliance Inventory)
-- Detail the kitchen layout (eat-in kitchen, island, breakfast bar, dining nook).
-- Note cabinetry and countertop finishes.
-- **Explicitly list all appliances included**: Refrigerator, gas/electric range & oven, built-in microwave, multi-cycle dishwasher, garbage disposal.
-- Mention pantry storage or direct access to outdoor dining areas.
-
-### Paragraph 4: Bedrooms & Bathrooms (With Decimal Precision)
-- Describe the primary bedroom suite: space for king/queen furniture, walk-in closets, natural light.
-- Detail the primary bathroom: vanity style, soaking tub or step-in shower, tile work.
-- Cover secondary bedrooms and common full baths or powder rooms (e.g. half bath on main level).
-- **Strict Rule**: Decimal bath count in text must match structured fields (`1.5`, `2.5`, `3.5`).
-
-### Paragraph 5: Utility, Basement, Laundry & Climate
-- Highlight storage: full private basement (finished or unfinished), attic, or utility closets.
-- **Laundry specifics**: In-unit washer & dryer included vs. dedicated washer/dryer hookups.
-- **Climate systems**: Central air conditioning, forced-air heat, or heat pump.
-
-### Paragraph 6: Grounds, Outdoor Living & Parking
-- Outdoor amenities: Private fenced backyard, covered front porch, composite deck, or patio.
-- **Parking details**: Attached/detached 1-car or 2-car garage, private driveway, or dedicated off-street parking.
-
-### Paragraph 7: Inclusions, Policies & Standard Choice Closing
-- Clarify utilities tenant is responsible for (gas, electric, water/sewer/trash) or municipal fees.
-- **Pet policy**: Always state: `Pet friendly.`
-- **Application fee**: Always state: `Application Fee: $50.`
-- **Mandatory Call-to-Action**: `Submit your rental application today at Choice Properties.`
+- **Preserve Source Narrative**: Keep the property manager's or listing agent's actual narrative description intact.
+- **Basic Privacy Scrubbing Only**:
+  - Strip direct agent phone numbers and personal emails so all inquiries route through Choice Properties.
+  - Strip external third-party portal links (Zillow, Apartments.com, etc.).
+  - Strip mentions of security deposits, lease durations, and move-in/availability dates.
+- **Standard Application Fee & Closing Note**:
+  Ensure the listing closes with the standard application fee statement:  
+  `Application Fee: $50. Submit your rental application today at Choice Properties.`
 
 ---
 

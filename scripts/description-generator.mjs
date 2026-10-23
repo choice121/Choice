@@ -6,7 +6,6 @@
  * Prohibited content is stripped. $50 application fee is appended.
  */
 
-import { stripProhibitedContent } from './description-sanitizer.mjs';
 
 export function extractMinedFacts(rawDescription = '', structuredData = {}) {
   const text = (rawDescription || '').toLowerCase();
@@ -126,25 +125,16 @@ export function determineArchetypeAndTier(prop, minedFacts = {}) {
 }
 
 export function generateDynamicDescription(prop, options = {}) {
-  const sanitized = stripProhibitedContent(prop.original_description || '');
-  const address = prop.address;
-  const city = prop.city;
-  const state = prop.state;
-  const beds = prop.bedrooms;
-  const baths = prop.bathrooms;
-  const sqft = prop.square_footage ? `${Number(prop.square_footage).toLocaleString()} square feet` : null;
-
-  const parts = [];
-  if (sanitized) parts.push(sanitized);
-  const summary = [
-    address && city && state ? `${address}, ${city}, ${state}` : null,
-    beds != null ? `${beds} Bed` : null,
-    baths != null ? `${baths} Bath` : null,
-    sqft ? sqft : null
-  ].filter(Boolean).join(' | ');
-  if (summary) parts.push(summary);
-  parts.push('Application Fee: $50');
-  return parts.join('\n\n');
+  const rawText = prop.original_description || prop.description || '';
+  const sanitized = stripProhibitedContent(rawText);
+  if (!sanitized) {
+    return 'Application Fee: $50. Submit your rental application today at Choice Properties.';
+  }
+  let desc = sanitized;
+  if (!desc.includes('Application Fee: $50') && !desc.includes('$50 application fee')) {
+    desc += '\n\nApplication Fee: $50. Submit your rental application today at Choice Properties.';
+  }
+  return desc;
 }
 
 export function lintDescription(description = '', prop = {}) {

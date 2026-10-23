@@ -69,25 +69,14 @@ Physical structural reality takes precedence over MLS portal defaults:
 
 ---
 
-## 3. Deep Walkthrough Description Architecture
-Descriptions must NEVER be brief 2-sentence summaries or generic AI fluff. They must read like comprehensive, high-end real estate walkthroughs that articulate everything included:
-
-1. **Architecture & Property Setting**: Construction year, square footage, curb appeal, neighborhood context.
-2. **Main Living & Interior Flow**: Living room scale, natural light, picture windows, flooring materials.
-3. **Kitchen & Dining Details**: Cabinetry, countertops, pantry, and full appliance inventory (refrigerator, range/oven, dishwasher, microwave).
-4. **Bedrooms & Bathrooms**: Primary owner's suite, closet capacity, secondary bedrooms, full & half bath fixtures (with exact decimal bath counts matching structured data).
-5. **Utility, Comfort & Systems**: In-unit laundry hookups, high-efficiency central heating and air conditioning.
-6. **Outdoor Living & Parking**: Yard space, private fencing, attached garage capacity or driveway parking.
-7. **Inclusions & Choice Closing**: Pet-friendly confirmation, application fee strictly $50, and the closing invitation: *"Submit your rental application today at Choice Properties."*
-
-### Contextual Relocation Scrubbing:
-When an address is relocated, scrub all source artifacts:
-- Strip local school districts (e.g. replace "Plano ISD" with "local top-rated school district").
-- Strip specific highways/airports (e.g. replace "minutes from I-635 / DFW Airport" with "convenient access to regional commuter corridors and shopping").
-- Strip source county and subdivision names.
-
-### Anti-Cliché Rules:
-Avoid repetitive AI marketing clichés (e.g., *“Welcome to…”*, *“Discover…”*, *“Nestled in…”*, *“Boasts…”*, *“Step inside…”*, *“Perfect blend…”*, *“Dream home…”*). Write with natural, varied sentence structure and realistic flow.
+## 3. Authentic Source Description Preservation Protocol (No Rewriting)
+- **Zero Synthetic Rewriting**: Descriptions must NEVER be rewritten, lengthened, or transformed into fabricated multi-paragraph AI walkthroughs. All synthetic description generation is decommissioned.
+- **Preserve Authentic Source Text**: Use the authentic human-written source description directly as provided by the property manager or MLS listing.
+- **Basic Privacy Scrubbing (Strictly Minimal)**:
+  - Strip external MLS broker/agent direct phone numbers and personal emails so prospective tenants contact Choice Properties.
+  - Strip external third-party portal URLs (Zillow, Apartments.com, TurboTenant, etc.) and showing links.
+  - Strip mentions of security deposits, lease terms/durations, and available/move-in dates per platform invariants.
+- **Standard Choice Application Note**: Ensure the description concludes with the standard application fee note: *"Application Fee: $50. Submit your rental application today at Choice Properties."*
 
 ---
 
@@ -140,7 +129,7 @@ Any future AI agent making changes to backend API routes (`serve.js`, `lib/assis
 
 ## 7. Quality Audit & Automated Workflow
 Every property follows this complete lifecycle:
-**Scrape → Census Verify → Deduplicate → Enrich → Clean → Process Images → Synchronize Data → Generate Description → Validate → Auto-Correct → Publish**
+**Scrape → Census Verify → Deduplicate → Basic Privacy Clean → Process Images → Synchronize Data → Validate → Publish**
 
-- **Source of Truth**: Verified original listing details anchor facts; never invent room sizes, materials, or features.
+- **Source of Truth**: Preserve authentic source descriptions and facts; never synthesize room sizes or rewrite listing text.
 - **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and verified Census GPS coordinates.
