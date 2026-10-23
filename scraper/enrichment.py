@@ -1909,6 +1909,18 @@ QUALIFICATIONS_APPEND = """
 REQUIREMENTS & QUALIFICATIONS:
 No corporate leases allowed or AIRBNB. Credit score must be a minimum of 575. Income must exceed 3.0 times the monthly rent to qualify. No evictions or broken leases on your rental history. No criminal history ever. Application pending - Waiting list options are available at present. Photos are stock images provided, video tour of actual unit available upon request. Pictures are for marketing purposes only."""
 
+# Prohibited qualification fragments to strip if present
+_QUAL_PROHIBITED = [
+    r"No corporate leases allowed or AIRBNB\.?",
+    r"Credit score must be a minimum of 575\.?",
+    r"Income must exceed 3\.0 times the monthly rent to qualify\.?",
+    r"No evictions or broken leases on your rental history\.?",
+    r"No criminal history ever\.?",
+    r"Application pending - Waiting list options are available at present\.?",
+    r"Photos are stock images provided, video tour of actual unit available upon request\.?",
+    r"Pictures are for marketing purposes only\.?"
+]
+
 # Known portals/domains to detect for external redirects
 _EXTERNAL_DOMAINS = [
     r"zillow\.com",
