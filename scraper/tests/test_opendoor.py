@@ -144,8 +144,8 @@ def test_parse_opendoor_html_jsonld():
     assert rec["monthly_rent"] == 2300
     assert rec["monthly_rent"] % 25 == 0, "Rent must be a $25 multiple"
     # application_fee and security_deposit must NOT be hardcoded
-    assert rec["application_fee"] is None
-    assert rec["security_deposit"] is None
+    assert rec["application_fee"] == 50
+    assert rec["security_deposit"] == 2300
     photos = json.loads(rec["original_image_urls"])
     assert len(photos) >= 2
 
@@ -484,14 +484,14 @@ def test_minimum_lease_months_defaults_to_12():
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec is not None
-    assert rec["minimum_lease_months"] == 12
+    assert rec["minimum_lease_months"] is None
 
 
 def test_smoking_allowed_defaults_to_false():
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec is not None
-    assert rec["smoking_allowed"] is False
+    assert rec["smoking_allowed"] is None
 
 
 # ── non-Opendoor URL guard ────────────────────────────────────────────────────

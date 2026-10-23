@@ -275,6 +275,17 @@ def normalize_allcaps_description(text):
     is treated as an accidental ALL-CAPS MLS dump and converted to readable
     sentence case.  Normal mixed-case text is returned unchanged.
     """
+    if not text or not published_rent:
+        return text
+    try:
+        rent = int(published_rent)
+    except (TypeError, ValueError):
+        return text
+    import re
+    def _repl(m):
+        return "${:,}/month".format(rent)
+    text = re.sub(r"\$[\d,]+\s*/\s*month", _repl, text)
+    text = re.sub(r"\$[\d,]+\s*per\s*month", _repl, text)
     return text
 
 
@@ -444,6 +455,17 @@ def enforce_price_consistency(text, published_rent):
     ("/mo", "per month", "rent of $X") to avoid mangling unrelated dollar
     figures such as deposits or fees mentioned elsewhere.
     """
+    if not text or not published_rent:
+        return text
+    try:
+        rent = int(published_rent)
+    except (TypeError, ValueError):
+        return text
+    import re
+    def _repl(m):
+        return "${:,}/month".format(rent)
+    text = re.sub(r"\$[\d,]+\s*/\s*month", _repl, text)
+    text = re.sub(r"\$[\d,]+\s*per\s*month", _repl, text)
     return text
 
 
@@ -866,6 +888,11 @@ def append_apply_cta(description):
     Uses a stable selection (based on description length) so re-enriching the
     same record produces the same CTA — no randomness required.
     """
+    if not description:
+        description = ""
+    cta = "Submit your rental application today at Choice Properties."
+    if cta not in (description or ""):
+        description = (description or "").rstrip() + "\n\n" + cta
     return description
 
 
@@ -1347,6 +1374,7 @@ def rule_based_enrich(record):
 
     # Lease terms are never displayed; always clear them.
     record["lease_terms"] = None
+    record["minimum_lease_months"] = None
     return record
 
 
