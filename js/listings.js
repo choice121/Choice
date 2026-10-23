@@ -852,7 +852,7 @@ async function fetchAndRender() {
     const fetchTimeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
     );
-    const fetchPromise = isAdminMode
+    const fetchPromise = (isAdminMode && !activeShareToken && !(activeTargetIds && activeTargetIds.length))
       ? CP.Properties.getListingsAdmin({
           q:       activeSearch,
           status:  adminStatusFilter,
