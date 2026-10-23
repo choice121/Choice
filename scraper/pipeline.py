@@ -326,6 +326,30 @@ class PipelineResult:
 
 
 # ---------------------------------------------------------------------------
+# Zillow / Apify Record Mapping Helper
+# ---------------------------------------------------------------------------
+
+def _map_zillow_service_property(p):
+    """Map a zillow_services record to the pipeline record schema."""
+    rec = dict(p) if isinstance(p, dict) else {}
+    rec.setdefault("source", "zillow")
+    rec.setdefault("source_listing_id", rec.get("zpid") or rec.get("id") or rec.get("listing_id"))
+    rec.setdefault("address", rec.get("streetAddress") or rec.get("address"))
+    rec.setdefault("city", rec.get("city"))
+    rec.setdefault("state", rec.get("state"))
+    rec.setdefault("zip", rec.get("zipcode") or rec.get("zip"))
+    rec.setdefault("monthly_rent", rec.get("price") or rec.get("rent"))
+    rec.setdefault("bedrooms", rec.get("bedrooms"))
+    rec.setdefault("bathrooms", rec.get("bathrooms"))
+    rec.setdefault("square_footage", rec.get("livingArea") or rec.get("sqft"))
+    rec.setdefault("property_type", rec.get("homeType") or rec.get("propertyType"))
+    rec.setdefault("original_image_urls", rec.get("images") or rec.get("photos") or [])
+    rec.setdefault("latitude", rec.get("latitude"))
+    rec.setdefault("longitude", rec.get("longitude"))
+    return rec
+
+
+# ---------------------------------------------------------------------------
 # PipelineOrchestrator
 # ---------------------------------------------------------------------------
 
@@ -920,27 +944,6 @@ class PipelineOrchestrator:
     # -----------------------------------------------------------------------
     # Step implementations
     # -----------------------------------------------------------------------
-
-
-
-def _map_zillow_service_property(p):
-    """Map a zillow_services record to the pipeline record schema."""
-    rec = dict(p) if isinstance(p, dict) else {}
-    rec.setdefault("source", "zillow")
-    rec.setdefault("source_listing_id", rec.get("zpid") or rec.get("id") or rec.get("listing_id"))
-    rec.setdefault("address", rec.get("streetAddress") or rec.get("address"))
-    rec.setdefault("city", rec.get("city"))
-    rec.setdefault("state", rec.get("state"))
-    rec.setdefault("zip", rec.get("zipcode") or rec.get("zip"))
-    rec.setdefault("monthly_rent", rec.get("price") or rec.get("rent"))
-    rec.setdefault("bedrooms", rec.get("bedrooms"))
-    rec.setdefault("bathrooms", rec.get("bathrooms"))
-    rec.setdefault("square_footage", rec.get("livingArea") or rec.get("sqft"))
-    rec.setdefault("property_type", rec.get("homeType") or rec.get("propertyType"))
-    rec.setdefault("original_image_urls", rec.get("images") or rec.get("photos") or [])
-    rec.setdefault("latitude", rec.get("latitude"))
-    rec.setdefault("longitude", rec.get("longitude"))
-    return rec
 
     def _step1_scrape(self, criteria: BatchCriteria) -> List[Dict]:
         records = []
