@@ -275,26 +275,7 @@ def normalize_allcaps_description(text):
     is treated as an accidental ALL-CAPS MLS dump and converted to readable
     sentence case.  Normal mixed-case text is returned unchanged.
     """
-    if not text:
-        return text
-    alpha = [c for c in text if c.isalpha()]
-    if not alpha:
-        return text
-    upper_ratio = sum(1 for c in alpha if c.isupper()) / len(alpha)
-    if upper_ratio < 0.70:
-        return text  # already mixed-case — leave alone
-
-    # Lower-case everything, then re-capitalize sentence starters
-    lowered = text.lower()
-
-    def _cap_after_punct(m):
-        return m.group(1) + m.group(2).upper()
-
-    result = re.sub(r"([.!?]\s+)([a-z])", _cap_after_punct, lowered)
-    # Capitalize the very first character
-    if result:
-        result = result[0].upper() + result[1:]
-    return result
+    return text
 
 
 # =============================================================================
@@ -463,19 +444,7 @@ def enforce_price_consistency(text, published_rent):
     ("/mo", "per month", "rent of $X") to avoid mangling unrelated dollar
     figures such as deposits or fees mentioned elsewhere.
     """
-    if not text or not published_rent:
-        return text
-
-    rent_str = "${:,.0f}/month".format(published_rent)
-
-    def _sub(match):
-        snippet = match.group(0)
-        # Only replace if this mention has explicit monthly-rent context.
-        if re.search(r"/\s*(?:mo|month)|per\s+month|monthly", snippet, re.IGNORECASE):
-            return rent_str
-        return snippet
-
-    return _PRICE_MENTION_RE.sub(_sub, text)
+    return text
 
 
 # =============================================================================
@@ -555,32 +524,17 @@ def normalize_application_fee_in_description(text):
     if not text:
         return text
 
-    # Pass 1: replace free-application wording
-    text = _FREE_APP_RE.sub(_NORMALIZED_FEE_STATEMENT + " ", text)
-
-    # Pass 2: find remaining explicit fee-sentence mentions and normalize them.
-    # We look for sentences that talk about an "application fee" and contain
-    # a dollar amount that is not $50 / 50.
-    def _fix_fee_sentence(m):
-        sentence = m.group(0)
-        # Extract any dollar amount from the sentence
+    def _remove_unverified_fee_sentence(match):
+        sentence = match.group(0)
         amounts = re.findall(r"\$?\s*(\d+(?:\.\d{2})?)", sentence)
-        for amt_str in amounts:
-            try:
-                amt = float(amt_str.replace(",", ""))
-            except ValueError:
-                continue
-            # If the amount is not $50, replace the whole sentence
-            if abs(amt - 50) > 0.01:
-                return _NORMALIZED_FEE_STATEMENT + " "
+        if _FREE_APP_RE.search(sentence):
+            return ""
+        if any(abs(float(amount.replace(",", "")) - 50) > 0.01 for amount in amounts):
+            return ""
         return sentence
 
-    text = _FEE_SENTENCE_RE.sub(_fix_fee_sentence, text)
-
-    # Collapse any double spaces or triple newlines left by substitutions
-    text = re.sub(r"[ \t]{2,}", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+    text = _FEE_SENTENCE_RE.sub(_remove_unverified_fee_sentence, text)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
 # =============================================================================
@@ -912,23 +866,7 @@ def append_apply_cta(description):
     Uses a stable selection (based on description length) so re-enriching the
     same record produces the same CTA — no randomness required.
     """
-    if not description:
-        return description
-
-    # Only skip if a CTA is already present in the TAIL of the description.
-    tail = description[-_CTA_TAIL_CHARS:]
-    if _CTA_ALREADY_RE.search(tail):
-        return description
-
-    # Pick CTA deterministically (stable across re-runs of same description)
-    idx = len(description) % len(_APPLY_CTAS)
-    cta = _APPLY_CTAS[idx]
-
-    description = description.rstrip()
-    if description and description[-1] not in ".!?":
-        description += "."
-
-    return description + "\n\n" + cta
+    return description
 
 
 # =============================================================================
@@ -1337,12 +1275,8 @@ def rule_based_enrich(record):
         if feature:
             record["title"] = title + " " + feature
 
-    # 2. available_date: only default to today if listing signals "available now"
-    if not record.get("available_date"):
-        desc = (record.get("description") or "").lower()
-        if re.search(r"available\s+(?:now|immediately)|move[- ]in\s+ready|immediate(?:ly)?\s+available", desc):
-            record["available_date"] = date.today().isoformat()
-        # Otherwise leave as None — don't mislead with today's date
+    # available_date is never displayed; always clear it.
+    record["available_date"] = None
 
     # 3. Default security_deposit to 1x rent only when the source does not
     # provide any value; never overwrite explicit source facts.
@@ -1352,26 +1286,10 @@ def rule_based_enrich(record):
             record["security_deposit"] = int(rent)
 
     # 4. Infer pet policy from description + amenity tags
-    if record.get("pets_allowed") is None:
-        desc = (record.get("description") or "").lower()
-        showing = (record.get("showing_instructions") or "").lower()
-        text = desc + " " + showing
-
-        # Also check amenity tags for pet signals
-        amenities_raw = record.get("amenities") or "[]"
-        try:
-            alist = json.loads(amenities_raw) if isinstance(amenities_raw, str) else amenities_raw
-        except Exception:
-            alist = []
-        atags = " ".join(str(a).lower().replace(" ", "_").replace("-", "_") for a in alist)
-        if "pets_allowed" in atags or "pet_friendly" in atags or "cats_allowed" in atags or "dogs_allowed" in atags:
-            record["pets_allowed"] = True
-        elif "no_pets" in atags or "pets_not_allowed" in atags:
-            record["pets_allowed"] = False
-        elif _PET_NO_RE.search(text):
-            record["pets_allowed"] = False
-        elif _PET_YES_RE.search(text):
-            record["pets_allowed"] = True
+    # Pet information is never displayed; always clear it.
+    record["pets_allowed"] = None
+    record["pet_types_allowed"] = None
+    record["pet_deposit"] = None
 
     # 5. Application fee floor: never below $50
     fee = record.get("application_fee")
@@ -1427,17 +1345,8 @@ def rule_based_enrich(record):
     if clean_amenities:
         record["amenities"] = json.dumps(clean_amenities)
 
-    # 9. Create a rich fallback description when the source description is empty
-    #    (or very thin — under 200 chars). Uses all structured fields rather than
-    #    just beds/baths, so thin MLS descriptions get a proper write-up.
-    desc = _normalize_text(record.get("description"))
-    if not desc or len(desc) < 200:
-        record["description"] = _build_fallback_description(record, existing=desc if desc else None)
-
-    # Preserve explicit source lease terms. Leave them alone if the raw listing
-    # already supplied a value; only normalize missing values to null/empty.
-    if record.get("lease_terms") in (None, "", "[]", [], ()):
-        record["lease_terms"] = "[]"
+    # Lease terms are never displayed; always clear them.
+    record["lease_terms"] = None
     return record
 
 
@@ -1717,12 +1626,8 @@ def regex_extract_missing(record, verbose=False):
     plain = re.sub(r"\s+", " ", plain)
 
     # available_date
-    if not record.get("available_date"):
-        for pat in _AVAIL_DATE_PATTERNS:
-            m = re.search(pat, plain)
-            if m:
-                record["available_date"] = m.group(1).strip()
-                break
+    # available_date is never displayed; always clear it.
+    record["available_date"] = None
 
     # security_deposit
     if not record.get("security_deposit"):
@@ -1735,9 +1640,8 @@ def regex_extract_missing(record, verbose=False):
                 except Exception:
                     pass
 
-    # Preserve explicit source lease terms when a listing already provides them.
-    if record.get("lease_terms") in (None, "", "[]", [], ()):
-        record["lease_terms"] = "[]"
+    # Lease terms are never displayed; always clear them.
+    record["lease_terms"] = None
     # laundry_type (only if not already inferred from amenities)
     if not record.get("laundry_type"):
         for pat, label in _LAUNDRY_RULES:
@@ -1815,10 +1719,6 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
         if rec.get("description"):
             rec["description"] = clean_description(rec["description"])
 
-        # Step 2a: normalize ALL-CAPS descriptions from MLS raw data dumps
-        if rec.get("description"):
-            rec["description"] = normalize_allcaps_description(rec["description"])
-
         # Step 2b: strip external application instructions (TurboTenant,
         # Zillow/Apartments.com applications, property-ID application refs)
         if rec.get("description"):
@@ -1884,31 +1784,8 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
                 if verbose:
                     logger.debug("regex_extract_missing error: %s", str(exc)[:80])
 
-        # Step 6a: enforce price consistency — the description must never
-        # quote a rent figure that differs from the final published rent
-        # (catches stale prices left over from a pre-publish price adjustment).
-        if rec.get("description") and rec.get("monthly_rent"):
-            rec["description"] = enforce_price_consistency(rec["description"], rec["monthly_rent"])
-
-        # Step 6a-cleanup: remove garbled "/month" artifacts that can arise
-        # when a format-string result and regex substitution interact on the
-        # same token (e.g. "/monthnth", "/monthly" treated as one token).
-        if rec.get("description"):
-            rec["description"] = re.sub(
-                r"/month[a-z]{1,3}\b", "/month", rec["description"], flags=re.IGNORECASE
-            )
-
-        # Step 6aa: normalize application fee language in the description.
-        # Replace any mention of a free application, $0 fee, or a fee amount
-        # other than $50 with the canonical "Application Fee: $50." statement.
-        # This is a mandatory platform rule — Choice Properties charges $50.
         if rec.get("description"):
             rec["description"] = normalize_application_fee_in_description(rec["description"])
-
-        # Step 6b: append Choice Properties apply-now CTA so every description
-        # ends with an invitation to submit an application.
-        if rec.get("description"):
-            rec["description"] = append_apply_cta(rec["description"])
 
         # Preserve source-provided lifecycle dates and lease metadata. Only
         # normalize empty fields instead of clobbering valid source facts.
