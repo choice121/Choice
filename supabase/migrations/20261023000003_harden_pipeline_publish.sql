@@ -66,7 +66,7 @@ BEGIN
   END;
 
   v_imported_at := COALESCE(p.imported_at, p.scraped_at, now());
-  new_id := 'prop_' || encode(gen_random_bytes(6), 'hex');
+  new_id := 'prop_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12);
 
   INSERT INTO public.properties (
     id, landlord_id, status,
