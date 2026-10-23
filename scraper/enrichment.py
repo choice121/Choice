@@ -275,17 +275,6 @@ def normalize_allcaps_description(text):
     is treated as an accidental ALL-CAPS MLS dump and converted to readable
     sentence case.  Normal mixed-case text is returned unchanged.
     """
-    if not text or not published_rent:
-        return text
-    try:
-        rent = int(published_rent)
-    except (TypeError, ValueError):
-        return text
-    import re
-    def _repl(m):
-        return "${:,}/month".format(rent)
-    text = re.sub(r"\$[\d,]+\s*/\s*month", _repl, text)
-    text = re.sub(r"\$[\d,]+\s*per\s*month", _repl, text)
     return text
 
 
