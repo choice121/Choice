@@ -133,3 +133,16 @@ Every property follows this complete lifecycle:
 
 - **Source of Truth**: Preserve authentic source descriptions and facts; never synthesize room sizes or rewrite listing text.
 - **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and 
+
+## Mandatory Pre-Publishing Verification Checklist
+Before publishing ANY property to the live site or creating a magic link:
+
+1. **Qualifications Check**: Every description MUST contain "REQUIREMENTS & QUALIFICATIONS" section with all required text (no corporate leases/AIRBNB, min 575 credit, 3.0x income, no evictions/broken leases, no criminal history, application pending/waitlist, stock photos/video tour disclaimer, pictures for marketing purposes only).
+2. **Application Fee**: Must be exactly $50 in description (and structured field `application_fee: 50`).
+3. **Prohibited Content**: No security deposits, lease terms/durations, available dates/move-in dates, smoking policies, pet policies, broker/agent contacts, external portal links.
+4. **Photos**: Must have photos present (preferably from source). For private placement, photos must be included.
+5. **Required Fields**: Address, city, state, zip, beds, baths, monthly_rent must all be present and non-null.
+6. **Source Authenticity**: Use original description as base; only strip prohibited content, never invent amenities/features.
+7. **Manual Verification**: AI must read the final description and confirm all checklist items before calling `pipeline_publish`. If any item fails, fix it before publishing.
+
+The enrichment pipeline automatically appends qualifications, but manual verification is REQUIRED as a final safety check.
