@@ -42,8 +42,9 @@ def _get_config():
     """Load service configuration from environment variables."""
     return {
         "apify": {
+            "api_tokens": [t.strip() for t in os.environ.get("APIFY_API_TOKENS", os.environ.get("APIFY_API_TOKEN", "")).split(",") if t.strip()],
             "api_token": os.environ.get("APIFY_API_TOKEN", ""),
-            "enabled": bool(os.environ.get("APIFY_API_TOKEN")),
+            "enabled": bool(os.environ.get("APIFY_API_TOKENS") or os.environ.get("APIFY_API_TOKEN")),
             "actor_id": os.environ.get("APIFY_ZILLOW_ACTOR", "apify/zillow-scraper"),
         },
         "scrapebadger": {
@@ -114,11 +115,13 @@ class ApifyService(ZillowScraperService):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.service_name = "apify"
-        self.api_token = config.get("apify", {}).get("api_token", "")
+        self.api_tokens = config.get("apify", {}).get("api_tokens") or ([config.get("apify", {}).get("api_token", "")] if config.get("apify", {}).get("api_token") else [])
+        self.api_tokens = [t for t in self.api_tokens if t]
+        self.api_token = self.api_tokens[0] if self.api_tokens else ""
         self.actor_id = config.get("apify", {}).get("actor_id", "apify/zillow-scraper")
     
     def is_available(self) -> bool:
-        return bool(self.api_token)
+        return bool(self.api_tokens)
     
     def scrape(
         self,
@@ -163,32 +166,43 @@ class ApifyService(ZillowScraperService):
             }
         }
         
-        # Start actor run
-        headers = {
-            "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": "application/json",
-        }
-        
-        # Trigger actor
+        # Start actor run — try each token until one succeeds
         run_url = f"https://api.apify.com/v2/acts/{self.actor_id}/runs"
-        
-        try:
-            resp = req.post(run_url, json=actor_input, headers=headers, timeout=30)
+        run_id = None
+        headers = None
+        for _token in self.api_tokens:
+            headers = {"Authorization": f"Bearer {_token}", "Content-Type": "application/json"}
+            try:
+                resp = req.post(run_url, json=actor_input, headers=headers, timeout=30)
+            except Exception as e:
+                if verbose:
+                    print(f"  [Apify] request error with token: {e}")
+                continue
+            if resp.status_code in (401, 402, 403, 429):
+                if verbose:
+                    print(f"  [Apify] token rejected ({resp.status_code}), trying next")
+                continue
             if resp.status_code != 201:
                 if verbose:
                     print(f"  [Apify] Failed to start actor: {resp.status_code} - {resp.text[:200]}")
-                return [], False
-            
-            run_data = resp.json()
+                continue
+            try:
+                run_data = resp.json()
+            except Exception:
+                continue
             run_id = run_data.get("data", {}).get("id")
-            
-            if not run_id:
+            if run_id:
                 if verbose:
-                    print("  [Apify] No run ID returned")
-                return [], False
-            
+                    print(f"  [Apify] Run started with a working token: {run_id}")
+                break
+
+        if not run_id:
             if verbose:
-                print(f"  [Apify] Run started: {run_id}")
+                print("  [Apify] No working token available")
+            return [], False
+
+        try:
+            _ = None  # keep outer try for polling/fetch below
             
             # Poll for completion
             dataset_url = f"https://api.apify.com/v2/acts/{self.actor_id}/runs/{run_id}/dataset/items"
