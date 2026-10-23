@@ -166,3 +166,39 @@ For local runs, export the same env var:
 ```
 export APIFY_API_TOKENS="token1,token2"
 ```
+
+## End-to-End Zillow Scrape & Publish (Apify)
+
+### Overview
+The pipeline uses Apify actors to scrape Zillow rental listings, stages them in `pipeline.pipeline_properties`, then publishes via the `pipeline_publish` RPC as `private_placement` (hidden from public browse) with a single client magic link.
+
+### Apify Token Pool
+- Store all tokens in one GitHub Secret: `APIFY_API_TOKENS=token1,token2,token3`
+- The workflow injects it as an env var; `scraper/zillow_services.py` splits on commas and auto-rotates on 401/402/403/429.
+- Adding tokens requires only editing the secret value — no code changes.
+
+### Scraping
+- Actors used: `pro100chok/zillow-scraper-all-in-one` (search) and `sleek_waveform/zillow-scraper` (apartments with unit data).
+- Locations: Dallas, Austin, Houston, San Antonio, Fort Worth (configurable).
+- Required-field gate: a listing is skipped unless it has address, city, state, zip, beds, baths, price, and at least one photo.
+- Dedup by address+zip before staging.
+
+### Publishing
+- `pipeline_publish` RPC (hardened migration `20261023000003`): revoke anon execute, enforce required fields + photo gate, null prohibited display fields (available_date, lease_terms, pets, amenities).
+- ID generation uses `md5(random())` (no pgcrypto dependency).
+- Status: `private_placement` (hidden from public browse, accessible via share token).
+
+### Client Magic Link
+- Generate a 32-byte URL-safe token, store SHA-256 hash in `public.property_shares` (90-day expiry).
+- Insert rows into `public.property_share_properties` linking the share to each property.
+- Single link: `https://choice-properties-site.pages.dev/listings.html#share={token}`
+
+### Description Enrichment
+- `scripts/description-generator.mjs` is now source-only: no invented claims (appliances, pet-friendly, outdoor space, etc.).
+- `scraper/enrichment.py` clears available_date, lease_terms, and pet fields per AGENTS.md invariants.
+
+### Key Files
+- `scraper/zillow_services.py` — Apify service with token rotation
+- `supabase/migrations/20261023000003_harden_pipeline_publish.sql` — hardened publish RPC
+- `scripts/description-generator.mjs` — source-only description generator
+- `.github/workflows/daily-scrape.yml` — CI workflow with APIFY_API_TOKENS secret
