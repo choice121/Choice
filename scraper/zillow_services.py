@@ -151,9 +151,10 @@ class ApifyService(ZillowScraperService):
             print(f"  [Apify] Actor: {self.actor_id}")
         
         # Build actor input
-        search_url = f"https://www.zillow.com/homes/for_rent/{location.replace(', ', '-').replace(',', '-').replace(' ', '-')}/"
+        search_url = os.environ.get("APIFY_ZILLOW_SEARCH_URL") or f"https://www.zillow.com/homes/for_rent/{location.replace(', ', '-').replace(',', '-').replace(' ', '-')}/"
         
         actor_input = {
+            "searchUrls": [{"url": search_url}],
             "startUrls": [{"url": search_url}],
             "maxItems": limit,
             "proxy": {
@@ -167,7 +168,7 @@ class ApifyService(ZillowScraperService):
         }
         
         # Start actor run — try each token until one succeeds
-        run_url = f"https://api.apify.com/v2/acts/{self.actor_id}/runs"
+        run_url = f"https://api.apify.com/v2/acts/{self.actor_id.replace(chr(47), chr(126))}/runs"
         run_id = None
         headers = None
         for _token in self.api_tokens:
@@ -205,7 +206,7 @@ class ApifyService(ZillowScraperService):
             _ = None  # keep outer try for polling/fetch below
             
             # Poll for completion
-            dataset_url = f"https://api.apify.com/v2/acts/{self.actor_id}/runs/{run_id}/dataset/items"
+            dataset_url = f"https://api.apify.com/v2/acts/{self.actor_id.replace(chr(47), chr(126))}/runs/{run_id}/dataset/items"
             max_wait = 300  # 5 minutes max
             wait_time = 0
             
@@ -234,6 +235,14 @@ class ApifyService(ZillowScraperService):
                     print("  [Apify] Timeout waiting for results")
                 return [], False
             
+            # Resolve dataset id from run
+            run_info = req.get(f"https://api.apify.com/v2/actor-runs/{run_id}", headers=headers, timeout=10)
+            dataset_id = None
+            if run_info.status_code == 200:
+                dataset_id = run_info.json().get("data", {}).get("defaultDatasetId")
+            if not dataset_id:
+                dataset_id = run_id
+            dataset_url = f"https://api.apify.com/v2/datasets/{dataset_id}/items"
             result_resp = req.get(dataset_url, headers=headers, timeout=30)
             if result_resp.status_code != 200:
                 if verbose:
