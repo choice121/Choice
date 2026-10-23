@@ -28,8 +28,7 @@ from enrichment import (
     append_apply_cta,
     rule_based_enrich,
     filter_record_photos,
-    _rescore,
-)
+    _rescore)
 
 SUPABASE_HOST = "tlfmwetmhthpyrytrcfo.supabase.co"
 SUPABASE_URL = f"https://{SUPABASE_HOST}"
@@ -47,7 +46,6 @@ PIPELINE_HEADERS["Accept-Profile"] = "pipeline"
 PIPELINE_HEADERS["Content-Profile"] = "pipeline"
 PIPELINE_HEADERS["Prefer"] = "return=representation"
 
-
 def sb_request(method, path, body=None, is_pipeline=False):
     conn = http.client.HTTPSConnection(SUPABASE_HOST, timeout=30)
     headers = PIPELINE_HEADERS if is_pipeline else HEADERS
@@ -60,7 +58,6 @@ def sb_request(method, path, body=None, is_pipeline=False):
     except Exception:
         json_data = resp_body
     return resp.status, json_data
-
 
 def clean_kansas_city_description(desc, monthly_rent, deposit):
     """
@@ -107,7 +104,6 @@ def clean_kansas_city_description(desc, monthly_rent, deposit):
     # 6. Apply CTA
     desc = append_apply_cta(desc)
     return desc
-
 
 def main():
     print("Fetching Kansas City, MO properties < 1350 from pipeline...")
@@ -250,7 +246,6 @@ def main():
         print(f"• {res['address']}, {res['city']}, {res['state']} {res['zip']}")
         print(f"  Bedrooms: {res['bedrooms']} | Bathrooms: {res['bathrooms']} | Rent: ${res['rent']}/mo")
         print(f"  URL: {res['url']}\n")
-
 
 if __name__ == "__main__":
     main()

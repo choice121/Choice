@@ -166,8 +166,7 @@ def main():
             listings = scrape_property(
                 location=location,
                 listing_type='for_rent',
-                past_days=args.past_days,
-            )
+                past_days=args.past_days)
         except Exception as e:
             print(f'  WARN: scrape failed — {e}')
             time.sleep(2)

@@ -9,8 +9,7 @@ import { sendLandlordEmail, getLandlordForProperty } from '../_shared/landlord-n
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-);
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 const ADMIN_EMAILS = getAdminEmails();
 
@@ -491,8 +490,7 @@ Deno.serve(async (req: Request) => {
     recipient: string,
     status: string,
     provider: string,
-    errorMsg: string | null = null,
-  ) => {
+    errorMsg: string | null = null) => {
     const { error } = await supabase.from('email_logs').insert({
       app_id: appId, type, recipient, status, provider, error_msg: errorMsg,
     });
@@ -531,8 +529,7 @@ Deno.serve(async (req: Request) => {
             html: landlordNewApplicationHtml(
               landlordInfo.contact_name || '',
               firstName, lastName, email, propLabel, appId,
-              getAdminUrl('/admin/applications.html'),
-            ),
+              getAdminUrl('/admin/applications.html')),
           }).then(result => logEmail('landlord_new_application', landlordInfo.email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
             .catch(() => {});
         }

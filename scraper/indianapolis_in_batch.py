@@ -54,11 +54,9 @@ RENT_MIN = 800
 RENT_MAX = 1800
 RENT_CAP = 1800
 
-
 def compute_indianapolis_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """Publish at the advertised rent when it is within the budget window."""
     if original_rent is None:
         return None, None
@@ -78,7 +76,6 @@ def compute_indianapolis_rent(
                 break
 
     return int(published), rent
-
 
 def main():
     ap = argparse.ArgumentParser(description="Indianapolis, IN rental batch")
@@ -105,15 +102,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_indianapolis_rent,
-    )
+        pricing_fn=compute_indianapolis_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

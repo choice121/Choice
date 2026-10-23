@@ -37,7 +37,6 @@ PIPELINE_HEADERS["Accept-Profile"] = "pipeline"
 PIPELINE_HEADERS["Content-Profile"] = "pipeline"
 PIPELINE_HEADERS["Prefer"] = "return=representation"
 
-
 def sb_request(method, path, body=None, is_pipeline=False, extra_headers=None):
     conn = http.client.HTTPSConnection(SUPABASE_HOST, timeout=60)
     headers = dict(PIPELINE_HEADERS if is_pipeline else HEADERS)
@@ -52,7 +51,6 @@ def sb_request(method, path, body=None, is_pipeline=False, extra_headers=None):
     except Exception:
         json_data = resp_body
     return resp.status, json_data
-
 
 def clean_and_enrich_desc(desc, address, bedrooms, bathrooms, rent, deposit):
     if not desc:
@@ -110,7 +108,6 @@ Choice Properties is dedicated to providing honest, accessible housing."""
 
     formatted_desc = append_apply_cta(formatted_desc.strip())
     return formatted_desc
-
 
 def publish_pipeline_property(pipeline_id, max_rent=1300):
     print("\n" + "=" * 65)
@@ -280,7 +277,6 @@ def publish_pipeline_property(pipeline_id, max_rent=1300):
         "url": url
     }
 
-
 def main():
     recent_ids = ["PP-A699C0EE", "PP-D5BE91FA", "PP-0342A513", "PP-AF083F86"]
 
@@ -299,7 +295,6 @@ def main():
         print(f"  {r['bedrooms']} Bed / {r['bathrooms']} Bath | Rent: ${r['rent']}/mo | Deposit: ${r['deposit']} | Photos: {r['photos_count']}")
         print(f"  Live URL: {r['url']}")
         print()
-
 
 if __name__ == "__main__":
     main()

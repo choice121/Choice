@@ -101,7 +101,7 @@ const server = http.createServer((req, res) => {
               newLng: property.lng || property.longitude,
               newDescription: newDesc,
               method: 'Same-Block Parity-Preserving Privacy Aliasing (+4 Offset)',
-              verifiedCensus: true
+              
             }
           }));
         }
@@ -177,7 +177,7 @@ const server = http.createServer((req, res) => {
             newLng: loc.lng,
             newDescription: newDesc,
             method: `Verified Municipal Street Protocol (${city}, ${state} ${zip})`,
-            verifiedCensus: true
+            
           }
         }));
       } catch (err) {

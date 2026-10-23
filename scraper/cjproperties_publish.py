@@ -85,7 +85,6 @@ DEFAULT_RENT_MIN = 800
 DEFAULT_RENT_MAX = 3500
 ALLOWED_TYPES = {"SINGLE_FAMILY", "TOWNHOMES", "CONDOS", "APARTMENT", "DUPLEX"}
 
-
 def _filter_records(records, states=None, rent_min=800, rent_max=3500):
     """Filter scraped records by criteria."""
     filtered = []
@@ -100,7 +99,6 @@ def _filter_records(records, states=None, rent_min=800, rent_max=3500):
             continue
         filtered.append(rec)
     return filtered
-
 
 def _upload_photo(url, folder, idx):
     """Download a photo from source URL and upload to ImageKit."""
@@ -122,8 +120,7 @@ def _upload_photo(url, folder, idx):
                 headers={"Authorization": IK_AUTH},
                 files={"file": (fname, rd.content, "image/jpeg")},
                 data={"fileName": fname, "folder": folder},
-                timeout=60,
-            )
+                timeout=60)
             if r.status_code == 200:
                 url = r.json().get("url")
                 if url:
@@ -135,7 +132,6 @@ def _upload_photo(url, folder, idx):
         if attempt < 3:
             time.sleep(2 * attempt)
     return idx, None
-
 
 def _fetch_pipeline_id_map(source_ids):
     """Fetch existing pipeline_properties records by source_listing_id."""
@@ -149,8 +145,7 @@ def _fetch_pipeline_id_map(source_ids):
                 "{}/rest/v1/pipeline_properties?source_listing_id=in.({})&select=id,source_listing_id,choice_property_id".format(
                     SUPABASE_URL, ",".join("'{}'".format(s.replace("'", "''")) for s in batch)),
                 headers=SB_PIPELINE_HEADERS,
-                timeout=20,
-            )
+                timeout=20)
             if r.ok:
                 for row in r.json():
                     result[row["source_listing_id"]] = row
@@ -160,18 +155,15 @@ def _fetch_pipeline_id_map(source_ids):
             print("  WARNING: fetch pipeline map failed: {}".format(str(e)[:100]))
     return result
 
-
 def _cleanup_staged(pipeline_id):
     """Delete a staged pipeline record that failed to publish."""
     try:
         requests.delete(
             "{}/rest/v1/pipeline_properties?id=eq.{}".format(SUPABASE_URL, urllib.parse.quote(str(pipeline_id))),
             headers=SB_PIPELINE_HEADERS,
-            timeout=15,
-        )
+            timeout=15)
     except Exception:
         pass
-
 
 def main():
     ap = argparse.ArgumentParser(description="CJ Properties publish")
@@ -314,8 +306,7 @@ def main():
                 "{}/rest/v1/pipeline_properties?on_conflict=source_listing_id".format(SUPABASE_URL),
                 headers={**SB_PIPELINE_HEADERS, "Prefer": "return=representation,resolution=merge-duplicates"},
                 data=json.dumps(rec, default=str).encode(),
-                timeout=30,
-            )
+                timeout=30)
             if not r.ok:
                 print("    ERROR: Stage failed: {} {}".format(r.status_code, r.text[:200]))
                 errors.append("Stage failed: " + addr)
@@ -336,8 +327,7 @@ def main():
                 "{}/rest/v1/rpc/pipeline_publish".format(SUPABASE_URL),
                 headers=SB_HEADERS,
                 json={"p_id": staged_id, "p_landlord_id": None},
-                timeout=30,
-            )
+                timeout=30)
             if not r.ok:
                 print("    ERROR: Publish RPC failed: {} {}".format(r.status_code, r.text[:200]))
                 errors.append("Publish RPC failed: " + addr)
@@ -374,8 +364,7 @@ def main():
                 "{}/rest/v1/properties?id=eq.{}".format(SUPABASE_URL, urllib.parse.quote(str(prop_id))),
                 headers=SB_HEADERS,
                 json={"status": "active"},
-                timeout=15,
-            )
+                timeout=15)
             if r.ok:
                 print("    Activated")
             else:
@@ -414,8 +403,7 @@ def main():
                     "{}/rest/v1/property_photos".format(SUPABASE_URL),
                     headers={**SB_HEADERS, "Prefer": "return=minimal"},
                     data=json.dumps(photo_rows).encode(),
-                    timeout=30,
-                )
+                    timeout=30)
                 if r.ok:
                     print("    Inserted {} photo row(s)".format(len(photo_rows)))
                 else:
@@ -451,7 +439,6 @@ def main():
         for e in errors:
             print("  - " + e)
     print("=" * 65)
-
 
 if __name__ == "__main__":
     main()

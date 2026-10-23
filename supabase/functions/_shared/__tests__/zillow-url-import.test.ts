@@ -25,8 +25,7 @@ function pageFor(property: Record<string, unknown>, label = "House for rent"): s
 
 Deno.test("accepts canonical Zillow home detail URLs and strips tracking", () => {
   const result = parseZillowDetailUrl(
-    "https://www.zillow.com/homedetails/2165-Sunshine-Peak-Dr/455321734_zpid/?utm_source=test",
-  );
+    "https://www.zillow.com/homedetails/2165-Sunshine-Peak-Dr/455321734_zpid/?utm_source=test");
   assert(result.ok, "Expected valid Zillow home detail URL.");
   assert(result.zpid === "455321734", "Expected to extract the Zillow property ID.");
   assert(result.url.search === "", "Expected tracking query parameters to be removed.");

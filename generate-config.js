@@ -9,7 +9,6 @@
 
 const fs = require('fs');
 
-
 // Read from environment variables (set in your hosting platform's dashboard)
 let rawSupabaseUrl = process.env.SUPABASE_URL || '';
 if (!rawSupabaseUrl || rawSupabaseUrl.includes('your-project-ref')) {

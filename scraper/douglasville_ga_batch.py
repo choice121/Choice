@@ -53,11 +53,9 @@ RENT_MIN = 2000
 RENT_MAX = 2500
 RENT_CAP = 2500
 
-
 def compute_douglasville_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """Publish at the advertised rent when it falls within the budget window."""
     if original_rent is None:
         return None, None
@@ -77,7 +75,6 @@ def compute_douglasville_rent(
                 break
 
     return int(published), rent
-
 
 def main():
     ap = argparse.ArgumentParser(description="Douglasville, GA rental batch")
@@ -104,15 +101,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_douglasville_rent,
-    )
+        pricing_fn=compute_douglasville_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

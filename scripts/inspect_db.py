@@ -48,4 +48,3 @@ if isinstance(pipe_props, list):
 else:
     print("Pipeline response was not a list:", pipe_props)
 
-

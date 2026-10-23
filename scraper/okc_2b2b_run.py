@@ -41,8 +41,7 @@ criteria = BatchCriteria(
     past_days=90,
     limit=300,
     min_score=30,
-    pricing_fn=pricing_fn,
-)
+    pricing_fn=pricing_fn)
 
 orchestrator = PipelineOrchestrator(verbose=True)
 result = orchestrator.run(criteria)

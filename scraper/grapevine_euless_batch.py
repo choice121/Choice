@@ -81,15 +81,13 @@ BATHS_MIN  = 1.0
 RENT_MIN   = 1400
 RENT_MAX   = 1800   # hard ceiling per brief
 
-
 # ---------------------------------------------------------------------------
 # Pricing function — publish as-is, hard cap at $1,800
 # ---------------------------------------------------------------------------
 
 def compute_grapevine_euless_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Publish at the original advertised rent with no adjustment.
 
@@ -107,7 +105,6 @@ def compute_grapevine_euless_rent(
         return None, None
     published = int(round(rent))
     return published, rent
-
 
 # ---------------------------------------------------------------------------
 # Main
@@ -158,15 +155,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_grapevine_euless_rent,
-    )
+        pricing_fn=compute_grapevine_euless_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

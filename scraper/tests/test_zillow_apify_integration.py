@@ -49,7 +49,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline import _map_zillow_service_property, BatchCriteria, PipelineOrchestrator
 import enrichment as e
 
-
 class TestZillowApifyIntegration(unittest.TestCase):
 
     def test_map_zillow_service_property_full_payload(self):
@@ -138,7 +137,6 @@ class TestZillowApifyIntegration(unittest.TestCase):
         self.assertTrue(hasattr(orchestrator, "_step1_scrape"))
         self.assertTrue(hasattr(orchestrator, "_step2_availability_dedup"))
         self.assertTrue(hasattr(orchestrator, "_step3_filter"))
-
 
 if __name__ == "__main__":
     unittest.main()

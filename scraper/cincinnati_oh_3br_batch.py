@@ -39,8 +39,7 @@ from enrichment import (
     enforce_price_consistency,
     normalize_application_fee_in_description,
     append_apply_cta,
-    filter_record_photos,
-)
+    filter_record_photos)
 
 # ---------------------------------------------------------------------------
 # Batch constants & verified properties
@@ -166,11 +165,9 @@ PUBLISHED_RENTS = {
     "8921 Cherry St": 1550,
 }
 
-
 def compute_cincinnati_3br_rent(
     original_rent: float,
-    seen_rents: Optional[Set[int]] = None,
-) -> Tuple[Optional[int], Optional[float]]:
+    seen_rents: Optional[Set[int]] = None) -> Tuple[Optional[int], Optional[float]]:
     """Pricing calculation respecting customer preference ($1,550) and cap ($1,600)."""
     if original_rent is None:
         return None, None
@@ -204,7 +201,6 @@ def compute_cincinnati_3br_rent(
                 break
 
     return pub, float(original_rent)
-
 
 def prepare_candidate_records() -> List[Dict]:
     """Load the 11 verified candidates, format for pipeline, and apply descriptions."""
@@ -250,7 +246,6 @@ def prepare_candidate_records() -> List[Dict]:
 
     return records
 
-
 # ---------------------------------------------------------------------------
 # Main Runner
 # ---------------------------------------------------------------------------
@@ -280,8 +275,7 @@ def main():
         rent_cap=RENT_CAP,
         allowed_types=ALLOWED_TYPES,
         target=min(args.target, len(records)),
-        pricing_fn=compute_cincinnati_3br_rent,
-    )
+        pricing_fn=compute_cincinnati_3br_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run_records(records, criteria=criteria, dry_run=args.dry_run)
@@ -308,7 +302,6 @@ def main():
             # Format: {n}. {Address}, {City}, {State} {Zip} (${Rent}/mo | {Beds} Bed / {Baths} Bath) — {url}
             baths_str = f"{int(baths)}" if float(baths).is_integer() else f"{baths}"
             print(f"{idx}. {addr}, {city}, {state} {zip_code} (${rent:,}/mo | {beds} Bed / {baths_str} Bath) — {url}")
-
 
 if __name__ == "__main__":
     main()

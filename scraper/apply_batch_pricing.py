@@ -67,7 +67,6 @@ HEADERS = {
     "Content-Profile": "pipeline",
 }
 
-
 def compute_adjusted_rent(original_rent, rent_min, rent_max, cap, reduction,
                           reduce_max=1900):
     """
@@ -125,7 +124,6 @@ def compute_adjusted_rent(original_rent, rent_min, rent_max, cap, reduction,
     # Rule 5: gap between reduce_max and rent_max ($1,901–$1,999) — skip.
     return None, None
 
-
 def fetch_pipeline_records(location, status="scraped"):
     params = {
         "select": "id,address,city,state,monthly_rent,security_deposit,source_listing_id",
@@ -138,11 +136,9 @@ def fetch_pipeline_records(location, status="scraped"):
         SUPABASE_URL + "/rest/v1/pipeline_properties",
         headers=HEADERS,
         params=params,
-        timeout=30,
-    )
+        timeout=30)
     resp.raise_for_status()
     return resp.json()
-
 
 def update_record(record_id, published_rent, deposit):
     resp = requests.patch(
@@ -150,10 +146,8 @@ def update_record(record_id, published_rent, deposit):
         headers=HEADERS,
         params={"id": "eq." + str(record_id)},
         json={"monthly_rent": published_rent, "security_deposit": deposit},
-        timeout=30,
-    )
+        timeout=30)
     resp.raise_for_status()
-
 
 def main():
     ap = argparse.ArgumentParser(description="TEMPORARY batch pricing adjustment (not a permanent rule).")
@@ -183,8 +177,7 @@ def main():
         original_rent = rec.get("monthly_rent")
         published_rent, adjusted = compute_adjusted_rent(
             original_rent, args.rent_min, args.rent_max, args.cap, args.reduction,
-            reduce_max=args.reduce_max,
-        )
+            reduce_max=args.reduce_max)
         addr = (rec.get("address") or "") + ", " + (rec.get("city") or "")
 
         if published_rent is None:
@@ -213,7 +206,6 @@ def main():
           "  Out of batch scope: " + str(out_of_scope))
     if args.dry_run:
         print("(dry run -- no records were updated)")
-
 
 if __name__ == "__main__":
     main()

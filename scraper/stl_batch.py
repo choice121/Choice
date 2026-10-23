@@ -61,15 +61,13 @@ RENT_MAX      = 1600
 RENT_CAP      = 1200
 RENT_FLOOR    = 1050
 
-
 # ---------------------------------------------------------------------------
 # Pricing function (batch-specific)
 # ---------------------------------------------------------------------------
 
 def compute_stl_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Cap-based pricing for St. Louis market.
     Anything above $1,200 is proportionally reduced to $1,050–$1,200.
@@ -99,7 +97,6 @@ def compute_stl_rent(
 
     return int(published), rent
 
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -128,15 +125,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_stl_rent,
-    )
+        pricing_fn=compute_stl_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

@@ -130,7 +130,6 @@ _TRACKABLE_MISSING = [
     "available_date", "heating_type", "cooling_type", "laundry_type",
 ]
 
-
 # ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
@@ -143,12 +142,10 @@ def _make_session():
         total=FETCH_RETRIES,
         backoff_factor=0.5,
         status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["GET"],
-    )
+        allowed_methods=["GET"])
     s.mount("https://", HTTPAdapter(max_retries=retry))
     s.headers.update(_HEADERS)
     return s
-
 
 def _fetch_with_retry(session, url: str, params: Optional[Dict] = None, verbose: bool = False):
     """Fetch a URL with retries and backoff."""
@@ -170,7 +167,6 @@ def _fetch_with_retry(session, url: str, params: Optional[Dict] = None, verbose:
         print("[cjproperties_scraper] all fetch attempts failed for {}".format(url))
     return None
 
-
 # ---------------------------------------------------------------------------
 # HTML parsing helpers
 # ---------------------------------------------------------------------------
@@ -184,7 +180,6 @@ def _unescape_js_string(js_text: str) -> str:
     text = text.replace('\\"', '"').replace("\\'", "'")
     text = text.replace('\\n', "\n").replace('\\r', "\r").replace('\\t', "\t")
     return text
-
 
 def _extract_html_from_js(js_text: str) -> str:
     """Extract the HTML written by document.write from the JS blob.
@@ -213,7 +208,6 @@ def _extract_html_from_js(js_text: str) -> str:
 
     return text
 
-
 def _strip_tags(text: str) -> str:
     """Strip HTML tags but preserve newlines from <br> tags."""
     if not text:
@@ -229,7 +223,6 @@ def _strip_tags(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
-
 def _safe_int(value) -> Optional[int]:
     if value is None:
         return None
@@ -239,7 +232,6 @@ def _safe_int(value) -> Optional[int]:
     except (ValueError, TypeError):
         return None
 
-
 def _safe_float(value) -> Optional[float]:
     if value is None:
         return None
@@ -248,7 +240,6 @@ def _safe_float(value) -> Optional[float]:
         return f if f > 0 else None
     except (ValueError, TypeError):
         return None
-
 
 def _parse_price(value) -> Optional[int]:
     if value is None:
@@ -264,7 +255,6 @@ def _parse_price(value) -> Optional[int]:
     except Exception:
         return None
 
-
 def _extract_property_blocks(html_content: str) -> List[Dict[str, Any]]:
     """Parse property cards from the Rent Manager HTML output.
 
@@ -274,8 +264,7 @@ def _extract_property_blocks(html_content: str) -> List[Dict[str, Any]]:
     pattern = re.compile(
         r'<div[^>]*class=["\']property["\'][^>]*data-unitid=["\'](\d+)["\'](.*?)'
         r'<div[^>]*class=["\']clear["\'][^>]*>.*?<hr',
-        re.DOTALL | re.IGNORECASE,
-    )
+        re.DOTALL | re.IGNORECASE)
     blocks = []
     for m in pattern.finditer(html_content):
         unit_id = m.group(1)
@@ -286,13 +275,11 @@ def _extract_property_blocks(html_content: str) -> List[Dict[str, Any]]:
     if not blocks:
         prop_pattern = re.compile(
             r'<div[^>]*class=["\']property["\'][^>]*data-unitid=["\'](\d+)["\'](.*?)(?=<div[^>]*class=["\']property["\']|$)',
-            re.DOTALL | re.IGNORECASE,
-        )
+            re.DOTALL | re.IGNORECASE)
         for m in prop_pattern.finditer(html_content):
             blocks.append({"unitid": m.group(1), "html": m.group(2)})
 
     return blocks
-
 
 # ---------------------------------------------------------------------------
 # Per-property field extraction
@@ -303,7 +290,6 @@ def _extract_header(block_html: str) -> Optional[str]:
     if m:
         return _strip_tags(m.group(1))[:200] or None
     return None
-
 
 def _extract_address(block_html: str) -> Dict[str, Optional[str]]:
     m = re.search(r'<div class=["\']propertyAddress["\']>(.*?)</div>', block_html, re.DOTALL)
@@ -336,7 +322,6 @@ def _extract_address(block_html: str) -> Dict[str, Optional[str]]:
 
     return {"street": street, "city": city, "state": state, "zip": zip_code}
 
-
 def _extract_details(block_html: str) -> Dict[str, Optional[Any]]:
     """Extract type, bedrooms, bathrooms, price from the detailRight block."""
     m = re.search(r'<div class=["\']detailRight["\']>(.*?)</div>', block_html, re.DOTALL)
@@ -368,13 +353,11 @@ def _extract_details(block_html: str) -> Dict[str, Optional[Any]]:
 
     return result
 
-
 def _extract_description(block_html: str) -> Optional[str]:
     m = re.search(r'<div class=["\']propertyDescription["\']>(.*?)</div>', block_html, re.DOTALL)
     if m:
         return _strip_tags(m.group(1))[:2000] or None
     return None
-
 
 def _collect_image_urls_from_text(text: str, limit: int = MAX_PHOTOS) -> List[str]:
     """Collect unique Rent Manager FileReader image URLs from arbitrary HTML/text."""
@@ -382,8 +365,7 @@ def _collect_image_urls_from_text(text: str, limit: int = MAX_PHOTOS) -> List[st
     seen = set()
     pattern = re.compile(
         r'https://rm12filereader\.rentmanager\.com/files/get/\?EID=cjre&FKey=[^"\'\s\\]+',
-        re.IGNORECASE,
-    )
+        re.IGNORECASE)
     for m in pattern.finditer(text or ""):
         url = html.unescape(m.group(0))
         if url and url not in seen:
@@ -393,11 +375,9 @@ def _collect_image_urls_from_text(text: str, limit: int = MAX_PHOTOS) -> List[st
                 break
     return urls
 
-
 def _extract_image_urls(block_html: str) -> List[str]:
     """Extract Rent Manager FileReader image URLs from a property block."""
     return _collect_image_urls_from_text(block_html)
-
 
 def _extract_image_urls_from_detail_html(detail_html: str) -> List[str]:
     """Extract gallery URLs from an individual detail page HTML payload."""
@@ -420,13 +400,11 @@ def _extract_image_urls_from_detail_html(detail_html: str) -> List[str]:
                 return urls
     return urls
 
-
 def _extract_unit_url(block_html: str) -> Optional[str]:
     m = re.search(r'href=["\']([^"\']*?unit[-_]detail[^"\']*)["\']', block_html, re.IGNORECASE)
     if m:
         return m.group(1)
     return None
-
 
 def _fetch_detail_html(session, unit_id: str, unit_url: Optional[str], verbose: bool = False) -> Optional[str]:
     """Fetch the per-unit detail page when available and extract gallery URLs from it.
@@ -507,7 +485,6 @@ def _fetch_detail_html(session, unit_id: str, unit_url: Optional[str], verbose: 
                 print("[cjproperties_scraper] detail page fetch failed for {}: {}".format(candidate, exc))
     return None
 
-
 # ---------------------------------------------------------------------------
 # Amenity / policy extraction from description text
 # ---------------------------------------------------------------------------
@@ -519,7 +496,6 @@ def _parse_pets(description: str, header: str = "") -> Optional[bool]:
     if re.search(r"\b(pets (?:are )?welcome|pets allowed|dogs allowed|cats allowed|small pets allowed|pets welcome|pet[- ]friendly)\b", text):
         return True
     return None
-
 
 def _parse_parking(description: str) -> Optional[str]:
     text = (description or "").lower()
@@ -538,7 +514,6 @@ def _parse_parking(description: str) -> Optional[str]:
         return "Off-street parking"
     return None
 
-
 def _parse_laundry(description: str) -> Optional[str]:
     text = (description or "").lower()
     if "washer/dryer hookups" in text or "washer / dryer hookups" in text:
@@ -555,7 +530,6 @@ def _parse_laundry(description: str) -> Optional[str]:
         return "Shared laundry"
     return None
 
-
 def _parse_available_date(description: str, header: str = "") -> Optional[str]:
     """Extract availability date from description or header if present."""
     text = " ".join(filter(None, [description or "", header or ""]))
@@ -563,8 +537,7 @@ def _parse_available_date(description: str, header: str = "") -> Optional[str]:
     m = re.search(
         r"available\s+(?:on\s+)?([A-Z][a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,\s*(\d{4})",
         text,
-        re.IGNORECASE,
-    )
+        re.IGNORECASE)
     if m:
         month = m.group(1)
         day = m.group(2)
@@ -583,7 +556,6 @@ def _parse_available_date(description: str, header: str = "") -> Optional[str]:
         except Exception:
             pass
     return None
-
 
 def _parse_move_in_special(description: str, header: str = "") -> Optional[str]:
     """Detect move-in specials (e.g. 'HALF OFF first full month')."""
@@ -604,7 +576,6 @@ def _parse_move_in_special(description: str, header: str = "") -> Optional[str]:
             return snippet[:200]
     return None
 
-
 def _parse_appliances(description: str) -> List[str]:
     text = (description or "").lower()
     appliances = set()
@@ -623,14 +594,12 @@ def _parse_appliances(description: str) -> List[str]:
             appliances.add(label)
     return sorted(appliances)
 
-
 # ---------------------------------------------------------------------------
 # Data quality scoring (mirrors pipeline conventions)
 # ---------------------------------------------------------------------------
 
 def _missing_fields(record: Dict[str, Any]) -> List[str]:
     return [f for f in _TRACKABLE_MISSING if record.get(f) in (None, "", "[]")]
-
 
 def _data_quality_score(record: Dict[str, Any]) -> int:
     score = 0
@@ -648,7 +617,6 @@ def _data_quality_score(record: Dict[str, Any]) -> int:
     score += 6 if len(photo_list) >= 5 else 3 if len(photo_list) >= 1 else 0
     return min(score, 100)
 
-
 # ---------------------------------------------------------------------------
 # Record builder
 # ---------------------------------------------------------------------------
@@ -659,7 +627,6 @@ def _normalize_property_type(raw: Optional[str]) -> Optional[str]:
     raw = str(raw).strip()
     return _PROPERTY_TYPE_MAP.get(raw) or raw.upper().replace("-", "_").replace(" ", "_")
 
-
 def _build_record(
     unit_id: str,
     header: str,
@@ -667,8 +634,7 @@ def _build_record(
     details: Dict[str, Optional[Any]],
     description: str,
     image_urls: List[str],
-    unit_url: str,
-) -> Dict[str, Any]:
+    unit_url: str) -> Dict[str, Any]:
     """Build a standard pipeline_properties record from extracted fields."""
     typ = _normalize_property_type(details.get("type"))
     beds = details.get("beds")
@@ -793,7 +759,6 @@ def _build_record(
     rec["data_quality_score"] = _data_quality_score(rec)
     return rec
 
-
 # ---------------------------------------------------------------------------
 # Main scrape function
 # ---------------------------------------------------------------------------
@@ -801,8 +766,7 @@ def _build_record(
 def scrape_cjproperties(
     states: Optional[List[str]] = None,
     locations: Optional[str] = None,
-    verbose: bool = False,
-) -> List[Dict[str, Any]]:
+    verbose: bool = False) -> List[Dict[str, Any]]:
     """Scrape all rental listings from cjproperties.org.
 
     Args:
@@ -904,8 +868,7 @@ def scrape_cjproperties(
                 safe_addr,
                 details.get("rent"),
                 details.get("beds"),
-                len(image_urls),
-            ))
+                len(image_urls)))
 
         rec = _build_record(
             unit_id=unit_id,
@@ -914,8 +877,7 @@ def scrape_cjproperties(
             details=details,
             description=description,
             image_urls=image_urls,
-            unit_url=unit_url,
-        )
+            unit_url=unit_url)
         if rec:
             records.append(rec)
 
@@ -929,7 +891,6 @@ def scrape_cjproperties(
 
     return records
 
-
 # ---------------------------------------------------------------------------
 # Feature detection helpers for batch scripts
 # ---------------------------------------------------------------------------
@@ -941,12 +902,10 @@ def estimate_rent_range(records: List[Dict[str, Any]]) -> Tuple[Optional[int], O
         return None, None
     return min(rents), max(rents)
 
-
 def list_states(records: List[Dict[str, Any]]) -> List[str]:
     """Return sorted unique states from scraped records."""
     states = {r.get("state") for r in records if r.get("state")}
     return sorted(states)
-
 
 if __name__ == "__main__":
     import argparse
@@ -979,8 +938,7 @@ if __name__ == "__main__":
                 rec.get("monthly_rent"),
                 rec.get("bedrooms"),
                 rec.get("data_quality_score"),
-                len(json.loads(rec.get("original_image_urls") or "[]")),
-            ))
+                len(json.loads(rec.get("original_image_urls") or "[]"))))
 
     if args.json:
         print("\n" + json.dumps(results, indent=2, default=str))

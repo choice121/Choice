@@ -1440,7 +1440,6 @@ function renderError(errorMsg = 'Failed to load listings') {
     </div>`;
 }
 
-
 // showToast() is provided as a window global by /js/cp-ui.js (issue #16 dedup).
 
 async function toggleSave(id, btn) {

@@ -12,7 +12,7 @@ export async function onRequestPost(context) {
 
     const phoneSuffixMatch = incomingText.match(/\((\d{4})\)/);
     const phone_last4 = phoneSuffixMatch ? phoneSuffixMatch[1] : (body.phone_last4 || '0000');
-    const aliasMatch = incomingText.match(/(?:hi|hello|this is|,)\s+([A-Za-z]+)/i);
+    const aliasMatch = incomingText.match(/(?:hi|hello|this is|)\s+([A-Za-z]+)/i);
     const alias = aliasMatch ? aliasMatch[1] : (body.alias || 'Valued Renter');
 
     const lower = incomingText.toLowerCase();

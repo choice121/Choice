@@ -43,7 +43,6 @@ _HEADERS = {
     "Content-Profile": "pipeline",
 }
 
-
 # ── Supabase fetch ─────────────────────────────────────────────────────────────
 
 def _fetch_recent_runs(hours: int = 26):
@@ -63,7 +62,6 @@ def _fetch_recent_runs(hours: int = 26):
         return [], f"HTTP {e.code}: {e.read().decode()[:200]}"
     except Exception as e:
         return [], str(e)
-
 
 def _fetch_pipeline_totals():
     """Get current pipeline counts by status."""
@@ -87,7 +85,6 @@ def _fetch_pipeline_totals():
     except Exception:
         return {}
 
-
 # ── Summary builder ────────────────────────────────────────────────────────────
 
 def _fmt_score(v):
@@ -99,7 +96,6 @@ def _fmt_score(v):
     if v >= 60:
         return f"{v} 🟡"
     return f"{v} 🔴"
-
 
 def build_markdown_summary(runs, pipeline_totals=None):
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -175,7 +171,6 @@ def build_markdown_summary(runs, pipeline_totals=None):
 
     return "\n".join(lines)
 
-
 def build_plain_text_summary(runs, pipeline_totals=None):
     """Plain-text version for email bodies."""
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -227,7 +222,6 @@ def build_plain_text_summary(runs, pipeline_totals=None):
 
     return "\n".join(lines)
 
-
 # ── Output handlers ────────────────────────────────────────────────────────────
 
 def write_github_summary(md_text):
@@ -239,7 +233,6 @@ def write_github_summary(md_text):
     with open(path, "w") as f:
         f.write(md_text)
     print("✅ Summary written to GitHub Step Summary")
-
 
 def send_email(plain_text, subject):
     if not RESEND_API_KEY:
@@ -262,8 +255,7 @@ def send_email(plain_text, subject):
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type":  "application/json",
-        },
-    )
+        })
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             resp = json.loads(r.read())
@@ -272,7 +264,6 @@ def send_email(plain_text, subject):
         print(f"⚠️  Email failed (HTTP {e.code}): {e.read().decode()[:200]}")
     except Exception as e:
         print(f"⚠️  Email failed: {e}")
-
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 

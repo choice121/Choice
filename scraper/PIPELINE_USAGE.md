@@ -27,11 +27,9 @@ import argparse, sys
 from typing import Optional, Set
 from pipeline import PipelineOrchestrator, BatchCriteria
 
-
 TARGET_LOCATIONS   = ["My City, ST"]
 FALLBACK_LOCATIONS = ["Nearby City, ST"]
 ALLOWED_TYPES      = {"SINGLE_FAMILY", "TOWNHOMES"}
-
 
 def compute_my_city_rent(original_rent, seen_rents: Optional[Set[int]] = None):
     """
@@ -54,7 +52,6 @@ def compute_my_city_rent(original_rent, seen_rents: Optional[Set[int]] = None):
                 published = c
                 break
     return published, rent
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -80,13 +77,11 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_my_city_rent,
-    )
+        pricing_fn=compute_my_city_rent)
 
     result = PipelineOrchestrator(verbose=True).run(criteria, dry_run=args.dry_run)
     if result.errors:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

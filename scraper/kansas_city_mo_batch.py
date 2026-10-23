@@ -53,11 +53,9 @@ RENT_MIN = 1200
 RENT_MAX = 1500
 RENT_CAP = 1300
 
-
 def compute_kansas_city_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """Publish at the advertised rent when it is within the budget window."""
     if original_rent is None:
         return None, None
@@ -77,7 +75,6 @@ def compute_kansas_city_rent(
                 break
 
     return int(published), rent
-
 
 def main():
     ap = argparse.ArgumentParser(description="Kansas City, MO/KS rental batch")
@@ -104,15 +101,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_kansas_city_rent,
-    )
+        pricing_fn=compute_kansas_city_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

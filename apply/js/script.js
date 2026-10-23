@@ -345,7 +345,6 @@ class RentalApplication {
         }
     }
 
-
     // ─────────────────────────────────────────────────────────────────────
     // APPLICATION FEE — read from URL param before translations are built.
     // Falls back to 50 if the param is absent from the URL.
@@ -557,7 +556,6 @@ class RentalApplication {
               setHidden('hiddenPetDetails',      petDetails);
               setHidden('hiddenSmokingAllowed',  smoking);
               // Pet and smoking questions are left flexible — applicants may answer Yes or No regardless of property policy.
-
 
               setHidden('hiddenUtilities',       utilities);
               setHidden('hiddenParking',         parking);
@@ -819,8 +817,6 @@ class RentalApplication {
         petField.classList.remove('is-invalid');
         return true;
     }
-
-
 
     setupOfflineDetection() {
         window.addEventListener('online', () => {
@@ -3210,7 +3206,6 @@ class RentalApplication {
             spinner.style.color = '';
         }
     }
-
 
     // Generates a 64-character hex nonce used as a bot-friction CSRF token.
     // The backend validates format only (32-128 alphanumeric chars); this satisfies that requirement.

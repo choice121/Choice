@@ -44,8 +44,7 @@ test('Orion mobile widget appears without refresh and saves the current Zillow l
     body: `<!doctype html>
       <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
       <body><main>Zillow listing</main><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
-        zillowPageData('111111', '100 First St', 1500),
-      )}</script></body></html>`,
+        zillowPageData('111111', '100 First St', 1500))}</script></body></html>`,
   }));
 
   const savedPayloads = [];

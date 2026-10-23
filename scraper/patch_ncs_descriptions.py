@@ -49,7 +49,6 @@ _APPLY_CTAS = [
     "Like what you see? Apply now — Choice Properties makes the rental process simple and straightforward.",
 ]
 
-
 def _cta(body: str) -> str:
     """Append the deterministic CTA (same logic as enrichment.py)."""
     body = body.rstrip()
@@ -57,7 +56,6 @@ def _cta(body: str) -> str:
         body += "."
     idx = len(body) % len(_APPLY_CTAS)
     return body + "\n\n" + _APPLY_CTAS[idx]
-
 
 # ---------------------------------------------------------------------------
 # Descriptions (content only — CTA appended below)
@@ -166,7 +164,6 @@ PATCHES = [
     },
 ]
 
-
 def patch_property(patch: dict, dry_run: bool = False) -> bool:
     pid = patch["id"]
     label = patch["label"]
@@ -192,15 +189,13 @@ def patch_property(patch: dict, dry_run: bool = False) -> bool:
     r = requests.patch(
         f"{SUPABASE_URL}/rest/v1/properties?id=eq.{pid}",
         json=payload,
-        headers=HEADERS,
-    )
+        headers=HEADERS)
     if r.status_code in (200, 204):
         print("   ✓ Patched")
         return True
     else:
         print(f"   ✗ Error {r.status_code}: {r.text[:200]}")
         return False
-
 
 def main():
     ap = argparse.ArgumentParser(description="Patch NCS descriptions in Supabase")
@@ -214,7 +209,6 @@ def main():
     ok = sum(1 for p in PATCHES if patch_property(p, dry_run=args.dry_run))
     print(f"\n{'='*60}")
     print(f"Done: {ok}/{len(PATCHES)} patched successfully")
-
 
 if __name__ == "__main__":
     main()

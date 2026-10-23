@@ -41,8 +41,7 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
 export function normalizeNearbyPlaces(
   features: unknown,
   propertyLat: number,
-  propertyLng: number,
-): NearbyPlace[] {
+  propertyLng: number): NearbyPlace[] {
   if (!Array.isArray(features)) return [];
 
   const bestByCategory = new Map<NearbyCategory, NearbyPlace[]>();

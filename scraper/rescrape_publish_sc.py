@@ -72,7 +72,6 @@ LISTINGS = [
     },
 ]
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def sb_get(path, headers=H_PUB, params=None):
@@ -80,29 +79,24 @@ def sb_get(path, headers=H_PUB, params=None):
     r.raise_for_status()
     return r.json()
 
-
 def sb_patch(path, payload, headers=H_PUB):
     r = requests.patch(SB + path, headers=headers, json=payload, timeout=20)
     r.raise_for_status()
     return r
-
 
 def sb_post(path, payload, headers=H_PUB):
     r = requests.post(SB + path, headers=headers, json=payload, timeout=20)
     r.raise_for_status()
     return r
 
-
 def sb_delete(path, headers=H_PUB, params=None):
     r = requests.delete(SB + path, headers=headers, params=params, timeout=20)
     r.raise_for_status()
     return r
 
-
 def fetch_pipeline_record(pp_id):
     rows = sb_get(f"/rest/v1/pipeline_properties?id=eq.{pp_id}&select=*", headers=H_PL)
     return rows[0] if rows else None
-
 
 def delete_property_photos(cpid):
     """Delete all existing property_photos rows for a property."""
@@ -112,7 +106,6 @@ def delete_property_photos(cpid):
     )
     r.raise_for_status()
     print(f"    Deleted old photo rows for {cpid[:8]}")
-
 
 def insert_property_photos(cpid, ik_urls):
     """Insert new property_photos rows (first = hero)."""
@@ -132,7 +125,6 @@ def insert_property_photos(cpid, ik_urls):
         )
         r.raise_for_status()
         print(f"    Inserted {len(rows)} photo rows")
-
 
 def update_pipeline_record(pp_id, fresh_rec, ik_urls):
     """Patch the pipeline_properties row with fresh scraped data + IK URLs."""
@@ -168,7 +160,6 @@ def update_pipeline_record(pp_id, fresh_rec, ik_urls):
     r.raise_for_status()
     print(f"    Pipeline record updated")
 
-
 def update_public_property(cpid, fresh_rec, ik_urls):
     """Patch public.properties with fresh description, available_date, photo count."""
     payload = {
@@ -195,7 +186,6 @@ def update_public_property(cpid, fresh_rec, ik_urls):
     )
     r.raise_for_status()
     print(f"    public.properties updated")
-
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -288,7 +278,6 @@ def process_listing(listing):
     print(f"  🔗  https://choice-properties-site.pages.dev/property?id={cpid}")
     return True
 
-
 def main():
     print("\nChoice Properties — Opendoor SC Re-scrape + Re-publish")
     print("=" * 60)
@@ -304,7 +293,6 @@ def main():
 
     print(f"\n{'='*60}")
     print(f"Completed: {ok}/{len(LISTINGS)} listings updated")
-
 
 if __name__ == "__main__":
     main()

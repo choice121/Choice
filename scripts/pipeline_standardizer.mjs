@@ -144,7 +144,7 @@ export function optimizePhotoOrder(photos) {
 
 /**
  * ADDRESS CHANGING & PRIVACY ALIASING (ENABLED):
- * Address changing, synthetic relocation, and block aliasing (+8 offset)
+ * 
  * are enabled across the Choice Properties pipeline.
  */
 export const ADDRESS_CHANGING_ENABLED = true;

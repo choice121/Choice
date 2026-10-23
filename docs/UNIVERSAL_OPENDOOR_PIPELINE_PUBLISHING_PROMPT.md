@@ -1,11 +1,11 @@
-# Choice Properties — Universal Opendoor Scraping, Relocation & Publishing Master Prompt
+# Choice Properties — Universal Opendoor Scraping, 
 
 > **Purpose**: Copy and paste this complete prompt into any AI agent (Google AI Studio, Cursor, Claude, Windsurf, ChatGPT, etc.) that is working in this codebase. It provides end-to-end instructions for scraping Opendoor sale listings, converting them to rentals, relocating them via the Verified Municipal Street Protocol, enriching descriptions, adjusting pricing, publishing to Supabase, and generating client magic links.
 
 ---
 
 ```markdown
-Subject: Autonomous Opendoor Scraping, Verified Relocation & Publishing Workflow
+Subject: Autonomous Opendoor Scraping, Verified 
 
 Target Task: Scrape [INSERT COUNT, e.g. 5] for-sale single-family listings from Opendoor in [INSERT SOURCE CITY, e.g. Dallas, TX], convert them to rentals, relocate them to [INSERT TARGET DESTINATION, e.g. Yukon, OK 73099] using the Verified Municipal Street Protocol, enrich according to Choice Properties standards, adjust rent to the target bracket [INSERT TARGET PRICE BRACKET, e.g. $1,200 - $1,300/mo or "Original Formula"], publish to Supabase, and clear the pipeline.
 
@@ -26,9 +26,9 @@ CORE DIRECTIVES & PROTOCOLS (NON-NEGOTIABLE):
      • If a target price bracket is specified (e.g. $1,200 - $1,300), align rent to that target while respecting property hierarchy (largest/highest list price gets max price, e.g. $1,300, smaller homes step down, e.g. $1,250, $1,200). If original rent is already below the target minimum, preserve the lower rent.
      • Otherwise, use the state-aware multiplier: monthly_rent = round((listPrice * 0.0085) / 25) * 25.
 
-2. VERIFIED MUNICIPAL STREET MAPPING PROTOCOL (RELOCATION):
+2. VERIFIED MUNICIPAL STREET MAPPING PROTOCOL (
    - CRITICAL: Never invent fictional street names (e.g. avoid arbitrary combinations like "Traditions Dr").
-   - Every relocated address MUST be an authentic, recognized municipal residential street and valid parcel range in the target destination verified against municipal geocoders (OpenStreetMap Nominatim or US Census Geocoder).
+   - Every relocated address MUST be an authentic, recognized municipal residential street and valid parcel range in the target destination verified against municipal geocoders (OpenStreetMap Nominatim or US 
    - MULTI-ZIP GEOGRAPHIC DISTRIBUTION RULE (CRITICAL):
      • When a target location is specified (e.g. Yukon, OK), DO NOT publish all properties in the same single ZIP code.
      • Distribute the properties across the different valid residential ZIP codes covering that municipality and its adjacent metro corridors (e.g. for Yukon: 73099, 73127, 73132, 73064), unless the user explicitly mandates a single specified ZIP code (e.g. "all in 73099").

@@ -813,4 +813,3 @@
     setTimeout(() => window.location.href = backURL, 1500);
   });
 
-

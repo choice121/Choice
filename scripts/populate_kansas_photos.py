@@ -34,7 +34,6 @@ def sb_req(method, path, body=None, is_pipeline=False):
     except Exception:
         return resp.status, body_data
 
-
 def main():
     # Target 6 pipeline IDs
     pipeline_ids = [

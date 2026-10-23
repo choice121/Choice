@@ -53,7 +53,6 @@ EDGE_HEADERS = {
 
 SITE_BASE = "https://choice-properties-site.pages.dev/property"
 
-
 def publish_one(pipeline_id, dry_run=False):
     """Returns (choice_property_id, error_str)."""
     if dry_run:
@@ -63,8 +62,7 @@ def publish_one(pipeline_id, dry_run=False):
         f"{SUPABASE_URL}/rest/v1/rpc/pipeline_publish",
         headers=RPC_HEADERS,
         json={"p_id": pipeline_id, "p_landlord_id": None},
-        timeout=20,
-    )
+        timeout=20)
     if resp.status_code not in (200, 201):
         return None, f"HTTP {resp.status_code}: {resp.text[:200]}"
 
@@ -73,7 +71,6 @@ def publish_one(pipeline_id, dry_run=False):
         return None, data.get("error", "Unknown RPC error")
 
     return data["choice_property_id"], None
-
 
 def import_photos(pipeline_id, property_id, dry_run=False):
     """Returns (transferred, error_str)."""
@@ -84,8 +81,7 @@ def import_photos(pipeline_id, property_id, dry_run=False):
         f"{SUPABASE_URL}/functions/v1/import-pipeline-photos",
         headers=EDGE_HEADERS,
         json={"pipeline_id": pipeline_id, "property_id": property_id},
-        timeout=120,
-    )
+        timeout=120)
     if resp.status_code not in (200, 201):
         return 0, f"HTTP {resp.status_code}: {resp.text[:200]}"
 
@@ -98,7 +94,6 @@ def import_photos(pipeline_id, property_id, dry_run=False):
 
     return data.get("transferred", 0), None
 
-
 def fetch_addresses():
     """Pull address+city for the 14 IDs so we can label output."""
     resp = requests.get(
@@ -108,12 +103,10 @@ def fetch_addresses():
             "select": "id,address,city",
             "id": "in.(" + ",".join(PIPELINE_IDS) + ")",
         },
-        timeout=15,
-    )
+        timeout=15)
     if resp.status_code != 200:
         return {}
     return {r["id"]: f"{r['address']}, {r['city']}" for r in resp.json()}
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -159,7 +152,6 @@ def main():
         for n, label, cid, e in results:
             if cid and not e:
                 print(f"  {n}. {SITE_BASE}/{cid}  — {label}")
-
 
 if __name__ == "__main__":
     main()

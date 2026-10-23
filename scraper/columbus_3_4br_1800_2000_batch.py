@@ -76,15 +76,13 @@ RENT_MAX      = 2000
 RENT_FLOOR    = 1800
 RENT_CAP      = 2000
 
-
 # ---------------------------------------------------------------------------
 # Pricing function — publish at original advertised rent, cap at $2,000
 # ---------------------------------------------------------------------------
 
 def compute_columbus_3_4br_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Publish at the original advertised rent — no reduction needed.
     Only filter out listings outside the $1,800–$2,000 range.
@@ -112,7 +110,6 @@ def compute_columbus_3_4br_rent(
                 break
 
     return int(published), rent
-
 
 # ---------------------------------------------------------------------------
 # Main
@@ -146,8 +143,7 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_columbus_3_4br_rent,
-    )
+        pricing_fn=compute_columbus_3_4br_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
@@ -161,7 +157,6 @@ def main():
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

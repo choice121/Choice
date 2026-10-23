@@ -73,15 +73,13 @@ RENT_MAX    = 1700   # wider scrape net
 RENT_FLOOR  = 1200   # minimum published rent for adjusted listings
 RENT_CAP    = 1500   # never publish above this
 
-
 # ---------------------------------------------------------------------------
 # Pricing function — pass-through ≤$1,500, tier-reduce $1,501–$1,700
 # ---------------------------------------------------------------------------
 
 def compute_columbus_3br_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Tiered pricing for Columbus 3BR batch.
 
@@ -130,7 +128,6 @@ def compute_columbus_3br_rent(
 
     return int(published), rent
 
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -161,15 +158,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_columbus_3br_rent,
-    )
+        pricing_fn=compute_columbus_3br_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

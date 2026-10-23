@@ -246,20 +246,17 @@ Application Fee: $50. Security deposit equal to one month's rent.\
 """,
 }
 
-
 # ── Photo helpers ──────────────────────────────────────────────────────────────
 
 def _get_source_urls(pipeline_id):
     r = requests.get(
         SUPABASE_URL + "/rest/v1/pipeline_properties",
         headers={**H_PL},
-        params={"select": "original_image_urls", "id": "eq." + pipeline_id},
-    )
+        params={"select": "original_image_urls", "id": "eq." + pipeline_id})
     rows = r.json()
     if not rows:
         return []
     return json.loads(rows[0].get("original_image_urls") or "[]")
-
 
 def _download(url):
     hdrs = {
@@ -278,7 +275,6 @@ def _download(url):
         pass
     return None, None
 
-
 def _upload_ik(img_bytes, filename, folder):
     b64 = base64.b64encode(img_bytes).decode()
     for attempt in range(MAX_RETRIES):
@@ -287,8 +283,7 @@ def _upload_ik(img_bytes, filename, folder):
                 "https://upload.imagekit.io/api/v1/files/upload",
                 auth=(IK_PRIVATE_KEY, ""),
                 data={"file": b64, "fileName": filename, "folder": folder},
-                timeout=UPLOAD_TIMEOUT,
-            )
+                timeout=UPLOAD_TIMEOUT)
             if resp.status_code in (200, 201):
                 d = resp.json()
                 return d.get("url"), d.get("fileId", "")
@@ -297,7 +292,6 @@ def _upload_ik(img_bytes, filename, folder):
         if attempt < MAX_RETRIES - 1:
             time.sleep(RETRY_BACKOFF * (attempt + 1))
     return None, None
-
 
 def _insert_photo(property_id, ik_url, file_id, order, is_hero):
     r = requests.post(
@@ -311,10 +305,8 @@ def _insert_photo(property_id, ik_url, file_id, order, is_hero):
             "is_hero":          is_hero,
             "watermark_status": "pending",
             "alt_text":         "",
-        },
-    )
+        })
     return r.status_code in (200, 201)
-
 
 def import_photos(pipeline_id, property_id):
     """
@@ -368,7 +360,6 @@ def import_photos(pipeline_id, property_id):
 
     return transferred, skipped
 
-
 # ── DB helpers ─────────────────────────────────────────────────────────────────
 
 def patch_pipeline(pipeline_id, patch):
@@ -376,19 +367,16 @@ def patch_pipeline(pipeline_id, patch):
         SUPABASE_URL + "/rest/v1/pipeline_properties",
         headers=H_PL,
         params={"id": "eq." + pipeline_id},
-        json=patch,
-    )
+        json=patch)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"PATCH pipeline failed {r.status_code}: {r.text[:300]}")
-
 
 def publish_rpc(pipeline_id):
     """Returns choice_property_id (status='draft') on success."""
     r = requests.post(
         SUPABASE_URL + "/rest/v1/rpc/pipeline_publish",
         headers=H_PUB,
-        json={"p_id": pipeline_id, "p_landlord_id": None},
-    )
+        json={"p_id": pipeline_id, "p_landlord_id": None})
     if r.status_code not in (200, 201):
         raise RuntimeError(f"RPC {r.status_code}: {r.text[:400]}")
     result = r.json()
@@ -396,16 +384,13 @@ def publish_rpc(pipeline_id):
         raise RuntimeError(f"RPC ok=false: {result.get('error')}")
     return result["choice_property_id"]
 
-
 def verify_photo_count(property_id):
     """Return the number of photos in property_photos for this property."""
     r = requests.get(
         SUPABASE_URL + "/rest/v1/property_photos",
         headers=H_PUB,
-        params={"select": "id", "property_id": "eq." + property_id},
-    )
+        params={"select": "id", "property_id": "eq." + property_id})
     return len(r.json()) if isinstance(r.json(), list) else 0
-
 
 def activate_property(property_id):
     """Set status active — called ONLY after photo import is confirmed."""
@@ -413,15 +398,12 @@ def activate_property(property_id):
         SUPABASE_URL + "/rest/v1/properties",
         headers=H_PUB,
         params={"id": "eq." + property_id},
-        json={"status": "active"},
-    )
+        json={"status": "active"})
     if r.status_code not in (200, 204):
         raise RuntimeError(f"Activate failed {r.status_code}: {r.text[:300]}")
 
-
 def property_url(property_id):
     return f"https://choice-properties-site.pages.dev/property.html?id={property_id}"
-
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -533,7 +515,6 @@ def main():
 
     if not published:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

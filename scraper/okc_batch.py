@@ -85,15 +85,13 @@ RENT_MIN       = 1300
 RENT_MAX       = 1650                # scrape cap == publish cap
 RENT_CAP       = 1650                # never publish above this
 
-
 # ---------------------------------------------------------------------------
 # Pricing function
 # ---------------------------------------------------------------------------
 
 def compute_okc_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     No pricing tiers for this batch — publish at original advertised rent.
 
@@ -121,7 +119,6 @@ def compute_okc_rent(
                 break
 
     return int(published), rent
-
 
 # ---------------------------------------------------------------------------
 # Main
@@ -152,15 +149,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_okc_rent,
-    )
+        pricing_fn=compute_okc_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

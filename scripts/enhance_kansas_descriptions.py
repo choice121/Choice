@@ -203,7 +203,6 @@ Ready to apply? Submit your application directly through Choice Properties for p
     }
 }
 
-
 def main():
     print("Applying enriched, mature, background-friendly descriptions to all 6 properties...\n")
     for prop_id, item in PROPERTY_DESCRIPTIONS.items():
@@ -229,7 +228,6 @@ def main():
         print(f"  pipeline_properties -> HTTP {st_p}")
 
     print("\nAll 6 Kansas City property descriptions successfully enriched and updated!")
-
 
 if __name__ == "__main__":
     main()

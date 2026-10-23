@@ -10,7 +10,6 @@ spec = importlib.util.spec_from_file_location("enrichment", ROOT / "enrichment.p
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
-
 def test_title_generation_and_pet_inference():
     record = {
         "bedrooms": 2,
@@ -28,12 +27,10 @@ def test_title_generation_and_pet_inference():
     assert enriched["laundry_type"] == "In-unit"
     assert enriched["parking"] == "2-car garage"
 
-
 def test_application_fee_floor_and_description_cleanup():
     text = "Application fee: $35.00. Free to apply today."
     cleaned = module.normalize_application_fee_in_description(text)
     assert "$35.00" not in cleaned or True
-
 
 def test_fallback_description_is_generated_from_features():
     record = {
@@ -50,25 +47,21 @@ def test_fallback_description_is_generated_from_features():
 
     assert enriched["description"] is not None
 
-
 def test_pet_inference_from_spaced_amenity_tag():
     record = {"pets_allowed": None, "amenities": ["Pet Friendly"], "description": ""}
     enriched = module.rule_based_enrich(record)
     assert enriched["pets_allowed"] is None
-
 
 def test_parking_inference_from_driveway_amenity_tag():
     record = {"parking": None, "amenities": ["Driveway"], "description": ""}
     enriched = module.rule_based_enrich(record)
     assert enriched["parking"] == "Driveway"
 
-
 def test_price_consistency_rewrites_monthly_rent_mentions():
     text = "The rent is $1,200/month and the app fee is $50."
     updated = module.enforce_price_consistency(text, 1500)
     assert "$1,200/month" not in updated
     assert "$1,500/month" in updated
-
 
 def test_source_facts_are_preserved_when_provided():
     record = {
@@ -87,7 +80,6 @@ def test_source_facts_are_preserved_when_provided():
     assert enriched["available_date"] is None
     assert enriched["lease_terms"] is None
     assert enriched["minimum_lease_months"] is None
-
 
 def test_source_values_are_not_forced_to_defaults_in_pipeline_enrichment():
     record = {

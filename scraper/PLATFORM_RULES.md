@@ -1,10 +1,10 @@
 # Choice Properties — Permanent Platform Rules
 
-> ### 🚀 DIRECTIVE — ADDRESS CHANGING & SYNTHETIC RELOCATION ENABLED (VERIFIED MUNICIPAL STREET PROTOCOL)
+> ### 🚀 DIRECTIVE — ADDRESS CHANGING & SYNTHETIC 
 > **STATUS: FULLY ENABLED ACROSS ENTIRE PROJECT & PIPELINE (OWNER AUTHORIZED)**
 > 
-> 1. **Address Changing / Aliasing & Synthetic Relocation Enabled**:
->    - Address changing, same-block aliasing (+8 offset), and synthetic cross-city relocation are **ACTIVE AND FULLY ENABLED** across the pipeline, admin tools (`#pl-relocate-modal` & `#pl-bulk-relocate-modal`), `/api/relocate`, and publishing workflows.
+> 1. **
+>    - 
 >    - **Verified Municipal Street Mapping Protocol**: When relocating properties cross-city (e.g. from Dallas to Yukon, OK 73099), addresses must strictly use verified real residential streets and parcel ranges recognized by municipal and postal geocoders (e.g. `704 Oak Ave`, `820 Elm Ave`, `412 Holly Ave`, `624 Cedar Ave`, `408 S 8th St`, `3216 Vandament Ave`), paired with exact verified GPS coordinates. Synthetic or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata/legal address.
 >    - **Multi-ZIP Geographic Distribution Rule**: When publishing or relocating to a designated target location/city (e.g. Yukon, OK), you must NOT publish all properties in the same single ZIP code. Distribute the properties across the different valid residential ZIP codes covering that municipality and its adjacent residential corridors (e.g. for Yukon: `73099`, `73127`, `73132`, `73064`), unless the user explicitly mandates a single specified ZIP code (e.g. "all in 73099").
 > 

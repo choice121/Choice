@@ -923,8 +923,6 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
-
-
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
     const btn = document.getElementById(id);
@@ -3602,8 +3600,7 @@ function renderNeighborhoodIntelligence(p) {
   bikeScore = parseScore(bikeScore);
   const qualifiedLocationCtx = locationCtx.replace(
     /(^|;\s*)Schools:\s*([^;]+)/gi,
-    '$1Listing-reported school names (not independently verified): $2',
-  );
+    '$1Listing-reported school names (not independently verified): $2');
 
   const neighborhoodName = (p.neighborhood || '').trim();
   const countyName = (p.county || '').trim();

@@ -73,7 +73,6 @@ except ImportError:
             "Run: pip install curl-cffi"
         )
 
-
 # -- Constants -----------------------------------------------------------------
 
 ZILLOW_BASE     = "https://www.zillow.com"
@@ -180,7 +179,6 @@ _TRACKABLE_MISSING = [
     "available_date", "heating_type", "cooling_type", "laundry_type",
 ]
 
-
 # -- HTTP session --------------------------------------------------------------
 
 def _make_session():
@@ -212,16 +210,13 @@ def _make_session():
         max_retries=Retry(
             total=2,
             backoff_factor=1.2,
-            status_forcelist=[500, 502, 503, 504],
-        ),
+            status_forcelist=[500, 502, 503, 504]),
         pool_connections=10,
-        pool_maxsize=20,
-    )
+        pool_maxsize=20)
     s.mount("https://", adapter)
     s.mount("http://",  adapter)
     s.headers.update(headers)
     return s
-
 
 def _warm_session(session, verbose=False):
     """
@@ -266,11 +261,9 @@ def _warm_session(session, verbose=False):
                 print("  [warmup] Waiting " + str(round(delay, 1)) + "s ...")
             time.sleep(delay)
 
-
 def _rotate_ua(session):
     """Swap the session's User-Agent to a new random value."""
     session.headers["User-Agent"] = random.choice(_USER_AGENTS)
-
 
 # -- URL helpers ---------------------------------------------------------------
 
@@ -288,12 +281,10 @@ def _location_to_slug(location):
     s = re.sub(r"-{2,}", "-", s)
     return s
 
-
 def _build_search_url(slug, page):
     if page <= 1:
         return ZILLOW_BASE + "/homes/for_rent/" + slug + "/"
     return ZILLOW_BASE + "/homes/for_rent/" + slug + "/" + str(page) + "_p/"
-
 
 def _build_detail_url(detail_path):
     """Turn a Zillow detailUrl (relative or absolute) into a full URL."""
@@ -303,22 +294,19 @@ def _build_detail_url(detail_path):
         return detail_path
     return ZILLOW_BASE + detail_path
 
-
 # -- __NEXT_DATA__ extraction --------------------------------------------------
 
 def _extract_next_data(html):
     """Pull the __NEXT_DATA__ JSON from a Zillow HTML page."""
     m = re.search(
         r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>\s*(.*?)\s*</script>',
-        html, re.DOTALL,
-    )
+        html, re.DOTALL)
     if not m:
         return None
     try:
         return json.loads(m.group(1))
     except (ValueError, TypeError):
         return None
-
 
 def _is_bot_page(html, status):
     """Return True if the response looks like a bot-detection page."""
@@ -340,7 +328,6 @@ def _is_bot_page(html, status):
         if sig in lower:
             return True
     return False
-
 
 def _get_listings_array(nd):
     """
@@ -381,7 +368,6 @@ def _get_listings_array(nd):
             continue
 
     return [], total
-
 
 def _extract_detail_property(nd):
     """
@@ -449,7 +435,6 @@ def _extract_detail_property(nd):
 
     return None
 
-
 # -- Field helpers -------------------------------------------------------------
 
 def _safe_int(v):
@@ -458,13 +443,11 @@ def _safe_int(v):
     except (ValueError, TypeError):
         return None
 
-
 def _safe_float(v):
     try:
         return float(v) if v is not None else None
     except (ValueError, TypeError):
         return None
-
 
 def _parse_price(v):
     """
@@ -480,7 +463,6 @@ def _parse_price(v):
     digits = re.sub(r"[^\d]", "", str(v).split("+")[0].split("-")[0])
     return int(digits) if digits else None
 
-
 def _jdumps(v):
     if v is None:
         return "[]"
@@ -490,14 +472,11 @@ def _jdumps(v):
         return json.dumps([str(x) for x in v if x is not None])
     return "[]"
 
-
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
-
 def _gen_id():
     return "PP-" + uuid.uuid4().hex[:8].upper()
-
 
 def _list_to_str(lst):
     """Join a list of strings into a single readable string."""
@@ -505,7 +484,6 @@ def _list_to_str(lst):
         return None
     parts = [str(x).strip() for x in lst if x]
     return ", ".join(parts) if parts else None
-
 
 def _parse_date(v):
     """Try to extract a YYYY-MM-DD string from various Zillow date formats."""
@@ -536,7 +514,6 @@ def _parse_date(v):
             pass
     return None
 
-
 def _coerce_bool(v):
     """Return True/False/None from various Zillow yes/no/bool values."""
     if v is None:
@@ -549,7 +526,6 @@ def _coerce_bool(v):
     if s in ("false", "no", "0", "not allowed", "none"):
         return False
     return None
-
 
 # -- Photo collection ----------------------------------------------------------
 
@@ -583,7 +559,6 @@ def _collect_photos_search(listing):
             _add(p.get("url") or p.get("src"))
 
     return urls[:40]
-
 
 def _collect_photos_detail(prop):
     """
@@ -658,7 +633,6 @@ def _collect_photos_detail(prop):
 
     return urls[:50]  # Cap at 50 photos to keep row sizes sane
 
-
 # -- Quality scoring -----------------------------------------------------------
 
 def _quality_score(r):
@@ -676,10 +650,8 @@ def _quality_score(r):
     sc += 6 if n >= 5 else (3 if n >= 1 else 0)
     return min(sc, 100)
 
-
 def _missing_fields(r):
     return [f for f in _TRACKABLE_MISSING if r.get(f) in (None, "", "[]")]
-
 
 # -- Listing mapper (Phase 1 -- search result) ---------------------------------
 
@@ -898,7 +870,6 @@ def _map_listing(raw):
     record["missing_fields"]     = _jdumps(_missing_fields(record))
 
     return record
-
 
 # -- Detail enrichment (Phase 2) -----------------------------------------------
 
@@ -1401,7 +1372,6 @@ def _enrich_from_detail(record, prop):
 
     return record
 
-
 # -- Filters -------------------------------------------------------------------
 
 def _passes_filters(raw, beds_min, beds_max, price_min, price_max):
@@ -1437,12 +1407,10 @@ def _passes_filters(raw, beds_min, beds_max, price_min, price_max):
 
     return True
 
-
 # -- Phase 2: detail page fetcher (thread-safe) --------------------------------
 
 _detail_lock = threading.Lock()
 _detail_ua_idx = [0]
-
 
 def _next_ua():
     """Thread-safe round-robin UA picker."""
@@ -1450,7 +1418,6 @@ def _next_ua():
         idx = _detail_ua_idx[0] % len(_USER_AGENTS)
         _detail_ua_idx[0] += 1
         return _USER_AGENTS[idx]
-
 
 def _fetch_detail_property(session, url, zpid, verbose=False):
     """
@@ -1496,7 +1463,6 @@ def _fetch_detail_property(session, url, zpid, verbose=False):
             time.sleep(random.uniform(2.0, 4.0))
 
     return None
-
 
 def _enrich_records_with_details(session, records, verbose=True):
     """
@@ -1583,7 +1549,6 @@ def _enrich_records_with_details(session, records, verbose=True):
 
     return already_good + enriched
 
-
 # -- Public scrape function ----------------------------------------------------
 
 def scrape_and_map(
@@ -1595,8 +1560,7 @@ def scrape_and_map(
     price_max     = None,
     min_score     = 0,
     fetch_details = True,
-    verbose       = True,
-):
+    verbose       = True):
     """
     Scrape Zillow for-rent listings for one location and return a list of
     pipeline_properties-compatible dicts (quality scored, filters applied).
@@ -1794,7 +1758,6 @@ def scrape_and_map(
 
     return records, blocked
 
-
 # -- Direct URL scraping (skip search phase entirely) -------------------------
 
 def _extract_zpid_from_url(url):
@@ -1803,7 +1766,6 @@ def _extract_zpid_from_url(url):
     """
     m = re.search(r"/(\d+)_zpid", url)
     return m.group(1) if m else None
-
 
 def _map_from_detail_only(prop, source_url=None, zpid=None):
     """
@@ -1905,8 +1867,7 @@ def _map_from_detail_only(prop, source_url=None, zpid=None):
         "poster_landlord_id":    None,
         "original_data":         json.dumps(
             {"zpid": zpid_str, "detailUrl": source_url, "_source": "zillow", "_phase": "detail"},
-            default=str,
-        ),
+            default=str),
         "edited_fields":         "[]",
         "inferred_features":     "[]",
         "published_at":          None,
@@ -1934,7 +1895,6 @@ def _map_from_detail_only(prop, source_url=None, zpid=None):
             record["title"] = "Zillow Rental"
 
     return record
-
 
 def scrape_urls(urls, verbose=True):
     """

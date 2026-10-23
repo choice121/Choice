@@ -28,4 +28,3 @@ if isinstance(items, list):
 else:
     print("Non-list response:", items)
 
-

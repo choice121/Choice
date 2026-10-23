@@ -218,8 +218,7 @@ def upload_to_imagekit(image_bytes, filename, folder):
             headers={"Authorization": f"Basic {auth}"},
             files={"file": (filename, image_bytes, "image/jpeg")},
             data={"fileName": filename, "folder": folder, "useUniqueFileName": "false"},
-            timeout=60,
-        )
+            timeout=60)
         if resp.status_code == 200:
             d = resp.json()
             return d.get("url"), d.get("fileId")
@@ -260,8 +259,7 @@ def sb_insert(table, records):
             "Prefer": "return=representation",
         },
         json=records,
-        timeout=30,
-    )
+        timeout=30)
     return resp.status_code, resp.json()
 
 def delete_ik_file(file_id):
@@ -271,8 +269,7 @@ def delete_ik_file(file_id):
         resp = requests.delete(
             f"https://api.imagekit.io/v1/files/{file_id}",
             headers={"Authorization": f"Basic {auth}"},
-            timeout=20,
-        )
+            timeout=20)
         return resp.status_code in (200, 204)
     except Exception:
         return False

@@ -21,8 +21,7 @@ export async function generateMagicLoginUrl(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   email: string,
-  opts: MagicLoginOptions = {},
-): Promise<string> {
+  opts: MagicLoginOptions = {}): Promise<string> {
   const fallback = getTenantLoginUrl(opts.appId, email);
   if (!email) return fallback;
 
@@ -43,8 +42,7 @@ export async function generateMagicLoginUrl(
     if (error || !actionLink) {
       console.error(
         'generateMagicLoginUrl: no action_link returned',
-        error?.message || '(no error message)',
-      );
+        error?.message || '(no error message)');
       return fallback;
     }
     return actionLink;

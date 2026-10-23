@@ -44,8 +44,7 @@ def upload_photo(idx, path, folder):
                 auth=IK_AUTH,
                 files={"file": (fname, data, "image/webp")},
                 data={"fileName": fname, "folder": folder},
-                timeout=60,
-            )
+                timeout=60)
             if r.status_code == 200:
                 url = r.json().get("url")
                 if url:

@@ -6,7 +6,6 @@
  * Prohibited content is stripped. $50 application fee is appended.
  */
 
-
 export function extractMinedFacts(rawDescription = '', structuredData = {}) {
   const text = (rawDescription || '').toLowerCase();
   const finishes = [];

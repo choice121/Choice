@@ -58,21 +58,18 @@ UPLOAD_TIMEOUT   = 45   # seconds
 MAX_RETRIES      = 3
 RETRY_BACKOFF    = 2.0
 
-
 def get_pipeline_images(pipeline_id):
     """Fetch original_image_urls from pipeline record."""
     r = requests.get(
         SUPABASE_URL + "/rest/v1/pipeline_properties",
         headers=dict(H_SUP, **{"Accept-Profile": "pipeline", "Content-Profile": "pipeline"}),
-        params={"select": "original_image_urls,address", "id": "eq." + pipeline_id},
-    )
+        params={"select": "original_image_urls,address", "id": "eq." + pipeline_id})
     data = r.json()
     if not data:
         return [], "unknown"
     row = data[0]
     urls = json.loads(row.get("original_image_urls") or "[]")
     return urls, row.get("address", pipeline_id)
-
 
 def download_image(url):
     """Download image bytes from source URL. Returns (bytes, content_type) or (None, None)."""
@@ -94,7 +91,6 @@ def download_image(url):
     except Exception:
         return None, None
 
-
 def upload_to_imagekit(img_bytes, filename, folder, content_type):
     """Upload image bytes to ImageKit. Returns IK file URL on success, None on failure."""
     import base64
@@ -109,8 +105,7 @@ def upload_to_imagekit(img_bytes, filename, folder, content_type):
                     "fileName": filename,
                     "folder":   folder,
                 },
-                timeout=UPLOAD_TIMEOUT,
-            )
+                timeout=UPLOAD_TIMEOUT)
             if resp.status_code in (200, 201):
                 data = resp.json()
                 return data.get("url"), data.get("fileId")
@@ -120,7 +115,6 @@ def upload_to_imagekit(img_bytes, filename, folder, content_type):
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_BACKOFF * (attempt + 1))
     return None, None
-
 
 def insert_photo(property_id, ik_url, file_id, display_order, is_hero):
     """Insert a row into public.property_photos."""
@@ -135,10 +129,8 @@ def insert_photo(property_id, ik_url, file_id, display_order, is_hero):
             "is_hero":          is_hero,
             "watermark_status": "pending",
             "alt_text":         "",
-        },
-    )
+        })
     return r.status_code in (200, 201)
-
 
 def process_property(pipeline_id, property_id):
     source_urls, address = get_pipeline_images(pipeline_id)
@@ -193,7 +185,6 @@ def process_property(pipeline_id, property_id):
 
     return transferred, skipped, None
 
-
 def main():
     print("\n" + "=" * 60)
     print("  North Metro Atlanta — Photo Import")
@@ -218,7 +209,6 @@ def main():
     print("\n" + "=" * 60)
     print(f"  DONE — total transferred: {grand_transferred}  skipped: {grand_skipped}")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()

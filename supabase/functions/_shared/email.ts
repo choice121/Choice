@@ -173,8 +173,7 @@ export function applicationConfirmationHtml(
   appId: string,
   fields?: ApplicationFields,
   dashboardLink?: string,
-  enforcedFee?: number | null,
-): string {
+  enforcedFee?: number | null): string {
   const portal = dashboardLink || getTenantLoginUrl(appId, String(fields?.['Email'] || ''));
   const feeRaw = fields?.['Application Fee'];
   const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
@@ -285,8 +284,7 @@ export function adminNotificationHtml(
   propertyAddress: string,
   appId: string,
   fields?: ApplicationFields,
-  enforcedFee?: number | null,
-): string {
+  enforcedFee?: number | null): string {
   const adminUrl = getAdminUrl();
   const feeRaw = fields?.['Application Fee'];
   const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
@@ -397,8 +395,7 @@ export function statusUpdateHtml(
   dashboardLink: string,
   propertyAddress: string,
   propertyName?: string,
-  propertyState?: string,
-): string {
+  propertyState?: string): string {
   const portal = dashboardLink || getTenantLoginUrl(appId);
   const isApproved = status === 'approved';
   const isWaitlisted = status === 'waitlisted';
@@ -528,8 +525,7 @@ export function paymentConfirmedHtml(
   message?: string,
   phone?: string,
   appId?: string,
-  propertyName?: string,
-): string {
+  propertyName?: string): string {
   const portal = getTenantLoginUrl(appId);
   const feeDisplay = amount != null ? formatMoney(amount) : '—';
 
@@ -608,8 +604,7 @@ export function holdingFeeRequestHtml(
   dueDate?: string,
   message?: string,
   appId?: string,
-  applicantPaymentMethods?: string[],
-): string {
+  applicantPaymentMethods?: string[]): string {
   const portal = getTenantLoginUrl(appId);
   const deadlineText = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '48 hours from this email';
 
@@ -708,8 +703,7 @@ export function holdingFeeReceivedHtml(
   message?: string,
   feeAmount?: number | string,
   remainingBalance?: number | string,
-  appId?: string,
-): string {
+  appId?: string): string {
   const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
 
   return `<!DOCTYPE html>
@@ -779,8 +773,7 @@ export function signingEmailHtml(
   propertyAddress: string,
   signingUrl: string,
   appId: string,
-  leaseData?: { term?: string; startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCosts?: string | number; propertyState?: string },
-): string {
+  leaseData?: { term?: string; startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCosts?: string | number; propertyState?: string }): string {
   const eSignText = getESignText(leaseData?.propertyState || 'MI');
 
   return `<!DOCTYPE html>
@@ -864,8 +857,7 @@ export function signedConfirmHtml(
   firstName: string,
   propertyAddress: string,
   appId: string,
-  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; moveInCost?: string | number; signature?: string },
-): string {
+  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; moveInCost?: string | number; signature?: string }): string {
   const portal = getTenantLoginUrl(appId);
 
   return `<!DOCTYPE html>
@@ -933,8 +925,7 @@ export function leaseFullyExecutedHtml(
   propertyAddress: string,
   portalUrl: string,
   appId?: string,
-  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCost?: string | number },
-): string {
+  leaseData?: { startDate?: string; endDate?: string; rent?: string | number; deposit?: string | number; moveInCost?: string | number }): string {
   const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
 
   return `<!DOCTYPE html>
@@ -999,8 +990,7 @@ export function moveinEmailHtml(
   propertyAddress: string,
   moveInDate?: string,
   message?: string,
-  appId?: string,
-): string {
+  appId?: string): string {
   const portal = getTenantLoginUrl(appId);
 
   return `<!DOCTYPE html>
@@ -1060,8 +1050,7 @@ export function moveInPrepHtml(
   propertyAddress: string,
   message?: string,
   appId?: string,
-  leaseData?: { rent?: string | number; deposit?: string | number; moveInCost?: string | number; startDate?: string },
-): string {
+  leaseData?: { rent?: string | number; deposit?: string | number; moveInCost?: string | number; startDate?: string }): string {
   const portal = getTenantLoginUrl(appId);
   const contactEmail = getContactEmail();
   const moveInTotal = leaseData?.moveInCost || (leaseData?.rent && leaseData?.deposit ? Number(leaseData.rent) + Number(leaseData.deposit) : null);
@@ -1145,8 +1134,7 @@ export function leaseSigningReminderHtml(
   portalUrl: string,
   message?: string,
   appId?: string,
-  signingUrl?: string,
-): string {
+  signingUrl?: string): string {
   const portal = appId ? getTenantLoginUrl(appId) : portalUrl;
   const actionUrl = signingUrl || portal;
 
@@ -1200,8 +1188,7 @@ export function leaseExpiryAlertHtml(
   leaseEndDate: string,
   appId: string,
   tenantEmail: string,
-  tenantPhone?: string,
-): string {
+  tenantPhone?: string): string {
   const adminUrl = getAdminUrl();
 
   return `<!DOCTYPE html>
@@ -1261,8 +1248,7 @@ export function adminReviewSummaryHtml(
   propertyAddress: string,
   appId: string,
   feeReceived?: number | string,
-  appData?: Record<string, unknown>,
-): string {
+  appData?: Record<string, unknown>): string {
   const adminUrl = getAdminUrl('/admin/leases.html');
   const now = new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -1350,8 +1336,7 @@ export function coApplicantInviteHtml(
   primaryName: string,
   propertyAddress: string,
   signingUrl: string,
-  appId: string,
-): string {
+  appId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1450,8 +1435,7 @@ export function amendmentRequestHtml(
   propertyAddress: string,
   amendmentTitle: string,
   signingUrl: string,
-  appId: string,
-): string {
+  appId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1504,8 +1488,7 @@ export function amendmentSignedHtml(
   firstName: string,
   propertyAddress: string,
   amendmentTitle: string,
-  appId: string,
-): string {
+  appId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1547,8 +1530,7 @@ export function renewalNudgeHtml(
   propertyAddress: string,
   leaseEndDate: string,
   daysRemaining: number,
-  appId: string,
-): string {
+  appId: string): string {
   const friendlyEnd = formatDate(leaseEndDate);
   const urgencyTone = daysRemaining <= 30 ? 'amber' : '';
   const urgencyHeader = daysRemaining <= 30
@@ -1612,8 +1594,7 @@ export function rentIncreaseNoticeHtml(
   isLargeIncrease: boolean,
   downloadUrl: string,
   portalUrl: string,
-  appId: string,
-): string {
+  appId: string): string {
   const fmt = (n: number) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const friendlyDate = new Date(effectiveDate + 'T00:00:00Z').toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
@@ -1686,8 +1667,7 @@ export function terminationNoticeHtml(
   reasonText: string | null,
   downloadUrl: string,
   portalUrl: string,
-  appId: string,
-): string {
+  appId: string): string {
   const friendlyDate = new Date(effectiveDate + 'T00:00:00Z').toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
   });
@@ -1767,8 +1747,7 @@ export function depositDisputeAdminHtml(
   disputeText: string,
   isFirstDispute: boolean,
   stateCode: string | null,
-  stateReturnDeadline: string | null,
-): string {
+  stateReturnDeadline: string | null): string {
   const safeDispute = disputeText
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
@@ -1879,8 +1858,7 @@ export function landlordNewApplicationHtml(
   applicantEmail: string,
   propertyAddress: string,
   appId: string,
-  adminUrl: string,
-): string {
+  adminUrl: string): string {
   const greeting = landlordName ? `Hi ${landlordName},` : 'Hello,';
   return landlordWrap(`
   ${buildLandlordHeader('New Application Received', appId)}
@@ -1905,8 +1883,7 @@ export function landlordAppStatusHtml(
   propertyAddress: string,
   status: 'approved' | 'denied' | 'waitlisted',
   appId: string,
-  adminUrl: string,
-): string {
+  adminUrl: string): string {
   const greeting = landlordName ? `Hi ${landlordName},` : 'Hello,';
   const statusLabel = status === 'approved' ? '✅ Approved' : status === 'denied' ? '❌ Denied' : '⏳ Waitlisted';
   const statusColor = status === 'approved' ? '#166534' : status === 'denied' ? '#991b1b' : '#b45309';
@@ -1935,8 +1912,7 @@ export function landlordTenantSignedHtml(
   tenantName: string,
   propertyAddress: string,
   appId: string,
-  adminUrl: string,
-): string {
+  adminUrl: string): string {
   const greeting = landlordName ? `Hi ${landlordName},` : 'Hello,';
   return landlordWrap(`
   ${buildLandlordHeader('Tenant Has Signed Their Lease', appId)}
@@ -1961,8 +1937,7 @@ export function landlordLeaseExecutedHtml(
   propertyAddress: string,
   leaseStart: string | undefined,
   appId: string,
-  adminUrl: string,
-): string {
+  adminUrl: string): string {
   const greeting = landlordName ? `Hi ${landlordName},` : 'Hello,';
   const startRow = leaseStart
     ? `<div class="row"><span class="lbl">Lease start</span><span class="val">${formatDate(leaseStart)}</span></div>`

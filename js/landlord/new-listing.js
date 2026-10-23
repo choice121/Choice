@@ -791,7 +791,6 @@
       minimum_credit_score     : v('minCredit') ? parseInt(v('minCredit')) : null,
     };
 
-
     const { error } = await CP.sb().from('properties').insert(listingData);
 
     if (error) {
@@ -889,5 +888,4 @@
     document.getElementById('successDashBtn')?.addEventListener('click', () => clearTimeout(redirectTimer));
     document.getElementById('successNewBtn')?.addEventListener('click', () => clearTimeout(redirectTimer));
   }
-
 

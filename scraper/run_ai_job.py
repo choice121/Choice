@@ -118,7 +118,6 @@ _OPTIONAL_ENV = {
 
 _REQUIRED_PACKAGES = ["requests", "homeharvest"]
 
-
 def _check_env() -> List[str]:
     """Return list of missing required env vars."""
     missing = []
@@ -126,7 +125,6 @@ def _check_env() -> List[str]:
         if not os.environ.get(var, "").strip():
             missing.append(var)
     return missing
-
 
 def _check_packages() -> List[str]:
     """Return list of missing required Python packages."""
@@ -137,7 +135,6 @@ def _check_packages() -> List[str]:
         except ImportError:
             missing.append(pkg)
     return missing
-
 
 def preflight(verbose: bool = True) -> bool:
     """Run all pre-flight checks. Returns True if OK, False if fatal."""
@@ -164,7 +161,6 @@ def preflight(verbose: bool = True) -> bool:
 
     return ok
 
-
 # ---------------------------------------------------------------------------
 # Criteria parsing
 # ---------------------------------------------------------------------------
@@ -181,7 +177,6 @@ def _parse_locations(raw: Any) -> List[str]:
         return [str(p).strip() for p in raw if str(p).strip()]
     return []
 
-
 def _parse_types(raw: Any) -> Set[str]:
     """Normalize property types input to a set of uppercase strings."""
     if raw is None:
@@ -192,7 +187,6 @@ def _parse_types(raw: Any) -> Set[str]:
     if isinstance(raw, list):
         return {str(p).strip().upper() for p in raw if str(p).strip()}
     return {"SINGLE_FAMILY", "TOWNHOMES"}
-
 
 def build_criteria_from_dict(data: Dict[str, Any], overrides: Dict[str, Any] = None) -> Any:
     """
@@ -270,14 +264,12 @@ def build_criteria_from_dict(data: Dict[str, Any], overrides: Dict[str, Any] = N
         limit=int(d.get("limit", 200)),
         min_score=int(d.get("min_score", 75)),
         pricing_fn=pricing_fn,
-        folder_name=str(d["folder_name"]).strip() if d.get("folder_name") else None,
-    )
+        folder_name=str(d["folder_name"]).strip() if d.get("folder_name") else None)
 
     dry_run = bool(d.get("dry_run", False))
     strict_watermarks = bool(d.get("strict_watermarks", False))
 
     return criteria, dry_run, strict_watermarks
-
 
 # ---------------------------------------------------------------------------
 # Enhanced watermark filter (applied after standard enrichment)
@@ -313,7 +305,6 @@ def apply_strict_watermark_filter(records: List[Dict[str, Any]]) -> List[Dict[st
         kept.append(rec)
 
     return kept
-
 
 # ---------------------------------------------------------------------------
 # Main execution
@@ -399,7 +390,6 @@ def run_job(criteria: Any, dry_run: bool = False, strict_watermarks: bool = Fals
 
     return output
 
-
 def main():
     ap = argparse.ArgumentParser(
         description="Universal AI Agent Runner — Choice Properties Pipeline",
@@ -417,21 +407,18 @@ Examples:
 
   # JSON output:
   %(prog)s --instructions-file job.json --json-output
-        """,
-    )
+        """)
 
     # Instruction input (mutually exclusive)
     instr_group = ap.add_mutually_exclusive_group(required=True)
     instr_group.add_argument(
         "--instructions",
         type=str,
-        help="JSON string with search criteria",
-    )
+        help="JSON string with search criteria")
     instr_group.add_argument(
         "--instructions-file",
         type=str,
-        help="Path to JSON file with search criteria",
-    )
+        help="Path to JSON file with search criteria")
 
     # Quick CLI args (alternative to JSON)
     ap.add_argument("--location", type=str, help="Single location (e.g. 'Dallas, TX')")
@@ -540,8 +527,7 @@ Examples:
             criteria,
             dry_run=dry_run,
             strict_watermarks=strict_watermarks,
-            json_output=args.json_output,
-        )
+            json_output=args.json_output)
     except Exception as exc:
         print("\nFATAL: Pipeline execution failed: {}".format(exc))
         import traceback
@@ -555,7 +541,6 @@ Examples:
 
     # Return the exit code from the result
     sys.exit(result.get("exit_code", 1))
-
 
 if __name__ == "__main__":
     main()

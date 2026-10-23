@@ -54,7 +54,6 @@ MAX_IMAGE_BYTES      = 20 * 1024 * 1024  # 20 MB hard cap per image
 
 logger = logging.getLogger("imagekit_upload")
 
-
 # -- Credential helpers --------------------------------------------------------
 
 def _get_credentials():
@@ -73,12 +72,10 @@ def _get_credentials():
     ).strip().rstrip("/")
     return key, endpoint
 
-
 def is_configured():
     """Return True if both required ImageKit env vars are set."""
     key, endpoint = _get_credentials()
     return bool(key and endpoint)
-
 
 # -- Path helpers --------------------------------------------------------------
 
@@ -89,7 +86,6 @@ def _make_folder(listing_id):
     """
     safe = re.sub(r"[^a-zA-Z0-9_-]", "_", str(listing_id or "unknown"))
     return "properties/" + safe
-
 
 def _ext_from_url_or_content_type(url, content_type):
     """
@@ -116,11 +112,9 @@ def _ext_from_url_or_content_type(url, content_type):
         pass
     return "jpg"
 
-
 def _safe_filename(index, ext):
     """Return a safe, numbered filename for position `index` (0-based)."""
     return "photo_{:02d}.{}".format(index + 1, ext)
-
 
 # -- Image download ------------------------------------------------------------
 
@@ -164,7 +158,6 @@ def _download_image(url):
         logger.debug("  [IK] Download error for %s: %s", url[:80], str(e)[:80])
         return None, None
 
-
 # -- Upload one image ----------------------------------------------------------
 
 def _upload_one(source_url, index, listing_id, private_key):
@@ -181,8 +174,7 @@ def _upload_one(source_url, index, listing_id, private_key):
         if data is None:
             logger.warning(
                 "  [IK] image %d download failed (attempt %d/%d): %s",
-                index + 1, attempt, MAX_UPLOAD_RETRIES, source_url[:80],
-            )
+                index + 1, attempt, MAX_UPLOAD_RETRIES, source_url[:80])
             if attempt < MAX_UPLOAD_RETRIES:
                 time.sleep(RETRY_BACKOFF * attempt)
             continue
@@ -199,32 +191,27 @@ def _upload_one(source_url, index, listing_id, private_key):
                 headers={"Authorization": "Basic " + credentials},
                 files=files,
                 data=fields,
-                timeout=UPLOAD_TIMEOUT,
-            )
+                timeout=UPLOAD_TIMEOUT)
             if r.status_code == 200:
                 ik_url = r.json().get("url")
                 if ik_url:
                     return ik_url
                 logger.warning(
                     "  [IK] Upload returned 200 but no URL for image %d (listing %s)",
-                    index + 1, listing_id,
-                )
+                    index + 1, listing_id)
             else:
                 logger.warning(
                     "  [IK] Upload HTTP %d for image %d, attempt %d: %s",
-                    r.status_code, index + 1, attempt, r.text[:120],
-                )
+                    r.status_code, index + 1, attempt, r.text[:120])
         except Exception as e:
             logger.warning(
                 "  [IK] Upload exception image %d attempt %d: %s",
-                index + 1, attempt, str(e)[:100],
-            )
+                index + 1, attempt, str(e)[:100])
 
         if attempt < MAX_UPLOAD_RETRIES:
             time.sleep(RETRY_BACKOFF * attempt)
 
     return None  # all attempts exhausted
-
 
 # -- URL verification ----------------------------------------------------------
 
@@ -241,7 +228,6 @@ def _verify_url(url):
         return r.status_code < 400
     except Exception:
         return False
-
 
 # -- Public entry point --------------------------------------------------------
 

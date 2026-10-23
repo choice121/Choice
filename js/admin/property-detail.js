@@ -1531,8 +1531,6 @@
       });
     }
 
-
-
     const _guardedClose = async () => {
       if (_formDirty) {
         const leave = await S.confirm({

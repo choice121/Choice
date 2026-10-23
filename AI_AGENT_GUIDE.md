@@ -1,11 +1,11 @@
 # AI Agent Guide — Choice Properties Pipeline
 
-> ### 🚀 DIRECTIVE — UNIVERSAL RELOCATION, ZERO PHOTO GATE & STRICT CROSS-LOCATION SOURCING
+> ### 🚀 DIRECTIVE — UNIVERSAL 
 > **STATUS: FULLY ENABLED ACROSS ENTIRE PROJECT & PIPELINE (OWNER AUTHORIZED)**
 > 
-> 1. **Universal Relocation & Census Verified Municipal Street Protocol**:
->    - Address changing and synthetic cross-city relocation are **ACTIVE AND FULLY ENABLED** across all 50 states and any municipality.
->    - Addresses must strictly use real residential streets and parcel ranges verified against the official **US Census Bureau TIGER-line geocoder**, paired with exact live rooftop coordinates. Synthetic or unverified street names are strictly prohibited.
+> 1. **Universal 
+>    - 
+>    - Addresses must strictly use real residential streets and parcel ranges verified against the official ** Synthetic or unverified street names are strictly prohibited.
 >    - **STRICT Cross-Location Sourcing Rule**: NEVER scrape properties from the destination market/state itself. Always scrape from an external source state/city (e.g. TX, GA, CO, AZ, FL) when relocating to the target area (e.g. NC, OK) so that no local MLS reverse-lookups can collide.
 >    - **Multi-ZIP Geographic Distribution Rule**: Distribute properties across valid residential ZIP codes covering the target municipality and adjacent corridors.
 > 

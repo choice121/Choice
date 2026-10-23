@@ -29,7 +29,6 @@ if isinstance(pub_props, list):
 else:
     print("Pub props error response:", pub_props)
 
-
 # 2. Fetch all pipeline properties in Kansas City
 pipeline_headers = dict(headers)
 pipeline_headers['Accept-Profile'] = 'pipeline'

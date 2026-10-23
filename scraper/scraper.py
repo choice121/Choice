@@ -220,8 +220,7 @@ def _get_sb_session():
             total=3,
             backoff_factor=0.5,
             status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET", "POST", "PATCH"],
-        )
+            allowed_methods=["GET", "POST", "PATCH"])
         adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=20)
         s.mount("https://", adapter)
         s.mount("http://",  adapter)
@@ -237,7 +236,6 @@ def _get_sb_session():
         _session_local.session = s
     return _session_local.session
 
-
 def _sb_get(table, qs=""):
     url = f"{SUPABASE_URL}/rest/v1/{table}?{qs}"
     try:
@@ -248,7 +246,6 @@ def _sb_get(table, qs=""):
         return [], e.response.text[:300] if e.response else str(e)
     except Exception as e:
         return [], str(e)
-
 
 def _sb_post_batch(table, records, upsert=False, ignore_duplicates=False, on_conflict=None):
     prefer = "return=representation"
@@ -267,8 +264,7 @@ def _sb_post_batch(table, records, upsert=False, ignore_duplicates=False, on_con
             r = _get_sb_session().post(
                 url, data=body,
                 headers={"Prefer": prefer},
-                timeout=30,
-            )
+                timeout=30)
             r.raise_for_status()
             data = r.json()
             return len(data) if isinstance(data, list) else len(records), None
@@ -283,7 +279,6 @@ def _sb_post_batch(table, records, upsert=False, ignore_duplicates=False, on_con
             time.sleep(delay)
             delay *= 2
     return 0, last_err
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -311,7 +306,6 @@ def _jdumps(v):
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
-
 
 # ── Realtor.com property mapper (v5) ─────────────────────────────────────────
 _STYLE_MAP = {
@@ -409,7 +403,6 @@ def _upgrade_photo_url(url):
         return s
     # Other CDNs — strip all size params to get original upload
     return re.sub(r"_[qwhr]-\d+", "", url)
-
 
 def _collect_photos(prop):
     """
@@ -943,7 +936,6 @@ def _map_realtor_property(prop):
 
     return record
 
-
 # ── Realtor.com Phase 2 — detail page fetch & enrichment ──────────────────────
 
 def _fetch_realtor_detail_html(url, timeout=REALTOR_DETAIL_TIMEOUT):
@@ -972,7 +964,6 @@ def _fetch_realtor_detail_html(url, timeout=REALTOR_DETAIL_TIMEOUT):
             continue
     return None
 
-
 def _extract_realtor_detail_property(html):
     """
     Parse a Realtor.com listing detail page HTML and extract the property object
@@ -990,8 +981,7 @@ def _extract_realtor_detail_property(html):
         return None
     m = re.search(
         r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>\s*(.*?)\s*</script>',
-        html, re.DOTALL,
-    )
+        html, re.DOTALL)
     if not m:
         return None
     try:
@@ -1023,7 +1013,6 @@ def _extract_realtor_detail_property(html):
             return obj
 
     return None
-
 
 def _collect_realtor_detail_photos(prop):
     """
@@ -1068,7 +1057,6 @@ def _collect_realtor_detail_photos(prop):
             _add(ap)
 
     return urls[:50]
-
 
 def _enrich_realtor_from_detail(record, prop):
     """
@@ -1258,7 +1246,6 @@ def _enrich_realtor_from_detail(record, prop):
 
     return record
 
-
 def _enrich_realtor_batch(records, verbose=False):
     """
     Phase 2 for Realtor.com: concurrently fetch each listing's detail page
@@ -1330,7 +1317,6 @@ def _enrich_realtor_batch(records, verbose=False):
 
     return records
 
-
 # ── Deduplication ─────────────────────────────────────────────────────────────
 
 def _get_existing_ids(source_ids):
@@ -1349,14 +1335,12 @@ def _get_existing_ids(source_ids):
         encoded = urllib.parse.quote(",".join(chunk))
         rows, err = _sb_get(
             "pipeline_properties",
-            f"source_listing_id=in.({encoded})&select=source_listing_id&limit=10000",
-        )
+            f"source_listing_id=in.({encoded})&select=source_listing_id&limit=10000")
         if err:
             print(f"  ⚠  Dedup check error (continuing without dedup): {err[:120]}")
             return set()  # fail open — DB UNIQUE constraint is the final safety net
         existing.update(r["source_listing_id"] for r in rows)
     return existing
-
 
 # ── Scrape-run logger ─────────────────────────────────────────────────────────
 
@@ -1379,7 +1363,6 @@ def _log_run(location, source, count_total, count_new, avg_score,
     }
     _sb_post_batch("pipeline_scrape_runs", [payload])
 
-
 # ── Batch insert worker ───────────────────────────────────────────────────────
 
 def _insert_batch(batch, upsert, batch_num, total_batches, source_label):
@@ -1387,8 +1370,7 @@ def _insert_batch(batch, upsert, batch_num, total_batches, source_label):
     # is the final safety net (silently skips conflicting rows instead of erroring).
     inserted, err = _sb_post_batch(
         "pipeline_properties", batch, upsert=upsert,
-        ignore_duplicates=(not upsert), on_conflict="source_listing_id",
-    )
+        ignore_duplicates=(not upsert), on_conflict="source_listing_id")
     if err:
         print(f"  ❌  [{source_label}] Batch {batch_num}/{total_batches} failed: {err[:160]}")
         return 0, len(batch)
@@ -1397,7 +1379,6 @@ def _insert_batch(batch, upsert, batch_num, total_batches, source_label):
         f"{inserted} record(s) {'upserted' if upsert else 'inserted'}"
     )
     return inserted, 0
-
 
 # ── Shared staging logic ──────────────────────────────────────────────────────
 
@@ -1431,8 +1412,7 @@ def _stage_records(records, location, source_label, args, started_at):
             records, count_watermarked = _enrich_pipeline(
                 records,
                 verbose=True,
-                enable_detail_fetch=(not no_detail_fetch),
-            )
+                enable_detail_fetch=(not no_detail_fetch))
         except Exception as _ee:
             print(f"  ⚠  Enrichment pipeline error (continuing without enrichment): {_ee}")
     elif not _ENRICH_AVAILABLE:
@@ -1557,7 +1537,6 @@ def _stage_records(records, location, source_label, args, started_at):
              None, started_at, count_dup, count_err, count_watermarked)
     return count_new, count_dup, count_err, avg_score
 
-
 # ── Realtor.com scrape for one location ───────────────────────────────────────
 
 def _run_realtor(location, args, started_at):
@@ -1576,8 +1555,7 @@ def _run_realtor(location, args, started_at):
         past_days           = args.past_days,
         return_type         = "pydantic",
         limit               = args.limit,
-        extra_property_data = args.extra,
-    )
+        extra_property_data = args.extra)
     if args.beds_min       is not None: scrape_kwargs["beds_min"]      = args.beds_min
     if args.beds_max       is not None: scrape_kwargs["beds_max"]      = args.beds_max
     if args.price_min      is not None: scrape_kwargs["price_min"]     = args.price_min
@@ -1632,7 +1610,6 @@ def _run_realtor(location, args, started_at):
 
     return _stage_records(records, location, "realtor", args, started_at)
 
-
 # ── Generic URL scraper (non-Zillow sites: RentProgress, Apartments.com, etc.) ─
 
 def _scrape_generic_url(url):
@@ -1672,8 +1649,7 @@ def _scrape_generic_url(url):
     # URL: https://rentprogress.com/property-details/{street}/{city}/{state}/{zip}/{id}
     rp_match = _re.search(
         r"rentprogress\.com/property-details/([^/?#]+)/([^/?#]+)/([^/?#]+)/([^/?#]+)/([^/?#]+)",
-        url,
-    )
+        url)
     if rp_match:
         source_name = "rentprogress"
         raw_street, raw_city, raw_state, raw_zip, raw_id = rp_match.groups()
@@ -1910,7 +1886,6 @@ def _scrape_generic_url(url):
     }
     return record
 
-
 # ── URL-list scrape runner ─────────────────────────────────────────────────────
 
 def _upsert_one(rec, upsert=False):
@@ -1929,7 +1904,6 @@ def _upsert_one(rec, upsert=False):
         print("  [error] Insert failed: " + err[:160])
         return "err"
     return "new"
-
 
 def _run_urls(urls, args, started_at):
     """
@@ -2049,7 +2023,6 @@ def _run_urls(urls, args, started_at):
     _log_run("url-list", "url", new_count, dup_count, err_count, None, started_at)
     return all_records, new_count, dup_count, err_count
 
-
 # ── Zillow scrape for one location ────────────────────────────────────────────
 
 def _run_zillow(location, args, started_at):
@@ -2071,8 +2044,7 @@ def _run_zillow(location, args, started_at):
                 beds_max=args.beds_max,
                 price_min=args.price_min,
                 price_max=args.price_max,
-                verbose=True,
-            )
+                verbose=True)
             
             if blocked:
                 msg = "Zillow blocked the request (bot detection). Try a different service or residential IP."
@@ -2115,8 +2087,7 @@ def _run_zillow(location, args, started_at):
             price_max     = args.price_max,
             min_score     = args.min_score,
             fetch_details = not getattr(args, "no_details", False),
-            verbose       = True,
-        )
+            verbose       = True)
     except Exception as e:
         print(f"❌  Zillow scrape error: {e}")
         _log_run(location, "zillow", 0, 0, 0, str(e), started_at)
@@ -2134,7 +2105,6 @@ def _run_zillow(location, args, started_at):
         return 0, 0, 0, 0
 
     return _stage_records(records, location, "zillow", args, started_at)
-
 
 # ── Redfin scrape for one location ────────────────────────────────────────────
 
@@ -2155,8 +2125,7 @@ def _run_redfin(location, args, started_at):
         past_days           = args.past_days,
         return_type         = "pydantic",
         limit               = args.limit,
-        extra_property_data = args.extra,
-    )
+        extra_property_data = args.extra)
     if args.beds_min  is not None: scrape_kwargs["beds_min"]  = args.beds_min
     if args.beds_max  is not None: scrape_kwargs["beds_max"]  = args.beds_max
     if args.price_min is not None: scrape_kwargs["price_min"] = args.price_min
@@ -2205,7 +2174,6 @@ def _run_redfin(location, args, started_at):
 
     return _stage_records(records, location, "redfin", args, started_at)
 
-
 # ── Per-location dispatcher ───────────────────────────────────────────────────
 
 def _run_location(location, args, started_at):
@@ -2246,7 +2214,6 @@ def _run_location(location, args, started_at):
     print(f"{'─'*55}")
 
     return total_new, total_dup, total_err, avg
-
 
 # ── Main runner ───────────────────────────────────────────────────────────────
 
@@ -2359,7 +2326,6 @@ def run(args):
 
     return 0
 
-
 # ── CLI entry-point ───────────────────────────────────────────────────────────
 
 def _build_parser():
@@ -2385,8 +2351,7 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
   python3 scraper.py --location "Dallas, TX" --source both
   python3 scraper.py --locations-file cities.txt --source both --min-score 40
   python3 scraper.py --location "Miami, FL" --upsert --past-days 7 --dry-run
-        """,
-    )
+        """)
 
     # ── URL mode args ─────────────────────────────────────────────────────────
     p.add_argument(
@@ -2397,26 +2362,22 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
             "appliances, heating/cooling/laundry, deposits, schools, walk scores, etc.) "
             "and other sites (RentProgress, Apartments.com) via best-effort extraction. "
             "Zillow URLs must be run from a residential IP (iSH or home WiFi)."
-        ),
-    )
+        ))
     p.add_argument(
         "--urls-file", metavar="FILE", dest="urls_file",
         help=(
             "Text file with one listing URL per line (# comments ignored). "
             "Same as passing each line as --url. "
             "Great for pasting a batch of shared Zillow links."
-        ),
-    )
+        ))
 
     # ── Search mode args ──────────────────────────────────────────────────────
     p.add_argument(
         "--location", action="append", metavar="LOCATION",
-        help='City/ZIP to search (repeatable). e.g. "Dallas, TX" or "75201".',
-    )
+        help='City/ZIP to search (repeatable). e.g. "Dallas, TX" or "75201".')
     p.add_argument(
         "--locations-file", metavar="FILE",
-        help="Text file with one location per line (# comments supported).",
-    )
+        help="Text file with one location per line (# comments supported).")
     p.add_argument(
         "--source", choices=["realtor", "zillow", "redfin", "both"], default="realtor",
         help=(
@@ -2426,12 +2387,10 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
             "  redfin  — Redfin via HomeHarvest (safe from Replit)\n"
             "  both    — run realtor + zillow + redfin in sequence\n"
             "Not used in URL mode (source is auto-detected from the URL)."
-        ),
-    )
+        ))
     p.add_argument(
         "--past-days", type=int, default=7, metavar="N",
-        help="Realtor.com only: listings from the last N days (default: 7).",
-    )
+        help="Realtor.com only: listings from the last N days (default: 7).")
     p.add_argument("--beds-min",  type=int, default=None, metavar="N",
                    help="Minimum bedrooms filter.")
     p.add_argument("--beds-max",  type=int, default=None, metavar="N",
@@ -2442,24 +2401,19 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
                    help="Maximum monthly rent filter.")
     p.add_argument(
         "--property-type", default=None, metavar="TYPE",
-        help="Realtor.com only. Comma-separated: single_family, multi_family, condos, townhomes, apartment, mobile",
-    )
+        help="Realtor.com only. Comma-separated: single_family, multi_family, condos, townhomes, apartment, mobile")
     p.add_argument(
         "--limit", type=int, default=200, metavar="N",
-        help="Max listings per location per source (default: 200). Not used in URL mode.",
-    )
+        help="Max listings per location per source (default: 200). Not used in URL mode.")
     p.add_argument(
         "--min-score", type=int, default=0, metavar="N",
-        help="Skip listings with data quality score below N (default: 0).",
-    )
+        help="Skip listings with data quality score below N (default: 0).")
     p.add_argument(
         "--upsert", action="store_true",
-        help="Update an existing pipeline record if the source_listing_id already exists.",
-    )
+        help="Update an existing pipeline record if the source_listing_id already exists.")
     p.add_argument(
         "--extra", action="store_true",
-        help="Realtor.com only: fetch extra data per property (schools, tax history). Slower.",
-    )
+        help="Realtor.com only: fetch extra data per property (schools, tax history). Slower.")
     p.add_argument(
         "--no-realtor-details", action="store_true", dest="no_realtor_details",
         help=(
@@ -2468,51 +2422,44 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
             "virtual tours, full photo galleries (up to 50), showing instructions, "
             "move-in specials, schools, walk scores, and location context. "
             "Use this flag for a faster but shallower scrape."
-        ),
-    )
+        ))
     p.add_argument(
         "--no-details", action="store_true",
         help=(
             "Zillow search mode only: skip Phase 2 detail-page enrichment. "
             "Has no effect in URL mode (URL mode always does full detail scrape)."
-        ),
-    )
+        ))
     p.add_argument(
         "--no-enrich", action="store_true", dest="no_enrich",
         help=(
             "Skip the enrichment pipeline entirely (watermark filter, description "
             "cleaning, rule-based enrichment, regex detail fetch). Faster but records "
             "will have less data and may include competitor-branded listings."
-        ),
-    )
+        ))
     p.add_argument(
         "--no-detail-enrich", action="store_true", dest="no_detail_enrich",
         help=(
             "Skip the regex detail-fetch step of the enrichment pipeline only. "
             "Still applies watermark filter, description cleaner, and rule-based "
             "enrichment. Useful for faster runs when you don't need the HTTP fetches."
-        ),
-    )
+        ))
     p.add_argument(
         "--dry-run", action="store_true",
-        help="Preview what would be staged without writing to the database.",
-    )
+        help="Preview what would be staged without writing to the database.")
     p.add_argument(
         "--publish", action="store_true", dest="publish",
         help=(
             "Automatically publish URL-scraped listings through the pipeline. "
             "Use this for Opendoor URL conversion candidates when you want end-to-end "
             "publish flow without admin approval."
-        ),
-    )
+        ))
     p.add_argument(
         "--allow-opendoor", action="store_true", dest="allow_opendoor",
         help=(
             "Allow Opendoor URL scraping in URL mode. "
             "Opendoor listings are sale-to-rent conversion candidates and are "
             "only scraped when explicitly permitted."
-        ),
-    )
+        ))
     p.add_argument(
         "--zillow-service", default="auto", choices=["auto", "direct", "apify", "scrapebadger", "oxylabs"],
         help=(
@@ -2522,10 +2469,8 @@ Search mode (Realtor.com is safe from Replit; Zillow needs residential IP):
             "  apify      — use Apify (requires APIFY_API_TOKEN in .env)\n"
             "  scrapebadger — use ScrapeBadger (requires SCRAPEBADGER_API_TOKEN in .env)\n"
             "  oxylabs    — use Oxylabs (requires OXYLABS_USERNAME + OXYLABS_PASSWORD in .env)"
-        ),
-    )
+        ))
     return p
-
 
 if __name__ == "__main__":
     parser = _build_parser()

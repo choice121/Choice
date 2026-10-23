@@ -286,7 +286,6 @@ Application Fee: $50. Security deposit equal to one month's rent ($1,285).\
 """,
 }
 
-
 # ── Photo helpers ─────────────────────────────────────────────────────────────
 
 def _get_source_urls(pipeline_id):
@@ -296,7 +295,6 @@ def _get_source_urls(pipeline_id):
     if not rows:
         return []
     return json.loads(rows[0].get("original_image_urls") or "[]")
-
 
 def _download(url):
     hdrs = {
@@ -312,7 +310,6 @@ def _download(url):
     except Exception:
         pass
     return None, None
-
 
 def _upload_ik(img_bytes, filename, folder):
     b64 = base64.b64encode(img_bytes).decode()
@@ -331,14 +328,12 @@ def _upload_ik(img_bytes, filename, folder):
             time.sleep(RETRY_BACKOFF * (attempt + 1))
     return None, None
 
-
 def _insert_photo(property_id, ik_url, file_id, order, is_hero):
     r = requests.post(SUPABASE_URL + "/rest/v1/property_photos", headers=H_PUB,
         json={"property_id": property_id, "url": ik_url, "file_id": file_id,
               "display_order": order, "is_hero": is_hero,
               "watermark_status": "pending", "alt_text": ""})
     return r.status_code in (200, 201)
-
 
 def import_photos(pipeline_id, property_id):
     src_urls = _get_source_urls(pipeline_id)
@@ -377,7 +372,6 @@ def import_photos(pipeline_id, property_id):
         raise RuntimeError(f"Zero photos transferred (skipped={skipped})")
     return transferred, skipped
 
-
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
 def patch_pipeline(pipeline_id, patch):
@@ -385,7 +379,6 @@ def patch_pipeline(pipeline_id, patch):
         headers=H_PL, params={"id": "eq." + pipeline_id}, json=patch)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"PATCH pipeline {r.status_code}: {r.text[:300]}")
-
 
 def publish_rpc(pipeline_id):
     r = requests.post(SUPABASE_URL + "/rest/v1/rpc/pipeline_publish",
@@ -398,13 +391,11 @@ def publish_rpc(pipeline_id):
         raise RuntimeError(f"RPC ok=false: {result.get('error')}")
     return result["choice_property_id"]
 
-
 def verify_photo_count(property_id):
     r = requests.get(SUPABASE_URL + "/rest/v1/property_photos",
         headers=H_PUB, params={"select": "id", "property_id": "eq." + property_id})
     data = r.json()
     return len(data) if isinstance(data, list) else 0
-
 
 def activate(property_id):
     r = requests.patch(SUPABASE_URL + "/rest/v1/properties",
@@ -413,10 +404,8 @@ def activate(property_id):
     if r.status_code not in (200, 204):
         raise RuntimeError(f"Activate {r.status_code}: {r.text[:300]}")
 
-
 def prop_url(pid):
     return f"https://choice-properties-site.pages.dev/property.html?id={pid}"
-
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -523,7 +512,6 @@ def main():
 
     if not published:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

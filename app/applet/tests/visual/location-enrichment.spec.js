@@ -14,8 +14,7 @@ test('active property shows nearby places and Geoapify map markers', async ({ pa
   const siteUrl = process.env.CHOICE_SITE_URL || 'https://choice-properties-site.pages.dev';
   const propertyResponse = await request.get(
     `${supabaseUrl}/rest/v1/properties?select=id&status=eq.active&lat=not.is.null&lng=not.is.null&limit=1`,
-    { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } },
-  );
+    { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } });
 
   expect(propertyResponse.ok()).toBeTruthy();
   const properties = await propertyResponse.json();

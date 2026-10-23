@@ -48,7 +48,6 @@ logger = logging.getLogger("listing_audit")
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _SCRIPT_DIR)
 
-
 def _load_dotenv():
     for candidate in [".env", "../.env",
                       os.path.join(_SCRIPT_DIR, ".env"),
@@ -64,7 +63,6 @@ def _load_dotenv():
                     if k and k not in os.environ:
                         os.environ[k] = v.strip().strip('"').strip("'")
             break
-
 
 _load_dotenv()
 
@@ -111,7 +109,6 @@ def _make_session():
     })
     return s
 
-
 _session = _make_session()
 
 # ---------------------------------------------------------------------------
@@ -128,8 +125,7 @@ def fetch_active_properties() -> List[Dict]:
             "?status=eq.active"
             "&select=id,title,address,city,state,status"
             "&limit={}&offset={}".format(SUPABASE_URL, PAGE_SIZE, offset),
-            timeout=30,
-        )
+            timeout=30)
         r.raise_for_status()
         batch = r.json()
         if not batch:
@@ -141,7 +137,6 @@ def fetch_active_properties() -> List[Dict]:
         time.sleep(0.2)
     return properties
 
-
 def fetch_property_photos(property_id: str) -> List[Dict]:
     """Fetch all photos for a property from property_photos."""
     r = _session.get(
@@ -149,11 +144,9 @@ def fetch_property_photos(property_id: str) -> List[Dict]:
         "?property_id=eq.{}"
         "&select=id,url,display_order,is_hero,watermark_status"
         "&order=display_order.asc&limit=50".format(SUPABASE_URL, property_id),
-        timeout=20,
-    )
+        timeout=20)
     r.raise_for_status()
     return r.json()
-
 
 # ---------------------------------------------------------------------------
 # Photo checks
@@ -174,7 +167,6 @@ def _check_url(url: str) -> Tuple[str, bool, int]:
         return url, r.status_code < 400, r.status_code
     except Exception:
         return url, False, 0
-
 
 def check_photos(photos: List[Dict]) -> List[str]:
     """
@@ -217,7 +209,6 @@ def check_photos(photos: List[Dict]) -> List[str]:
 
     return failures
 
-
 # ---------------------------------------------------------------------------
 # Remediation
 # ---------------------------------------------------------------------------
@@ -227,8 +218,7 @@ def unpublish_property(property_id: str) -> bool:
     r = _session.patch(
         "{}/rest/v1/properties?id=eq.{}".format(SUPABASE_URL, property_id),
         json={"status": "needs_review"},
-        timeout=15,
-    )
+        timeout=15)
     if not r.ok:
         logger.warning("unpublish_property: HTTP %d for %s — %s",
                        r.status_code, property_id, r.text[:200])
@@ -243,15 +233,13 @@ def unpublish_property(property_id: str) -> bool:
                 logger.warning(
                     "unpublish_property: property %s status is '%s', expected 'needs_review' — "
                     "possible RLS or trigger block",
-                    property_id, updated_status,
-                )
+                    property_id, updated_status)
                 return False
     except Exception as parse_err:
         logger.warning("unpublish_property: could not parse response for %s: %s",
                        property_id, parse_err)
         # r.ok was True, so HTTP succeeded — treat as best-effort success
     return True
-
 
 def log_audit_action(property_id: str, failures: List[str], dry_run: bool):
     """Insert an audit log entry. Logs a warning if the insert fails."""
@@ -269,8 +257,7 @@ def log_audit_action(property_id: str, failures: List[str], dry_run: bool):
                     "source": "listing_audit.py",
                 }),
             },
-            timeout=10,
-        )
+            timeout=10)
         if not r.ok:
             # FIX M6: No longer swallows silently — warns if logging fails
             logger.warning("log_audit_action: failed to insert admin_action for %s — HTTP %d: %s",
@@ -278,7 +265,6 @@ def log_audit_action(property_id: str, failures: List[str], dry_run: bool):
     except Exception as e:
         # FIX M6: Log the failure rather than silently passing
         logger.warning("log_audit_action: exception for %s: %s", property_id, str(e)[:200])
-
 
 # ---------------------------------------------------------------------------
 # Main audit
@@ -365,7 +351,6 @@ def run_audit(dry_run: bool = False, fix: bool = False, report_only: bool = Fals
     print("=" * 65)
     return len(non_compliant)
 
-
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -384,7 +369,6 @@ def main():
     if count < 0:
         sys.exit(2)
     sys.exit(1 if count > 0 else 0)
-
 
 if __name__ == "__main__":
     main()

@@ -57,7 +57,6 @@ RENT_MIN = 1100.0
 RENT_MAX = 1300.0
 CAP      = 1100.0
 
-
 def compute_published_rent(original_rent):
     """
     Returns (published_rent, adjusted: bool).
@@ -77,7 +76,6 @@ def compute_published_rent(original_rent):
     published = round(0.5 * original_rent + 450)
     published = min(published, int(CAP))  # hard cap at $1,100
     return published, True
-
 
 def fetch_records(hours_back=12):
     """Fetch pipeline_properties staged in the last N hours in Houston-area cities.
@@ -100,8 +98,7 @@ def fetch_records(hours_back=12):
             "bedrooms":   "eq.1",
             "scraped_at": "gte." + since.replace("+00:00", "Z"),
         },
-        timeout=30,
-    )
+        timeout=30)
     resp.raise_for_status()
     records = resp.json()
 
@@ -111,17 +108,14 @@ def fetch_records(hours_back=12):
         if (r.get("city") or "").strip().lower() in HOUSTON_CITIES
     ]
 
-
 def update_record(record_id, published_rent, deposit):
     resp = requests.patch(
         SUPABASE_URL + "/rest/v1/pipeline_properties",
         headers=HEADERS,
         params={"id": "eq." + str(record_id)},
         json={"monthly_rent": published_rent, "security_deposit": deposit},
-        timeout=30,
-    )
+        timeout=30)
     resp.raise_for_status()
-
 
 def main():
     ap = argparse.ArgumentParser(description="Houston batch pricing — one-time script.")
@@ -167,7 +161,6 @@ def main():
         print("(dry run — no records were updated)")
     else:
         print("✅  Pricing applied.")
-
 
 if __name__ == "__main__":
     main()

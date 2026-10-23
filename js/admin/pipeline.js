@@ -503,7 +503,7 @@
       <div class="pl-section">
         <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between">
           <span>Listing details</span>
-          <button type="button" class="btn btn-sm btn-outline" id="pl-relocate-btn" title="Address changing & relocation is temporarily disabled across the pipeline until further notice" style="font-size:.72rem;padding:2px 8px;display:flex;align-items:center;gap:4px;opacity:0.6;cursor:not-allowed">
+          <button type="button" class="btn btn-sm btn-outline" id="pl-relocate-btn" title="72rem;padding:2px 8px;display:flex;align-items:center;gap:4px;opacity:0.6;cursor:not-allowed">
             <svg class="i i-sm" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             Relocate / Change Address (Disabled)
           </button>
@@ -1149,7 +1149,7 @@ function wirePanelPhotoActions(){
         </div>
 
         <div style="font-size:.84rem;color:var(--muted,#cbd5e1);line-height:1.45">
-          Generate an authentic, census-verified synthetic address for this property. You can relocate cross-city to any US destination or apply same-block privacy aliasing.
+          Generate an authentic, 
         </div>
 
         <div style="background:rgba(255,255,255,.04);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:10px;padding:12px;font-size:.82rem">
@@ -1159,7 +1159,7 @@ function wirePanelPhotoActions(){
 
         <div style="display:flex;flex-direction:column;gap:12px">
           <div>
-            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Relocation Mode</label>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
                 <input type="radio" name="relocate-mode" value="cross_location" checked>
@@ -1253,7 +1253,7 @@ function wirePanelPhotoActions(){
         currentGenerated = data.result;
         previewAddr.textContent = currentGenerated.newTitle;
         previewMeta.textContent = `Coordinates: ${currentGenerated.newLat}, ${currentGenerated.newLng} · Method: ${currentGenerated.method}` +
-          (currentGenerated.verifiedCensus ? ' · ✓ US Census Verified' : '');
+          (currentGenerated.
 
         previewBox.style.display = 'block';
         applyBtn.disabled = false;
@@ -1862,7 +1862,7 @@ function wirePanelPhotoActions(){
 
         <div style="display:flex;flex-direction:column;gap:12px">
           <div>
-            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Relocation Mode</label>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
                 <input type="radio" name="bulk-relocate-mode" value="cross_location" checked>
@@ -1894,7 +1894,7 @@ function wirePanelPhotoActions(){
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--border,rgba(255,255,255,.1));padding-top:16px">
           <button type="button" class="btn btn-ghost btn-sm" id="pl-bulk-cancel">Cancel</button>
           <button type="button" class="btn btn-primary btn-sm" id="pl-bulk-start-btn">
-            Start Bulk Relocation (${targetListings.length})
+            Start Bulk length})
           </button>
         </div>
       </div>
@@ -1969,7 +1969,7 @@ function wirePanelPhotoActions(){
         }
       }
 
-      S.toast(`Bulk relocation complete! Successfully relocated ${successCount} listings.`, 'success');
+      S.toast(`Bulk `, 'success');
       renderList(visibleListings(), false);
       wireCardEvents();
       setTimeout(closeBulkModal, 1000);

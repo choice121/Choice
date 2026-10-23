@@ -86,15 +86,13 @@ RENT_MAX         = 1800
 ADJUSTED_FLOOR   = 1500   # minimum for tiers 2–4 (adjusted-down properties only)
 RENT_CAP         = 1600   # never publish above this
 
-
 # ---------------------------------------------------------------------------
 # Pricing function (batch-specific)
 # ---------------------------------------------------------------------------
 
 def compute_columbus_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Tiered pricing for Columbus, OH batch (per job spec).
 
@@ -157,7 +155,6 @@ def compute_columbus_rent(
 
     return int(published), rent
 
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -187,15 +184,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_columbus_rent,
-    )
+        pricing_fn=compute_columbus_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

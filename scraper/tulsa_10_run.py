@@ -52,8 +52,7 @@ PRIMARY_LOCATIONS = [
 SMOKING_STRIP = re.compile(
     r"(no[\s\-]smoking|smoke[\s\-]free|non[\s\-]smoking|smoking\s+(is\s+)?prohibited"
     r"|smoking\s+not\s+allowed|tobacco[\s\-]free|vaping\s+not\s+allowed)[^.]*\.",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 def _enforce_policies(rec: dict) -> dict:
     """Force pets_allowed=True and strip smoking restriction language."""
@@ -122,8 +121,7 @@ criteria = BatchCriteria(
     past_days=90,
     limit=400,
     min_score=30,
-    pricing_fn=pricing_fn,
-)
+    pricing_fn=pricing_fn)
 
 orchestrator = PipelineOrchestrator(verbose=True)
 result = orchestrator.run(criteria)

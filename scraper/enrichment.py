@@ -88,7 +88,6 @@ from datetime import date
 
 logger = logging.getLogger(__name__)
 
-
 # =============================================================================
 # 1. Description cleaner
 # =============================================================================
@@ -177,7 +176,6 @@ _FOR_SALE_PATTERNS = [
     re.compile(r"(?i)\b(?:great\s+starter\s+home|perfect\s+for\s+first[- ]time\s+home\s*buyers?|first[- ]time\s+buyer)\b", re.IGNORECASE),
 ]
 
-
 # Patterns to completely strip availability and move-in mentions from descriptions
 _AVAILABILITY_STRIP_PATTERNS = [
     # 1. Full sentences or bullet points starting with availability or move-in
@@ -193,7 +191,6 @@ _AVAILABILITY_STRIP_PATTERNS = [
     re.compile(r"(?i)\bavailable\s+for\s+(?:immediate\s+)?(?:move-?in|occupancy)\b", re.IGNORECASE),
     re.compile(r"(?i)\bmove-?in\s+ready\b", re.IGNORECASE),
 ]
-
 
 def strip_for_sale_jargon_from_description(text):
     """
@@ -212,7 +209,6 @@ def strip_for_sale_jargon_from_description(text):
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
 
-
 def strip_security_deposit_from_description(text):
     """
     Remove all security deposit mentions, amounts, and clauses from listing descriptions.
@@ -229,7 +225,6 @@ def strip_security_deposit_from_description(text):
     text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
-
 
 def strip_availability_from_description(text):
     """
@@ -248,7 +243,6 @@ def strip_availability_from_description(text):
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
 
-
 def clean_description(text):
     """
     Strip agent boilerplate, CTA language, screening criteria, for-sale jargon,
@@ -266,7 +260,6 @@ def clean_description(text):
     text = text.strip()
     return text
 
-
 def normalize_allcaps_description(text):
     """
     Convert fully ALL-CAPS descriptions to sentence case.
@@ -276,7 +269,6 @@ def normalize_allcaps_description(text):
     sentence case.  Normal mixed-case text is returned unchanged.
     """
     return text
-
 
 # =============================================================================
 # 2. Corporate management company fee block stripper
@@ -316,7 +308,6 @@ _CORPORATE_FEE_PATTERNS = [
 
 _CORPORATE_FEE_RE = [re.compile(p, re.IGNORECASE) for p in _CORPORATE_FEE_PATTERNS]
 
-
 def strip_corporate_fees(text):
     """
     Remove management company fee schedules and boilerplate that contradict
@@ -328,7 +319,6 @@ def strip_corporate_fees(text):
         text = pat.sub("", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
-
 
 # =============================================================================
 # 1b. External application instructions — remove references to applying
@@ -347,7 +337,6 @@ _EXTERNAL_APPLICATION_PATTERNS = [
 ]
 _EXTERNAL_APPLICATION_RE = [re.compile(p) for p in _EXTERNAL_APPLICATION_PATTERNS]
 
-
 def strip_external_application_instructions(text):
     """Remove any instructions to apply through a third-party portal/site."""
     if not text:
@@ -356,7 +345,6 @@ def strip_external_application_instructions(text):
         text = pat.sub("", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
-
 
 # =============================================================================
 # 1c. Property manager / owner / third-party brand references — replace with
@@ -389,16 +377,13 @@ _THIRD_PARTY_BRAND_RE = [re.compile(p) for p in _THIRD_PARTY_BRAND_PATTERNS]
 # since _WATERMARKED_BRANDS is defined further down in this module.
 _INLINE_BRAND_RE = None
 
-
 def _inline_brand_re():
     global _INLINE_BRAND_RE
     if _INLINE_BRAND_RE is None:
         _INLINE_BRAND_RE = re.compile(
             r"\b(?:" + "|".join(re.escape(b) for b in _WATERMARKED_BRANDS if len(b) > 3) + r")\b",
-            re.IGNORECASE,
-        )
+            re.IGNORECASE)
     return _INLINE_BRAND_RE
-
 
 def replace_owner_manager_references(text):
     """
@@ -414,7 +399,6 @@ def replace_owner_manager_references(text):
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
-
 def strip_third_party_branding(text):
     """Remove brokerage / MLS / other-platform branding from descriptions."""
     if not text:
@@ -426,14 +410,12 @@ def strip_third_party_branding(text):
     text = re.sub(r"[ \t]{2,}", " ", text)
     return text.strip()
 
-
 # =============================================================================
 # 1d. Price consistency — a description must never quote a rent figure that
 #     differs from the property's final published monthly_rent.
 # =============================================================================
 
 _PRICE_MENTION_RE = re.compile(r"\$\s?[\d,]+(?:\.\d{2})?\s*(?:/\s*(?:mo|month)|per\s+month|monthly)?", re.IGNORECASE)
-
 
 def enforce_price_consistency(text, published_rent):
     """
@@ -456,7 +438,6 @@ def enforce_price_consistency(text, published_rent):
     text = re.sub(r"\$[\d,]+\s*/\s*month", _repl, text)
     text = re.sub(r"\$[\d,]+\s*per\s*month", _repl, text)
     return text
-
 
 # =============================================================================
 # 1e. Application fee normalization in descriptions
@@ -481,8 +462,7 @@ _APP_FEE_AMOUNT_RE = re.compile(
         |0*(\d{1,4})\s+dollars?\s+(?:application|app)\s+fee)
     )
     """,
-    re.IGNORECASE | re.VERBOSE,
-)
+    re.IGNORECASE | re.VERBOSE)
 
 # Matches any wording that indicates the application is free
 _FREE_APP_RE = re.compile(
@@ -504,19 +484,16 @@ _FREE_APP_RE = re.compile(
     [^.!?\n]*                                             # rest of the sentence
     [.!?\n]?                                              # optional sentence terminator
     """,
-    re.IGNORECASE | re.VERBOSE,
-)
+    re.IGNORECASE | re.VERBOSE)
 
 # Sentence-level patterns that explicitly state fee amounts in context
 _FEE_SENTENCE_RE = re.compile(
     r"[^.!?\n]*"
     r"(?:application|app|rental)\s+fee[^.!?\n]*"
     r"[.!?\n]",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 _NORMALIZED_FEE_STATEMENT = "Application Fee: $50."
-
 
 def normalize_application_fee_in_description(text):
     """
@@ -546,7 +523,6 @@ def normalize_application_fee_in_description(text):
 
     text = _FEE_SENTENCE_RE.sub(_remove_unverified_fee_sentence, text)
     return re.sub(r"[ \t]{2,}", " ", text).strip()
-
 
 # =============================================================================
 # Pre-publish validation gate
@@ -606,16 +582,14 @@ def validate_for_publish(record, transferred_photo_count=None):
         r"|book\s+a\s+(?:tour|showing)"
         r"|open\s+house"
         r"|contact\s+(?:us|the\s+agent|the\s+landlord|owner)",
-        re.IGNORECASE,
-    )
+        re.IGNORECASE)
     if _TOUR_CHECK.search(desc):
         failures.append("Description contains tour/showing/contact CTA language")
 
     # 5. Description must not reference external application portals
     _PORTAL_CHECK = re.compile(
         r"turbotenant|zillow\s+application|apartments\.com|apply\s+on\s+\w+",
-        re.IGNORECASE,
-    )
+        re.IGNORECASE)
     if _PORTAL_CHECK.search(desc):
         failures.append("Description references an external application portal")
 
@@ -633,13 +607,11 @@ def validate_for_publish(record, transferred_photo_count=None):
         r"|move-?in\s+ready"
         r"|ready\s+for\s+(?:immediate\s+)?move-?in"
         r"|available\s+date",
-        re.IGNORECASE,
-    )
+        re.IGNORECASE)
     if _AVAIL_CHECK.search(desc):
         failures.append("Description contains availability date or move-in language")
 
     return (len(failures) == 0, failures)
-
 
 # =============================================================================
 # 3. Watermark / competitor-brand filter
@@ -674,14 +646,11 @@ _WATERMARKED_BRANDS = (
     "main street renewal",
     "amh",
     "invitation_homes",
-    "nfm lending",
-)
-
+    "nfm lending")
 
 def _norm(s):
     """Lowercase + collapse non-alphanumeric to spaces."""
     return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
-
 
 def is_watermarked(record):
     """
@@ -714,7 +683,6 @@ def is_watermarked(record):
             return True
     return False
 
-
 def watermark_reason(record):
     """Return the matched brand name for log output, or None."""
     parts = []
@@ -727,7 +695,6 @@ def watermark_reason(record):
         if brand in combined:
             return brand
     return None
-
 
 # =============================================================================
 # 3b. Branded photo filter — remove individual photos showing company branding
@@ -786,7 +753,6 @@ _BRANDED_PHOTO_URL_PATTERNS = [
 
 _BRANDED_PHOTO_RE = [re.compile(p, re.IGNORECASE) for p in _BRANDED_PHOTO_URL_PATTERNS]
 
-
 def filter_branded_photos(photo_urls):
     """
     Given a list of photo URLs, remove any that appear to show company
@@ -806,7 +772,6 @@ def filter_branded_photos(photo_urls):
             filtered.append(url)
 
     return filtered
-
 
 def filter_record_photos(record):
     """
@@ -828,14 +793,12 @@ def filter_record_photos(record):
             logger.debug(
                 "filter_record_photos: removed %d branded photo(s) from %s",
                 removed,
-                (record.get("address") or record.get("source_listing_id") or "?"),
-            )
+                (record.get("address") or record.get("source_listing_id") or "?"))
         record["original_image_urls"] = json.dumps(filtered)
     except Exception:
         pass
 
     return record
-
 
 # =============================================================================
 # 3c. Apply Now CTA — append a Choice Properties call-to-action to every
@@ -859,11 +822,9 @@ _APPLY_CTAS = [
 _CTA_ALREADY_RE = re.compile(
     r"apply\s+now|submit\s+(?:your\s+)?application|apply\s+today|apply\s+online"
     r"|choice\s+properties.*apply",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 _CTA_TAIL_CHARS = 300   # how many characters from the end to scan
-
 
 def append_apply_cta(description):
     """
@@ -883,7 +844,6 @@ def append_apply_cta(description):
     if cta not in (description or ""):
         description = (description or "").rstrip() + "\n\n" + cta
     return description
-
 
 # =============================================================================
 # 4. HVAC normalization — parse raw MLS blobs into separate heating/cooling
@@ -928,7 +888,6 @@ def normalize_heating_type(raw):
 
     return None
 
-
 def normalize_cooling_type(raw):
     """
     Extract the cooling type from a raw MLS combined text.
@@ -961,7 +920,6 @@ def normalize_cooling_type(raw):
         return None
 
     return None
-
 
 def normalize_hvac(record):
     """
@@ -999,7 +957,6 @@ def normalize_hvac(record):
 
     return record
 
-
 # =============================================================================
 # 5. Rule-based enrichment  (no API calls, runs locally)
 # =============================================================================
@@ -1014,8 +971,7 @@ _PET_YES_RE = re.compile(
     r"|pets\s+are\s+allowed"
     r"|animals\s+(?:ok|allowed|welcome)"
     r"|pet\s+(?:ok|friendly)",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 _PET_NO_RE = re.compile(
     r"no\s+pets"
     r"|pets?\s+not\s+allowed"
@@ -1024,8 +980,7 @@ _PET_NO_RE = re.compile(
     r"|no animals"
     r"|no dogs"
     r"|no cats",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 # Laundry inference — checked against amenity tags (lowercase)
 _LAUNDRY_IN_UNIT_TAGS = {
@@ -1042,28 +997,24 @@ _LAUNDRY_IN_UNIT_RE = re.compile(
     r"|in[- ]unit\s+(?:laundry|washer)"
     r"|w/?d\s+in\s+unit"
     r"|(?:washer|dryer)\s+included",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 _LAUNDRY_HOOKUP_RE = re.compile(
     r"washer[/\s-]*dryer\s+hookups?"
     r"|laundry\s+hookups?"
     r"|w/?d\s+hookups?"
     r"|washer\s+and\s+dryer\s+hookup",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 # Parking inference from amenity tags
 _GARAGE_TAGS_RE = re.compile(
     r"garage_(\d+)_or_more|garage_spaces?_(\d+)|attached_garage|detached_garage",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 _PARKING_DESC_RE = re.compile(
     r"(\d+)[- ]car\s+(?:attached\s+)?garage"
     r"|(\d+)\s+car\s+garage"
     r"|two[- ]car\s+garage"
     r"|2[- ]car\s+garage",
-    re.IGNORECASE,
-)
+    re.IGNORECASE)
 
 _HEATING_RULES = [
     (r"(?i)forced[- ]air|gas\s+forced", "Forced Air"),
@@ -1081,7 +1032,6 @@ _COOLING_RULES = [
     (r"(?i)evaporative|swamp cool", "Evaporative"),
     (r"(?i)no\s+(?:a/?c|air conditioning|cooling)", "None"),
 ]
-
 
 def _infer_laundry(record):
     """
@@ -1132,7 +1082,6 @@ def _infer_laundry(record):
         return None
 
     return existing
-
 
 def _infer_parking(record):
     """
@@ -1198,7 +1147,6 @@ def _infer_parking(record):
         return "Carport"
 
     return None
-
 
 def rule_based_enrich(record):
     """
@@ -1365,7 +1313,6 @@ def rule_based_enrich(record):
     record["lease_terms"] = None
     record["minimum_lease_months"] = None
     return record
-
 
 def _build_fallback_description(record, existing=None):
     """
@@ -1537,7 +1484,6 @@ def _build_fallback_description(record, existing=None):
 
     return "\n\n".join(p for p in paragraphs if p.strip()) or "A well-maintained rental property available now."
 
-
 # =============================================================================
 # 6. Regex extraction from listing detail page
 # =============================================================================
@@ -1563,27 +1509,23 @@ _LAUNDRY_RULES = [
         r"|washer.*?dryer\s+in\s+unit"
         r"|w/?d\s+in\s+unit"
         r"|washer\s*/?\s*dryer\s+included",
-        "In-unit",
-    ),
+        "In-unit"),
     (
         r"(?i)washer[- ]dryer hookups?"
         r"|laundry hookups?"
         r"|w/?d\s+hookups?"
         r"|washer.*?dryer\s+hookup",
-        "Washer/dryer hookups",
-    ),
+        "Washer/dryer hookups"),
     (
         r"(?i)shared laundry"
         r"|laundry\s+on[- ]site"
         r"|coin[- ]operated laundry"
         r"|communal laundry",
-        "Shared laundry",
-    ),
+        "Shared laundry"),
 ]
 
 # Only fetch detail pages for records below this quality score
 _DETAIL_FETCH_THRESHOLD = 75
-
 
 def regex_extract_missing(record, verbose=False):
     """
@@ -1691,7 +1633,6 @@ def regex_extract_missing(record, verbose=False):
         logger.debug("regex_extract done for %s (score was %d)", url[:60], score)
 
     return record
-
 
 # =============================================================================
 # 7. Combined pipeline entry-point
@@ -1825,7 +1766,6 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
 
     return clean_records, count_watermarked
 
-
 # =============================================================================
 # Internal helpers
 # =============================================================================
@@ -1845,7 +1785,6 @@ _RESCORE_TRACKABLE = [
     "parking", "pets_allowed", "security_deposit", "amenities", "appliances",
     "available_date", "heating_type", "cooling_type", "laundry_type",
 ]
-
 
 def _rescore(records):
     """Re-calculate data_quality_score + missing_fields after enrichment."""

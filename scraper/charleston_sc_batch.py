@@ -91,15 +91,13 @@ RENT_MIN      = 3000
 RENT_MAX      = 4500
 RENT_CAP      = 4500
 
-
 # ---------------------------------------------------------------------------
 # Pricing function
 # ---------------------------------------------------------------------------
 
 def compute_charleston_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Publish at original advertised rent.
     Validates rent is within [$3,000, $4,500].
@@ -122,7 +120,6 @@ def compute_charleston_rent(
                 break
 
     return int(published), rent
-
 
 # ---------------------------------------------------------------------------
 # Main
@@ -154,8 +151,7 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_charleston_rent,
-    )
+        pricing_fn=compute_charleston_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
@@ -167,7 +163,6 @@ def main():
 
     if result.errors and result.published == 0:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

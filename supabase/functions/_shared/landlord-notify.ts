@@ -18,8 +18,7 @@ export interface LandlordInfo {
 
 export async function getLandlordForProperty(
   supabase: any,
-  propertyId: string | null | undefined,
-): Promise<LandlordInfo | null> {
+  propertyId: string | null | undefined): Promise<LandlordInfo | null> {
   if (!propertyId) return null;
   try {
     const { data: prop } = await supabase
@@ -46,8 +45,7 @@ export async function sendLandlordEmail(
   supabase: any,
   propertyId: string | null | undefined,
   subject: string,
-  html: string,
-): Promise<{ ok: boolean; email?: string }> {
+  html: string): Promise<{ ok: boolean; email?: string }> {
   const info = await getLandlordForProperty(supabase, propertyId);
   if (!info) return { ok: false };
   try {

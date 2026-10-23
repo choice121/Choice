@@ -1,11 +1,11 @@
 # Choice Properties — AI Agent Rules & Directives
 
-> ### 🚀 DIRECTIVE 1 — ADDRESS CHANGING, RELOCATION & VERIFIED MUNICIPAL STREET PROTOCOL
+> ### 🚀 DIRECTIVE 1 — ADDRESS CHANGING, 
 > **STATUS: FULLY ENABLED ACROSS ENTIRE PROJECT & PIPELINE (OWNER AUTHORIZED)**
 > 
 > 1. **Universal Multi-City Verified Municipal Protocol (ANY US City / ANY State)**:
->    - Relocation is universal across all 50 states and any municipality (e.g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
->    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official **US Census Bureau TIGER-line geocoder**, paired with exact live rooftop coordinates. Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
+>    - g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
+>    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official ** Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
 > 2. **Flexible In-State & Out-of-State Sourcing with In-State Area Separation Protocol**:
 >    - Sourcing may be out-of-state OR within the same destination state depending on the operator target.
 >    - **In-State Area Separation Enforcement**: When sourcing properties within the same destination state, the system strictly enforces publishing to a distinct geographic area/corridor.
@@ -14,13 +14,13 @@
 >    - When publishing or relocating to any destination municipality, you must **NOT** dump all properties into a single ZIP code.
 >    - Distribute properties across the valid residential ZIP codes covering that municipality and its adjacent residential corridors, unless the user explicitly mandates a single specified ZIP code (e.g. "all in 75217").
 > 4. **The Mandatory Universal CLI Runner for Future AIs**:
->    - Future AI assistants MUST NOT write custom or unverified scraping code. Always execute the unified, Census-validated runner:
+>    - Future AI assistants MUST NOT write custom or un
 >      ```bash
->      node scripts/publish-relocated.mjs --source opendoor --count 5 --target "<City, State>"
+>      node scripts/
 >      # Advanced filters: beds, baths, sqft, price targeting, and status
->      node scripts/publish-relocated.mjs --source opendoor --target "Matthews, NC" --beds 4 --baths-min 2 --baths-max 3 --sqft-min 2000 --sqft-max 2500 --status private_placement --count 5
+>      node scripts/
 >      ```
->    - The runner automatically enforces flexible sourcing with in-state area separation, Census TIGER geocoding, multi-ZIP distribution, original image sequence preservation, zero photo count gate, realistic regional market rent calculation, and Choice platform rule enforcement.
+>    - The runner automatically enforces flexible sourcing with in-state area separation, 
 
 > ### 🚀 DIRECTIVE 2 — STRICT ORIGINAL IMAGE ORDER & DIRECT SOURCE CDN INGESTION
 > 1. **Zero Photo Count Gate (Complete Removal of Photo Count Restrictions Across Entire Project)**:
@@ -132,4 +132,4 @@ Every property follows this complete lifecycle:
 **Scrape → Census Verify → Deduplicate → Basic Privacy Clean → Process Images → Synchronize Data → Validate → Publish**
 
 - **Source of Truth**: Preserve authentic source descriptions and facts; never synthesize room sizes or rewrite listing text.
-- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and verified Census GPS coordinates.
+- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and 

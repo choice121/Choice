@@ -71,15 +71,13 @@ RENT_MAX      = 2000
 RENT_CAP      = 1500
 RENT_FLOOR    = 1350
 
-
 # ---------------------------------------------------------------------------
 # Pricing function (batch-specific)
 # ---------------------------------------------------------------------------
 
 def compute_dallas_ga_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None,
-):
+    seen_rents: Optional[Set[int]] = None):
     """
     Tiered proportional reduction for the Dallas GA market.
 
@@ -124,7 +122,6 @@ def compute_dallas_ga_rent(
 
     return int(published), rent
 
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -154,15 +151,13 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_dallas_ga_rent,
-    )
+        pricing_fn=compute_dallas_ga_rent)
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

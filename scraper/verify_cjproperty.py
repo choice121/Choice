@@ -40,8 +40,7 @@ PIPELINE_HEADERS["Content-Profile"] = "pipeline"
 r = requests.get(
     SUPABASE_URL + "/rest/v1/properties?id=eq." + PROP_ID,
     headers=HEADERS,
-    timeout=15,
-)
+    timeout=15)
 print("=== properties table ===")
 print("HTTP", r.status_code)
 if r.ok:
@@ -67,8 +66,7 @@ print("\n=== property_photos ===")
 r2 = requests.get(
     SUPABASE_URL + "/rest/v1/property_photos?property_id=eq." + PROP_ID + "&select=id,url,is_hero,display_order",
     headers=HEADERS,
-    timeout=15,
-)
+    timeout=15)
 print("HTTP", r2.status_code)
 if r2.ok:
     photos = r2.json()
@@ -84,8 +82,7 @@ print("\n=== pipeline_properties ===")
 r3 = requests.get(
     SUPABASE_URL + "/rest/v1/pipeline_properties?source_listing_id=eq.cjproperties%3A650",
     headers=PIPELINE_HEADERS,
-    timeout=15,
-)
+    timeout=15)
 print("HTTP", r3.status_code)
 if r3.ok:
     rows = r3.json()

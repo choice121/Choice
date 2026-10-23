@@ -60,7 +60,6 @@ DEFAULT_RENT_MAX = 3500
 # Property types to include (exclude commercial)
 ALLOWED_TYPES = {"SINGLE_FAMILY", "TOWNHOMES", "CONDOS", "APARTMENT", "DUPLEX"}
 
-
 # ---------------------------------------------------------------------------
 # Filtering helpers
 # ---------------------------------------------------------------------------
@@ -73,8 +72,7 @@ def _filter_records(
     beds_min: Optional[int] = None,
     beds_max: Optional[int] = None,
     allowed_types: Optional[Set[str]] = None,
-    min_score: int = DEFAULT_MIN_SCORE,
-) -> List[dict]:
+    min_score: int = DEFAULT_MIN_SCORE) -> List[dict]:
     """Filter scraped records by criteria before feeding to the pipeline."""
     filtered = []
     for rec in records:
@@ -106,7 +104,6 @@ def _filter_records(
         filtered.append(rec)
 
     return filtered
-
 
 # ---------------------------------------------------------------------------
 # Main
@@ -161,8 +158,7 @@ def main():
         beds_min=args.beds_min,
         beds_max=args.beds_max,
         allowed_types=ALLOWED_TYPES,
-        min_score=args.min_score,
-    )
+        min_score=args.min_score)
     print("   Kept {} / {} records after filtering".format(len(filtered), len(records)))
 
     if not filtered:
@@ -180,8 +176,7 @@ def main():
             rec.get("monthly_rent"),
             rec.get("bedrooms"),
             rec.get("data_quality_score"),
-            len(json.loads(rec.get("original_image_urls") or "[]")),
-        ))
+            len(json.loads(rec.get("original_image_urls") or "[]"))))
 
     # ── Step 3: Run pipeline ─────────────────────────────────────────────
     print("\n── Step 3: Running pipeline ──")
@@ -189,14 +184,12 @@ def main():
     result = orchestrator.run_records(
         records=filtered,
         batch_name="CJ Properties {} batch".format(",".join(states)),
-        dry_run=args.dry_run,
-    )
+        dry_run=args.dry_run)
 
     print("\n" + result.summary())
 
     if result.errors and not args.dry_run:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
