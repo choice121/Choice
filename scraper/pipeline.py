@@ -128,7 +128,8 @@ try:
         strip_third_party_branding,
         filter_record_photos,
         rule_based_enrich,
-        normalize_hvac)
+        normalize_hvac,
+        apply_enrichment_pipeline_contextual)
     _ENRICH_OK = True
 except Exception as _ee:
     _ENRICH_OK = False
@@ -471,6 +472,11 @@ class PipelineOrchestrator:
         if _ENRICH_OK:
             records, wm_count = apply_enrichment_pipeline(records, verbose=self.verbose)
             result.watermarked_dropped += wm_count
+            try:
+                records = apply_enrichment_pipeline_contextual(records, verbose=self.verbose)
+                self._log("   Contextual enrichment applied")
+            except Exception as e:
+                self._log("   WARNING: contextual enrichment failed: {}".format(str(e)[:80]))
         else:
             self._log("   WARNING: enrichment module unavailable — skipping")
 
@@ -777,6 +783,11 @@ class PipelineOrchestrator:
         if _ENRICH_OK:
             records, wm_count = apply_enrichment_pipeline(records, verbose=self.verbose)
             result.watermarked_dropped += wm_count
+            try:
+                records = apply_enrichment_pipeline_contextual(records, verbose=self.verbose)
+                self._log("   Contextual enrichment applied")
+            except Exception as e:
+                self._log("   WARNING: contextual enrichment failed: {}".format(str(e)[:80]))
         else:
             self._log("   WARNING: enrichment module unavailable — skipping")
 

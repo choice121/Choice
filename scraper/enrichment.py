@@ -1892,3 +1892,412 @@ Respond ONLY with a valid JSON object using this exact schema:
                 print("      => Gemini API rate limit reached, skipping further AI enrichment.")
         elif verbose:
             print(f"      => AI extraction failed: {e}")
+
+
+# =============================================================================
+# 8. Contextual AI-powered description enrichment (compliant, minimal edits)
+# =============================================================================
+
+import hashlib
+import json as _json
+import os
+
+ENRICHMENT_RULESET_VERSION = "v1.0.0"
+
+# Known portals/domains to detect for external redirects
+_EXTERNAL_DOMAINS = [
+    r"zillow\.com",
+    r"apartments\.com",
+    r"trulia\.com",
+    r"realtor\.com",
+    r"hotpads\.com",
+    r"turbotenant\.com",
+    r"rentspree\.com",
+    r"rentcafe\.com",
+    r"cozy\.com",
+    r"appfolio\.com",
+    r"rently\.com",
+    r"showmojo\.com",
+]
+
+# Phone/email patterns
+_PHONE_RE = re.compile(r"(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_URL_RE = re.compile(r"https?://[^\s)]+", re.IGNORECASE)
+
+# Price patterns (for price consistency)
+_PRICE_ANY_RE = re.compile(r"\$\s?([\d,]+)(?:\.\d{2})?", re.IGNORECASE)
+_PRICE_MO_RE = re.compile(r"\$\s?[\d,]+(?:\.\d{2})?\s*(?:/\s*mo|/month|per\s+month|monthly)", re.IGNORECASE)
+
+
+def _hash_text(s):
+    if not s:
+        return None
+    return hashlib.sha256(s.encode('utf-8', errors='ignore')).hexdigest()
+
+
+def _is_redirect_context(line):
+    """Heuristic: does this line appear to redirect off-platform?"""
+    lower = line.lower()
+    redirect_markers = [
+        'contact', 'call', 'text', 'email', 'reach out',
+        'apply', 'submit application', 'schedule', 'book', 'tour', 'showing', 'viewing',
+        'visit', 'click', 'go to', 'website', 'portal', 'link',
+    ]
+    domain_hit = any(re.search(d, lower) for d in _EXTERNAL_DOMAINS)
+    if domain_hit:
+        return True
+    if _PHONE_RE.search(line) or _EMAIL_RE.search(line):
+        # If also has redirect markers, likely redirecting
+        if any(m in lower for m in ['contact', 'call', 'text', 'email', 'reach', 'apply', 'schedule']):
+            return True
+    if any(m in lower for m in redirect_markers):
+        # More specific - external app/tour/contact
+        if any(x in lower for x in ['apply', 'schedule', 'tour', 'showing', 'agent', 'owner', 'landlord', 'manager', 'portal']):
+            return True
+    return False
+
+
+def _classify_span_deterministic(span):
+    """Classify a span deterministically. Returns (action, reason, confidence, needs_review)."""
+    if not span or not span.strip():
+        return 'PRESERVE', None, 1.0, False
+    lower = span.lower()
+    
+    # External application instructions
+    if any(re.search(p, span, re.I) for p in _EXTERNAL_APPLICATION_PATTERNS):
+        return 'REMOVE', 'external_application_instructions', 0.95, False
+    # External domains
+    if any(re.search(d, span, re.I) for d in _EXTERNAL_DOMAINS) and any(m in lower for m in ['apply', 'visit', 'click', 'submit']):
+        return 'REMOVE', 'external_portal_redirect', 0.95, False
+    # Tour/showing/contact redirecting
+    if re.search(r"(schedule|book|request|arrange).*?(tour|showing|viewing|appointment)", span, re.I):
+        if _PHONE_RE.search(span) or _EMAIL_RE.search(span) or _is_redirect_context(span):
+            return 'REMOVE', 'external_tour_redirect', 0.9, False
+        # Just mentioning tour without redirect might be borderline - be conservative and review if unclear
+    # Direct contact with phone/email in redirect context
+    if (_PHONE_RE.search(span) or _EMAIL_RE.search(span)) and _is_redirect_context(span):
+        # Could be mixed - check if it's just contact info
+        if re.search(r"contact|call|text|email|reach", span, re.I):
+            return 'REMOVE', 'direct_contact_redirect', 0.9, False
+    # Property/listing ID for external application
+    if re.search(r"(property|listing)\s*(id|#|code)", span, re.I) and any(m in lower for m in ['apply', 'enter', 'use', 'submit']):
+        return 'REMOVE', 'external_listing_id_redirect', 0.9, False
+    # Scam warnings that are just redirecting/hiding platform issues - flag for review
+    if re.search(r"beware.*scam|rental scam|fraudulent", span, re.I):
+        # If it's just a warning without being malicious redirect, could be legitimate disclosure - REVIEW
+        if any(m in lower for m in ['contact', 'send money', 'wire', 'payment']):  # payment redirect combined
+            return 'REVIEW', 'scam_warning_with_payment_redirect', 0.7, True
+        return 'REVIEW', 'scam_warning_disclosure', 0.6, True
+    # Third-party branding/attribution redirecting
+    if re.search(r"(listed by|courtesy of|presented by|brokered by)", span, re.I):
+        # May be attribution - could be needed? But we strip in normal flow; be conservative
+        return 'REMOVE', 'third_party_attribution', 0.85, False
+    # Payment redirects
+    if any(m in lower for m in ['send payment', 'pay.*owner', 'zelle', 'cash app', 'venmo']) and not any(m in lower for m in ['application fee']):
+        return 'REMOVE', 'external_payment_redirect', 0.9, False
+    
+    return 'PRESERVE', None, 0.8, False
+
+
+def _number_words_to_int(s):
+    """Simple number word conversion for small numbers."""
+    if not s:
+        return None
+    s = s.lower().strip()
+    mapping = {
+        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+        'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+        'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20,
+        'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
+        'eighty': 80, 'ninety': 90, 'hundred': 100, 'thousand': 1000
+    }
+    # Try direct match
+    if s in mapping:
+        return mapping[s]
+    # Try compound (simple cases)
+    parts = re.findall(r'\b\w+\b', s)
+    if not parts:
+        return None
+    total = 0
+    current = 0
+    for p in parts:
+        if p not in mapping:
+            continue
+        val = mapping[p]
+        if val == 100:
+            current = max(current, 1) * 100
+        elif val == 1000:
+            total += current * 1000
+            current = 0
+        else:
+            current += val
+    total += current
+    return total if total > 0 else None
+
+
+def _extract_amounts_with_context(text):
+    """Extract amounts with surrounding context to classify."""
+    results = []
+    # Numeric amounts
+    for m in _PRICE_ANY_RE.finditer(text):
+        start = max(0, m.start() - 80)
+        end = min(len(text), m.end() + 80)
+        context = text[start:end]
+        amount_str = m.group(1).replace(',', '')
+        try:
+            amount = float(amount_str)
+        except:
+            continue
+        results.append({
+            'type': 'numeric',
+            'amount': amount,
+            'amount_str': m.group(0),
+            'start': m.start(),
+            'end': m.end(),
+            'context': context
+        })
+    # Word amounts like "twelve hundred dollars"
+    for m in re.finditer(r'\b((?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|\s)+)\s+dollars?\b', text, re.I):
+        start = max(0, m.start() - 80)
+        end = min(len(text), m.end() + 80)
+        context = text[start:end]
+        amt = _number_words_to_int(m.group(1))
+        if amt:
+            results.append({
+                'type': 'words',
+                'amount': float(amt),
+                'amount_str': m.group(0),
+                'start': m.start(),
+                'end': m.end(),
+                'context': context
+            })
+    return results
+
+
+def _classify_amount_context(amount_info, old_rent, new_rent):
+    """Classify if amount is old rent vs deposit/fee/utility/historical."""
+    ctx = amount_info['context'].lower()
+    amt = amount_info['amount']
+    
+    # Historical indicators
+    if any(x in ctx for x in ['previously', 'was ', 'used to be', 'reduced from', 'down from']):
+        return 'HISTORICAL', 0.9
+    
+    # Deposit indicators
+    if any(x in ctx for x in ['deposit', 'security deposit']):
+        return 'DEPOSIT', 0.95
+    
+    # Fee indicators
+    if any(x in ctx for x in ['application fee', 'pet fee', 'admin fee', 'fee']):
+        # But not if it's the main rent context
+        if 'rent' not in ctx.split('deposit')[0] if 'deposit' in ctx else True:
+            # Could be fee
+            if amt < 500:  # typical fees small
+                return 'FEE', 0.9
+    
+    # Rent indicators
+    rent_indicators = ['rent', 'monthly', '/mo', 'per month', 'monthly rent', 'rental rate']
+    if any(x in ctx for x in rent_indicators):
+        # If it matches old rent and different from new rent
+        if old_rent and abs(amt - float(old_rent)) < 0.01 and new_rent and abs(float(old_rent) - float(new_rent)) > 0.01:
+            return 'OLD_RENT', 0.95
+        if old_rent and abs(amt - float(old_rent)) < 0.01:
+            return 'OLD_RENT', 0.9
+        return 'RENT', 0.7  # Could be current rent - don't change
+    
+    # If amount equals old rent and different from new rent, and no other strong classification
+    if old_rent and abs(amt - float(old_rent)) < 0.01 and new_rent and abs(float(old_rent) - float(new_rent)) > 0.01:
+        # Be more careful - could be coincidentally same as deposit
+        if 'deposit' not in ctx:
+            return 'OLD_RENT', 0.8  # Lower confidence if no strong rent indicators
+    
+    return 'OTHER', 0.3
+
+
+def enrich_description_contextual(original_description, current_rent=None, original_rent=None, 
+                                    enable_ai=False, verbose=False):
+    """
+    Contextually enrich description with minimal edits. Works from original_description.
+    Only does price-consistency if rent actually changed.
+    Returns (cleaned_description, enrichment_meta)
+    """
+    if not original_description or not str(original_description).strip():
+        return original_description, {'status': 'skipped', 'reason': 'empty'}
+    
+    text = str(original_description)
+    original_hash = _hash_text(text)
+    
+    changes = []
+    reasons = []
+    needs_review = False
+    overall_confidence = 1.0
+    price_correction_applied = False
+    
+    # Work on a copy
+    cleaned = text
+    
+    # Split into sentences/paragraphs for processing
+    # Use regex to split on sentence boundaries
+    # Process paragraph by paragraph
+    paragraphs = re.split(r'(\n\s*\n)', cleaned)
+    
+    new_paragraphs = []
+    for para in paragraphs:
+        if re.match(r'\n\s*\n', para):
+            new_paragraphs.append(para)
+            continue
+        if not para.strip():
+            new_paragraphs.append(para)
+            continue
+        
+        # Split into sentences
+        sentences = re.split(r'([.!?]+[\s\n]+)', para)
+        new_sentences = []
+        i = 0
+        while i < len(sentences):
+            sent = sentences[i]
+            punct = sentences[i+1] if i+1 < len(sentences) else ''
+            full_sent = sent + punct
+            if not sent.strip():
+                i += 2
+                continue
+            
+            action, reason, conf, review = _classify_span_deterministic(full_sent)
+            if action == 'REMOVE':
+                changes.append({'type': 'remove', 'span': full_sent[:100] + '...' if len(full_sent) > 100 else full_sent, 'reason': reason})
+                reasons.append(reason)
+                overall_confidence = min(overall_confidence, conf)
+                i += 2
+                continue  # Skip this sentence
+            elif action == 'REVIEW':
+                needs_review = True
+                overall_confidence = min(overall_confidence, conf)
+                reasons.append(reason)
+                new_sentences.append(full_sent)
+                i += 2
+                continue
+            else:  # PRESERVE or MINIMALLY_EDIT
+                new_sentences.append(full_sent)
+                i += 2
+                continue
+        
+        rebuilt = ''.join(new_sentences)
+        # Clean up multiple spaces
+        rebuilt = re.sub(r' +', ' ', rebuilt)
+        rebuilt = re.sub(r'\n +', '\n', rebuilt)
+        new_paragraphs.append(rebuilt)
+    
+    cleaned = ''.join(new_paragraphs)
+    
+    # Price consistency - only if rent actually changed
+    if current_rent is not None and original_rent is not None:
+        try:
+            cur_rent_f = float(current_rent)
+            orig_rent_f = float(original_rent)
+            if abs(cur_rent_f - orig_rent_f) > 0.01:  # Rent actually changed
+                amounts = _extract_amounts_with_context(cleaned)
+                # Process from right to left to preserve positions
+                replacements = []
+                for amt_info in sorted(amounts, key=lambda x: x['start'], reverse=True):
+                    classification, conf = _classify_amount_context(amt_info, orig_rent_f, cur_rent_f)
+                    if classification == 'OLD_RENT' and conf >= 0.75:
+                        # Replace with current rent
+                        new_price_str = f"${cur_rent_f:,.0f}/month"
+                        replacements.append((amt_info['start'], amt_info['end'], new_price_str, amt_info['amount_str']))
+                        price_correction_applied = True
+                        changes.append({'type': 'price_correction', 'old': amt_info['amount_str'], 'new': new_price_str, 'reason': 'rent_changed'})
+                        overall_confidence = min(overall_confidence, conf)
+                    elif classification == 'OLD_RENT' and conf < 0.75:
+                        needs_review = True
+                        reasons.append('ambiguous_price_correction')
+                # Apply replacements
+                for start, end, new_str, old_str in replacements:
+                    cleaned = cleaned[:start] + new_str + cleaned[end:]
+        except Exception as e:
+            if verbose:
+                logger.debug(f"Price consistency error: {e}")
+    
+    # Final cleanup
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    cleaned = re.sub(r' +', ' ', cleaned)
+    cleaned = cleaned.strip()
+    
+    # Validation
+    # Check for obvious prohibited patterns that should have been removed
+    validation_issues = []
+    if _PHONE_RE.search(cleaned):
+        # Check if it's in redirect context
+        for m in _PHONE_RE.finditer(cleaned):
+            ctx_start = max(0, m.start() - 40)
+            ctx_end = min(len(cleaned), m.end() + 40)
+            ctx = cleaned[ctx_start:ctx_end].lower()
+            if any(x in ctx for x in ['contact', 'call', 'text', 'apply', 'schedule']):
+                validation_issues.append('phone_in_redirect_context')
+                needs_review = True
+                break
+    if any(re.search(d, cleaned, re.I) for d in _EXTERNAL_DOMAINS):
+        if any(m in cleaned.lower() for m in ['apply', 'visit', 'click']):
+            validation_issues.append('external_domain_redirect')
+            needs_review = True
+    
+    cleaned_hash = _hash_text(cleaned)
+    
+    enrichment_meta = {
+        'status': 'review' if needs_review else 'clean',
+        'ruleset_version': ENRICHMENT_RULESET_VERSION,
+        'changes': changes,
+        'reasons': list(set(reasons)),
+        'confidence': overall_confidence,
+        'needs_review': needs_review,
+        'price_correction_applied': price_correction_applied,
+        'original_hash': original_hash,
+        'cleaned_hash': cleaned_hash,
+        'validation_issues': validation_issues,
+        'enriched_at': __import__('datetime').datetime.utcnow().isoformat()
+    }
+    
+    return cleaned, enrichment_meta
+
+
+def apply_enrichment_pipeline_contextual(records, verbose=False, enable_ai=False):
+    """
+    Apply contextual enrichment to records. Works from original_description if available,
+    otherwise from description. Stores metadata.
+    """
+    enriched = []
+    for rec in records:
+        try:
+            orig_desc = rec.get('original_description') or rec.get('description')
+            current_rent = rec.get('monthly_rent')
+            original_rent = rec.get('original_monthly_rent') or rec.get('source_monthly_rent')
+            
+            if orig_desc:
+                cleaned_desc, meta = enrich_description_contextual(
+                    orig_desc,
+                    current_rent=current_rent,
+                    original_rent=original_rent,
+                    enable_ai=enable_ai,
+                    verbose=verbose
+                )
+                rec['description'] = cleaned_desc
+                rec['description_enrichment_meta'] = meta
+                rec['enrichment_status'] = meta.get('status', 'clean')
+                rec['needs_review'] = meta.get('needs_review', False)
+                rec['enrichment_version'] = ENRICHMENT_RULESET_VERSION
+                rec['last_enriched_hash'] = meta.get('cleaned_hash')
+                rec['enriched_at'] = meta.get('enriched_at')
+                if verbose:
+                    print(f"   [ctx-enrich] {rec.get('address','?')}: {len(meta.get('changes',[]))} changes, review={meta.get('needs_review')}")
+            else:
+                rec['enrichment_status'] = 'clean'
+                rec['needs_review'] = False
+        except Exception as e:
+            if verbose:
+                print(f"   [ctx-enrich] ERROR for {rec.get('address','?')}: {e}")
+            rec['enrichment_status'] = 'failed'
+            rec['needs_review'] = True
+            rec['description_enrichment_meta'] = {'status': 'failed', 'error': str(e)}
+        enriched.append(rec)
+    return enriched
