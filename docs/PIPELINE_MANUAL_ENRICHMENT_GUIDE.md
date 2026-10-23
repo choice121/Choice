@@ -202,3 +202,9 @@ The pipeline uses Apify actors to scrape Zillow rental listings, stages them in 
 - `supabase/migrations/20261023000003_harden_pipeline_publish.sql` — hardened publish RPC
 - `scripts/description-generator.mjs` — source-only description generator
 - `.github/workflows/daily-scrape.yml` — CI workflow with APIFY_API_TOKENS secret
+
+## Zillow/Apify Source Integration (new)
+- Set `criteria.source = "zillow"` in BatchCriteria to use Apify-backed Zillow scraping instead of Realtor/HomeHarvest.
+- Direct Zillow scraping is blocked on datacenter IPs (DataDome); Apify is the default reliable source.
+- _map_zillow_service_property maps Apify records to the pipeline schema.
+- Phase 2 detail fetch and Apify fallback handle blocked pages.
