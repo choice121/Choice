@@ -150,3 +150,19 @@ After publishing, the AI assistant must present the published properties in the 
 
 Example:
 1. 5914 Wilkes Dr, Fort Worth, TX 76119 ($1,350/mo | 3 Bed / 2 Bath) — https://choice-properties-site.pages.dev/property.html?id=c054a5e9-fe6a-4c2d-a1dd-08c15744bc07
+
+## Apify Token Pool (Auto-Rotation)
+
+Store all Apify API tokens in a single GitHub Secret named `APIFY_API_TOKENS` as a comma-separated list:
+
+```
+APIFY_API_TOKENS=token1,token2,token3
+```
+
+The workflow (`.github/workflows/daily-scrape.yml`) injects this as the `APIFY_API_TOKENS` env var. `scraper/zillow_services.py` splits on commas and tries each token in order, automatically rotating to the next when one returns 401/402/403/429 (quota/auth failure). No code changes are needed when adding or removing tokens — just edit the secret value.
+
+For local runs, export the same env var:
+
+```
+export APIFY_API_TOKENS="token1,token2"
+```
