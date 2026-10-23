@@ -1904,6 +1904,11 @@ import os
 
 ENRICHMENT_RULESET_VERSION = "v1.0.0"
 
+QUALIFICATIONS_APPEND = """
+
+REQUIREMENTS & QUALIFICATIONS:
+No corporate leases allowed or AIRBNB. Credit score must be a minimum of 575. Income must exceed 3.0 times the monthly rent to qualify. No evictions or broken leases on your rental history. No criminal history ever. Application pending - Waiting list options are available at present. Photos are stock images provided, video tour of actual unit available upon request. Pictures are for marketing purposes only."""
+
 # Known portals/domains to detect for external redirects
 _EXTERNAL_DOMAINS = [
     r"zillow\.com",
@@ -2286,6 +2291,8 @@ def apply_enrichment_pipeline_contextual(records, verbose=False, enable_ai=False
                 rec['enrichment_status'] = meta.get('status', 'clean')
                 rec['needs_review'] = meta.get('needs_review', False)
                 rec['enrichment_version'] = ENRICHMENT_RULESET_VERSION
+        if rec.get('description') and 'REQUIREMENTS & QUALIFICATIONS' not in rec['description']:
+            rec['description'] = rec['description'].rstrip() + QUALIFICATIONS_APPEND
                 rec['last_enriched_hash'] = meta.get('cleaned_hash')
                 rec['enriched_at'] = meta.get('enriched_at')
                 if verbose:
