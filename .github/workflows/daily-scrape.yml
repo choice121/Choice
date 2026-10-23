@@ -59,6 +59,7 @@ jobs:
           IMAGEKIT_URL_ENDPOINT: ${{ secrets.IMAGEKIT_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SITE_BASE_URL: ${{ secrets.SITE_URL }}
+          APIFY_API_TOKENS: ${{ secrets.APIFY_API_TOKENS }}
         run: |
           PAST_DAYS="${{ github.event.inputs.past_days || '3' }}"
           LIMIT="${{ github.event.inputs.limit || '200' }}"
