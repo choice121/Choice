@@ -111,14 +111,10 @@ BEGIN
     NULL, NULL,
     NULL,
     p.parking, p.parking_fee,
-    CASE WHEN p.amenities IS NOT NULL AND p.amenities <> '' AND p.amenities <> '[]'
-         THEN p.amenities::jsonb ELSE NULL END,
-    CASE WHEN p.appliances IS NOT NULL AND p.appliances <> '' AND p.appliances <> '[]'
-         THEN p.appliances::jsonb ELSE NULL END,
-    CASE WHEN p.utilities_included IS NOT NULL AND p.utilities_included <> '' AND p.utilities_included <> '[]'
-         THEN p.utilities_included::jsonb ELSE NULL END,
-    CASE WHEN p.flooring IS NOT NULL AND p.flooring <> '' AND p.flooring <> '[]'
-         THEN p.flooring::jsonb ELSE NULL END,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     p.heating_type, p.cooling_type, p.laundry_type,
     p.location_context, p.virtual_tour_url,
     p.has_basement,
