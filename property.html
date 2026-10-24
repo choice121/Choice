@@ -13,7 +13,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1792882196503"></script>
+  <script src="/js/cp-error-reporter.js?v=1792844332768"></script>
   <script nonce="__CSP_NONCE__">
     (function(){
       try {
@@ -56,9 +56,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
-  <link rel="stylesheet" href="/css/cp-design.css?v=1792882196503">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792882196503">
-  <link rel="stylesheet" href="/css/premium-design.css?v=1792882196503">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792844332768">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792844332768">
+  <link rel="stylesheet" href="/css/premium-design.css?v=1792844332768">
   <!-- Leaflet loaded lazily via IntersectionObserver in renderMap() -->
   <style>
     /* ── CRITICAL CSS & THEME VARIABLES ───────────────────────────────────── */
@@ -127,7 +127,6 @@
       background:var(--m-bg);color:var(--m-ink);line-height:1.6;font-size:15px;
     }
     #site-nav{min-height:56px;display:block}
-    .mosaic-vertical-track { display: none; }
 
     /* ── Branding logo & nav theme compatibility (property details) ── */
     html[data-theme="light"] .mv2-nav,
@@ -577,101 +576,55 @@
         border-left: none !important;
       }
 
-      /* ── Opendoor-Style Mobile Embedded Top-to-Bottom Scroller ── */
+      /* ── Gallery → rounded card ── */
       #gallery {
         border-radius: 16px !important;
         overflow: hidden !important;
-        aspect-ratio: 4 / 3 !important;
-        height: clamp(340px, 58vh, 460px) !important;
+        aspect-ratio: 16 / 9 !important;
+        height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
         position: relative !important;
         background: var(--m-surface-2) !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
       }
-      #mosaicMain,
-      #mosaicSide,
-      .mosaic-nav-btn,
-      .mosaic-expand-btn,
-      #galleryStrip {
-        display: none !important;
-      }
-      .mosaic-vertical-track {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 6px !important;
-        width: 100% !important;
-        height: 100% !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        scroll-snap-type: y mandatory !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
+      #mosaicMain {
         position: absolute !important;
         inset: 0 !important;
-      }
-      .mosaic-vertical-track::-webkit-scrollbar {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-      }
-      .mosaic-vertical-slide {
-        flex-shrink: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        aspect-ratio: 4 / 3 !important;
-        scroll-snap-align: start !important;
-        scroll-snap-stop: always !important;
-        position: relative !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        background: var(--m-surface-2) !important;
-        cursor: pointer !important;
       }
-      .mosaic-vertical-slide img {
+      #mosaicMainImg {
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
-        display: block !important;
-        border-radius: 12px !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
+        border-radius: 0 !important;
       }
-      .mosaic-vertical-slide .mosaic-touch-shield {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 2 !important;
-        background: transparent !important;
-        -webkit-touch-callout: none !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-      }
-      /* Floating glassmorphic counter pill (bottom right) */
+      #mosaicSide        { display: none !important; }
+      #galleryStrip      { display: none !important; }
+      .mosaic-expand-btn { display: none !important; }
+      /* Photo count chip → top-right pill */
       #mosaicMobileCount {
         position: absolute !important;
-        top: auto !important;
-        bottom: 14px !important;
-        right: 14px !important;
-        left: auto !important;
-        z-index: 25 !important;
-        background: rgba(15, 23, 42, 0.78) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.22) !important;
+        top: 12px !important; right: 12px !important;
+        bottom: auto !important; left: auto !important;
+        background: var(--m-surface) !important;
+        color: var(--m-ink) !important;
+        border: 1px solid var(--m-border) !important;
         font-size: 12px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.02em !important;
-        padding: 6px 14px !important;
-        border-radius: 9999px !important;
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
-        pointer-events: none !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-        line-height: 1 !important;
+        font-weight: 600 !important;
+        padding: 5px 12px !important;
+        border-radius: 999px !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        box-shadow: var(--m-shadow-sm) !important;
+      }
+      .mosaic-nav-btn {
+        background: var(--m-surface) !important;
+        color: var(--m-ink) !important;
+        border: 1px solid var(--m-border) !important;
+        border-radius: 50% !important;
+        width: 36px !important; height: 36px !important;
+        box-shadow: var(--m-shadow-sm) !important;
       }
 
       /* ── Breadcrumb → hidden ── */
@@ -965,11 +918,11 @@
 
 
   </style>
-<script defer src="/config.js?v=1792882196503"></script>
-<script defer src="/js/supabase.min.js?v=1792882196503"></script>
-<script defer src="/js/cp-ui.js?v=1792882196503"></script>
-<script type="module" src="/js/cp-api.js?v=1792882196503"></script>
-<script defer src="/js/components.js?v=1792882196503"></script>
+<script defer src="/config.js?v=1792844332768"></script>
+<script defer src="/js/supabase.min.js?v=1792844332768"></script>
+<script defer src="/js/cp-ui.js?v=1792844332768"></script>
+<script type="module" src="/js/cp-api.js?v=1792844332768"></script>
+<script defer src="/js/components.js?v=1792844332768"></script>
 </head>
 <body data-portal="public" data-page="property">
 
@@ -1068,8 +1021,6 @@
         <div class="mosaic-touch-shield" id="mosaicTouchShield" aria-hidden="true"></div>
       </div>
       <div class="mosaic-side" id="mosaicSide"></div>
-      <!-- Opendoor-style embedded top-to-bottom scrollable mobile gallery -->
-      <div class="mosaic-vertical-track" id="mosaicVerticalTrack" role="region" aria-label="Photo gallery scroller"></div>
       <!-- Mobile swipe nav -->
       <button type="button" class="mosaic-nav-btn prev" id="mosaicPrev" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>
       <button type="button" class="mosaic-nav-btn next" id="mosaicNext" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>
@@ -1443,7 +1394,7 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- Leaflet loaded lazily -->
-<script type="module" src="/js/property.js?v=1792882196503"></script>
+<script type="module" src="/js/property.js?v=1792844332768"></script>
 
 <!-- Contact drawer overlay (mobile) -->
 <div class="contact-drawer-overlay" id="contactDrawerOverlay" aria-hidden="true"></div>
