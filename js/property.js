@@ -1403,24 +1403,77 @@ function renderGallery(photos) {
     });
   }
 
-  if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
-  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
-  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
+  // Opendoor-style mobile embedded top-to-bottom scrollable gallery track
+  const verticalTrack = document.getElementById('mosaicVerticalTrack');
+  if (verticalTrack) {
+    verticalTrack.innerHTML = photos.map((url, i) => {
+      const highResUrl = CONFIG.img(url, 'gallery');
+      const highRes2x = CONFIG.img(url, 'gallery_2x');
+      const srcsetAttr = (CONFIG.IMAGEKIT_URL && url && url.startsWith(CONFIG.IMAGEKIT_URL))
+        ? `srcset="${CONFIG.img(url, 'card')} 600w, ${highResUrl} 1200w, ${highRes2x} 2400w" sizes="(max-width: 900px) 100vw, 50vw"`
+        : `srcset="${highResUrl} 1x, ${highRes2x} 2x"`;
+      const isEager = i < 2;
+      return `
+        <div class="mosaic-vertical-slide" data-idx="${i}" role="button" tabindex="0" aria-label="Enlarge photo ${i + 1} of ${photos.length}">
+          <img src="${highResUrl}"
+               ${srcsetAttr}
+               alt="Property photo ${i + 1}"
+               loading="${isEager ? 'eager' : 'lazy'}"
+               ${isEager ? 'fetchpriority="high"' : ''}
+               decoding="async"
+               referrerpolicy="no-referrer">
+          <div class="mosaic-touch-shield" aria-hidden="true"></div>
+        </div>`;
+    }).join('');
 
-  // Touch swipe on mosaic (mobile carousel) — velocity-aware
+    verticalTrack.querySelectorAll('.mosaic-vertical-slide').forEach(slide => {
+      const handleOpen = () => {
+        const idx = parseInt(slide.dataset.idx, 10) || 0;
+        openLightbox(idx);
+      };
+      slide.addEventListener('click', handleOpen);
+      slide.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleOpen();
+        }
+      });
+      slide.addEventListener('contextmenu', e => e.preventDefault());
+      slide.addEventListener('dragstart', e => e.preventDefault());
+
+      const img = slide.querySelector('img');
+      if (img) {
+        img.onerror = function() {
+          this.onerror = null;
+          this.srcset = '';
+          this.src = '/assets/placeholder-property.jpg';
+        };
+      }
+    });
+
+    setupVerticalScrollObserver(verticalTrack, photos.length);
+  }
+
+  if (mobileCount) mobileCount.innerHTML = `<i class="fas fa-camera" style="font-size:11px;opacity:0.85"></i> 1 / ${photos.length}`;
+  prevBtn?.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
+  nextBtn?.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
+
+  // Touch swipe on mosaic (mobile desktop fallback) — velocity-aware
   let touchX = 0, touchT = 0;
-  mosaicMain.addEventListener('touchstart', e => {
-    touchX = e.touches[0].clientX;
-    touchT = Date.now();
-  }, { passive: true });
-  mosaicMain.addEventListener('touchend', e => {
-    const diff = touchX - e.changedTouches[0].clientX;
-    const dt   = Date.now() - touchT;
-    const vel  = Math.abs(diff) / dt; // px/ms
-    if (Math.abs(diff) > 30 || vel > 0.3) {
-      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
-    }
-  }, { passive: true });
+  if (mosaicMain) {
+    mosaicMain.addEventListener('touchstart', e => {
+      touchX = e.touches[0].clientX;
+      touchT = Date.now();
+    }, { passive: true });
+    mosaicMain.addEventListener('touchend', e => {
+      const diff = touchX - e.changedTouches[0].clientX;
+      const dt   = Date.now() - touchT;
+      const vel  = Math.abs(diff) / dt; // px/ms
+      if (Math.abs(diff) > 30 || vel > 0.3) {
+        showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
+      }
+    }, { passive: true });
+  }
 
   // Keyboard — lightbox arrows + escape + space + fullscreen
   document.addEventListener('keydown', e => {
@@ -1482,24 +1535,117 @@ function syncStripActive(idx) {
   }
 }
 
+let _verticalObserver = null;
+function setupVerticalScrollObserver(track, total) {
+  if (!track || total === 0) return;
+  const mobileCount = document.getElementById('mosaicMobileCount');
+
+  const updateCount = (idx) => {
+    photoIndex = idx;
+    if (mobileCount) {
+      mobileCount.innerHTML = `<i class="fas fa-camera" style="font-size:11px;opacity:0.85"></i> ${idx + 1} / ${total}`;
+    }
+  };
+
+  updateCount(0);
+
+  if (_verticalObserver) {
+    _verticalObserver.disconnect();
+    _verticalObserver = null;
+  }
+
+  if ('IntersectionObserver' in window) {
+    _verticalObserver = new IntersectionObserver((entries) => {
+      let maxRatio = 0;
+      let targetIdx = -1;
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          const idx = parseInt(entry.target.dataset.idx, 10);
+          if (!isNaN(idx)) targetIdx = idx;
+        }
+      });
+      if (targetIdx !== -1 && targetIdx !== photoIndex) {
+        updateCount(targetIdx);
+        syncStripActive(targetIdx);
+      }
+    }, {
+      root: track,
+      threshold: [0.5, 0.7, 0.9]
+    });
+
+    track.querySelectorAll('.mosaic-vertical-slide').forEach(slide => {
+      _verticalObserver.observe(slide);
+    });
+  }
+
+  // Active scroll position listener fallback
+  let ticking = false;
+  track.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        ticking = false;
+        const slides = track.querySelectorAll('.mosaic-vertical-slide');
+        if (!slides.length) return;
+        const trackTop = track.getBoundingClientRect().top;
+        const trackHeight = track.clientHeight;
+        const centerY = trackTop + trackHeight / 2;
+
+        let closestIdx = 0;
+        let minDiff = Infinity;
+
+        slides.forEach((slide, idx) => {
+          const rect = slide.getBoundingClientRect();
+          const slideCenter = rect.top + rect.height / 2;
+          const diff = Math.abs(slideCenter - centerY);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+
+        if (closestIdx !== photoIndex) {
+          updateCount(closestIdx);
+          syncStripActive(closestIdx);
+        }
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+}
+
 function showPhoto(idx) {
   photoIndex = idx;
   const mainImg = document.getElementById('mosaicMainImg');
-  mainImg.style.opacity = '0';
-  mainImg.style.transition = 'opacity 150ms';
-  setTimeout(() => {
-    const curUrl = allPhotos[idx];
-    mainImg.src = CONFIG.img(curUrl, 'gallery');
-    if (CONFIG.IMAGEKIT_URL && curUrl && curUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
-      mainImg.srcset = `${CONFIG.img(curUrl, 'card')} 600w, ${CONFIG.img(curUrl, 'gallery')} 1200w, ${CONFIG.img(curUrl, 'gallery_2x')} 2400w`;
-    } else {
-      mainImg.srcset = '';
-    }
-    mainImg.alt    = `Property photo ${idx + 1}`;
-    mainImg.style.opacity = '1';
-  }, 150);
+  if (mainImg) {
+    mainImg.style.opacity = '0';
+    mainImg.style.transition = 'opacity 150ms';
+    setTimeout(() => {
+      const curUrl = allPhotos[idx];
+      mainImg.src = CONFIG.img(curUrl, 'gallery');
+      if (CONFIG.IMAGEKIT_URL && curUrl && curUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
+        mainImg.srcset = `${CONFIG.img(curUrl, 'card')} 600w, ${CONFIG.img(curUrl, 'gallery')} 1200w, ${CONFIG.img(curUrl, 'gallery_2x')} 2400w`;
+      } else {
+        mainImg.srcset = '';
+      }
+      mainImg.alt    = `Property photo ${idx + 1}`;
+      mainImg.style.opacity = '1';
+    }, 150);
+  }
   const mobileCount = document.getElementById('mosaicMobileCount');
-  if (mobileCount) mobileCount.textContent = `${idx + 1} / ${allPhotos.length}`;
+  if (mobileCount) {
+    mobileCount.innerHTML = `<i class="fas fa-camera" style="font-size:11px;opacity:0.85"></i> ${idx + 1} / ${allPhotos.length}`;
+  }
+
+  // Scroll mobile vertical track if active
+  const track = document.getElementById('mosaicVerticalTrack');
+  if (track && window.innerWidth <= 900) {
+    const targetSlide = track.querySelector(`.mosaic-vertical-slide[data-idx="${idx}"]`);
+    if (targetSlide) {
+      targetSlide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   syncStripActive(idx);
 }
 
@@ -1565,6 +1711,8 @@ function closeLightbox() {
   document.removeEventListener('keydown', _lbFocusTrap);
   if (_lbOpener && typeof _lbOpener.focus === 'function') _lbOpener.focus();
   _lbOpener = null;
+  // Sync the current photo to the main image and mobile vertical track
+  showPhoto(photoIndex);
 }
 
 let _lbViewMode = 'stage'; // 'stage' | 'grid'
