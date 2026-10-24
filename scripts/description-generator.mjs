@@ -70,6 +70,28 @@ export function extractMinedFacts(rawDescription = '', structuredData = {}) {
 export function stripProhibitedContent(text = '') {
   if (!text) return '';
   let cleaned = text;
+  // Requirements & Qualifications block and individual clauses
+  cleaned = cleaned.replace(/\b(?:requirements\s*&\s*qualifications|qualifications\s*&\s*requirements)\b:?/gi, '');
+  cleaned = cleaned.replace(/no\s+corporate\s+leases\s+(allowed\s+)?(or\s+)?airbnb[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/credit\s+score\s+must\s+be\s+a\s+minimum[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/income\s+must\s+exceed[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/no\s+evictions\s+or\s+broken\s+leases[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/no\s+criminal\s+history[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/application\s+pending\s*-\s*waiting\s+list[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/photos\s+are\s+stock\s+images[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/pictures\s+are\s+for\s+marketing\s+purposes[^.\n]*/gi, '');
+
+  // Scam & fraud disclaimers
+  cleaned = cleaned.replace(/\b(?:beware|warning|alert|notice|protect yourself)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?)[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/we\s+(do\s+not|don['']t|never)\s+(post|list|advertise)\s+on[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/\b(?:craigslist|facebook\s+marketplace|tiktok|offerup)[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/\bscam(?:s|mer|mers)?\b[^.\n]*/gi, '');
+
+  // Third-party payment methods
+  cleaned = cleaned.replace(/\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|wire\s*transfer|western\s*union|money\s*order)[^.\n]*/gi, '');
+  cleaned = cleaned.replace(/never\s+wire\s+money[^.\n]*/gi, '');
+
+  // Contact info, URLs, portals
   cleaned = cleaned.replace(/(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '');
   cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
   cleaned = cleaned.replace(/https?:\/\/\S+/gi, '');
@@ -77,19 +99,30 @@ export function stripProhibitedContent(text = '') {
   cleaned = cleaned.replace(/(call|text|contact|reach out to)\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)?[^.\n]*/gi, '');
   cleaned = cleaned.replace(/schedule\s+(a\s+)?(showing|tour|viewing)[^.\n]*/gi, '');
   cleaned = cleaned.replace(/open\s+house[^.\n]*/gi, '');
+
+  // Security deposit
   cleaned = cleaned.replace(/(security\s+)?deposit\s*(is|of|amount)?\s*:?\s*\$?\s*[\d,]+[^.\n]*/gi, '');
   cleaned = cleaned.replace(/\$?\s*[\d,]+\s*(security\s+)?deposit[^.\n]*/gi, '');
   cleaned = cleaned.replace(/deposit\s+free[^.\n]*/gi, '');
+
+  // Lease duration
   cleaned = cleaned.replace(/\b\d+[- ]month(s)?\s+lease\b[^.\n]*/gi, '');
   cleaned = cleaned.replace(/\b\d+[- ]year(s)?\s+lease\b[^.\n]*/gi, '');
   cleaned = cleaned.replace(/lease\s+(duration|term|length|period)[^.\n]*/gi, '');
+
+  // Move-in / Availability
   cleaned = cleaned.replace(/available\s+(now|immediately|for\s+rent|on\s+[A-Za-z0-9/,-]+)[^.\n]*/gi, '');
   cleaned = cleaned.replace(/move[- ]in\s*(ready|date|special)?[^.\n]*/gi, '');
   cleaned = cleaned.replace(/ready\s+for\s+move[- ]in[^.\n]*/gi, '');
+
+  // Smoking
   cleaned = cleaned.replace(/no\s+smoking[^.\n]*/gi, '');
   cleaned = cleaned.replace(/smoking\s+(is\s+)?(prohibited|not\s+allowed|policy)[^.\n]*/gi, '');
+
+  // Application fee variations ($0, free, waived)
   cleaned = cleaned.replace(/(no|\$0|zero|free)\s+application\s+fee[^.\n]*/gi, '');
   cleaned = cleaned.replace(/application\s+fee\s*(is\s*)?(waived|\$0|free)[^.\n]*/gi, '');
+
   return cleaned.replace(/\s{2,}/g, ' ').trim();
 }
 
@@ -173,6 +206,15 @@ export function lintDescription(description = '', prop = {}) {
   }
   if (/https?:\/\//i.test(description)) {
     errors.push('CRITICAL: Description contains external URL. URLs must be stripped.');
+  }
+  if (/requirements\s*&\s*qualifications|no\s+corporate\s+leases|credit\s+score\s+must\s+be\s+a\s+minimum|income\s+must\s+exceed|no\s+evictions\s+or\s+broken\s+leases|no\s+criminal\s+history|pictures\s+are\s+for\s+marketing\s+purposes/i.test(description)) {
+    errors.push('CRITICAL: Description contains prohibited qualifications/requirements text.');
+  }
+  if (/beware\s*(?:of)?\s*scam|scammers?|we\s+do\s+not\s+(?:post|list)\s+on\s+craigslist|facebook\s+marketplace/i.test(description)) {
+    errors.push('CRITICAL: Description contains scam or social media listing warnings.');
+  }
+  if (/cash\s*app|cashapp|zelle|paypal|venmo|wire\s*transfer/i.test(description)) {
+    errors.push('CRITICAL: Description mentions prohibited third-party payment methods.');
   }
 
   return {

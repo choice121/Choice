@@ -140,6 +140,29 @@ _BOILERPLATE_PATTERNS = [
     r"[Cc]redit check required[^.]*\.",
     r"All applicants must[^.]*\.",
     r"We (?:do not|don['']t) accept[^.]*applications[^.]*\.",
+    # ── Prohibited Requirements & Qualifications block and clauses ─────────
+    r"(?:REQUIREMENTS\s*&\s*QUALIFICATIONS|QUALIFICATIONS\s*&\s*REQUIREMENTS|QUALIFICATIONS|REQUIREMENTS)\s*[:.]?",
+    r"No corporate leases allowed or AIRBNB[^.!?\n]*[.!?]?",
+    r"Credit score must be a minimum of \d+[^.!?\n]*[.!?]?",
+    r"Income must exceed [\d.]+ times the monthly rent to qualify[^.!?\n]*[.!?]?",
+    r"No evictions or broken leases on your rental history[^.!?\n]*[.!?]?",
+    r"No criminal history ever[^.!?\n]*[.!?]?",
+    r"Application pending\s*-\s*Waiting list options are available at present[^.!?\n]*[.!?]?",
+    r"Photos are stock images provided,?\s*video tour of actual unit available upon request[^.!?\n]*[.!?]?",
+    r"Pictures are for marketing purposes only[^.!?\n]*[.!?]?",
+    r"NO VOUCHERS ACCEPTED[^.!?\n]*[.!?]?",
+    r"All information provided is deemed reliable however is not guaranteed[^.!?\n]*[.!?]?",
+    # ── Scam / fraud warnings and social media / classified ads disclaimers ──
+    r"(?:beware|warning|alert|notice|protect yourself|caution)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?|fraudulent)[^.!?\n]*[.!?]?",
+    r"[^.!?\n]*\b(?:scammers?|fraudsters?|scam\s+alert|scam\s+warning)\b[^.!?\n]*[.!?]?",
+    r"(?:we\s+)?(?:do not|don['']t|never)\s+(?:advertise|post|list|solicit)\s+(?:on\s+)?[^.!?\n]*(?:craigslist|facebook|marketplace|tiktok|offerup|social media)[^.!?\n]*[.!?]?",
+    r"[^.!?\n]*\b(?:craigslist|facebook marketplace|tiktok|offerup)\b[^.!?\n]*[.!?]?",
+    r"(?:do not|never)\s+wire\s+(?:money|funds)[^.!?\n]*[.!?]?",
+    # ── Third-party payment methods ──────────────────────────────────────────
+    r"[^.!?\n]*\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|google\s*pay|wire\s*transfer|western\s*union|money\s*order)\b[^.!?\n]*[.!?]?",
+    # ── Free application / non-$50 fee language ─────────────────────────────
+    r"[^.!?\n]*\b(?:free|no|\$0|zero|waived|complimentary)\s+(?:application|app)\s+fee\b[^.!?\n]*[.!?]?",
+    r"[^.!?\n]*\bapplication\s+fee\s+(?:is\s+)?(?:waived|\$0|zero|free|none|complimentary)\b[^.!?\n]*[.!?]?",
     # Separator lines
     r"-{8,}",
     r"={8,}",
@@ -610,6 +633,39 @@ def validate_for_publish(record, transferred_photo_count=None):
         re.IGNORECASE)
     if _AVAIL_CHECK.search(desc):
         failures.append("Description contains availability date or move-in language")
+
+    # 9. Description must not contain prohibited qualifications or screening clauses
+    _QUAL_CHECK = re.compile(
+        r"requirements\s*&\s*qualifications"
+        r"|no\s+corporate\s+leases"
+        r"|airbnb"
+        r"|credit\s+score\s+must\s+be\s+a\s+minimum"
+        r"|income\s+must\s+exceed"
+        r"|no\s+evictions\s+or\s+broken\s+leases"
+        r"|no\s+criminal\s+history"
+        r"|application\s+pending\s*-\s*waiting\s+list"
+        r"|photos\s+are\s+stock\s+images"
+        r"|pictures\s+are\s+for\s+marketing\s+purposes",
+        re.IGNORECASE)
+    if _QUAL_CHECK.search(desc):
+        failures.append("Description contains prohibited requirements & qualifications language")
+
+    # 10. Description must not contain scam/fraud warnings or social media disclaimers
+    _SCAM_CHECK = re.compile(
+        r"\b(?:scams?|scammers?|fraud)\b"
+        r"|we\s+(?:do\s+not|don['']t|never)\s+(?:advertise|post|list)\s+on"
+        r"|\b(?:craigslist|facebook\s+marketplace|tiktok|offerup)\b"
+        r"|never\s+wire\s+money",
+        re.IGNORECASE)
+    if _SCAM_CHECK.search(desc):
+        failures.append("Description contains scam/fraud warning or social media disclaimer")
+
+    # 11. Description must not contain third-party payment methods
+    _PAYMENT_CHECK = re.compile(
+        r"\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|wire\s*transfer|western\s*union|money\s*order)\b",
+        re.IGNORECASE)
+    if _PAYMENT_CHECK.search(desc):
+        failures.append("Description references third-party payment methods")
 
     return (len(failures) == 0, failures)
 
@@ -1902,23 +1958,29 @@ import hashlib
 import json as _json
 import os
 
-ENRICHMENT_RULESET_VERSION = "v1.0.0"
+ENRICHMENT_RULESET_VERSION = "v1.1.0"
 
-QUALIFICATIONS_APPEND = """
-
-REQUIREMENTS & QUALIFICATIONS:
-No corporate leases allowed or AIRBNB. Credit score must be a minimum of 575. Income must exceed 3.0 times the monthly rent to qualify. No evictions or broken leases on your rental history. No criminal history ever. Application pending - Waiting list options are available at present. Photos are stock images provided, video tour of actual unit available upon request. Pictures are for marketing purposes only."""
-
-# Prohibited qualification fragments to strip if present
+# Prohibited qualification fragments, scam warnings, social media ads warnings, and payment methods to strip
 _QUAL_PROHIBITED = [
-    r"No corporate leases allowed or AIRBNB\.?",
-    r"Credit score must be a minimum of 575\.?",
-    r"Income must exceed 3\.0 times the monthly rent to qualify\.?",
-    r"No evictions or broken leases on your rental history\.?",
-    r"No criminal history ever\.?",
-    r"Application pending - Waiting list options are available at present\.?",
-    r"Photos are stock images provided, video tour of actual unit available upon request\.?",
-    r"Pictures are for marketing purposes only\.?"
+    r"(?i)REQUIREMENTS\s*&\s*QUALIFICATIONS\s*:?",
+    r"(?i)No corporate leases allowed or AIRBNB\.?",
+    r"(?i)Credit score must be a minimum of \d+\.?",
+    r"(?i)Income must exceed [\d.]+ times the monthly rent to qualify\.?",
+    r"(?i)No evictions or broken leases on your rental history\.?",
+    r"(?i)No criminal history ever\.?",
+    r"(?i)Application pending\s*-\s*Waiting list options are available at present\.?",
+    r"(?i)Photos are stock images provided,?\s*video tour of actual unit available upon request\.?",
+    r"(?i)Pictures are for marketing purposes only\.?",
+    r"(?i)NO VOUCHERS ACCEPTED\.?",
+    r"(?i)All information provided is deemed reliable however is not guaranteed[^.!?\n]*[.!?]?",
+    r"(?i)(?:beware|warning|alert|notice|protect yourself|caution)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?|fraudulent)[^.!?\n]*[.!?]?",
+    r"(?i)[^.!?\n]*\b(?:scammers?|fraudsters?|scam\s+alert|scam\s+warning)\b[^.!?\n]*[.!?]?",
+    r"(?i)(?:we\s+)?(?:do not|don['']t|never)\s+(?:advertise|post|list|solicit)\s+(?:on\s+)?[^.!?\n]*(?:craigslist|facebook|marketplace|tiktok|offerup|social media)[^.!?\n]*[.!?]?",
+    r"(?i)[^.!?\n]*\b(?:craigslist|facebook marketplace|tiktok|offerup)\b[^.!?\n]*[.!?]?",
+    r"(?i)(?:do not|never)\s+wire\s+(?:money|funds)[^.!?\n]*[.!?]?",
+    r"(?i)[^.!?\n]*\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|google\s*pay|wire\s*transfer|western\s*union|money\s*order)\b[^.!?\n]*[.!?]?",
+    r"(?i)[^.!?\n]*\b(?:free|no|\$0|zero|waived|complimentary)\s+(?:application|app)\s+fee\b[^.!?\n]*[.!?]?",
+    r"(?i)[^.!?\n]*\bapplication\s+fee\s+(?:is\s+)?(?:waived|\$0|zero|free|none|complimentary)\b[^.!?\n]*[.!?]?",
 ]
 
 # Known portals/domains to detect for external redirects
@@ -2303,8 +2365,6 @@ def apply_enrichment_pipeline_contextual(records, verbose=False, enable_ai=False
                 rec['enrichment_status'] = meta.get('status', 'clean')
                 rec['needs_review'] = meta.get('needs_review', False)
                 rec['enrichment_version'] = ENRICHMENT_RULESET_VERSION
-        if rec.get('description') and 'REQUIREMENTS & QUALIFICATIONS' not in rec['description']:
-            rec['description'] = rec['description'].rstrip() + QUALIFICATIONS_APPEND
                 rec['last_enriched_hash'] = meta.get('cleaned_hash')
                 rec['enriched_at'] = meta.get('enriched_at')
                 if verbose:

@@ -51,6 +51,9 @@ During description rewriting, surgically remove:
 5. **Lease Terms & Durations**: Forbidden in text and UI (*"12-month lease required"*, *"minimum 1-year"*).
 6. **Available / Move-In Dates**: Forbidden in text and UI (*"available immediately"*, *"move-in ready"*, *"ready for move-in"*).
 7. **Free or Non-$50 Application Fees**: Descriptions must never state or imply $0 or free application. Fee is strictly $50.
+8. **Requirements & Qualifications**: Strictly forbidden in text (*"REQUIREMENTS & QUALIFICATIONS"*, *"no corporate leases or Airbnb"*, minimum credit score requirements, 3x income multiples, eviction/broken lease disclaimers, criminal history clauses, stock photo disclaimers, *"pictures are for marketing purposes only"*).
+9. **Scam & Fraud Disclaimers**: Strictly forbidden in text (*"beware of scams"*, *"protect yourself from fraud"*, *"we do not post on Facebook Marketplace, TikTok, Craigslist, OfferUp"*, *"never wire money"*).
+10. **Third-Party Payment Services**: Strictly forbidden in text (*"Cash App"*, *"Zelle"*, *"PayPal"*, *"Venmo"*, *"Apple Pay"*, wire transfers, money orders).
 
 ---
 

@@ -45,6 +45,9 @@ Every property across the database, pipeline, and public site must adhere to the
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and descriptions (`lease_terms: null`, `minimum_lease_months: null`). Never display lease terms anywhere.
 - **No Available Date / Move-In Display or Tables**: Available dates, availability tables ("Available From"), move-in dates, and move-in status are completely removed from all property pages, overview cards, sidebar tables, and descriptions (`strip_availability_from_description`). Never display available dates or move-in timelines.
 - **No Smoking Policy**: Smoking policies and smoking tabs are removed from property details pages. Never display smoking policies on property pages.
+- **Strictly Prohibited Requirements & Qualifications**: "REQUIREMENTS & QUALIFICATIONS" and all related qualification disclaimers (e.g., "No corporate leases allowed or AIRBNB", "Credit score must be a minimum of 575", "Income must exceed 3.0 times", "No evictions or broken leases", "No criminal history ever", "Application pending - Waiting list options", "Photos are stock images", "Pictures are for marketing purposes only") are **STRICTLY PROHIBITED** and must be stripped from all descriptions. Never append or include them.
+- **Strictly Prohibited Scam/Fraud & Social Platform Warnings**: Any warnings regarding scams, fraud alerts ("beware of scams", "protect yourself from fraud"), and social/classified platform disclaimers ("we do not post on Facebook, Marketplace, TikTok, Craigslist, OfferUp") are **STRICTLY PROHIBITED** and must be stripped during enrichment.
+- **Strictly Prohibited Third-Party Payment Methods**: Any mention of peer-to-peer or third-party payment methods (Cash App, Zelle, PayPal, Venmo, Apple Pay, wire transfers, Western Union, money orders) is **STRICTLY PROHIBITED** in descriptions and must be completely removed.
 - **Third-Party Sanitization**: Strip all broker contacts, agent phone numbers, MLS cross-links, portal URLs, external showing links, and tour/showing language. Replace management references with Choice Properties.
 
 ---
@@ -137,7 +140,7 @@ Every property follows this complete lifecycle:
 ## Mandatory Pre-Publishing Verification Checklist
 Before publishing ANY property to the live site or creating a magic link:
 
-1. **Qualifications Check**: Every description MUST contain "REQUIREMENTS & QUALIFICATIONS" section with all required text (no corporate leases/AIRBNB, min 575 credit, 3.0x income, no evictions/broken leases, no criminal history, application pending/waitlist, stock photos/video tour disclaimer, pictures for marketing purposes only).
+1. **Strictly Prohibited Content Verification**: Every description MUST NOT contain "REQUIREMENTS & QUALIFICATIONS" or any sub-clauses (no corporate leases, credit score requirements, income multiples, evictions/broken leases clauses, criminal history clauses, stock photo disclaimers), NO scam/fraud warnings ("beware of scams", "we don't post on Craigslist/Facebook/TikTok"), and NO third-party payment methods (Cash App, Zelle, PayPal, Venmo, wire transfers).
 2. **Application Fee**: Must be exactly $50 in description (and structured field `application_fee: 50`).
 3. **Prohibited Content**: No security deposits, lease terms/durations, available dates/move-in dates, smoking policies, pet policies, broker/agent contacts, external portal links.
 4. **Photos**: Must have photos present (preferably from source). For private placement, photos must be included.
@@ -145,4 +148,4 @@ Before publishing ANY property to the live site or creating a magic link:
 6. **Source Authenticity**: Use original description as base; only strip prohibited content, never invent amenities/features.
 7. **Manual Verification**: AI must read the final description and confirm all checklist items before calling `pipeline_publish`. If any item fails, fix it before publishing.
 
-The enrichment pipeline automatically appends qualifications, but manual verification is REQUIRED as a final safety check.
+The enrichment pipeline automatically strips all prohibited content, and manual verification is REQUIRED as a final safety check.
