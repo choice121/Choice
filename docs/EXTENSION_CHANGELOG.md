@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v31.0.1] - 2026-10-25
+### Zillow Multi-Unit Apartment Page Detection
+- **Recognize Zillow Building Pages**: Added support for Zillow `/apartments/{slug}/{id}` detail URLs that omit the `_zpid` suffix, allowing the importer widget to appear on multi-unit building listings.
+- **Starting Rent Coverage**: Added regression coverage confirming a Zillow `$1,450+` price is imported as the numeric starting rent while preserving the building's unit count.
+- **Synchronized Extension Packages**: Rebuilt Chromium and Orion packages and the shared extractor variants as v31.0.1.
+
+---
+
 ## [v28.0.6] - 2026-10-16 09:10 UTC
 ### One-Tap Mobile Pipeline Save
 - **Compact Property Bar**: On phones, the importer starts as a small address/rent bar with a one-tap Save button, avoiding the full floating panel over Zillow's listing content.

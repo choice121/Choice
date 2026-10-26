@@ -10,6 +10,7 @@ const cache = (p) => ({ props: { pageProps: { componentProps: { gdpClientCache: 
 
 // --- Fixtures ---
 const Z = 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75201/98765432_zpid/';
+const ZMULTI = 'https://www.zillow.com/apartments/the-magnolia/5XjKMn/';
 const ZD = doc(cache({ zpid: 98765432, address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' }, price: 1850, bedrooms: 3, bathrooms: 2, livingArea: 1450, yearBuilt: 1998, homeType: 'SINGLE_FAMILY', isPetFriendly: true, walkScore: 78, responsivePhotos: [{ mixedSources: { jpeg: [{ width: 1024, url: 'https://photos.zillowstatic.com/fp/1.jpg' }] } }], attributionInfo: { agentName: 'Jane Agent' }, resoFacts: { dateAvailable: '2026-09-01', securityDeposit: 1850, petsAllowed: true } }));
 
 const R = 'https://www.realtor.com/realestateandhomes-detail/456-Oak-Ave_Austin_TX_78701/M1012345678';
@@ -196,6 +197,9 @@ const CJD = {
 // --- Tests ---
 console.log('CP_Extractors tests\n');
 t('detect Zillow', () => assert.strictEqual(api.detect(Z).id, 'zillow'));
+t('detect Zillow multi-unit apartment detail URL without zpid suffix', () => {
+  assert.strictEqual(api.detect(ZMULTI).id, 'zillow');
+});
 t('detect Realtor', () => assert.strictEqual(api.detect(R).id, 'realtor'));
 t('detect Apartments', () => assert.strictEqual(api.detect(A).id, 'apartments'));
 t('detect Redfin', () => assert.strictEqual(api.detect(F).id, 'redfin'));
@@ -235,6 +239,19 @@ t('detect Invitation Homes', () => { assert.strictEqual(api.detect(IH).id, 'invi
 t('detect nested Invitation Homes route', () => { assert.strictEqual(api.detect(IH_NESTED).id, 'invitation_homes'); });
 t('detect live Invitation Homes route', () => { assert.strictEqual(api.detect(IH_LIVE).id, 'invitation_homes'); });
 t('Zillow minimal', () => { const d = doc(cache({ zpid: 111, address: { streetAddress: '1 Empty St', city: 'Nowhere', state: 'TX' }, price: 1000 })); const p = api.extractZillow(d, Z); assert.ok(p); assert.strictEqual(p.monthly_rent, 1000); assert.strictEqual(p.bedrooms, null); assert.strictEqual(p.security_deposit, null); });
+t('Zillow multi-unit starting rent with plus sign', () => {
+  const d = doc(cache({
+    zpid: 789,
+    address: { streetAddress: '500 Magnolia Ave', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: '$1,450+',
+    unitCount: 12,
+    homeType: 'APARTMENT',
+  }));
+  const p = api.extract(ZMULTI, d);
+  assert.ok(p);
+  assert.strictEqual(p.monthly_rent, 1450);
+  assert.strictEqual(p.total_units, 12);
+});
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
   const p = api.extractZillow(d, Z);

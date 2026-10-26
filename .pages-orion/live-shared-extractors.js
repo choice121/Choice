@@ -1777,7 +1777,9 @@
     },
     {
       id: 'zillow',
-      match: /zillow\.com\/apartments\/[^/]+\/[^/]+\/[a-z0-9]+/i,
+      // Zillow multi-unit building pages commonly use /apartments/{slug}/{id}
+      // and do not always include a `_zpid` suffix.
+      match: /zillow\.com\/apartments\/[^/?#]+\/[^/?#]+(?:\/|$)/i,
       fn: extractZillow
     },
     {
