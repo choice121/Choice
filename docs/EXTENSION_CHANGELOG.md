@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v31.0.3] - 2026-10-26
+### Zillow Apartment Lazy-Loaded Photo Capture
+- **Gallery Attribute Coverage**: Zillow DOM extraction now checks rendered and lazy-loaded image URLs in `src`, `data-src`, `data-lazy-src`, `data-original`, `srcset`, `data-srcset`, and background images.
+- **Photo-Only CDN Filtering**: Only Zillow CDN URLs under `/fp/` are accepted, avoiding logos and unrelated page assets in the listing gallery.
+- **Regression Coverage**: Added an 11-photo lazy-loading fixture and verified both Chrome and Orion show all photos; Orion save tests confirm all 11 source URLs are submitted.
+- **Synchronized Extension Packages**: Rebuilt shared extractor variants and Chromium and Orion packages as v31.0.3.
+
+---
+
 ## [v31.0.2] - 2026-10-26
 ### Zillow Starting-Rent Imports and Orion Apartment-Page Detection
 - **Consistent Zillow Route Recognition**: Orion now consults the shared extractor registry before applying its legacy URL patterns, so Zillow `/apartments/{slug}/{id}` building pages without a `_zpid` suffix receive the Save widget.

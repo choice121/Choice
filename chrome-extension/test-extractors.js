@@ -270,6 +270,45 @@ t('Zillow DOM rent range uses the starting rent', () => {
   const p = api.extractZillow(d, Z);
   assert.strictEqual(p.monthly_rent, 1500);
 });
+t('Zillow DOM extracts lazy-loaded gallery photos and ignores non-photo CDN assets', () => {
+  const photoUrls = Array.from({ length: 11 }, (_, index) =>
+    `https://photos.zillowstatic.com/fp/${String(index).padStart(16, '0')}-photo.jpg`);
+  const imageElements = photoUrls.map((url, index) => ({
+    currentSrc: '',
+    src: '',
+    getAttribute: (name) => {
+      if (name === 'data-src') return index % 2 === 0 ? url : null;
+      if (name === 'data-srcset') return index % 2 === 1 ? `${url} 1536w` : null;
+      return null;
+    },
+  }));
+  imageElements.push({
+    currentSrc: '',
+    src: '',
+    getAttribute: (name) => name === 'data-src'
+      ? 'https://www.zillowstatic.com/images/logo.png'
+      : null,
+  });
+
+  const d = doc(cache({
+    zpid: 789,
+    address: { streetAddress: '500 Magnolia Ave', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: '$1,450+',
+    responsivePhotos: [],
+  }));
+  d.querySelector = () => null;
+  d.querySelectorAll = (selector) => selector === 'script[type="application/ld+json"]'
+    ? []
+    : imageElements;
+  d.body = { innerText: '' };
+
+  const p = api.extractZillow(d, Z);
+  assert.strictEqual(p.monthly_rent, 1450);
+  assert.strictEqual(p.address, '500 Magnolia Ave');
+  const photos = JSON.parse(p.original_image_urls);
+  assert.strictEqual(photos.length, 11);
+  assert.ok(photos.every((url) => url.includes('/fp/')));
+});
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
   const p = api.extractZillow(d, Z);
