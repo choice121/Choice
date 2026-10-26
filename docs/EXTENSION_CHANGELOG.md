@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v31.0.4] - 2026-10-26
+### Zillow Apartment Building Extraction Recovery
+- **Preserve Rendered Listing Data**: Zillow NextData objects with empty address, rent, or photo fields no longer erase more complete values extracted from the visible page.
+- **Nested Building Cache Support**: Added bounded traversal of nested Zillow `gdpClientCache` payloads to locate building property records.
+- **Visible Building Details**: DOM extraction now recognizes full street addresses, labeled rent fields, additional image attributes, and stable building IDs from city/slug/id apartment routes.
+- **Regression Coverage**: Added a Paseo-shaped fixture and Orion mocked-save browser test confirming address, starting rent, building ID, and all 11 gallery URLs reach the save payload.
+
+---
+
 ## [v31.0.3] - 2026-10-26
 ### Zillow Apartment Lazy-Loaded Photo Capture
 - **Gallery Attribute Coverage**: Zillow DOM extraction now checks rendered and lazy-loaded image URLs in `src`, `data-src`, `data-lazy-src`, `data-original`, `srcset`, `data-srcset`, and background images.

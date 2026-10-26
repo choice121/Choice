@@ -56,6 +56,51 @@
     return node;
   }
 
+  function findZillowProperty(root) {
+    const stack = [{ value: root, depth: 0, key: '' }];
+    const seen = new Set();
+    let visited = 0;
+
+    while (stack.length && visited < 20000) {
+      const current = stack.pop();
+      let value = current.value;
+      if (typeof value === 'string' && /gdpClientCache/i.test(current.key)) {
+        try { value = JSON.parse(value); } catch (_) { continue; }
+      }
+      if (!value || typeof value !== 'object' || seen.has(value) || current.depth > 12) continue;
+      seen.add(value);
+      visited++;
+
+      if (value.zpid != null && (
+        value.address || value.streetAddress || value.price != null ||
+        value.bedrooms != null || value.homeType || value.responsivePhotos ||
+        value.photos || value.hugePhotos
+      )) return value;
+
+      for (const key of Object.keys(value)) {
+        const child = value[key];
+        if (child && typeof child === 'object') {
+          stack.push({ value: child, depth: current.depth + 1, key });
+        } else if (typeof child === 'string' && /gdpClientCache/i.test(key)) {
+          stack.push({ value: child, depth: current.depth + 1, key });
+        }
+      }
+    }
+    return null;
+  }
+
+  function parseZillowStreetAddress(text) {
+    if (!text || typeof text !== 'string') return null;
+    const match = text.match(/(?:^|[\n\r])\s*(\d{1,6}\s+[^,\n\r]{2,100}),\s*([^,\n\r]{2,60}),\s*([A-Z]{2})\s+(\d{5})(?:-\d{4})?\b/i);
+    if (!match) return null;
+    return {
+      street: match[1].trim(),
+      city: match[2].trim(),
+      state: match[3].toUpperCase(),
+      zip: match[4]
+    };
+  }
+
   // ── Value helpers ────────────────────────────────────────────
   function bestJpeg(ms) {
     const jpegs = (ms && ms.jpeg) || [];
@@ -375,6 +420,7 @@
         if (cp && cp.homeDetails && cp.homeDetails.zpid) prop = cp.homeDetails;
       } catch (_) {}
     }
+    if (!prop) prop = findZillowProperty(nd);
     if (!prop) return null;
 
     const rf   = prop.resoFacts || {};
@@ -757,19 +803,45 @@
       }
     }
 
+    const summaryText = doc.body ? doc.body.innerText : '';
+    if (!address || !city || !state || !zip) {
+      const parsedAddress = parseZillowStreetAddress(summaryText);
+      if (parsedAddress) {
+        address = parsedAddress.street;
+        city = parsedAddress.city;
+        state = parsedAddress.state;
+        zip = parsedAddress.zip;
+      }
+    }
+
     // 2. Price detection
     let price = null;
-    const priceEl = doc.querySelector([
+    const priceSelector = [
       'span[data-testid="price"]',
       '[data-testid="price"] span',
       'span[data-test="price"]',
       '.summary-container [data-testid="price"]',
       'span[class*="Price-c11n"]',
       '[data-test="bdp-price-range"]',
-      'span[data-testid="price-summary"]'
-    ].join(', '));
-    if (priceEl && priceEl.textContent) {
-      price = parseRent(priceEl.textContent);
+      'span[data-testid="price-summary"]',
+      '[data-testid*="rent"]',
+      '[data-test-id*="rent"]',
+      '[data-testid*="price"]',
+      '[data-test-id*="price"]',
+      '[class*="rent"]',
+      '[class*="price"]'
+    ].join(', ');
+    const priceEls = doc.querySelectorAll(priceSelector);
+    const priceCandidates = priceEls && priceEls.length
+      ? Array.from(priceEls)
+      : [doc.querySelector(priceSelector)].filter(Boolean);
+    for (const candidate of priceCandidates) {
+      const priceText = (candidate.textContent || '').trim();
+      const parsedPrice = parseRent(priceText);
+      if (parsedPrice >= 100 && !/\b(?:application|admin|deposit|special|discount|savings|concession)\b/i.test(priceText)) {
+        price = parsedPrice;
+        break;
+      }
     }
 
     // 3. Beds, Baths, Sqft detection
@@ -777,7 +849,6 @@
     let baths = null;
     let sqft = null;
 
-    const summaryText = doc.body ? doc.body.innerText : '';
     const bedMatch = summaryText.match(/(\d+)\s*(?:bd|bed|bedroom)/i);
     if (bedMatch) beds = parseInt(bedMatch[1], 10);
 
@@ -822,14 +893,19 @@
 
     // 4. Photos from rendered DOM
     const photos = [];
-    const imgEls = doc.querySelectorAll('img, picture source, [style*="background-image"]');
+    const imgEls = doc.querySelectorAll('img, picture source, source, [style*="background-image"], [data-photo-url], [data-image-url]');
     imgEls.forEach(el => {
-      const attributes = ['src', 'data-src', 'data-lazy-src', 'data-original', 'srcset', 'data-srcset'];
+      const attributes = ['src', 'data-src', 'data-lazy-src', 'data-original', 'srcset', 'data-srcset', 'data-photo-url', 'data-image-url'];
       const candidates = [el.currentSrc, el.src];
       attributes.forEach(name => {
         const value = el.getAttribute(name);
         if (value) candidates.push(value);
       });
+      if (el.attributes) {
+        Array.from(el.attributes).forEach(attribute => {
+          if (attribute && attribute.value) candidates.push(attribute.value);
+        });
+      }
       const style = el.getAttribute('style') || '';
       const backgroundMatch = style.match(/url\(['"]?(https?:\/\/[^'")]+)['"]?\)/i);
       if (backgroundMatch) candidates.push(backgroundMatch[1]);
@@ -859,7 +935,8 @@
     }
 
     const zpidMatch = (url.match(/(\d+)_zpid/i) || url.match(/\/b\/([^/]+)/i) || [])[1];
-    const sourceId = zpidMatch || String(Date.now());
+    const buildingIdMatch = url.match(/\/apartments\/(?:[^/?#]+\/){1,2}([^/?#]+)\/?(?:[?#]|$)/i);
+    const sourceId = zpidMatch || (buildingIdMatch && buildingIdMatch[1]) || String(Date.now());
 
     const rawDomDesc = (description || '') + ' ' + summaryText;
     const harvestedDom = extractFeaturesFromNarrative(rawDomDesc);
@@ -916,8 +993,16 @@
     const ld = extractFromJsonLd(doc, url, 'zillow');
     const ldPhotos = ld ? (JSON.parse(ld.original_image_urls || '[]')) : [];
 
-    // Merge best available attributes: NextData > DOM > JSON-LD
-    let merged = Object.assign({}, ld || {}, dom || {}, res || {});
+    // Prefer NextData > DOM > JSON-LD, but don't let empty NextData fields
+    // erase values that are present in the rendered building page.
+    let merged = basePayload('zillow', null, url);
+    [ld, dom, res].forEach(source => {
+      if (!source) return;
+      Object.keys(source).forEach(key => {
+        const value = source[key];
+        if (value !== null && value !== undefined && value !== '' && value !== '[]') merged[key] = value;
+      });
+    });
     if (!merged.address && !merged.monthly_rent) return null;
 
     // Ensure best photo collection is kept
