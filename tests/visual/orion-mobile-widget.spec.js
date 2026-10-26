@@ -109,7 +109,9 @@ test('Orion detects Zillow apartment pages without a zpid suffix and saves start
     contentType: 'text/html',
     body: `<!doctype html>
       <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-      <body><main>Zillow apartment building</main><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
+      <body><main>Zillow apartment building</main>${Array.from({ length: 11 }, (_, index) =>
+        `<img data-src="https://photos.zillowstatic.com/fp/${String(index).padStart(16, '0')}-photo.jpg">`
+      ).join('')}<script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
         zillowPageData('building-123', '500 Magnolia Ave', '$1,450+'))}</script></body></html>`,
   }));
 
@@ -150,12 +152,14 @@ test('Orion detects Zillow apartment pages without a zpid suffix and saves start
   await expect(saveButton).toBeAttached();
   await expect(compactSummary).toContainText('500 Magnolia Ave, Columbus, OH');
   await expect(compactSummary).toContainText('$1,450/mo');
+  await expect(page.locator('#cp-photos-chip')).toHaveText('📸 11 photos');
 
   await saveButton.click();
   await expect(page.locator('#cp-success-box')).toContainText('Saved to');
   expect(savedPayloads).toHaveLength(1);
   expect(savedPayloads[0].source_listing_id).toBe('building-123');
   expect(savedPayloads[0].monthly_rent).toBe(1450);
+  expect(JSON.parse(savedPayloads[0].original_image_urls)).toHaveLength(11);
 });
 
 test('Chrome importer appears on Zillow apartment pages without a zpid suffix', async ({ page }) => {
@@ -163,7 +167,9 @@ test('Chrome importer appears on Zillow apartment pages without a zpid suffix', 
     status: 200,
     contentType: 'text/html',
     body: `<!doctype html>
-      <html><body><main>Zillow apartment building</main>
+      <html><body><main>Zillow apartment building</main>${Array.from({ length: 11 }, (_, index) =>
+        `<img data-src="https://photos.zillowstatic.com/fp/${String(index).padStart(16, '0')}-photo.jpg">`
+      ).join('')}
       <script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
         zillowPageData('building-456', '500 Magnolia Ave', '$1,450+'))}</script></body></html>`,
   }));
@@ -175,4 +181,5 @@ test('Chrome importer appears on Zillow apartment pages without a zpid suffix', 
 
   await expect(page.locator('#cp-btn-save')).toBeAttached();
   await expect(page.locator('.cp-chip-price')).toContainText('$1,450/mo');
+  await expect(page.locator('.cp-chip-photos')).toHaveText('📸 11 photos');
 });

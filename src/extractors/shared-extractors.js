@@ -816,19 +816,33 @@
 
     // 4. Photos from rendered DOM
     const photos = [];
-    const imgEls = doc.querySelectorAll('img[src*="zillowstatic.com"], picture source[srcset*="zillowstatic.com"]');
+    const imgEls = doc.querySelectorAll('img, picture source, [style*="background-image"]');
     imgEls.forEach(el => {
-      let src = el.src || el.getAttribute('srcset') || el.getAttribute('data-src') || '';
-      if (src) {
-        // Pick high res source
-        if (src.includes(',')) {
-          const split = src.split(',');
-          src = split[split.length - 1].trim().split(' ')[0];
-        }
-        // Upgrade thumbnail to high-res
-        src = src.replace(/_[a-z0-9]+\.jpg$/i, '-uncropped_scaled_within_1536_1152.jpg');
-        photos.push(src);
-      }
+      const attributes = ['src', 'data-src', 'data-lazy-src', 'data-original', 'srcset', 'data-srcset'];
+      const candidates = [el.currentSrc, el.src];
+      attributes.forEach(name => {
+        const value = el.getAttribute(name);
+        if (value) candidates.push(value);
+      });
+      const style = el.getAttribute('style') || '';
+      const backgroundMatch = style.match(/url\(['"]?(https?:\/\/[^'")]+)['"]?\)/i);
+      if (backgroundMatch) candidates.push(backgroundMatch[1]);
+
+      candidates.forEach(candidate => {
+        if (!candidate || typeof candidate !== 'string') return;
+        const urls = candidate.match(/https?:\/\/[^\s,'")]+/gi) || [];
+        urls.forEach(rawUrl => {
+          const src = rawUrl.replace(/&amp;/g, '&');
+          if (!/^https?:\/\/(?:[^/]+\.)?zillowstatic\.com\/fp\//i.test(src)) return;
+          if (!photos.includes(src)) photos.push(src);
+        });
+      });
+    });
+
+    // Keep the Zillow CDN photo variants deduplicated and prefer the highest
+    // resolution URL when several gallery elements expose the same photo.
+    const normalizedPhotos = dedupZillowPhotos(photos).map(src => {
+      return src.replace(/_[a-z0-9]+\.jpg(?:\?.*)?$/i, '-uncropped_scaled_within_1536_1152.jpg');
     });
 
     // 5. Description
@@ -841,8 +855,6 @@
     const zpidMatch = (url.match(/(\d+)_zpid/i) || url.match(/\/b\/([^/]+)/i) || [])[1];
     const sourceId = zpidMatch || String(Date.now());
 
-    if (!address && !price) return null;
-
     const rawDomDesc = (description || '') + ' ' + summaryText;
     const harvestedDom = extractFeaturesFromNarrative(rawDomDesc);
     const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
@@ -851,7 +863,7 @@
 
     return basePayload('zillow', sourceId, url, {
       title: domTitle,
-      address: address || 'Zillow Property',
+      address: address || (price ? 'Zillow Property' : null),
       city: city || null,
       state: state || null,
       zip: zip || null,
@@ -878,7 +890,7 @@
       has_central_air: harvestedDom.has_central_air ?? null,
       description,
       original_description: description || null,
-      original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
+      original_image_urls: JSON.stringify(dedupZillowPhotos(normalizedPhotos).slice(0, 50)),
       _import: 'zillow-dom-deep-scanner'
     });
   }
