@@ -11,6 +11,7 @@ const cache = (p) => ({ props: { pageProps: { componentProps: { gdpClientCache: 
 // --- Fixtures ---
 const Z = 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75201/98765432_zpid/';
 const ZMULTI = 'https://www.zillow.com/apartments/the-magnolia/5XjKMn/';
+const ZPASEO = 'https://www.zillow.com/apartments/dallas-tx/paseo-apartments/5YLsV5/';
 const ZD = doc(cache({ zpid: 98765432, address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' }, price: 1850, bedrooms: 3, bathrooms: 2, livingArea: 1450, yearBuilt: 1998, homeType: 'SINGLE_FAMILY', isPetFriendly: true, walkScore: 78, responsivePhotos: [{ mixedSources: { jpeg: [{ width: 1024, url: 'https://photos.zillowstatic.com/fp/1.jpg' }] } }], attributionInfo: { agentName: 'Jane Agent' }, resoFacts: { dateAvailable: '2026-09-01', securityDeposit: 1850, petsAllowed: true } }));
 
 const R = 'https://www.realtor.com/realestateandhomes-detail/456-Oak-Ave_Austin_TX_78701/M1012345678';
@@ -308,6 +309,69 @@ t('Zillow DOM extracts lazy-loaded gallery photos and ignores non-photo CDN asse
   const photos = JSON.parse(p.original_image_urls);
   assert.strictEqual(photos.length, 11);
   assert.ok(photos.every((url) => url.includes('/fp/')));
+});
+t('Zillow building page extracts nested cache data, visible address, rent, and gallery photos', () => {
+  const galleryUrls = Array.from({ length: 11 }, (_, index) =>
+    `https://photos.zillowstatic.com/fp/${String(index + 1).padStart(16, '0')}-gallery.jpg`);
+  const images = galleryUrls.map((url) => ({
+    currentSrc: url,
+    src: url,
+    getAttribute: () => null,
+  }));
+  const priceElements = [
+    { textContent: 'Special offer: $0 App Fee $0 Admin Fee' },
+    { textContent: 'Starting at $1,450+ per month' },
+  ];
+  const paseoDoc = doc({
+    props: {
+      pageProps: {
+        initialState: {
+          clientCache: {
+            gdpClientCache: JSON.stringify({
+              building: {
+                data: {
+                  property: {
+                    zpid: 461916207,
+                    address: null,
+                    responsivePhotos: [],
+                  },
+                },
+              },
+            }),
+          },
+        },
+      },
+    },
+  });
+  paseoDoc.title = 'Paseo Apartments - Zillow';
+  paseoDoc.body = {
+    innerText: 'Paseo Apartments\n4836 Sunnyvale St, Dallas, TX 75216\nStarting at $1,450+ per month',
+  };
+  paseoDoc.querySelector = (selector) => selector.includes('h1')
+    ? { textContent: 'Paseo Apartments' }
+    : null;
+  paseoDoc.querySelectorAll = (selector) => {
+    if (selector.includes('application/ld+json')) return [];
+    if (selector.includes('data-testid*="rent"')) return priceElements;
+    if (selector.startsWith('img,')) return images;
+    return [];
+  };
+
+  const payload = api.extractZillow(paseoDoc, ZPASEO);
+  assert.ok(payload);
+  assert.strictEqual(payload.source_listing_id, '461916207');
+  assert.strictEqual(payload.address, '4836 Sunnyvale St');
+  assert.strictEqual(payload.city, 'Dallas');
+  assert.strictEqual(payload.state, 'TX');
+  assert.strictEqual(payload.zip, '75216');
+  assert.strictEqual(payload.monthly_rent, 1450);
+  assert.strictEqual(JSON.parse(payload.original_image_urls).length, 11);
+
+  paseoDoc.getElementById = () => null;
+  const domOnlyPayload = api.extractZillow(paseoDoc, ZPASEO);
+  assert.strictEqual(domOnlyPayload.source_listing_id, '5YLsV5');
+  assert.strictEqual(domOnlyPayload.address, '4836 Sunnyvale St');
+  assert.strictEqual(JSON.parse(domOnlyPayload.original_image_urls).length, 11);
 });
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
