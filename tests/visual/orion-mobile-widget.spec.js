@@ -102,3 +102,77 @@ test('Orion mobile widget appears without refresh and saves the current Zillow l
   expect(savedPayloads[0].address).toBe('200 Second St');
   expect(savedPayloads[0].monthly_rent).toBe(1750);
 });
+
+test('Orion detects Zillow apartment pages without a zpid suffix and saves starting rent', async ({ page }) => {
+  await page.route('https://www.zillow.com/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'text/html',
+    body: `<!doctype html>
+      <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+      <body><main>Zillow apartment building</main><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
+        zillowPageData('building-123', '500 Magnolia Ave', '$1,450+'))}</script></body></html>`,
+  }));
+
+  const savedPayloads = [];
+  await page.route('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import**', async (route) => {
+    const corsHeaders = {
+      'access-control-allow-origin': 'https://www.zillow.com',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-headers': 'content-type, x-import-secret',
+    };
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: corsHeaders });
+    }
+    if (route.request().method() === 'POST') {
+      savedPayloads.push(route.request().postDataJSON());
+      return route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, id: 'pipeline-building-id', title: 'Magnolia Apartments' }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      headers: corsHeaders,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, folders: [] }),
+    });
+  });
+
+  await page.goto('https://www.zillow.com/apartments/the-magnolia/building-123/');
+  await page.addScriptTag({ path: '.pages-orion/config.js' });
+  await page.addScriptTag({ path: '.pages-orion/shared-extractors.js' });
+  await page.addScriptTag({ path: '.pages-orion/live-content.js' });
+
+  const compactSummary = page.locator('#cp-mini-summary');
+  const saveButton = page.locator('#cp-btn-save');
+  await expect(saveButton).toBeAttached();
+  await expect(compactSummary).toContainText('500 Magnolia Ave, Columbus, OH');
+  await expect(compactSummary).toContainText('$1,450/mo');
+
+  await saveButton.click();
+  await expect(page.locator('#cp-success-box')).toContainText('Saved to');
+  expect(savedPayloads).toHaveLength(1);
+  expect(savedPayloads[0].source_listing_id).toBe('building-123');
+  expect(savedPayloads[0].monthly_rent).toBe(1450);
+});
+
+test('Chrome importer appears on Zillow apartment pages without a zpid suffix', async ({ page }) => {
+  await page.route('https://www.zillow.com/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'text/html',
+    body: `<!doctype html>
+      <html><body><main>Zillow apartment building</main>
+      <script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
+        zillowPageData('building-456', '500 Magnolia Ave', '$1,450+'))}</script></body></html>`,
+  }));
+
+  await page.goto('https://www.zillow.com/apartments/the-magnolia/building-456/');
+  await page.addScriptTag({ path: 'chrome-extension/config.js' });
+  await page.addScriptTag({ path: 'chrome-extension/shared-extractors.js' });
+  await page.addScriptTag({ path: 'chrome-extension/content.js' });
+
+  await expect(page.locator('#cp-btn-save')).toBeAttached();
+  await expect(page.locator('.cp-chip-price')).toContainText('$1,450/mo');
+});

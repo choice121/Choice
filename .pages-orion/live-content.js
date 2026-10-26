@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v31.0.1
+// Choice Properties — Live Content Script v31.0.2
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '31.0.1-live';
+  var VERSION  = '31.0.2-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -864,6 +864,9 @@
 
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
+    if (window.CP_Extractors && typeof window.CP_Extractors.detect === 'function') {
+      if (window.CP_Extractors.detect(url)) return true;
+    }
     return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
            /zillow\.com\/.*_zpid/i.test(url) ||
            /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
@@ -1697,7 +1700,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v31.0.1-live',
+        _import: 'browser-extension-v31.0.2-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

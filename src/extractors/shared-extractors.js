@@ -763,7 +763,7 @@
       'span[data-testid="price-summary"]'
     ].join(', '));
     if (priceEl && priceEl.textContent) {
-      price = parseInt(priceEl.textContent.replace(/[^0-9]/g, ''), 10) || null;
+      price = parseRent(priceEl.textContent);
     }
 
     // 3. Beds, Baths, Sqft detection

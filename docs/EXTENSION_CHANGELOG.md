@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v31.0.2] - 2026-10-26
+### Zillow Starting-Rent Imports and Orion Apartment-Page Detection
+- **Consistent Zillow Route Recognition**: Orion now consults the shared extractor registry before applying its legacy URL patterns, so Zillow `/apartments/{slug}/{id}` building pages without a `_zpid` suffix receive the Save widget.
+- **Safe DOM Rent Parsing**: Zillow's rendered price text now uses the shared rent parser. Starting prices such as `$1,450+` and ranges such as `$1,500–$2,000` resolve to the first displayed rent instead of concatenating all digits into an invalid amount.
+- **Regression Coverage**: Added extractor tests for DOM starting/range prices and browser tests for the Chrome and Orion widgets on Zillow apartment building URLs; Orion also verifies a successful mocked save.
+- **Synchronized Extension Packages**: Rebuilt the shared extractors, Chromium and Orion ZIP packages, and version metadata as v31.0.2.
+
+---
+
 ## [v31.0.1] - 2026-10-25
 ### Zillow Multi-Unit Apartment Page Detection
 - **Recognize Zillow Building Pages**: Added support for Zillow `/apartments/{slug}/{id}` detail URLs that omit the `_zpid` suffix, allowing the importer widget to appear on multi-unit building listings.
