@@ -252,6 +252,24 @@ t('Zillow multi-unit starting rent with plus sign', () => {
   assert.strictEqual(p.monthly_rent, 1450);
   assert.strictEqual(p.total_units, 12);
 });
+t('Zillow DOM starting rent with plus sign', () => {
+  const d = doc({});
+  d.querySelector = (selector) => selector.includes('data-testid="price"')
+    ? { textContent: '$1,500+' }
+    : null;
+  d.body = { innerText: '$1,500+ rent' };
+  const p = api.extractZillow(d, Z);
+  assert.strictEqual(p.monthly_rent, 1500);
+});
+t('Zillow DOM rent range uses the starting rent', () => {
+  const d = doc({});
+  d.querySelector = (selector) => selector.includes('data-testid="price"')
+    ? { textContent: '$1,500 – $2,000/mo' }
+    : null;
+  d.body = { innerText: '$1,500 – $2,000/mo rent' };
+  const p = api.extractZillow(d, Z);
+  assert.strictEqual(p.monthly_rent, 1500);
+});
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
   const p = api.extractZillow(d, Z);
