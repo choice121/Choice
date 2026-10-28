@@ -159,7 +159,7 @@
                         <div class="step-number">1</div>
                         <div class="step-content">
                             <strong data-i18n="paymentRequiredTitle">Application Fee</strong>
-                            <p data-i18n="paymentRequiredDesc">The fixed $50 application fee is due after submission. Choice Properties management will contact you with the next steps before review begins.</p>
+                            <p data-i18n="paymentRequiredDesc">The application fee total shown above is due after submission. Choice Properties management will contact you with the next steps before review begins.</p>
                         </div>
                     </div>
                     <div class="step-row">
@@ -230,7 +230,7 @@
                             <div class="explainer-icon"><i class="fas fa-phone-alt"></i></div>
                             <div class="explainer-content">
                                 <h4 data-i18n="step2PaymentArranged">2. Fee Coordination</h4>
-                                <p data-i18n="step2Desc">A representative contacts you to process the fee.</p>
+                                <p data-i18n="step2Desc">A representative contacts you to process the fee total shown on your application.</p>
                             </div>
                         </div>
                         <div class="explainer-arrow">→</div>
@@ -387,6 +387,7 @@
 
                 <div id="coApplicantSection" style="display: none;">
                     <h4 data-i18n="coApplicantInfo">Co-Applicant / Guarantor Information</h4>
+                    <p>The additional adult applicant or guarantor must provide their own information and personally authorize screening below.</p>
 
                     <!-- Role selection -->
                     <div class="form-group">
@@ -495,7 +496,7 @@
                     <div class="form-group">
                         <div class="custom-checkbox">
                             <input type="checkbox" id="coConsent" name="Co-Applicant Consent">
-                            <label for="coConsent" data-i18n="coConsentLabel">I authorize verification of the information provided for this additional person, including credit and background check.</label>
+                            <label for="coConsent" data-i18n="coConsentLabel">I am the additional adult applicant or guarantor and personally authorize verification of my information, including credit and background screening. I understand the fee is $50 for each adult applicant or guarantor being screened.</label>
                         </div>
                         <div class="error-message"></div>
                     </div>
@@ -853,7 +854,7 @@
                 <div class="payment-section-intro">
                     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:0.88rem;color:#166534;display:flex;align-items:flex-start;gap:8px;">
                         <i class="fas fa-lock-open" style="margin-top:2px;flex-shrink:0;"></i>
-                        <span><strong data-i18n="paymentNoCollection">No payment is collected via this form.</strong> <span data-i18n="paymentCoordinationNotice">Following submission, a coordinator will text you to provide the active payment-routing details. Direct coordination waives convenience surcharges; the $50 application fee still applies.</span></span>
+                        <span><strong data-i18n="paymentNoCollection">No payment is collected via this form.</strong> <span data-i18n="paymentCoordinationNotice">Following submission, a coordinator will contact you about the fee total shown on your application. The fee is $50 per adult being screened.</span></span>
                     </div>
                     <p data-i18n="paymentIntro">Tell us which payment services you use. When we contact you about the application fee, we'll reach out through the method you choose here.</p>
                     <div class="important">
@@ -1019,11 +1020,12 @@
 
                   <div class="fee-display">
                     <div class="fee-info">
-                        <h4 data-i18n="feeTitle">Application Fee: —</h4>
-                        <p data-i18n="feeDesc">The fixed $50 application fee is due after submission. Choice Properties management will contact you with next steps.</p>
-                    </div>
-                    <!-- [10B-20] Default hidden; JS (_readApplicationFee) fills correct value from URL param -->
-            <div class="fee-amount" style="display:none">—</div>
+                      <h4 id="applicationFeeTitle" data-i18n="feeTitle">Application Fee: —</h4>
+                      <p data-i18n="feeDesc">The fee is $50 for each adult being screened. Adult occupants who are not applying or being screened are not charged. The total is shown below before you submit.</p>
+                      <p id="applicationFeeBreakdown" aria-live="polite">1 adult applicant being screened × $50 = $50 total.</p>
+                  </div>
+                  <!-- [10B-20] Default hidden; JS (_readApplicationFee) fills correct value from URL param -->
+            <div class="fee-amount" id="applicationFeeAmount" style="display:none">—</div>
                 </div>
 
                 <div id="summaryContainer" class="summary-section">
@@ -1073,7 +1075,7 @@
 
                         <div class="custom-checkbox">
                             <input type="checkbox" id="feeAcknowledge" name="feeAcknowledge" value="on" required>
-                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I acknowledge that Choice Properties management reviews my application and that the fixed application fee is $50. Nothing is charged when I submit. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.</label>
+                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I understand that the application fee is $50 for each adult applicant or guarantor being screened, and that the total shown above is due after submission. Adult occupants who are not applying or being screened are not charged. Nothing is charged when I submit. If reapplying after a non-approval, I should contact management before payment to verify eligibility for the 30-day courtesy. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.</label>
                         </div>
 
                         <div class="custom-checkbox">
@@ -1088,7 +1090,7 @@
                     </div>
 
                     <input type="hidden" id="hiddenConsentTimestamp" name="Consent Timestamp" value="">
-                    <input type="hidden" id="hiddenConsentVersion" name="Consent Version" value="2.0">
+                    <input type="hidden" id="hiddenConsentVersion" name="Consent Version" value="2.1">
                     <input type="hidden" id="hiddenSmsConsent" name="SMS Consent" value="no">
                     <input type="hidden" id="hiddenTermsConsent" name="Terms Consent" value="no">
                     <div id="declarationError" class="error-message" style="display:none;margin-top:8px;padding:8px 12px;"></div>

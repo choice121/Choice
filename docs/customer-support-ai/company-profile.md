@@ -22,12 +22,12 @@ This document provides foundational knowledge about Choice Properties for the AI
 ### B. Co-Signers & Guarantors
 - **Policy**: Co-signers and guarantors are permitted and welcome across our participating properties.
 - **Who Needs One**: Applicants with emerging credit, non-traditional income, recent employment transitions, or students.
-- **How It Works**: Co-signers complete a standard application ($50 application fee) to verify identity, financial capacity, and income.
+- **How It Works**: Co-signers/guarantors who are individually screened pay the standard $50 per adult screened, subject to applicable law.
 
 ### C. Application Cost & Standards
-- **Application Fee**: Strictly $50 per adult applicant. Never $0, never free, never waived.
+- **Application Fee**: $50 per adult screened. State the total before submission; adult occupants who are not applying or being screened are not charged. Fees are subject to applicable law.
 - **Turnaround Time**: Standard underwriting review is completed within 24 to 72 hours.
-- **Multi-Property Courtesy (7-Day Rule)**: If an applicant is not approved for their initial home, their application remains valid for up to two additional participating properties within 7 days at zero additional application fee.
+- **Multi-Property Courtesy (30-Day Rule)**: After an initial paid application is not approved, the same screened adults may apply for up to two additional participating properties within 30 days without another application fee. A newly screened adult is subject to the standard fee. Management verifies and applies the fee waiver before payment; eligibility is not automatically detected.
 
 ### D. Security Deposit Terms
 - **Amount**: Exactly equal to one month's rent upon approval.

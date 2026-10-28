@@ -3,7 +3,10 @@
 This document serves as the single source of truth for business policies used by the AI Rental Inquiry Assistant and customer operations.
 
 ## 1. Core Financial Policies
-- **Application Fee**: Exactly **$50** per adult applicant / property.
+- **Application Fee**: **$50 per adult screened**. The applicant-facing form supports a primary applicant and one additional adult, and the total is $50 per screened adult.
+  - Do not charge adult occupants who are not applying or being screened.
+  - Show the total before submission; the server calculates and records the total.
+  - Fees remain subject to applicable law; do not describe the nationwide rule as legally approved.
   - Never state "$0 fee", "free application", or "fee is waived".
   - If the application fee policy is modified centrally, this document and `policies.json` are updated simultaneously.
 - **Security Deposit**: Exactly **1x monthly rent** in structured database records.
@@ -18,9 +21,11 @@ This document serves as the single source of truth for business policies used by
   - Must always be communicated as an **estimate**, never a guaranteed decision time.
   - Example phrasing: *"Our team typically reviews completed applications within 24 to 72 hours."*
 
-## 3. Additional Application Opportunities (7-Day Reapplication Rule)
+## 3. Additional Application Opportunities (30-Day Reapplication Rule)
 - If an applicant is not approved for their initial property choice, Choice Properties offers an extended evaluation window:
-  - The applicant may apply for up to **two additional properties within seven (7) days** without paying an additional application fee.
+  - After an initial paid application is not approved, the same screened adults may apply for up to **two additional properties within thirty (30) days** without another application fee, subject to the published policy and applicable law.
+  - A newly screened adult is subject to the standard $50 fee, subject to applicable law.
+  - Management must verify eligibility and apply the fee waiver before collecting payment; the system does not automatically identify qualifying reapplications.
   - Must be clearly explained when an applicant inquires about denial risk or backup options.
   - The assistant must never guarantee approval on subsequent applications.
 

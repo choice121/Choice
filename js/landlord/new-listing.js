@@ -80,9 +80,10 @@
 
   // App fee
   const appFeeInput = document.getElementById('appFee');
-  appFeeInput.value = '';
+  appFeeInput.value = '50';
+  appFeeInput.readOnly = true;
   document.getElementById('appFeeHint').textContent =
-    'Enter 0 if free to apply. This amount will be shown to applicants before they submit.';
+    'The application fee is $50 per adult being screened.';
 
   // Title counter
   document.getElementById('title').addEventListener('input', e => {
@@ -234,7 +235,7 @@
     if (s1.adminFee !== undefined)      document.getElementById('adminFee').value = s1.adminFee;
     if (s1.moveInSpecial) document.getElementById('moveInSpecial').value = s1.moveInSpecial;
     if (s1.availDate)    document.getElementById('availDate').value = s1.availDate;
-    if (s1.appFee !== undefined) document.getElementById('appFee').value = s1.appFee;
+    document.getElementById('appFee').value = '50';
     if (s1.parking)      document.getElementById('parking').value = s1.parking;
     if (s1.garageSpaces !== undefined) document.getElementById('garageSpaces').value = s1.garageSpaces;
     if (s1.parkingFee !== undefined)   document.getElementById('parkingFee').value = s1.parkingFee;

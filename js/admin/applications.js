@@ -113,7 +113,7 @@
         ${!isArchived && app.status!=='pending' ? `<button class="btn-act btn-pending" data-action="status" data-set="pending" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Reset</button>` : ''}
         ${!isArchived ? `<button class="btn-act btn-archive" data-action="status" data-set="archived" ${ds} style="opacity:.7"><svg class="i i-sm"><use href="#i-trash"/></svg> Archive</button>` : `<button class="btn-act btn-pending" data-action="status" data-set="pending" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Unarchive</button>`}
 
-        ${!isPaid && !isWaived ? `<button class="btn-act btn-pay"   data-action="pay"   ${ds}><svg class="i i-sm"><use href="#i-card"/></svg> Mark paid</button>` : ''}
+        ${!isPaid && !isWaived ? `<button class="btn-act btn-pay" data-action="pay" data-fee="${S.esc(app.application_fee||50)}" data-adult-count="${S.esc(app.screened_adult_count ?? '')}" ${ds}><svg class="i i-sm"><use href="#i-card"/></svg> Mark paid</button>` : ''}
         ${isPaid                ? `<button class="btn-act btn-unpay" data-action="unpay" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Mark unpaid</button>` : ''}
         ${isPaid                ? `<button class="btn-act btn-refund" data-action="refund" ${ds}>Refund</button>` : ''}
         ${!isWaived             ? `<button class="btn-act"           data-action="waive"  ${ds}>Waive</button>` : ''}
@@ -123,7 +123,7 @@
         ${hfPaid                     ? `<button class="btn-act btn-hf-undo"  data-action="hf-undo" ${ds} title="Undo: mark holding fee unpaid"><svg class="i i-sm"><use href="#i-refresh"/></svg> Undo holding paid</button>` : ''}
 
         <button class="btn-act btn-email" data-action="resend" ${ds} title="Resend any notification email"><svg class="i i-sm"><use href="#i-mail"/></svg> Resend</button>
-        ${!isArchived ? `<button class="btn-act" data-action="sms-dispatch" data-sms-app-id="${S.esc(app.app_id||app.id)}" data-sms-first-name="${S.esc(app.first_name||name.split(' ')[0])}" data-sms-address="${S.esc(app.property_address||prop)}" data-sms-phone="${S.esc(app.phone||'')}" data-sms-email="${S.esc(app.email||'')}" data-sms-method="${S.esc(app.primary_payment_method||'preferred method')}" data-sms-sign-token="${S.esc(app.tenant_sign_token||'')}" title="Prepare a stage-specific tenant text"><i class="fas fa-comment-sms" aria-hidden="true"></i> Quick SMS</button>` : ''}
+        ${!isArchived ? `<button class="btn-act" data-action="sms-dispatch" data-sms-app-id="${S.esc(app.app_id||app.id)}" data-sms-first-name="${S.esc(app.first_name||name.split(' ')[0])}" data-sms-address="${S.esc(app.property_address||prop)}" data-sms-phone="${S.esc(app.phone||'')}" data-sms-email="${S.esc(app.email||'')}" data-sms-method="${S.esc(app.primary_payment_method||'preferred method')}" data-sms-fee="${S.esc(app.application_fee||0)}" data-sms-sign-token="${S.esc(app.tenant_sign_token||'')}" title="Prepare a stage-specific tenant text"><i class="fas fa-comment-sms" aria-hidden="true"></i> Quick SMS</button>` : ''}
         <button class="btn-act"           data-action="toggle" ${ds}>Details</button>
       </div>
 
@@ -148,6 +148,9 @@
           ${row('Phone', coapp.phone)}
           ${row('DOB', coapp.dob)}
           ${row('Role', coapp.role)}
+          ${row('Screening consent checkbox', app.co_applicant_consent ? 'Submitted' : 'Not submitted')}
+          ${row('Consent recorded at submission', app.co_applicant_consent_timestamp)}
+          ${row('Consent copy version', app.co_applicant_consent_version)}
           ${row('Employer', coapp.employer)}
           ${row('Job title', coapp.job_title)}
           ${row('Income/mo', coapp.monthly_income)}
@@ -235,7 +238,7 @@
         <div class="detail-section-title" style="color:#1d4ed8;">💳 Payment Coordination</div>
         ${(app.payment_status !== 'paid' && app.payment_status !== 'waived') ? `
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:0.88rem;color:#1e40af;line-height:1.5;">
-          <i class="fas fa-info-circle"></i> <strong>Contact this applicant using their preferred method below</strong> to arrange the ${app.application_fee ? fmtMoney(app.application_fee) : ''} fee, then record payment once confirmed.
+          <i class="fas fa-info-circle"></i> <strong>Verify any 30-day reapplication courtesy before requesting payment.</strong> If eligible, use the fee-waiver action for the same screened adults; newly screened adults remain subject to the fee. Otherwise arrange the ${app.application_fee ? fmtMoney(app.application_fee) : ''} total application fee${app.screened_adult_count ? ` for ${app.screened_adult_count} screened adult${app.screened_adult_count === 1 ? '' : 's'}` : ''}, then record payment once confirmed.
         </div>` : ''}
         <div class="detail-grid">
           ${app.primary_payment_method ? `<div class="detail-row"><span class="detail-key">Primary method</span><span class="detail-val" style="font-weight:700;color:#1d4ed8;">${S.esc(app.primary_payment_method)}${app.primary_payment_method_other?' ('+S.esc(app.primary_payment_method_other)+')':''}</span></div>` : ''}
@@ -248,6 +251,8 @@
         <div class="detail-section-title">Payment record</div>
         <div class="detail-grid">
           ${row('Fee', fmtMoney(app.application_fee))}
+          ${app.screened_adult_count != null ? row('Adults screened', app.screened_adult_count) : ''}
+          ${app.application_fee_per_adult != null ? row('Fee per adult', fmtMoney(app.application_fee_per_adult)) : ''}
           ${row('Status', app.payment_status||'—')}
           ${row('Amount collected', fmtMoney(app.payment_amount_recorded))}
           ${row('Method', app.payment_method_recorded)}
@@ -286,7 +291,18 @@
     let coapp = null;
     if(app.has_co_applicant){
       const { data } = await CP.sb().from('co_applicants').select('*').eq('app_id', app.app_id).maybeSingle();
-      coapp = data;
+      coapp = data || {
+        first_name: app.co_applicant_first_name,
+        last_name: app.co_applicant_last_name,
+        email: app.co_applicant_email,
+        phone: app.co_applicant_phone,
+        dob: app.co_applicant_dob,
+        role: app.co_applicant_role,
+        employer: app.co_applicant_employer,
+        job_title: app.co_applicant_job_title,
+        monthly_income: app.co_applicant_monthly_income,
+        employment_duration: app.co_applicant_employment_duration,
+      };
     }
     document.getElementById('detail-inner-' + id).innerHTML = renderDetail(app, coapp);
   }
@@ -381,7 +397,19 @@
     return runBulk(label, (id) => CP.Applications.updateStatus(id, status), { danger: status === 'denied' });
   }
   function bulkMarkPaid(){
-    return runBulk('Mark paid', (id) => CP.Applications.updatePayment(id, 'paid'));
+    return runBulk('Mark paid', async (id) => {
+      const application = await CP.Applications.getOne(id);
+      if(!application.ok || !application.data) return { ok:false, error:application.error || 'Application fee could not be loaded.' };
+      const fee = Number(application.data.application_fee);
+      if(!Number.isFinite(fee) || fee <= 0) return { ok:false, error:'A valid application fee total is required before recording payment.' };
+      return CP.Applications.updatePaymentWithDetails(
+        id,
+        'paid',
+        fee,
+        null,
+        null
+      );
+    });
   }
   function bulkMarkUnpaid(){
     return runBulk('Mark unpaid', (id) => CP.Applications.updatePayment(id, 'unpaid'));
@@ -520,7 +548,7 @@
       title: 'Mark as paid · ' + name,
       submit: 'Mark as paid',
       fields: [
-        { name:'amount', label:'Application fee collected ($50.00)', type:'number', value:'50.00', placeholder:'50.00' },
+        { name:'amount', label:`Application fee collected (${fmtMoney(expectedFee)}${Number(adultCount) > 0 ? ` · ${adultCount} screened adult${Number(adultCount) === 1 ? '' : 's'}` : ''})`, type:'number', value:expectedFee.toFixed(2), placeholder:expectedFee.toFixed(2) },
         { name:'method', label:'Payment method', type:'select', value:'', options:[
           { value:'', label:'(none selected)' },
           // Mirrors the application form (apply/index.html) — keep in sync.
@@ -538,8 +566,11 @@
       ]
     });
     if(!data) return;
-    const amount = data.amount ? parseFloat(data.amount) : 50;
-    if(amount !== 50){ S.toast('Application fee must be recorded as exactly $50.00.', 'error'); return; }
+    const amount = data.amount ? parseFloat(data.amount) : expectedFee;
+    if(!Number.isFinite(amount) || Math.round(amount * 100) !== Math.round(expectedFee * 100)){
+      S.toast(`Application fee must be recorded as exactly ${fmtMoney(expectedFee)}.`, 'error');
+      return;
+    }
     const method = data.method || null;
     const notes  = data.notes || null;
     const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes, { sendEmail:false });
@@ -729,7 +760,7 @@
       : portalUrl;
     const templates = {
       intake: `Hello ${firstName}, this is Choice Properties management regarding your rental application for ${address} (Ref: #${appId}). We have received your application. Our team will review it after the required steps are complete and contact you with any updates. A confirmation was sent to ${email}.`,
-      fee: `Hello ${firstName}, Choice Properties management has recorded the $50 application fee for ${address}. You can track your application in your resident portal: ${portalUrl}. We sent a confirmation to ${email}.`,
+      fee: `Hello ${firstName}, Choice Properties management has recorded the ${fee} application fee for ${address}. The total is calculated at $50 per adult screened. You can track your application in your resident portal: ${portalUrl}. We sent a confirmation to ${email}.`,
       approved: `Hello ${firstName}, Choice Properties management approved your rental application for ${address}. Please review the next steps in your resident portal: ${portalUrl}. We sent a confirmation to ${email}.`,
       holding: `Great news ${firstName}! Your reservation holding deposit for ${address} has been verified and posted to your account ledger.\n\nThe home is now officially off the market and secured for your upcoming move-in! Your stamped receipt is now available in your portal:\n${portalUrl}\n\nOur leasing team is currently preparing your official Residential Lease Agreement. We have also emailed your receipt to ${email} (please check spam if needed).`,
       lease: `Hello ${firstName}, your official Residential Lease Agreement for ${address} is prepared and ready for electronic signature!\n\nPlease review and execute your agreement securely using your signing link:\n${signingUrl}\n\nA direct signing copy was also dispatched to ${email}. Because this contains formal legal contracts, some email providers filter it—please inspect your spam, junk, or promotions folder. Feel free to text me here once signed!`,

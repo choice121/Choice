@@ -1322,7 +1322,7 @@ async function updateNav() {
         .from('applications')
         .select(
           'id,app_id,created_at,updated_at,status,payment_status,payment_date,' +
-          'admin_notes,application_fee,property_id,property_address,' +
+          'admin_notes,application_fee,application_fee_per_adult,screened_adult_count,property_id,property_address,' +
           'first_name,last_name,email,phone,dob,ssn,' +
           'requested_move_in_date,desired_lease_term,' +
           'current_address,residency_duration,current_rent_amount,reason_for_leaving,' +
@@ -1341,7 +1341,9 @@ async function updateNav() {
           'has_pets,pet_details,total_occupants,additional_occupants,ever_evicted,smoker,' +
           'preferred_contact_method,preferred_time,' +
           'vehicle_make,vehicle_model,vehicle_year,vehicle_license_plate,' +
-          'has_co_applicant,co_applicant_ssn,landlord_email,document_urls,' +
+          'has_co_applicant,co_applicant_first_name,co_applicant_last_name,co_applicant_email,co_applicant_phone,co_applicant_dob,co_applicant_ssn,' +
+          'co_applicant_role,co_applicant_consent,co_applicant_consent_timestamp,co_applicant_consent_version,co_applicant_employer,co_applicant_job_title,co_applicant_monthly_income,co_applicant_employment_duration,' +
+          'landlord_email,document_urls,' +
           'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,' +
           'monthly_rent,security_deposit,move_in_costs,lease_notes,lease_pdf_url,' +
           'tenant_signature,signature_timestamp,' +

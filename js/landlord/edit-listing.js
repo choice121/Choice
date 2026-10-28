@@ -159,9 +159,9 @@
       <div class="form-grid-2">
         <div class="form-group"><label class="form-label" for="availDate">Available Date</label><input type="date" class="form-input" id="availDate" value="${prop.available_date||''}"></div>
         <div class="form-group">
-          <label class="form-label" for="appFee">Application Fee</label>
-          <div style="position:relative"><span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)">$</span><input type="number" class="form-input" id="appFee" value="${prop.application_fee ?? 50}" style="padding-left:28px" min="0" placeholder="50"></div>
-          <div class="form-hint">Standard application fee is $50.</div>
+        <label class="form-label" for="appFee">Application Fee per Screened Adult</label>
+        <div style="position:relative"><span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)">$</span><input type="number" class="form-input" id="appFee" value="50" style="padding-left:28px" min="50" max="50" readonly></div>
+        <div class="form-hint">The application fee is $50 per adult being screened.</div>
         </div>
       </div>
       <div class="form-grid-2">

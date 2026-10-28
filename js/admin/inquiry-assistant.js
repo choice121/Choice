@@ -311,7 +311,7 @@
       fee_pending: { label: 'App: Fee Pending', cls: 'pill-warning' },
       in_review: { label: 'App: In Review (24–72h)', cls: 'pill-info' },
       approved: { label: 'App: Approved', cls: 'pill-success' },
-      denied: { label: 'App: Denied (7-Day Reapply)', cls: 'pill-danger' }
+      denied: { label: 'App: Denied (30-Day Reapply)', cls: 'pill-danger' }
     };
     const sInfo = statusMap[cust.application_status] || { label: cust.application_status, cls: 'pill-muted' };
     pAppStatus.textContent = sInfo.label;
@@ -711,7 +711,7 @@
       if (data.ok && data.policies) {
         document.getElementById('pol-fee').value = data.policies.application_fee || 50;
         document.getElementById('pol-review-window').value = data.policies.review_window_hours || '24–72 hours';
-        document.getElementById('pol-reapply-days').value = data.policies.reapplication_days || 7;
+        document.getElementById('pol-reapply-days').value = data.policies.reapplication_days || 30;
         document.getElementById('pol-reapply-count').value = data.policies.reapplication_count || 2;
         document.getElementById('pol-deposit').value = data.policies.security_deposit_rule || 'Equal to 1x monthly rent in DB';
         document.getElementById('pol-pets').value = data.policies.pet_policy || 'Pet friendly';
@@ -727,7 +727,7 @@
     const payload = {
       application_fee: Number(document.getElementById('pol-fee').value) || 50,
       review_window_hours: document.getElementById('pol-review-window').value.trim(),
-      reapplication_days: Number(document.getElementById('pol-reapply-days').value) || 7,
+      reapplication_days: Number(document.getElementById('pol-reapply-days').value) || 30,
       reapplication_count: Number(document.getElementById('pol-reapply-count').value) || 2,
       security_deposit_rule: document.getElementById('pol-deposit').value.trim(),
       pet_policy: document.getElementById('pol-pets').value.trim()

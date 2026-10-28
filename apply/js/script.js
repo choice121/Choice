@@ -346,36 +346,36 @@ class RentalApplication {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // APPLICATION FEE — fixed at $50 per Choice Properties policy.
+    // APPLICATION FEE — $50 for each adult being screened.
     // ─────────────────────────────────────────────────────────────────────
     _readApplicationFee() {
         try {
-            const fee = 50;
-            this.state.applicationFee = fee;
-            const feeTitle  = document.querySelector('[data-i18n="feeTitle"]');
-            const feeAmount = document.querySelector('.fee-amount');
-            const formatted = '$' + fee.toFixed(2);
-            if (feeTitle)  feeTitle.textContent  = 'Application Fee: ' + formatted;
-            if (feeAmount) { feeAmount.textContent = '$' + fee.toFixed(0); feeAmount.style.display = ''; }
-            // Patch any hardcoded "$50" references in static HTML that flash before JS-built
-            // success content replaces them. Walk all text nodes in the document and replace
-            // the literal "$50" with the correct fee so there is never a wrong-fee flash.
-            if (fee !== 50) {
-                const feeStr    = fee <= 0 ? 'free' : ('$' + fee.toFixed(0));
-                const walk = (node) => {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        if (node.nodeValue.includes('$50')) {
-                            node.nodeValue = node.nodeValue.replace(/\$50\b/g, feeStr);
-                        }
-                    } else {
-                        node.childNodes.forEach(walk);
-                    }
-                };
-                // Only patch static success-state HTML — avoid touching input placeholders
-                const successEl = document.getElementById('successState');
-                if (successEl) walk(successEl);
-            }
+            this._updateApplicationFee();
         } catch (e) { console.warn('[CP App] Non-critical error in _readApplicationFee:', e); }
+    }
+
+    _updateApplicationFee() {
+        const hasCoApplicant = document.getElementById('hasCoApplicant')?.checked === true;
+        const adultCount = hasCoApplicant ? 2 : 1;
+        const fee = adultCount * 50;
+        this.state.applicationFee = fee;
+
+        const title = document.getElementById('applicationFeeTitle');
+        const amount = document.getElementById('applicationFeeAmount');
+        const breakdown = document.getElementById('applicationFeeBreakdown');
+        const hiddenFee = document.getElementById('hiddenApplicationFee');
+        const isSpanish = this.state.language === 'es';
+        if (title) title.textContent = `${isSpanish ? 'Tarifa de Solicitud' : 'Application Fee'}: $${fee.toFixed(2)}`;
+        if (amount) {
+            amount.textContent = `$${fee.toFixed(0)}`;
+            amount.style.display = '';
+        }
+        if (breakdown) {
+            breakdown.textContent = isSpanish
+                ? `${adultCount} solicitante${adultCount === 1 ? '' : 's'} adulto${adultCount === 1 ? '' : 's'} × $50 = $${fee} en total.`
+                : `${adultCount} adult${adultCount === 1 ? '' : 's'} being screened × $50 = $${fee} total.`;
+        }
+        if (hiddenFee) hiddenFee.value = String(fee);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -2303,7 +2303,7 @@ class RentalApplication {
                 paymentRequiredTitle: 'Application Fee',
                 paymentRequiredDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to screening.'
-                    : 'The fixed $50 fee is due after submission. Choice Properties management will contact you with the next steps before review begins.',
+                    : 'The application fee total shown above is due after submission. Choice Properties management will contact you with the next steps before review begins.',
                 completePaymentTitle: 'Management Review',
                 completePaymentDesc: freeApp
                     ? 'No payment is required. Your application has been submitted and will be reviewed as received.'
@@ -2331,7 +2331,7 @@ class RentalApplication {
                 step1YouSubmit: '1. Application Submitted',
                 step1Desc: 'Complete and submit this application in full.',
                 step2PaymentArranged: '2. Application Fee',
-                step2Desc: 'Choice Properties management will contact you with the next steps for the fixed $50 fee.',
+                step2Desc: 'Choice Properties management will contact you with the next steps for the application fee total shown above.',
                 step3ReviewBegins: '3. Screening & Review',
                 step3Desc: 'Management review begins after the required application steps are complete. Timing varies.',
                 propertyHeader: 'Applicant Identification & Property',
@@ -2381,7 +2381,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'e.g., 4000',
                 coEmploymentDurationLabel: 'Duration of Employment',
                 coEmploymentDurationPlaceholder: 'e.g., 2 years',
-                coConsentLabel: 'I authorize verification of all information provided for this co-applicant or guarantor, including credit and background screening.',
+                coConsentLabel: 'I am the additional adult applicant or guarantor and personally authorize verification of my information, including credit and background screening. I understand the fee is $50 for each adult applicant or guarantor being screened.',
                 contactPrefsHeader: 'Contact Preferences',
                 prefContactMethod: 'Preferred Contact Method',
                 contactMethodText: 'SMS / Text',
@@ -2471,7 +2471,7 @@ class RentalApplication {
                 smokerLabel: 'Tobacco / Smoking Use',
                 paymentHeader: 'Resident Billing Allocation',
                 paymentNoCollection: 'No payment is collected via this form.',
-                paymentCoordinationNotice: 'Following submission, a coordinator will text you to provide the active payment-routing details. Direct coordination waives convenience surcharges; the $50 application fee still applies.',
+                paymentCoordinationNotice: 'Following submission, a coordinator will contact you about the fee total shown on your application. The fee is $50 per adult being screened.',
                 paymentIntro: freeApp
                     ? 'No application fee is required for this property. Please indicate your preferred contact method for review communications.'
                     : `Indicate your preferred payment method. A representative will use this information to coordinate the $${fee} application fee after submission.`,
@@ -2496,7 +2496,7 @@ class RentalApplication {
                 feeTitle: freeApp ? 'Application Fee: Waived' : `Application Fee: $${fee}.00`,
                 feeDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to review.'
-                    : 'The application fee is required before screening can begin. A representative will contact you after submission to coordinate payment.',
+                    : 'The fee is $50 for each adult being screened. Adult occupants who are not applying or being screened are not charged. The total is shown below before you submit.',
                 paymentReminderTitle: freeApp ? 'No Application Fee' : 'Application Fee Required',
                 paymentReminderDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to review upon submission.'
@@ -2568,7 +2568,7 @@ class RentalApplication {
                 uploadCta: 'Click to browse or drag files here',
                 uploadHint: 'Government-issued ID &nbsp;·&nbsp; Pay stubs &nbsp;·&nbsp; Bank statements',
                 trustLine: 'Application data is transmitted securely and used solely for rental screening purposes.',
-                feeAcknowledge: 'I acknowledge that Choice Properties management reviews my application and that the fixed application fee is $50. Nothing is charged when I submit. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.',
+                feeAcknowledge: 'I understand that the application fee is $50 for each adult applicant or guarantor being screened, and that the total shown above is due after submission. Adult occupants who are not applying or being screened are not charged. Nothing is charged when I submit. If reapplying after a non-approval, I should contact management before payment to verify eligibility for the 30-day courtesy. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.',
                 agreeTermsPrivacy: 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Terms of Service</a> (including the <strong>binding arbitration clause</strong> and <strong>class action waiver</strong> in Sections 18–19), the <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Privacy Policy</a>, and the <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Complete Policy &amp; Legal Framework</a>. I confirm I am at least 18 years of age and have legal capacity to enter into this agreement.',
                 smsConsent: 'I expressly consent to receive transactional SMS messages from Choice Properties at the mobile number provided, regarding application status, fee coordination, lease execution, and move-in scheduling. Message frequency varies. <strong>Message and data rates may apply.</strong> Reply HELP for assistance, STOP to opt out at any time. SMS consent is not a condition of application — leave unchecked to receive communications by email only.',
                 footerCopyright: '&copy; 2026 Choice Properties. All rights reserved.',

@@ -19,13 +19,13 @@ export async function onRequestPost(context) {
     let draft = `Hi ${alias}! Thanks for reaching out to Choice Properties.`;
     
     if (lower.includes('voucher') || lower.includes('section 8') || lower.includes('housing choice')) {
-      draft += ` Yes, we gladly accept housing choice vouchers and Section 8 subsidies! Our team will review your income stability and references. The application fee is $50 per adult. Submit your application today at Choice Properties!`;
+      draft += ` Yes, we gladly accept housing choice vouchers and Section 8 subsidies! Our team will review your income stability and references. The application fee is $50 per adult screened, and the total is shown before submission. Submit your application today at Choice Properties!`;
     } else if (lower.includes('credit') || lower.includes('eviction') || lower.includes('bad credit') || lower.includes('low credit')) {
-      draft += ` We evaluate all applications holistically based on income stability and rental references rather than strict automated credit score cutoffs. The application fee is $50. Submit your application today at Choice Properties!`;
+      draft += ` We evaluate all applications holistically based on income stability and rental references rather than strict automated credit score cutoffs. The application fee is $50 per adult screened, and the total is shown before submission. Submit your application today at Choice Properties!`;
     } else if (lower.includes('list my') || lower.includes('landlord') || lower.includes('i own')) {
       draft += ` We partner with property owners and investors across the region for professional leasing and management. We would love to discuss managing your property. Reach out to our leasing team to get started!`;
     } else {
-      draft += ` We have beautiful homes available to fit your needs. The application fee is $50 per adult. Please submit your application today at Choice Properties!`;
+      draft += ` We have beautiful homes available to fit your needs. The application fee is $50 per adult screened, and the total is shown before submission. Please submit your application today at Choice Properties!`;
     }
 
     const format = new URL(req.url).searchParams.get('format') || body.format || '';

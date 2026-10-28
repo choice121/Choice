@@ -7,7 +7,7 @@
 //   Flow: Apply -> Payment -> Review -> Approval -> Reservation -> Lease -> Move-In
 var COPY = {
   en: {
-    feeStatement: 'An application fee is required after submission. Our team will contact you to securely complete payment before your application is reviewed.',
+    feeStatement: 'The application fee is $50 for each adult being screened. The total is shown before submission; adult occupants who are not applying or being screened are not charged.',
     feeReinforcement: 'Applications are only activated after payment is completed.',
     reviewTime: 'Applications are typically processed within 24 to 72 hours after payment is completed.',
     reviewBehavior: 'Faster decisions are often made for applicants who complete all steps promptly, provide accurate information, and remain responsive.',
@@ -150,7 +150,7 @@ var EMAIL_STRINGS = {
     deniedCalloutBodyPost: 'We understand this is disappointing and we genuinely appreciate the trust you placed in us.',
     deniedCalloutBodyNone: 'We understand this is disappointing and we genuinely appreciate the trust you placed in us.',
     lookingAheadLabel: 'Looking Ahead',
-    deniedNext1Title: 'Reapplication Protection Policy', deniedNext1Body: 'As a Choice Properties applicant, you may apply for any other available listing within <strong>30 days</strong> at no additional fee.',
+    deniedNext1Title: 'Reapplication Protection Policy', deniedNext1Body: 'After an initial paid application is not approved, the same adults screened may apply for up to two additional participating properties within <strong>30 days</strong> without another application fee. A newly screened adult is subject to the standard fee. Contact our team before payment so we can verify eligibility and apply the fee waiver.',
     deniedNext2Title: 'Other Properties', deniedNext2Body: 'Our team manages a portfolio of properties nationwide and would be happy to discuss alternatives.',
     viewAppBtn: 'View My Application',
     leaseSentSubject: '[Choice Properties] Action Required \u2014 Lease Agreement Ready for Signature (',
@@ -637,6 +637,10 @@ function sendApplicationConfirmation(to, cc, d, cfg) {
   var fee = parseFloat(d.application_fee) || 0;
   var hasFee = fee > 0;
   var feeLabel = hasFee ? '$' + fmtCurrency(fee, lang) : t('freeNoFee', lang);
+  var screenedAdultCount = parseInt(d.screened_adult_count, 10) || (d.has_co_applicant ? 2 : 1);
+  var feeBreakdown = lang === 'es'
+    ? screenedAdultCount + ' adulto' + (screenedAdultCount === 1 ? '' : 's') + ' evaluado' + (screenedAdultCount === 1 ? '' : 's') + ' × $50 = ' + feeLabel + ' en total'
+    : screenedAdultCount + ' adult' + (screenedAdultCount === 1 ? '' : 's') + ' screened × $50 = ' + feeLabel + ' total';
   var statusBanner = hasFee
     ? '<div class="status-line status-pending">' + t('appConfirmStatusPending', lang) + '</div>'
     : '<div class="status-line" style="color:#166534;background:#f0fdf4">' + t('appConfirmStatusFree', lang) + '</div>';
@@ -647,8 +651,8 @@ function sendApplicationConfirmation(to, cc, d, cfg) {
 
   var paymentSection = hasFee
     ? '<div class="section"><div class="callout amber" style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:18px 20px;margin-bottom:16px;">' +
-        '<div style="font-size:17px;font-weight:800;color:#92400e;margin-bottom:10px;">💰 ' + (lang === 'es' ? 'Cargo de Solicitud Pendiente — $50.00' : 'Application Fee Due — $50.00') + '</div>' +
-        '<p style="font-size:14px;color:#78350f;line-height:1.6;margin:0 0 12px 0;">' + (lang === 'es' ? 'Se requiere un cargo de solicitud de $50 después del envío. Nuestro equipo lo contactará en breve para completar el pago de forma segura antes de revisar su solicitud.' : 'A $50 application fee is required after submission. Our team will contact you shortly to securely complete payment before your application is reviewed.') + '</p>' +
+        '<div style="font-size:17px;font-weight:800;color:#92400e;margin-bottom:10px;">💰 ' + (lang === 'es' ? 'Tarifa de Solicitud Pendiente — ' : 'Application Fee Due — ') + feeLabel + '</div>' +
+        '<p style="font-size:14px;color:#78350f;line-height:1.6;margin:0 0 12px 0;">' + feeBreakdown + '. ' + (lang === 'es' ? 'Nuestro equipo se comunicará con usted para coordinar el pago antes de revisar su solicitud.' : 'Our team will contact you to coordinate payment before your application is reviewed.') + '</p>' +
         '<div style="background:rgba(245,158,11,0.18);border-left:3px solid #f59e0b;padding:8px 12px;border-radius:4px;margin:12px 0;font-size:13.5px;font-weight:700;color:#92400e;">⚡ ' + (lang === 'es' ? 'Los solicitantes que completan el pago rápidamente se colocan antes en la lista de revisión.' : 'Applicants who complete payment quickly are placed earlier in the review queue.') + '</div>' +
         '<p style="font-size:13px;color:#78350f;line-height:1.6;margin:12px 0 0 0;">' + (lang === 'es' ? 'Las instrucciones activas de direccionamiento de pago son coordinadas directamente por su especialista de facturación asignado por mensaje de texto para garantizar el procesamiento inmediato y eximir recargos.' : 'Active payment-routing instructions are coordinated directly by your assigned billing specialist via text to ensure immediate processing and waive payment surcharges.') + '</p>' +
         payPillsHtml +
@@ -682,8 +686,10 @@ function sendAdminNotification(to, cc, d, cfg) {
   var fee = parseFloat(d.application_fee) || 0;
   var hasFee = fee > 0;
   var feeLabel = hasFee ? '$' + fee.toLocaleString('en-US', {minimumFractionDigits:2}) : 'Free \u2014 No fee';
+  var screenedAdultCount = parseInt(d.screened_adult_count, 10) || (d.has_co_applicant ? 2 : 1);
+  var feeBreakdown = screenedAdultCount + ' adult' + (screenedAdultCount === 1 ? '' : 's') + ' screened × $50 = ' + feeLabel + ' total';
   var statusBanner = hasFee ? '<div class="status-line status-pending">\u26a1 &nbsp; Action Required \u2014 Fee Pending Collection</div>' : '<div class="status-line" style="color:#166534;background:#f0fdf4">\ud83d\udccb &nbsp; New Application \u2014 No Fee \u2014 Proceed to Review</div>';
-  var paymentBlock = hasFee ? '<div class="section"><div class="section-label">Payment Preferences</div><div class="callout amber"><h4>Contact Applicant to Collect Fee \u2014 ' + feeLabel + '</h4><p style="margin-bottom:12px;">Preferred payment methods:</p><div>' + payMethods.map(function(m){ return '<span class="pay-pill">' + m + '</span>'; }).join('') + '</div></div></div>' : '<div class="section"><div class="callout green"><h4>\u2713 No Application Fee</h4><p>No payment collection required \u2014 proceed to review.</p></div></div>';
+  var paymentBlock = hasFee ? '<div class="section"><div class="section-label">Payment Preferences</div><div class="callout amber"><h4>Contact Applicant to Collect Fee \u2014 ' + feeLabel + '</h4><p><strong>' + feeBreakdown + '</strong></p><p style="margin-bottom:12px;">Preferred payment methods:</p><div>' + payMethods.map(function(m){ return '<span class="pay-pill">' + m + '</span>'; }).join('') + '</div></div></div>' : '<div class="section"><div class="callout green"><h4>\u2713 No Application Fee</h4><p>No payment collection required \u2014 proceed to review.</p></div></div>';
   send(cfg.adminEmails, null,
     '[New Application] ' + d.app_id + ' \u2014 ' + d.first_name + ' ' + d.last_name + (hasFee ? ' \u2014 Fee Pending' : ' \u2014 No Fee \u2014 Proceed to Review'),
     wrap('New Application Received', d.app_id, 'en',

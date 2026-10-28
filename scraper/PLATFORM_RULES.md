@@ -116,8 +116,11 @@ details pages, overview cards, and listing cards must never display availability
 
 ## 3. Application Fee Normalization (Mandatory)
 
-**Choice Properties charges a flat $50 application fee. No listing may ever
-state or imply a different amount.**
+**Choice Properties charges $50 per adult being screened.**
+`public.properties.application_fee` remains the per-adult amount (`50`);
+`public.applications.application_fee` stores the server-calculated household
+total (`$50 × screened_adult_count`). Listing descriptions continue to use the
+standard "$50 application fee" wording and must not promise a household total.
 
 ### 3a. Explicit fee amounts — normalize to $50
 Any mention of an application fee amount other than $50 in the description must

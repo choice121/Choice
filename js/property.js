@@ -818,8 +818,7 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  const leaseAppFee = (p.application_fee != null && Number(p.application_fee) > 0) ? Number(p.application_fee) : 50;
-  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${leaseAppFee.toLocaleString()}</div>`);
+  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $50 per adult being screened</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
@@ -909,17 +908,12 @@ function renderProperty(p) {
   if (_depEl) {
     _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   }
-  // Flat $50 application fee is the platform standard. If a property has no
-  // explicit fee, default to $50 rather than showing "Free" (which contradicts
-  // the marketing promise and the scraper normalization rules).
-  const _appFee = (p.application_fee != null && p.application_fee > 0)
-    ? Number(p.application_fee)
-    : 50;
+  const _appFee = 50;
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
   if (_feeAmtEl) {
-    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
+    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -2592,7 +2586,7 @@ function buildAdminEditDrawer(prop) {
           </div>
           <div class="adw-field">
             <label class="adw-label" for="adwAppFee">App Fee ($)</label>
-            <input class="adw-input" id="adwAppFee" type="number" min="0" value="${p.application_fee??''}">
+            <input class="adw-input" id="adwAppFee" type="number" min="50" max="50" value="50" readonly>
           </div>
         </div>
         <div class="adw-row">

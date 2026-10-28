@@ -24,7 +24,7 @@ The **Choice Properties AI Rental Inquiry Assistant** provides high-conversion, 
 3. **Independent Company Knowledge & General Intake**:
    - Fully capable of answering high-level questions without being tied to a specific property listing (e.g. general screening standards, housing voucher acceptance, co-signers, landlord partnership intake, and application procedures).
 4. **Platform Invariant Guardrails**:
-   - Strictly enforces the **$50 application fee** across all responses.
+   - States the **$50 fee per adult screened** and does not charge adult occupants who are not applying or being screened.
    - Strictly adheres to zero deposit mentions in conversational texts.
    - Respects privacy: internal database IDs and private operator notes are never leaked to customers.
 5. **Decoupled & Portable**:
@@ -190,7 +190,7 @@ All 34 tests must pass before deploying updates to production.
 
 ## 7. Operational Guidelines for Future AI Assistants
 
-1. **Strict $50 Application Fee**: All drafted responses mentioning applications must state **$50 application fee**. Never mention $0, waived fees, or free applications.
+1. **Application Fee**: State **$50 per adult screened**. The total is shown before submission; do not imply that adult occupants who are not applying or being screened are charged. Fees are subject to applicable law.
 2. **No Security Deposit Mentions in Text**: Deposits are stored strictly in the database as 1x monthly rent. Never quote deposit dollar figures in chat or SMS copy.
 3. **Warm, Holistic Qualification**: If applicants mention low credit scores, past evictions, or non-traditional income, respond reassuringly and explain that applications are evaluated holistically based on income stability and rental references. Never issue automatic rejections or false approval guarantees.
 4. **Voucher & Section 8 Welcoming**: Choice Properties welcomes housing choice vouchers and subsidy programs. Respond with enthusiasm and provide the application steps.
