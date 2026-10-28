@@ -3,3 +3,9 @@ verify_jwt = false
 
 [functions.receive-pipeline-import]
 verify_jwt = false
+
+[functions.confirm-co-applicant-screening]
+verify_jwt = false
+
+[functions.send-co-applicant-consent]
+verify_jwt = false

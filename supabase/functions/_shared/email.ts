@@ -15,6 +15,15 @@ function safeFee(val: unknown): string {
   return (!isNaN(n) && n > 0) ? n.toFixed(0) : '—';
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function getESignText(state: string): string {
   const map: Record<string, string> = {
     AL: 'Alabama Uniform Electronic Transactions Act',
@@ -123,7 +132,7 @@ const EMAIL_FOOTER = `
     <div class="footer-details" style="margin-top:10px;font-size:10px;color:#9aa3af;line-height:1.5;">
       You are receiving this transactional email because you submitted an application or signed a lease through Choice Properties. This is not a marketing message.<br>
       <strong>SMS:</strong> Reply HELP for help, STOP to opt out. Msg &amp; data rates may apply. SMS opt-out does not affect application emails.<br>
-      Policy Framework v2.0 &middot; Effective April 22, 2026.
+      Policy Framework v2.3 &middot; Effective October 28, 2026.
     </div>
   </div>
 `;
@@ -133,8 +142,8 @@ function buildEmailHeader(title: string, appId?: string): string {
   <div class="email-header">
     <div class="header-brand">Choice Properties</div>
     <div class="header-sub">Nationwide Rental Marketplace</div>
-    <div class="header-title">${title}</div>
-    ${appId ? `<div class="header-ref">Reference: ${appId}</div>` : ''}
+    <div class="header-title">${escapeHtml(title)}</div>
+    ${appId ? `<div class="header-ref">Reference: ${escapeHtml(appId)}</div>` : ''}
   </div>`;
 }
 
@@ -173,8 +182,13 @@ export function applicationConfirmationHtml(
   appId: string,
   fields?: ApplicationFields,
   dashboardLink?: string,
-  enforcedFee?: number | null): string {
+  enforcedFee?: number | null,
+  coApplicantConsentInviteSent = false): string {
   const portal = dashboardLink || getTenantLoginUrl(appId, String(fields?.['Email'] || ''));
+  const safeFirstName = escapeHtml(firstName);
+  const safeLastName = escapeHtml(fields?.['Last Name']);
+  const safeAppId = escapeHtml(appId);
+  const safePropertyAddress = escapeHtml(propertyAddress || 'To be confirmed');
   const feeRaw = fields?.['Application Fee'];
   const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
   const hasFee = feeNum > 0;
@@ -182,14 +196,17 @@ export function applicationConfirmationHtml(
   const feeDisplay = hasFee ? `$${feeNum.toFixed(0)}` : (freeApp ? 'Free' : 'Per property terms');
   const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
   const screenedAdultCount = hasCoApplicant ? 2 : 1;
-  const feeBreakdown = `${screenedAdultCount} adult${screenedAdultCount === 1 ? '' : 's'} screened × $50 = ${feeDisplay} total`;
+  const feeBreakdown = `${screenedAdultCount} adult applicant${screenedAdultCount === 1 ? '' : 's'} × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
     fields?.['Alternative Payment Method'],
     fields?.['Third Choice Payment Method'],
   ].filter(Boolean) as string[];
-  const phoneRef = fields?.['Phone'] ? ` at <strong>${fields['Phone']}</strong>` : '';
-  const payPills = payMethods.length ? `<div>${payMethods.map(m => `<span class="pay-pill">${m}</span>`).join('')}</div>` : '';
+  const phoneRef = fields?.['Phone'] ? ` at <strong>${escapeHtml(fields['Phone'])}</strong>` : '';
+  const payPills = payMethods.length ? `<div>${payMethods.map(m => `<span class="pay-pill">${escapeHtml(m)}</span>`).join('')}</div>` : '';
+  const consentNotice = hasCoApplicant
+    ? `<div class="callout amber"><h4>Additional adult screening consent required</h4><p>${coApplicantConsentInviteSent ? 'A separate authorization link was emailed to the additional adult.' : 'The additional adult authorization email could not be sent. Please contact the leasing team; screening will not begin until consent is recorded.'} Screening cannot begin until they complete that step.</p></div>`
+    : '';
   const paymentSection = hasFee
     ? `<div class="section"><div class="section-label">Application Fee &amp; Payment</div><div class="callout amber"><h4>Application Fee \u2014 ${feeDisplay}</h4><p><strong>${feeBreakdown}</strong></p><p style="margin-bottom:12px;">A member of our leasing team will contact you within 24 hours via text${phoneRef} to coordinate your application fee. Your application will not be reviewed until payment is received and confirmed.</p>${payPills}</div></div>`
     : freeApp
@@ -217,26 +234,27 @@ export function applicationConfirmationHtml(
   ${buildEmailHeader('Application Successfully Received', appId)}
   ${hasFee ? '<div class="status-line status-pending">&#x23F3; &nbsp; Awaiting Application Fee &middot; Review Pending</div>' : freeApp ? '<div class="status-line" style="color:#166534;background:#f0fdf4">&#x2713; &nbsp; Application Received &middot; No Fee Required &middot; Entering Review</div>' : '<div class="status-line status-pending">&#x23F3; &nbsp; Application Received &middot; Review Pending</div>'}
   <div class="email-body">
-    <p class="greeting">Dear ${firstName},</p>
+    <p class="greeting">Dear ${safeFirstName},</p>
     <p class="intro-text">Thank you for choosing Choice Properties. We have successfully received your rental application and your file is now in our system. This confirmation serves as your official acknowledgment that your submission has been recorded.</p>
 
     <div class="section">
       <div class="section-label">Application Summary</div>
       <table class="info-table">
-        <tr><td>Application ID</td><td><strong>${appId}</strong></td></tr>
-        <tr><td>Applicant Name</td><td>${firstName} ${fields?.['Last Name'] || ''}</td></tr>
-        <tr><td>Property of Interest</td><td>${propertyAddress || 'To be confirmed'}</td></tr>
-        <tr><td>Requested Move-In</td><td>${fields?.['Requested Move-in Date'] || 'Not specified'}</td></tr>
-        <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
-        <tr><td>Email on File</td><td>${fields?.['Email'] || ''}</td></tr>
-        <tr><td>Phone on File</td><td>${fields?.['Phone'] || ''}</td></tr>
-        <tr><td>Screened Adult Applicants</td><td>${screenedAdultCount}</td></tr>
+        <tr><td>Application ID</td><td><strong>${safeAppId}</strong></td></tr>
+        <tr><td>Applicant Name</td><td>${safeFirstName} ${safeLastName}</td></tr>
+        <tr><td>Property of Interest</td><td>${safePropertyAddress}</td></tr>
+        <tr><td>Requested Move-In</td><td>${escapeHtml(fields?.['Requested Move-in Date'] || 'Not specified')}</td></tr>
+        <tr><td>Lease Term</td><td>${escapeHtml(fields?.['Desired Lease Term'] || 'Not specified')}</td></tr>
+        <tr><td>Email on File</td><td>${escapeHtml(fields?.['Email'] || '')}</td></tr>
+        <tr><td>Phone on File</td><td>${escapeHtml(fields?.['Phone'] || '')}</td></tr>
+        <tr><td>Adults Included in Screening</td><td>${screenedAdultCount}</td></tr>
         <tr><td>Fee Calculation</td><td>${feeBreakdown}</td></tr>
         ${(() => { const dc = fields ? Object.keys(fields).filter(k => k.startsWith('_docFile_') && k.endsWith('_name')).length : 0; return dc > 0 ? `<tr><td>Documents Submitted</td><td><strong>${dc} file${dc > 1 ? 's' : ''} attached</strong> — accessible via your tenant portal</td></tr>` : ''; })()}
       </table>
     </div>
 
     ${paymentSection}
+    ${consentNotice}
 
     <div class="section">
       <div class="section-label">What Happens Next</div>
@@ -245,12 +263,12 @@ export function applicationConfirmationHtml(
 
     <div class="callout">
       <h4>Important — Save Your Application ID</h4>
-      <p>Your application ID is <strong>${appId}</strong>. Please save this reference number. You will use it to track your application status and access your tenant portal at any time.</p>
+      <p>Your application ID is <strong>${safeAppId}</strong>. Please save this reference number. You will use it to track your application status and access your tenant portal at any time.</p>
     </div>
 
     <div class="cta-wrap">
-      <a href="${portal}" class="cta-btn">Track My Application</a>
-      <div class="cta-note">Or visit: ${portal}</div>
+      <a href="${escapeHtml(portal)}" class="cta-btn">Track My Application</a>
+      <div class="cta-note">Or visit: ${escapeHtml(portal)}</div>
     </div>
 
     <div class="section">
@@ -258,10 +276,10 @@ export function applicationConfirmationHtml(
       <p style="font-size:13px;color:#555;line-height:1.65;">When you submitted this application you agreed to the
         <a href="${POLICY_BASE_URL}/terms.html" style="color:#1a5276;">Terms of Service</a> (including binding arbitration and class-action waiver in Sections 18–19),
         the <a href="${POLICY_BASE_URL}/privacy.html" style="color:#1a5276;">Privacy Policy</a>, and the
-        <a href="${POLICY_BASE_URL}/policies.html" style="color:#1a5276;">Complete Policy &amp; Legal Framework</a> (v2.0).
+        <a href="${POLICY_BASE_URL}/policies.html" style="color:#1a5276;">Complete Policy &amp; Legal Framework</a> (v2.3).
         ${agreementFeeLine}
         ${fields?.['SMS Consent'] === 'yes'
-          ? `You opted in to transactional SMS at <strong>${fields?.['Phone'] || 'the number on file'}</strong>. Reply STOP to opt out at any time.`
+          ? `You opted in to transactional SMS at <strong>${escapeHtml(fields?.['Phone'] || 'the number on file')}</strong>. Reply STOP to opt out at any time.`
           : `You did not opt in to SMS — we will reach you by email and phone only.`}
       </p>
     </div>
@@ -280,6 +298,45 @@ export function applicationConfirmationHtml(
 </html>`;
 }
 
+export function coApplicantScreeningConsentHtml(
+  firstName: string,
+  appId: string,
+  consentLink: string): string {
+  const safeFirstName = escapeHtml(firstName);
+  const safeAppId = escapeHtml(appId);
+  const safeLink = escapeHtml(consentLink);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Screening Authorization — Choice Properties</title>
+  <style>${EMAIL_BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  ${buildEmailHeader('Your separate screening authorization is needed', appId)}
+  <div class="email-body">
+    <p class="greeting">Dear ${safeFirstName},</p>
+    <p class="intro-text">You were listed as an additional adult applicant or guarantor on a Choice Properties rental application. Before any screening of you can begin, you must personally review and submit your own authorization.</p>
+    <div class="callout amber">
+      <h4>What you are authorizing</h4>
+      <p>You authorize Choice Properties and its designated verification providers to verify information you provide, including employment, income, rental history, and personal references, and to request consumer reports where applicable. If a decision is based on a consumer report, you will receive the notices and information required by law.</p>
+    </div>
+    <p class="intro-text">This link is specific to you, expires in seven days, and can be used once. Do not forward it. The $50 screening application fee applies to each adult screened; the primary applicant has been shown the household total.</p>
+    <div class="cta-wrap">
+      <a href="${safeLink}" class="cta-btn">Review and authorize screening</a>
+      <p class="cta-note">If the button does not work, copy and paste this secure link: ${safeLink}</p>
+    </div>
+    <p class="cta-note">Application reference: ${safeAppId}</p>
+    ${CONTACT_ROW}
+  </div>
+  ${EMAIL_FOOTER}
+</div>
+</body>
+</html>`;
+}
+
 // ─── Template 2: Admin Notification ───────────────────────────────────────────
 
 export function adminNotificationHtml(
@@ -291,6 +348,12 @@ export function adminNotificationHtml(
   fields?: ApplicationFields,
   enforcedFee?: number | null): string {
   const adminUrl = getAdminUrl();
+  const safeAdminUrl = escapeHtml(adminUrl);
+  const safeFirstName = escapeHtml(firstName);
+  const safeLastName = escapeHtml(lastName);
+  const safeEmail = escapeHtml(email);
+  const safeAppId = escapeHtml(appId);
+  const safePropertyAddress = escapeHtml(propertyAddress || 'Not specified');
   const feeRaw = fields?.['Application Fee'];
   const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
   const hasFee = feeNum > 0;
@@ -298,14 +361,14 @@ export function adminNotificationHtml(
   const feeDisplay = hasFee ? `$${feeNum.toFixed(2)}` : (freeApp ? 'Free \u2014 No Fee' : 'Per property terms');
   const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
   const screenedAdultCount = hasCoApplicant ? 2 : 1;
-  const feeBreakdown = `${screenedAdultCount} adult${screenedAdultCount === 1 ? '' : 's'} screened × $50 = ${feeDisplay} total`;
+  const feeBreakdown = `${screenedAdultCount} adult applicant${screenedAdultCount === 1 ? '' : 's'} × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
     fields?.['Alternative Payment Method'],
     fields?.['Third Choice Payment Method'],
-  ].filter(Boolean) as string[];
+  ].filter(Boolean).map(escapeHtml) as string[];
   const adminPaymentSection = hasFee
-    ? `<div class="section"><div class="section-label" style="color:#1d4ed8;">\ud83d\udcb3 Payment Coordination \u2014 Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant\u2019s Preferred Method</h4><p><strong>${feeBreakdown}</strong></p>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${firstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'\u2605 ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click \u201cMark paid\u201d.</p>` : '<p>No payment method preference specified \u2014 contact applicant directly to arrange.</p>'}</div></div>`
+    ? `<div class="section"><div class="section-label" style="color:#1d4ed8;">\ud83d\udcb3 Payment Coordination \u2014 Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant\u2019s Preferred Method</h4><p><strong>${feeBreakdown}</strong></p>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${safeFirstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'\u2605 ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click \u201cMark paid\u201d.</p>` : '<p>No payment method preference specified \u2014 contact applicant directly to arrange.</p>'}</div></div>`
     : freeApp
       ? `<div class="section"><div class="callout green"><h4>\u2713 No Application Fee</h4><p>No payment collection required \u2014 proceed directly to review.</p></div></div>`
       : '';
@@ -315,7 +378,7 @@ export function adminNotificationHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>New Application — ${appId}</title>
+  <title>New Application — ${safeAppId}</title>
   <style>${EMAIL_BASE_CSS}</style>
 </head>
 <body>
@@ -331,16 +394,16 @@ export function adminNotificationHtml(
     <div class="section">
       <div class="section-label">Applicant Overview</div>
       <table class="info-table">
-        <tr><td>Full Name</td><td><strong>${firstName} ${lastName}</strong></td></tr>
-        <tr><td>Email</td><td>${email}</td></tr>
-        <tr><td>Phone</td><td><strong>${fields?.['Phone'] || 'Not provided'}</strong> (Text preferred)</td></tr>
-        <tr><td>Property Requested</td><td>${propertyAddress || 'Not specified'}</td></tr>
-        <tr><td>Requested Move-In</td><td>${fields?.['Requested Move-in Date'] || 'Not specified'}</td></tr>
-        <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
-        <tr><td>Contact Preference</td><td>${fields?.['Preferred Contact Method'] || 'Not specified'}</td></tr>
-        <tr><td>Best Time to Reach</td><td>${[fields?.['Preferred Time'], fields?.['Preferred Time Specific']].filter(Boolean).join(' — ') || 'Any'}</td></tr>
-        ${hasCoApplicant ? `<tr><td>Co-Applicant</td><td><strong style="color:#7c3aed;">&#x1F465; ${[fields?.['Co-Applicant First Name'], fields?.['Co-Applicant Last Name']].filter(Boolean).join(' ') || 'Yes'}</strong>${fields?.['Co-Applicant Email'] ? ` &mdash; ${fields['Co-Applicant Email']}` : ''}</td></tr>` : ''}
-        <tr><td>Screened Adult Applicants</td><td>${screenedAdultCount}</td></tr>
+        <tr><td>Full Name</td><td><strong>${safeFirstName} ${safeLastName}</strong></td></tr>
+        <tr><td>Email</td><td>${safeEmail}</td></tr>
+        <tr><td>Phone</td><td><strong>${escapeHtml(fields?.['Phone'] || 'Not provided')}</strong> (Text preferred)</td></tr>
+        <tr><td>Property Requested</td><td>${safePropertyAddress}</td></tr>
+        <tr><td>Requested Move-In</td><td>${escapeHtml(fields?.['Requested Move-in Date'] || 'Not specified')}</td></tr>
+        <tr><td>Lease Term</td><td>${escapeHtml(fields?.['Desired Lease Term'] || 'Not specified')}</td></tr>
+        <tr><td>Contact Preference</td><td>${escapeHtml(fields?.['Preferred Contact Method'] || 'Not specified')}</td></tr>
+        <tr><td>Best Time to Reach</td><td>${escapeHtml([fields?.['Preferred Time'], fields?.['Preferred Time Specific']].filter(Boolean).join(' — ') || 'Any')}</td></tr>
+        ${hasCoApplicant ? `<tr><td>Additional adult</td><td><strong style="color:#7c3aed;">&#x1F465; ${escapeHtml([fields?.['Co-Applicant First Name'], fields?.['Co-Applicant Last Name']].filter(Boolean).join(' ') || 'Yes')}</strong>${fields?.['Co-Applicant Email'] ? ` &mdash; ${escapeHtml(fields['Co-Applicant Email'])}` : ''}<br>Separate screening consent is pending. Invitation email: ${escapeHtml(fields?.['Co-Applicant Consent Invite'] || 'not sent')}.</td></tr>` : ''}
+        <tr><td>Adults Included in Screening</td><td>${screenedAdultCount}</td></tr>
         <tr><td>Fee Calculation</td><td>${feeBreakdown}</td></tr>
         ${(() => { const docCount = fields ? Object.keys(fields).filter(k => k.startsWith('_docFile_') && k.endsWith('_name')).length : 0; return docCount > 0 ? `<tr><td>Documents Attached</td><td><strong style="color:#059669;">&#x1F4CE; ${docCount} file${docCount > 1 ? 's' : ''} — view in admin portal</strong></td></tr>` : ''; })()}
       </table>
@@ -350,11 +413,11 @@ export function adminNotificationHtml(
     <div class="section">
       <div class="section-label">Employment &amp; Income</div>
       <table class="info-table">
-        <tr><td>Employment Status</td><td>${fields?.['Employment Status'] || 'Not specified'}</td></tr>
-        <tr><td>Employer</td><td>${fields?.['Employer'] || 'N/A'}</td></tr>
-        <tr><td>Job Title</td><td>${fields?.['Job Title'] || 'N/A'}</td></tr>
+        <tr><td>Employment Status</td><td>${escapeHtml(fields?.['Employment Status'] || 'Not specified')}</td></tr>
+        <tr><td>Employer</td><td>${escapeHtml(fields?.['Employer'] || 'N/A')}</td></tr>
+        <tr><td>Job Title</td><td>${escapeHtml(fields?.['Job Title'] || 'N/A')}</td></tr>
         <tr><td>Monthly Income</td><td>${fields?.['Monthly Income'] ? '$' + Number(fields['Monthly Income']).toLocaleString() : 'Not specified'}</td></tr>
-        <tr><td>Employment Duration</td><td>${fields?.['Employment Duration'] || 'N/A'}</td></tr>
+        <tr><td>Employment Duration</td><td>${escapeHtml(fields?.['Employment Duration'] || 'N/A')}</td></tr>
       </table>
     </div>
     ` : ''}
@@ -378,15 +441,15 @@ export function adminNotificationHtml(
     <div class="section">
       <div class="section-label">Quick Actions</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
-        <a href="${adminUrl}" style="display:inline-block;background:#0a1628;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Admin Dashboard</a>
-        <a href="mailto:${email}?subject=Your%20Application%20${appId}%20-%20Choice%20Properties" style="display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Email Applicant</a>
-        ${fields?.['Phone'] ? `<a href="sms:${fields['Phone'].toString().replace(/\D/g,'')}?body=Hi%20${firstName}%2C%20this%20is%20Choice%20Properties%20regarding%20your%20application%20${appId}" style="display:inline-block;background:#059669;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Text Applicant</a>` : ''}
+        <a href="${safeAdminUrl}" style="display:inline-block;background:#0a1628;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Admin Dashboard</a>
+        <a href="mailto:${encodeURIComponent(email)}?subject=Your%20Application%20${encodeURIComponent(appId)}%20-%20Choice%20Properties" style="display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Email Applicant</a>
+        ${fields?.['Phone'] ? `<a href="sms:${encodeURIComponent(fields['Phone'].toString().replace(/\D/g,''))}?body=Hi%20${encodeURIComponent(firstName)}%2C%20this%20is%20Choice%20Properties%20regarding%20your%20application%20${encodeURIComponent(appId)}" style="display:inline-block;background:#059669;color:white;text-decoration:none;padding:11px 22px;border-radius:3px;font-size:13px;font-weight:600;">Text Applicant</a>` : ''}
       </div>
     </div>
 
     <div class="email-closing">
       <div class="sign-off">Choice Properties System</div>
-      <div class="sign-company">Automated Admin Notification &mdash; ${appId}</div>
+      <div class="sign-company">Automated Admin Notification &mdash; ${safeAppId}</div>
     </div>
   </div>
   ${EMAIL_FOOTER}
@@ -410,6 +473,10 @@ export function statusUpdateHtml(
   const isApproved = status === 'approved';
   const isWaitlisted = status === 'waitlisted';
   const propertyLabel = propertyName || propertyAddress;
+  const safeFirstName = escapeHtml(firstName);
+  const safePropertyLabel = escapeHtml(propertyLabel);
+  const safeReason = escapeHtml(reason);
+  const safePortal = escapeHtml(portal);
   const eSignText = getESignText(propertyState || 'MI');
 
   return `<!DOCTYPE html>
@@ -427,8 +494,8 @@ export function statusUpdateHtml(
     ${isApproved ? '&#x2713; &nbsp; Congratulations — Your Application Has Been Approved' : isWaitlisted ? '&#x23F3; &nbsp; You Have Been Added to the Waitlist' : '&mdash; &nbsp; Your Application Has Been Reviewed'}
   </div>
   <div class="email-body">
-    <p class="greeting">Dear ${firstName},</p>
-    ${propertyLabel ? `<p style="font-size:13px;color:#64748b;margin:-4px 0 16px;">Property: <strong>${propertyLabel}</strong></p>` : ''}
+    <p class="greeting">Dear ${safeFirstName},</p>
+    ${propertyLabel ? `<p style="font-size:13px;color:#64748b;margin:-4px 0 16px;">Property: <strong>${safePropertyLabel}</strong></p>` : ''}
 
     ${isApproved ? `
     <p class="intro-text">We are delighted to inform you that your rental application with Choice Properties has been <strong>approved</strong>. This decision reflects our confidence in your application, and we look forward to welcoming you as a resident.</p>
@@ -455,10 +522,10 @@ export function statusUpdateHtml(
       <p style="font-size:13px;color:#555;line-height:1.65;">Approved listings often have multiple qualified applicants. Moving promptly through the holding-fee and signing steps is how we make sure the right unit is secured for the right resident — without leaving anyone in limbo. Our team is available throughout to answer questions before you commit.</p>
     </div>
     ` : isWaitlisted ? `
-    <p class="intro-text">Thank you for your application for <strong>${propertyLabel}</strong>. We have reviewed your application and have added you to our active waitlist for this property.</p>
+    <p class="intro-text">Thank you for your application for <strong>${safePropertyLabel}</strong>. We have reviewed your application and have added you to our active waitlist for this property.</p>
     <div class="callout" style="border-color:#1e40af;">
       <h4>&#x23F3; You Are on the Active Waitlist</h4>
-      <p>${reason || 'Your application is complete and has been placed in our priority waitlist queue. We will contact you as soon as a unit becomes available or a comparable property opens up.'}</p>
+      <p>${safeReason || 'Your application is complete and has been placed in our priority waitlist queue. We will contact you as soon as a unit becomes available or a comparable property opens up.'}</p>
     </div>
     <div class="section">
       <div class="section-label">What This Means</div>
@@ -475,7 +542,7 @@ export function statusUpdateHtml(
     <p class="intro-text">Thank you for the time and effort you invested in your rental application. After careful and thorough consideration, we regret to inform you that we are unable to offer you a tenancy at this time.</p>
     <div class="callout red">
       <h4>Application Status — Not Approved</h4>
-      <p>${reason ? `After review, the primary consideration relates to: <strong>${reason}</strong>. ` : ''}Our decision is based on our standard application review criteria. We understand this is disappointing and we genuinely appreciate the trust you placed in us by applying.</p>
+      <p>${safeReason ? `After review, the primary consideration relates to: <strong>${safeReason}</strong>. ` : ''}Our decision is based on our standard application review criteria. We understand this is disappointing and we genuinely appreciate the trust you placed in us by applying.</p>
     </div>
     <div class="section">
       <div class="section-label">Looking Ahead</div>
@@ -491,7 +558,7 @@ export function statusUpdateHtml(
     `}
 
     <div class="cta-wrap">
-      <a href="${portal}" class="cta-btn">View My Application</a>
+      <a href="${safePortal}" class="cta-btn">View My Application</a>
     </div>
 
     ${CONTACT_ROW}
@@ -535,9 +602,18 @@ export function paymentConfirmedHtml(
   message?: string,
   phone?: string,
   appId?: string,
-  propertyName?: string): string {
+  propertyName?: string,
+  screenedAdultCount?: number,
+  feePerAdult = 50,
+  hasCoApplicant = false,
+  coApplicantConsent?: boolean): string {
   const portal = getTenantLoginUrl(appId);
   const feeDisplay = amount != null ? formatMoney(amount) : '—';
+  const consentPending = hasCoApplicant && coApplicantConsent !== true;
+  const safeFirstName = escapeHtml(firstName);
+  const safeAppId = escapeHtml(appId);
+  const safeProperty = escapeHtml(propertyName || propertyAddress);
+  const safePortal = escapeHtml(portal);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -550,35 +626,38 @@ export function paymentConfirmedHtml(
 <body>
 <div class="email-wrapper">
   ${buildEmailHeader('Application Fee Confirmed', appId)}
-  <div class="status-line status-paid">&#x2713; &nbsp; Payment Received — Application Now Under Review</div>
+  <div class="status-line status-paid">&#x2713; &nbsp; ${consentPending ? 'Payment Received — Waiting for Additional Adult Authorization' : 'Payment Received — Application Now Under Review'}</div>
   <div class="email-body">
-    <p class="greeting">Dear ${firstName},</p>
-    <p class="intro-text">We are pleased to confirm that your application fee has been received and successfully recorded. Your application is now active and has been placed in our review queue. Thank you for completing this step promptly.</p>
+    <p class="greeting">Dear ${safeFirstName},</p>
+    <p class="intro-text">${consentPending
+      ? 'We are pleased to confirm that your application fee has been received and successfully recorded. Review will begin after the additional adult submits their separate screening authorization.'
+      : 'We are pleased to confirm that your application fee has been received and successfully recorded. Your application is now active and has been placed in our review queue. Thank you for completing this step promptly.'}</p>
 
     <div class="section">
       <div class="section-label">Payment Confirmation</div>
       <div class="callout green">
         <h4>&#x2713; Payment Successfully Received</h4>
-        ${appId ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${appId}-PMT</span></div>` : ''}
-        ${appId ? `<div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${appId}</span></div>` : ''}
-        <div class="financial-row"><span class="f-label">Applicant</span><span class="f-value">${firstName}</span></div>
-        ${propertyAddress || propertyName ? `<div class="financial-row"><span class="f-label">Property</span><span class="f-value">${propertyName || propertyAddress}</span></div>` : ''}
+        ${appId ? `<div class="financial-row"><span class="f-label">Receipt ID</span><span class="f-value">${safeAppId}-PMT</span></div>` : ''}
+        ${appId ? `<div class="financial-row"><span class="f-label">Application ID</span><span class="f-value">${safeAppId}</span></div>` : ''}
+        <div class="financial-row"><span class="f-label">Applicant</span><span class="f-value">${safeFirstName}</span></div>
+        ${propertyAddress || propertyName ? `<div class="financial-row"><span class="f-label">Property</span><span class="f-value">${safeProperty}</span></div>` : ''}
         <div class="financial-row"><span class="f-label">Amount Paid</span><span class="f-value">${feeDisplay}</span></div>
+        ${screenedAdultCount && screenedAdultCount > 0 ? `<div class="financial-row"><span class="f-label">Screened adults × fee per adult</span><span class="f-value">${screenedAdultCount} × ${formatMoney(feePerAdult)} = ${formatMoney(screenedAdultCount * feePerAdult)}</span></div>` : ''}
         <div class="financial-row"><span class="f-label">Payment Date</span><span class="f-value">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-        ${method ? `<div class="financial-row"><span class="f-label">Payment Method</span><span class="f-value">${method}</span></div>` : ''}
-        ${ref ? `<div class="financial-row"><span class="f-label">Reference / Note</span><span class="f-value">${ref}</span></div>` : ''}
-        <div class="financial-row"><span class="f-label">Status</span><span class="f-value" style="color:#059669;">Under Review</span></div>
+        ${method ? `<div class="financial-row"><span class="f-label">Payment Method</span><span class="f-value">${escapeHtml(method)}</span></div>` : ''}
+        ${ref ? `<div class="financial-row"><span class="f-label">Reference / Note</span><span class="f-value">${escapeHtml(ref)}</span></div>` : ''}
+        <div class="financial-row"><span class="f-label">Status</span><span class="f-value" style="color:#059669;">${consentPending ? 'Waiting for additional adult authorization' : 'Under Review'}</span></div>
       </div>
     </div>
 
-    ${message ? `<div class="callout"><p>${message}</p></div>` : ''}
+    ${message ? `<div class="callout"><p>${escapeHtml(message)}</p></div>` : ''}
 
     <div class="section">
       <div class="section-label">What Happens Next</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span><strong>Active Review</strong> — Your complete application is now being reviewed by our leasing team. Applications are typically processed within 24–72 hours of payment confirmation.</span></li>
+        <li><span class="step-num">1</span><span><strong>${consentPending ? 'Additional adult authorization' : 'Active Review'}</strong> — ${consentPending ? 'The additional adult must submit their separate screening authorization before review can begin.' : 'Your complete application is now being reviewed by our leasing team. Applications are typically processed within 24–72 hours of payment confirmation.'}</span></li>
         <li><span class="step-num">2</span><span><strong>Background &amp; Income Verification</strong> — We will conduct standard verification procedures as part of our review process.</span></li>
-        <li><span class="step-num">3</span><span><strong>Decision Notification</strong> — You will receive an email once a decision has been made.${phone ? ` Our team may also reach out via text at <strong>${phone}</strong> if additional information is needed.` : ''}</span></li>
+        <li><span class="step-num">3</span><span><strong>Decision Notification</strong> — You will receive an email once a decision has been made.${phone ? ` Our team may also reach out via text at <strong>${escapeHtml(phone)}</strong> if additional information is needed.` : ''}</span></li>
       </ul>
     </div>
 
@@ -588,7 +667,7 @@ export function paymentConfirmedHtml(
     </div>
 
     <div class="cta-wrap">
-      <a href="${portal}" class="cta-btn">Track My Application</a>
+      <a href="${safePortal}" class="cta-btn">Track My Application</a>
     </div>
 
     ${CONTACT_ROW}

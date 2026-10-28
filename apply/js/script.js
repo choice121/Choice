@@ -1365,14 +1365,7 @@ class RentalApplication {
                             radios.forEach(r => this.clearError(r));
                         }
                     } else if (input.type === 'checkbox') {
-                        if (input.id === 'coConsent' && !input.checked) {
-                            this.showError(input, this.state.language === 'en' ? 'You must authorize verification' : 'Debe autorizar la verificación');
-                            input.classList.add('is-invalid');
-                            isStepValid = false;
-                            if (!firstInvalidField) firstInvalidField = input;
-                        } else {
-                            this.clearError(input);
-                        }
+                        this.clearError(input);
                     } else {
                         if (input.hasAttribute('required') && !input.value.trim()) {
                             this.showError(input, this.state.language === 'en' ? 'Required' : 'Campo obligatorio');
@@ -1502,22 +1495,17 @@ class RentalApplication {
         if (hasCoApplicantCheck && coApplicantSection) {
             hasCoApplicantCheck.addEventListener('change', (e) => {
                 coApplicantSection.style.display = e.target.checked ? 'block' : 'none';
+                this._updateApplicationFee();
                 if (e.target.checked) {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.setAttribute('required', 'required');
                     });
-                    // coConsent must be checked when section is visible
-                    const coConsentEl = document.getElementById('coConsent');
-                    if (coConsentEl) coConsentEl.setAttribute('required', 'required');
                 } else {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
                         if (el) { el.removeAttribute('required'); el.value = ''; }
                     });
-                    // Remove required from coConsent and uncheck it when section hides
-                    const coConsentEl = document.getElementById('coConsent');
-                    if (coConsentEl) { coConsentEl.removeAttribute('required'); coConsentEl.checked = false; }
                     const inputs = coApplicantSection.querySelectorAll('input, select, textarea');
                     inputs.forEach(input => this.clearError(input));
                 }
@@ -2061,6 +2049,8 @@ class RentalApplication {
             // No server draft — fall back to localStorage
             this.restoreSavedProgress();
         }
+        document.getElementById('hasCoApplicant')?.dispatchEvent(new Event('change', { bubbles: true }));
+        this._updateApplicationFee();
     }
 
       restoreSavedProgress() {
@@ -2126,6 +2116,8 @@ class RentalApplication {
                 this._restoreDocumentsFromDraft(data._documents);
             } catch (e) { console.warn('[CP App] Non-critical error in restoreSavedProgress:', e); }
         }
+        document.getElementById('hasCoApplicant')?.dispatchEvent(new Event('change', { bubbles: true }));
+        this._updateApplicationFee();
     }
 
     // Issue #14: drafts now persist attached supporting documents alongside
@@ -2381,7 +2373,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'e.g., 4000',
                 coEmploymentDurationLabel: 'Duration of Employment',
                 coEmploymentDurationPlaceholder: 'e.g., 2 years',
-                coConsentLabel: 'I am the additional adult applicant or guarantor and personally authorize verification of my information, including credit and background screening. I understand the fee is $50 for each adult applicant or guarantor being screened.',
+                coApplicantConsentNotice: 'We will email the additional adult a separate link to review and authorize screening. Their screening cannot begin until they complete that step.',
                 contactPrefsHeader: 'Contact Preferences',
                 prefContactMethod: 'Preferred Contact Method',
                 contactMethodText: 'SMS / Text',
@@ -2474,7 +2466,7 @@ class RentalApplication {
                 paymentCoordinationNotice: 'Following submission, a coordinator will contact you about the fee total shown on your application. The fee is $50 per adult being screened.',
                 paymentIntro: freeApp
                     ? 'No application fee is required for this property. Please indicate your preferred contact method for review communications.'
-                    : `Indicate your preferred payment method. A representative will use this information to coordinate the $${fee} application fee after submission.`,
+                    : 'Indicate your preferred payment method. A representative will use this information to coordinate the application fee total shown above after submission.',
                 paymentImportant: freeApp
                     ? 'No application fee is required. Your application will be reviewed upon submission.'
                     : 'The application fee must be processed before screening can begin. You will be contacted after submission to arrange payment.',
@@ -2500,11 +2492,11 @@ class RentalApplication {
                 paymentReminderTitle: freeApp ? 'No Application Fee' : 'Application Fee Required',
                 paymentReminderDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to review upon submission.'
-                    : `Your application will not be activated until the $${fee} fee has been processed. A representative will contact you after submission.`,
+                    : 'Your application will not be activated until the fee total shown on your application has been processed. A representative will contact you after submission.',
                 verificationTitle: 'Verify Contact Information',
                 verificationDesc: freeApp
                     ? 'Confirm that the email address and phone number provided are accurate. These will be used for all application communications.'
-                    : `Confirm that the email address and phone number provided are accurate. These will be used to coordinate the $${fee} fee and communicate application status.`,
+                    : 'Confirm that the email address and phone number provided are accurate. These will be used to coordinate the fee total shown on your application and communicate application status.',
                 reapplicationPolicyTextShort: 'Choice Properties management reviews completed applications and contacts applicants about next steps.',
                 legalDeclaration: 'Applicant Declaration',
                 legalCertify: 'I certify that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that any material misrepresentation is grounds for denial or termination of tenancy.',
@@ -2609,7 +2601,7 @@ class RentalApplication {
                 paymentRequiredTitle: 'Tarifa de Solicitud',
                 paymentRequiredDesc: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud pasará directamente al proceso de verificación.'
-                    : 'La tarifa fija de $50 se paga después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
+                    : 'El total de la tarifa mostrado arriba se paga después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
                 completePaymentTitle: 'Revisión de Administración',
                 completePaymentDesc: freeApp
                     ? 'No se requiere pago. Su solicitud ha sido enviada y será revisada tal como fue recibida.'
@@ -2637,7 +2629,7 @@ class RentalApplication {
                 step1YouSubmit: '1. Solicitud Enviada',
                 step1Desc: 'Complete y envíe esta solicitud en su totalidad.',
                 step2PaymentArranged: '2. Tarifa de Solicitud',
-                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre la tarifa fija de $50.',
+                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre el total de la tarifa mostrado en su solicitud.',
                 step3ReviewBegins: '3. Verificación y Revisión',
                 step3Desc: 'La revisión de administración comienza cuando se completan los pasos requeridos. El tiempo varía.',
                 propertyHeader: 'Identificación del Solicitante y Propiedad',
@@ -2687,7 +2679,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'ej., 4000',
                 coEmploymentDurationLabel: 'Tiempo en el empleo',
                 coEmploymentDurationPlaceholder: 'ej., 2 años',
-                coConsentLabel: 'Autorizo la verificación de toda la información proporcionada para este co-solicitante o garante, incluyendo verificación de crédito y antecedentes.',
+                coApplicantConsentNotice: 'Enviaremos al adulto adicional un enlace separado para revisar y autorizar la verificación. Su evaluación no comenzará hasta que complete ese paso.',
                 contactPrefsHeader: 'Preferencias de Contacto',
                 prefContactMethod: 'Método de Contacto Preferido',
                 contactMethodText: 'SMS / Texto',
@@ -2777,10 +2769,10 @@ class RentalApplication {
                 smokerLabel: 'Uso de Tabaco / Cigarrillos',
                 paymentHeader: 'Asignación de Pagos del Residente',
                 paymentNoCollection: 'No se cobra ningún pago mediante este formulario.',
-                paymentCoordinationNotice: 'Después del envío, un coordinador le enviará un mensaje de texto con los datos de pago vigentes. La coordinación directa elimina los cargos por conveniencia; la tarifa de solicitud de $50 sigue vigente.',
+                paymentCoordinationNotice: 'Después del envío, un coordinador se comunicará con usted para coordinar el total de la tarifa mostrado en su solicitud. Se cobran $50 por cada adulto evaluado.',
                 paymentIntro: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Indique su método de contacto preferido para las comunicaciones de revisión.'
-                    : `Indique su método de pago preferido. Un representante usará esta información para coordinar la tarifa de solicitud de $${fee} tras el envío.`,
+                    : 'Indique su método de pago preferido. Un representante usará esta información para coordinar el total de la tarifa mostrado arriba después del envío.',
                 paymentImportant: freeApp
                     ? 'No se requiere tarifa de solicitud. Su solicitud será revisada al momento del envío.'
                     : 'La tarifa de solicitud debe procesarse antes de que pueda iniciarse la verificación. Será contactado después del envío para coordinar el pago.',
@@ -2806,11 +2798,11 @@ class RentalApplication {
                 paymentReminderTitle: freeApp ? 'Sin Tarifa de Solicitud' : 'Pago Requerido Antes de la Revisión',
                 paymentReminderDesc: freeApp
                     ? 'Esta propiedad no tiene tarifa de solicitud. Su envío está completo y pasará directamente a revisión.'
-                    : `Su solicitud no está completa hasta que se haya pagado la tarifa de $${fee}. Nuestro equipo lo contactará poco después del envío para organizar esto.`,
+                    : 'Su solicitud no estará activa hasta que se haya pagado el total de la tarifa mostrado en su solicitud. Nuestro equipo se comunicará con usted después del envío.',
                 verificationTitle: 'Verifique Su Información de Contacto',
                 verificationDesc: freeApp
                     ? 'Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará durante el proceso de revisión.'
-                    : `Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará acerca de la tarifa de $${fee}.`,
+                    : 'Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo coordinará el total de la tarifa mostrado en su solicitud y le comunicará el estado.',
                 reapplicationPolicyTextShort: 'El equipo de administración de Choice Properties revisa las solicitudes completas y contacta a los solicitantes sobre los siguientes pasos.',
                 legalDeclaration: 'Declaración del Solicitante',
                 legalCertify: 'Certifico que toda la información proporcionada en esta solicitud es verdadera, exacta y completa a mi leal saber y entender. Entiendo que cualquier tergiversación material es causa de denegación o terminación del arrendamiento.',
@@ -2874,7 +2866,7 @@ class RentalApplication {
                 uploadCta: 'Haga clic para buscar o arrastre archivos aquí',
                 uploadHint: 'Identificación oficial &nbsp;·&nbsp; Talones de pago &nbsp;·&nbsp; Estados de cuenta',
                 trustLine: 'Los datos de la solicitud se transmiten de forma segura y se utilizan exclusivamente para fines de verificación de arrendamiento.',
-                feeAcknowledge: 'Reconozco que el equipo de administración de Choice Properties revisa mi solicitud y que la tarifa fija es de $50. No se cobra al enviar. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
+                feeAcknowledge: 'Entiendo que la tarifa de solicitud es de $50 por cada adulto solicitante o garante que será evaluado, y que debo pagar el total mostrado arriba después de enviar la solicitud. No se cobra a los adultos que no solicitan ni serán evaluados. No se cobra nada al enviar. Si vuelvo a solicitar después de una decisión de no aprobación, debo comunicarme con administración antes del pago para verificar si califico para la cortesía de 30 días. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
                 agreeTermsPrivacy: 'He leído y acepto los <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Términos del Servicio</a> (incluyendo la <strong>cláusula de arbitraje vinculante</strong> y la <strong>renuncia a demanda colectiva</strong> en las Secciones 18–19), la <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Privacidad</a> y el <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Marco Completo de Políticas y Legal</a>. Confirmo que tengo al menos 18 años de edad y la capacidad legal para celebrar este acuerdo.',
                 smsConsent: 'Doy mi consentimiento expreso para recibir mensajes SMS transaccionales de Choice Properties al número móvil proporcionado, relacionados con el estado de la solicitud, coordinación de tarifa, ejecución del contrato y programación de mudanza. La frecuencia de los mensajes varía. <strong>Pueden aplicar tarifas de mensajes y datos.</strong> Responda HELP para asistencia, STOP para cancelar en cualquier momento. El consentimiento de SMS no es condición de la solicitud — deje sin marcar para recibir comunicaciones únicamente por correo electrónico.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',
@@ -2933,6 +2925,7 @@ class RentalApplication {
                 });
 
                 this.updateProgressBar();
+                this._updateApplicationFee();
 
                 if (this.getCurrentSection() === 6) {
                     this.generateApplicationSummary();
@@ -2969,6 +2962,7 @@ class RentalApplication {
             });
             document.documentElement.setAttribute('lang', 'es');
             document.title = t.pageTitle;
+            this._updateApplicationFee();
         }
     }
 
@@ -3418,7 +3412,7 @@ class RentalApplication {
                 await this.delay(500);
                 this.updateSubmissionProgress(4, t.complete);
                 await this.delay(500);
-                this.handleSubmissionSuccess(result.appId, result.portal_login_url);
+                this.handleSubmissionSuccess(result.appId, result.portal_login_url, result.coApplicantConsentInviteError);
             } else {
                 // GAS returns this error when the form was already submitted successfully
                 // but the original response was lost and the frontend retried. The App ID
@@ -3594,7 +3588,7 @@ class RentalApplication {
     }
 
     // ---------- handleSubmissionSuccess ----------
-    handleSubmissionSuccess(appId, portalLoginUrl) {
+    handleSubmissionSuccess(appId, portalLoginUrl, consentInviteError) {
         // Guard against being called twice (POST response + verify both succeed)
         if (this._successHandled) return;
         this._successHandled = true;
@@ -3615,7 +3609,7 @@ class RentalApplication {
             }
         } catch (_) { /* storage disabled — fall back to legacy login URL */ }
 
-        this.showSuccessState(appId, portalLoginUrl);
+        this.showSuccessState(appId, portalLoginUrl, consentInviteError);
         this.clearSavedProgress();
         sessionStorage.setItem('lastSuccessAppId', appId);
     }
@@ -3625,7 +3619,7 @@ class RentalApplication {
     }
 
     // ---------- showSuccessState ----------
-    showSuccessState(appId, portalLoginUrl) {
+    showSuccessState(appId, portalLoginUrl, consentInviteError) {
         const successState = document.getElementById('successState');
         if (!successState) return;
 
@@ -3656,6 +3650,11 @@ class RentalApplication {
             : (/^https?:\/\//i.test(savedPortalUrl) ? savedPortalUrl : '');
         const trackUrl = oneClickUrl
             || ('/tenant/login.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : ''));
+        const consentInviteWarning = consentInviteError
+            ? `<div role="alert" style="border-left:4px solid #b45309;background:#fff7ed;padding:12px 14px;margin:16px 0;color:#7c2d12;">${this._escHtml(this.state.language === 'es'
+                ? 'La solicitud se recibió, pero no se pudo enviar el enlace de autorización al adulto adicional. El equipo de Choice Properties debe enviar un nuevo enlace antes de comenzar la evaluación.'
+                : 'Your application was received, but the additional adult authorization email could not be sent. Choice Properties must send a new link before screening can begin.')}</div>`
+            : '';
 
         let paymentPrefs = primaryPayment ? primaryPayment : t.notSelected;
         if (secondaryPayment && secondaryPayment.trim()) {
@@ -3713,6 +3712,7 @@ class RentalApplication {
                 </div>
 
                 <div class="divider"></div>
+                ${this._safeHtml(consentInviteWarning)}
 
                 <div class="next-steps-box">
                     <h3><i class="fas fa-clock"></i> ${t.immediateNextSteps}</h3>
@@ -3851,8 +3851,7 @@ class RentalApplication {
                 'Co-Applicant DOB',
                 'Co-Applicant SSN',
                 'Co-Applicant Employer', 'Co-Applicant Job Title',
-                'Co-Applicant Monthly Income', 'Co-Applicant Employment Duration',
-                'Co-Applicant Consent'
+                'Co-Applicant Monthly Income', 'Co-Applicant Employment Duration'
             ]},
             { id: 2, name: t.summaryResidency, fields: [
                 'Current Address', 'Residency Duration', 'Current Rent Amount',
