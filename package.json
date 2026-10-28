@@ -8,7 +8,7 @@
     "test:location-visual": "playwright test",
     "bump-extension": "node scripts/sync-and-bump-extension.mjs",
     "validate-extension": "node scripts/validate-extension.mjs",
-    "lint": "node -e \"console.log('Linting passed')\"",
+    "lint": "node scripts/check-js-syntax.mjs",
     "setup-credentials": "node scripts/open-setup.mjs",
     "load-credentials": "node scripts/setup-credentials.mjs",
     "setup-direct": "node setup-direct.mjs",

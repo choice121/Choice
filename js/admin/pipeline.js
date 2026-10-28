@@ -1252,8 +1252,7 @@ function wirePanelPhotoActions(){
 
         currentGenerated = data.result;
         previewAddr.textContent = currentGenerated.newTitle;
-        previewMeta.textContent = `Coordinates: ${currentGenerated.newLat}, ${currentGenerated.newLng} · Method: ${currentGenerated.method}` +
-          (currentGenerated.
+        previewMeta.textContent = `Coordinates: ${currentGenerated.newLat}, ${currentGenerated.newLng} · Method: ${currentGenerated.method}`;
 
         previewBox.style.display = 'block';
         applyBtn.disabled = false;
