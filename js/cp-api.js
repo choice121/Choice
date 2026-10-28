@@ -660,7 +660,7 @@ const Properties = {
   async getOne(id) {
     // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
     // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
+     const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero), property_media(id, kind, url, display_order, is_hero, metadata)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }

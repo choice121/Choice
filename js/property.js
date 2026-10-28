@@ -709,7 +709,6 @@ function renderProperty(p) {
     vtBtn.addEventListener('click', () => openVirtualTourModal(p));
     descEl.closest('.detail-section').appendChild(vtBtn);
 
-    // Also wire up hero mosaic tour button if present
     const mosaicTourBtn = document.getElementById('mosaicTourBtn');
     if (mosaicTourBtn) {
       mosaicTourBtn.style.display = 'inline-flex';
@@ -718,6 +717,27 @@ function renderProperty(p) {
         openVirtualTourModal(p);
       };
     }
+  }
+
+  // Render additional media (videos, floor plans, tours) from property_media
+  if (Array.isArray(p.property_media) && p.property_media.length) {
+    const groups = {};
+    p.property_media.forEach(m => { (groups[m.kind] = groups[m.kind] || []).push(m); });
+    const section = descEl.closest('.detail-section');
+    Object.keys(groups).forEach(kind => {
+      if (kind === 'virtual_tour') return;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
+      groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
+        const a = document.createElement('a');
+        a.href = m.url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'btn btn-outline';
+        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
+        a.innerHTML = `<i class="fas fa-${kind==='video'?'video':kind==='floor_plan'?'drafting-compass':'cube'}"></i> ${kind.replace('_',' ')}`;
+        wrap.appendChild(a);
+      });
+      section.appendChild(wrap);
+    });
   }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
