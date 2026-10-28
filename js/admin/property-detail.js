@@ -489,6 +489,7 @@
     const actionsHtml = `<div class="pd-actions">
       <button class="btn btn-primary btn-sm" id="pd-btn-edit">${ico('edit')} Edit &amp; Upload</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-photos">${ico('photos')} ${_photos.length ? 'All photos ('+_photos.length+')' : 'Manage photos'}</button>
+      <button class="btn btn-ghost btn-sm" id="pd-btn-media">Manage floor plans &amp; tours</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-import-photos" title="Pull photos from the original Zillow/Realtor listing into ImageKit">${ico('dnload')} Import source photos</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-verify" title="Confirm this listing is still active and available">${ico('check')} Mark as verified</button>
       <a class="btn btn-ghost btn-sm" href="/property.html?id=${esc(p.id)}" target="_blank" rel="noopener">${ico('ext')} Public listing</a>
