@@ -113,6 +113,11 @@
       footer.querySelectorAll('a[href="/listings/"]').forEach(function (link) {
         link.href = '/listings.html?view=cities';
       });
+      footer.querySelectorAll('a[href="/listings.html"]').forEach(function (link) {
+        if (link.search.indexOf('view=cities') === -1) {
+          link.href = '/listings.html?view=cities';
+        }
+      });
     }
   }
 

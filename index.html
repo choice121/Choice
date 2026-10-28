@@ -13,7 +13,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1793159292128"></script>
+  <script src="/js/cp-error-reporter.js?v=1793213513093"></script>
   <script nonce="__CSP_NONCE__">
     (function(){
       try {
@@ -49,9 +49,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1793159292128">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1793159292128">
-  <link rel="stylesheet" href="/css/premium-design.css?v=1793159292128">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1793213513093">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1793213513093">
+  <link rel="stylesheet" href="/css/premium-design.css?v=1793213513093">
   <style>
     /* ── CRITICAL CSS — above-fold paint for index.html ──────────────────────
        Inlined to eliminate render-blocking flash on slow mobile connections.
@@ -83,16 +83,16 @@
     .property-card-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%)}
     #site-nav{min-height:64px}
   </style>
-<script defer src="/config.js?v=1793159292128"></script>
-<script defer src="/js/supabase.min.js?v=1793159292128"></script>
-<script defer src="/js/cp-ui.js?v=1793159292128"></script>
-<script type="module" src="/js/cp-api.js?v=1793159292128"></script>
-<script defer src="/js/components.js?v=1793159292128"></script>
-<script defer src="/js/card-builder.js?v=1793159292128"></script>
-<script defer src="/js/cp-live-hero.js?v=1793159292128"></script>
-<script defer src="/js/cp-mobile-search.js?v=1793159292128"></script>
-<script defer src="/js/cp-saved-nudge.js?v=1793159292128"></script>
-<script defer src="/js/cp-scroll-nav.js?v=1793159292128"></script>
+<script defer src="/config.js?v=1793213513093"></script>
+<script defer src="/js/supabase.min.js?v=1793213513093"></script>
+<script defer src="/js/cp-ui.js?v=1793213513093"></script>
+<script type="module" src="/js/cp-api.js?v=1793213513093"></script>
+<script defer src="/js/components.js?v=1793213513093"></script>
+<script defer src="/js/card-builder.js?v=1793213513093"></script>
+<script defer src="/js/cp-live-hero.js?v=1793213513093"></script>
+<script defer src="/js/cp-mobile-search.js?v=1793213513093"></script>
+<script defer src="/js/cp-saved-nudge.js?v=1793213513093"></script>
+<script defer src="/js/cp-scroll-nav.js?v=1793213513093"></script>
 
   <!-- I-060: WebSite + SearchAction structured data — enables Google Sitelinks Searchbox -->
   <script type="application/ld+json">
@@ -233,7 +233,6 @@
       <p class="mv2-eyebrow">
         <span class="mv2-eyebrow-pulse" aria-hidden="true"></span>
         Choice-managed homes · $50 per adult screened
-        Real homes. One management team.<br>
       </p>
 
       <h1 id="hero-headline" class="mv2-headline">
@@ -243,140 +242,57 @@
 
       <p class="mv2-lede">
         Verified listings, transparent pricing, and a clear $50-per-adult screening fee —
-        Choice-managed rentals · $50 per adult screened
-        <div class="trust-strip-item"><i class="fas fa-map-marker-alt"></i> Active Markets</div>
-                different from the start — Choice Properties managed the listing and the photos matched
+        designed for renters who want a simpler, more reliable path to home search.
       </p>
-        Rental homes, managed by <em>Choice Properties.</em>
-           Wrapped in <form> so Enter/Go submits cleanly; #searchBtn click handler
-           still fires unchanged for explicit button clicks. -->
+
       <form class="mv2-hero__search" role="search" aria-label="Search rentals"
+            onsubmit="event.preventDefault(); document.getElementById('searchBtn').click(); return false;">
         <div class="mv2-hero__search-row">
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="text" id="searchInput"
               placeholder="City, zip code, or neighborhood…"
               autocomplete="off" aria-label="Search location">
-          <div class="mv2-hero__content">
-            <p class="mv2-eyebrow">
-              <span class="mv2-eyebrow-pulse" aria-hidden="true"></span>
-              Choice-managed rentals · $50 per adult screened
-            </p>
-
-            <h1 id="hero-headline" class="mv2-headline">
-              Rental homes, managed by <em>Choice Properties.</em>
-            </h1>
-
-            <p class="mv2-lede">
-              Browse rentals managed by Choice Properties, then apply online and track updates from our team.
-            </p>
-
-            <form class="mv2-hero__search" role="search" aria-label="Search rentals"
-                  onsubmit="event.preventDefault(); document.getElementById('searchBtn').click(); return false;">
-              <div class="mv2-hero__search-row">
-                <div class="mv2-hero__search-field">
-                  <i class="fas fa-search" aria-hidden="true"></i>
-                  <input type="text" id="searchInput"
-                    placeholder="City, zip code, or neighborhood…"
-                    autocomplete="off" aria-label="Search location">
-                </div>
-                <div class="mv2-hero__search-field">
-                  <i class="fas fa-bed" aria-hidden="true"></i>
-                  <select id="bedroomsFilter" aria-label="Bedrooms">
-                    <option value="">Any beds</option>
-                    <option value="0">Studio</option>
-                    <option value="1">1 Bed</option>
-                    <option value="2">2 Beds</option>
-                    <option value="3">3 Beds</option>
-                    <option value="4">4+ Beds</option>
-                  </select>
-                </div>
-                <div class="mv2-hero__search-field">
-                  <i class="fas fa-dollar-sign" aria-hidden="true"></i>
-                  <select id="maxRentFilter" aria-label="Max rent">
-                    <option value="">Any price</option>
-                    <option value="700">Up to $700</option>
-                    <option value="900">Up to $900</option>
-                    <option value="1100">Up to $1,100</option>
-                    <option value="1400">Up to $1,400</option>
-                    <option value="1700">Up to $1,700</option>
-                    <option value="2200">Up to $2,200</option>
-                    <option value="2500">Up to $2,500</option>
-                    <option value="3000">Up to $3,000</option>
-                    <option value="3500">Up to $3,500</option>
-                    <option value="4000">Up to $4,000</option>
-                    <option value="5000">Up to $5,000</option>
-                  </select>
-                </div>
-                <button type="submit" class="mv2-btn mv2-btn--primary mv2-hero__search-btn"
-                        id="searchBtn" aria-label="Search">
-                  <i class="fas fa-search" aria-hidden="true"></i>
-                  <span>Search</span>
-                </button>
-              </div>
-            </form>
-
-            <ul class="mv2-hero__trust" aria-label="Choice Properties rental service">
-              <li><i class="fas fa-building" aria-hidden="true"></i> Choice-managed homes</li>
-              <li><i class="fas fa-bolt" aria-hidden="true"></i> $50 per adult screened</li>
-              <li><i class="fas fa-clipboard-check" aria-hidden="true"></i> Management-led review</li>
-            </ul>
-
-            <div class="mv2-hero__live" role="status" aria-live="polite" aria-label="Rental activity">
-              <span class="mv2-hero__live-label">
-                <span class="mv2-hero__live-dot" aria-hidden="true"></span>
-                Live
-              </span>
-              <span class="mv2-hero__live-text">Loading live activity…</span>
-            </div>
           </div>
-<div class="mv2-msearch-sheet" data-open="false" role="dialog" aria-modal="true"
-     aria-hidden="true" aria-labelledby="msearch-sheet-title">
-  <div class="mv2-msearch-sheet__handle" aria-hidden="true"></div>
-  <div class="mv2-msearch-sheet__header">
-    <h2 id="msearch-sheet-title" class="mv2-msearch-sheet__title">Find your home.</h2>
-    <button type="button" class="mv2-msearch-sheet__close" aria-label="Close search">
-      <i class="fas fa-times" aria-hidden="true"></i>
-    </button>
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-bed" aria-hidden="true"></i>
+            <select id="bedroomsFilter" aria-label="Bedrooms">
+              <option value="">Any beds</option>
+              <option value="0">Studio</option>
+              <option value="1">1 Bed</option>
+              <option value="2">2 Beds</option>
+              <option value="3">3 Beds</option>
+              <option value="4">4+ Beds</option>
+            </select>
+          </div>
+          <div class="mv2-hero__search-field">
+            <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+            <select id="maxRentFilter" aria-label="Max rent">
+              <option value="">Any price</option>
+              <option value="700">Up to $700</option>
+              <option value="900">Up to $900</option>
+              <option value="1100">Up to $1,100</option>
+              <option value="1400">Up to $1,400</option>
+              <option value="1700">Up to $1,700</option>
+              <option value="2200">Up to $2,200</option>
+              <option value="2500">Up to $2,500</option>
+              <option value="3000">Up to $3,000</option>
+              <option value="3500">Up to $3,500</option>
+              <option value="4000">Up to $4,000</option>
+              <option value="5000">Up to $5,000</option>
+            </select>
+          </div>
+          <button type="submit" class="mv2-btn mv2-btn--primary mv2-hero__search-btn"
+                  id="searchBtn" aria-label="Search">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            Search
+          </button>
+        </div>
+      </form>
+
+      <div class="trust-strip-item"><i class="fas fa-map-marker-alt"></i> Active Markets</div>
+    </div>
   </div>
-  <form class="mv2-msearch-sheet__form" role="search" aria-label="Search rentals">
-    <label class="mv2-msearch-sheet__field">
-      <i class="fas fa-search" aria-hidden="true"></i>
-      <input type="text" id="m-searchInput"
-             placeholder="City, zip code, or neighborhood…"
-             autocomplete="off" aria-label="Search location">
-    </label>
-    <label class="mv2-msearch-sheet__field">
-      <i class="fas fa-bed" aria-hidden="true"></i>
-      <select id="m-bedroomsFilter" aria-label="Bedrooms">
-        <option value="">Any beds</option>
-        <option value="0">Studio</option>
-        <option value="1">1 Bed</option>
-        <option value="2">2 Beds</option>
-        <option value="3">3 Beds</option>
-        <option value="4">4+ Beds</option>
-      </select>
-    </label>
-    <label class="mv2-msearch-sheet__field">
-      <i class="fas fa-dollar-sign" aria-hidden="true"></i>
-      <select id="m-maxRentFilter" aria-label="Max rent">
-        <option value="">Any price</option>
-        <option value="700">Up to $700</option>
-        <option value="900">Up to $900</option>
-        <option value="1100">Up to $1,100</option>
-        <option value="1400">Up to $1,400</option>
-        <option value="1700">Up to $1,700</option>
-        <option value="2200">Up to $2,200</option>
-        <option value="2500">Up to $2,500</option>
-        <option value="3000">Up to $3,000</option>
-        <option value="3500">Up to $3,500</option>
-        <option value="4000">Up to $4,000</option>
-        <option value="5000">Up to $5,000</option>
-      </select>
-    </label>
-    <button type="submit" class="mv2-btn mv2-btn--primary mv2-msearch-sheet__submit">
-      <i class="fas fa-search" aria-hidden="true"></i>
-      <span>Search rentals</span>
-    </button>
-  </form>
-</div>
 
 <!-- ── Trust Strip ── -->
 <div class="trust-strip" id="trust-section">
