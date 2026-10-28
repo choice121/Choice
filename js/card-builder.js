@@ -42,10 +42,7 @@
 
   function cityPageUrl(city, state) {
     if (!city || !state) return null;
-    var stateSlug = _STATE_SLUG[String(state).toUpperCase()] || toSlug(state);
-    var citySlug  = toSlug(city);
-    if (!stateSlug || !citySlug) return null;
-    return '/listings/' + stateSlug + '/' + citySlug;
+    return '/listings.html?' + new URLSearchParams({ city: city, state: state });
   }
 
   // ── Rent formatter ──────────────────────────────────────────
@@ -172,14 +169,6 @@
     // ── Address ───────────────────────────────────────────────
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
-    // ── Pet policy chip — shown when pets are allowed ─────────
-    var petChip = '';
-    if (p.pets_allowed === true) {
-      petChip = '<span class="property-card-pet-chip"><i class="fas fa-paw"></i> Pets OK</span>';
-    } else if (p.pets_allowed === false) {
-      petChip = '<span class="property-card-pet-chip property-card-pet-chip--no"><i class="fas fa-ban"></i> No Pets</span>';
-    }
-
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
     var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
@@ -222,8 +211,6 @@
           '</div>' +
           // 3. Specs — beds + baths + sqft
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
-          // 3b. Pet policy chip
-          (petChip ? '<div class="property-card-pet-row">' + petChip + '</div>' : '') +
           // 4. Footer — price pinned to bottom (no divider)
           '<div class="property-card-footer">' +
             '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +

@@ -330,6 +330,37 @@ function _typeFilterOr(canonicalType) {
 }
 
 const Properties = {
+    async getLocationIndex() {
+      const PAGE_SIZE = 1000;
+      const rows = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await sb()
+          .from('properties')
+          .select('city,state')
+          .eq('status', 'active')
+          .not('city', 'is', null)
+          .not('state', 'is', null)
+          .order('state', { ascending: true })
+          .order('city', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) return _ok(null, error);
+        rows.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+      }
+
+      const locations = new Map();
+      rows.forEach(row => {
+        const city = String(row.city || '').trim();
+        const state = String(row.state || '').trim();
+        if (!city || !state) return;
+        const key = `${state.toLowerCase()}|${city.toLowerCase()}`;
+        const location = locations.get(key) || { city, state, count: 0 };
+        location.count++;
+        locations.set(key, location);
+      });
+      return _ok([...locations.values()], null);
+    },
+
   // getListings - server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
   // Returns { ok, data: { rows, total, page, per_page, total_pages }, error }
@@ -573,6 +604,8 @@ const Properties = {
 
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status);
     if (filters.landlord) q = q.eq('landlord_id', filters.landlord);
+    if (filters.city) q = q.ilike('city', filters.city);
+    if (filters.state) q = q.eq('state', filters.state);
 
     if (filters.q) {
       const term = filters.q.trim();

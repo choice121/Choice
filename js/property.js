@@ -491,7 +491,6 @@ function renderProperty(p) {
   sd.type = 'application/ld+json';
   const amenities = [];
   if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
-  if (p.pets_allowed) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Pets Allowed",   "value": true });
   if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
   if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
   if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
@@ -632,7 +631,6 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
@@ -668,7 +666,6 @@ function renderProperty(p) {
   }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
@@ -806,13 +803,7 @@ function renderProperty(p) {
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
-  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
-  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
-  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
-  if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
-  if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -979,7 +970,6 @@ function renderProperty(p) {
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 
   // ── Enrichment sections ──
-  try { renderRenterRequirements(p); } catch (e) { console.warn('[property] renderRenterRequirements error:', e); }
   try { renderPropFacts(p); } catch (e) { console.warn('[property] renderPropFacts error:', e); }
   try { renderScoresSection(p); } catch (e) { console.warn('[property] renderScoresSection error:', e); }
   try { loadSimilarListings(p); } catch (e) { console.warn('[property] loadSimilarListings error:', e); }
@@ -1957,7 +1947,7 @@ document.getElementById('sendInquiryBtn').addEventListener('click', async () => 
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
   } else {
-    showToast('Message sent! The landlord will be in touch soon.', 'success');
+    showToast('Message sent! Choice Properties management will be in touch soon.', 'success');
     btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
 
     // Clear form fields after successful send
@@ -3433,37 +3423,9 @@ function renderRenterRequirements(p) {
   if (!section) return;
   injectEnrichmentStyles();
 
-  const reqs = [];
+   const reqs = [];
 
-  if (p.pets_allowed != null) {
-    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
-    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
-    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
-    reqs.push({
-      icon: 'fa-paw',
-      label: 'Pets',
-      value: petVal,
-      type: p.pets_allowed ? 'req-emerald' : 'req-rose'
-    });
-  }
-  if (p.minimum_credit_score) {
-    reqs.push({
-      icon: 'fa-chart-line',
-      label: 'Min. credit score',
-      value: Number(p.minimum_credit_score).toLocaleString() + '+',
-      type: 'req-blue'
-    });
-  }
-  if (p.minimum_income_multiplier) {
-    reqs.push({
-      icon: 'fa-coins',
-      label: 'Min. income',
-      value: p.minimum_income_multiplier + '× monthly rent',
-      type: 'req-amber'
-    });
-  }
-
-  if (!reqs.length) return;
+   if (!reqs.length) return;
 
   section.style.display = '';
   section.innerHTML = `

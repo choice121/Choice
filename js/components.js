@@ -35,6 +35,8 @@
   }
 
   function initComponents() {
+    normalizeManagementNavigation();
+
     /* ── I-030: Set og:url to the real current URL ── */
     var ogUrlMeta = document.querySelector('meta[property="og:url"]');
     if (ogUrlMeta) ogUrlMeta.setAttribute('content', location.href);
@@ -66,6 +68,52 @@
 
     /* ── Call updateNav once window.CP is ready ── */
     waitForCP(function () { window.CP.updateNav(); });
+  }
+
+  function normalizeManagementNavigation() {
+    var nav = document.getElementById('site-nav');
+    if (nav) {
+      nav.querySelectorAll('a[href^="/landlord/"]').forEach(function (link) { link.remove(); });
+      nav.querySelectorAll('a[href="/how-it-works.html"]').forEach(function (link) {
+        if (link.id === 'drawerListPropertyLink' || link.classList.contains('nav-link--landlord')) {
+          link.textContent = 'How We Manage Rentals';
+        }
+      });
+      var cta = nav.querySelector('.nav-drawer-cta');
+      var ctaLink = cta && cta.querySelector('a');
+      if (ctaLink) {
+        ctaLink.href = '/about.html';
+        ctaLink.textContent = 'About Choice Properties';
+      }
+      nav.querySelectorAll('.nav-logo-tagline').forEach(function (tagline) {
+        tagline.textContent = 'Managed Rentals';
+      });
+    }
+
+    var footer = document.getElementById('site-footer');
+    if (footer) {
+      footer.querySelectorAll('.footer-desc').forEach(function (description) {
+        description.textContent = 'Rental homes managed by Choice Properties, with direct application and resident support.';
+      });
+      footer.querySelectorAll('a[href="/application-credit-policy.html"]').forEach(function (link) {
+        link.textContent = 'Application Fee Adjustments';
+      });
+      var columns = footer.querySelectorAll('.footer-grid > div');
+      columns.forEach(function (column) {
+        var title = column.querySelector('.footer-col-title');
+        if (title && title.textContent.trim().toLowerCase() === 'landlords') {
+          title.textContent = 'Management';
+          var links = column.querySelectorAll('a');
+          if (links[0]) { links[0].href = '/about.html'; links[0].textContent = 'About Choice Properties'; }
+          if (links[1]) { links[1].href = '/how-it-works.html'; links[1].textContent = 'How We Manage Rentals'; }
+          Array.prototype.slice.call(links, 2).forEach(function (link) { link.remove(); });
+        }
+        column.querySelectorAll('a[href^="/landlord/"]').forEach(function (link) { link.remove(); });
+      });
+      footer.querySelectorAll('a[href="/listings/"]').forEach(function (link) {
+        link.href = '/listings.html?view=cities';
+      });
+    }
   }
 
   /* ─────────────────────────────────────────────────────────────

@@ -346,19 +346,11 @@ class RentalApplication {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // APPLICATION FEE — read from URL param before translations are built.
-    // Falls back to 50 if the param is absent from the URL.
-    // Zero-fee fix: fee=0 is a valid value (free application). The old
-    // check `if (fee && fee > 0)` treated 0 as falsy and fell back to $50,
-    // so applicants for free-application properties saw the wrong fee.
+    // APPLICATION FEE — fixed at $50 per Choice Properties policy.
     // ─────────────────────────────────────────────────────────────────────
     _readApplicationFee() {
         try {
-            const p      = new URLSearchParams(window.location.search);
-            const rawFee = p.get('fee');
-            const fee = (rawFee !== null && !isNaN(parseFloat(rawFee)) && parseFloat(rawFee) > 0)
-                ? parseFloat(rawFee)
-                : 50; // Choice Properties standard: always $50
+            const fee = 50;
             this.state.applicationFee = fee;
             const feeTitle  = document.querySelector('[data-i18n="feeTitle"]');
             const feeAmount = document.querySelector('.fee-amount');
@@ -395,11 +387,12 @@ class RentalApplication {
         try {
             const p     = new URLSearchParams(window.location.search);
             const id    = p.get('id')    || '';
-            const name  = p.get('pn')   || '';
-            const addr  = p.get('addr') || '';
-            const city  = p.get('city') || '';
+            const name  = p.get('pn')    || '';
+            const addr  = p.get('addr')  || '';
+            const city  = p.get('city')  || '';
             const state = p.get('state') || '';
-            const rent  = p.get('rent') || '';
+            const rent  = p.get('rent')  || '';
+            const fee   = '50';
             const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
 
             // Nothing useful in the URL — show manual-entry prompt and return
@@ -418,7 +411,6 @@ class RentalApplication {
               // Additional property context params
               const zip        = p.get('zip')         || '';
               const deposit    = p.get('deposit')     || '';
-              const fee        = p.get('fee')         || '';
               const beds       = p.get('beds')        || '';
               const baths      = p.get('baths')       || '';
               const avail      = p.get('avail')       || '';
@@ -989,29 +981,14 @@ class RentalApplication {
 
             if (!income) { widget.style.display = 'none'; return; }
 
-            const ratio  = total / rent; // typically landlords require 2.5x–3x
             const pct    = Math.round((rent / total) * 100);
             widget.style.display = 'block';
 
-            let color, bg, label, msg;
-            if (ratio >= 3) {
-                color = '#1b5e20'; bg = '#e8f5e9'; label = '✓ Qualifies';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '), which meets the standard 3× requirement.';
-            } else if (ratio >= 2.5) {
-                color = '#e65100'; bg = '#fff8e1'; label = '⚠ Borderline';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '). Most landlords require 2.5–3×. This may be reviewed closely.';
-            } else {
-                color = '#b71c1c'; bg = '#ffebee'; label = '✗ May Not Qualify';
-                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
-                      rent.toLocaleString('en-US') + '). Most landlords require at least 2.5–3×. ' +
-                      (other ? '' : 'Adding any additional income above may help.');
-            }
-
-            widget.style.background  = bg;
+            const color = '#1d4ed8';
+            const msg = 'Estimated rent share: ' + pct + '% of the income entered. Choice Properties management reviews each application individually.';
+            widget.style.background  = '#eff6ff';
             widget.style.borderColor = color + '55';
-            badge.textContent  = label;
+            badge.textContent  = 'For review';
             badge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;background:' + color + ';color:#fff;';
             const muted = document.createElement('span');
             muted.style.color = '#94a3b8';
@@ -2323,18 +2300,18 @@ class RentalApplication {
                 appId: 'Application ID',
                 clickToCopy: 'Copy ID',
                 immediateNextSteps: 'Next Steps',
-                paymentRequiredTitle: freeApp ? 'No Application Fee' : 'Application Fee Required',
+                paymentRequiredTitle: 'Application Fee',
                 paymentRequiredDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to screening.'
-                    : `An application fee of $${fee} is required to initiate the screening process. A representative will contact you to coordinate payment.`,
-                completePaymentTitle: freeApp ? 'Application Submitted' : 'Fee Coordination',
+                    : 'The fixed $50 fee is due after submission. Choice Properties management will contact you with the next steps before review begins.',
+                completePaymentTitle: 'Management Review',
                 completePaymentDesc: freeApp
                     ? 'No payment is required. Your application has been submitted and will be reviewed as received.'
-                    : `A representative will contact you using your indicated payment method to coordinate the $${fee} application fee.`,
-                reviewBeginsTitle: 'Screening in Progress',
+                    : 'Choice Properties management reviews completed applications. Timing varies based on the information and follow-up needed.',
+                reviewBeginsTitle: 'Application Review',
                 reviewBeginsDesc: freeApp
                     ? 'Screening typically concludes within 24 to 72 hours. Application status is available online using your Application ID.'
-                    : 'Screening typically concludes within 24 to 72 hours of fee confirmation. Application status is available online using your Application ID.',
+                    : 'You can track your application status using your Application ID. Review timing varies.',
                 importantNote: 'Notice:',
                 paymentUrgentText: freeApp
                     ? 'No application fee is required for this property. Your application has been submitted for review.'
@@ -2349,14 +2326,14 @@ class RentalApplication {
                 spamWarning: '📧 A confirmation has been sent to the email address provided. If not received within a few minutes, check your <strong>spam or junk folder</strong>.',
                 trackStatus: 'Track Application Status',
                 newApplication: 'Submit New Application',
-                reapplicationPolicyTitle: 'Reapplication Policy',
-                reapplicationPolicyText: 'In the event of denial, applicants may reapply for any available property within 30 days without a new application fee. Screening results remain valid for 60 days.',
+                reapplicationPolicyTitle: 'What Happens Next',
+                reapplicationPolicyText: 'Choice Properties management reviews completed applications and contacts applicants about next steps.',
                 step1YouSubmit: '1. Application Submitted',
                 step1Desc: 'Complete and submit this application in full.',
-                step2PaymentArranged: freeApp ? '2. Application Received' : '2. Fee Coordination',
-                step2Desc: freeApp ? 'No fee required. Application enters review immediately.' : `A representative contacts you to process the $${fee} fee.`,
+                step2PaymentArranged: '2. Application Fee',
+                step2Desc: 'Choice Properties management will contact you with the next steps for the fixed $50 fee.',
                 step3ReviewBegins: '3. Screening & Review',
-                step3Desc: freeApp ? 'Typically completed within 24–72 hours.' : 'Typically completed within 24–72 hours of fee confirmation.',
+                step3Desc: 'Management review begins after the required application steps are complete. Timing varies.',
                 propertyHeader: 'Applicant Identification & Property',
                 propertyInfo: 'Property Information',
                 propertyAddressLabel: 'Property Address',
@@ -2528,10 +2505,10 @@ class RentalApplication {
                 verificationDesc: freeApp
                     ? 'Confirm that the email address and phone number provided are accurate. These will be used for all application communications.'
                     : `Confirm that the email address and phone number provided are accurate. These will be used to coordinate the $${fee} fee and communicate application status.`,
-                reapplicationPolicyTextShort: 'In the event of denial, applicants may reapply within 30 days without a new fee. Screening results valid for 60 days.',
+                reapplicationPolicyTextShort: 'Choice Properties management reviews completed applications and contacts applicants about next steps.',
                 legalDeclaration: 'Applicant Declaration',
                 legalCertify: 'I certify that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that any material misrepresentation is grounds for denial or termination of tenancy.',
-                legalAuthorize: 'I authorize Choice Properties and its designated agents to verify all information provided in this application, including employment, income, rental history, personal references, and to conduct a consumer credit and background screening.',
+                legalAuthorize: 'I authorize Choice Properties management and its designated verification providers to verify information provided in this application, including employment, income, rental history, and personal references, and to request consumer reports where applicable. If a decision is based on a consumer report, I will receive the notices and information required by law.',
                 termsAgreeLabel: 'I certify that all information provided in this application is accurate and complete, and I authorize Choice Properties to verify it.',
                 submitBtn: 'Submit Application',
                 submitDisclaimer: 'By submitting, you authorize Choice Properties to process this application in accordance with its Privacy Policy and Terms of Service.',
@@ -2590,10 +2567,8 @@ class RentalApplication {
                 uploadDesc: 'Documents may be attached to expedite the review process. Image files (JPG, PNG) will display a preview after upload. PDF files will be confirmed with a verification badge. <strong>Accepted:</strong> PDF, JPG, PNG · Max 1 MB per file · Up to 4 files · 3 MB total.',
                 uploadCta: 'Click to browse or drag files here',
                 uploadHint: 'Government-issued ID &nbsp;·&nbsp; Pay stubs &nbsp;·&nbsp; Bank statements',
-                creditApplied: 'Application Credit Applied',
-                creditAppliedText: 'An application credit has been applied. The application fee is waived.',
                 trustLine: 'Application data is transmitted securely and used solely for rental screening purposes.',
-                feeAcknowledge: 'I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the property owner solely for rental application screening. The application fee is <strong>non-refundable</strong> upon submission and payment processing, except as provided in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.',
+                feeAcknowledge: 'I acknowledge that Choice Properties management reviews my application and that the fixed application fee is $50. Nothing is charged when I submit. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.',
                 agreeTermsPrivacy: 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Terms of Service</a> (including the <strong>binding arbitration clause</strong> and <strong>class action waiver</strong> in Sections 18–19), the <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Privacy Policy</a>, and the <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Complete Policy &amp; Legal Framework</a>. I confirm I am at least 18 years of age and have legal capacity to enter into this agreement.',
                 smsConsent: 'I expressly consent to receive transactional SMS messages from Choice Properties at the mobile number provided, regarding application status, fee coordination, lease execution, and move-in scheduling. Message frequency varies. <strong>Message and data rates may apply.</strong> Reply HELP for assistance, STOP to opt out at any time. SMS consent is not a condition of application — leave unchecked to receive communications by email only.',
                 footerCopyright: '&copy; 2026 Choice Properties. All rights reserved.',
@@ -2631,18 +2606,18 @@ class RentalApplication {
                 appId: 'ID de Solicitud',
                 clickToCopy: 'Copiar ID',
                 immediateNextSteps: 'Próximos Pasos',
-                paymentRequiredTitle: freeApp ? 'Sin Tarifa de Solicitud' : 'Tarifa de Solicitud Requerida',
+                paymentRequiredTitle: 'Tarifa de Solicitud',
                 paymentRequiredDesc: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud pasará directamente al proceso de verificación.'
-                    : `Se requiere una tarifa de solicitud de $${fee} para iniciar el proceso de verificación. Un representante lo contactará para coordinar el pago.`,
-                completePaymentTitle: freeApp ? 'Solicitud Enviada' : 'Coordinación de Tarifa',
+                    : 'La tarifa fija de $50 se paga después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
+                completePaymentTitle: 'Revisión de Administración',
                 completePaymentDesc: freeApp
                     ? 'No se requiere pago. Su solicitud ha sido enviada y será revisada tal como fue recibida.'
-                    : `Un representante lo contactará usando su método de pago indicado para coordinar la tarifa de solicitud de $${fee}.`,
-                reviewBeginsTitle: 'Verificación en Proceso',
+                    : 'El equipo de administración de Choice Properties revisa las solicitudes completas. El tiempo varía según la información y el seguimiento necesario.',
+                reviewBeginsTitle: 'Revisión de Solicitud',
                 reviewBeginsDesc: freeApp
                     ? 'La verificación generalmente concluye en 24 a 72 horas. El estado de la solicitud está disponible en línea usando su ID de Solicitud.'
-                    : 'La verificación generalmente concluye en 24 a 72 horas tras la confirmación del pago. El estado de la solicitud está disponible en línea usando su ID de Solicitud.',
+                    : 'Puede consultar el estado de su solicitud con su ID. El tiempo de revisión varía.',
                 importantNote: 'Aviso:',
                 paymentUrgentText: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud ha sido enviada para revisión.'
@@ -2657,14 +2632,14 @@ class RentalApplication {
                 spamWarning: '📧 Se ha enviado una confirmación al correo electrónico proporcionado. Si no lo recibe en unos minutos, revise su carpeta de <strong>spam o correo no deseado</strong>.',
                 trackStatus: 'Ver Estado de Solicitud',
                 newApplication: 'Enviar Nueva Solicitud',
-                reapplicationPolicyTitle: 'Política de Reaplicación',
-                reapplicationPolicyText: 'En caso de denegación, los solicitantes pueden volver a solicitar cualquier propiedad disponible dentro de 30 días sin nueva tarifa. Los resultados de verificación permanecen válidos por 60 días.',
+                reapplicationPolicyTitle: 'Qué Sucede Después',
+                reapplicationPolicyText: 'El equipo de administración de Choice Properties revisa las solicitudes completas y contacta a los solicitantes sobre los siguientes pasos.',
                 step1YouSubmit: '1. Solicitud Enviada',
                 step1Desc: 'Complete y envíe esta solicitud en su totalidad.',
-                step2PaymentArranged: freeApp ? '2. Solicitud Recibida' : '2. Coordinación de Tarifa',
-                step2Desc: freeApp ? 'Sin tarifa. La solicitud entra en revisión de inmediato.' : `Un representante lo contacta para procesar la tarifa de $${fee}.`,
+                step2PaymentArranged: '2. Tarifa de Solicitud',
+                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre la tarifa fija de $50.',
                 step3ReviewBegins: '3. Verificación y Revisión',
-                step3Desc: freeApp ? 'Generalmente concluye en 24–72 horas.' : 'Generalmente concluye en 24–72 horas tras la confirmación del pago.',
+                step3Desc: 'La revisión de administración comienza cuando se completan los pasos requeridos. El tiempo varía.',
                 propertyHeader: 'Identificación del Solicitante y Propiedad',
                 propertyInfo: 'Información de la Propiedad',
                 propertyAddressLabel: 'Dirección de la Propiedad',
@@ -2836,10 +2811,10 @@ class RentalApplication {
                 verificationDesc: freeApp
                     ? 'Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará durante el proceso de revisión.'
                     : `Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará acerca de la tarifa de $${fee}.`,
-                reapplicationPolicyTextShort: 'Si es denegado, puede aplicar nuevamente dentro de 30 días sin nueva tarifa. Resultados de evaluación válidos por 60 días.',
+                reapplicationPolicyTextShort: 'El equipo de administración de Choice Properties revisa las solicitudes completas y contacta a los solicitantes sobre los siguientes pasos.',
                 legalDeclaration: 'Declaración del Solicitante',
                 legalCertify: 'Certifico que toda la información proporcionada en esta solicitud es verdadera, exacta y completa a mi leal saber y entender. Entiendo que cualquier tergiversación material es causa de denegación o terminación del arrendamiento.',
-                legalAuthorize: 'Autorizo a Choice Properties y sus agentes designados a verificar toda la información proporcionada en esta solicitud, incluyendo empleo, ingresos, historial de arrendamiento, referencias personales, y a realizar una verificación de crédito y antecedentes del consumidor.',
+                legalAuthorize: 'Autorizo al equipo de administración de Choice Properties y a sus proveedores de verificación designados a verificar la información proporcionada en esta solicitud, incluyendo empleo, ingresos, historial de alquiler y referencias personales, y a solicitar informes del consumidor cuando corresponda. Si una decisión se basa en un informe del consumidor, recibiré los avisos e información exigidos por ley.',
                 termsAgreeLabel: 'Certifico que toda la información proporcionada en esta solicitud es exacta y completa, y autorizo a Choice Properties a verificarla.',
                 submitBtn: 'Enviar Solicitud',
                 submitDisclaimer: 'Al enviar, autoriza a Choice Properties a procesar esta solicitud conforme a su Política de Privacidad y Términos de Servicio.',
@@ -2898,10 +2873,8 @@ class RentalApplication {
                 uploadDesc: 'Los documentos pueden adjuntarse para agilizar el proceso de revisión. Los archivos de imagen (JPG, PNG) mostrarán una vista previa al cargar. Los archivos PDF se confirmarán con un distintivo de verificación. <strong>Aceptados:</strong> PDF, JPG, PNG · Máx. 1 MB por archivo · Hasta 4 archivos · 3 MB total.',
                 uploadCta: 'Haga clic para buscar o arrastre archivos aquí',
                 uploadHint: 'Identificación oficial &nbsp;·&nbsp; Talones de pago &nbsp;·&nbsp; Estados de cuenta',
-                creditApplied: 'Crédito de Solicitud Aplicado',
-                creditAppliedText: 'Se ha aplicado un crédito de solicitud. La tarifa de solicitud está exonerada.',
                 trustLine: 'Los datos de la solicitud se transmiten de forma segura y se utilizan exclusivamente para fines de verificación de arrendamiento.',
-                feeAcknowledge: 'Reconozco la política de tarifas de solicitud y autorizo que mi información personal sea revisada por el personal de Choice Properties y el propietario de la propiedad únicamente para la verificación de arrendamiento. La tarifa de solicitud es <strong>no reembolsable</strong> al momento del envío y procesamiento del pago, excepto según lo previsto en la <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Crédito de Solicitud</a>.',
+                feeAcknowledge: 'Reconozco que el equipo de administración de Choice Properties revisa mi solicitud y que la tarifa fija es de $50. No se cobra al enviar. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
                 agreeTermsPrivacy: 'He leído y acepto los <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Términos del Servicio</a> (incluyendo la <strong>cláusula de arbitraje vinculante</strong> y la <strong>renuncia a demanda colectiva</strong> en las Secciones 18–19), la <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Privacidad</a> y el <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Marco Completo de Políticas y Legal</a>. Confirmo que tengo al menos 18 años de edad y la capacidad legal para celebrar este acuerdo.',
                 smsConsent: 'Doy mi consentimiento expreso para recibir mensajes SMS transaccionales de Choice Properties al número móvil proporcionado, relacionados con el estado de la solicitud, coordinación de tarifa, ejecución del contrato y programación de mudanza. La frecuencia de los mensajes varía. <strong>Pueden aplicar tarifas de mensajes y datos.</strong> Responda HELP para asistencia, STOP para cancelar en cualquier momento. El consentimiento de SMS no es condición de la solicitud — deje sin marcar para recibir comunicaciones únicamente por correo electrónico.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',

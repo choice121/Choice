@@ -267,7 +267,7 @@
           <div class="totals-row"><span>Interest accrued</span><span class="v">${esc(fmtMoney(accounting.interest_accrued))}</span></div>
           <div class="totals-row emph"><span>Net refund owed to you</span><span class="v ${refund>0?'refund-pos':'refund-zero'}">${esc(fmtMoney(refund))}</span></div>
         </div>
-        ${refund>0?'<div class="small" style="margin-top:14px">Your landlord will issue the refund per your state\'s statute. Contact Choice Properties if you have not received it within a reasonable time.</div>':''}
+        ${refund>0?'<div class="small" style="margin-top:14px">Choice Properties management will issue the refund per your state\'s statute. Contact Choice Properties if you have not received it within a reasonable time.</div>':''}
       </div>
     `;
 

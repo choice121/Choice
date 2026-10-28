@@ -26,7 +26,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1792844332768"></script>
+  <script src="/js/cp-error-reporter.js?v=1793159292128"></script>
     <meta charset="UTF-8">
       <meta name="description" content="Apply to rent a Choice Properties unit. Complete your rental application online in minutes.">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +35,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=1792844332768">
+    <link rel="stylesheet" href="css/style.css?v=1793159292128">
 </head>
 <body>
 
@@ -158,15 +158,15 @@
                     <div class="step-row">
                         <div class="step-number">1</div>
                         <div class="step-content">
-                            <strong data-i18n="paymentRequiredTitle">Payment Required Before Review</strong>
-                            <p data-i18n="paymentRequiredDesc">An application fee may be required after submission. Our team will contact you to securely complete payment before your application is reviewed.</p>
+                            <strong data-i18n="paymentRequiredTitle">Application Fee</strong>
+                            <p data-i18n="paymentRequiredDesc">The fixed $50 application fee is due after submission. Choice Properties management will contact you with the next steps before review begins.</p>
                         </div>
                     </div>
                     <div class="step-row">
                         <div class="step-number">2</div>
                         <div class="step-content">
-                            <strong data-i18n="completePaymentTitle">Application Under Review</strong>
-                            <p data-i18n="completePaymentDesc">Once payment is confirmed, your application enters active screening — typically completed within 24 to 72 hours. You'll receive updates by email at each stage.</p>
+                            <strong data-i18n="completePaymentTitle">Management Review</strong>
+                            <p data-i18n="completePaymentDesc">Choice Properties management reviews completed applications. Timing varies based on the information and follow-up needed.</p>
                         </div>
                     </div>
                     <div class="step-row">
@@ -194,13 +194,6 @@
                         </div>
                     </div>
                     <p class="pref-note" data-i18n="preferenceNote">We'll reach out using these preferences to coordinate next steps.</p>
-                </div>
-                <div class="policy-box">
-                    <i class="fas fa-gem"></i>
-                    <div>
-                        <strong data-i18n="reapplicationPolicyTitle">Reapplication Protection</strong>
-                        <p data-i18n="reapplicationPolicyText">If your application is not approved, your fee is covered on your next application. <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Learn more.</a></p>
-                    </div>
                 </div>
                 <div class="action-buttons">
                     <button type="button" class="btn-new">
@@ -1024,19 +1017,10 @@
             <div class="form-section" id="section6">
                 <h2><i class="fas fa-check-double"></i> <span data-i18n="reviewHeader">Review & Submit</span></h2>
 
-                <!-- Credit notice: shown by JS when valid credits exist -->
-                  <div id="creditNotice" style="display:none;background:#e8f5e9;border:1px solid #43a047;border-radius:8px;padding:14px 16px;margin-bottom:16px;align-items:center;gap:10px;">
-                      <i class="fas fa-ticket-alt" style="color:#2e7d32;font-size:18px;"></i>
-                      <div>
-                          <strong style="color:#1b5e20;font-size:14px;" data-i18n="creditApplied">Application Credit Applied</strong>
-                          <p style="color:#2e7d32;font-size:13px;margin:2px 0 0;" id="creditNoticeText" data-i18n="creditAppliedText">You have application credits — your application fee is covered.</p>
-                      </div>
-                  </div>
-
                   <div class="fee-display">
                     <div class="fee-info">
                         <h4 data-i18n="feeTitle">Application Fee: —</h4>
-                        <p data-i18n="feeDesc">This fee is required before review can begin. Our team will contact you immediately after submission to arrange payment.</p>
+                        <p data-i18n="feeDesc">The fixed $50 application fee is due after submission. Choice Properties management will contact you with next steps.</p>
                     </div>
                     <!-- [10B-20] Default hidden; JS (_readApplicationFee) fills correct value from URL param -->
             <div class="fee-amount" style="display:none">—</div>
@@ -1046,11 +1030,6 @@
                     <div class="summary-grid" id="applicationSummary">
                         <!-- Populated by JavaScript -->
                     </div>
-                </div>
-
-                <div class="policy-reminder">
-                    <i class="fas fa-info-circle"></i>
-                    <span><strong data-i18n="reapplicationPolicyTitle">Reapplication Protection:</strong> <span data-i18n="reapplicationPolicyTextShort">If denied after payment, you receive application credits covering the fee on a future application. Credits valid for 45 days.</span></span>
                 </div>
 
                 <!-- Phase 8.2: Supporting Document Upload -->
@@ -1089,12 +1068,12 @@
 
                         <div class="custom-checkbox">
                             <input type="checkbox" id="authorizeVerify" name="authorizeVerify" required>
-                            <label for="authorizeVerify" data-i18n="legalAuthorize">I authorize Choice Properties and its designated agents — including the property landlord, employment and income verification services, and consumer reporting agencies (which conduct credit and background checks) — to verify all information provided in this application, including employment, income, rental history, and personal references. If adverse action is taken based on a consumer report, I will receive the name and contact information of the reporting agency used, a copy of the report, and a Summary of My Rights under the FCRA.</label>
+                            <label for="authorizeVerify" data-i18n="legalAuthorize">I authorize Choice Properties management and its designated verification providers to verify information provided in this application, including employment, income, rental history, and personal references, and to request consumer reports where applicable. If a decision is based on a consumer report, I will receive the notices and information required by law.</label>
                         </div>
 
                         <div class="custom-checkbox">
                             <input type="checkbox" id="feeAcknowledge" name="feeAcknowledge" value="on" required>
-                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the property owner solely for rental application screening. The application fee is <strong>non-refundable once payment has been processed</strong> — nothing is charged until our team contacts you after submission — except as provided in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.</label>
+                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I acknowledge that Choice Properties management reviews my application and that the fixed application fee is $50. Nothing is charged when I submit. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.</label>
                         </div>
 
                         <div class="custom-checkbox">
@@ -1168,7 +1147,7 @@
     </div>
 
     <script src="config.js"></script>
-      <script src="js/script.js?v=1792844332768_billing_allocation"></script>
+      <script src="js/script.js?v=1793159292128_billing_allocation"></script>
 
     <style>
         #devTestFillBtn {

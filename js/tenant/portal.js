@@ -1,3 +1,4 @@
+// ── Management decision and next steps ───────────────────────────────────────
 'use strict';
 
 async function waitForSB(ms){
@@ -877,12 +878,12 @@ function renderReservationAgreement(app){
 
   return `
     <div class="section" id="approval-reservation-agreement" style="margin-bottom:var(--sp-6)">
-      <div class="section-label">Underwriting Decision &amp; Reservation Protocol</div>
+      <div class="section-label">Choice Properties Management Decision</div>
       <div class="card" style="border:1.5px solid ${holdingPaid ? 'var(--acc-success-border)' : '#10b981'};background:linear-gradient(180deg, ${holdingPaid ? 'rgba(240,253,244,.8)' : 'rgba(236,253,245,.85)'} 0%, var(--surface) 100%);padding:var(--sp-6)">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-4)">
           <div>
             <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--r-pill);background:#065f46;color:#fff;font-size:.68rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
-              &#10003; Official Underwriting Approval
+              &#10003; Application Approved
             </span>
             <h2 style="font-size:1.35rem;font-weight:750;color:var(--text);margin:0;letter-spacing:-.015em">
               Property Reservation Protocol
@@ -900,7 +901,7 @@ function renderReservationAgreement(app){
 
         <div style="background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);font-size:.85rem;line-height:1.65;color:var(--text)">
           <p style="margin:0 0 10px">
-            Congratulations, <strong>${firstName}</strong>! Your rental application for <strong>${address}</strong> has been officially approved by Choice Properties underwriting.
+            Congratulations, <strong>${firstName}</strong>! Choice Properties management approved your rental application for <strong>${address}</strong>.
           </p>
           <p style="margin:0 0 10px">
             Under our reservation protocol, this property is eligible to be placed on <strong>exclusive hold in your name</strong> while our leasing desk finalizes your formal state-specific Residential Lease Agreement.

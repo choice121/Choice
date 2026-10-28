@@ -78,6 +78,9 @@ function isBlocked(pathname) {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
+  if (url.pathname === '/landlord' || url.pathname.startsWith('/landlord/')) {
+    return Response.redirect(new URL('/admin/login.html', url), 302);
+  }
   if (isBlocked(url.pathname)) {
     return new Response('Not Found', {
       status: 404,

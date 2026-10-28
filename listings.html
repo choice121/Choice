@@ -13,7 +13,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1792844332768"></script>
+  <script src="/js/cp-error-reporter.js?v=1793159292128"></script>
   <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
@@ -37,8 +37,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1792844332768">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792844332768">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1793159292128">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1793159292128">
   <style>
     /* ── CRITICAL CSS — above-fold paint for listings.html ───────────────────
        Minimal subset of cp-marketing.css needed for: nav slot reservation,
@@ -57,17 +57,21 @@
     .property-grid{display:grid;grid-template-columns:1fr;gap:14px}
     .property-card{display:flex;flex-direction:row;overflow:hidden;background:#fff;border-radius:18px}
     .property-card-img{position:relative;width:280px;flex-shrink:0;height:210px;overflow:hidden;background:linear-gradient(145deg,#c8d8e8 0%,#b8cad8 50%,#a8bac8 100%);border-radius:18px 0 0 18px}
+    .city-directory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+    .city-directory-link{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;background:#fff;border:1px solid #e4e8ef;border-radius:8px;color:#1f2937;text-decoration:none}
+    .city-directory-link:hover,.city-directory-link:focus-visible{border-color:#006aff;outline-color:#006aff}
+    .city-directory-count{color:#64748b;font-size:.8rem;white-space:nowrap}
     @media(max-width:599px){
       .property-card{flex-direction:column}
       .property-card-img{width:100%;height:auto;aspect-ratio:3/2;border-radius:18px 18px 0 0}
     }
   </style>
-<script defer src="/config.js?v=1792844332768"></script>
-<script defer src="/js/supabase.min.js?v=1792844332768"></script>
-<script defer src="/js/cp-ui.js?v=1792844332768"></script>
-<script type="module" src="/js/cp-api.js?v=1792844332768"></script>
-<script defer src="/js/components.js?v=1792844332768"></script>
-<script defer src="/js/card-builder.js?v=1792844332768"></script>
+<script defer src="/config.js?v=1793159292128"></script>
+<script defer src="/js/supabase.min.js?v=1793159292128"></script>
+<script defer src="/js/cp-ui.js?v=1793159292128"></script>
+<script type="module" src="/js/cp-api.js?v=1793159292128"></script>
+<script defer src="/js/components.js?v=1793159292128"></script>
+<script defer src="/js/card-builder.js?v=1793159292128"></script>
 
   <!-- I-060: CollectionPage structured data for listings page -->
   <script type="application/ld+json">
@@ -220,6 +224,17 @@
   </div>
 </div>
 
+<section class="listings-section" id="cityDirectory" hidden>
+  <div class="container">
+    <div class="listings-header">
+      <h2 class="listings-heading">Browse rentals by city</h2>
+    </div>
+    <div class="city-directory-grid" id="cityDirectoryGrid" aria-live="polite">
+      <p>Loading markets…</p>
+    </div>
+  </div>
+</section>
+
 <!-- ── Filter Bar (Phase 9.8 mv2 polish) ── -->
 <div class="filter-bar mv2-filter-bar">
   <div class="filter-bar-inner">
@@ -238,7 +253,6 @@
     <button class="filter-pill" data-filter="condo"><i class="fas fa-city"></i> Condos</button>
     <button class="filter-pill" data-filter="townhouse"><i class="fas fa-house-user"></i> Townhomes</button>
     <div class="filter-divider"></div>
-    <button class="filter-pill" data-filter="pets"><i class="fas fa-paw"></i> Pet Friendly</button>
     <button class="filter-pill" data-filter="parking"><i class="fas fa-car"></i> Parking</button>
 
     <div class="filter-dropdown-wrap" id="moreFiltersWrap">
@@ -301,17 +315,6 @@
             <option value="radiant">Radiant</option>
             <option value="heat-pump">Heat Pump</option>
             <option value="boiler">Boiler</option>
-          </select>
-        </div>
-        <div class="filter-dropdown-row">
-          <label>Pet Type</label>
-          <select id="advPetTypeFilter">
-            <option value="">Any</option>
-            <option value="Dogs">Dogs</option>
-            <option value="Cats">Cats</option>
-            <option value="Birds">Birds</option>
-            <option value="Small Animals">Small Animals</option>
-            <option value="Reptiles">Reptiles</option>
           </select>
         </div>
         <div class="filter-dropdown-actions">
@@ -493,6 +496,6 @@
 
 <!-- Leaflet loaded lazily when user switches to Map View -->
 
-<script type="module" src="/js/listings.js?v=1792844332768"></script>
+<script type="module" src="/js/listings.js?v=1793159292128"></script>
 </body>
 </html>

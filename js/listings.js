@@ -25,13 +25,15 @@ document.addEventListener('error', function(e) {
 // ── State ────────────────────────────────────────────────────────────────
 let activeType     = 'all';
 let activeBeds     = '';
+let activeMinBeds  = '';
+let activeCity     = '';
+let activeState    = '';
 let activeMaxRent  = '';
 let activeMinRent  = '';
 let activeSearch   = '';
 let activeMinBaths = '';
 let activeLaundry  = '';
 let activeHeating  = '';
-let activePetType  = '';
 let sortBy         = 'newest';
 let currentPage    = 1;
 let totalPages     = 1;
@@ -47,6 +49,7 @@ let savedIds       = loadSavedIds();
 let pageProperties = [];
 let activeTargetIds = [];
 let activeShareToken = '';
+let browseCityView = false;
 const PER_PAGE     = 24;
 
 // ── Admin mode state ───────────────────────────────────────────────────────
@@ -75,6 +78,28 @@ async function waitForCP(timeoutMs = 8000) {
   }
 }
 
+async function renderCityDirectory() {
+    const grid = document.getElementById('cityDirectoryGrid');
+    const result = await CP.Properties.getLocationIndex();
+    if (!result.ok) {
+      grid.innerHTML = '<p role="alert">Markets could not be loaded. Please try again.</p>';
+      return;
+    }
+    const locations = result.data || [];
+    if (!locations.length) {
+      grid.innerHTML = '<p>No active markets are available right now.</p>';
+      return;
+    }
+    grid.innerHTML = locations.map(location => {
+      const params = new URLSearchParams({ city: location.city, state: location.state });
+      const countLabel = `${location.count} ${location.count === 1 ? 'rental' : 'rentals'}`;
+      return `<a class="city-directory-link" href="/listings.html?${params}">
+        <span>${esc(location.city)}, ${esc(location.state)}</span>
+        <span class="city-directory-count">${countLabel}</span>
+      </a>`;
+    }).join('');
+}
+
 function fmtRent(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? `$${n.toLocaleString()}` : 'Rent TBD';
@@ -88,6 +113,10 @@ function readURL() {
   activeTargetIds = !activeShareToken && targetIdsRaw ? targetIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   activeSearch   = p.get('q')        || '';
   activeBeds     = p.get('beds')     || '';
+  activeMinBeds  = p.get('minbeds')  || '';
+  activeCity     = p.get('city')     || '';
+  activeState    = p.get('state')    || '';
+  browseCityView = p.get('view') === 'cities';
   activeMaxRent  = p.get('maxrent')  || '';
   activeMinRent  = p.get('minrent')  || '';
   activeMinBaths = p.get('minbaths') || '';
@@ -103,6 +132,10 @@ function pushURL(replace = false) {
   if (!activeShareToken && activeTargetIds && activeTargetIds.length) p.set('p', activeTargetIds.join(','));
   if (activeSearch)   p.set('q',        activeSearch);
   if (activeBeds)     p.set('beds',     activeBeds);
+  if (activeMinBeds)  p.set('minbeds',  activeMinBeds);
+  if (activeCity)     p.set('city',     activeCity);
+  if (activeState)    p.set('state',    activeState);
+  if (browseCityView) p.set('view',     'cities');
   if (activeMaxRent)  p.set('maxrent',  activeMaxRent);
   if (activeMinRent)  p.set('minrent',  activeMinRent);
   if (activeMinBaths) p.set('minbaths', activeMinBaths);
@@ -129,13 +162,11 @@ function syncControls() {
   document.querySelectorAll('.filter-pill[data-filter]').forEach(pill => {
     pill.classList.toggle('active', pill.dataset.filter === activeType);
   });
-  const at    = document.getElementById('advTypeFilter');
   const ab    = document.getElementById('advMinBeds');
   const abath = document.getElementById('advMinBaths');
   const amin  = document.getElementById('advMinRent');
   const amax  = document.getElementById('advMaxRent');
-  if (at)    at.value    = ['apartment','house','condo','townhouse'].includes(activeType) ? activeType : '';
-  if (ab)    ab.value    = activeBeds;
+  if (ab)    ab.value    = activeMinBeds || (activeBeds === '0' ? '0' : '');
   if (abath) abath.value = activeMinBaths;
   if (amin)  amin.value  = activeMinRent;
   if (amax)  amax.value  = activeMaxRent;
@@ -808,6 +839,14 @@ async function adminCSVExport() {
     setupScrollTop();
     setupGridDelegation(); // P1-A: wire delegated listeners once at boot
     readURL();
+    if (browseCityView) {
+      document.querySelector('.listings-search-row')?.setAttribute('hidden', '');
+      document.querySelector('.filter-bar')?.setAttribute('hidden', '');
+      document.getElementById('listings')?.setAttribute('hidden', '');
+      document.getElementById('cityDirectory').hidden = false;
+      await renderCityDirectory();
+      return;
+    }
     syncControls();
     setupFilters();
     // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
@@ -857,6 +896,8 @@ async function fetchAndRender() {
           q:       activeSearch,
           status:  adminStatusFilter,
           landlord: adminLandlordId,
+          city:    activeCity,
+          state:   activeState,
           beds:    activeBeds,
           min_rent: activeMinRent,
           max_rent: activeMaxRent,
@@ -871,11 +912,13 @@ async function fetchAndRender() {
           type:         activeType,
           beds:         activeBeds,
           min_baths:    activeMinBaths,
+          min_beds:     activeMinBeds,
+          city:         activeCity,
+          state:        activeState,
           min_rent:     activeMinRent,
           max_rent:     activeMaxRent,
           laundry_type: activeLaundry,
           heating_type: activeHeating,
-          pet_type:     activePetType,
           sort:         sortBy,
           page:      currentPage,
           per_page:  PER_PAGE,
@@ -1327,7 +1370,11 @@ function setupFilters() {
   document.getElementById('searchBtn').addEventListener('click', doSearch);
   document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   document.getElementById('searchInput').addEventListener('input', debouncedSearch);
-  document.getElementById('bedroomsFilter').addEventListener('change', e => { activeBeds = e.target.value; refreshResults(); });
+  document.getElementById('bedroomsFilter').addEventListener('change', e => {
+    activeBeds = e.target.value;
+    activeMinBeds = '';
+    refreshResults();
+  });
   document.getElementById('maxRentFilter').addEventListener('change', e => { activeMaxRent = e.target.value; refreshResults(); });
   document.getElementById('sortSelect').addEventListener('change', e => { sortBy = e.target.value; refreshResults(); });
 
@@ -1377,9 +1424,14 @@ function setupFilters() {
     activeMinBaths = document.getElementById('advMinBaths').value;
     activeLaundry  = document.getElementById('advLaundryFilter').value;
     activeHeating  = document.getElementById('advHeatingFilter').value;
-    activePetType  = document.getElementById('advPetTypeFilter').value;
     const advBeds = document.getElementById('advMinBeds').value;
-    if (advBeds !== '') activeBeds = advBeds;
+    if (advBeds === '0') {
+      activeBeds = '0';
+      activeMinBeds = '';
+    } else {
+      activeBeds = '';
+      activeMinBeds = advBeds;
+    }
     document.getElementById('moreFiltersDropdown').classList.remove('open');
     sessionStorage.setItem('filters_dropdown_open', 'false');
     refreshResults();
@@ -1387,8 +1439,9 @@ function setupFilters() {
   });
 
   document.getElementById('clearAdvFilters').addEventListener('click', () => {
-    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
-      document.getElementById(id).value = '';
+    ['advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
+      const control = document.getElementById(id);
+      if (control) control.value = '';
     });
     window.clearAllFilters();
     document.getElementById('moreFiltersDropdown').classList.remove('open');
@@ -1397,9 +1450,10 @@ function setupFilters() {
 }
 
 window.clearAllFilters = function() {
-  activeType = 'all'; activeSearch = ''; activeBeds = '';
+  activeType = 'all'; activeSearch = ''; activeBeds = ''; activeMinBeds = '';
+  activeCity = ''; activeState = '';
   activeMaxRent = ''; activeMinRent = ''; activeMinBaths = '';
-  activeLaundry = ''; activeHeating = ''; activePetType = '';
+  activeLaundry = ''; activeHeating = '';
   sortBy = 'newest'; currentPage = 1;
   syncControls();
   pushURL(true);
@@ -1415,7 +1469,7 @@ function updateFilterBadge() {
     const badge = document.getElementById('filterActiveBadge');
     const clearAllPill = document.getElementById('clearAllPill');
     const mobileBadge = document.getElementById('mobileFiltersBadge');
-    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
+    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMinBeds, !!activeCity, !!activeState, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating].filter(Boolean).length;
     if (badge) { badge.textContent = count || ''; badge.style.display = count > 0 ? 'inline-flex' : 'none'; }
     if (clearAllPill) clearAllPill.style.display = count > 0 ? '' : 'none';
     if (mobileBadge) { mobileBadge.textContent = count || ''; mobileBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
