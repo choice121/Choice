@@ -155,6 +155,9 @@
             <li>Last 4 digits of Social Security Number only — the full SSN is never stored in any system</li>
             <li>Documents you upload (government ID, pay stubs — stored securely by Google)</li>
             <li>Payment preferences</li>
+            <li>For an additional adult listed on an application: name, contact details, and information submitted for that person's screening</li>
+            <li>Screening authorization records, including the consent wording version, server timestamp, IP address, and browser user-agent string</li>
+            <li>When a separate adult authorization link is issued, its SHA-256 token hash and expiry/usage status; the raw link token is not stored in the database</li>
           </ul>
         </div>
 
@@ -163,6 +166,7 @@
           <p>We use your information to:</p>
           <ul>
             <li>Process and evaluate your rental application</li>
+            <li>Send a separate screening-authorization request to each additional adult who is to be screened and record their response</li>
             <li>Communicate with you about your application status</li>
             <li>Generate and deliver your lease agreement</li>
             <li>Prevent fraud and abuse</li>

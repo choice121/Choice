@@ -66,6 +66,7 @@ const filesToCopy = [
   '_headers',
   '_redirects',
   'about.html',
+  'co-applicant-consent.html',
   'fair-housing.html',
   'faq.html',
   'health.html',

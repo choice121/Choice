@@ -1,8 +1,10 @@
+/// <reference lib="deno.ns" />
+
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
-import { applicationConfirmationHtml, adminNotificationHtml } from '../_shared/email.ts';
-import { getAdminEmails, getAdminUrl, getTenantLoginUrl } from '../_shared/config.ts';
+import { applicationConfirmationHtml, adminNotificationHtml, coApplicantScreeningConsentHtml } from '../_shared/email.ts';
+import { getAdminEmails, getSiteUrl, getTenantLoginUrl } from '../_shared/config.ts';
 import { generateMagicLoginUrl } from '../_shared/magic-login.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
 
@@ -125,6 +127,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonErr(405, 'Method not allowed');
 
   const ip = getClientIp(req);
+  const consentIp = req.headers.get('cf-connecting-ip') || (ip === 'unknown' ? null : ip);
   const ua = req.headers.get('user-agent') || '';
 
   // ── Per-IP rate limit (5 submissions / 60s) ───────────────────────────────
@@ -177,6 +180,10 @@ Deno.serve(async (req: Request) => {
   if (fBool(fields['feeAcknowledge']) !== true) {
     return jsonErr(400, 'You must acknowledge the application fee before submitting.');
   }
+  const screeningConsent = fBool(fields['authorizeVerify']) === true;
+  if (!screeningConsent) {
+    return jsonErr(400, 'You must authorize screening before submitting.');
+  }
 
   // ── Server-side age 18+ check — primary applicant ────────────────────────
   const age = ageInYears(dob);
@@ -190,14 +197,10 @@ Deno.serve(async (req: Request) => {
   const coFirstName = fv(fields['Co-Applicant First Name']);
   const coLastName = fv(fields['Co-Applicant Last Name']);
   const coEmail = fv(fields['Co-Applicant Email']).toLowerCase();
-  const coConsent = fBool(fields['Co-Applicant Consent']) === true;
   const coRole = fv(fields['Additional Person Role']);
   if (hasCoApplicant) {
     if (!coFirstName || !coLastName || !coEmail || !coEmail.includes('@') || coEmail.length > 254) {
       return jsonErr(400, 'A complete name and valid email are required for the additional adult applicant.');
-    }
-    if (!coConsent) {
-      return jsonErr(400, 'The additional adult applicant must authorize screening before submission.');
     }
     if (!['Co-applicant', 'Guarantor'].includes(coRole)) {
       return jsonErr(400, 'Select whether the additional adult is a co-applicant or guarantor.');
@@ -209,10 +212,13 @@ Deno.serve(async (req: Request) => {
       return jsonErr(400, 'A valid date of birth is required for the additional adult applicant.');
     }
     const coAge = ageInYears(coDob);
-    if (coAge !== null && coAge < 18) {
+    if (coAge === null) {
+      return jsonErr(400, 'Enter a valid date of birth for the additional adult applicant.');
+    }
+    if (coAge < 18) {
       return jsonErr(400, 'Co-applicant must be 18 years of age or older.');
     }
-    if (coAge !== null && coAge > 120) {
+    if (coAge > 120) {
       return jsonErr(400, 'Please enter a valid date of birth for the co-applicant.');
     }
   }
@@ -400,9 +406,9 @@ Deno.serve(async (req: Request) => {
     co_applicant_dob: hasCoApplicant ? coDob : null,
     co_applicant_ssn: hasCoApplicant ? (() => { const d = fv(fields['Co-Applicant SSN']).replace(/\D/g, ''); return 'XXX-XX-' + d.slice(-4); })() : null,
     co_applicant_role: hasCoApplicant ? coRole : null,
-    co_applicant_consent: hasCoApplicant ? coConsent : null,
-    co_applicant_consent_timestamp: hasCoApplicant ? new Date().toISOString() : null,
-    co_applicant_consent_version: hasCoApplicant ? (fv(fields['Consent Version']) || '2.1') : null,
+    co_applicant_consent: hasCoApplicant ? false : null,
+    co_applicant_consent_timestamp: null,
+    co_applicant_consent_version: null,
     co_applicant_employer: hasCoApplicant ? (fv(fields['Co-Applicant Employer']) || null) : null,
     co_applicant_job_title: hasCoApplicant ? (fv(fields['Co-Applicant Job Title']) || null) : null,
     co_applicant_monthly_income: hasCoApplicant ? fNum(fields['Co-Applicant Monthly Income']) : null,
@@ -417,6 +423,9 @@ Deno.serve(async (req: Request) => {
     move_in_status: 'pending',
     payment_status: fPaymentStatus(null),
     terms_consent: termsConsent,
+    screening_consent: screeningConsent,
+    screening_consent_timestamp: new Date().toISOString(),
+    screening_consent_version: '3.0',
     sms_consent: fv(fields['SMS Consent']) === 'yes' || fBool(fields['SMS Consent']) === true || fBool(fields['smsConsent']) === true,
     consent_timestamp: new Date().toISOString(),    // server clock — never trust client
     consent_version: fv(fields['Consent Version']) || '2.1',
@@ -432,7 +441,11 @@ Deno.serve(async (req: Request) => {
   );
 
   // ── Insert; unique index on submission_uuid handles concurrent retries ────
-  const { error: insertErr } = await supabase.from('applications').insert(cleanApp);
+  const { data: insertedApp, error: insertErr } = await supabase
+    .from('applications')
+    .insert(cleanApp)
+    .select('id')
+    .single();
   if (insertErr) {
     // 23505 = unique violation → another concurrent request beat us; fetch and return.
     if ((insertErr as { code?: string }).code === '23505') {
@@ -445,6 +458,30 @@ Deno.serve(async (req: Request) => {
     }
     console.error('Insert error:', JSON.stringify(insertErr));
     return jsonErr(500, 'Failed to save application');
+  }
+
+  if (!insertedApp?.id) {
+    console.error('Application insert returned no database ID.');
+    return jsonErr(500, 'Application was saved but follow-up consent setup could not be completed.');
+  }
+  const databaseAppId = insertedApp.id;
+  let coApplicantConsentLink: string | null = null;
+  if (hasCoApplicant) {
+    const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = btoa(String.fromCharCode(...tokenBytes))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    const tokenHash = await sha256Hex(token);
+    const { error: tokenError } = await supabase.from('co_applicant_consent_tokens').insert({
+      application_id: databaseAppId,
+      token_hash: tokenHash,
+      recipient_email: coEmail,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    if (tokenError) {
+      console.error('Co-applicant consent token insert failed:', tokenError.message);
+    } else {
+      coApplicantConsentLink = `${getSiteUrl()}/co-applicant-consent.html#token=${token}`;
+    }
   }
 
   // ── Persist attached documents to storage ────────────────────────────────
@@ -501,20 +538,29 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Append-only consent record ────────────────────────────────────────────
-  try {
-    await supabase.from('consent_log').insert({
+  const { error: consentLogError } = await supabase.from('application_screening_consent_events').insert({
+      application_id: databaseAppId,
+      applicant_type: 'primary',
+      consent_version: String(application.screening_consent_version),
+      consented_at: application.screening_consent_timestamp,
+      ip: consentIp,
+      user_agent: ua || null,
+    });
+  if (consentLogError) {
+    console.error('Primary screening consent event insert failed:', consentLogError.message);
+  }
+  const { error: consentLogInsertError } = await supabase.from('consent_log').insert({
       app_id: appId,
       submission_uuid: submissionUuid,
       email,
       consent_version: String(application.consent_version),
       terms_consent: termsConsent,
+      screening_consent: screeningConsent,
       sms_consent: !!application.sms_consent,
-      ip: ip === 'unknown' ? null : ip,
+      ip: consentIp,
       user_agent: ua || null,
     });
-  } catch (e) {
-    console.error('consent_log insert failed (non-fatal):', e);
-  }
+  if (consentLogInsertError) console.error('consent_log insert failed:', consentLogInsertError.message);
 
   // ── Notification emails ───────────────────────────────────────────────────
   const propLabel = enforcedAddress || 'your chosen property';
@@ -531,11 +577,31 @@ Deno.serve(async (req: Request) => {
     if (error) console.error('Email log insert failed:', error.message);
   };
 
+  let coApplicantConsentInviteSent = false;
+  if (coApplicantConsentLink) {
+    try {
+      const inviteResult = await sendEmail({
+        to: coEmail,
+        subject: `Action required: authorize screening for Choice Properties application ${appId}`,
+        html: coApplicantScreeningConsentHtml(coFirstName, appId, coApplicantConsentLink),
+      });
+      coApplicantConsentInviteSent = inviteResult.ok;
+      fields['Co-Applicant Consent Invite'] = inviteResult.ok ? 'sent' : 'failed';
+      await logEmail('co_applicant_consent_invitation', coEmail, inviteResult.ok ? 'sent' : 'failed', inviteResult.provider, inviteResult.ok ? null : (inviteResult.error || 'send failed'));
+    } catch (err) {
+      console.error('Co-applicant consent invitation error:', err);
+      fields['Co-Applicant Consent Invite'] = 'failed';
+      await logEmail('co_applicant_consent_invitation', coEmail, 'failed', 'none', err instanceof Error ? err.message : 'unknown error');
+    }
+  } else if (hasCoApplicant) {
+    fields['Co-Applicant Consent Invite'] = 'not sent';
+  }
+
   const emailJobs = [
     sendEmail({
       to: email,
       subject: `Application Received — ${propLabel.split(',')[0]} | Choice Properties (Ref: ${appId})`,
-      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee ?? null),
+      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee ?? null, coApplicantConsentInviteSent),
     }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
       .catch(async err => {
         console.error('Confirmation email error:', err);
@@ -556,8 +622,13 @@ Deno.serve(async (req: Request) => {
 
   await Promise.all(emailJobs);
 
-  // Suppress unused-import warning in environments without the helper
-  void sha256Hex;
-
-  return jsonOk({ success: true, appId, portal_login_url: portalUrl, message: 'Application received.' });
+  return jsonOk({
+    success: true,
+    appId,
+    portal_login_url: portalUrl,
+    message: 'Application received.',
+    ...(hasCoApplicant && !coApplicantConsentInviteSent
+      ? { coApplicantConsentInviteError: 'The application was saved, but the additional adult authorization email could not be sent. Staff must issue a new link before screening.' }
+      : {}),
+  });
 });

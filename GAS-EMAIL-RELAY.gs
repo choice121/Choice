@@ -744,17 +744,34 @@ function sendPaymentConfirmation(to, cc, d, cfg) {
   var lang = d.preferred_language || 'en';
   var dashLink = cfg.dashboardUrl + '/apply/dashboard.html?id=' + d.app_id;
   var firstName = (d.applicant_name || '').split(' ')[0];
+  var hasCoApplicant = d.has_co_applicant === true || d.has_co_applicant === 'true';
+  var hasCoApplicantConsent = d.co_applicant_consent === true || d.co_applicant_consent === 'true';
+  var consentPending = hasCoApplicant && !hasCoApplicantConsent;
+  var screenedAdultCount = parseInt(d.screened_adult_count, 10);
+  var feePerAdult = Number(d.application_fee_per_adult || 50);
+  var statusText = consentPending
+    ? (lang === 'es' ? 'Pago recibido — falta la autorización del adulto adicional' : 'Payment received — waiting for additional adult authorization')
+    : t('payConfirmStatus', lang);
+  var introText = consentPending
+    ? (lang === 'es'
+      ? 'Confirmamos que recibimos y registramos el pago. La revisión comenzará cuando el adulto adicional envíe su autorización de evaluación por separado.'
+      : 'Your application fee was received and recorded. Review will begin after the additional adult submits their separate screening authorization.')
+    : t('payConfirmIntro', lang);
+  var feeBreakdown = screenedAdultCount > 0 && isFinite(feePerAdult) && feePerAdult > 0
+    ? '<div class="financial-row"><span class="f-label">' + (lang === 'es' ? 'Adultos incluidos × tarifa por adulto' : 'Adults included in screening × fee per adult') + '</span><span class="f-value">' + screenedAdultCount + ' × $' + fmtCurrency(feePerAdult, lang) + ' = $' + fmtCurrency(screenedAdultCount * feePerAdult, lang) + '</span></div>'
+    : '';
   send(to, cc, t('payConfirmSubject', lang) + d.app_id,
     wrap(t('payConfirmTitle', lang), d.app_id, lang,
-      '<div class="status-line status-paid">' + t('payConfirmStatus', lang) + '</div>' +
-      '<div class="email-body"><p class="greeting">' + t('dear', lang) + ' ' + esc(firstName) + ',</p><p class="intro-text">' + t('payConfirmIntro', lang) + '</p>' +
+      '<div class="status-line status-paid">' + esc(statusText) + '</div>' +
+      '<div class="email-body"><p class="greeting">' + t('dear', lang) + ' ' + esc(firstName) + ',</p><p class="intro-text">' + esc(introText) + '</p>' +
       '<div class="section"><div class="section-label">' + t('payConfirmSectionLabel', lang) + '</div><div class="callout green"><h4>' + t('payConfirmSuccess', lang) + '</h4>' +
       '<div class="financial-row"><span class="f-label">' + t('payConfirmAppId', lang) + '</span><span class="f-value">' + d.app_id + '</span></div>' +
       '<div class="financial-row"><span class="f-label">' + t('payConfirmApplicant', lang) + '</span><span class="f-value">' + esc(d.applicant_name) + '</span></div>' +
+      feeBreakdown +
       '<div class="financial-row"><span class="f-label">' + t('payConfirmDate', lang) + '</span><span class="f-value">' + fmtDatetime(lang) + '</span></div>' +
-      '<div class="financial-row"><span class="f-label">' + t('payConfirmStatus2', lang) + '</span><span class="f-value" style="color:#059669;">' + t('underReview', lang) + '</span></div>' +
+      '<div class="financial-row"><span class="f-label">' + t('payConfirmStatus2', lang) + '</span><span class="f-value" style="color:#059669;">' + (consentPending ? esc(statusText) : t('underReview', lang)) + '</span></div>' +
       '</div></div><div class="section"><div class="section-label">' + t('whatHappensNext', lang) + '</div><ul class="steps-list">' +
-      '<li><span class="step-num">1</span><span><strong>' + t('payNext1Title', lang) + '</strong> \u2014 ' + t('payNext1Body', lang) + '</span></li>' +
+      '<li><span class="step-num">1</span><span><strong>' + (consentPending ? (lang === 'es' ? 'Autorización del adulto adicional' : 'Additional adult authorization') : t('payNext1Title', lang)) + '</strong> \u2014 ' + (consentPending ? (lang === 'es' ? 'La revisión comenzará cuando se registre su autorización de evaluación por separado.' : 'Review will begin when their separate screening authorization is recorded.') : t('payNext1Body', lang)) + '</span></li>' +
       '<li><span class="step-num">2</span><span><strong>' + t('payNext2Title', lang) + '</strong> \u2014 ' + t('payNext2Body', lang) + '</span></li>' +
       '<li><span class="step-num">3</span><span><strong>' + t('payNext3Title', lang) + '</strong> \u2014 ' + t('payNext3Body', lang) + '</span></li>' +
       '</ul></div><div class="cta-wrap"><a href="' + dashLink + '" class="cta-btn">' + t('trackBtn', lang) + '</a></div>' +

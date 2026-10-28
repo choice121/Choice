@@ -14,6 +14,24 @@
       })();
     });
   }
+
+  async function sendCoApplicantConsent(dbId){
+    try {
+      const session = await CP.Auth.getSession();
+      const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-co-applicant-consent', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ application_id: dbId })
+      });
+      const json = await res.json().catch(() => ({}));
+      if(!res.ok || json.success === false) {
+        S.toast('Could not send consent link: ' + (json.error || res.statusText), 'error');
+        return;
+      }
+      S.toast('A new separate screening authorization link was emailed to the additional adult.');
+    } catch(e) { S.toast('Consent invitation error: ' + e.message, 'error'); }
+  }
   let S; // assigned after waitReady resolves
 
   let _allData=[], _status='all', _search='', _payFilter='', _debounce;
@@ -113,7 +131,8 @@
         ${!isArchived && app.status!=='pending' ? `<button class="btn-act btn-pending" data-action="status" data-set="pending" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Reset</button>` : ''}
         ${!isArchived ? `<button class="btn-act btn-archive" data-action="status" data-set="archived" ${ds} style="opacity:.7"><svg class="i i-sm"><use href="#i-trash"/></svg> Archive</button>` : `<button class="btn-act btn-pending" data-action="status" data-set="pending" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Unarchive</button>`}
 
-        ${!isPaid && !isWaived ? `<button class="btn-act btn-pay" data-action="pay" data-fee="${S.esc(app.application_fee||50)}" data-adult-count="${S.esc(app.screened_adult_count ?? '')}" ${ds}><svg class="i i-sm"><use href="#i-card"/></svg> Mark paid</button>` : ''}
+        ${app.has_co_applicant && app.co_applicant_consent !== true ? `<button class="btn-act" data-action="send-co-consent" ${ds}>Email separate screening consent</button>` : ''}
+        ${!isPaid && !isWaived ? `<button class="btn-act btn-pay" data-action="pay" data-fee="${S.esc(app.application_fee ?? '')}" data-adult-count="${S.esc(app.screened_adult_count ?? (app.has_co_applicant ? 2 : 1))}" data-has-co-applicant="${app.has_co_applicant === true}" data-co-consent="${app.co_applicant_consent === true}" ${ds}><svg class="i i-sm"><use href="#i-card"/></svg> Mark paid</button>` : ''}
         ${isPaid                ? `<button class="btn-act btn-unpay" data-action="unpay" ${ds}><svg class="i i-sm"><use href="#i-refresh"/></svg> Mark unpaid</button>` : ''}
         ${isPaid                ? `<button class="btn-act btn-refund" data-action="refund" ${ds}>Refund</button>` : ''}
         ${!isWaived             ? `<button class="btn-act"           data-action="waive"  ${ds}>Waive</button>` : ''}
@@ -148,8 +167,8 @@
           ${row('Phone', coapp.phone)}
           ${row('DOB', coapp.dob)}
           ${row('Role', coapp.role)}
-          ${row('Screening consent checkbox', app.co_applicant_consent ? 'Submitted' : 'Not submitted')}
-          ${row('Consent recorded at submission', app.co_applicant_consent_timestamp)}
+          ${row('Separate screening authorization', app.co_applicant_consent === true ? 'Confirmed' : 'Pending')}
+          ${row('Consent recorded at', app.co_applicant_consent_timestamp)}
           ${row('Consent copy version', app.co_applicant_consent_version)}
           ${row('Employer', coapp.employer)}
           ${row('Job title', coapp.job_title)}
@@ -394,7 +413,16 @@
 
   function bulkSetStatus(status){
     const label = ({ approved:'Approve', denied:'Deny', waitlisted:'Waitlist', archived:'Archive', withdrawn:'Withdraw' })[status] || 'Update status';
-    return runBulk(label, (id) => CP.Applications.updateStatus(id, status), { danger: status === 'denied' });
+    return runBulk(label, async (id) => {
+      if(status === 'approved'){
+        const application = await CP.Applications.getOne(id);
+        if(!application.ok || !application.data) return { ok:false, error:application.error || 'Application could not be loaded.' };
+        if(application.data.has_co_applicant && application.data.co_applicant_consent !== true){
+          return { ok:false, error:'Separate additional-adult screening consent is required before approval.' };
+        }
+      }
+      return CP.Applications.updateStatus(id, status);
+    }, { danger: status === 'denied' });
   }
   function bulkMarkPaid(){
     return runBulk('Mark paid', async (id) => {
@@ -504,6 +532,11 @@
 
   // ───── Status change ─────
   async function setStatus(dbId, appId, status){
+    const application = _allData.find(item => String(item.id) === String(dbId));
+    if(status === 'approved' && application?.has_co_applicant && application.co_applicant_consent !== true){
+      S.toast('The additional adult must complete separate screening authorization before approval.', 'error');
+      return;
+    }
     const willEmail = ['approved','denied','waitlisted'].includes(status);
     const labels = { approved:'Approve application?', denied:'Deny application?', waitlisted:'Move to waitlist?', pending:'Reset to pending?', new:'Reset to new?', archived:'Archive application?', withdrawn:'Mark as withdrawn?' };
     const verbs  = { approved:'Approve', denied:'Deny', waitlisted:'Waitlist', pending:'Reset', new:'Reset', archived:'Archive', withdrawn:'Withdraw' };
@@ -543,12 +576,18 @@
   }
 
   // ───── Payment ─────
-  async function openPaySheet(dbId, appId, name){
+  async function openPaySheet(dbId, appId, name, feeValue, adultCountValue, hasCoApplicantValue, coApplicantConsentValue){
+    const expectedFee = Number(feeValue);
+    const adultCount = Number(adultCountValue);
+    if(!Number.isFinite(expectedFee) || expectedFee <= 0 || !Number.isInteger(adultCount) || adultCount < 1 || adultCount > 2){
+      S.toast('Application fee details are missing or invalid. Reload the application before recording payment.', 'error');
+      return;
+    }
     const data = await S.formSheet({
       title: 'Mark as paid · ' + name,
       submit: 'Mark as paid',
       fields: [
-        { name:'amount', label:`Application fee collected (${fmtMoney(expectedFee)}${Number(adultCount) > 0 ? ` · ${adultCount} screened adult${Number(adultCount) === 1 ? '' : 's'}` : ''})`, type:'number', value:expectedFee.toFixed(2), placeholder:expectedFee.toFixed(2) },
+        { name:'amount', label:`Application fee collected (${fmtMoney(expectedFee)}${Number(adultCount) > 0 ? ` · ${adultCount} adult applicant${Number(adultCount) === 1 ? '' : 's'}` : ''})`, type:'number', value:expectedFee.toFixed(2), placeholder:expectedFee.toFixed(2) },
         { name:'method', label:'Payment method', type:'select', value:'', options:[
           { value:'', label:'(none selected)' },
           // Mirrors the application form (apply/index.html) — keep in sync.
@@ -588,7 +627,14 @@
       try {
         const session = await CP.Auth.getSession();
         const token = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
-        const body = { app_id: appId, type:'payment_confirmed' };
+        const body = {
+          app_id: appId,
+          type:'payment_confirmed',
+          screened_adult_count:adultCount,
+          application_fee_per_adult:50,
+          has_co_applicant:hasCoApplicantValue === 'true',
+          co_applicant_consent:coApplicantConsentValue === 'true'
+        };
         if(amount != null) body.amount_collected = amount;
         if(method) body.payment_method = method;
         if(notes) body.transaction_ref = notes;
@@ -920,7 +966,8 @@
     // ───── Wiring (after S is available) ─────
     S.on('toggle',       (t) => toggleDetail(t.dataset.id));
     S.on('status',       (t) => setStatus(t.dataset.id, t.dataset.appId, t.dataset.set));
-    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name));
+    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name, t.dataset.fee, t.dataset.adultCount, t.dataset.hasCoApplicant, t.dataset.coConsent));
+    S.on('send-co-consent', (t) => sendCoApplicantConsent(t.dataset.id));
     S.on('unpay',        (t) => markUnpaid(t.dataset.id));
     S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
     S.on('waive',        (t) => markWaived(t.dataset.id));

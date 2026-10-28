@@ -387,7 +387,7 @@
 
                 <div id="coApplicantSection" style="display: none;">
                     <h4 data-i18n="coApplicantInfo">Co-Applicant / Guarantor Information</h4>
-                    <p>The additional adult applicant or guarantor must provide their own information and personally authorize screening below.</p>
+                    <p>The additional adult applicant or guarantor must provide their information and personally authorize screening through a separate email link.</p>
 
                     <!-- Role selection -->
                     <div class="form-group">
@@ -492,13 +492,8 @@
                         </div>
                     </div>
 
-                    <!-- Consent -->
-                    <div class="form-group">
-                        <div class="custom-checkbox">
-                            <input type="checkbox" id="coConsent" name="Co-Applicant Consent">
-                            <label for="coConsent" data-i18n="coConsentLabel">I am the additional adult applicant or guarantor and personally authorize verification of my information, including credit and background screening. I understand the fee is $50 for each adult applicant or guarantor being screened.</label>
-                        </div>
-                        <div class="error-message"></div>
+                    <div class="form-group" role="status">
+                        <p data-i18n="coApplicantConsentNotice">We will email the additional adult a separate link to review and authorize screening. Their screening cannot begin until they complete that step.</p>
                     </div>
                 </div>
                 <!-- ===== END CO-APPLICANT SECTION ===== -->
