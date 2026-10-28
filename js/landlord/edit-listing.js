@@ -812,4 +812,3 @@
     CP.UI.toast('Listing deleted.', 'success');
     setTimeout(() => window.location.href = backURL, 1500);
   });
-

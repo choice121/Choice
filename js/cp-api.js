@@ -290,6 +290,27 @@ function _attachPhotoArrays(row) {
 const PROPERTIES_SELECT_FULL =
   '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(id, url, file_id, display_order, is_hero)';
 
+async function _attachPropertyMedia(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return rows || [];
+  const propertyIds = rows.map((row) => row.id).filter(Boolean);
+  if (!propertyIds.length) return rows;
+  try {
+    const { data, error } = await sb().from('property_media')
+      .select('id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
+      .in('property_id', propertyIds)
+      .order('display_order', { ascending: true });
+    if (error) return rows;
+    const mediaByProperty = new Map();
+    (data || []).forEach((item) => {
+      const propertyMedia = mediaByProperty.get(item.property_id) || [];
+      propertyMedia.push(item);
+      mediaByProperty.set(item.property_id, propertyMedia);
+    });
+    rows.forEach((row) => { row.property_media = mediaByProperty.get(row.id) || []; });
+  } catch (_) {}
+  return rows;
+}
+
 // ── Property type normalization ─────────────────────────────────────────────
 // The scraper writes UPPER_SNAKE values (SINGLE_FAMILY, TOWNHOMES, APARTMENT,
 // CONDOS) while manual publishes write lowercase (house, apartment, townhouse).
@@ -428,6 +449,7 @@ const Properties = {
       }
 
       rows = rows.map(_attachPhotoArrays);
+      if (!filters.share_token) rows = await _attachPropertyMedia(rows);
 
       // In-memory search & filter support for tailored selections
       if (filters.q) {
@@ -581,7 +603,7 @@ const Properties = {
       ok: true,
       error: null,
       data: {
-        rows:        (data || []).map(_attachPhotoArrays),
+        rows:        await _attachPropertyMedia((data || []).map(_attachPhotoArrays)),
         total,
         page,
         per_page:    PAGE_SIZE,
@@ -637,7 +659,7 @@ const Properties = {
     return {
       ok: true, error: null,
       data: {
-        rows:        (data || []).map(_attachPhotoArrays),
+        rows:        await _attachPropertyMedia((data || []).map(_attachPhotoArrays)),
         total,
         page,
         per_page:    PAGE_SIZE,
@@ -655,12 +677,12 @@ const Properties = {
     if (filters.max_rent)  q = q.lte('monthly_rent', filters.max_rent);
     if (filters.state)     q = q.eq('state', filters.state);
     const { data, error } = await q;
-    return _ok((data || []).map(_attachPhotoArrays), error);
+    return _ok(await _attachPropertyMedia((data || []).map(_attachPhotoArrays)), error);
   },
   async getOne(id) {
     // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
     // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-     const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero), property_media(id, kind, url, display_order, is_hero, metadata)').eq('id', id).single();
+    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }

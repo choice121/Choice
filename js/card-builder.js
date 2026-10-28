@@ -137,6 +137,10 @@
     var specsHtml = specParts.map(function (s, i) {
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
+    if (p.unit_floor) {
+      var floorSpec = '<span class="property-card-spec-item"><i class="fas fa-stairs"></i>Floor ' + esc(p.unit_floor) + '</span>';
+      specsHtml += (specsHtml ? '<span class="property-card-spec-sep">·</span>' : '') + floorSpec;
+    }
 
     // ── Badge — priority: featured only (Private placement badges completely disabled) ──
     var badge = '';
@@ -144,7 +148,10 @@
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
     }
 
-    var tourChipHtml = p.virtual_tour_url
+    var hasTour = Boolean(p.virtual_tour_url) || (Array.isArray(p.property_media) && p.property_media.some(function (item) {
+      return item.kind === 'virtual_tour' || item.kind === 'tour_3d';
+    }));
+    var tourChipHtml = hasTour
       ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
       : '';
 

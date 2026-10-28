@@ -189,6 +189,16 @@ async function loadProperty(id) {
         .single();
       if (error || !data) throw new Error(error ? error.message : 'Not found');
       prop = data;
+      try {
+        const { data: mediaData } = await client
+          .from('property_media')
+          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
+          .eq('property_id', cleanId)
+          .order('display_order', { ascending: true });
+        prop.property_media = mediaData || [];
+      } catch (_) {
+        prop.property_media = [];
+      }
     }
   } catch (e) {
     if (shareToken) {
@@ -202,11 +212,13 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
+        prop.property_media = mediaRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -450,6 +462,156 @@ function amenityIconColor(text) {
   return '';
 }
 
+function renderPropertyMedia(p) {
+  const section = document.getElementById('propertyMediaSection');
+  if (!section) return;
+
+  const items = Array.isArray(p.property_media) ? p.property_media.slice() : [];
+  if (p.virtual_tour_url && !items.some((item) => item.url === p.virtual_tour_url)) {
+    items.push({ kind: 'virtual_tour', title: '3D virtual tour', url: p.virtual_tour_url, display_order: -1 });
+  }
+  const ordered = items
+    .filter((item) => {
+      try { return new URL(item.url).protocol === 'https:'; } catch (_) { return false; }
+    })
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
+  section.replaceChildren();
+  if (!ordered.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+  const heading = document.createElement('h2');
+  heading.id = 'propertyMediaHeading';
+  heading.className = 'prop-section-head';
+  heading.innerHTML = 'Floor plans &amp; <em>walkthroughs</em>.';
+  section.append(heading);
+
+  const levels = [...new Set(ordered.map((item) => String(item.floor_label || '').trim()).filter(Boolean))];
+  if (levels.length > 1) {
+    const levelLabel = document.createElement('label');
+    levelLabel.className = 'property-media-level';
+    levelLabel.append(document.createTextNode('Show level'));
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', 'Filter floor plans and tours by level');
+    select.innerHTML = '<option value="">All levels</option>' + levels.map((level) => `<option value="${esc(level)}">${esc(level)}</option>`).join('');
+    levelLabel.append(select);
+    section.append(levelLabel);
+    select.addEventListener('change', () => {
+      section.querySelectorAll('.property-media-card[data-floor-label]').forEach((card) => {
+        card.hidden = !!select.value && !!card.dataset.floorLabel && card.dataset.floorLabel !== select.value;
+      });
+    });
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'property-media-grid';
+  section.append(grid);
+
+  ordered.forEach((item) => {
+    const url = new URL(item.url).toString();
+    const card = document.createElement('article');
+    card.className = 'property-media-card';
+    card.dataset.floorLabel = String(item.floor_label || '').trim();
+
+    const title = String(item.title || (item.kind === 'floor_plan' ? 'Floor plan' : item.kind.replace('_', ' ')));
+    const copy = document.createElement('div');
+    copy.className = 'property-media-copy';
+    const titleEl = document.createElement('h3');
+    titleEl.className = 'property-media-title';
+    titleEl.textContent = title;
+    copy.append(titleEl);
+    const metadata = [item.floor_label, item.provider].filter(Boolean).join(' · ');
+    if (metadata) {
+      const metaEl = document.createElement('div');
+      metaEl.className = 'property-media-meta';
+      metaEl.textContent = metadata;
+      copy.append(metaEl);
+    }
+
+    if (item.kind === 'floor_plan') {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.setAttribute('aria-label', `Open ${title} in a new tab`);
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = title;
+      image.loading = 'lazy';
+      link.append(image);
+      card.append(link);
+    } else if (item.kind === 'video' && /\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+      const video = document.createElement('video');
+      video.src = url;
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      if (item.poster_url) {
+        try { if (new URL(item.poster_url).protocol === 'https:') video.poster = item.poster_url; } catch (_) {}
+      }
+      video.setAttribute('aria-label', title);
+      card.append(video);
+    } else if (item.kind === 'video' && /(^|\.)youtube\.com$|(^|\.)youtu\.be$|(^|\.)vimeo\.com$/i.test(new URL(url).hostname)) {
+      const parsed = new URL(url);
+      let embedUrl = '';
+      if (parsed.hostname.endsWith('youtu.be')) embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(parsed.pathname.slice(1))}`;
+      else if (parsed.hostname.endsWith('youtube.com')) {
+        const videoId = parsed.searchParams.get('v') || parsed.pathname.match(/\/embed\/([^/]+)/)?.[1];
+        if (videoId) embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`;
+      } else {
+        const videoId = parsed.pathname.match(/\/(\d+)/)?.[1];
+        if (videoId) embedUrl = `https://player.vimeo.com/video/${encodeURIComponent(videoId)}`;
+      }
+      if (embedUrl) {
+        const frame = document.createElement('iframe');
+        frame.src = embedUrl;
+        frame.title = title;
+        frame.loading = 'lazy';
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        frame.allowFullscreen = true;
+        card.append(frame);
+      }
+    } else if (item.kind === 'virtual_tour' || item.kind === 'tour_3d') {
+      const host = new URL(url).hostname.toLowerCase();
+      const supported = /(^|\.)matterport\.com$|(^|\.)insidemaps\.com$|(^|\.)zillow\.com$|(^|\.)youtube\.com$|(^|\.)youtu\.be$|(^|\.)vimeo\.com$/.test(host);
+      if (supported) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'property-media-action';
+        button.textContent = 'Explore virtual tour';
+        button.addEventListener('click', () => openVirtualTourModal({ ...p, virtual_tour_url: url }));
+        card.append(button);
+      }
+    }
+
+    const hasPlayableContent = card.querySelector('img,video,iframe,button');
+    if (!hasPlayableContent) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.className = 'property-media-action';
+      link.textContent = item.kind === 'video' ? 'Watch video' : 'Open tour';
+      card.append(link);
+    }
+    card.append(copy);
+    grid.append(card);
+  });
+
+  const tour = ordered.find((item) => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
+  const mosaicTourBtn = document.getElementById('mosaicTourBtn');
+  if (tour && mosaicTourBtn) {
+    mosaicTourBtn.style.display = 'inline-flex';
+    mosaicTourBtn.onclick = (event) => {
+      event.stopPropagation();
+      openVirtualTourModal({ ...p, virtual_tour_url: tour.url });
+    };
+  }
+}
+
 function renderProperty(p) {
   document.title = `${p.title} — Choice Properties`;
 
@@ -603,21 +765,6 @@ function renderProperty(p) {
     document.getElementById('gallery')?.classList.remove('skeleton-loading');
   }
 
-  // Move-in special banner — inject between gallery strip and detail content
-  if (p.move_in_special) {
-    const _existingBanner = document.getElementById('moveInSpecialBanner');
-    if (!_existingBanner) {
-      const _banner = document.createElement('div');
-      _banner.id = 'moveInSpecialBanner';
-      _banner.style.cssText = 'background:linear-gradient(90deg,#065f46,#059669);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:.875rem;font-weight:600;margin:0;';
-      _banner.innerHTML = `<i class="fas fa-tag" style="font-size:1rem;opacity:.9"></i><span>Move-in Special: ${esc(p.move_in_special)}</span>`;
-      // Insert move-in banner before the About section in the content column
-      const _aboutSection = document.getElementById('aboutSection');
-      if (_aboutSection) _aboutSection.insertAdjacentElement('beforebegin', _banner);
-      else document.getElementById('propSplitContent')?.insertAdjacentElement('afterbegin', _banner);
-    }
-  }
-
   // Header
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
@@ -633,7 +780,6 @@ function renderProperty(p) {
   const headerChips = [];
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
-  if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
   if (headerChips.length) {
     const chipRow = document.createElement('div');
     chipRow.id = 'detailHeaderChips';
@@ -669,7 +815,8 @@ function renderProperty(p) {
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
-  if (p.floors > 1)       metas.push({ label:'Floors', value: p.floors, icon:'fa-layer-group' });
+  if (p.floors > 1)       metas.push({ label:'Building stories', value: p.floors, icon:'fa-layer-group' });
+  if (p.unit_floor)       metas.push({ label:'Unit floor', value: p.unit_floor, icon:'fa-stairs' });
   if (p.lot_size_sqft)    metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   if (p.has_basement === true)    metas.push({ label:'Basement',    value:'Yes', icon:'fa-dungeon' });
   if (p.has_central_air === true) metas.push({ label:'Central Air', value:'Yes', icon:'fa-snowflake' });
@@ -700,45 +847,7 @@ function renderProperty(p) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
-  if (p.virtual_tour_url) {
-    const vtBtn = document.createElement('button');
-    vtBtn.type = 'button';
-    vtBtn.className = 'btn btn-outline';
-    vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem;cursor:pointer';
-    vtBtn.innerHTML = '<i class="fas fa-cube" style="color:#0284c7"></i> Explore 3D Virtual Tour';
-    vtBtn.addEventListener('click', () => openVirtualTourModal(p));
-    descEl.closest('.detail-section').appendChild(vtBtn);
-
-    const mosaicTourBtn = document.getElementById('mosaicTourBtn');
-    if (mosaicTourBtn) {
-      mosaicTourBtn.style.display = 'inline-flex';
-      mosaicTourBtn.onclick = (e) => {
-        e.stopPropagation();
-        openVirtualTourModal(p);
-      };
-    }
-  }
-
-  // Render additional media (videos, floor plans, tours) from property_media
-  if (Array.isArray(p.property_media) && p.property_media.length) {
-    const groups = {};
-    p.property_media.forEach(m => { (groups[m.kind] = groups[m.kind] || []).push(m); });
-    const section = descEl.closest('.detail-section');
-    Object.keys(groups).forEach(kind => {
-      if (kind === 'virtual_tour') return;
-      const wrap = document.createElement('div');
-      wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
-      groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
-        const a = document.createElement('a');
-        a.href = m.url; a.target = '_blank'; a.rel = 'noopener';
-        a.className = 'btn btn-outline';
-        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
-        a.innerHTML = `<i class="fas fa-${kind==='video'?'video':kind==='floor_plan'?'drafting-compass':'cube'}"></i> ${kind.replace('_',' ')}`;
-        wrap.appendChild(a);
-      });
-      section.appendChild(wrap);
-    });
-  }
+  renderPropertyMedia(p);
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
@@ -759,7 +868,6 @@ function renderProperty(p) {
   p.appliances = safeArr(p.appliances);
   p.flooring = safeArr(p.flooring);
   p.utilities_included = safeArr(p.utilities_included);
-  p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
     hasAmenities = true;
@@ -820,9 +928,7 @@ function renderProperty(p) {
   const leaseItems = [];
   leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $50 per adult being screened</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
-  if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
-  if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
+  if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -923,11 +1029,6 @@ function renderProperty(p) {
     document.getElementById('sidebarAdminFeeRow').style.display = '';
     document.getElementById('sidebarAdminFee').textContent = `$${Number(p.admin_fee).toLocaleString()}`;
   }
-  if (p.move_in_special) {
-    document.getElementById('sidebarMoveInSpecialRow').style.display = '';
-    document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
-  }
-
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
     const btn = document.getElementById(id);

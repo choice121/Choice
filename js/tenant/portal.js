@@ -404,6 +404,7 @@ function renderPaymentStatus(app){
   if(paid||waived){
     const lines=[];
     if(fee!=null)lines.push(`<div class="meta-item"><span class="meta-label">Application Fee</span><span class="meta-val">${fmtMoney(fee)}</span></div>`);
+    if(hasFeeBreakdown)lines.push(`<div class="meta-item"><span class="meta-label">Fee calculation</span><span class="meta-val">${esc(feeBreakdown)}</span></div>`);
     lines.push(`<div class="meta-item"><span class="meta-label">Payment Status</span><span class="meta-val" style="color:#15803d">&#10003; ${paid?'Paid':waived?'Waived':''}</span></div>`);
     if(app.payment_date)lines.push(`<div class="meta-item"><span class="meta-label">Received</span><span class="meta-val">${fmtDateShort(app.payment_date)}</span></div>`);
     if(app.payment_amount_recorded)lines.push(`<div class="meta-item"><span class="meta-label">Amount</span><span class="meta-val">${fmtMoney(app.payment_amount_recorded)}</span></div>`);

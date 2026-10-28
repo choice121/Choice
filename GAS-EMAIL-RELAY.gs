@@ -24,7 +24,7 @@ var COPY = {
     leaseWindow: 'Please complete your lease within 48 hours to maintain your reservation.'
   },
   es: {
-    feeStatement: 'Se requiere un cargo de solicitud después de enviar su solicitud. Nuestro equipo lo contactará para completar el pago de forma segura antes de revisar su solicitud.',
+    feeStatement: 'La tarifa de solicitud es de $50 por cada solicitante adulto cuyo historial se verifique. El total se muestra antes del envío; no se cobra a los ocupantes adultos que no soliciten ni sean verificados.',
     feeReinforcement: 'Las solicitudes solo se activan después de completar el pago.',
     reviewTime: 'Las solicitudes generalmente se procesan dentro de 24 a 72 horas después de completar el pago.',
     reviewBehavior: 'Las decisiones más rápidas suelen tomarse para quienes completan todos los pasos con prontitud, brindan información precisa y responden a tiempo.',

@@ -82,7 +82,7 @@
 
   var ES = {
     feeStatement:
-      'Se requiere un cargo de solicitud de $50 después de enviar su solicitud. Nuestro equipo lo contactará para completar el pago de forma segura antes de revisar su solicitud.',
+      'La tarifa de solicitud es de $50 por cada solicitante adulto cuyo historial se verifique. No se cobra a los ocupantes adultos que no soliciten ni sean verificados. El total se muestra antes del envío; nuestro equipo se comunicará con usted para coordinar el pago.',
     feeReinforcement: 'Las solicitudes solo se activan después de completar el pago.',
 
     reviewTime:

@@ -1311,6 +1311,7 @@ function initMap(props, isBoundsUpdate = false) {
           <div class="map-popup-meta">
             ${p.bedrooms != null ? `<span>${p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' bd'}</span>` : ''}
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
+            ${p.unit_floor ? `<span>Floor ${esc(p.unit_floor)}</span>` : ''}
             ${p.virtual_tour_url ? `<span style="background:#0284c7;color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700"><i class="fas fa-cube"></i> 3D</span>` : ''}
           </div>
           <a href="${popupHref}" class="map-popup-apply">View Property →</a>

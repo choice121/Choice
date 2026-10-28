@@ -491,6 +491,7 @@ class RentalApplication {
                                 _leaseHint.appendChild(_lh);
                             }
                         }
+
                         // Remove all options except the placeholder
                         while (leaseSelect.options.length > 1) leaseSelect.remove(1);
                         finalTerms.forEach(term => {
@@ -1502,6 +1503,7 @@ class RentalApplication {
         if (hasCoApplicantCheck && coApplicantSection) {
             hasCoApplicantCheck.addEventListener('change', (e) => {
                 coApplicantSection.style.display = e.target.checked ? 'block' : 'none';
+                this._updateApplicationFee();
                 if (e.target.checked) {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
@@ -1522,6 +1524,7 @@ class RentalApplication {
                     inputs.forEach(input => this.clearError(input));
                 }
             });
+            hasCoApplicantCheck.dispatchEvent(new Event('change'));
         }
         const vehicleYes = document.getElementById('vehicleYes');
         const vehicleNo = document.getElementById('vehicleNo');
@@ -2280,7 +2283,7 @@ class RentalApplication {
                 tagline: 'Professional Property Management',
                 confidentialStamp: 'CONFIDENTIAL & SECURE',
                 trustIndicator: 'Your information is encrypted and protected',
-                timeEstimate: 'Estimated time: 15–20 minutes',
+                timeEstimate: 'Completion time varies',
                 step1Label: 'Property & Applicant',
                 step2Label: 'Residency & Occupancy',
                 step3Label: 'Employment & Income',
@@ -2586,7 +2589,7 @@ class RentalApplication {
                 tagline: 'Soluciones Profesionales de Administración de Propiedades',
                 confidentialStamp: 'CONFIDENCIAL & SEGURO',
                 trustIndicator: 'Su información está encriptada y protegida',
-                timeEstimate: 'Tiempo estimado: 15-20 minutos',
+                timeEstimate: 'El tiempo de finalización varía',
                 step1Label: 'Propiedad y Solicitante',
                 step2Label: 'Residencia y Ocupación',
                 step3Label: 'Empleo e Ingresos',
@@ -2609,7 +2612,7 @@ class RentalApplication {
                 paymentRequiredTitle: 'Tarifa de Solicitud',
                 paymentRequiredDesc: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud pasará directamente al proceso de verificación.'
-                    : 'La tarifa fija de $50 se paga después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
+                    : 'El total de la tarifa mostrado arriba se debe después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
                 completePaymentTitle: 'Revisión de Administración',
                 completePaymentDesc: freeApp
                     ? 'No se requiere pago. Su solicitud ha sido enviada y será revisada tal como fue recibida.'
@@ -2637,7 +2640,7 @@ class RentalApplication {
                 step1YouSubmit: '1. Solicitud Enviada',
                 step1Desc: 'Complete y envíe esta solicitud en su totalidad.',
                 step2PaymentArranged: '2. Tarifa de Solicitud',
-                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre la tarifa fija de $50.',
+                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre el total de la tarifa mostrado arriba.',
                 step3ReviewBegins: '3. Verificación y Revisión',
                 step3Desc: 'La revisión de administración comienza cuando se completan los pasos requeridos. El tiempo varía.',
                 propertyHeader: 'Identificación del Solicitante y Propiedad',
@@ -2687,7 +2690,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'ej., 4000',
                 coEmploymentDurationLabel: 'Tiempo en el empleo',
                 coEmploymentDurationPlaceholder: 'ej., 2 años',
-                coConsentLabel: 'Autorizo la verificación de toda la información proporcionada para este co-solicitante o garante, incluyendo verificación de crédito y antecedentes.',
+                coConsentLabel: 'Soy el solicitante adulto adicional o garante y autorizo personalmente la verificación de mi información, incluyendo crédito y antecedentes. Entiendo que se aplica una tarifa de $50 por cada solicitante adulto o garante verificado.',
                 contactPrefsHeader: 'Preferencias de Contacto',
                 prefContactMethod: 'Método de Contacto Preferido',
                 contactMethodText: 'SMS / Texto',
@@ -2777,7 +2780,7 @@ class RentalApplication {
                 smokerLabel: 'Uso de Tabaco / Cigarrillos',
                 paymentHeader: 'Asignación de Pagos del Residente',
                 paymentNoCollection: 'No se cobra ningún pago mediante este formulario.',
-                paymentCoordinationNotice: 'Después del envío, un coordinador le enviará un mensaje de texto con los datos de pago vigentes. La coordinación directa elimina los cargos por conveniencia; la tarifa de solicitud de $50 sigue vigente.',
+                paymentCoordinationNotice: 'Después del envío, un coordinador se comunicará con usted sobre el total mostrado en su solicitud. La tarifa es de $50 por cada solicitante adulto verificado.',
                 paymentIntro: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Indique su método de contacto preferido para las comunicaciones de revisión.'
                     : `Indique su método de pago preferido. Un representante usará esta información para coordinar la tarifa de solicitud de $${fee} tras el envío.`,
@@ -2802,7 +2805,7 @@ class RentalApplication {
                 feeTitle: freeApp ? 'Tarifa de Solicitud: Exonerada' : `Tarifa de Solicitud: $${fee}.00`,
                 feeDesc: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud pasará directamente a revisión.'
-                    : 'La tarifa de solicitud es requerida antes de que pueda iniciarse la verificación. Un representante lo contactará después del envío para coordinar el pago.',
+                    : 'La tarifa es de $50 por cada solicitante adulto cuyo historial se verifique. No se cobra a los ocupantes adultos que no soliciten ni sean verificados. El total se muestra abajo antes del envío.',
                 paymentReminderTitle: freeApp ? 'Sin Tarifa de Solicitud' : 'Pago Requerido Antes de la Revisión',
                 paymentReminderDesc: freeApp
                     ? 'Esta propiedad no tiene tarifa de solicitud. Su envío está completo y pasará directamente a revisión.'
@@ -2874,7 +2877,7 @@ class RentalApplication {
                 uploadCta: 'Haga clic para buscar o arrastre archivos aquí',
                 uploadHint: 'Identificación oficial &nbsp;·&nbsp; Talones de pago &nbsp;·&nbsp; Estados de cuenta',
                 trustLine: 'Los datos de la solicitud se transmiten de forma segura y se utilizan exclusivamente para fines de verificación de arrendamiento.',
-                feeAcknowledge: 'Reconozco que el equipo de administración de Choice Properties revisa mi solicitud y que la tarifa fija es de $50. No se cobra al enviar. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
+                feeAcknowledge: 'Entiendo que la tarifa de solicitud es de $50 por cada solicitante adulto o garante cuyo historial se verifique, y que el total mostrado arriba se debe después del envío. No se cobra a los ocupantes adultos que no soliciten ni sean verificados. No se cobra al enviar. Si vuelvo a solicitar después de una decisión de no aprobación, debo comunicarme con administración antes del pago para verificar si califico para la cortesía de 30 días. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
                 agreeTermsPrivacy: 'He leído y acepto los <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Términos del Servicio</a> (incluyendo la <strong>cláusula de arbitraje vinculante</strong> y la <strong>renuncia a demanda colectiva</strong> en las Secciones 18–19), la <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Privacidad</a> y el <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Marco Completo de Políticas y Legal</a>. Confirmo que tengo al menos 18 años de edad y la capacidad legal para celebrar este acuerdo.',
                 smsConsent: 'Doy mi consentimiento expreso para recibir mensajes SMS transaccionales de Choice Properties al número móvil proporcionado, relacionados con el estado de la solicitud, coordinación de tarifa, ejecución del contrato y programación de mudanza. La frecuencia de los mensajes varía. <strong>Pueden aplicar tarifas de mensajes y datos.</strong> Responda HELP para asistencia, STOP para cancelar en cualquier momento. El consentimiento de SMS no es condición de la solicitud — deje sin marcar para recibir comunicaciones únicamente por correo electrónico.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',
@@ -2922,6 +2925,7 @@ class RentalApplication {
                 });
                 document.documentElement.setAttribute('lang', this.state.language);
                 document.title = t.pageTitle;
+                this._updateApplicationFee();
 
                 document.querySelectorAll('.btn-next').forEach(b => {
                     const span = b.querySelector('[data-i18n="nextStep"]') || b.querySelector('span');
@@ -2969,6 +2973,7 @@ class RentalApplication {
             });
             document.documentElement.setAttribute('lang', 'es');
             document.title = t.pageTitle;
+            this._updateApplicationFee();
         }
     }
 

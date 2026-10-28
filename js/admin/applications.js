@@ -543,7 +543,8 @@
   }
 
   // ───── Payment ─────
-  async function openPaySheet(dbId, appId, name){
+  async function openPaySheet(dbId, appId, name, fee, adultCount){
+    const expectedFee = Number(fee) || 50;
     const data = await S.formSheet({
       title: 'Mark as paid · ' + name,
       submit: 'Mark as paid',
@@ -754,6 +755,7 @@
     const phone = details.phone || '';
     const email = details.email || 'your email address';
     const method = details.method || 'preferred method';
+    const fee = fmtMoney(details.fee || 0);
     const portalUrl = `${window.location.origin}/tenant/portal.html?app=${encodeURIComponent(appId)}`;
     const signingUrl = details.signToken
       ? `${window.location.origin}/lease-sign.html?token=${encodeURIComponent(details.signToken)}`
@@ -920,7 +922,7 @@
     // ───── Wiring (after S is available) ─────
     S.on('toggle',       (t) => toggleDetail(t.dataset.id));
     S.on('status',       (t) => setStatus(t.dataset.id, t.dataset.appId, t.dataset.set));
-    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name));
+    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name, t.dataset.fee, t.dataset.adultCount));
     S.on('unpay',        (t) => markUnpaid(t.dataset.id));
     S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
     S.on('waive',        (t) => markWaived(t.dataset.id));
@@ -939,6 +941,7 @@
       phone:t.dataset.smsPhone,
       email:t.dataset.smsEmail,
       method:t.dataset.smsMethod,
+      fee:t.dataset.smsFee,
       signToken:t.dataset.smsSignToken,
     }));
     S.on('reload-apps',  () => loadApps());

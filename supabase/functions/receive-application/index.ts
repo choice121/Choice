@@ -209,15 +209,18 @@ Deno.serve(async (req: Request) => {
       return jsonErr(400, 'A valid date of birth is required for the additional adult applicant.');
     }
     const coAge = ageInYears(coDob);
-    if (coAge !== null && coAge < 18) {
+    if (coAge === null) {
+      return jsonErr(400, 'Please enter a valid date of birth for the additional adult applicant.');
+    }
+    if (coAge < 18) {
       return jsonErr(400, 'Co-applicant must be 18 years of age or older.');
     }
-    if (coAge !== null && coAge > 120) {
+    if (coAge > 120) {
       return jsonErr(400, 'Please enter a valid date of birth for the co-applicant.');
     }
   }
 
-  // ── Property is required, fee/rent/deposit must come from DB, never client ─
+  // ── Property is required; rent and deposit must come from DB, never client ─
   const submittedPropertyId = fv(fields['Property ID']);
   if (!submittedPropertyId) {
     await logBotAttempt(ip, ua, 'no_property');
@@ -535,7 +538,7 @@ Deno.serve(async (req: Request) => {
     sendEmail({
       to: email,
       subject: `Application Received — ${propLabel.split(',')[0]} | Choice Properties (Ref: ${appId})`,
-      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee ?? null),
+      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee),
     }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
       .catch(async err => {
         console.error('Confirmation email error:', err);
@@ -545,7 +548,7 @@ Deno.serve(async (req: Request) => {
       sendEmail({
         to: adminEmail,
         subject: `New Application — ${appId} | ${firstName} ${lastName}`,
-        html: adminNotificationHtml(firstName, lastName, email, propLabel, appId, fields, enforcedFee ?? null),
+        html: adminNotificationHtml(firstName, lastName, email, propLabel, appId, fields, enforcedFee),
       }).then(result => logEmail('admin_notification', adminEmail, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
         .catch(async err => {
           console.error('Admin notification error:', err);

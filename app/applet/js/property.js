@@ -599,21 +599,6 @@ function renderProperty(p) {
     document.getElementById('gallery')?.classList.remove('skeleton-loading');
   }
 
-  // Move-in special banner — inject between gallery strip and detail content
-  if (p.move_in_special) {
-    const _existingBanner = document.getElementById('moveInSpecialBanner');
-    if (!_existingBanner) {
-      const _banner = document.createElement('div');
-      _banner.id = 'moveInSpecialBanner';
-      _banner.style.cssText = 'background:linear-gradient(90deg,#065f46,#059669);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:.875rem;font-weight:600;margin:0;';
-      _banner.innerHTML = `<i class="fas fa-tag" style="font-size:1rem;opacity:.9"></i><span>Move-in Special: ${esc(p.move_in_special)}</span>`;
-      // Insert move-in banner before the About section in the content column
-      const _aboutSection = document.getElementById('aboutSection');
-      if (_aboutSection) _aboutSection.insertAdjacentElement('beforebegin', _banner);
-      else document.getElementById('propSplitContent')?.insertAdjacentElement('afterbegin', _banner);
-    }
-  }
-
   // Header
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
@@ -629,7 +614,6 @@ function renderProperty(p) {
   const headerChips = [];
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
-  if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
   if (headerChips.length) {
     const chipRow = document.createElement('div');
     chipRow.id = 'detailHeaderChips';
@@ -736,7 +720,6 @@ function renderProperty(p) {
   p.appliances = safeArr(p.appliances);
   p.flooring = safeArr(p.flooring);
   p.utilities_included = safeArr(p.utilities_included);
-  p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
     hasAmenities = true;
@@ -798,11 +781,7 @@ function renderProperty(p) {
   const leaseAppFee = (p.application_fee != null && Number(p.application_fee) > 0) ? Number(p.application_fee) : 50;
   leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${leaseAppFee.toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
-  if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
-  if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
-  if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
-  if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
+  if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -904,11 +883,6 @@ function renderProperty(p) {
     document.getElementById('sidebarAdminFeeRow').style.display = '';
     document.getElementById('sidebarAdminFee').textContent = `$${Number(p.admin_fee).toLocaleString()}`;
   }
-  if (p.move_in_special) {
-    document.getElementById('sidebarMoveInSpecialRow').style.display = '';
-    document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
-  }
-
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
     const btn = document.getElementById(id);

@@ -889,4 +889,3 @@
     document.getElementById('successDashBtn')?.addEventListener('click', () => clearTimeout(redirectTimer));
     document.getElementById('successNewBtn')?.addEventListener('click', () => clearTimeout(redirectTimer));
   }
-

@@ -489,6 +489,7 @@
     const actionsHtml = `<div class="pd-actions">
       <button class="btn btn-primary btn-sm" id="pd-btn-edit">${ico('edit')} Edit &amp; Upload</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-photos">${ico('photos')} ${_photos.length ? 'All photos ('+_photos.length+')' : 'Manage photos'}</button>
+      <button class="btn btn-ghost btn-sm" id="pd-btn-media">Manage floor plans &amp; tours</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-import-photos" title="Pull photos from the original Zillow/Realtor listing into ImageKit">${ico('dnload')} Import source photos</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-verify" title="Confirm this listing is still active and available">${ico('check')} Mark as verified</button>
       <a class="btn btn-ghost btn-sm" href="/property.html?id=${esc(p.id)}" target="_blank" rel="noopener">${ico('ext')} Public listing</a>
@@ -1199,6 +1200,9 @@
                 <label class="pd-edit-label">Floors
                   <input class="pd-edit-input" name="floors" type="number" value="${esc(String(p.floors || ''))}" placeholder="2" min="1">
                 </label>
+                <label class="pd-edit-label">Unit floor
+                  <input class="pd-edit-input" name="unit_floor" type="text" value="${esc(p.unit_floor || '')}" placeholder="Ground, 2, or 2B" maxlength="60">
+                </label>
               </div>
               <div class="pd-edit-row">
                 <label class="pd-edit-label">Bedrooms
@@ -1857,6 +1861,16 @@
     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = ico('check') + ' Save changes'; }
 
     if (error) { S.toast('Save failed: ' + error.message, 'error'); return; }
+
+    const unitFloor = get('unit_floor') || null;
+    const { data: floorData, error: floorError } = await CP.sb().functions.invoke('property-media', {
+      body: { action: 'set_unit_floor', property_id: propId, unit_floor: unitFloor },
+    });
+    if (floorError || floorData?.error) {
+      S.toast('Other changes saved, but unit floor could not be saved: ' + (floorError?.message || floorData.error), 'error');
+      return;
+    }
+    patch.unit_floor = unitFloor;
 
     S.toast('Property saved!', 'success');
     _lastSavedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
