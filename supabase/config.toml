@@ -1,6 +1,9 @@
 [functions.property-location]
 verify_jwt = false
 
+[functions.property-media]
+verify_jwt = false
+
 [functions.receive-pipeline-import]
 verify_jwt = false
 

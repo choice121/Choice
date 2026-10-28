@@ -189,6 +189,16 @@ async function loadProperty(id) {
         .single();
       if (error || !data) throw new Error(error ? error.message : 'Not found');
       prop = data;
+      try {
+        const { data: mediaData } = await client
+          .from('property_media')
+          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
+          .eq('property_id', cleanId)
+          .order('display_order', { ascending: true });
+        prop.property_media = mediaData || [];
+      } catch (_) {
+        prop.property_media = [];
+      }
     }
   } catch (e) {
     if (shareToken) {
@@ -202,11 +212,13 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
+        prop.property_media = mediaRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -722,21 +734,43 @@ function renderProperty(p) {
   // Render additional media (videos, floor plans, tours) from property_media
   if (Array.isArray(p.property_media) && p.property_media.length) {
     const groups = {};
-    p.property_media.forEach(m => { (groups[m.kind] = groups[m.kind] || []).push(m); });
+    p.property_media.forEach((item) => {
+      if (!item || typeof item.url !== 'string') return;
+      let url;
+      try {
+        url = new URL(item.url);
+      } catch (_) {
+        return;
+      }
+      if (url.protocol !== 'https:') return;
+      (groups[item.kind] = groups[item.kind] || []).push({ ...item, url: url.href });
+    });
     const section = descEl.closest('.detail-section');
     Object.keys(groups).forEach(kind => {
       if (kind === 'virtual_tour') return;
       const wrap = document.createElement('div');
       wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
       groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
-        const a = document.createElement('a');
-        a.href = m.url; a.target = '_blank'; a.rel = 'noopener';
-        a.className = 'btn btn-outline';
-        a.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
-        a.innerHTML = `<i class="fas fa-${kind==='video'?'video':kind==='floor_plan'?'drafting-compass':'cube'}"></i> ${kind.replace('_',' ')}`;
-        wrap.appendChild(a);
+        const link = document.createElement('a');
+        link.href = m.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'btn btn-outline';
+        link.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
+        if (kind === 'floor_plan') {
+          const image = document.createElement('img');
+          image.src = m.url;
+          image.alt = m.title || 'Floor plan';
+          image.loading = 'lazy';
+          image.style.cssText = 'width:120px;max-height:90px;object-fit:contain';
+          link.appendChild(image);
+        }
+        const label = document.createElement('span');
+        label.textContent = m.title || kind.replace('_', ' ');
+        link.appendChild(label);
+        wrap.appendChild(link);
       });
-      section.appendChild(wrap);
+      if (wrap.childElementCount) section.appendChild(wrap);
     });
   }
 
