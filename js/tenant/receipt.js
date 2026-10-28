@@ -61,6 +61,9 @@
     const reference = storedReceipt?.transaction_ref || app.payment_transaction_ref || app.payment_notes || 'Not provided';
     const description = isHolding ? 'Property reservation holding payment' : 'Residential application screening fee';
     const address = app.property_address || 'Property address not recorded';
+    const screenedAdultCount = Number(app.screened_adult_count);
+    const feePerAdult = Number(app.application_fee_per_adult);
+    const hasFeeBreakdown = screenedAdultCount > 0 && feePerAdult > 0;
 
     paper.innerHTML = `
       <header class="receipt-top">
@@ -74,6 +77,7 @@
         <div class="detail"><div class="detail-label">Payment date</div><div class="detail-value">${esc(date(paidAt))}</div></div>
         <div class="detail"><div class="detail-label">Property</div><div class="detail-value">${esc(address)}</div></div>
         <div class="detail"><div class="detail-label">Payment method</div><div class="detail-value">${esc(method)}</div></div>
+        ${!isHolding && hasFeeBreakdown ? `<div class="detail"><div class="detail-label">Screened adults × fee per adult</div><div class="detail-value">${screenedAdultCount} × ${esc(money(feePerAdult))}</div></div>` : ''}
         <div class="detail"><div class="detail-label">Application reference</div><div class="detail-value">${esc(appRef)}</div></div>
         <div class="detail"><div class="detail-label">Transaction reference</div><div class="detail-value">${esc(reference)}</div></div>
       </section>
@@ -133,7 +137,7 @@
 
     if (!receiptId) {
       const { data, error } = await CP.sb().from('applications')
-      .select('app_id,first_name,last_name,property_address,application_fee,payment_status,payment_date,payment_confirmed_at,payment_amount_recorded,payment_amount_collected,payment_method_recorded,payment_method_confirmed,payment_transaction_ref,payment_notes,holding_fee_amount,holding_fee_paid,holding_fee_paid_at')
+      .select('app_id,first_name,last_name,property_address,application_fee,application_fee_per_adult,screened_adult_count,has_co_applicant,payment_status,payment_date,payment_confirmed_at,payment_amount_recorded,payment_amount_collected,payment_method_recorded,payment_method_confirmed,payment_transaction_ref,payment_notes,holding_fee_amount,holding_fee_paid,holding_fee_paid_at')
       .eq('app_id', appId)
       .maybeSingle();
       if (error || !data) {

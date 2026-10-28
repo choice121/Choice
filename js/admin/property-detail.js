@@ -502,7 +502,7 @@
     const fields = [
       { label:'Monthly rent',   value: fmtMoney(p.monthly_rent) },
       { label:'Security deposit', value: p.security_deposit ? fmtMoney(p.security_deposit) : '—' },
-      { label:'Application fee', value: p.application_fee != null ? fmtMoney(p.application_fee) : '—' },
+      { label:'Application fee per screened adult', value: '$50' },
       { label:'Bedrooms',       value: p.bedrooms != null ? (p.bedrooms === 0 ? 'Studio' : p.bedrooms) : '—' },
       { label:'Bathrooms',      value: p.bathrooms != null ? p.bathrooms + (p.half_bathrooms ? ' + ½' : '') : '—' },
       { label:'Sq. footage',    value: p.square_footage ? Number(p.square_footage).toLocaleString() + ' sqft' : '—' },
@@ -1239,8 +1239,8 @@
                 </label>
               </div>
               <div class="pd-edit-row">
-                <label class="pd-edit-label">Application fee ($)
-                  <input class="pd-edit-input" name="application_fee" type="number" value="${esc(String(p.application_fee != null ? p.application_fee : ''))}" placeholder="50" min="0">
+                <label class="pd-edit-label">Application fee per screened adult ($)
+                  <input class="pd-edit-input" name="application_fee" type="number" value="50" min="50" max="50" readonly>
                 </label>
                 <label class="pd-edit-label">Admin/move-in fee ($)
                   <input class="pd-edit-input" name="admin_fee" type="number" value="${esc(String(p.admin_fee || ''))}" placeholder="0" min="0">

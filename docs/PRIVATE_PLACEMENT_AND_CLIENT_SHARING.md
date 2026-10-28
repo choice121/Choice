@@ -47,9 +47,9 @@ Future AI agents, engineers, and administrators must maintain these standards ac
 - Do not display a private-placement badge or banner to clients. The share link is the access mechanism; UI labels do not enforce privacy.
 
 ### C. Application Confirmation Email Template
-- Application submissions for all properties strictly require the **$50.00 application fee**.
+- The application fee is **$50 per adult screened**; the application form shows the total before submission.
 - The confirmation email template (`supabase/functions/_shared/email.ts`) presents:
-  - 💰 Application Fee Due — $50.00
+  - 💰 Application Fee Due — the total shown on the application ($50 per screened adult)
   - Next Steps: Immediate text coordination from assigned billing specialist for payment routing.
   - Queue priority for prompt completions.
 

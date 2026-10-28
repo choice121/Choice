@@ -174,6 +174,9 @@ Deno.serve(async (req: Request) => {
   if (!termsConsent) {
     return jsonErr(400, 'You must accept the Terms & Privacy Policy to submit.');
   }
+  if (fBool(fields['feeAcknowledge']) !== true) {
+    return jsonErr(400, 'You must acknowledge the application fee before submitting.');
+  }
 
   // ── Server-side age 18+ check — primary applicant ────────────────────────
   const age = ageInYears(dob);
@@ -184,7 +187,27 @@ Deno.serve(async (req: Request) => {
   // ── Server-side age 18+ check — co-applicant (if present) ────────────────
   const hasCoApplicant = fBool(fields['Has Co-Applicant']) === true;
   const coDob = fv(fields['Co-Applicant DOB']);
-  if (hasCoApplicant && coDob) {
+  const coFirstName = fv(fields['Co-Applicant First Name']);
+  const coLastName = fv(fields['Co-Applicant Last Name']);
+  const coEmail = fv(fields['Co-Applicant Email']).toLowerCase();
+  const coConsent = fBool(fields['Co-Applicant Consent']) === true;
+  const coRole = fv(fields['Additional Person Role']);
+  if (hasCoApplicant) {
+    if (!coFirstName || !coLastName || !coEmail || !coEmail.includes('@') || coEmail.length > 254) {
+      return jsonErr(400, 'A complete name and valid email are required for the additional adult applicant.');
+    }
+    if (!coConsent) {
+      return jsonErr(400, 'The additional adult applicant must authorize screening before submission.');
+    }
+    if (!['Co-applicant', 'Guarantor'].includes(coRole)) {
+      return jsonErr(400, 'Select whether the additional adult is a co-applicant or guarantor.');
+    }
+    if (!fv(fields['Co-Applicant SSN']).replace(/\D/g, '').match(/^\d{4}$/)) {
+      return jsonErr(400, 'Enter the last four digits of the additional adult applicant’s SSN.');
+    }
+    if (!coDob) {
+      return jsonErr(400, 'A valid date of birth is required for the additional adult applicant.');
+    }
     const coAge = ageInYears(coDob);
     if (coAge !== null && coAge < 18) {
       return jsonErr(400, 'Co-applicant must be 18 years of age or older.');
@@ -203,7 +226,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: prop, error: propErr } = await supabase
     .from('properties')
-    .select('id, address, application_fee, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status')
+    .select('id, address, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status')
     .eq('id', submittedPropertyId)
     .maybeSingle();
 
@@ -254,7 +277,9 @@ Deno.serve(async (req: Request) => {
     if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
   }
 
-  const enforcedFee     = typeof prop.application_fee   === 'number' ? prop.application_fee   : null;
+  const screenedAdultCount = hasCoApplicant ? 2 : 1;
+  const applicationFeePerAdult = 50;
+  const enforcedFee = screenedAdultCount * applicationFeePerAdult;
   const enforcedRent    = typeof prop.monthly_rent      === 'number' ? prop.monthly_rent      : null;
   const enforcedDeposit = typeof prop.security_deposit  === 'number' ? prop.security_deposit  : null;
   const enforcedAddress = prop.address || fv(fields['Property Address']) || null;
@@ -367,13 +392,23 @@ Deno.serve(async (req: Request) => {
     vehicle_model: fv(fields['Vehicle Model']) || null,
     vehicle_year: fv(fields['Vehicle Year']) || null,
     vehicle_license_plate: fv(fields['Vehicle License Plate']) || null,
-    has_co_applicant: fBool(fields['Has Co-Applicant']),
-    co_applicant_first_name: fv(fields['Co-Applicant First Name']) || null,
-    co_applicant_last_name: fv(fields['Co-Applicant Last Name']) || null,
-    co_applicant_email: fv(fields['Co-Applicant Email']) || null,
-    co_applicant_phone: fv(fields['Co-Applicant Phone']) || null,
-    co_applicant_dob:   coDob || null,
-    co_applicant_ssn: (() => { const raw = fv(fields['Co-Applicant SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
+    has_co_applicant: hasCoApplicant,
+    co_applicant_first_name: hasCoApplicant ? coFirstName : null,
+    co_applicant_last_name: hasCoApplicant ? coLastName : null,
+    co_applicant_email: hasCoApplicant ? coEmail : null,
+    co_applicant_phone: hasCoApplicant ? (fv(fields['Co-Applicant Phone']) || null) : null,
+    co_applicant_dob: hasCoApplicant ? coDob : null,
+    co_applicant_ssn: hasCoApplicant ? (() => { const d = fv(fields['Co-Applicant SSN']).replace(/\D/g, ''); return 'XXX-XX-' + d.slice(-4); })() : null,
+    co_applicant_role: hasCoApplicant ? coRole : null,
+    co_applicant_consent: hasCoApplicant ? coConsent : null,
+    co_applicant_consent_timestamp: hasCoApplicant ? new Date().toISOString() : null,
+    co_applicant_consent_version: hasCoApplicant ? (fv(fields['Consent Version']) || '2.1') : null,
+    co_applicant_employer: hasCoApplicant ? (fv(fields['Co-Applicant Employer']) || null) : null,
+    co_applicant_job_title: hasCoApplicant ? (fv(fields['Co-Applicant Job Title']) || null) : null,
+    co_applicant_monthly_income: hasCoApplicant ? fNum(fields['Co-Applicant Monthly Income']) : null,
+    co_applicant_employment_duration: hasCoApplicant ? (fv(fields['Co-Applicant Employment Duration']) || null) : null,
+    screened_adult_count: screenedAdultCount,
+    application_fee_per_adult: applicationFeePerAdult,
     // Server-authoritative fee/rent/deposit (overrides anything from client)
     application_fee: enforcedFee,
     monthly_rent: enforcedRent,
@@ -384,7 +419,7 @@ Deno.serve(async (req: Request) => {
     terms_consent: termsConsent,
     sms_consent: fv(fields['SMS Consent']) === 'yes' || fBool(fields['SMS Consent']) === true || fBool(fields['smsConsent']) === true,
     consent_timestamp: new Date().toISOString(),    // server clock — never trust client
-    consent_version: fv(fields['Consent Version']) || '2.0',
+    consent_version: fv(fields['Consent Version']) || '2.1',
   };
 
   // Strip undefined and empty strings, BUT keep boolean false (terms_consent etc.)

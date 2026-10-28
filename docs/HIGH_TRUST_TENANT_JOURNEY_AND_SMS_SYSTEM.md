@@ -24,7 +24,7 @@ Choice Properties operates a nationwide rental platform designed to provide a pr
 ## 2. Platform Compliance Rules (Strict Invariants)
 
 Per `AGENTS.md` and Choice Properties core policies, any engineer or AI working on this implementation **must strictly observe the following rules**:
-1. **Application Fee:** Strictly `$50.00`. Database field: `application_fee: 50`. Descriptions and documents must never claim free or waived fees.
+1. **Application Fee:** `$50 per adult screened`. `public.properties.application_fee` is `50` per screened adult; `public.applications.application_fee` is the server-calculated total. Descriptions must never claim free or waived fees.
 2. **Security Deposit:** Strictly 1x monthly rent in structured database fields, but **never mentioned in listing descriptions**.
 3. **No Lease Term Display:** Never display lease lengths, lease durations, or minimum lease months on property detail pages or cards.
 4. **No Available Date or Move-In Tables:** Never display "Available From", move-in dates, or availability tables on property pages.
@@ -127,11 +127,11 @@ Note: We also dispatched your formal application confirmation to {Email}. If you
 ```
 
 #### Stage 2: Application Fee Received & Stamped Receipt Issued
-* **Trigger:** Admin clicks "Record Payment" and confirms $50 in dashboard.
+* **Trigger:** Admin records the actual application-fee total shown on the application.
 * **Admin Email Subject:** `[ACTION: Send SMS] Fee Received - Stamped Receipt for {Applicant_Name}`
 * **Generated SMS Content:**
 ```text
-Hello {First_Name}, your $50 application screening fee for {Property_Address} has been received and verified. 
+Hello {First_Name}, your {Application_Fee_Total} application screening fee for {Property_Address} has been received and verified. The total covers {Screened_Adult_Count} screened adult applicant(s) at $50 each.
 
 Your official stamped corporate ledger receipt has been generated. You can access your file and view your receipt directly in your resident portal here:
 https://choice-properties-site.pages.dev/tenant/portal.html?app={App_ID}

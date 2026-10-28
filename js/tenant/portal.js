@@ -396,6 +396,10 @@ function renderPaymentStatus(app){
   const paid=status==='paid';
   const waived=status==='waived';
   const refunded=status==='refunded';
+  const screenedAdultCount=Number(app.screened_adult_count);
+  const feePerAdult=Number(app.application_fee_per_adult);
+  const hasFeeBreakdown=screenedAdultCount>0&&feePerAdult>0;
+  const feeBreakdown=hasFeeBreakdown?`${screenedAdultCount} screened adult applicant${screenedAdultCount===1?'':'s'} × ${fmtMoney(feePerAdult)} each`:'';
 
   if(paid||waived){
     const lines=[];
@@ -421,7 +425,8 @@ function renderPaymentStatus(app){
     return `<div class="section"><div class="section-label">Payment</div>
       <div class="pay-unpaid-card">
         <div class="pay-unpaid-title">&#128176; Application Fee Due — ${fmtMoney(fee)}</div>
-        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">A $50 application fee is required after submission. Our team will contact you shortly to securely complete payment before your application is reviewed.</p>
+        ${hasFeeBreakdown?`<p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">${esc(feeBreakdown)} = ${fmtMoney(fee)} total.</p>`:''}
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">The application fee total shown above is due after submission. Our team will contact you shortly to coordinate payment before your application is reviewed.</p>
         <p style="color:#1d4ed8;font-size:.78rem;margin-bottom:14px;font-weight:600">Applicants who complete payment quickly are placed earlier in the review queue.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
           <p style="color:var(--muted);font-size:.78rem;line-height:1.55">Active payment-routing instructions are coordinated directly by your assigned billing specialist via text to ensure immediate processing and waive payment surcharges.</p>
@@ -1577,7 +1582,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(!fullApp){
       const {data:legacyApp,error:fetchErr}=await sb.from('applications')
         .select(
-          'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,'+
+          'id,app_id,created_at,updated_at,status,payment_status,payment_date,application_fee,application_fee_per_adult,screened_adult_count,'+
           'payment_amount_recorded,payment_method_recorded,payment_notes,'+
           'holding_fee_requested,holding_fee_amount,holding_fee_due_date,holding_fee_paid,holding_fee_paid_at,'+
           'payment_confirmed_at,payment_amount_collected,payment_method_confirmed,'+

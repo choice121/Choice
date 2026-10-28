@@ -888,17 +888,13 @@ function renderProperty(p) {
   if (_depEl) {
     _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   }
-  // Flat $50 application fee is the platform standard. If a property has no
-  // explicit fee, default to $50 rather than showing "Free" (which contradicts
-  // the marketing promise and the scraper normalization rules).
-  const _appFee = (p.application_fee != null && p.application_fee > 0)
-    ? Number(p.application_fee)
-    : 50;
+  // The application fee is $50 per adult being screened.
+  const _appFee = 50;
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
   if (_feeAmtEl) {
-    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
+    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';

@@ -8,10 +8,10 @@ This document outlines the standard 11-step customer journey from initial inquir
 3. **Link Sharing**: Provide verified listing links or a single client Master Magic Link (`/listings.html#share=token`).
 4. **Property Review & Selection**: The customer reviews options and identifies their top candidate property.
 5. **Application Guidance**: Guide the applicant to the online application form (`/apply`).
-6. **Application Fee Collection**: The $50 application fee is submitted through approved secure payment processing.
+6. **Application Fee Collection**: The application fee is $50 per adult screened. The form supports a primary applicant and one additional screened adult, displays the total before submission, and stores the household total on the application record. Fees are subject to applicable law.
 7. **Underwriting & Review**: Application enters underwriting review (typically 24–72 hours).
 8. **Document Follow-Up**: If proof of income (pay stubs, bank statements, offer letters) or photo ID is needed, staff contacts the applicant directly.
-9. **Outcome Communication**: Staff communicates approval or decision. If denied, the 7-day 2-reapplication courtesy policy applies.
+9. **Outcome Communication**: Staff communicates approval or decision. After an initial paid application is not approved, the 30-day courtesy may cover up to two additional participating properties for the same screened adults; newly screened adults are subject to the standard fee. Staff must verify eligibility and apply any fee waiver before collecting payment.
 10. **Viewing & Property Reservation**: Approved applicant schedules a private viewing and submits the holding deposit (which credits to 1st month's rent).
 11. **Lease Execution**: Digital lease agreement is delivered and signed.
 

@@ -17,7 +17,7 @@
   var EN = {
     // ── Fee & payment ─────────────────────────────────────────────────────
     feeStatement:
-      'A $50 application fee is required after submission. Our team will contact you to securely complete payment before your application is reviewed.',
+      'The application fee is $50 for each adult being screened. Adult occupants who are not applying or being screened are not charged. The total is shown before submission; our team will contact you to coordinate payment.',
     feeReinforcement: 'Applications are only activated after payment is completed.',
 
     // ── Review timing ─────────────────────────────────────────────────────

@@ -180,6 +180,9 @@ export function applicationConfirmationHtml(
   const hasFee = feeNum > 0;
   const freeApp = feeNum === 0;
   const feeDisplay = hasFee ? `$${feeNum.toFixed(0)}` : (freeApp ? 'Free' : 'Per property terms');
+  const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
+  const screenedAdultCount = hasCoApplicant ? 2 : 1;
+  const feeBreakdown = `${screenedAdultCount} adult${screenedAdultCount === 1 ? '' : 's'} screened × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
     fields?.['Alternative Payment Method'],
@@ -188,7 +191,7 @@ export function applicationConfirmationHtml(
   const phoneRef = fields?.['Phone'] ? ` at <strong>${fields['Phone']}</strong>` : '';
   const payPills = payMethods.length ? `<div>${payMethods.map(m => `<span class="pay-pill">${m}</span>`).join('')}</div>` : '';
   const paymentSection = hasFee
-    ? `<div class="section"><div class="section-label">Application Fee &amp; Payment</div><div class="callout amber"><h4>Application Fee \u2014 ${feeDisplay}</h4><p style="margin-bottom:12px;">A member of our leasing team will contact you within 24 hours via text${phoneRef} to coordinate your application fee. Your application will not be reviewed until payment is received and confirmed.</p>${payPills}</div></div>`
+    ? `<div class="section"><div class="section-label">Application Fee &amp; Payment</div><div class="callout amber"><h4>Application Fee \u2014 ${feeDisplay}</h4><p><strong>${feeBreakdown}</strong></p><p style="margin-bottom:12px;">A member of our leasing team will contact you within 24 hours via text${phoneRef} to coordinate your application fee. Your application will not be reviewed until payment is received and confirmed.</p>${payPills}</div></div>`
     : freeApp
       ? `<div class="section"><div class="section-label">Application Fee &amp; Payment</div><div class="callout green"><h4>No Application Fee Required</h4><p>This property has no application fee. Your application will proceed directly to the screening queue \u2014 no payment step is required.</p></div></div>`
       : `<div class="section"><div class="section-label">Application Fee &amp; Payment</div><div class="callout amber"><h4>Application Fee \u2014 ${feeDisplay}</h4><p style="margin-bottom:12px;">A member of our leasing team will contact you to confirm any applicable application fee before your application proceeds to review.</p></div></div>`;
@@ -227,6 +230,8 @@ export function applicationConfirmationHtml(
         <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
         <tr><td>Email on File</td><td>${fields?.['Email'] || ''}</td></tr>
         <tr><td>Phone on File</td><td>${fields?.['Phone'] || ''}</td></tr>
+        <tr><td>Screened Adult Applicants</td><td>${screenedAdultCount}</td></tr>
+        <tr><td>Fee Calculation</td><td>${feeBreakdown}</td></tr>
         ${(() => { const dc = fields ? Object.keys(fields).filter(k => k.startsWith('_docFile_') && k.endsWith('_name')).length : 0; return dc > 0 ? `<tr><td>Documents Submitted</td><td><strong>${dc} file${dc > 1 ? 's' : ''} attached</strong> — accessible via your tenant portal</td></tr>` : ''; })()}
       </table>
     </div>
@@ -291,13 +296,16 @@ export function adminNotificationHtml(
   const hasFee = feeNum > 0;
   const freeApp = feeNum === 0;
   const feeDisplay = hasFee ? `$${feeNum.toFixed(2)}` : (freeApp ? 'Free \u2014 No Fee' : 'Per property terms');
+  const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
+  const screenedAdultCount = hasCoApplicant ? 2 : 1;
+  const feeBreakdown = `${screenedAdultCount} adult${screenedAdultCount === 1 ? '' : 's'} screened × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
     fields?.['Alternative Payment Method'],
     fields?.['Third Choice Payment Method'],
   ].filter(Boolean) as string[];
   const adminPaymentSection = hasFee
-    ? `<div class="section"><div class="section-label" style="color:#1d4ed8;">\ud83d\udcb3 Payment Coordination \u2014 Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant\u2019s Preferred Method</h4>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${firstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'\u2605 ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click \u201cMark paid\u201d.</p>` : '<p>No payment method preference specified \u2014 contact applicant directly to arrange.</p>'}</div></div>`
+    ? `<div class="section"><div class="section-label" style="color:#1d4ed8;">\ud83d\udcb3 Payment Coordination \u2014 Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant\u2019s Preferred Method</h4><p><strong>${feeBreakdown}</strong></p>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${firstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'\u2605 ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click \u201cMark paid\u201d.</p>` : '<p>No payment method preference specified \u2014 contact applicant directly to arrange.</p>'}</div></div>`
     : freeApp
       ? `<div class="section"><div class="callout green"><h4>\u2713 No Application Fee</h4><p>No payment collection required \u2014 proceed directly to review.</p></div></div>`
       : '';
@@ -331,7 +339,9 @@ export function adminNotificationHtml(
         <tr><td>Lease Term</td><td>${fields?.['Desired Lease Term'] || 'Not specified'}</td></tr>
         <tr><td>Contact Preference</td><td>${fields?.['Preferred Contact Method'] || 'Not specified'}</td></tr>
         <tr><td>Best Time to Reach</td><td>${[fields?.['Preferred Time'], fields?.['Preferred Time Specific']].filter(Boolean).join(' — ') || 'Any'}</td></tr>
-        ${(String(fields?.['Has Co-Applicant']).toLowerCase() === 'true') ? `<tr><td>Co-Applicant</td><td><strong style="color:#7c3aed;">&#x1F465; ${[fields?.['Co-Applicant First Name'], fields?.['Co-Applicant Last Name']].filter(Boolean).join(' ') || 'Yes'}</strong>${fields?.['Co-Applicant Email'] ? ` &mdash; ${fields['Co-Applicant Email']}` : ''}</td></tr>` : ''}
+        ${hasCoApplicant ? `<tr><td>Co-Applicant</td><td><strong style="color:#7c3aed;">&#x1F465; ${[fields?.['Co-Applicant First Name'], fields?.['Co-Applicant Last Name']].filter(Boolean).join(' ') || 'Yes'}</strong>${fields?.['Co-Applicant Email'] ? ` &mdash; ${fields['Co-Applicant Email']}` : ''}</td></tr>` : ''}
+        <tr><td>Screened Adult Applicants</td><td>${screenedAdultCount}</td></tr>
+        <tr><td>Fee Calculation</td><td>${feeBreakdown}</td></tr>
         ${(() => { const docCount = fields ? Object.keys(fields).filter(k => k.startsWith('_docFile_') && k.endsWith('_name')).length : 0; return docCount > 0 ? `<tr><td>Documents Attached</td><td><strong style="color:#059669;">&#x1F4CE; ${docCount} file${docCount > 1 ? 's' : ''} — view in admin portal</strong></td></tr>` : ''; })()}
       </table>
     </div>
@@ -470,7 +480,7 @@ export function statusUpdateHtml(
     <div class="section">
       <div class="section-label">Looking Ahead</div>
       <ul class="steps-list">
-        <li><span class="step-num">1</span><span><strong>Reapplication Option</strong> — Your application and screening results remain on file for 60 days. If you wish to apply for another available Choice Properties unit within 30 days, <strong>no new application fee will be required</strong>. Please contact our team to discuss your options.</span></li>
+        <li><span class="step-num">1</span><span><strong>Reapplication Option</strong> — After an initial paid application is not approved, the same adults screened may apply for up to two additional participating properties within 30 days without another application fee. A newly screened adult is subject to the standard fee. Contact our team before payment so we can verify eligibility and apply the fee waiver.</span></li>
         <li><span class="step-num">2</span><span><strong>Other Properties</strong> — Choice Properties manages a portfolio of properties. Our team would be happy to discuss alternative options that may be a strong fit for your current profile.</span></li>
         <li><span class="step-num">3</span><span><strong>Questions</strong> — If you would like to discuss this decision or explore your options, please reach out to our leasing team directly.</span></li>
       </ul>

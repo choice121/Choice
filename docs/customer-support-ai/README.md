@@ -3,7 +3,7 @@
 Welcome to the documentation for the Choice Properties Customer Support AI and Customer Memory Engine.
 
 ## Directory Structure
-- `business-policies.md` — Single source of truth for financial rules, fees ($50), deposits (1x in DB, 0 in text), 24-72h review, 7-day 2-reapplication courtesy rule.
+- `business-policies.md` — Single source of truth for financial rules, fees ($50 per screened adult), deposits (1x in DB, 0 in text), 24-72h review, and 30-day/two-property reapplication courtesy.
 - `response-style.md` — Brand voice, copy-ready format rules, "we" perspective, missing-information discipline, zero internal IDs in customer messages.
 - `application-process.md` — 11-step application lifecycle, distinction between workflow explanation and confirmed database status.
 - `qualification-guidelines.md` — Empathetic, confident handling of low credit, past evictions, non-traditional income without guaranteeing approval or frightening renters.
