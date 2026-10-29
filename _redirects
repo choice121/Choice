@@ -19,7 +19,6 @@
 /landlord-platform-agreement.html /how-it-works.html                      302
 /listings                   /listings.html?view=cities                    302
 /listings/                  /listings.html?view=cities                    302
-/listings/*                 /listings.html?view=cities                    302
 # --- Block source / config / docs from being served on the CDN -----------
 # (Cloudflare Pages serves static files before _redirects is consulted
 #  only for exact file matches; wildcard rules below override static serving
