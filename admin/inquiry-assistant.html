@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1793302997390"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex, nofollow">
+  <title>AI Rental Inquiry Assistant · Choice Properties Admin</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1793302997390">
+  <script defer src="/config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+  <script defer src="/js/cp-api.js?v=1793302997390" type="module"></script>
+  <script defer src="/js/cp-chrome.js?v=1793302997390"></script>
+  <script defer src="/js/cp-shell.js?v=1793302997390"></script>
+  <style>
+    :root {
+      --as-radius: 12px;
+      --as-accent: #006aff;
+      --as-accent-glow: rgba(0, 106, 255, 0.15);
+      --as-surface: #10172a;
+      --as-surface-2: #1e293b;
+      --as-border: rgba(255, 255, 255, 0.08);
+      --as-text: #f8fafc;
+      --as-muted: #94a3b8;
+    }
+
+    .as-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding-bottom: 60px;
+    }
+
+    /* Top Search & Actions Bar */
+    .as-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--as-radius);
+      padding: 14px 18px;
+    }
+
+    .as-search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 320px;
+    }
+
+    .as-search-input {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.95rem;
+      flex: 1;
+      font-family: inherit;
+    }
+
+    .as-search-input:focus {
+      outline: none;
+      border-color: var(--brand);
+    }
+
+    .as-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .as-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .as-btn-brand {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .as-btn-brand:hover {
+      background: #0056d6;
+    }
+
+    .as-btn-sm {
+      padding: 6px 10px;
+      font-size: 0.78rem;
+    }
+
+    /* Collision Warning Banner */
+    .as-collision-alert {
+      display: none;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid #ef4444;
+      border-radius: var(--as-radius);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      color: #fca5a5;
+    }
+
+    .as-collision-alert.active {
+      display: block;
+    }
+
+    /* Main Grid Layout */
+    .as-main-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 960px) {
+      .as-main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Customer Profile Card */
+    .as-profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--as-radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .as-profile-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+
+    .as-profile-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px 0;
+    }
+
+    .as-id-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: var(--brand-glow);
+      color: #60a5fa;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+
+    .as-spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .as-spec-item {
+      background: var(--surface-2);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .as-spec-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-2);
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+
+    .as-spec-val {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .as-qual-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      color: #fcd34d;
+    }
+
+    /* Workspace: History & AI Generator */
+    .as-workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Conversation Feed */
+    .as-feed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--as-radius);
+      padding: 18px;
+    }
+
+    .as-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .as-chat-scroll {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .as-chat-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .as-bubble-cust {
+      background: var(--surface-2);
+      border-left: 4px solid #3b82f6;
+      margin-right: 40px;
+    }
+
+    .as-bubble-staff {
+      background: var(--brand-glow);
+      border-left: 4px solid var(--brand);
+      margin-left: 40px;
+    }
+
+    .as-bubble-draft {
+      background: rgba(168, 85, 247, 0.1);
+      border-left: 4px solid #a855f7;
+      margin-left: 40px;
+    }
+
+    .as-bubble-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--muted-2);
+      margin-bottom: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* AI Response Generator Box */
+    .as-generator-card {
+      background: var(--surface);
+      border: 1px solid var(--brand);
+      box-shadow: 0 4px 20px var(--brand-glow);
+      border-radius: var(--as-radius);
+      padding: 18px;
+    }
+
+    .as-prompt-textarea {
+      width: 100%;
+      min-height: 90px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.92rem;
+      resize: vertical;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    .as-prompt-textarea:focus {
+      outline: none;
+      border-color: var(--brand);
+    }
+
+    .as-chip-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .as-action-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s ease;
+    }
+
+    .as-action-chip:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--brand);
+    }
+
+    .as-draft-output-card {
+      background: #090e1a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      display: none;
+    }
+
+    .as-draft-output-card.active {
+      display: block;
+    }
+
+    .as-draft-text {
+      white-space: pre-wrap;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      margin-bottom: 14px;
+    }
+
+    .as-detected-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid #22c55e;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      color: #86efac;
+      margin-bottom: 12px;
+    }
+
+    /* Modal standard */
+    .as-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .as-modal-backdrop.active {
+      display: flex;
+    }
+
+    .as-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--as-radius);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .as-form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .as-form-row label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .as-form-row input, .as-form-row select, .as-form-row textarea {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body data-page-title="Inquiry Assistant" data-page-sub="AI Customer Memory & Response Engine">
+
+<div class="app">
+  <main class="app-content as-container">
+
+    <!-- Topbar: Quick Search & Global Operations -->
+    <div class="as-topbar">
+      <div class="as-search-box">
+        <input type="text" id="cust-search-input" class="as-search-input" placeholder="Enter 4-digit ID (e.g. 8376) or Name (e.g. Riley)..." autocomplete="off">
+        <button id="cust-search-btn" class="as-btn as-btn-brand">
+          <svg class="i i-sm"><use href="#i-search"/></svg> Find
+        </button>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/admin/mobile-setup.html" class="as-btn" style="text-decoration:none;border-color:rgba(0,106,255,0.4);color:#60a5fa">
+          📱 iPhone Copilot
+        </a>
+        <button id="btn-new-cust" class="as-btn as-btn-brand">
+          <svg class="i i-sm"><use href="#i-plus"/></svg> New Customer
+        </button>
+        <button id="btn-view-policies" class="as-btn">
+          <svg class="i i-sm"><use href="#i-list"/></svg> Policies ($50 Fee)
+        </button>
+        <button id="btn-backup-restore" class="as-btn">
+          <svg class="i i-sm"><use href="#i-download"/></svg> Backup / Restore
+        </button>
+      </div>
+    </div>
+
+    <!-- Collision Warning Banner (Hidden until collision) -->
+    <div id="collision-alert" class="as-collision-alert">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <strong style="display:block;margin-bottom:4px">⚠️ Identifier Collision Detected</strong>
+          <span id="collision-msg">Multiple customer records share this 4-digit identifier. Select which profile you wish to open, or link the records.</span>
+        </div>
+        <div id="collision-actions" style="display:flex;gap:8px"></div>
+      </div>
+    </div>
+
+    <!-- Main Workspace Grid -->
+    <div class="as-main-grid">
+
+      <!-- LEFT COLUMN: Structured Profile & Notes -->
+      <div>
+        <div id="profile-container" class="as-profile-card">
+          <div class="as-profile-header">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <h2 id="p-name" class="as-profile-title">No Customer Selected</h2>
+                <span id="p-id-badge" class="as-id-badge">----</span>
+              </div>
+              <span id="p-activity" style="font-size:0.75rem;color:var(--muted)">Search by 4-digit ID or name above</span>
+            </div>
+            <button id="btn-edit-profile" class="as-btn as-btn-sm" style="display:none">
+              <svg class="i i-sm"><use href="#i-edit"/></svg> Edit
+            </button>
+          </div>
+
+          <!-- Preferences Grid -->
+          <div id="p-specs-section" style="display:none">
+            <span class="as-card-title">Rental Preferences</span>
+            <div class="as-spec-grid">
+              <div class="as-spec-item">
+                <div class="as-spec-label">Target City</div>
+                <div id="p-city" class="as-spec-val">—</div>
+              </div>
+              <div class="as-spec-item">
+                <div class="as-spec-label">Beds / Baths</div>
+                <div id="p-beds-baths" class="as-spec-val">—</div>
+              </div>
+              <div class="as-spec-item">
+                <div class="as-spec-label">Max Budget</div>
+                <div id="p-budget" class="as-spec-val">—</div>
+              </div>
+              <div class="as-spec-item">
+                <div class="as-spec-label">Move-in Timeframe</div>
+                <div id="p-movein" class="as-spec-val">—</div>
+              </div>
+              <div class="as-spec-item">
+                <div class="as-spec-label">Property Type</div>
+                <div id="p-type" class="as-spec-val">—</div>
+              </div>
+              <div class="as-spec-item">
+                <div class="as-spec-label">Pets Allowed</div>
+                <div id="p-pets" class="as-spec-val">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Application & Qualification Status -->
+          <div id="p-status-section" style="display:none">
+            <span class="as-card-title">Application Status</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+              <span id="p-app-status" class="pill pill-muted">App: Not Started</span>
+              <span id="p-fee-status" class="pill pill-warning">Fee: $50 Pending</span>
+            </div>
+
+            <!-- Qualification disclosures -->
+            <div id="p-qual-box" class="as-qual-box" style="display:none">
+              <strong style="display:block;margin-bottom:4px">Disclosed Qualification Notes:</strong>
+              <div id="p-qual-text"></div>
+            </div>
+          </div>
+
+          <!-- Internal Staff Notes (Staff Only) -->
+          <div id="p-notes-section" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span class="as-card-title" style="margin:0">Private Staff Notes</span>
+              <span style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;font-weight:700">Internal Only</span>
+            </div>
+            <div id="p-notes-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="new-note-input" class="as-search-input" placeholder="Add private staff note..." style="font-size:0.82rem;padding:6px 10px">
+              <button id="btn-add-note" class="as-btn as-btn-sm as-btn-brand">Add</button>
+            </div>
+          </div>
+
+          <!-- Empty state when no customer selected -->
+          <div id="p-empty-state" style="text-align:center;padding:40px 10px;color:var(--muted)">
+            <svg class="i i-lg" style="margin-bottom:10px;opacity:0.4"><use href="#i-user"/></svg>
+            <p style="font-size:0.9rem;margin:0 0 6px 0">No customer loaded</p>
+            <p style="font-size:0.78rem;margin:0">Search by 4-digit number or create a new profile to get started.</p>
+          </div>
+        </div>
+
+        <!-- Recent Customer Directory Quick List -->
+        <div style="margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--as-radius);padding:14px">
+          <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Recent Inquiries</div>
+          <div id="recent-customers-list" style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:0.8rem;color:var(--muted)">Loading inquiries...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Conversation History & Context-Aware AI Generator -->
+      <div class="as-workspace">
+
+        <!-- AI Response Generator Card -->
+        <div class="as-generator-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <span style="font-size:0.95rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">
+                <svg class="i i-sm" style="color:var(--brand)"><use href="#i-spark"/></svg> AI Response Generator
+              </span>
+              <span style="font-size:0.75rem;color:var(--muted)">Drafts copy-ready replies adhering strictly to Choice Properties rules</span>
+            </div>
+            <span id="ai-model-tag" class="pill pill-info" style="font-size:0.7rem">Gemini 3.8 Flash</span>
+          </div>
+
+          <!-- Prompt Shortcut Chips -->
+          <div class="as-chip-bar">
+            <button class="as-action-chip" data-prompt="Will bad credit or a previous eviction disqualify me from renting?">Credit / Eviction Review</button>
+            <button class="as-action-chip" data-prompt="How much is the application fee and how long does review take?">Fee & Review Window ($50 per adult / 24-72h)</button>
+            <button class="as-action-chip" data-prompt="What happens if my application is denied? Can I apply for another house?">30-Day Reapplication Policy</button>
+            <button class="as-action-chip" data-prompt="I saw this house on TikTok, is it still available?">Unavailable Property Pivot</button>
+            <button class="as-action-chip" data-prompt="Can I schedule a tour to see the home in person today?">Viewing & Tour Protocol</button>
+            <button class="as-action-chip" data-prompt="Can I get an update on the status of my application?">Application Status Check</button>
+          </div>
+
+          <div style="margin-top: 12px; margin-bottom: 8px;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;">
+              💬 Live Operator Guidance & Custom Instructions (Optional)
+            </label>
+            <input type="text" id="operator-notes-input" class="as-search-input" placeholder="Tell the AI how to respond on the fly (e.g. 'Offer a private showing this Thursday at 2 PM')..." style="font-size: 0.85rem; width: 100%; box-sizing: border-box;">
+          </div>
+
+          <textarea id="incoming-message-input" class="as-prompt-textarea" placeholder="Paste incoming customer message here (SMS, web message, or TikTok inquiry)..."></textarea>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <button id="btn-generate-ai" class="as-btn as-btn-brand" style="padding:10px 20px">
+              <svg class="i i-sm"><use href="#i-spark"/></svg> Generate AI Response
+            </button>
+
+            <!-- Property Matcher Quick Insert -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <select id="property-matcher-select" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:0.8rem;color:var(--text)">
+                <option value="">Insert Verified Listing Link...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Draft Output Slot -->
+          <div id="draft-output-slot" class="as-draft-output-card">
+            <!-- Detected Updates Alert -->
+            <div id="detected-updates-banner" style="display:none" class="as-detected-chip">
+              <svg class="i i-sm"><use href="#i-check"/></svg>
+              <span id="detected-updates-text">New preference detected.</span>
+              <button id="btn-apply-detected" class="as-btn as-btn-sm as-btn-brand" style="margin-left:8px;padding:2px 8px;font-size:0.72rem">Apply to Profile</button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--muted)">Copy-Ready Response (Review Before Sending)</span>
+              <span id="draft-char-count" style="font-size:0.72rem;color:var(--muted-2)"></span>
+            </div>
+
+            <div id="draft-response-text" class="as-draft-text" contenteditable="true"></div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;gap:8px">
+                <button id="btn-copy-draft" class="as-btn as-btn-brand">
+                  <svg class="i i-sm"><use href="#i-check"/></svg> Copy Message
+                </button>
+                <button id="btn-mark-sent" class="as-btn">
+                  <svg class="i i-sm"><use href="#i-mail"/></svg> Mark as Sent
+                </button>
+                <button id="btn-save-draft" class="as-btn">Save as Draft</button>
+              </div>
+              <span id="copy-status" style="font-size:0.8rem;color:#22c55e;font-weight:600"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conversation History Feed -->
+        <div class="as-feed-card">
+          <div class="as-card-title">
+            <span>Conversation History</span>
+            <button id="btn-add-incoming-manual" class="as-btn as-btn-sm">
+              <svg class="i i-sm"><use href="#i-plus"/></svg> Log Customer Message
+            </button>
+          </div>
+
+          <div id="chat-messages-container" class="as-chat-scroll">
+            <div style="text-align:center;padding:30px 10px;color:var(--muted);font-size:0.85rem">
+              No conversation history loaded.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL 1: Create / Edit Customer Profile -->
+    <div id="modal-customer" class="as-modal-backdrop">
+      <div class="as-modal">
+        <h3 id="modal-cust-title" style="margin:0 0 16px 0;font-size:1.2rem">New Customer Profile</h3>
+        <form id="form-customer">
+          <input type="hidden" id="cust-form-id">
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="as-form-row">
+              <label>Phone Last 4 Digits</label>
+              <input type="text" id="cust-form-last4" maxlength="4" placeholder="e.g. 8376">
+            </div>
+            <div class="as-form-row">
+              <label>Customer Name / Alias</label>
+              <input type="text" id="cust-form-alias" placeholder="e.g. Riley">
+            </div>
+          </div>
+
+          <div class="as-form-row">
+            <label>Full Name (Optional)</label>
+            <input type="text" id="cust-form-fullname" placeholder="e.g. Riley Jenkins">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="as-form-row">
+              <label>Target City</label>
+              <input type="text" id="cust-form-city" placeholder="e.g. Charlotte, NC">
+            </div>
+            <div class="as-form-row">
+              <label>Property Type</label>
+              <select id="cust-form-type">
+                <option value="single_family">Single Family House</option>
+                <option value="townhouse">Townhouse</option>
+                <option value="duplex">Duplex</option>
+                <option value="apartment">Apartment</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div class="as-form-row">
+              <label>Bedrooms</label>
+              <input type="number" id="cust-form-beds" min="1" max="8" placeholder="e.g. 3">
+            </div>
+            <div class="as-form-row">
+              <label>Bathrooms</label>
+              <input type="number" id="cust-form-baths" step="0.5" min="1" max="6" placeholder="e.g. 2.5">
+            </div>
+            <div class="as-form-row">
+              <label>Max Budget ($/mo)</label>
+              <input type="number" id="cust-form-budget" step="50" placeholder="e.g. 1800">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="as-form-row">
+              <label>Move-in Timeframe</label>
+              <input type="text" id="cust-form-movein" placeholder="e.g. Nov 1–15">
+            </div>
+            <div class="as-form-row">
+              <label>Pets</label>
+              <select id="cust-form-pets">
+                <option value="false">No pets</option>
+                <option value="true">Yes (Dog/Cat)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="as-form-row">
+            <label>Disclosed Credit Concerns</label>
+            <input type="text" id="cust-form-credit" placeholder="e.g. Rough credit score disclosed">
+          </div>
+
+          <div class="as-form-row">
+            <label>Disclosed Eviction History</label>
+            <input type="text" id="cust-form-eviction" placeholder="e.g. Previous eviction 2022 in Missouri">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="as-form-row">
+              <label>Application Status</label>
+              <select id="cust-form-status">
+                <option value="not_started">Not Started</option>
+                <option value="submitted">Submitted</option>
+                <option value="fee_pending">Fee Pending</option>
+                <option value="in_review">In Review (24–72h)</option>
+                <option value="approved">Approved</option>
+                <option value="denied">Denied (30-Day Reapply)</option>
+              </select>
+            </div>
+            <div class="as-form-row">
+              <label>Fee Status</label>
+              <select id="cust-form-fee-status">
+                <option value="not_confirmed">Not Confirmed</option>
+                <option value="paid">$50 Paid</option>
+                <option value="unpaid">$50 Unpaid</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+            <button type="button" class="as-btn" onclick="document.getElementById('modal-customer').classList.remove('active')">Cancel</button>
+            <button type="submit" class="as-btn as-btn-brand">Save Customer Profile</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Business Policies Editor -->
+    <div id="modal-policies" class="as-modal-backdrop">
+      <div class="as-modal">
+        <h3 style="margin:0 0 16px 0;font-size:1.2rem">Central Business Policies</h3>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">
+          These policies are loaded dynamically by the AI Assistant when answering customer questions.
+        </p>
+        <form id="form-policies">
+          <div class="as-form-row">
+            <label>Application Fee ($ per property)</label>
+            <input type="number" id="pol-fee" required>
+          </div>
+          <div class="as-form-row">
+            <label>Application Review Window</label>
+            <input type="text" id="pol-review-window" required>
+          </div>
+          <div class="as-form-row">
+            <label>Reapplication Policy Days</label>
+            <input type="number" id="pol-reapply-days" required>
+          </div>
+          <div class="as-form-row">
+            <label>Reapplication Additional Properties Count</label>
+            <input type="number" id="pol-reapply-count" required>
+          </div>
+          <div class="as-form-row">
+            <label>Security Deposit Policy</label>
+            <input type="text" id="pol-deposit" required>
+          </div>
+          <div class="as-form-row">
+            <label>Pet Policy</label>
+            <input type="text" id="pol-pets" required>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+            <button type="button" class="as-btn" onclick="document.getElementById('modal-policies').classList.remove('active')">Close</button>
+            <button type="submit" class="as-btn as-btn-brand">Save Policies</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 3: Backup & Restore -->
+    <div id="modal-backup" class="as-modal-backdrop">
+      <div class="as-modal">
+        <h3 style="margin:0 0 16px 0;font-size:1.2rem">Customer Memory Backup & Restore</h3>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">
+          Customer memory is stored in persistent database storage and resilient backups. You can export a snapshot to migrate across GitHub repositories or deployment accounts.
+        </p>
+
+        <div style="background:var(--surface-2);border-radius:8px;padding:16px;margin-bottom:16px">
+          <h4 style="margin:0 0 8px 0;font-size:0.95rem">Export JSON Snapshot</h4>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">Download all profiles, conversations, and staff notes as a JSON file.</p>
+          <button id="btn-export-download" class="as-btn as-btn-brand">
+            <svg class="i i-sm"><use href="#i-download"/></svg> Export Customer Database
+          </button>
+        </div>
+
+        <div style="background:var(--surface-2);border-radius:8px;padding:16px">
+          <h4 style="margin:0 0 8px 0;font-size:0.95rem">Import JSON Snapshot</h4>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">Select a previously exported JSON backup file to restore records.</p>
+          <input type="file" id="import-file-input" accept=".json" style="margin-bottom:10px;font-size:0.82rem">
+          <button id="btn-import-upload" class="as-btn">
+            <svg class="i i-sm"><use href="#i-refresh"/></svg> Restore from Backup
+          </button>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+          <button type="button" class="as-btn" onclick="document.getElementById('modal-backup').classList.remove('active')">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script defer src="/js/admin/inquiry-assistant.js?v=1793302997390"></script>
+</body>
+</html>

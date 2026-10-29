@@ -1,0 +1,62 @@
+[
+  {
+    "id": "63d69564-e75b-4d9c-9cd0-4eb7dd317c6e",
+    "address": "12 Wahnetah Ln",
+    "city": "Lawton",
+    "state": "OK",
+    "zip": "73507",
+    "rent": 2475,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "photos_count": 21,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=63d69564-e75b-4d9c-9cd0-4eb7dd317c6e"
+  },
+  {
+    "id": "b9bd83d8-a26f-4ac6-ad5e-216836c63520",
+    "address": "2114 NW 55th St",
+    "city": "Lawton",
+    "state": "OK",
+    "zip": "73505",
+    "rent": 1800,
+    "bedrooms": 3,
+    "bathrooms": 2.0,
+    "photos_count": 21,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=b9bd83d8-a26f-4ac6-ad5e-216836c63520"
+  },
+  {
+    "id": "62f5ca6b-35bd-4564-adb5-23dd0c2e2fd1",
+    "address": "537 S Miles Ave",
+    "city": "El Reno",
+    "state": "OK",
+    "zip": "73036",
+    "rent": 1750,
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "photos_count": 35,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=62f5ca6b-35bd-4564-adb5-23dd0c2e2fd1"
+  },
+  {
+    "id": "20e297a1-3200-4844-9dd8-d6229285dd88",
+    "address": "2701 S 115th East Pl",
+    "city": "Tulsa",
+    "state": "OK",
+    "zip": "74129",
+    "rent": 1650,
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "photos_count": 20,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=20e297a1-3200-4844-9dd8-d6229285dd88"
+  },
+  {
+    "id": "91d58568-0ea2-45eb-afd5-7770f8b42ec7",
+    "address": "2429 NW 109th St",
+    "city": "Oklahoma City",
+    "state": "OK",
+    "zip": "73120",
+    "rent": 1675,
+    "bedrooms": 3,
+    "bathrooms": 2.0,
+    "photos_count": 20,
+    "url": "https://choice-properties-site.pages.dev/property.html?id=91d58568-0ea2-45eb-afd5-7770f8b42ec7"
+  }
+]
