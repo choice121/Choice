@@ -402,17 +402,19 @@ htmlFiles.forEach(function(file) {
     if (afterReporter !== src) { src = afterReporter; modified = true; }
   }
 
-  // Step D: inject nav + footer into their placeholder slots
+  // Step D: inject nav + footer into their placeholder slots (handles fresh or previously injected slots)
   if (buildNavHtml) {
+    const navSlotRegex = /<div\s+id=["']site-nav["'][^>]*>(?:[\s\S]*?<\/nav>\s*<\/div>|<\/div>)/gi;
     const afterNav = src.replace(
-      /<div\s+id="site-nav"\s*><\/div>/g,
+      navSlotRegex,
       `<div id="site-nav" data-server-injected="1">${buildNavHtml}</div>`
     );
     if (afterNav !== src) { src = afterNav; modified = true; }
   }
   if (buildFooterHtml) {
+    const footerSlotRegex = /<div\s+id=["']site-footer["'][^>]*>(?:[\s\S]*?<\/footer>\s*<\/div>|<\/div>)/gi;
     const afterFooter = src.replace(
-      /<div\s+id="site-footer"\s*><\/div>/g,
+      footerSlotRegex,
       `<div id="site-footer" data-server-injected="1">${buildFooterHtml}</div>`
     );
     if (afterFooter !== src) { src = afterFooter; modified = true; }
