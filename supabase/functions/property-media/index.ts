@@ -117,6 +117,31 @@ Deno.serve(async (req) => {
     return response({ media: data }, 201);
   }
 
+  if (action === "reorder") {
+    const ids = Array.isArray(body.ids) ? body.ids : (Array.isArray(body.order) ? body.order : null);
+    if (!ids || ids.length > 100 || ids.some((id) => typeof id !== "string") || new Set(ids).size !== ids.length) {
+      return response({ error: "invalid_media_order" }, 400);
+    }
+    const { data: existing, error: existingError } = await supabase
+      .from("property_media")
+      .select("id")
+      .eq("property_id", propertyId);
+    if (existingError) return response({ error: "media_order_load_failed", detail: existingError.message }, 500);
+    const existingIds = new Set((existing || []).map((item) => item.id));
+    if (ids.some((id) => !existingIds.has(id))) {
+      return response({ error: "media_order_mismatch" }, 400);
+    }
+    for (const [displayOrder, id] of ids.entries()) {
+      const { error } = await supabase
+        .from("property_media")
+        .update({ display_order: displayOrder, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("property_id", propertyId);
+      if (error) return response({ error: "media_order_save_failed", detail: error.message }, 500);
+    }
+    return response({ saved: true });
+  }
+
   const mediaId = typeof body.id === "string" ? body.id : "";
   if (!mediaId) return response({ error: "media_id_required" }, 400);
 
@@ -147,31 +172,6 @@ Deno.serve(async (req) => {
     return response({ media: data });
   }
 
-  if (action === "reorder") {
-    const ids = Array.isArray(body.ids) ? body.ids : (Array.isArray(body.order) ? body.order : null);
-    if (!ids || ids.length > 100 || ids.some((id) => typeof id !== "string") || new Set(ids).size !== ids.length) {
-      return response({ error: "invalid_media_order" }, 400);
-    }
-    const { data: existing, error: existingError } = await supabase
-      .from("property_media")
-      .select("id")
-      .eq("property_id", propertyId);
-    if (existingError) return response({ error: "media_order_load_failed", detail: existingError.message }, 500);
-    const existingIds = new Set((existing || []).map((item) => item.id));
-    if (ids.some((id) => !existingIds.has(id))) {
-      return response({ error: "media_order_mismatch" }, 400);
-    }
-    for (const [displayOrder, id] of ids.entries()) {
-      const { error } = await supabase
-        .from("property_media")
-        .update({ display_order: displayOrder, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("property_id", propertyId);
-      if (error) return response({ error: "media_order_save_failed", detail: error.message }, 500);
-    }
-    return response({ saved: true });
-  }
-
   if (action === "delete") {
     const { data: existing, error: lookupError } = await supabase
       .from("property_media")
@@ -180,6 +180,22 @@ Deno.serve(async (req) => {
       .eq("property_id", propertyId)
       .single();
     if (lookupError || !existing) return response({ error: "media_not_found" }, 404);
+
+    // Server-side orphan cleanup if file_id exists
+    if (existing.file_id) {
+      const ikPrivateKey = Deno.env.get("IMAGEKIT_PRIVATE_KEY");
+      if (ikPrivateKey) {
+        try {
+          await fetch(`https://api.imagekit.io/v1/files/${existing.file_id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Basic ${btoa(ikPrivateKey + ":")}`,
+            },
+          });
+        } catch (_) {}
+      }
+    }
+
     const { error } = await supabase
       .from("property_media")
       .delete()

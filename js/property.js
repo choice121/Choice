@@ -1136,15 +1136,44 @@ function renderMultiFloorMedia(p) {
 
   p._allFloorPlans = floorPlansList;
 
+  const FLOOR_RANK = {
+    'basement': 1,
+    'lower': 2,
+    'ground': 3,
+    'level 1': 4,
+    'floor 1': 4,
+    '1st': 4,
+    'level 2': 5,
+    'floor 2': 5,
+    '2nd': 5,
+    'level 3': 6,
+    'floor 3': 6,
+    '3rd': 6,
+    'attic': 7,
+    'penthouse': 8,
+    'general / entire home': 99
+  };
+  function getFloorRank(name) {
+    const k = String(name || '').toLowerCase().trim();
+    if (FLOOR_RANK[k] !== undefined) return FLOOR_RANK[k];
+    if (k.includes('1') || k.includes('main') || k.includes('ground') || k.includes('first')) return 4;
+    if (k.includes('2') || k.includes('second')) return 5;
+    if (k.includes('3') || k.includes('third')) return 6;
+    return 50;
+  }
+
+  const sortedKeys = Array.from(groups.keys()).sort((a, b) => getFloorRank(a) - getFloorRank(b));
+  const sortedGroups = new Map(sortedKeys.map(k => [k, groups.get(k)]));
+
   // Build Floor Navigation Tabs if >= 2 groups
-  if (groups.size > 1 && navWrap) {
+  if (sortedGroups.size > 1 && navWrap) {
     navWrap.style.display = 'flex';
     navWrap.innerHTML = `
       <button type="button" class="floor-nav-tab active" data-floor="all" role="tab" aria-selected="true">
         <span>All Levels</span>
         <span class="tab-count">${rawMedia.length}</span>
       </button>
-      ${Array.from(groups.entries()).map(([floor, items]) => `
+      ${Array.from(sortedGroups.entries()).map(([floor, items]) => `
         <button type="button" class="floor-nav-tab" data-floor="${esc(floor)}" role="tab" aria-selected="false">
           <span>${esc(floor)}</span>
           <span class="tab-count">${items.length}</span>
@@ -1177,7 +1206,7 @@ function renderMultiFloorMedia(p) {
 
   // Render floor groups
   let html = '';
-  for (const [floor, items] of groups.entries()) {
+  for (const [floor, items] of sortedGroups.entries()) {
     const isGeneral = floor === 'General / Entire Home';
     html += `
       <section class="floor-group-section" data-floor="${esc(floor)}" aria-label="${esc(floor)} media">
@@ -1552,12 +1581,19 @@ function openFloorPlanModal(activeItem, allFloorPlans = []) {
   const resetBtn = document.getElementById('fpReset');
 
   let currentZoom = 1;
+  let panX = 0, panY = 0, isDragging = false, startX = 0, startY = 0;
   const previousFocusedElement = document.activeElement;
+
+  function updateTransform() {
+    if (img) img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+  }
 
   function loadFloorPlan(item) {
     currentZoom = 1;
+    panX = 0;
+    panY = 0;
     if (img) {
-      img.style.transform = `scale(${currentZoom})`;
+      updateTransform();
       img.src = item.url;
       img.alt = item.title || 'Floor Plan';
     }
@@ -1589,20 +1625,45 @@ function openFloorPlanModal(activeItem, allFloorPlans = []) {
   if (zoomInBtn) {
     zoomInBtn.onclick = () => {
       currentZoom = Math.min(3, currentZoom + 0.25);
-      if (img) img.style.transform = `scale(${currentZoom})`;
+      updateTransform();
     };
   }
   if (zoomOutBtn) {
     zoomOutBtn.onclick = () => {
       currentZoom = Math.max(0.5, currentZoom - 0.25);
-      if (img) img.style.transform = `scale(${currentZoom})`;
+      if (currentZoom === 1) { panX = 0; panY = 0; }
+      updateTransform();
     };
   }
   if (resetBtn) {
     resetBtn.onclick = () => {
       currentZoom = 1;
-      if (img) img.style.transform = `scale(1)`;
+      panX = 0;
+      panY = 0;
+      updateTransform();
     };
+  }
+
+  if (img) {
+    img.style.cursor = 'grab';
+    img.onmousedown = (e) => {
+      if (currentZoom <= 1) return;
+      isDragging = true;
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+      img.style.cursor = 'grabbing';
+      e.preventDefault();
+    };
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      updateTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      if (img) img.style.cursor = currentZoom > 1 ? 'grab' : 'default';
+    });
   }
 
   modal.style.display = 'flex';
@@ -1622,9 +1683,14 @@ function openFloorPlanModal(activeItem, allFloorPlans = []) {
 
   if (closeBtn) closeBtn.onclick = closeModal;
   if (backdrop) backdrop.onclick = closeModal;
+  modal.onclick = (e) => {
+    if (e.target === modal || e.target === backdrop) closeModal();
+  };
 
   const keyHandler = (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+    }
   };
   document.addEventListener('keydown', keyHandler);
 }
