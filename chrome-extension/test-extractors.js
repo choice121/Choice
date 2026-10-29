@@ -210,6 +210,22 @@ t('detect CJ Real Estate', () => assert.strictEqual(api.detect(CJ).id, 'cj_real_
 t('detect AppFolio', () => assert.strictEqual(api.detect(AF).id, 'cj_real_estate'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
 t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, null); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
+t('Zillow structured media', () => {
+  const d = doc(cache({
+    zpid: 98765432,
+    address: { streetAddress: '123 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: 1850,
+    bedrooms: 3,
+    bathrooms: 2,
+    floorPlans: [{ title: 'Main Floor', floor: 'Main Floor', url: 'https://cdn.example.com/main-floor.jpg' }],
+    videos: [{ title: 'Walkthrough', url: 'https://cdn.example.com/walkthrough.mp4' }],
+    virtualTourUrl: 'https://my.matterport.com/show/?m=ZILLOW123',
+  }));
+  const media = api.extractZillow(d, Z).media;
+  assert.strictEqual(media.length, 3);
+  assert.deepStrictEqual(media.map(item => item.kind), ['floor_plan', 'video', 'virtual_tour']);
+  assert.strictEqual(media[0].floor_label, 'Main Floor');
+});
 t('Realtor payload', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });

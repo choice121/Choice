@@ -319,6 +319,72 @@ export interface PipelineRecordInput {
   scraped_at?: string | null;
   updated_at?: string | null;
   _import?: string | null;
+  media?: unknown;
+}
+
+function normalizeMediaRecord(item: unknown): Record<string, unknown> | null {
+  if (!item || typeof item !== 'object') return null;
+  const raw = item as Record<string, unknown>;
+  const url = safeStr(raw.url) ?? safeStr(raw.href) ?? safeStr(raw.src);
+  if (!url) return null;
+
+  let kind = safeStr(raw.kind) ?? safeStr(raw.type) ?? 'photo';
+  const normalizedKind = String(kind).trim().toLowerCase();
+  const kindMap: Record<string, string> = {
+    '3d_tour': 'tour_3d',
+    'tour_3d': 'tour_3d',
+    'tour3d': 'tour_3d',
+    'virtual-tour': 'virtual_tour',
+    'virtual_tour': 'virtual_tour',
+    'video_walkthrough': 'video',
+    'walkthrough_video': 'video',
+    'video-tour': 'video',
+    'floorplan': 'floor_plan',
+    'floor_plan': 'floor_plan',
+    'photo': 'photo',
+    'image': 'photo',
+  };
+
+  const mappedKind = kindMap[normalizedKind] ?? (
+    /matterport|virtual|tour|3d/i.test(url) ? 'virtual_tour' : /youtube|vimeo|mp4|mov|webm|video/i.test(url) ? 'video' : 'photo'
+  );
+
+  const displayOrder = Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0;
+  const metadata = raw.metadata && typeof raw.metadata === 'object' ? raw.metadata : {};
+
+  return {
+    kind: mappedKind,
+    title: safeStr(raw.title) ?? (
+      mappedKind === 'video' ? 'Video walkthrough' : mappedKind === 'floor_plan' ? 'Floor plan' : mappedKind === 'tour_3d' ? '3D Virtual Tour' : 'Media'
+    ),
+    floor_label: safeStr(raw.floor_label) ?? safeStr(raw.floorLabel) ?? null,
+    provider: safeStr(raw.provider) ?? safeStr(raw.source_provider) ?? null,
+    url,
+    file_id: safeStr(raw.file_id) ?? safeStr(raw.fileId) ?? null,
+    poster_url: safeStr(raw.poster_url) ?? safeStr(raw.posterUrl) ?? null,
+    display_order: displayOrder,
+    is_hero: safeBool(raw.is_hero) ?? safeBool(raw.isHero) ?? false,
+    width: safeInt(raw.width),
+    height: safeInt(raw.height),
+    metadata,
+  };
+}
+
+function normalizeMediaCollection(media: unknown): Record<string, unknown>[] {
+  const allMedia: unknown[] = Array.isArray(media) ? media : [];
+  const normalized: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+
+  for (const item of allMedia) {
+    const record = normalizeMediaRecord(item);
+    if (!record || !record.url) continue;
+    const key = `${String(record.kind)}::${String(record.url).trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(record);
+  }
+
+  return normalized;
 }
 
 export function buildPipelineRecord(body: PipelineRecordInput): Record<string, unknown> {
@@ -331,6 +397,27 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const publishedAt = normalizeTimestamp(body.published_at) ?? null;
   const sourceStatus = safeStr(body.source_status) ?? 'available';
   const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
+  const mediaItems = normalizeMediaCollection(body.media);
+  const legacyTour = safeStr(body.virtual_tour_url);
+  if (legacyTour) {
+    const hasLegacyTour = mediaItems.some((item) => String(item.kind) === 'virtual_tour' || String(item.kind) === 'tour_3d');
+    if (!hasLegacyTour) {
+      mediaItems.unshift({
+        kind: 'virtual_tour',
+        title: '3D Virtual Tour',
+        floor_label: null,
+        provider: null,
+        url: legacyTour,
+        file_id: null,
+        poster_url: null,
+        display_order: 0,
+        is_hero: false,
+        width: null,
+        height: null,
+        metadata: {},
+      });
+    }
+  }
 
   const title = safeStr(body.title) ??
     (safeStr(body.address)
@@ -377,6 +464,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
+    media:       mediaItems,
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
