@@ -2440,6 +2440,21 @@
     let directStatus = 'not_run';
     let directError = null;
     let directResult = null;
+    const safeErrorFrames = (error) => {
+      const stack = error && typeof error.stack === 'string' ? error.stack : '';
+      return stack.split(/\r?\n/).slice(0, 20).flatMap((line) => {
+        const location = line.match(/(?:^|\/)(shared-extractors|live-shared-extractors|content|live-content)\.js:(\d+):(\d+)/);
+        if (!location) return [];
+        const functionMatch = line.match(/^\s*at\s+([A-Za-z_$][\w$<>.]*)\s+\(/) ||
+          line.match(/^([A-Za-z_$][\w$<>.]*)@/);
+        return [{
+          file: location[1] + '.js',
+          line: Math.min(Number(location[2]), 10_000_000),
+          column: Math.min(Number(location[3]), 10_000_000),
+          function: functionMatch ? functionMatch[1].slice(0, 100) : null,
+        }];
+      }).slice(0, 8);
+    };
     if (detected) {
       try {
         directResult = detected.fn(d, url);
@@ -2453,6 +2468,7 @@
             ? errorName
             : 'Error',
           message_length: typeof errorMessage === 'string' ? errorMessage.length : 0,
+          stack_frames: safeErrorFrames(error),
         };
       }
     }

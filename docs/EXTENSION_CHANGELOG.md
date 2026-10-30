@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v41.0.0] - 2026-10-30
+### Privacy-Safe Extraction Error Locations
+- **Actionable failures**: Include allowlisted extension source filenames, line/column numbers, and function names for direct extractor exceptions.
+- **Privacy boundaries**: Never upload exception text, URLs, extension IDs, or arbitrary stack frames; the Edge Function independently filters frame metadata.
+- **Regression Coverage**: Verify diagnostic stack frames identify extension code without leaking message text or external URLs.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v41.0.0.
+
+---
+
 ## [v40.1.0] - 2026-10-30
 ### Opt-in Extraction Diagnostics
 - **One-click reports**: Add a "Run & Send Diagnostics" control to send a report even when extraction fails.

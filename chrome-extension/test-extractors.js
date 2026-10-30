@@ -686,7 +686,11 @@ t('diagnostics do not include extractor exception messages', () => {
   const privateMessage = 'PRIVATE LISTING DESCRIPTION must not be sent';
   let report;
   try {
-    zillow.fn = () => { throw new SyntaxError(privateMessage); };
+    zillow.fn = () => {
+      const error = new SyntaxError(privateMessage);
+      error.stack = `${privateMessage}\n    at extractZillowNextData (chrome-extension://private-id/shared-extractors.js:321:17)\n    at privateFunction (https://example.com/private.js:4:5)`;
+      throw error;
+    };
     report = api.diagnose(Z, doc({}));
   } finally {
     zillow.fn = originalExtractor;
@@ -694,7 +698,15 @@ t('diagnostics do not include extractor exception messages', () => {
   assert.strictEqual(report.extractor.direct_status, 'threw');
   assert.strictEqual(report.extractor.direct_error.name, 'SyntaxError');
   assert.strictEqual(report.extractor.direct_error.message_length, privateMessage.length);
+  assert.deepStrictEqual(report.extractor.direct_error.stack_frames, [{
+    file: 'shared-extractors.js',
+    line: 321,
+    column: 17,
+    function: 'extractZillowNextData',
+  }]);
   assert.ok(!JSON.stringify(report).includes(privateMessage));
+  assert.ok(!JSON.stringify(report).includes('private-id'));
+  assert.ok(!JSON.stringify(report).includes('example.com'));
 });
 t('diagnostics explain unsupported listing URLs without collecting page contents', () => {
   const report = api.diagnose('https://example.com/private?token=not-for-sharing', doc({}));

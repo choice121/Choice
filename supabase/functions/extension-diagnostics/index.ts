@@ -212,6 +212,35 @@ function sanitizeReport(raw: unknown): Record<string, unknown> | null {
   if (errorInput) {
     const errorName = boundedString(errorInput.name, 32);
     const messageLength = finiteNumber(errorInput.message_length);
+    const allowedFrameFiles = new Set([
+      "shared-extractors.js",
+      "live-shared-extractors.js",
+      "content.js",
+      "live-content.js",
+    ]);
+    const stackFrames = Array.isArray(errorInput.stack_frames)
+      ? errorInput.stack_frames.slice(0, 8).filter(isRecord).flatMap(
+        (frame) => {
+          const file = boundedString(frame.file, 40);
+          const line = finiteNumber(frame.line);
+          const column = finiteNumber(frame.column);
+          const functionName = boundedString(frame.function, 100);
+          if (
+            !file || !allowedFrameFiles.has(file) || line == null || line < 1 ||
+            column == null || column < 1
+          ) return [];
+          return [{
+            file,
+            line: Math.min(line, 10_000_000),
+            column: Math.min(column, 10_000_000),
+            function: functionName &&
+                /^[A-Za-z_$][A-Za-z0-9_$<>.]{0,99}$/.test(functionName)
+              ? functionName
+              : null,
+          }];
+        },
+      )
+      : [];
     extractor.direct_error = {
       name: [
           "Error",
@@ -228,6 +257,7 @@ function sanitizeReport(raw: unknown): Record<string, unknown> | null {
       message_length: messageLength != null && messageLength >= 0
         ? Math.min(messageLength, 10_000_000)
         : 0,
+      stack_frames: stackFrames,
     };
   }
 
