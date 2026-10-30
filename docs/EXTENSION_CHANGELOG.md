@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v44.0.2] - 2026-10-30
+### Avoid Guessing Zillow Rent Basis
+- **No page-wide fallback**: When no pricing-table heading is available, leave rent basis unknown rather than matching unrelated page text.
+- **Regression coverage**: Verify body text containing conflicting rent labels cannot override a missing table heading.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.2.
+
+---
+
 ## [v44.0.1] - 2026-10-30
 ### Use Zillow Pricing Table Labels
 - **Avoid page-wide false matches**: Read rent basis from pricing-table column headings and leave conflicting or absent labels unknown.

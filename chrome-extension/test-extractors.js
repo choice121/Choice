@@ -705,6 +705,7 @@ t('Zillow community unit prices retain their explicit price basis', () => {
     ['Total monthly price', 'Base rent fees may apply', 'total_monthly_price'],
     ['Base rent', 'Total monthly leasing prices are also shown in help text', 'base_rent'],
     [null, 'Pricing & availability', null],
+    [null, 'Base rent\nTotal monthly price', null],
     [['Base rent', 'Total monthly price'], 'Pricing & availability', null],
   ];
 
