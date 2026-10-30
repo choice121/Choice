@@ -503,7 +503,7 @@ const Properties = {
 
     let q = sb()
       .from('properties')
-      .select(`${PROPERTIES_SELECT_WITH_LAYOUTS}, property_media(kind, url)`, { count: 'exact' });
+      .select(PROPERTIES_SELECT_WITH_LAYOUTS, { count: 'exact' });
 
     q = q.eq('status', 'active');
     q = q.is('property_units.unit_number', null);
@@ -594,11 +594,29 @@ const Properties = {
     const { data, error, count } = await q;
     if (error) return { ok: false, data: null, error: error.message };
     const total = count ?? 0;
+    const rows = (data || []).map(_attachPhotoArrays);
+    const propertyIds = rows.map(row => row.id).filter(Boolean);
+    if (propertyIds.length) {
+      const { data: mediaRows, error: mediaError } = await sb()
+        .from('property_media')
+        .select('property_id, kind, url')
+        .in('property_id', propertyIds);
+      if (mediaError) {
+        console.warn('Listing media could not be loaded:', mediaError.message);
+      } else {
+        const mediaByProperty = new Map();
+        (mediaRows || []).forEach(item => {
+          if (!mediaByProperty.has(item.property_id)) mediaByProperty.set(item.property_id, []);
+          mediaByProperty.get(item.property_id).push({ kind: item.kind, url: item.url });
+        });
+        rows.forEach(row => { row.property_media = mediaByProperty.get(row.id) || []; });
+      }
+    }
     return {
       ok: true,
       error: null,
       data: {
-        rows:        (data || []).map(_attachPhotoArrays),
+        rows,
         total,
         page,
         per_page:    PAGE_SIZE,
