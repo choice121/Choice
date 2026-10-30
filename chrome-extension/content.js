@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v40.0.0
+// Choice Properties — Universal Content Script & UI Engine v40.1.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '40.0.0';
+  var VERSION  = '40.1.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -517,6 +517,13 @@
               </div>
             ` : ''}
 
+            <div class="cp-diagnostics-control">
+              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
+              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
+                Sends listing facts and page structure only. No cookies, session data, or full page text.
+              </span>
+            </div>
+
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -685,6 +692,8 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
+    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
+    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -902,6 +911,40 @@
       } else {
         inspectorTray.classList.remove('cp-open');
         chevron.textContent = '▾';
+      }
+    });
+
+    diagnosticsBtn.addEventListener('click', async function () {
+      diagnosticsBtn.disabled = true;
+      diagnosticsStatus.textContent = 'Analyzing this listing…';
+      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
+      try {
+        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
+          throw new Error('Diagnostics are unavailable in this extension build');
+        }
+        var report = window.CP_Extractors.diagnose(location.href, document);
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          throw new Error('Extension background service is unavailable');
+        }
+        var response = await new Promise(function (resolve, reject) {
+          chrome.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(result);
+            }
+          });
+        });
+        if (!response || !response.ok) {
+          throw new Error(response && response.error || 'Report could not be sent');
+        }
+        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
+        diagnosticsStatus.classList.add('cp-diagnostic-success');
+      } catch (error) {
+        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
+        diagnosticsStatus.classList.add('cp-diagnostic-error');
+      } finally {
+        diagnosticsBtn.disabled = false;
       }
     });
 

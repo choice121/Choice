@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v40.0.0
+// Choice Properties — Live Content Script v40.1.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '40.0.0-live';
+  var VERSION  = '40.1.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1174,6 +1174,12 @@
               <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip cp-chip-photos" id="cp-photos-chip">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
+            <div class="cp-diagnostics-control">
+              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
+              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
+                Sends listing facts and page structure only. No cookies, session data, or full page text.
+              </span>
+            </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -1181,8 +1187,6 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
-                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
-                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
             </div>
           </div>
@@ -1336,6 +1340,8 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
+    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
+    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -1553,6 +1559,36 @@
       }
     });
 
+    diagnosticsBtn.addEventListener('click', async function () {
+      diagnosticsBtn.disabled = true;
+      diagnosticsStatus.textContent = 'Analyzing this listing…';
+      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
+      try {
+        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
+          throw new Error('Diagnostics are unavailable in this extension build');
+        }
+        if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
+          throw new Error('Extension background service is unavailable');
+        }
+        var report = window.CP_Extractors.diagnose(location.href, document);
+        var response = await new Promise(function (resolve, reject) {
+          EXTENSION_API.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
+            var runtimeError = EXTENSION_API.runtime.lastError;
+            if (runtimeError) reject(new Error(runtimeError.message));
+            else resolve(result);
+          });
+        });
+        if (!response || !response.ok) throw new Error(response && response.error || 'Report could not be sent');
+        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
+        diagnosticsStatus.classList.add('cp-diagnostic-success');
+      } catch (error) {
+        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
+        diagnosticsStatus.classList.add('cp-diagnostic-error');
+      } finally {
+        diagnosticsBtn.disabled = false;
+      }
+    });
+
     saveBtn.addEventListener('click', handleSave);
     if (miniSaveBtn) {
       miniSaveBtn.addEventListener('click', function (event) {
@@ -1764,7 +1800,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v40.0.0-live',
+        _import: 'browser-extension-v40.1.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

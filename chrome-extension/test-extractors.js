@@ -655,6 +655,54 @@ t('Zillow community parser reads nested unit inventory beside the property cache
   );
   assert.ok(!JSON.stringify(payload.unit_options).includes('availabilityDate'));
 });
+t('diagnostics report extracted listing facts and page shape without raw descriptions or query data', () => {
+  const d = doc(cache({
+    zpid: 12345,
+    title: 'Private Test Apartments',
+    address: { streetAddress: '10 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    homeType: 'APARTMENT',
+    price: 1500,
+    units: [{ unitNumber: 'A101', bedrooms: 1, bathrooms: 1, monthlyRent: 1500 }],
+    description: 'Do not include this private test description in diagnostics.',
+  }));
+  d.title = 'Private Test Apartments - Zillow';
+  d.body = { innerText: 'Private Test Apartments listing page' };
+
+  const report = api.diagnose(Z + '?session=private#section', d);
+  assert.strictEqual(report.status, 'success');
+  assert.strictEqual(report.source_url, Z);
+  assert.strictEqual(report.facts.address, '10 Main St');
+  assert.strictEqual(report.unit_options[0].unit_number, 'A101');
+  assert.ok(!JSON.stringify(report).includes('Do not include this private test description'));
+  assert.ok(!JSON.stringify(report).includes('session=private'));
+  assert.ok(report.source_data_shape.length > 0);
+  assert.ok(report.source_data_shape.some((entry) => entry.path.includes('gdpClientCache.__parsed')));
+  assert.ok(report.source_data_shape.some((entry) => entry.path.endsWith('.property.description') && entry.type === 'string'));
+  assert.ok(!JSON.stringify(report.source_data_shape).includes('Private Test Apartments listing page'));
+});
+t('diagnostics do not include extractor exception messages', () => {
+  const zillow = api.EXTRACTORS.find((extractor) => extractor.id === 'zillow');
+  const originalExtractor = zillow.fn;
+  const privateMessage = 'PRIVATE LISTING DESCRIPTION must not be sent';
+  let report;
+  try {
+    zillow.fn = () => { throw new SyntaxError(privateMessage); };
+    report = api.diagnose(Z, doc({}));
+  } finally {
+    zillow.fn = originalExtractor;
+  }
+  assert.strictEqual(report.extractor.direct_status, 'threw');
+  assert.strictEqual(report.extractor.direct_error.name, 'SyntaxError');
+  assert.strictEqual(report.extractor.direct_error.message_length, privateMessage.length);
+  assert.ok(!JSON.stringify(report).includes(privateMessage));
+});
+t('diagnostics explain unsupported listing URLs without collecting page contents', () => {
+  const report = api.diagnose('https://example.com/private?token=not-for-sharing', doc({}));
+  assert.strictEqual(report.status, 'failed');
+  assert.strictEqual(report.reason, 'unsupported_url');
+  assert.strictEqual(report.source_url, 'https://example.com/private');
+  assert.ok(!JSON.stringify(report).includes('token=not-for-sharing'));
+});
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
   const p = api.extractZillow(d, Z);

@@ -2418,9 +2418,252 @@
     }
   }
 
+  function diagnose(url, doc) {
+    const d = doc || (typeof document !== 'undefined' ? document : null);
+    if (!d) return { status: 'failed', reason: 'document_unavailable' };
+
+    const detected = detect(url);
+    let pageSource = detected && detected.id || null;
+    if (!pageSource) {
+      try {
+        const host = new URL(url).hostname.toLowerCase();
+        if (host === 'zillow.com' || host.endsWith('.zillow.com')) pageSource = 'zillow';
+        else if (host === 'realtor.com' || host.endsWith('.realtor.com')) pageSource = 'realtor';
+        else if (host === 'apartments.com' || host.endsWith('.apartments.com')) pageSource = 'apartments';
+        else if (host === 'redfin.com' || host.endsWith('.redfin.com')) pageSource = 'redfin';
+        else if (host === 'opendoor.com' || host.endsWith('.opendoor.com')) pageSource = 'opendoor';
+        else if (host === 'rentprogress.com' || host.endsWith('.rentprogress.com')) pageSource = 'progress_residential';
+        else if (host.includes('cjproperties.org') || host.includes('cjrealestate.com') || host.endsWith('.appfolio.com') || host === 'appfolio.com') pageSource = 'cj_real_estate';
+        else if (host === 'invitationhomes.com' || host.endsWith('.invitationhomes.com')) pageSource = 'invitation_homes';
+      } catch (_) {}
+    }
+    let directStatus = 'not_run';
+    let directError = null;
+    let directResult = null;
+    if (detected) {
+      try {
+        directResult = detected.fn(d, url);
+        directStatus = directResult ? 'returned_data' : 'returned_empty';
+      } catch (error) {
+        directStatus = 'threw';
+        const errorName = String(error && error.name || 'Error');
+        const errorMessage = error && error.message;
+        directError = {
+          name: /^(?:Error|TypeError|SyntaxError|RangeError|ReferenceError|URIError|AggregateError|DOMException)$/.test(errorName)
+            ? errorName
+            : 'Error',
+          message_length: typeof errorMessage === 'string' ? errorMessage.length : 0,
+        };
+      }
+    }
+
+    let extracted = null;
+    let fallbackResult = null;
+    if (d.querySelectorAll) {
+      try { fallbackResult = extractFromJsonLd(d, url, detected && detected.id); } catch (_) {}
+    }
+    try { extracted = extract(url, d); } catch (_) {}
+
+    const safeFields = [
+      'source_listing_id', 'title', 'address', 'city', 'state', 'zip',
+      'property_type', 'monthly_rent', 'community_starting_rent',
+      'bedrooms', 'bathrooms', 'half_bathrooms', 'square_footage',
+      'year_built', 'lot_size_sqft', 'floors', 'total_units',
+      'heating_type', 'cooling_type', 'has_central_air', 'has_basement',
+      'garage_spaces', 'appliances', 'flooring', 'parking',
+      'utilities_included', 'laundry_type',
+    ];
+    const facts = {};
+    if (extracted) {
+      safeFields.forEach((key) => {
+        const value = extracted[key];
+        if (value == null || typeof value === 'function') return;
+        if (typeof value === 'string') facts[key] = value.slice(0, 500);
+        else if (typeof value === 'number' || typeof value === 'boolean') facts[key] = value;
+        else if (Array.isArray(value)) {
+          facts[key] = value.slice(0, 100).map((item) =>
+            typeof item === 'string' ? item.slice(0, 160) : item
+          );
+        }
+      });
+    }
+
+    const unitOptions = extracted && Array.isArray(extracted.unit_options)
+      ? extracted.unit_options.slice(0, 100).map((unit) => ({
+        source_kind: unit.source_kind || null,
+        unit_number: unit.unit_number == null ? null : String(unit.unit_number).slice(0, 40),
+        floor_plan_name: unit.floor_plan_name == null ? null : String(unit.floor_plan_name).slice(0, 80),
+        bedrooms: unit.bedrooms ?? null,
+        bathrooms: unit.bathrooms ?? null,
+        half_bathrooms: unit.half_bathrooms ?? null,
+        square_footage: unit.square_footage ?? null,
+        monthly_rent: unit.monthly_rent ?? null,
+        starting_rent: unit.starting_rent ?? null,
+        source_order: unit.source_order ?? null,
+      }))
+      : [];
+
+    const mediaKinds = {};
+    const mediaDetails = [];
+    (extracted && Array.isArray(extracted.media) ? extracted.media : []).forEach((item) => {
+      const kind = String(item && item.kind || 'unknown').slice(0, 40);
+      mediaKinds[kind] = (mediaKinds[kind] || 0) + 1;
+      if (mediaDetails.length < 50) {
+        let urlHost = null;
+        try { urlHost = item && item.url ? new URL(item.url).hostname.slice(0, 100) : null; } catch (_) {}
+        mediaDetails.push({
+          kind,
+          title: item && item.title ? String(item.title).slice(0, 120) : null,
+          provider: item && item.provider ? String(item.provider).slice(0, 80) : null,
+          floor_label: item && item.floor_label ? String(item.floor_label).slice(0, 80) : null,
+          display_order: Number.isInteger(item && item.display_order) ? item.display_order : null,
+          url_host: urlHost,
+          has_url: Boolean(item && item.url),
+          has_poster: Boolean(item && item.poster_url),
+        });
+      }
+    });
+    let photoCount = 0;
+    const photoHosts = {};
+    try {
+      const rawPhotos = extracted && extracted.original_image_urls;
+      const parsedPhotos = typeof rawPhotos === 'string' ? JSON.parse(rawPhotos) : rawPhotos;
+      if (Array.isArray(parsedPhotos)) photoCount = parsedPhotos.length;
+      else if (Array.isArray(extracted && extracted.photo_urls)) photoCount = extracted.photo_urls.length;
+      (Array.isArray(parsedPhotos) ? parsedPhotos : Array.isArray(extracted && extracted.photo_urls) ? extracted.photo_urls : [])
+        .slice(0, 100)
+        .forEach((photo) => {
+          try {
+            const host = new URL(typeof photo === 'string' ? photo : photo && photo.url).hostname.slice(0, 100);
+            photoHosts[host] = (photoHosts[host] || 0) + 1;
+          } catch (_) {}
+        });
+    } catch (_) {}
+
+    const structure = [];
+    let structureNodes = 0;
+    const addShape = (value, path, depth) => {
+      if (structure.length >= 100 || structureNodes >= 250 || depth > 8) return;
+      structureNodes += 1;
+      if (Array.isArray(value)) {
+        structure.push({ path, type: 'array', length: value.length });
+        value.slice(0, 2).forEach((item, index) => addShape(item, path + '[' + index + ']', depth + 1));
+      } else if (value && typeof value === 'object') {
+        const keys = Object.keys(value).filter((key) => /^[A-Za-z0-9_$.-]{1,60}$/.test(key)).slice(0, 30);
+        structure.push({ path, type: 'object', key_count: Object.keys(value).length });
+        keys.forEach((key) => addShape(value[key], path ? path + '.' + key : key, depth + 1));
+      } else {
+        structure.push({
+          path,
+          type: value === null ? 'null' : typeof value,
+          ...(typeof value === 'string' ? { length: value.length } : {}),
+        });
+        if (typeof value === 'string' && value.length <= 2_000_000 &&
+            /(?:gdpClientCache|reactServerState|initialData|dehydratedState|apolloState)/i.test(path)) {
+          try { addShape(JSON.parse(value), path + '.__parsed', depth + 1); } catch (_) {}
+        }
+      }
+    };
+    let nextDataStatus = 'missing';
+    if (d.getElementById) {
+      const script = d.getElementById('__NEXT_DATA__');
+      if (script) {
+        const raw = String(script.textContent || '');
+        nextDataStatus = raw.length > 2_000_000 ? 'too_large' : 'invalid';
+        if (raw.length <= 2_000_000) {
+          try {
+            addShape(JSON.parse(raw), '', 0);
+            nextDataStatus = 'parsed';
+          } catch (_) {}
+        }
+      }
+      if (d.querySelectorAll) {
+        const jsonLdScripts = Array.from(d.querySelectorAll('script[type="application/ld+json"]')).slice(0, 10);
+        jsonLdScripts.forEach((script, index) => {
+          if (structure.length >= 100) return;
+          const raw = String(script.textContent || '');
+          if (raw.length > 200_000) {
+            structure.push({ path: 'json_ld[' + index + ']', type: 'too_large', length: raw.length });
+            return;
+          }
+          try {
+            addShape(JSON.parse(raw), 'json_ld[' + index + ']', 0);
+          } catch (_) {
+            structure.push({ path: 'json_ld[' + index + ']', type: 'invalid_json' });
+          }
+        });
+      }
+    }
+
+    const countSelector = (selector) => {
+      try { return d.querySelectorAll ? d.querySelectorAll(selector).length : 0; } catch (_) { return 0; }
+    };
+    const scriptSignals = d.querySelectorAll
+      ? Array.from(d.querySelectorAll('script')).slice(0, 40).map((script) => {
+        let sourceHost = null;
+        try {
+          const source = script.getAttribute && script.getAttribute('src');
+          sourceHost = source ? new URL(source, url).hostname.slice(0, 100) : null;
+        } catch (_) {}
+        return {
+          id: script.id && /^[A-Za-z0-9_.:-]{1,80}$/.test(script.id) ? script.id : null,
+          type: script.getAttribute && /^[A-Za-z0-9_+./-]{1,80}$/.test(script.getAttribute('type') || '')
+            ? script.getAttribute('type')
+            : null,
+          source_host: sourceHost,
+          content_length: String(script.textContent || '').length,
+        };
+      })
+      : [];
+    let cleanUrl = '';
+    try {
+      const parsedUrl = new URL(url);
+      cleanUrl = parsedUrl.origin + parsedUrl.pathname;
+    } catch (_) {}
+
+    return {
+      schema_version: 1,
+      status: extracted ? 'success' : 'failed',
+      reason: extracted
+        ? null
+        : (!detected ? 'unsupported_url' : (directStatus === 'threw' ? 'extractor_exception' : 'no_listing_data')),
+      source: pageSource,
+      source_url: cleanUrl,
+      page: {
+        title: String(d.title || '').slice(0, 300),
+        body_text_length: d.body && typeof d.body.innerText === 'string' ? d.body.innerText.length : 0,
+        next_data: nextDataStatus,
+        script_signals: scriptSignals,
+        json_ld_script_count: countSelector('script[type="application/ld+json"]'),
+        script_count: countSelector('script'),
+        image_count: countSelector('img'),
+        video_count: countSelector('video'),
+        iframe_count: countSelector('iframe'),
+        unit_element_count: countSelector('[data-testid*="unit"], [data-test*="unit"], tr, [role="row"]'),
+        floor_plan_element_count: countSelector('[data-testid*="floorplan"], [data-testid*="floor-plan"], [data-test*="floorplan"], [data-test*="floor-plan"]'),
+      },
+      extractor: {
+        matched: Boolean(detected),
+        direct_status: directStatus,
+        direct_error: directError,
+        direct_had_data: Boolean(directResult),
+        json_ld_had_data: Boolean(fallbackResult),
+        extracted_fields: extracted ? Object.keys(extracted).slice(0, 100) : [],
+      },
+      facts,
+      unit_options: unitOptions,
+      media_kinds: mediaKinds,
+      media: mediaDetails,
+      photo_count: photoCount,
+      photo_hosts: photoHosts,
+      source_data_shape: structure,
+    };
+  }
+
   const api = {
     detect,
     extract,
+    diagnose,
     extractZillow,
     extractZillowNextData,
     extractZillowFromDom,

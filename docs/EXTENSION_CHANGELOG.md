@@ -4,6 +4,17 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v40.1.0] - 2026-10-30
+### Opt-in Extraction Diagnostics
+- **One-click reports**: Add a "Run & Send Diagnostics" control to send a report even when extraction fails.
+- **Useful evidence**: Include extracted property/unit facts, parser status, media/photo counts, DOM element counts, and a bounded embedded-data shape (field names and value types only).
+- **Privacy boundaries**: Exclude cookies, session state, full page text/HTML, descriptions, contact details, exception messages, and raw photo/media URLs. Server-side validation enforces the report schema.
+- **Private inbox**: Store reports in a service-role-only public-schema table, expose reads only to authenticated admins, and expire reports after 30 days.
+- **Regression Coverage**: Verify report URL stripping and that descriptions/page text values are not included.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v40.1.0.
+
+---
+
 ## [v40.0.0] - 2026-10-30
 ### Zillow Multi-Unit Extraction Reliability
 - **Keep Unit-Only Communities**: Do not discard valid apartment-community results when Zillow omits a street address or a single-property rent.
