@@ -32,7 +32,7 @@
       return value ? Number(value) : null;
     };
     return {
-      unit_number: read('unit_number')?.value.trim() || '',
+      unit_number: read('unit_number')?.value.trim() || null,
       bedrooms: number('bedrooms'),
       bathrooms: number('bathrooms'),
       square_footage: number('square_footage'),
@@ -49,12 +49,12 @@
     const amenities = Array.isArray(unit.amenities) ? unit.amenities : [];
     return `
       <div class="pu-fields">
-        <label>Unit number<input data-unit-field="unit_number" maxlength="40" required value="${escapeHtml(unit.unit_number || '')}"></label>
+        <label>Unit number <span class="pu-hint">If provided by source</span><input data-unit-field="unit_number" maxlength="40" value="${escapeHtml(unit.unit_number || '')}"></label>
         <label>Bedrooms<input data-unit-field="bedrooms" type="number" min="0" max="20" step="0.5" value="${escapeHtml(unit.bedrooms ?? '')}"></label>
         <label>Bathrooms<input data-unit-field="bathrooms" type="number" min="0" max="20" step="0.5" value="${escapeHtml(unit.bathrooms ?? '')}"></label>
         <label>Square feet<input data-unit-field="square_footage" type="number" min="1" max="100000" step="1" value="${escapeHtml(unit.square_footage ?? '')}"></label>
         <label>Monthly rent<input data-unit-field="monthly_rent" type="number" min="1" max="100000" step="1" required value="${escapeHtml(unit.monthly_rent ?? '')}"></label>
-        <label>Floor-plan name<input data-unit-field="floor_plan_name" maxlength="120" value="${escapeHtml(unit.floor_plan_name || '')}"></label>
+        <label>Layout label<input data-unit-field="floor_plan_name" maxlength="120" placeholder="Studio layout" value="${escapeHtml(unit.floor_plan_name || '')}"></label>
         <label class="pu-wide">Floor-plan image URL<input data-unit-field="floor_plan_image_url" type="url" placeholder="https://..." value="${escapeHtml(unit.floor_plan_image_url || '')}"></label>
         <label class="pu-wide">Unit photo URLs <span class="pu-hint">One HTTPS URL per line</span><textarea data-unit-field="unit_photos" rows="3">${escapeHtml(photos.join('\n'))}</textarea></label>
         <label class="pu-wide">Amenities <span class="pu-hint">Comma-separated</span><textarea data-unit-field="amenities" rows="2">${escapeHtml(amenities.join(', '))}</textarea></label>
@@ -69,7 +69,7 @@
     }
     list.innerHTML = units.map((unit) => `
       <details class="pu-row" data-unit-id="${escapeHtml(unit.id)}">
-        <summary><strong>Unit ${escapeHtml(unit.unit_number)}</strong><span>${escapeHtml(unit.bedrooms ?? '—')} bd · ${escapeHtml(unit.bathrooms ?? '—')} ba · $${Number(unit.monthly_rent).toLocaleString()}/mo</span></summary>
+        <summary><strong>${escapeHtml(unit.unit_number ? `Unit ${unit.unit_number}` : unit.floor_plan_name || 'Unit layout')}</strong><span>${escapeHtml(unit.bedrooms ?? '—')} bd · ${escapeHtml(unit.bathrooms ?? '—')} ba · $${Number(unit.monthly_rent).toLocaleString()}/mo</span></summary>
         <div class="pu-row-body">
           ${renderFormFields(unit)}
           <div class="pu-row-actions">

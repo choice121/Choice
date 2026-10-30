@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.property_units (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id text NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
-  unit_number text NOT NULL,
+  unit_number text,
   bedrooms numeric,
   bathrooms numeric,
   square_footage integer,
@@ -33,6 +33,9 @@ ALTER TABLE public.property_units
   ADD COLUMN IF NOT EXISTS amenities text[] DEFAULT ARRAY[]::text[],
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+ALTER TABLE public.property_units
+  ALTER COLUMN unit_number DROP NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_property_units_property_unit_number
   ON public.property_units(property_id, unit_number);
