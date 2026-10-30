@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v38.0.1] - 2026-10-30
+### Use Asking Rent for Zillow Imports
+- **Estimate Rejection**: Keep Zillow rent estimates out of staged asking-rent fields when no explicit listing price is available.
+- **Generated Extractors**: Regenerated browser and Edge Function extractors from the canonical shared source.
+- **Regression Coverage**: Added Edge Function tests for estimate-only and explicit asking-rent payloads.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v38.0.1.
+
+---
+
 ## [v36.0.0] - 2026-10-30
 ### Cross-Portal DOM Media Fallbacks
 - **DOM Fallback Coverage**: Reuse the labeled media collector for Opendoor, Progress Residential, Invitation Homes, and CJ listing pages when structured metadata is incomplete.

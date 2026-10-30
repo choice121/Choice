@@ -213,7 +213,6 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   const rawPrice = prop.price || prop.unformattedPrice;
   if (typeof rawPrice === 'number' && rawPrice > 0) { rent = rawPrice; }
   else if (typeof rawPrice === 'string') { const d = rawPrice.replace(/[^0-9]/g, ''); rent = d ? parseInt(d, 10) : null; }
-  if (!rent && prop.rentZestimate) rent = parseInt(String(prop.rentZestimate), 10) || null;
 
   // Bathrooms (Decimal precision without truncation per Rule 6A)
   const bathsRaw = prop.bathrooms ?? prop.baths ?? null;
@@ -275,6 +274,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   if (rf.dogsAllowed) petTypes.push('dogs');
 
   // Title
+  const city = addr.city || prop.city || null;
   const beds = prop.bedrooms ?? prop.beds ?? null;
   const propType = normalizePropType(prop.homeType);
   function fmtType(t: string | null) {
