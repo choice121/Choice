@@ -1,0 +1,11 @@
+{
+  "locations": ["Dallas, TX"],
+  "beds_exact": 2,
+  "baths_min": 1.0,
+  "rent_min": 1300,
+  "rent_max": 1800,
+  "target": 3,
+  "past_days": 30,
+  "min_score": 40,
+  "dry_run": true
+}

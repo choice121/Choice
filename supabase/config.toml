@@ -1,0 +1,26 @@
+[functions.property-location]
+verify_jwt = false
+
+[functions.property-media]
+verify_jwt = false
+
+[functions.pipeline-media]
+verify_jwt = false
+
+[functions.property-units]
+verify_jwt = false
+
+[functions.property-hierarchy]
+verify_jwt = false
+
+[functions.receive-pipeline-import]
+verify_jwt = false
+
+[functions.extension-diagnostics]
+verify_jwt = false
+
+[functions.confirm-co-applicant-screening]
+verify_jwt = false
+
+[functions.send-co-applicant-consent]
+verify_jwt = false

@@ -1,0 +1,38 @@
+name: Apify Zillow Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Scrape or inspect the most recent successful actor run
+        type: choice
+        required: true
+        default: scrape
+        options:
+          - scrape
+          - inspect-last-run
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scrape up to three Fort Worth rentals
+        run: node scripts/apify-zillow-smoke-test.mjs
+        env:
+          APIFY_API_TOKENS: ${{ secrets.APIFY_API_TOKENS }}
+          APIFY_MODE: ${{ inputs.mode }}
+
+      - name: Save reviewed fields as a short-lived artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zillow-fort-worth-smoke-test
+          path: zillow-smoke-test.json
+          if-no-files-found: error
+          retention-days: 1

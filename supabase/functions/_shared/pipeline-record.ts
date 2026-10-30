@@ -1,0 +1,665 @@
+// ============================================================
+// Choice Properties — Shared Pipeline Record Builder
+// ============================================================
+// Single source of truth for building pipeline_properties records.
+// Used by both receive-pipeline-import and import-from-url edge functions.
+// ============================================================
+
+// ── Quality-score weights (shared across all import channels) ────────────
+export const CORE_FIELDS = [
+  'address', 'city', 'state', 'zip', 'lat', 'lng',
+  'bedrooms', 'bathrooms', 'square_footage', 'monthly_rent',
+  'property_type', 'description',
+];
+
+export const BONUS_FIELDS = [
+  'county', 'neighborhood', 'year_built', 'parking',
+  'pets_allowed', 'security_deposit', 'amenities', 'appliances',
+  'heating_type', 'cooling_type', 'laundry_type',
+];
+
+export const TRACKABLE_MISSING = [
+  'lat', 'lng', 'county', 'neighborhood', 'year_built', 'square_footage',
+  'parking', 'security_deposit', 'amenities', 'appliances',
+  'heating_type', 'cooling_type', 'laundry_type',
+];
+
+export function isEmpty(v: unknown): boolean {
+  return v === null || v === undefined || v === '' || v === '[]';
+}
+
+function hasMultiUnitInventory(r: Record<string, unknown>): boolean {
+  if (r.is_multi_unit === true) return true;
+  if (typeof r.original_data === 'string' && r.original_data.trim().startsWith('{')) {
+    try {
+      const orig = JSON.parse(r.original_data);
+      if (orig?.is_multi_unit === true) return true;
+      if (Array.isArray(orig?.unit_options) && orig.unit_options.length > 0) return true;
+      if (Number(orig?.community_starting_rent) > 0) return true;
+    } catch { /* ignore */ }
+  }
+  return false;
+}
+
+export function qualityScore(r: Record<string, unknown>): number {
+  let sc = 0;
+  const multiUnit = hasMultiUnitInventory(r);
+  for (const f of CORE_FIELDS) {
+    if (!isEmpty(r[f])) {
+      sc += 6;
+    } else if (multiUnit && ['bedrooms', 'bathrooms', 'square_footage', 'monthly_rent'].includes(f)) {
+      sc += 6;
+    }
+  }
+  for (const f of BONUS_FIELDS) if (!isEmpty(r[f])) sc += 2;
+  try {
+    const urls = JSON.parse((r.original_image_urls as string) || '[]');
+    sc += Array.isArray(urls) && urls.length >= 5 ? 6 : urls.length >= 1 ? 3 : 0;
+  } catch { /* ignore */ }
+  return Math.min(sc, 100);
+}
+
+export function missingFields(r: Record<string, unknown>): string {
+  const multiUnit = hasMultiUnitInventory(r);
+  return JSON.stringify(
+    TRACKABLE_MISSING.filter(f => {
+      if (multiUnit && f === 'square_footage') return false;
+      return isEmpty(r[f]);
+    })
+  );
+}
+
+export function genId(): string {
+  return 'PP-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+}
+
+// ── Type coercion helpers ──────────────────────────────────────────────
+export function safeInt(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseInt(String(v));
+  return isNaN(n) ? null : n;
+}
+
+export function safeFloat(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseFloat(String(v));
+  return isNaN(n) ? null : n;
+}
+
+export function safeStr(v: unknown): string | null {
+  if (v === null || v === undefined || v === '') return null;
+  const s = String(v).trim();
+  return s || null;
+}
+
+export function safeJsonStr(v: unknown): string | null {
+  if (v === null || v === undefined || v === '') return null;
+  if (Array.isArray(v) || (typeof v === 'object' && v !== null)) {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return null;
+    }
+  }
+  const s = String(v).trim();
+  return s || null;
+}
+
+export function safeBool(v: unknown): boolean | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === '1') return true;
+  if (v === 'false' || v === '0') return false;
+  return null;
+}
+
+export function extractFeaturesFromNarrative(desc: string | null | undefined): Record<string, any> {
+  if (!desc || typeof desc !== 'string') return {};
+  const text = desc.toLowerCase();
+  const res: Record<string, any> = {};
+
+  // Appliances
+  const appSet = new Set<string>();
+  if (/\b(?:gas\s*range|gas\s*stove)\b/i.test(text)) appSet.add('Gas Range');
+  else if (/\b(?:electric\s*range|electric\s*stove|range|stove)\b/i.test(text)) appSet.add('Range / Oven');
+  if (/\b(?:double\s*ovens?)\b/i.test(text)) appSet.add('Double Oven');
+  else if (/\bovens?\b/i.test(text) && !appSet.has('Range / Oven')) appSet.add('Oven');
+  if (/\bdishwashers?\b/i.test(text)) appSet.add('Dishwasher');
+  if (/\b(?:refrigerators?|fridge)\b/i.test(text)) appSet.add('Refrigerator');
+  if (/\bmicrowaves?\b/i.test(text)) appSet.add('Microwave');
+  if (/\b(?:garbage\s*disposal|disposal)\b/i.test(text)) appSet.add('Garbage Disposal');
+  if (/\bfreezer\b/i.test(text)) appSet.add('Freezer');
+  if (/\b(?:full\s*size\s*washer|washer\s*(?:and|&)\s*dryer|washer\s*and\s*dryer\s*units?)\b/i.test(text)) {
+    appSet.add('Washer');
+    appSet.add('Dryer');
+  } else {
+    if (/\bwashers?\b/i.test(text) && !/\bdishwasher/i.test(text)) appSet.add('Washer');
+    if (/\bdryers?\b/i.test(text)) appSet.add('Dryer');
+  }
+  if (appSet.size > 0) res.appliances = Array.from(appSet);
+
+  // Parking / Garage
+  const garageMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*garage\b/i);
+  if (garageMatch) {
+    res.garage_spaces = parseInt(garageMatch[1], 10);
+    res.parking = `${garageMatch[1]}-Car Garage`;
+  } else if (/\b(?:attached\s*garage|2-car\s*garage|garage)\b/i.test(text)) {
+    res.parking = 'Attached Garage';
+  } else if (/\bcarport\b/i.test(text)) {
+    res.parking = 'Carport';
+  } else if (/\b(?:off-street\s*parking|off\s*street\s*parking|driveway)\b/i.test(text)) {
+    res.parking = 'Off-Street Parking';
+  }
+
+  // Laundry
+  if (/\b(?:separate\s*laundry\s*room|laundry\s*room|in-unit\s*washer|in\s*unit\s*washer|washer\s*and\s*dryer\s*in\s*unit)\b/i.test(text)) {
+    res.laundry_type = 'In Unit (Dedicated Laundry Room)';
+  } else if (/\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?)\b/i.test(text)) {
+    res.laundry_type = 'Washer/Dryer Hookups';
+  } else if (/\b(?:shared\s*laundry|on-site\s*laundry)\b/i.test(text)) {
+    res.laundry_type = 'On-Site Laundry';
+  }
+
+  // Flooring
+  const floorSet = new Set<string>();
+  if (/\b(?:hardwood|hardwood\s*floors?|wood\s*floors?)\b/i.test(text)) floorSet.add('Hardwood');
+  if (/\b(?:carpet|carpeted|carpeting)\b/i.test(text)) floorSet.add('Carpet');
+  if (/\b(?:tile|ceramic\s*tile|tiled)\b/i.test(text)) floorSet.add('Tile');
+  if (/\b(?:vinyl|luxury\s*vinyl|lvp|plank)\b/i.test(text)) floorSet.add('Vinyl Plank');
+  if (floorSet.size > 0) res.flooring = Array.from(floorSet);
+
+  // HVAC
+  if (/\b(?:central\s*air|central\s*a\/c|central\s*ac|central\s*cooling)\b/i.test(text)) {
+    res.cooling_type = 'Central Air';
+    res.has_central_air = true;
+  }
+  if (/\b(?:wall\s*furnace|forced\s*air|heat\s*pump|central\s*heat)\b/i.test(text)) {
+    if (/\bwall\s*furnace\b/i.test(text)) res.heating_type = 'Wall Furnace';
+    else if (/\bheat\s*pump\b/i.test(text)) res.heating_type = 'Heat Pump';
+    else res.heating_type = 'Forced Air Heat';
+  }
+
+  // Amenities
+  const extraAmenities: string[] = [];
+  if (/\b(?:swimming\s*pool|pool)\b/i.test(text)) extraAmenities.push('Swimming Pool');
+  if (/\b(?:private\s*backyard|backyard|fenced\s*yard|large\s*yard|landscaped\s*backyard)\b/i.test(text)) extraAmenities.push('Private Fenced Yard');
+  if (/\b(?:patio|balcony|deck)\b/i.test(text)) extraAmenities.push('Patio / Outdoor Living Area');
+  if (/\bfireplaces?\b/i.test(text)) extraAmenities.push('Fireplace');
+  if (/\bbasement\b/i.test(text) && !/\bno\s*basement\b/i.test(text)) {
+    extraAmenities.push('Basement Storage');
+    res.has_basement = true;
+  }
+  if (extraAmenities.length > 0) res.amenities = extraAmenities;
+
+  return res;
+}
+
+// ── Normalize property_type to UPPER_UNDERSCORE ─────────────────────────
+export function normalizePropType(v: unknown): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  // Already UPPER_UNDERSCORE
+  if (/^[A-Z_]+$/.test(s)) return s;
+  // Title-case variants from older import versions
+  const MAP: Record<string, string> = {
+    'Single Family': 'SINGLE_FAMILY', 'Single-Family': 'SINGLE_FAMILY',
+    'Multi Family':  'MULTI_FAMILY',  'Multi-Family':  'MULTI_FAMILY',
+    'Condo':         'CONDOS',        'Condos':         'CONDOS',
+    'Townhouse':     'TOWNHOMES',     'Townhomes':      'TOWNHOMES',
+    'Apartment':     'APARTMENT',
+    'Manufactured':  'MOBILE',        'Mobile':         'MOBILE',
+    'Land':          'LAND',          'Lot':            'LAND',
+    'Farm':          'FARM',
+  };
+  return MAP[s] ?? s.toUpperCase().replace(/[\s-]+/g, '_');
+}
+
+export function normalizeSource(v: unknown): string {
+  const source = safeStr(v)?.toLowerCase() ?? 'zillow';
+  const allowed = [
+    'zillow', 'realtor', 'apartments', 'redfin',
+    'opendoor', 'progress', 'progress_residential', 'cjrealestate', 'cj_real_estate',
+    'invitation_homes',
+  ];
+  if (!allowed.includes(source)) {
+    if (source.includes('opendoor')) return 'opendoor';
+    if (source.includes('progress')) return 'progress_residential';
+    if (source.includes('cj')) return 'cj_real_estate';
+    if (source.includes('invitation')) return 'invitation_homes';
+  }
+  return source;
+}
+
+// ── Normalize available_date to YYYY-MM-DD ─────────────────────────────
+export function normalizeDate(v: unknown): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  // Already ISO date
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  // Epoch ms
+  if (/^\d{13}$/.test(s)) {
+    try { return new Date(parseInt(s)).toISOString().slice(0, 10); } catch { /* ignore */ }
+  }
+  // Epoch s
+  if (/^\d{10}$/.test(s)) {
+    try { return new Date(parseInt(s) * 1000).toISOString().slice(0, 10); } catch { /* ignore */ }
+  }
+  // Natural language
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  } catch { /* ignore */ }
+  return s.slice(0, 40); // store raw as last resort
+}
+
+export function normalizeTimestamp(v: unknown): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const iso = s.includes('T') || s.includes('Z') || s.includes(' ') ? s : `${s}T00:00:00Z`;
+  try {
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  } catch { /* ignore */ }
+  return s;
+}
+
+// ── Build a full pipeline_properties record from a normalized payload ───
+export interface PipelineRecordInput {
+  source: string;
+  source_listing_id: string;
+  source_url?: string | null;
+  folder_name?: string | null;
+  folder_id?: string | null;
+  title?: string | null;
+  address?: string | null;
+  unit_number?: string | null;
+  unit_floor?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  county?: string | null;
+  neighborhood?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  location_context?: string | null;
+  property_type?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  half_bathrooms?: number | null;
+  total_bathrooms?: number | null;
+  square_footage?: number | null;
+  lot_size_sqft?: number | null;
+  year_built?: number | null;
+  floors?: number | null;
+  garage_spaces?: number | null;
+  total_units?: number | null;
+  building_name?: string | null;
+  is_multi_unit?: boolean | null;
+  price_range?: string | null;
+  community_starting_rent?: number | null;
+  rent_basis?: string | null;
+  has_basement?: boolean | null;
+  has_central_air?: boolean | null;
+  virtual_tour_url?: string | null;
+  monthly_rent?: number | null;
+  security_deposit?: number | null;
+  last_months_rent?: number | null;
+  application_fee?: number | null;
+  pet_deposit?: number | null;
+  admin_fee?: number | null;
+  move_in_special?: string | null;
+  parking_fee?: number | null;
+  hoa_fee?: number | null;
+  description?: string | null;
+  original_description?: string | null;
+  showing_instructions?: string | null;
+  available_date?: string | null;
+  minimum_lease_months?: number | null;
+  lease_terms?: string | string[] | null;
+  pets_allowed?: boolean | null;
+  pet_types_allowed?: string | null;
+  pet_weight_limit?: number | null;
+  pet_details?: string | null;
+  smoking_allowed?: boolean | null;
+  parking?: string | null;
+  amenities?: string | null;
+  appliances?: string | null;
+  utilities_included?: string | null;
+  flooring?: string | null;
+  heating_type?: string | null;
+  cooling_type?: string | null;
+  laundry_type?: string | null;
+  original_image_urls?: string | null;
+  local_image_paths?: string | null;
+  agent_name?: string | null;
+  broker_name?: string | null;
+  agent_image_url?: string | null;
+  poster_landlord_id?: string | null;
+  original_data?: string | null;
+  edited_fields?: string | null;
+  inferred_features?: string | null;
+  listed_at?: string | null;
+  original_listing_date?: string | null;
+  source_last_updated_at?: string | null;
+  imported_at?: string | null;
+  _imported_at?: string | null;
+  source_status?: string | null;
+  last_verified_at?: string | null;
+  published_at?: string | null;
+  choice_property_id?: string | null;
+  scraped_at?: string | null;
+  updated_at?: string | null;
+  _import?: string | null;
+  media?: unknown;
+  unit_options?: unknown;
+  buildings?: unknown;
+  building_floors?: unknown;
+}
+
+function inferProviderFromUrl(url: string): string | null {
+  if (/matterport\.com/i.test(url)) return 'matterport';
+  if (/zillow\.com.*(?:3d|imx|tour)|zillowstatic\.com.*3d/i.test(url)) return 'zillow_3d';
+  if (/kuula\.co/i.test(url)) return 'kuula';
+  if (/youriguide\.com|iguide/i.test(url)) return 'iguide';
+  if (/insidemaps\.com/i.test(url)) return 'insidemaps';
+  if (/cloudpano\.com/i.test(url)) return 'cloudpano';
+  if (/ricoh360\.com/i.test(url)) return 'ricoh360';
+  if (/youtube\.com|youtu\.be|youtube-nocookie\.com/i.test(url)) return 'youtube';
+  if (/vimeo\.com/i.test(url)) return 'vimeo';
+  if (/wistia\.(?:com|net)/i.test(url)) return 'wistia';
+  if (/loom\.com/i.test(url)) return 'loom';
+  if (/\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(url)) return 'direct_video';
+  return null;
+}
+
+function normalizeMediaRecord(item: unknown): Record<string, unknown> | null {
+  if (!item || typeof item !== 'object') return null;
+  const raw = item as Record<string, unknown>;
+  const url = safeStr(raw.url) ?? safeStr(raw.href) ?? safeStr(raw.src);
+  if (!url) return null;
+
+  const kind = safeStr(raw.kind) ?? safeStr(raw.type) ?? 'photo';
+  const normalizedKind = String(kind).trim().toLowerCase();
+  const kindMap: Record<string, string> = {
+    '3d_tour': 'tour_3d',
+    'tour_3d': 'tour_3d',
+    'tour3d': 'tour_3d',
+    'virtual-tour': 'virtual_tour',
+    'virtual_tour': 'virtual_tour',
+    'video_walkthrough': 'video',
+    'walkthrough_video': 'video',
+    'video-tour': 'video',
+    'video': 'video',
+    'floorplan': 'floor_plan',
+    'floor_plan': 'floor_plan',
+    'photo': 'photo',
+    'image': 'photo',
+  };
+
+  const mappedKind = kindMap[normalizedKind] ?? (
+    /matterport|kuula|youriguide|insidemaps|cloudpano|ricoh360|virtual|tour|3d/i.test(url)
+      ? 'virtual_tour'
+      : /youtube|youtu\.be|vimeo|wistia|loom|\.(?:mp4|mov|webm)(?:[?#]|$)|video/i.test(url)
+        ? 'video'
+        : 'photo'
+  );
+
+  const displayOrder = Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0;
+  const metadata = raw.metadata && typeof raw.metadata === 'object' ? raw.metadata : {};
+
+  return {
+    kind: mappedKind,
+    title: safeStr(raw.title) ?? (
+      mappedKind === 'video'
+        ? 'Video walkthrough'
+        : mappedKind === 'floor_plan'
+          ? 'Floor plan'
+          : (mappedKind === 'tour_3d' || mappedKind === 'virtual_tour')
+            ? '3D Virtual Tour'
+            : 'Media'
+    ),
+    floor_label: safeStr(raw.floor_label) ?? safeStr(raw.floorLabel) ?? null,
+    building_name: safeStr(raw.building_name) ?? safeStr(raw.buildingName) ?? null,
+    unit_number: safeStr(raw.unit_number) ?? safeStr(raw.unitNumber) ?? null,
+    provider: safeStr(raw.provider) ?? safeStr(raw.source_provider) ?? inferProviderFromUrl(url),
+    url,
+    file_id: safeStr(raw.file_id) ?? safeStr(raw.fileId) ?? null,
+    poster_url: safeStr(raw.poster_url) ?? safeStr(raw.posterUrl) ?? null,
+    display_order: displayOrder,
+    is_hero: safeBool(raw.is_hero) ?? safeBool(raw.isHero) ?? false,
+    width: safeInt(raw.width),
+    height: safeInt(raw.height),
+    metadata,
+  };
+}
+
+function normalizeMediaCollection(media: unknown): Record<string, unknown>[] {
+  const allMedia: unknown[] = Array.isArray(media) ? media : [];
+  const normalized: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+
+  for (const item of allMedia) {
+    const record = normalizeMediaRecord(item);
+    if (!record || !record.url) continue;
+    const key = `${String(record.kind)}::${String(record.url).trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(record);
+  }
+
+  return normalized;
+}
+
+export function buildPipelineRecord(body: PipelineRecordInput): Record<string, unknown> {
+  const source = normalizeSource(body.source);
+  const propType = normalizePropType(body.property_type);
+  const listedAt = normalizeDate(body.listed_at) ?? normalizeDate(body.original_listing_date) ?? null;
+  const now = new Date().toISOString();
+  const sourceLastUpdatedAt = normalizeTimestamp(body.source_last_updated_at) ?? normalizeTimestamp(body.updated_at) ?? null;
+  const importedAt = normalizeTimestamp(body.imported_at) ?? normalizeTimestamp(body._imported_at) ?? normalizeTimestamp(body.scraped_at) ?? now;
+  const publishedAt = normalizeTimestamp(body.published_at) ?? null;
+  const sourceStatus = safeStr(body.source_status) ?? 'available';
+  const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
+  const mediaItems = normalizeMediaCollection(body.media);
+  const legacyTour = safeStr(body.virtual_tour_url);
+  if (legacyTour) {
+    const hasLegacyTour = mediaItems.some((item) => String(item.kind) === 'virtual_tour' || String(item.kind) === 'tour_3d');
+    if (!hasLegacyTour) {
+      mediaItems.unshift({
+        kind: 'virtual_tour',
+        title: '3D Virtual Tour',
+        floor_label: null,
+        provider: null,
+        url: legacyTour,
+        file_id: null,
+        poster_url: null,
+        display_order: 0,
+        is_hero: false,
+        width: null,
+        height: null,
+        metadata: {},
+      });
+    }
+  }
+
+  const title = safeStr(body.title) ??
+    (safeStr(body.address)
+      ? (safeStr(body.city) && safeStr(body.state)
+          ? `${safeStr(body.address)}, ${safeStr(body.city)}, ${safeStr(body.state)}`
+          : safeStr(body.address))
+      : ((body.bedrooms ? `${body.bedrooms}BR ` : '') +
+         (propType ?? 'Rental') +
+         (body.city ? ` in ${body.city}` : '')));
+
+  // Ingestion-level Safety Net: Harvest features from narrative if structured fields are missing
+  const rawDescForHarvest = safeStr(body.original_description) ?? safeStr(body.description) ?? '';
+  const harvested = extractFeaturesFromNarrative(rawDescForHarvest);
+
+  let finalAppliances = body.appliances;
+  if (isEmpty(finalAppliances) && harvested.appliances) {
+    finalAppliances = harvested.appliances;
+  }
+  const finalParking = safeStr(body.parking) ?? harvested.parking ?? null;
+  const finalGarageSpaces = safeInt(body.garage_spaces) ?? (harvested.garage_spaces ? safeInt(harvested.garage_spaces) : null);
+  const finalLaundry = safeStr(body.laundry_type) ?? harvested.laundry_type ?? null;
+  let finalFlooring = body.flooring;
+  if (isEmpty(finalFlooring) && harvested.flooring) {
+    finalFlooring = harvested.flooring;
+  }
+  const finalCooling = safeStr(body.cooling_type) ?? harvested.cooling_type ?? null;
+  const finalHeating = safeStr(body.heating_type) ?? harvested.heating_type ?? null;
+  const finalHasCentralAir = safeBool(body.has_central_air) ?? (harvested.has_central_air === true ? true : null);
+  const finalHasBasement = safeBool(body.has_basement) ?? (harvested.has_basement === true ? true : null);
+
+  // Filter out any prohibited smoking tags or lease durations from amenities
+  let cleanedAmenities: string[] = [];
+  try {
+    const rawAm = typeof body.amenities === 'string' ? JSON.parse(body.amenities || '[]') : (body.amenities || []);
+    if (Array.isArray(rawAm)) {
+      cleanedAmenities = rawAm.filter(a => typeof a === 'string' && !/smoke|smoking|tobacco/i.test(a) && !/\b(?:\d+[\s-]*month|lease\s*term)\b/i.test(a));
+    }
+  } catch (_) {}
+  if (harvested.amenities) {
+    harvested.amenities.forEach((a: string) => { if (!cleanedAmenities.includes(a)) cleanedAmenities.push(a); });
+  }
+
+  const unitOptions = Array.isArray(body.unit_options) ? body.unit_options : [];
+  const buildingsList = Array.isArray(body.buildings) ? body.buildings : [];
+  const buildingFloors = Array.isArray(body.building_floors) ? body.building_floors : [];
+  const inferredMultiUnit = safeBool(body.is_multi_unit) ?? (unitOptions.length > 0 ? true : null);
+  const communityStartingRent = safeInt(body.community_starting_rent);
+  const resolvedMonthlyRent = safeInt(body.monthly_rent) ?? communityStartingRent;
+
+  const originalData = JSON.stringify({
+    zpid:                    body.source_listing_id,
+    detailUrl:               body.source_url,
+    homeType:                propType,
+    building_name:           safeStr(body.building_name),
+    is_multi_unit:           inferredMultiUnit,
+    price_range:             safeStr(body.price_range),
+    unit_floor:              safeStr(body.unit_floor),
+    floors:                  safeInt(body.floors),
+    total_units:             safeInt(body.total_units) ?? (unitOptions.length > 0 ? unitOptions.length : null),
+    community_starting_rent: communityStartingRent,
+    rent_basis:              safeStr(body.rent_basis),
+    unit_options:            unitOptions,
+    buildings:               buildingsList,
+    floors_list:             buildingFloors,
+    media:                   mediaItems,
+    _source:                 source,
+    _import:                 body._import ?? 'browser-extension-v2',
+    _imported_at:            now,
+  });
+
+  const record: Record<string, unknown> = {
+    // Identity
+    id:                   genId(),
+    source,
+    source_url:           safeStr(body.source_url),
+    source_listing_id:    body.source_listing_id,
+    status:               'scraped',
+
+    // Address
+    title,
+    address:              safeStr(body.address) ?? safeStr(body.building_name),
+    unit_number:          safeStr(body.unit_number),
+    unit_floor:           safeStr(body.unit_floor),
+    city:                 safeStr(body.city),
+    state:                safeStr(body.state),
+    zip:                  safeStr(body.zip),
+    county:               safeStr(body.county),
+    neighborhood:         safeStr(body.neighborhood),
+    lat:                  safeFloat(body.lat),
+    lng:                  safeFloat(body.lng),
+    location_context:     safeStr(body.location_context),
+
+    // Property details
+    property_type:        propType,
+    bedrooms:             safeInt(body.bedrooms),
+    bathrooms:            safeFloat(body.bathrooms),
+    half_bathrooms:       safeInt(body.half_bathrooms),
+    total_bathrooms:      safeFloat(body.total_bathrooms) ?? safeFloat(body.bathrooms),
+    square_footage:       safeInt(body.square_footage),
+    lot_size_sqft:        safeInt(body.lot_size_sqft),
+    year_built:           safeInt(body.year_built),
+    floors:               safeInt(body.floors),
+    garage_spaces:        finalGarageSpaces,
+    total_units:          safeInt(body.total_units) ?? (unitOptions.length > 0 ? unitOptions.length : null),
+    building_name:        safeStr(body.building_name),
+    is_multi_unit:        inferredMultiUnit,
+    price_range:          safeStr(body.price_range),
+    has_basement:         finalHasBasement,
+    has_central_air:      finalHasCentralAir,
+    virtual_tour_url:     safeStr(body.virtual_tour_url) ?? (mediaItems.find(m => m.kind === 'virtual_tour' || m.kind === 'tour_3d')?.url as string | undefined ?? null),
+
+    // Financials
+    monthly_rent:         resolvedMonthlyRent,
+    security_deposit:     safeInt(body.security_deposit),
+    last_months_rent:     safeInt(body.last_months_rent),
+    application_fee:      50,
+    pet_deposit:          null,
+    admin_fee:            safeInt(body.admin_fee),
+    move_in_special:      safeStr(body.move_in_special),
+    parking_fee:          safeInt(body.parking_fee),
+    hoa_fee:              safeInt(body.hoa_fee),
+    tax_value:            null,
+
+    // Listing details
+    description:          safeStr(body.description),
+    original_description: safeStr(body.original_description) ?? safeStr(body.description),
+    showing_instructions: safeStr(body.showing_instructions),
+    available_date:       null,
+    minimum_lease_months: null,
+    lease_terms:          '[]',
+
+    // Pets & policies (strictly nulled per platform invariants)
+    pets_allowed:         null,
+    pet_types_allowed:    '[]',
+    pet_weight_limit:     null,
+    pet_details:          null,
+    smoking_allowed:      null,
+
+    // Amenities & features
+    parking:              finalParking,
+    amenities:            safeJsonStr(cleanedAmenities) ?? '[]',
+    appliances:           safeJsonStr(finalAppliances) ?? '[]',
+    utilities_included:   safeJsonStr(body.utilities_included) ?? '[]',
+    flooring:             safeJsonStr(finalFlooring) ?? '[]',
+    heating_type:         finalHeating,
+    cooling_type:         finalCooling,
+    laundry_type:         finalLaundry,
+
+    // Photos
+    original_image_urls:  safeJsonStr(body.original_image_urls) ?? '[]',
+    local_image_paths:    safeJsonStr(body.local_image_paths) ?? '[]',
+
+    // Agent / broker
+    agent_name:           safeStr(body.agent_name),
+    broker_name:          safeStr(body.broker_name),
+    agent_image_url:      safeStr(body.agent_image_url),
+    poster_landlord_id:   safeStr(body.poster_landlord_id),
+
+    // Provenance and lifecycle metadata
+    listed_at:            listedAt,
+    source_last_updated_at: sourceLastUpdatedAt,
+    imported_at:          importedAt,
+    source_status:        sourceStatus,
+    last_verified_at:     lastVerifiedAt,
+    original_data:        safeStr(body.original_data) ?? originalData,
+    edited_fields:        safeStr(body.edited_fields) ?? '[]',
+    inferred_features:    safeStr(body.inferred_features) ?? '[]',
+    published_at:         publishedAt,
+    choice_property_id:   safeStr(body.choice_property_id),
+    scraped_at:           safeStr(body.scraped_at) ?? now,
+    updated_at:           safeStr(body.updated_at) ?? now,
+  };
+
+  record.data_quality_score = qualityScore(record);
+  record.missing_fields     = missingFields(record);
+
+  return record;
+}
