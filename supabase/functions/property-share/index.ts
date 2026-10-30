@@ -111,8 +111,21 @@ Deno.serve(async (req) => {
         );
       }
 
+      const { data: units, error: unitError } = await supabase
+        .from("property_units")
+        .select("id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities")
+        .in("property_id", propertyIds)
+        .order("unit_number", { ascending: true });
+      if (unitError) {
+        return new Response(
+          JSON.stringify({ error: "property_units_lookup_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const photoMap: Record<string, Array<Record<string, unknown>>> = {};
       const mediaMap: Record<string, Array<Record<string, unknown>>> = {};
+      const unitMap: Record<string, Array<Record<string, unknown>>> = {};
       if (photos) {
         photos.forEach(ph => {
           photoMap[ph.property_id] = photoMap[ph.property_id] || [];
@@ -127,10 +140,18 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (units) {
+        units.forEach(unit => {
+          unitMap[unit.property_id] = unitMap[unit.property_id] || [];
+          unitMap[unit.property_id].push(unit);
+        });
+      }
+
       const enriched = (properties || []).map(prop => ({
         ...prop,
         property_photos: photoMap[prop.id] || [],
-        property_media: mediaMap[prop.id] || []
+        property_media: mediaMap[prop.id] || [],
+        property_units: unitMap[prop.id] || []
       }));
 
       return new Response(

@@ -1019,6 +1019,20 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
+    .unit-layout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px}
+    .unit-layout-card{min-width:0;border:1px solid var(--m-border);border-radius:6px;background:var(--m-white);overflow:hidden}
+    .unit-layout-plan{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:var(--m-surface-2)}
+    .unit-layout-body{padding:14px}
+    .unit-layout-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .unit-layout-number{margin:0;color:var(--m-ink);font-size:1rem;font-weight:700}
+    .unit-layout-price{flex-shrink:0;color:var(--m-ink);font-size:1rem;font-weight:800;text-align:right}
+    .unit-layout-price small{display:block;color:var(--m-muted);font-size:.68rem;font-weight:500}
+    .unit-layout-specs{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;color:var(--m-text);font-size:.78rem}
+    .unit-layout-specs span{display:inline-flex;align-items:center;gap:5px}
+    .unit-layout-amenities{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+    .unit-layout-amenity{padding:3px 7px;border-radius:4px;background:var(--m-surface-2);color:var(--m-text);font-size:.68rem}
+    .unit-layout-photos{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+    .unit-layout-photo{flex:0 0 64px;width:64px;height:48px;object-fit:cover;border-radius:4px;background:var(--m-surface-2)}
     .floor-media-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.08);
@@ -1554,6 +1568,12 @@
 
       <!-- Media grid organized by floor -->
       <div class="floor-media-container" id="floorMediaContainer"></div>
+    </div>
+
+    <div class="prop-section" id="unitLayoutsSection" style="display:none">
+      <div class="prop-section-eyebrow">Apartment layouts</div>
+      <div class="prop-section-head">Compare <em>unit layouts</em>.</div>
+      <div class="unit-layout-grid" id="unitLayoutsGrid"></div>
     </div>
 
     <!-- Amenities / Utilities / Lease (tabbed) -->

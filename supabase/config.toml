@@ -7,6 +7,9 @@ verify_jwt = false
 [functions.pipeline-media]
 verify_jwt = false
 
+[functions.property-units]
+verify_jwt = false
+
 [functions.receive-pipeline-import]
 verify_jwt = false
 
