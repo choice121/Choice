@@ -4,6 +4,35 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v36.0.0] - 2026-10-30
+### Cross-Portal DOM Media Fallbacks
+- **DOM Fallback Coverage**: Reuse the labeled media collector for Opendoor, Progress Residential, Invitation Homes, and CJ listing pages when structured metadata is incomplete.
+- **JSON-LD Preservation**: Merge DOM-discovered media with existing JSON-LD media instead of discarding either source.
+- **Legacy Tour Compatibility**: Continue filling `virtual_tour_url` from the first detected 3D tour while retaining all media entries.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v36.0.0.
+
+---
+
+## [v35.0.0] - 2026-10-30
+### Zillow DOM Media Fallback
+- **DOM-Only Media**: Detect clearly labeled floor-plan images, video elements, and named 3D-tour embeds when structured listing data is unavailable.
+- **Source Ordering**: Preserve DOM order for mixed media and merge distinct media from Zillow's structured, DOM, and JSON-LD extraction tiers.
+- **Floor Labels**: Keep full labels such as “Main Floor” and “Second Floor” for multi-floor grouping.
+- **Regression Coverage**: Added a DOM fixture covering a tour, walkthrough video, and floor-plan image.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v35.0.0.
+
+---
+
+## [v34.0.0] - 2026-10-30
+### Cross-Portal Structured Media Extraction
+- **Portal Coverage**: Extract source-provided floor plans, videos, and virtual tours from Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, Zillow, and JSON-LD listing data.
+- **Video Classification**: Keep Apartments.com video URLs in the video media type instead of incorrectly copying them into the legacy 3D-tour field.
+- **Compatibility**: Preserve `virtual_tour_url` for existing listing integrations while adding structured `media[]` items.
+- **Regression Coverage**: Added cross-portal fixtures for floor plans, videos, virtual tours, and JSON-LD media.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v34.0.0.
+
+---
+
 ## [v33.0.0] - 2026-10-29
 ### Structured Property Media Import
 - **Zillow Media Extraction**: Capture structured floor plans, walkthrough videos, and virtual tours from supported listing fields, preserving floor labels, providers, poster URLs, and display order.
