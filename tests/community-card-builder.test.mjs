@@ -32,4 +32,18 @@ assert.match(card, /~625–~875 sqft/);
 assert.match(card, /2 floor plans/);
 assert.doesNotMatch(card, /Contact|TBD/);
 
+const mediaCard = window.buildPropertyCard({
+  id: 'media-home',
+  title: '200 Oak St, City, ST 12345',
+  photo_urls: ['https://images.example.test/home.jpg'],
+  property_media: [
+    { kind: 'video', url: 'https://videos.example.test/walkthrough.mp4' },
+    { kind: 'tour_3d', url: 'https://tours.example.test/home' },
+  ],
+});
+
+assert.match(mediaCard, /Video tour/);
+assert.match(mediaCard, /3D tour/);
+assert.doesNotMatch(window.buildPropertyCard({ id: 'no-media', photo_urls: [] }), /Video tour|3D tour/);
+
 console.log('Community property card tests passed.');

@@ -193,8 +193,18 @@
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
     }
 
-    var tourChipHtml = p.virtual_tour_url
-      ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
+    var mediaItems = Array.isArray(p.property_media) ? p.property_media : [];
+    var hasVideoTour = mediaItems.some(function(item) {
+      return item && item.kind === 'video' && typeof item.url === 'string' && item.url.trim();
+    });
+    var hasThreeDTour = !!(p.virtual_tour_url && String(p.virtual_tour_url).trim()) || mediaItems.some(function(item) {
+      return item && (item.kind === 'virtual_tour' || item.kind === 'tour_3d') && typeof item.url === 'string' && item.url.trim();
+    });
+    var mediaBadges = [];
+    if (hasThreeDTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-cube" aria-hidden="true"></i> 3D tour</span>');
+    if (hasVideoTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-play" aria-hidden="true"></i> Video tour</span>');
+    var mediaBadgesHtml = mediaBadges.length
+      ? '<div class="property-card-media-badges" aria-label="Available property media">' + mediaBadges.join('') + '</div>'
       : '';
 
     var listedLabel = listedDateLabel(p.listed_at, p.imported_at || p.created_at);
@@ -237,8 +247,8 @@
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
           // Featured / verified badge — top-left (self-positioned via .property-card-badge)
           badge +
-          // 3D Tour badge
-          tourChipHtml +
+          // Tour availability
+          mediaBadgesHtml +
           // Carousel position indicators — bottom-center
           dotsHtml +
           // Photo count — bottom-right (only when >6 photos)

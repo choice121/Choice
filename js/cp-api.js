@@ -503,7 +503,7 @@ const Properties = {
 
     let q = sb()
       .from('properties')
-      .select(PROPERTIES_SELECT_WITH_LAYOUTS, { count: 'exact' });
+      .select(`${PROPERTIES_SELECT_WITH_LAYOUTS}, property_media(kind, url)`, { count: 'exact' });
 
     q = q.eq('status', 'active');
     q = q.is('property_units.unit_number', null);
