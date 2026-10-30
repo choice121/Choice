@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v39.0.0
+// Choice Properties — Universal Content Script & UI Engine v40.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '39.0.0';
+  var VERSION  = '40.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -402,6 +402,31 @@
     } else if (extracted && Array.isArray(extracted.unit_options) && extracted.unit_options.length > 0) {
       bedsBaths = extracted.unit_options.length + ' unit details';
     }
+    var unitOptions = extracted && Array.isArray(extracted.unit_options) ? extracted.unit_options : [];
+    var unitDetailsHtml = unitOptions.length
+      ? '<div class="cp-unit-options-preview">' +
+          '<div class="cp-unit-options-heading">Extracted unit and floor-plan details (' + unitOptions.length + ')</div>' +
+          '<div class="cp-unit-options-list">' + unitOptions.slice(0, 12).map(function (unit, index) {
+            var name = unit.unit_number
+              ? 'Unit ' + unit.unit_number
+              : (unit.floor_plan_name || 'Option ' + (index + 1));
+            var facts = [];
+            if (unit.bedrooms === 0) facts.push('Studio');
+            else if (unit.bedrooms != null) facts.push(unit.bedrooms + ' bd');
+            if (unit.bathrooms != null) facts.push(unit.bathrooms + ' ba');
+            if (unit.square_footage != null) facts.push(Number(unit.square_footage).toLocaleString() + ' sqft');
+            var price = unit.monthly_rent != null
+              ? '$' + Number(unit.monthly_rent).toLocaleString() + '/mo'
+              : (unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
+            return '<div class="cp-unit-option-row"><span><strong>' + escapeHtml(name) + '</strong>' +
+              (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
+              '</span>' + (price ? '<strong>' + escapeHtml(price) + '</strong>' : '') + '</div>';
+          }).join('') + '</div>' +
+          (unitOptions.length > 12
+            ? '<div class="cp-unit-options-note">' + (unitOptions.length - 12) + ' more options are included when saved.</div>'
+            : '') +
+        '</div>'
+      : '';
 
     var photoUrls = [];
     if (extracted) {
@@ -426,8 +451,8 @@
     if (mediaCounts.floor_plan) mediaSummary.push(mediaCounts.floor_plan + (mediaCounts.floor_plan === 1 ? ' floor plan' : ' floor plans'));
 
     var propType = (extracted && extracted.property_type) ? extracted.property_type.replace(/_/g, ' ') : 'Property';
-    var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
-    if (extracted && extracted.city && extracted.state) {
+    var addressStr = extracted && (extracted.address || extracted.title) ? (extracted.address || extracted.title) : 'Detected Listing';
+    if (extracted && extracted.city && extracted.state && !String(addressStr).toLowerCase().includes(String(extracted.city).toLowerCase())) {
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
@@ -499,9 +524,8 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
-                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
-                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
+              ${unitDetailsHtml}
             </div>
           </div>
 

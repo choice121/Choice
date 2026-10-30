@@ -253,25 +253,47 @@
 
   function parseZillowUnitOption(value, sourceOrder, sourceKind) {
     if (!value || typeof value !== 'object') return null;
-    const unitNumber = value.unitNumber ?? value.unit_number ?? value.apartmentNumber ??
-      value.apartment_number ?? value.unit ?? null;
+    const rawUnitNumber = value.unitNumber ?? value.unit_number ?? value.apartmentNumber ??
+      value.apartment_number ?? value.unitLabel ?? value.unit_label ?? value.unit ?? null;
+    const unitNumber = rawUnitNumber && typeof rawUnitNumber === 'object'
+      ? rawUnitNumber.unitNumber ?? rawUnitNumber.unit_number ??
+        rawUnitNumber.number ?? rawUnitNumber.label ?? rawUnitNumber.name ?? rawUnitNumber.value ?? null
+      : rawUnitNumber;
     const unitLabel = unitNumber == null ? null : String(unitNumber).trim().replace(/^unit\s+/i, '');
-    const floorPlanName = value.floorPlanName ?? value.floor_plan_name ??
-      value.floorplanName ?? value.floorPlan ?? value.floor_plan ?? null;
-    const rawBeds = value.bedrooms ?? value.beds ?? value.bedroomCount ?? value.bedroom_count;
-    const bedText = String(rawBeds ?? '');
+    const rawFloorPlan = value.floorPlanName ?? value.floor_plan_name ??
+      value.floorplanName ?? value.floorPlan ?? value.floor_plan ?? value.layoutName ?? value.layout_name;
+    const floorPlanName = rawFloorPlan && typeof rawFloorPlan === 'object'
+      ? rawFloorPlan.name ?? rawFloorPlan.title ?? rawFloorPlan.label ?? null
+      : rawFloorPlan;
+    const rawBeds = value.bedrooms ?? value.beds ?? value.bedroomCount ??
+      value.bedroom_count ?? value.bedCount ?? value.bed_count;
+    const bedValue = rawBeds && typeof rawBeds === 'object'
+      ? rawBeds.min ?? rawBeds.minimum ?? rawBeds.value ?? rawBeds.count
+      : rawBeds;
+    const bedText = String(bedValue ?? '');
     const bedMatch = bedText.match(/(\d+(?:\.\d+)?)/);
     const bedrooms = /\bstudio\b/i.test(bedText) ? 0 : (bedMatch ? Number(bedMatch[1]) : null);
-    const rawBaths = value.bathrooms ?? value.baths ?? value.bathroomCount ?? value.bathroom_count;
-    const baths = parseBaths(rawBaths, '');
+    const rawBaths = value.bathrooms ?? value.baths ?? value.bathroomCount ??
+      value.bathroom_count ?? value.bathCount ?? value.bath_count;
+    const bathValue = rawBaths && typeof rawBaths === 'object'
+      ? rawBaths.min ?? rawBaths.minimum ?? rawBaths.value ?? rawBaths.count
+      : rawBaths;
+    const baths = parseBaths(bathValue, '');
     const rawSqft = value.squareFootage ?? value.square_footage ?? value.sqft ??
-      value.squareFeet ?? value.livingArea ?? value.area;
-    const sqftMatch = String(rawSqft ?? '').replace(/,/g, '').match(/\d+/);
+      value.squareFeet ?? value.square_feet ?? value.minSquareFootage ??
+      value.min_square_footage ?? value.livingArea ?? value.area;
+    const sqftValue = rawSqft && typeof rawSqft === 'object'
+      ? rawSqft.min ?? rawSqft.minimum ?? rawSqft.value
+      : rawSqft;
+    const sqftMatch = String(sqftValue ?? '').replace(/,/g, '').match(/\d+/);
     const squareFootage = sqftMatch ? Number(sqftMatch[0]) : null;
     const priceValue = value.monthlyRent ?? value.monthly_rent ?? value.startingRent ??
-      value.starting_rent ?? value.rent ?? value.price ?? null;
+      value.starting_rent ?? value.minRent ?? value.min_rent ?? value.rent ??
+      value.priceRange ?? value.price_range ?? value.rentRange ?? value.rent_range ??
+      value.price ?? null;
     const price = priceValue && typeof priceValue === 'object'
-      ? priceValue.amount ?? priceValue.value ?? priceValue.price ?? null
+      ? priceValue.min ?? priceValue.minimum ?? priceValue.lowPrice ?? priceValue.low_price ??
+        priceValue.amount ?? priceValue.value ?? priceValue.price ?? null
       : priceValue;
     const rentDisplay = price == null ? null : String(price).trim();
     const rentAmount = price == null ? null : parseRent(price);
@@ -292,7 +314,34 @@
     };
   }
 
-  function extractZillowUnitOptions(prop, doc) {
+  function parseZillowUnitText(text, sourceOrder, sourceKind, unitNumber, floorPlanName) {
+    const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!normalized) return null;
+    const bedMatch = normalized.match(/\b(\d+(?:\.\d+)?)\s*(?:bd|beds?|bedrooms?)\b/i);
+    const studio = /\bstudio\b/i.test(normalized);
+    const bathMatch = normalized.match(/\b(\d+(?:\.\d+)?)\s*(?:ba|baths?|bathrooms?)\b/i);
+    const sqftMatch = normalized.match(/\b([\d,]+)\s*(?:sqft|sq\s*ft|square\s*feet)\b/i);
+    const prices = [...normalized.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)(?:\s*\+)?/g)]
+      .filter(match => !/\b(?:application|admin|deposit|fee|special|discount|concession)\b/i.test(
+        normalized.slice(Math.max(0, match.index - 24), match.index)
+      ));
+    const priceMatch = prices.length
+      ? (sourceKind === 'floor_plan' ? prices[0] : prices[prices.length - 1])
+      : null;
+    const priceText = priceMatch ? priceMatch[0].replace(/\s+/g, '') : null;
+    if (!priceText || (!unitNumber && !studio && !bedMatch && !bathMatch && !sqftMatch)) return null;
+
+    return parseZillowUnitOption({
+      unitNumber,
+      floorPlanName,
+      bedrooms: studio ? 0 : (bedMatch ? bedMatch[1] : null),
+      bathrooms: bathMatch ? bathMatch[1] : null,
+      squareFootage: sqftMatch ? sqftMatch[1] : null,
+      monthlyRent: priceText,
+    }, sourceOrder, sourceKind);
+  }
+
+  function extractZillowUnitOptions(prop, doc, pageData) {
     const options = [];
     const seen = new Set();
     const add = option => {
@@ -307,20 +356,81 @@
     };
     const sourceArrays = [
       ['units', 'available_unit'], ['availableUnits', 'available_unit'],
-      ['available_units', 'available_unit'], ['floorPlans', 'floor_plan'],
-      ['floor_plans', 'floor_plan'], ['unitTypes', 'floor_plan'], ['unit_types', 'floor_plan'],
+      ['available_units', 'available_unit'], ['unitsAvailable', 'available_unit'],
+      ['unitDetails', 'available_unit'], ['unit_details', 'available_unit'],
+      ['floorPlans', 'floor_plan'], ['floorplans', 'floor_plan'],
+      ['floor_plans', 'floor_plan'], ['floorPlanList', 'floor_plan'],
+      ['floorPlanData', 'floor_plan'], ['unitTypes', 'floor_plan'], ['unit_types', 'floor_plan'],
     ];
     sourceArrays.forEach(([key, kind]) => {
       if (!Array.isArray(prop && prop[key])) return;
       prop[key].forEach(item => add(parseZillowUnitOption(item, options.length, kind)));
     });
 
+    const visited = new Set();
+    let visitedCount = 0;
+    const walkUnitArrays = (node, parentKey, depth) => {
+      if (typeof node === 'string' && /(?:gdpClientCache|unit|floor[\s_-]*plan|layout)/i.test(parentKey)) {
+        try {
+          walkUnitArrays(JSON.parse(node), parentKey, depth + 1);
+        } catch (_) {}
+        return;
+      }
+      if (!node || typeof node !== 'object' || visited.has(node) || depth > 10 || visitedCount >= 10000) return;
+      visited.add(node);
+      visitedCount++;
+      if (Array.isArray(node)) {
+        if (/(?:unit|floor[\s_-]*plan|layout|inventory|rent[\s_-]*option)/i.test(parentKey)) {
+          const kind = /floor|plan|layout/i.test(parentKey) ? 'floor_plan' : 'available_unit';
+          node.forEach(item => add(parseZillowUnitOption(item, options.length, kind)));
+        }
+        node.forEach(item => {
+          if (item && typeof item === 'object') walkUnitArrays(item, parentKey, depth + 1);
+        });
+        return;
+      }
+      Object.keys(node).forEach(key => {
+        const child = node[key];
+        if (child && (typeof child === 'object' ||
+          (typeof child === 'string' && /(?:gdpClientCache|unit|floor[\s_-]*plan|layout)/i.test(key)))) {
+          walkUnitArrays(child, key, depth + 1);
+        }
+      });
+    };
+    walkUnitArrays(prop, '', 0);
+    if (pageData && pageData !== prop) walkUnitArrays(pageData, '', 0);
+
     const rowTexts = [];
     if (doc && typeof doc.querySelectorAll === 'function') {
-      const rows = doc.querySelectorAll('tr, [role="row"], [data-testid*="unit-row"], [data-test*="unit-row"]');
+      const rows = doc.querySelectorAll([
+        'tr', '[role="row"]', '[data-testid*="unit"]', '[data-test*="unit"]',
+        '[data-testid*="floorplan"]', '[data-testid*="floor-plan"]',
+        '[data-test*="floorplan"]', '[data-test*="floor-plan"]',
+      ].join(', '));
       rows.forEach(row => {
-        const text = String(row.innerText || row.textContent || '').replace(/\s+/g, ' ').trim();
-        if (text) rowTexts.push(text);
+        const text = String(row.innerText || row.textContent || '').trim();
+        if (!text) return;
+        const descriptor = [
+          row.getAttribute && row.getAttribute('data-testid'),
+          row.getAttribute && row.getAttribute('data-test'),
+          row.getAttribute && row.getAttribute('aria-label'),
+          row.getAttribute && row.getAttribute('data-unit-number'),
+          row.getAttribute && row.getAttribute('data-unit'),
+          row.getAttribute && row.getAttribute('data-floor-plan-name'),
+        ].filter(Boolean).join(' ');
+        let unitNumber = null;
+        if (row.getAttribute) {
+          unitNumber = row.getAttribute('data-unit-number') || row.getAttribute('data-unit') ||
+            row.getAttribute('data-apartment-number');
+        }
+        const explicitUnit = text.match(/\bunit\s+([a-z0-9-]+)\b/i);
+        if (explicitUnit) unitNumber = explicitUnit[1];
+        if (!unitNumber && row.querySelectorAll) {
+          const cells = row.querySelectorAll('td, [role="cell"]');
+          const firstCell = cells && cells.length ? String(cells[0].innerText || cells[0].textContent || '').trim() : '';
+          if (/^[a-z]?\d{2,}[a-z]?$/i.test(firstCell)) unitNumber = firstCell;
+        }
+        rowTexts.push({ text, unitNumber, descriptor });
       });
     }
     const bodyText = doc && doc.body && typeof doc.body.innerText === 'string' ? doc.body.innerText : '';
@@ -329,27 +439,32 @@
       if (!/\bunit\s+[a-z0-9-]+\b/i.test(lines[index])) continue;
       let end = index + 1;
       while (end < lines.length && end < index + 8 && !/\bunit\s+[a-z0-9-]+\b/i.test(lines[end])) end++;
-      rowTexts.push(lines.slice(index, end).join(' '));
+      rowTexts.push({ text: lines.slice(index, end).join(' '), unitNumber: null, descriptor: 'body-unit-row' });
     }
 
-    rowTexts.forEach(text => {
-      const unitMatch = text.match(/\bunit\s+([a-z0-9-]+)\b/i);
-      if (!unitMatch || !/\$\s*[\d,]+/.test(text)) return;
-      const bedMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:bd|beds?|bedrooms?)\b/i);
-      const studio = /\bstudio\b/i.test(text);
-      const bathMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:ba|baths?|bathrooms?)\b/i);
-      const sqftMatch = text.match(/\b([\d,]+)\s*(?:sqft|sq\s*ft|square\s*feet)\b/i);
-      const prices = [...text.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)/g)];
-      const priceText = prices.length ? prices[prices.length - 1][0].replace(/\s+/g, '') : null;
-      add(parseZillowUnitOption({
-        unitNumber: unitMatch[1],
-        bedrooms: studio ? 0 : (bedMatch ? bedMatch[1] : null),
-        bathrooms: bathMatch ? bathMatch[1] : null,
-        squareFootage: sqftMatch ? sqftMatch[1] : null,
-        monthlyRent: priceText,
-      }, options.length, 'available_unit'));
+    rowTexts.forEach(row => {
+      const explicitUnit = row.text.match(/\bunit\s+([a-z0-9-]+)\b/i);
+      const unitNumber = row.unitNumber || (explicitUnit && explicitUnit[1]);
+      if (unitNumber) {
+        add(parseZillowUnitText(row.text, options.length, 'available_unit', unitNumber, null));
+      } else if (/floor[\s_-]*plan|floorplan|unit/i.test(row.descriptor)) {
+        const firstLine = row.text.split(/\r?\n/).map(line => line.trim()).find(line =>
+          line && !/^(?:studio|\d+(?:\.\d+)?\s*(?:bd|beds?|ba|baths?)|[\d,]+\s*(?:sqft|sq\s*ft))\b/i.test(line)
+        );
+        const floorPlanName = firstLine && /^[a-z][a-z0-9 ._-]{0,24}$/i.test(firstLine)
+          ? firstLine
+          : null;
+        add(parseZillowUnitText(row.text, options.length, 'floor_plan', null, floorPlanName));
+      }
     });
     return options;
+  }
+
+  function hasUsefulZillowCommunityData(payload) {
+    return Boolean(payload && (
+      payload.community_starting_rent != null ||
+      (Array.isArray(payload.unit_options) && payload.unit_options.length > 0)
+    ));
   }
 
   function isZillowBuildingPage(url, prop, text) {
@@ -661,7 +776,7 @@
     const zip    = addr.zipcode || prop.zipcode || '';
     const beds   = prop.bedrooms != null ? prop.bedrooms : (prop.beds != null ? prop.beds : null);
     const rawDesc = (prop.description || '') + ' ' + (rf.description || '');
-    const unitOptions = extractZillowUnitOptions(prop, doc);
+    const unitOptions = extractZillowUnitOptions(prop, doc, nd);
     const buildingPage = isZillowBuildingPage(url, prop, doc && doc.body && doc.body.innerText);
     const { bathrooms: bathVal, half_bathrooms: bathH } = parseBaths(
       prop.bathrooms != null ? prop.bathrooms : (prop.baths != null ? prop.baths : null),
@@ -842,7 +957,8 @@
 
     const zTitle = (street
       ? (city ? street + ', ' + city + ', ' + state + (zip ? ' ' + zip : '') : street).trim()
-      : (prop.title && String(prop.title).trim())) ||
+      : (prop.title && String(prop.title).trim()) ||
+        (buildingPage && prop.name && String(prop.name).trim())) ||
       buildTitle(beds, propType, city, street, null, state, zip);
 
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
@@ -1085,6 +1201,25 @@
       : [doc.querySelector(priceSelector)].filter(Boolean);
     for (const candidate of priceCandidates) {
       const priceText = (candidate.textContent || '').trim();
+      const testId = candidate.getAttribute && (
+        candidate.getAttribute('data-testid') || candidate.getAttribute('data-test-id') ||
+        candidate.getAttribute('data-test') || ''
+      );
+      const unitContainer = candidate.closest
+        ? candidate.closest('[data-testid*="unit"], [data-test*="unit"], tr, [role="row"]')
+        : null;
+      const priceContext = [
+        priceText,
+        testId,
+        candidate.parentElement && candidate.parentElement.textContent,
+        unitContainer && unitContainer.textContent,
+      ].filter(Boolean).join(' ');
+      if (buildingPage) {
+        const unitSpecific = Boolean(unitContainer || /\bunit\s+[a-z0-9-]+\b/i.test(priceContext));
+        const labeledCommunityPrice = /\b(?:starting\s+(?:at|from)|from\s+\$|rent\s+range|price\s+range)\b/i.test(priceContext) ||
+          /(?:bdp-price-range|price-summary|community-price|building-price)/i.test(testId);
+        if (unitSpecific || !labeledCommunityPrice) continue;
+      }
       const parsedPrice = parseRent(priceText);
       if (parsedPrice >= 100 && !/\b(?:application|admin|deposit|special|discount|savings|concession)\b/i.test(priceText)) {
         price = parsedPrice;
@@ -1248,8 +1383,6 @@
         if (value !== null && value !== undefined && value !== '' && value !== '[]') merged[key] = value;
       });
     });
-    if (!merged.address && !merged.monthly_rent) return null;
-
     // Ensure best photo collection is kept
     const bestPhotos = [resPhotos, domPhotos, ldPhotos].sort((a, b) => b.length - a.length)[0] || [];
     if (bestPhotos.length > 0) {
@@ -1271,6 +1404,8 @@
       });
     });
     merged.unit_options = unitOptions;
+    if (!merged.address && !merged.monthly_rent && !hasUsefulZillowCommunityData(merged)) return null;
+
     if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
       merged.property_type = 'APARTMENT';
       merged.monthly_rent = null;
@@ -2270,7 +2405,7 @@
     }
     try {
       const res = e.fn(d, url);
-      if (res && res.address) return res;
+      if (res && (res.address || (e.id === 'zillow' && hasUsefulZillowCommunityData(res)))) return res;
       // Secondary fallback to JSON-LD
       const ldRes = extractFromJsonLd(d, url, e.id);
       return ldRes || res;

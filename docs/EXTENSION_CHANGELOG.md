@@ -4,6 +4,17 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v40.0.0] - 2026-10-30
+### Zillow Multi-Unit Extraction Reliability
+- **Keep Unit-Only Communities**: Do not discard valid apartment-community results when Zillow omits a street address or a single-property rent.
+- **Broader Inventory Parsing**: Read nested unit inventory alongside Zillow's property cache, and parse labeled unit rows and floor-plan cards with distinct prices.
+- **Community Preview**: Show the community name and extracted unit/floor-plan facts in the widget; retain all parsed options in the existing pipeline `original_data`.
+- **Content Rules**: Keep unit rents separate from community starting rent and do not display pet policies, lease terms, or availability dates.
+- **Regression Coverage**: Add missing-address, unnumbered floor-plan, and nested inventory cases; retain single-family Zillow tests.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v40.0.0.
+
+---
+
 ## [v39.0.0] - 2026-10-30
 ### Zillow Apartment Community Extraction
 - **Community-Level Accuracy**: Keep building-page rent and bedroom/bathroom/square-footage fields empty instead of copying the first unit's facts.

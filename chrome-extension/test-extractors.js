@@ -553,6 +553,108 @@ t('Zillow apartment communities preserve unit rows and media without flattening 
   assert.ok(!JSON.stringify(payload.unit_options).includes('availabilityDate'));
   assert.ok(!JSON.stringify(payload.unit_options).includes('Dec 4'));
 });
+t('Zillow community extraction survives missing street address and shows distinct unit prices', () => {
+  const rows = [
+    { innerText: 'Unit 1201\n1 bd\n1 ba\n650 sqft\n$1,450' },
+    { innerText: 'Unit 1202\n2 bd\n2 ba\n980 sqft\n$1,895' },
+  ];
+  const unitPrices = rows.map((row) => ({ textContent: row.innerText }));
+  const communityDoc = doc({});
+  communityDoc.title = 'The Oaks Apartments - Zillow';
+  communityDoc.body = { innerText: 'The Oaks Apartments\nApartments in Dallas, TX 75216' };
+  communityDoc.querySelector = (selector) => selector.includes('h1')
+    ? { textContent: 'The Oaks Apartments' }
+    : null;
+  communityDoc.querySelectorAll = (selector) => {
+    if (selector.includes('application/ld+json')) return [];
+    if (selector.includes('[data-testid*="rent"]')) return unitPrices;
+    if (selector.includes('tr, [role="row"')) return rows;
+    return [];
+  };
+
+  const payload = api.extract('https://www.zillow.com/apartments/dallas-tx/the-oaks/AbC123/', communityDoc);
+  assert.ok(payload, 'unit data should keep a community extractable without a street address');
+  assert.strictEqual(payload.title, 'The Oaks Apartments');
+  assert.strictEqual(payload.address, null);
+  assert.strictEqual(payload.city, 'Dallas');
+  assert.strictEqual(payload.monthly_rent, null);
+  assert.strictEqual(payload.community_starting_rent, null, 'a unit rent must not become the community starting rent');
+  assert.deepStrictEqual(
+    payload.unit_options.map((unit) => [unit.unit_number, unit.bedrooms, unit.bathrooms, unit.square_footage, unit.monthly_rent]),
+    [['1201', 1, 1, 650, 1450], ['1202', 2, 2, 980, 1895]]
+  );
+});
+t('Zillow community parser captures floor-plan cards without explicit unit numbers', () => {
+  const card = {
+    innerText: 'A2\n2 bd\n2 ba\n980 sqft\nStarting at $1,895 - $2,150',
+    getAttribute: (name) => name === 'data-testid' ? 'floorplan-card' : null,
+  };
+  const communityDoc = doc({});
+  communityDoc.body = { innerText: 'Apartments in Dallas, TX 75216' };
+  communityDoc.querySelector = () => null;
+  communityDoc.querySelectorAll = (selector) => {
+    if (selector.includes('application/ld+json')) return [];
+    if (selector.includes('floorplan')) return [card];
+    return [];
+  };
+
+  const payload = api.extract('https://www.zillow.com/apartments/dallas-tx/the-oaks/AbC123/', communityDoc);
+  assert.ok(payload);
+  assert.strictEqual(payload.monthly_rent, null);
+  assert.strictEqual(payload.unit_options.length, 1);
+  assert.deepStrictEqual(
+    [payload.unit_options[0].source_kind, payload.unit_options[0].floor_plan_name, payload.unit_options[0].bedrooms, payload.unit_options[0].bathrooms, payload.unit_options[0].square_footage, payload.unit_options[0].starting_rent],
+    ['floor_plan', 'A2', 2, 2, 980, 1895]
+  );
+});
+t('Zillow community parser reads nested unit inventory beside the property cache', () => {
+  const communityDoc = doc({
+    props: {
+      pageProps: {
+        componentProps: {
+          gdpClientCache: JSON.stringify({
+            community: {
+              data: {
+                property: {
+                  zpid: 'AbC123',
+                  address: null,
+                  name: 'The Oaks Apartments',
+                  price: '$1,450+',
+                  homeType: 'APARTMENT',
+                  floorPlans: [
+                    { floorPlanName: 'A1', bedrooms: 1, bathrooms: 1, squareFootage: 650, startingRent: 1450 },
+                  ],
+                },
+                unitInventory: [
+                  { unitNumber: '1201', bedroomCount: 1, bathroomCount: 1, squareFeet: 650, minRent: 1450 },
+                  { unitNumber: '1202', bedroomCount: 2, bathroomCount: 2, squareFeet: 980, minRent: 1895 },
+                ],
+              },
+            },
+          }),
+        },
+      },
+    },
+  });
+  communityDoc.body = { innerText: 'Apartments in Dallas, TX 75216' };
+  communityDoc.querySelector = () => null;
+  communityDoc.querySelectorAll = () => [];
+
+  const payload = api.extract('https://www.zillow.com/apartments/dallas-tx/the-oaks/AbC123/', communityDoc);
+  assert.ok(payload);
+  assert.strictEqual(payload.title, 'The Oaks Apartments');
+  assert.strictEqual(payload.monthly_rent, null);
+  assert.strictEqual(payload.community_starting_rent, 1450);
+  assert.deepStrictEqual(
+    payload.unit_options.map((unit) => [unit.source_kind, unit.unit_number, unit.floor_plan_name]),
+    [['floor_plan', null, 'A1'], ['available_unit', '1201', null], ['available_unit', '1202', null]]
+  );
+  assert.deepStrictEqual(
+    payload.unit_options.slice(1).map((unit) => [unit.unit_number, unit.bedrooms, unit.bathrooms, unit.square_footage, unit.monthly_rent]),
+    [['1201', 1, 1, 650, 1450], ['1202', 2, 2, 980, 1895]]
+  );
+  assert.ok(!JSON.stringify(payload.unit_options).includes('availabilityDate'));
+});
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));
   const p = api.extractZillow(d, Z);

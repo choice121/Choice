@@ -293,6 +293,42 @@
   color: #e2e8f0;
 }
 
+.cp-unit-options-preview {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.cp-unit-options-heading {
+  color: #e2e8f0;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.cp-unit-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.cp-unit-option-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #cbd5e1;
+}
+
+.cp-unit-option-row strong {
+  color: #f8fafc;
+}
+
+.cp-unit-options-note {
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
 /* Folder Pill & Auto-Collapsing Folder Popover */
 .cp-folder-bar {
   position: relative;
