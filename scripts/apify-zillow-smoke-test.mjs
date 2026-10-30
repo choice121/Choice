@@ -30,12 +30,12 @@ function firstToken(rawValue) {
   return raw.split(/[,\n;]/).map((token) => token.trim()).find(Boolean) || '';
 }
 
-function isZillowDetailUrl(value) {
+function isZillowListingUrl(value) {
   try {
     const url = new URL(value);
     return url.protocol === 'https:' &&
       ['zillow.com', 'www.zillow.com'].includes(url.hostname) &&
-      /_zpid\/?$/.test(url.pathname);
+      url.pathname.length > 1;
   } catch {
     return false;
   }
@@ -48,7 +48,7 @@ function normalizeListing(item) {
   const address = item.listingAddress || {};
   if (!ZIP_CODES.includes(String(address.zipCode)) || address.state !== 'TX') return null;
   const propertyUrl = typeof item.propertyUrl === 'string' ? item.propertyUrl : '';
-  if (!isZillowDetailUrl(propertyUrl)) return null;
+  if (!isZillowListingUrl(propertyUrl)) return null;
   const photoUrls = (Array.isArray(item.listingPhotos) ? item.listingPhotos : [])
     .map((photo) => photo?.url)
     .filter((url) => {
@@ -138,8 +138,15 @@ const diagnostics = rawItems.slice(0, MAX_RESULTS).map((item) => ({
     .filter(([key]) => /price|rent/i.test(key))
     .map(([key, value]) => [key, value && typeof value === 'object' ? value.amount ?? typeof value : value])),
   zillow_url_fields: Object.entries(item || {})
-    .filter(([key, value]) => /url|link/i.test(key) && isZillowDetailUrl(value))
+    .filter(([key, value]) => /url|link/i.test(key) && isZillowListingUrl(value))
     .map(([key]) => key),
+  units_count: Array.isArray(item?.units) ? item.units.length : 0,
+  unit_fields: Array.isArray(item?.units) ? item.units.slice(0, 3).map((unit) => ({
+    fields: Object.keys(unit || {}),
+    price_fields: Object.fromEntries(Object.entries(unit || {})
+      .filter(([key]) => /price|rent/i.test(key))
+      .map(([key, value]) => [key, value && typeof value === 'object' ? value.amount ?? typeof value : value])),
+  })) : [],
   photo_count: Array.isArray(item?.listingPhotos) ? item.listingPhotos.length : 0,
 }));
 
