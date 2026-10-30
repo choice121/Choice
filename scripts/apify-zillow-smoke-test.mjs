@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 const ACTOR = 'maxcopell~zillow-zip-search';
 const MAX_RESULTS = 3;
 const MAX_CHARGE_USD = '0.02';
+const ZIP_CODES = ['76116', '76137'];
 
 function firstToken(rawValue) {
   const raw = String(rawValue || '').trim();
@@ -21,7 +22,7 @@ function normalizeListing(item) {
   const rent = Number(item.listingPrice?.amount);
   if (!Number.isFinite(rent) || rent <= 0) return null;
   const address = item.listingAddress || {};
-  if (String(address.zipCode) !== '76102' || address.state !== 'TX') return null;
+  if (!ZIP_CODES.includes(String(address.zipCode)) || address.state !== 'TX') return null;
   const propertyUrl = typeof item.propertyUrl === 'string' ? item.propertyUrl : '';
   try {
     const url = new URL(propertyUrl);
@@ -79,7 +80,7 @@ const response = await fetch(endpoint, {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    zipCodes: ['76102'],
+    zipCodes: ZIP_CODES,
     forRent: true,
     resultsLimit: MAX_RESULTS,
   }),
@@ -94,11 +95,18 @@ if (!response.ok) {
 const rawItems = await response.json();
 if (!Array.isArray(rawItems)) throw new Error('Apify returned an unexpected dataset format.');
 const listings = rawItems.map(normalizeListing).filter(Boolean).slice(0, MAX_RESULTS);
-if (!listings.length) throw new Error('The scrape returned no verified, currently-for-rent listings with an asking rent.');
+if (!listings.length) {
+  const statuses = rawItems.reduce((counts, item) => {
+    const status = String(item?.listingStatus || 'missing');
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
+  throw new Error(`No verified rentals with asking rent for the requested ZIPs. Actor returned ${rawItems.length} items; listing statuses: ${JSON.stringify(statuses)}.`);
+}
 
 await writeFile('zillow-smoke-test.json', `${JSON.stringify({
   source: 'Apify Zillow ZIP Code Search Scraper',
-  target_zip: '76102',
+  target_zips: ZIP_CODES,
   result_limit: MAX_RESULTS,
   max_charge_usd: Number(MAX_CHARGE_USD),
   scraped_at: new Date().toISOString(),
