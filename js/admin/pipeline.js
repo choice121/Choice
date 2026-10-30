@@ -462,6 +462,8 @@
         floor_label: item.floor_label || null,
         provider: item.provider || null,
         url: url.href,
+        poster_url: item.poster_url || null,
+        metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : {},
       });
     });
 
@@ -470,7 +472,7 @@
       try {
         const url = new URL(legacyTour);
         if((url.protocol === 'https:' || url.protocol === 'http:') && !items.some(item => item.url.replace(/\/+$/, '').toLowerCase() === url.href.replace(/\/+$/, '').toLowerCase())){
-          items.push({ id: 'legacy-tour', kind: 'virtual_tour', title: '3D virtual tour', floor_label: null, provider: null, url: url.href });
+          items.push({ id: 'legacy-tour', kind: 'virtual_tour', title: '3D virtual tour', floor_label: null, provider: null, url: url.href, poster_url: null, metadata: {} });
         }
       } catch(_) {}
     }
@@ -478,30 +480,165 @@
     return items;
   }
 
+  function renderSourceMediaItem(item, editable){
+    const isDirectVideo = item.kind === 'video' && /\.(?:mp4|webm|mov)(?:[?#].*)?$/i.test(item.url || '');
+    const preview = item.kind === 'floor_plan' && item.url
+      ? `<a href="${S.esc(item.url)}" target="_blank" rel="noopener"><img src="${S.esc(item.url)}" alt="${S.esc(item.title)}" loading="lazy" referrerpolicy="no-referrer" style="display:block;width:100%;max-height:180px;object-fit:contain;background:var(--surface-2);border-radius:4px"></a>`
+      : isDirectVideo
+        ? `<video controls preload="metadata" playsinline style="display:block;width:100%;max-height:220px;background:#111;border-radius:4px"><source src="${S.esc(item.url)}"></video>`
+        : '';
+    const fields = editable ? `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0">
+        <label class="pl-field"><span>Type</span><select data-media-field="kind">
+          <option value="floor_plan"${item.kind === 'floor_plan' ? ' selected' : ''}>Floor plan</option>
+          <option value="video"${item.kind === 'video' ? ' selected' : ''}>Video</option>
+          <option value="virtual_tour"${item.kind === 'virtual_tour' ? ' selected' : ''}>Virtual tour</option>
+          <option value="tour_3d"${item.kind === 'tour_3d' ? ' selected' : ''}>3D tour</option>
+        </select></label>
+        <label class="pl-field"><span>Title</span><input data-media-field="title" maxlength="120" value="${S.esc(item.title)}"></label>
+        <label class="pl-field"><span>Floor / level</span><input data-media-field="floor_label" maxlength="60" value="${S.esc(item.floor_label || '')}"></label>
+        <label class="pl-field"><span>Provider</span><input data-media-field="provider" maxlength="60" value="${S.esc(item.provider || '')}"></label>
+        <label class="pl-field" style="grid-column:1/-1"><span>URL</span><input data-media-field="url" type="url" value="${S.esc(item.url || '')}"></label>
+        <label class="pl-field" style="grid-column:1/-1"><span>Poster image URL</span><input data-media-field="poster_url" type="url" value="${S.esc(item.poster_url || '')}"></label>
+      </div>` : '';
+    const actions = editable ? `<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm btn-ghost" type="button" data-media-action="up" aria-label="Move media up" title="Move up">↑</button>
+      <button class="btn btn-sm btn-ghost" type="button" data-media-action="down" aria-label="Move media down" title="Move down">↓</button>
+        <button class="btn btn-sm btn-danger" type="button" data-media-action="remove">Remove</button>
+    </div>` : '';
+      const openLink = item.url ? `<a class="btn btn-sm btn-outline" href="${S.esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : '';
+    return `<article data-source-media-row data-source-media-id="${S.esc(item.id || '')}" style="min-width:0;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span class="qs-badge">${S.esc(String(item.kind).replace('_', ' '))}</span>${openLink}</div>
+      ${fields}${preview}${actions}
+    </article>`;
+  }
+
   function renderSourceMedia(l){
     const items = sourceMediaItems(l);
-    if(!items.length) return '';
+    const editable = l.status !== 'published' && l.status !== 'archived';
+    const rows = items.map(item => renderSourceMediaItem(item, editable)).join('');
+    return `<div class="pl-section" id="pl-source-media-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="pl-section-title">Media from source <span style="font-weight:400;color:var(--muted-2)">(${items.length})</span></div>${editable ? '<button class="btn btn-sm btn-outline" type="button" data-media-action="add">Add media</button>' : ''}</div>
+      <div id="pl-source-media-list">${rows || '<p class="pl-photo-count">No source media found.</p>'}</div>
+      ${editable ? '<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-sm btn-primary" type="button" data-media-action="save">Save media changes</button></div><p id="pl-source-media-status" class="pl-photo-count" role="status" aria-live="polite"></p>' : ''}
+    </div>`;
+  }
 
-    const rows = items.map(function(item){
-      const isFloorPlan = item.kind === 'floor_plan';
-      const isDirectVideo = item.kind === 'video' && /\.(?:mp4|webm|mov)(?:[?#].*)?$/i.test(item.url);
-      const kindLabel = item.kind === 'floor_plan' ? 'Floor plan' : item.kind === 'video' ? 'Video' : '3D tour';
-      const preview = isFloorPlan
-        ? `<a href="${S.esc(item.url)}" target="_blank" rel="noopener"><img src="${S.esc(item.url)}" alt="${S.esc(item.title)}" loading="lazy" referrerpolicy="no-referrer" style="display:block;width:100%;max-height:180px;object-fit:contain;background:var(--surface-2);border-radius:4px"></a>`
-        : isDirectVideo
-          ? `<video controls preload="metadata" playsinline style="display:block;width:100%;max-height:220px;background:#111;border-radius:4px"><source src="${S.esc(item.url)}"></video>`
-          : '';
-      return `<div style="min-width:0;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
-          <span class="qs-badge">${kindLabel}</span>
-          <div style="min-width:0;flex:1"><strong>${S.esc(item.title)}</strong>${item.floor_label ? `<div style="font-size:.75rem;color:var(--muted-2);margin-top:2px">${S.esc(item.floor_label)}</div>` : ''}</div>
-          <a class="btn btn-sm btn-outline" href="${S.esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>
-        </div>
-        ${preview}
-      </div>`;
-    }).join('');
+  function collectSourceMediaEdits(l){
+    const section = document.getElementById('pl-source-media-section');
+    if(!section) return [];
+    const originalById = new Map(sourceMediaItems(l).map(item => [String(item.id), item]));
+    const seen = new Set();
+    const items = [];
 
-    return `<div class="pl-section"><div class="pl-section-title">Media from source <span style="font-weight:400;color:var(--muted-2)">(${items.length})</span></div>${rows}</div>`;
+    section.querySelectorAll('[data-source-media-row]').forEach((row, index) => {
+      const read = field => row.querySelector(`[data-media-field="${field}"]`)?.value.trim() || '';
+      const kind = read('kind');
+      const title = read('title').slice(0, 120);
+      if(!['floor_plan','video','virtual_tour','tour_3d'].includes(kind)) throw new Error('Choose a valid media type.');
+      if(!title) throw new Error('Every media item needs a title.');
+
+      let url;
+      try { url = new URL(read('url')); if(url.protocol !== 'https:') throw new Error(); }
+      catch(_) { throw new Error('Media URLs must use HTTPS.'); }
+      const posterRaw = read('poster_url');
+      let posterUrl = null;
+      if(posterRaw){
+        try { posterUrl = new URL(posterRaw).href; if(!posterUrl.startsWith('https://')) throw new Error(); }
+        catch(_) { throw new Error('Poster image URLs must use HTTPS.'); }
+      }
+
+      const key = `${kind}::${url.href.toLowerCase()}`;
+      if(seen.has(key)) throw new Error('Remove duplicate media URLs before saving.');
+      seen.add(key);
+      const previous = originalById.get(row.dataset.sourceMediaId || '');
+      items.push({
+        kind,
+        title,
+        floor_label: read('floor_label').slice(0, 60) || null,
+        provider: read('provider').slice(0, 60) || null,
+        url: url.href,
+        poster_url: posterUrl,
+        display_order: index,
+        metadata: previous?.metadata || {},
+      });
+    });
+    return items;
+  }
+
+  async function saveSourceMedia(id){
+    const section = document.getElementById('pl-source-media-section');
+    const status = section?.querySelector('#pl-source-media-status');
+    const saveButton = section?.querySelector('[data-media-action="save"]');
+    if(!section || !_current) return;
+    let media;
+    try { media = collectSourceMediaEdits(_current); }
+    catch(error) { if(status) status.textContent = error.message || 'Check media fields and try again.'; S.toast(error.message || 'Check media fields and try again.', 'error'); return; }
+
+    if(saveButton){ saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
+    if(status) status.textContent = 'Saving media…';
+    try {
+      const { data, error } = await CP.sb().functions.invoke('pipeline-media', { body: { pipeline_id: id, media } });
+      if(error) throw error;
+      if(data?.error) throw new Error(data.detail || data.error);
+
+      const currentData = parseJSON(_current.original_data);
+      const updatedData = currentData && typeof currentData === 'object' && !Array.isArray(currentData) ? { ...currentData } : {};
+      updatedData.media = data.media || media;
+      _current.original_data = JSON.stringify(updatedData);
+      _current.virtual_tour_url = data.virtual_tour_url || null;
+      const editedFields = parseJSON(_current.edited_fields);
+      _current.edited_fields = JSON.stringify([...new Set([...(Array.isArray(editedFields) ? editedFields : []), 'media'])]);
+      if(_current.status === 'scraped') _current.status = 'edited';
+      const index = _pageData.findIndex(item => item.id === id);
+      if(index >= 0) _pageData[index] = _current;
+      _cClear();
+      refreshCard(id);
+      fetchCounts().catch(()=>{});
+      section.outerHTML = renderSourceMedia(_current);
+      wireSourceMediaControls(id);
+      S.toast('Media changes saved', 'success');
+    } catch(error) {
+      if(status) status.textContent = error.message || 'Could not save media changes.';
+      S.toast('Media save failed: ' + (error.message || 'unknown'), 'error');
+    } finally {
+      const currentButton = document.querySelector('#pl-source-media-section [data-media-action="save"]');
+      if(currentButton){ currentButton.disabled = false; currentButton.textContent = 'Save media changes'; }
+    }
+  }
+
+  function wireSourceMediaControls(id){
+    const section = document.getElementById('pl-source-media-section');
+    const list = section?.querySelector('#pl-source-media-list');
+    if(!section || !list || section.dataset.controlsWired === 'true') return;
+    section.dataset.controlsWired = 'true';
+
+    section.addEventListener('click', event => {
+      const button = event.target.closest('[data-media-action]');
+      if(!button) return;
+      const action = button.dataset.mediaAction;
+      if(action === 'save'){
+        saveSourceMedia(id);
+        return;
+      }
+      if(action === 'add'){
+        const item = { id: '', kind: 'video', title: 'Video walkthrough', floor_label: null, provider: null, url: '', poster_url: null, metadata: {} };
+        list.querySelector('.pl-photo-count')?.remove();
+        list.insertAdjacentHTML('beforeend', renderSourceMediaItem(item, true));
+        list.querySelector('[data-source-media-row]:last-child [data-media-field="title"]')?.focus();
+        return;
+      }
+
+      const row = button.closest('[data-source-media-row]');
+      if(!row) return;
+      if(action === 'remove'){
+        row.remove();
+      } else if(action === 'up' && row.previousElementSibling){
+        list.insertBefore(row, row.previousElementSibling);
+      } else if(action === 'down' && row.nextElementSibling){
+        list.insertBefore(row.nextElementSibling, row);
+      }
+    });
   }
 
   function missingTags(l){
@@ -765,6 +902,7 @@
     const panel    = document.getElementById('pl-panel');
     const backdrop = document.getElementById('pl-backdrop');
     panel.innerHTML = renderPanel(l);
+      wireSourceMediaControls(l.id);
     requestAnimationFrame(() => {
       panel.classList.add('open');
       backdrop.classList.add('open');
