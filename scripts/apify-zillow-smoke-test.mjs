@@ -5,6 +5,19 @@ const MAX_RESULTS = 3;
 const MAX_CHARGE_USD = '0.02';
 const ZIP_CODES = ['76116', '76137'];
 
+async function apifyRequest(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+    signal: AbortSignal.timeout(300_000),
+  });
+  if (!response.ok) throw new Error(`Apify returned HTTP ${response.status}.`);
+  return response;
+}
+
 function firstToken(rawValue) {
   const raw = String(rawValue || '').trim();
   if (!raw) return '';
@@ -17,6 +30,17 @@ function firstToken(rawValue) {
   return raw.split(/[,\n;]/).map((token) => token.trim()).find(Boolean) || '';
 }
 
+function isZillowDetailUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' &&
+      ['zillow.com', 'www.zillow.com'].includes(url.hostname) &&
+      /_zpid\/?$/.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function normalizeListing(item) {
   if (!item || item.listingStatus !== 'forRent') return null;
   const rent = Number(item.listingPrice?.amount);
@@ -24,12 +48,7 @@ function normalizeListing(item) {
   const address = item.listingAddress || {};
   if (!ZIP_CODES.includes(String(address.zipCode)) || address.state !== 'TX') return null;
   const propertyUrl = typeof item.propertyUrl === 'string' ? item.propertyUrl : '';
-  try {
-    const url = new URL(propertyUrl);
-    if (url.protocol !== 'https:' || !['zillow.com', 'www.zillow.com'].includes(url.hostname) || !/_zpid\/?$/.test(url.pathname)) return null;
-  } catch {
-    return null;
-  }
+  if (!isZillowDetailUrl(propertyUrl)) return null;
   const photoUrls = (Array.isArray(item.listingPhotos) ? item.listingPhotos : [])
     .map((photo) => photo?.url)
     .filter((url) => {
@@ -66,51 +85,71 @@ function normalizeListing(item) {
 const token = firstToken(process.env.APIFY_API_TOKENS);
 if (!token) throw new Error('APIFY_API_TOKENS is unavailable to this workflow.');
 
-const endpoint = new URL(`https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items`);
-endpoint.searchParams.set('timeout', '240');
-endpoint.searchParams.set('maxTotalChargeUsd', MAX_CHARGE_USD);
-endpoint.searchParams.set('format', 'json');
-endpoint.searchParams.set('clean', 'true');
-endpoint.searchParams.set('limit', String(MAX_RESULTS));
+const mode = process.env.APIFY_MODE || 'scrape';
+let rawItems;
+if (mode === 'inspect-last-run') {
+  const runUrl = new URL(`https://api.apify.com/v2/acts/${ACTOR}/runs/last`);
+  runUrl.searchParams.set('origin', 'API');
+  runUrl.searchParams.set('status', 'SUCCEEDED');
+  const run = await (await apifyRequest(runUrl)).json();
+  const datasetId = run?.data?.defaultDatasetId;
+  if (!datasetId) throw new Error('No successful Apify API run dataset was found.');
+  const datasetUrl = new URL(`https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items`);
+  datasetUrl.searchParams.set('format', 'json');
+  datasetUrl.searchParams.set('clean', 'true');
+  datasetUrl.searchParams.set('limit', String(MAX_RESULTS));
+  rawItems = await (await apifyRequest(datasetUrl)).json();
+} else if (mode === 'scrape') {
+  const endpoint = new URL(`https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items`);
+  endpoint.searchParams.set('timeout', '240');
+  endpoint.searchParams.set('maxTotalChargeUsd', MAX_CHARGE_USD);
+  endpoint.searchParams.set('format', 'json');
+  endpoint.searchParams.set('clean', 'true');
+  endpoint.searchParams.set('limit', String(MAX_RESULTS));
 
-const response = await fetch(endpoint, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    zipCodes: ZIP_CODES,
-    forRent: true,
-    resultsLimit: MAX_RESULTS,
-  }),
-  signal: AbortSignal.timeout(300_000),
-});
-
-if (!response.ok) {
-  const detail = (await response.text()).slice(0, 500);
-  throw new Error(`Apify Zillow actor returned HTTP ${response.status}: ${detail}`);
+  const response = await apifyRequest(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      zipCodes: ZIP_CODES,
+      forRent: true,
+      resultsLimit: MAX_RESULTS,
+    }),
+  });
+  rawItems = await response.json();
+} else {
+  throw new Error(`Unsupported Apify workflow mode: ${mode}`);
 }
 
-const rawItems = await response.json();
 if (!Array.isArray(rawItems)) throw new Error('Apify returned an unexpected dataset format.');
 const listings = rawItems.map(normalizeListing).filter(Boolean).slice(0, MAX_RESULTS);
-if (!listings.length) {
-  const statuses = rawItems.reduce((counts, item) => {
-    const status = String(item?.listingStatus || 'missing');
-    counts[status] = (counts[status] || 0) + 1;
-    return counts;
-  }, {});
-  throw new Error(`No verified rentals with asking rent for the requested ZIPs. Actor returned ${rawItems.length} items; listing statuses: ${JSON.stringify(statuses)}.`);
-}
+const statusCounts = rawItems.reduce((counts, item) => {
+  const status = String(item?.listingStatus || 'missing');
+  counts[status] = (counts[status] || 0) + 1;
+  return counts;
+}, {});
+const diagnostics = rawItems.slice(0, MAX_RESULTS).map((item) => ({
+  listing_status: item?.listingStatus || null,
+  zip: item?.listingAddress?.zipCode == null ? null : String(item.listingAddress.zipCode),
+  state: item?.listingAddress?.state || null,
+  asking_rent: item?.listingPrice?.amount ?? null,
+  has_zillow_detail_url: isZillowDetailUrl(item?.propertyUrl),
+  photo_count: Array.isArray(item?.listingPhotos) ? item.listingPhotos.length : 0,
+}));
 
 await writeFile('zillow-smoke-test.json', `${JSON.stringify({
   source: 'Apify Zillow ZIP Code Search Scraper',
   target_zips: ZIP_CODES,
+  mode,
   result_limit: MAX_RESULTS,
-  max_charge_usd: Number(MAX_CHARGE_USD),
+  max_charge_usd: mode === 'scrape' ? Number(MAX_CHARGE_USD) : 0,
   scraped_at: new Date().toISOString(),
+  actor_returned_count: rawItems.length,
+  listing_status_counts: statusCounts,
+  diagnostics,
   listing_count: listings.length,
   listings,
+  publishable: false,
+  publish_note: 'Search results do not include the full source description; manual review and sanitization are required.',
 }, null, 2)}\n`);
-console.log(`Saved ${listings.length} verified rentals for review. Apify charge was capped at $${MAX_CHARGE_USD}.`);
+console.log(`Saved ${listings.length} verified rentals from ${rawItems.length} actor results for review (${mode} mode).`);
