@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v42.0.0] - 2026-10-30
+### Harden Zillow JSON-LD Fallback
+- **Preserve primary extraction**: Treat Zillow JSON-LD as an optional fallback so malformed structured data cannot discard valid NextData or DOM listing results.
+- **Support schema type arrays**: Normalize JSON-LD `@type` strings and arrays safely, including schema URLs.
+- **Regression Coverage**: Verify Zillow still returns primary address and rent when JSON-LD uses an array-valued type.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v42.0.0.
+
+---
+
 ## [v41.0.0] - 2026-10-30
 ### Privacy-Safe Extraction Error Locations
 - **Actionable failures**: Include allowlisted extension source filenames, line/column numbers, and function names for direct extractor exceptions.

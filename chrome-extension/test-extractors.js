@@ -708,6 +708,34 @@ t('diagnostics do not include extractor exception messages', () => {
   assert.ok(!JSON.stringify(report).includes('private-id'));
   assert.ok(!JSON.stringify(report).includes('example.com'));
 });
+t('Zillow extraction preserves primary listing data when JSON-LD uses an array type', () => {
+  const d = doc(cache({
+    zpid: 98765,
+    title: 'Array Type Test',
+    address: { streetAddress: '50 Test St', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    homeType: 'SINGLE_FAMILY',
+    price: 1800,
+    bedrooms: 3,
+    bathrooms: 2,
+  }));
+  d.querySelector = () => null;
+  d.body = { innerText: '' };
+  d.querySelectorAll = (selector) => selector.includes('application/ld+json')
+    ? [{
+      textContent: JSON.stringify({
+        '@type': ['https://schema.org/Apartment', 'Accommodation'],
+        name: 'JSON-LD fallback listing',
+        address: { streetAddress: '50 Test St', addressLocality: 'Dallas', addressRegion: 'TX', postalCode: '75201' },
+      }),
+    }]
+    : [];
+
+  const payload = api.extract(Z, d);
+  assert.ok(payload);
+  assert.strictEqual(payload.address, '50 Test St');
+  assert.strictEqual(payload.monthly_rent, 1800);
+  assert.strictEqual(payload.property_type, 'SINGLE_FAMILY');
+});
 t('diagnostics explain unsupported listing URLs without collecting page contents', () => {
   const report = api.diagnose('https://example.com/private?token=not-for-sharing', doc({}));
   assert.strictEqual(report.status, 'failed');

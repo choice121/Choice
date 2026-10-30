@@ -535,8 +535,12 @@
     MANUFACTURED: 'MOBILE', MOBILE: 'MOBILE', LOT: 'LAND', LAND: 'LAND', FARM: 'FARM',
   };
   function normalizeType(homeType) {
-    const t = (homeType || '').toUpperCase().replace(/[^A-Z_]/g, '_');
-    return TYPE_MAP[t] || t || null;
+    const values = Array.isArray(homeType) ? homeType : [homeType];
+    const types = values
+      .filter(type => typeof type === 'string' && type.trim())
+      .map(type => type.split(/[\/#]/).pop().toUpperCase().replace(/[^A-Z_]/g, '_'));
+    const type = types.find(value => TYPE_MAP[value]) || types[0];
+    return TYPE_MAP[type] || type || null;
   }
   function fmtType(t) {
     return !t ? 'Rental' : t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -1068,6 +1072,7 @@
     const beds = prop.numberOfBedrooms || prop.numberOfRooms || null;
     const baths = prop.numberOfBathroomsTotal || prop.numberOfFullBathrooms || null;
     const desc = prop.description || null;
+    const propertyTypes = Array.isArray(prop['@type']) ? prop['@type'] : [prop['@type']];
     const photos = [];
     if (Array.isArray(prop.image)) {
       prop.image.forEach(img => {
@@ -1095,9 +1100,11 @@
       bedrooms: beds ? Number(beds) : null,
       bathrooms: baths ? parseBaths(baths, desc).bathrooms : null,
       half_bathrooms: baths && (Number(baths) % 1 !== 0) ? 1 : null,
-      property_type: /SingleFamilyResidence|House|Residence/i.test(String(prop['@type'] || ''))
+      property_type: propertyTypes.some(type =>
+        typeof type === 'string' && /SingleFamilyResidence|House|Residence/i.test(type)
+      )
         ? 'SINGLE_FAMILY'
-        : normalizeType(prop['@type'] || 'APARTMENT'),
+        : normalizeType(propertyTypes) || 'APARTMENT',
       description: desc,
       original_description: desc,
       virtual_tour_url: virtualTour ? virtualTour.url : null,
@@ -1376,7 +1383,12 @@
     const domPhotos = dom ? (JSON.parse(dom.original_image_urls || '[]')) : [];
 
     // Tier 3: JSON-LD (filtered)
-    const ld = extractFromJsonLd(doc, url, 'zillow');
+    let ld = null;
+    try {
+      ld = extractFromJsonLd(doc, url, 'zillow');
+    } catch (error) {
+      console.warn('[CP] Zillow JSON-LD fallback failed:', error && error.name || 'Error');
+    }
     const ldPhotos = ld ? (JSON.parse(ld.original_image_urls || '[]')) : [];
 
     // Prefer NextData > DOM > JSON-LD, but don't let empty NextData fields
