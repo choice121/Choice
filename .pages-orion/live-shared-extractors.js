@@ -269,9 +269,13 @@
     const validUnitLabel = isValidZillowUnitLabel(unitLabel) ? unitLabel : null;
     const rawFloorPlan = value.floorPlanName ?? value.floor_plan_name ??
       value.floorplanName ?? value.floorPlan ?? value.floor_plan ?? value.layoutName ?? value.layout_name;
-    const floorPlanName = rawFloorPlan && typeof rawFloorPlan === 'object'
+    const parsedFloorPlanName = rawFloorPlan && typeof rawFloorPlan === 'object'
       ? rawFloorPlan.name ?? rawFloorPlan.title ?? rawFloorPlan.label ?? null
       : rawFloorPlan;
+    const floorPlanName = parsedFloorPlanName == null ||
+        /^(?:unit|floor[\s_-]*plan|plan)$/i.test(String(parsedFloorPlanName).trim())
+      ? null
+      : String(parsedFloorPlanName).trim();
     const rawBeds = value.bedrooms ?? value.beds ?? value.bedroomCount ??
       value.bedroom_count ?? value.bedCount ?? value.bed_count;
     const bedValue = rawBeds && typeof rawBeds === 'object'
@@ -354,9 +358,7 @@
       option.bedrooms,
       option.bathrooms,
       option.square_footage,
-      (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
-        ? ''
-        : option.starting_rent,
+      option.starting_rent,
     ].join('|');
   }
 
@@ -372,16 +374,52 @@
     ].filter(value => value !== null && value !== undefined && value !== '').length;
   }
 
+  function mergeZillowFloorPlanOptions(left, right) {
+    if (!left || !right || left.source_kind !== 'floor_plan' || right.source_kind !== 'floor_plan') return null;
+    const leftName = String(left.floor_plan_name || '').trim().toLowerCase();
+    const rightName = String(right.floor_plan_name || '').trim().toLowerCase();
+    if (leftName && rightName && leftName !== rightName) return null;
+    const fields = ['bedrooms', 'bathrooms', 'half_bathrooms', 'square_footage', 'starting_rent'];
+    if (fields.some(field => left[field] != null && right[field] != null && left[field] !== right[field])) return null;
+    const sharedIdentity = (left.square_footage != null && left.square_footage === right.square_footage) ||
+      (left.starting_rent != null && left.starting_rent === right.starting_rent);
+    if (!leftName && !rightName && !sharedIdentity) return null;
+    if ((!leftName || !rightName) &&
+        (left.bedrooms == null || left.bedrooms !== right.bedrooms ||
+          left.bathrooms == null || left.bathrooms !== right.bathrooms || !sharedIdentity)) return null;
+
+    const merged = Object.assign({}, left);
+    fields.forEach(field => {
+      if (merged[field] == null) merged[field] = right[field];
+    });
+    merged.floor_plan_name = left.floor_plan_name || right.floor_plan_name || null;
+    merged.rent_display = left.rent_display || right.rent_display || null;
+    merged.source_order = Math.min(left.source_order ?? Number.MAX_SAFE_INTEGER, right.source_order ?? Number.MAX_SAFE_INTEGER);
+    return merged;
+  }
+
+  function addZillowUnitOption(options, option) {
+    if (!option) return;
+    for (const [key, existing] of options.entries()) {
+      const merged = mergeZillowFloorPlanOptions(existing, option);
+      if (!merged) continue;
+      options.delete(key);
+      options.set(zillowUnitOptionKey(merged), merged);
+      return;
+    }
+    const key = zillowUnitOptionKey(option);
+    const existing = options.get(key);
+    if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
+      options.set(key, option);
+    }
+  }
+
   function mergeZillowUnitOptions(...sources) {
     const byKey = new Map();
     sources.forEach(source => {
       (Array.isArray(source) ? source : []).forEach(option => {
         if (!option || typeof option !== 'object') return;
-        const key = zillowUnitOptionKey(option);
-        const existing = byKey.get(key);
-        if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
-          byKey.set(key, option);
-        }
+        addZillowUnitOption(byKey, option);
       });
     });
     return Array.from(byKey.values()).map((option, index) =>
@@ -402,7 +440,8 @@
       ));
     const priceMatch = prices.length ? prices[0] : null;
     const priceText = priceMatch ? priceMatch[0].replace(/\s+/g, '') : null;
-    if (!priceText || (!unitNumber && !studio && !bedMatch && !bathMatch && !sqftMatch)) return null;
+    if ((!priceText && sourceKind !== 'floor_plan') ||
+        (!unitNumber && !studio && !bedMatch && !bathMatch && !sqftMatch)) return null;
 
     return parseZillowUnitOption({
       unitNumber,
@@ -417,12 +456,7 @@
   function extractZillowUnitOptions(prop, doc, pageData) {
     const options = new Map();
     const add = option => {
-      if (!option) return;
-      const key = zillowUnitOptionKey(option);
-      const existing = options.get(key);
-      if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
-        options.set(key, option);
-      }
+      addZillowUnitOption(options, option);
     };
     const optionCount = () => options.size;
     const sourceArrays = [
@@ -477,14 +511,18 @@
         'tr', '[role="row"]', '[data-testid*="unit"]', '[data-test*="unit"]',
         '[data-testid*="floorplan"]', '[data-testid*="floor-plan"]',
         '[data-test*="floorplan"]', '[data-test*="floor-plan"]',
+        '[class*="floorplan"]', '[class*="floorPlan"]', '[class*="floor-plan"]',
+        '[role="listitem"]', 'article', 'li', 'div',
       ].join(', '));
-      rows.forEach(row => {
+      Array.from(rows).slice(0, 1000).forEach(row => {
         const text = String(row.innerText || row.textContent || '').trim();
-        if (!text) return;
+        if (!text || text.length > 2000) return;
+        const className = row.className && typeof row.className === 'string' ? row.className : '';
         const descriptor = [
           row.getAttribute && row.getAttribute('data-testid'),
           row.getAttribute && row.getAttribute('data-test'),
           row.getAttribute && row.getAttribute('aria-label'),
+          className,
           row.getAttribute && row.getAttribute('data-unit-number'),
           row.getAttribute && row.getAttribute('data-unit'),
           row.getAttribute && row.getAttribute('data-floor-plan-name'),
@@ -502,7 +540,18 @@
           const firstCell = cells && cells.length ? String(cells[0].innerText || cells[0].textContent || '').trim() : '';
           if (isValidZillowUnitLabel(firstCell)) unitNumber = firstCell;
         }
-        rowTexts.push({ text, unitNumber, descriptor });
+        const hasPlanFacts = /(?:\bstudio\b|\b\d+(?:\.\d+)?\s*(?:bd|beds?|bedrooms?)\b)/i.test(text) &&
+          (/\b\d+(?:\.\d+)?\s*(?:ba|baths?|bathrooms?)\b/i.test(text) ||
+            /\b[\d,]+\s*(?:sqft|sq\s*ft|square\s*feet)\b/i.test(text));
+        if (unitNumber || /floor[\s_-]*plan|floorplan|layout/i.test(descriptor) ||
+            (hasPlanFacts && !/\bunit\s+#?[a-z0-9-]+\b/i.test(text))) {
+          rowTexts.push({
+            text,
+            unitNumber,
+            descriptor,
+            floorPlanName: row.getAttribute && row.getAttribute('data-floor-plan-name'),
+          });
+        }
       });
     }
     const bodyText = doc && doc.body && typeof doc.body.innerText === 'string' ? doc.body.innerText : '';
@@ -525,12 +574,20 @@
         : (explicitUnit && isValidZillowUnitLabel(explicitUnit[1]) ? explicitUnit[1] : null);
       if (unitNumber) {
         add(parseZillowUnitText(row.text, optionCount(), 'available_unit', unitNumber, null));
-      } else if (/floor[\s_-]*plan|floorplan|unit/i.test(row.descriptor)) {
-        const firstLine = row.text.split(/\r?\n/).map(line => line.trim()).find(line =>
-          line && !/^(?:studio|\d+(?:\.\d+)?\s*(?:bd|beds?|ba|baths?)|[\d,]+\s*(?:sqft|sq\s*ft))\b/i.test(line)
+      } else {
+        const lines = row.text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        const firstLine = lines.find(line =>
+          line && !/^(?:studio|\d+(?:\.\d+)?\s*(?:bd|beds?|ba|baths?|bedrooms?|bathrooms?)|[\d,]+\s*(?:sqft|sq\s*ft|square\s*feet)|starting\s+(?:at|from)|from\s+\$|see\s+(?:all|availability)|available\s+units?)\b/i.test(line) &&
+          !/\$\s*[\d,]+/.test(line)
         );
-        const floorPlanName = firstLine && /^[a-z][a-z0-9 ._-]{0,24}$/i.test(firstLine)
-          ? firstLine
+        const hintedName = row.floorPlanName && String(row.floorPlanName)
+          .replace(/^(?:floor[\s_-]*plan|plan)[\s:_-]*/i, '').trim();
+        const candidateName = hintedName && !/floor[\s_-]*plan|^unit$/i.test(hintedName)
+          ? hintedName
+          : firstLine;
+        const floorPlanName = candidateName && /^[a-z][a-z0-9 ._-]{0,24}$/i.test(candidateName) &&
+          !/^(?:unit|floor plan|plan|availability|pricing)$/i.test(candidateName)
+          ? candidateName
           : null;
         add(parseZillowUnitText(row.text, optionCount(), 'floor_plan', null, floorPlanName));
       }
@@ -2748,6 +2805,22 @@
     const countSelector = (selector) => {
       try { return d.querySelectorAll ? d.querySelectorAll(selector).length : 0; } catch (_) { return 0; }
     };
+    const countFloorPlanCandidates = () => {
+      try {
+        if (!d.querySelectorAll) return 0;
+        return Array.from(d.querySelectorAll('div, li, article, [role="listitem"]'))
+          .slice(0, 1000)
+          .filter((element) => {
+            const text = String(element.innerText || element.textContent || '');
+            return text.length <= 2000 &&
+              /(?:\bstudio\b|\b\d+(?:\.\d+)?\s*(?:bd|beds?|bedrooms?)\b)/i.test(text) &&
+              (/\b\d+(?:\.\d+)?\s*(?:ba|baths?|bathrooms?)\b/i.test(text) ||
+                /\b[\d,]+\s*(?:sqft|sq\s*ft|square\s*feet)\b/i.test(text));
+          }).length;
+      } catch (_) {
+        return 0;
+      }
+    };
     const scriptSignals = d.querySelectorAll
       ? Array.from(d.querySelectorAll('script')).slice(0, 40).map((script) => {
         let sourceHost = null;
@@ -2790,7 +2863,8 @@
         video_count: countSelector('video'),
         iframe_count: countSelector('iframe'),
         unit_element_count: countSelector('[data-testid*="unit"], [data-test*="unit"], tr, [role="row"]'),
-        floor_plan_element_count: countSelector('[data-testid*="floorplan"], [data-testid*="floor-plan"], [data-test*="floorplan"], [data-test*="floor-plan"]'),
+        floor_plan_element_count: countSelector('[data-testid*="floorplan"], [data-testid*="floor-plan"], [data-test*="floorplan"], [data-test*="floor-plan"], [class*="floorplan"], [class*="floorPlan"], [class*="floor-plan"]'),
+        floor_plan_candidate_count: countFloorPlanCandidates(),
       },
       extractor: {
         matched: Boolean(detected),

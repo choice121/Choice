@@ -607,6 +607,64 @@ t('Zillow community parser captures floor-plan cards without explicit unit numbe
     ['floor_plan', 'A2', 2, 2, 980, 1895]
   );
 });
+t('Zillow community parser extracts named Waverly-style plan cards and diagnostic counts', () => {
+  const plans = [
+    ['A2', '1 bd', '1 ba', '680 sqft', 'Starting at $1,005+'],
+    ['A1', '1 bd', '1 ba', '616 sqft', 'Starting at $1,070+'],
+    ['B2', '2 bd', '2 ba', '879 sqft', 'Starting at $1,315+'],
+    ['B1', '2 bd', '1 ba', '784 sqft', 'Starting at $1,405+'],
+    ['B3', '2 bd', '2 ba', '979 sqft', 'Starting at $1,465+'],
+  ].map((lines) => ({
+    className: 'floor-plan-card',
+    innerText: lines.join('\n'),
+    getAttribute: (name) => name === 'data-testid' ? 'floorplan-card' : null,
+  }));
+  const communityDoc = doc(cache({
+    zpid: '5XhsVQ',
+    name: 'The Waverly Apartments',
+    homeType: 'APARTMENT',
+    floorPlans: [
+      { bedrooms: 1, bathrooms: 1, startingRent: 1005, floorPlanName: 'Unit' },
+      { bedrooms: 1, bathrooms: 1, squareFootage: 680 },
+      { bedrooms: 1, bathrooms: 1, squareFootage: 616 },
+      { bedrooms: 2, bathrooms: 2, squareFootage: 879 },
+      { bedrooms: 2, bathrooms: 1, squareFootage: 784 },
+      { bedrooms: 2, bathrooms: 2, squareFootage: 979 },
+    ],
+  }));
+  communityDoc.body = { innerText: 'The Waverly Apartments\nApartments in Dallas, TX 75220' };
+  communityDoc.querySelector = () => null;
+  communityDoc.querySelectorAll = (selector) => {
+    if (selector.includes('application/ld+json')) return [];
+    if (selector === 'div, li, article, [role="listitem"]') return plans;
+    if (selector.includes('floorplan') || selector.includes('floor-plan-card')) return plans;
+    return [];
+  };
+
+  const url = 'https://www.zillow.com/apartments/dallas-tx/the-waverly-apartments/5XhsVQ/';
+  const payload = api.extract(url, communityDoc);
+  assert.ok(payload);
+  assert.deepStrictEqual(
+    payload.unit_options.map((unit) => [
+      unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
+      unit.square_footage, unit.starting_rent,
+    ]),
+    [
+      ['A2', 1, 1, 680, 1005],
+      ['A1', 1, 1, 616, 1070],
+      ['B2', 2, 2, 879, 1315],
+      ['B1', 2, 1, 784, 1405],
+      ['B3', 2, 2, 979, 1465],
+    ]
+  );
+  assert.strictEqual(payload.unit_options.length, 5, 'partial structured records should merge with complete rendered cards');
+  const report = api.diagnose(url, communityDoc);
+  assert.strictEqual(report.page.floor_plan_candidate_count, 5);
+  assert.deepStrictEqual(
+    report.unit_options.map((unit) => unit.floor_plan_name),
+    ['A2', 'A1', 'B2', 'B1', 'B3']
+  );
+});
 t('Zillow community parser reads nested unit inventory beside the property cache', () => {
   const communityDoc = doc({
     props: {

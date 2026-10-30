@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v44.0.2)
+# Choice Properties — Universal Chrome Extension (v44.0.4)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -50,7 +50,7 @@ A browser extension that allows Choice Properties agents to save rental listings
   - **Strict Stripping**: Never outputs lease duration or smoking policies.
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 - **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
-- **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts to the admin inbox. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
+- **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts—including candidate floor-plan card counts—to the admin inbox. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
 - **Resilient Zillow JSON-LD Fallback**: Ignore malformed optional JSON-LD when primary listing data was extracted, and handle schema.org `@type` values supplied as strings or arrays.
 - **Source-Fact Accuracy**: Zillow estimates are not substituted for asking rent, and unavailable, lease-term, and smoking-policy fields are omitted from imports. Unknown feature facts stay unknown; generic cooling/window units do not imply central air, while explicit "No basement" wording is captured as false.
 - **Location Intelligence Integration**: Property pages can load cached, server-side Geoapify nearby places and approximate neighborhood context. Details are documented in [`docs/LOCATION_ENRICHMENT.md`](../docs/LOCATION_ENRICHMENT.md); no school ratings, attendance boundaries, or walk/travel times are inferred.
