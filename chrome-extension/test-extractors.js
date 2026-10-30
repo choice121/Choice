@@ -624,7 +624,9 @@ t('Zillow community parser extracts named Waverly-style plan cards and diagnosti
     name: 'The Waverly Apartments',
     homeType: 'APARTMENT',
     floorPlans: [
-      { bedrooms: 1, bathrooms: 1, startingRent: 1005, floorPlanName: 'Unit' },
+      { bedrooms: 1, bathrooms: 1 },
+      { bedrooms: 2, bathrooms: 2 },
+      { bedrooms: 2, bathrooms: 1 },
       { bedrooms: 1, bathrooms: 1, squareFootage: 680 },
       { bedrooms: 1, bathrooms: 1, squareFootage: 616 },
       { bedrooms: 2, bathrooms: 2, squareFootage: 879 },

@@ -4,13 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
-## [v44.0.4] - 2026-10-30
+## [v44.0.5] - 2026-10-30
 ### Recover Zillow Community Floor Plans
 - **Broader card detection**: Inspect rendered semantic and class-based plan cards when Zillow does not expose floor-plan test IDs.
 - **Preserve partial plan facts**: Keep valid plan names, bedroom/bath counts, and square footage even when a starting price is absent.
 - **Focused diagnostics**: Report a bounded count of candidate plan-card nodes alongside the safely extracted plan facts.
 - **Regression coverage**: Verify Waverly-style cards retain their names, sizes, bed/bath counts, and starting rents.
-- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.4.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.5.
 
 ---
 
