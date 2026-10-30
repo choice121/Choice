@@ -8,6 +8,10 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function stripHtml(value) {
+  return String(value ?? '').replace(/<[^>]*>/g, '');
+}
+
 function safeImageUrl(value) {
   if (typeof value !== 'string') return '';
   try {
@@ -44,7 +48,10 @@ export function renderPropertyUnitsHtml(units) {
     const planUrl = safeImageUrl(unit.floor_plan_image_url);
     const photos = unitPhotoUrls(unit.unit_photos);
     const amenities = Array.isArray(unit.amenities)
-      ? unit.amenities.filter(value => typeof value === 'string' && value.trim()).slice(0, 10)
+      ? unit.amenities
+        .map(stripHtml)
+        .filter(value => typeof value === 'string' && value.trim())
+        .slice(0, 10)
       : [];
     const specs = [];
     if (unit.bedrooms != null) {
