@@ -129,11 +129,17 @@ const statusCounts = rawItems.reduce((counts, item) => {
   return counts;
 }, {});
 const diagnostics = rawItems.slice(0, MAX_RESULTS).map((item) => ({
+  top_level_fields: Object.keys(item || {}),
   listing_status: item?.listingStatus || null,
   zip: item?.listingAddress?.zipCode == null ? null : String(item.listingAddress.zipCode),
   state: item?.listingAddress?.state || null,
-  asking_rent: item?.listingPrice?.amount ?? null,
-  has_zillow_detail_url: isZillowDetailUrl(item?.propertyUrl),
+  address_fields: Object.keys(item?.listingAddress || {}),
+  price_fields: Object.fromEntries(Object.entries(item || {})
+    .filter(([key]) => /price|rent/i.test(key))
+    .map(([key, value]) => [key, value && typeof value === 'object' ? value.amount ?? typeof value : value])),
+  zillow_url_fields: Object.entries(item || {})
+    .filter(([key, value]) => /url|link/i.test(key) && isZillowDetailUrl(value))
+    .map(([key]) => key),
   photo_count: Array.isArray(item?.listingPhotos) ? item.listingPhotos.length : 0,
 }));
 
