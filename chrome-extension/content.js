@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v42.0.0
+// Choice Properties — Universal Content Script & UI Engine v43.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '42.0.0';
+  var VERSION  = '43.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -335,6 +335,36 @@
     return normalized;
   }
 
+  function isValidUnitNumber(value) {
+    var label = String(value == null ? '' : value).trim().replace(/^#/, '');
+    return /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(label);
+  }
+
+  function summarizeUnitOptions(options) {
+    var units = new Map();
+    var plans = new Map();
+    (Array.isArray(options) ? options : []).forEach(function (option) {
+      if (!option || typeof option !== 'object') return;
+      if (isValidUnitNumber(option.unit_number)) {
+        var unitKey = String(option.unit_number).trim().toLowerCase();
+        if (!units.has(unitKey)) units.set(unitKey, option);
+        return;
+      }
+      if (option.source_kind !== 'floor_plan') return;
+      var planKey = [
+        String(option.floor_plan_name || '').trim().toLowerCase(),
+        option.bedrooms,
+        option.bathrooms,
+        option.square_footage,
+        (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
+          ? ''
+          : option.starting_rent,
+      ].join('|');
+      if (!plans.has(planKey)) plans.set(planKey, option);
+    });
+    return { units: Array.from(units.values()), floorPlans: Array.from(plans.values()) };
+  }
+
   function dedupePhotoUrls(urls) {
     var seen = new Set();
     var unique = [];
@@ -399,14 +429,21 @@
       if (extracted.square_footage) {
         bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
       }
-    } else if (extracted && Array.isArray(extracted.unit_options) && extracted.unit_options.length > 0) {
-      bedsBaths = extracted.unit_options.length + ' unit details';
     }
     var unitOptions = extracted && Array.isArray(extracted.unit_options) ? extracted.unit_options : [];
-    var unitDetailsHtml = unitOptions.length
+    var inventory = summarizeUnitOptions(unitOptions);
+    var inventoryLabels = [];
+    if (inventory.units.length) inventoryLabels.push(inventory.units.length + ' available unit' + (inventory.units.length === 1 ? '' : 's') + ' found');
+    if (inventory.floorPlans.length) inventoryLabels.push(inventory.floorPlans.length + ' floor plan' + (inventory.floorPlans.length === 1 ? '' : 's'));
+    var inventoryFacts = [];
+    if (extracted && extracted.total_units != null) inventoryFacts.push(Number(extracted.total_units).toLocaleString() + ' total units');
+    if (extracted && extracted.floors != null) inventoryFacts.push(Number(extracted.floors).toLocaleString() + ' building stor' + (Number(extracted.floors) === 1 ? 'y' : 'ies'));
+    if (inventoryLabels.length) bedsBaths = inventoryLabels.join(' • ');
+    var allInventoryOptions = inventory.units.concat(inventory.floorPlans);
+    var unitDetailsHtml = allInventoryOptions.length
       ? '<div class="cp-unit-options-preview">' +
-          '<div class="cp-unit-options-heading">Extracted unit and floor-plan details (' + unitOptions.length + ')</div>' +
-          '<div class="cp-unit-options-list">' + unitOptions.slice(0, 12).map(function (unit, index) {
+          '<div class="cp-unit-options-heading">' + escapeHtml(inventoryLabels.join(' · ')) + '</div>' +
+          '<div class="cp-unit-options-list">' + allInventoryOptions.slice(0, 12).map(function (unit, index) {
             var name = unit.unit_number
               ? 'Unit ' + unit.unit_number
               : (unit.floor_plan_name || 'Option ' + (index + 1));
@@ -422,9 +459,10 @@
               (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
               '</span>' + (price ? '<strong>' + escapeHtml(price) + '</strong>' : '') + '</div>';
           }).join('') + '</div>' +
-          (unitOptions.length > 12
-            ? '<div class="cp-unit-options-note">' + (unitOptions.length - 12) + ' more options are included when saved.</div>'
+          (allInventoryOptions.length > 12
+            ? '<div class="cp-unit-options-note">' + (allInventoryOptions.length - 12) + ' more options are included when saved.</div>'
             : '') +
+          (inventoryFacts.length ? '<div class="cp-unit-options-note">' + escapeHtml(inventoryFacts.join(' · ')) + '</div>' : '') +
         '</div>'
       : '';
 
@@ -503,6 +541,9 @@
               <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
               <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip ${photoBadgeClass}">${escapeHtml(photoBadgeText)}</span>
+              ${extracted && extracted.building_name ? '<span class="cp-chip">' + escapeHtml(extracted.building_name) + '</span>' : ''}
+              ${extracted && extracted.price_range ? '<span class="cp-chip">Source price range: ' + escapeHtml(extracted.price_range) + '</span>' : ''}
+              ${inventoryFacts.length ? '<span class="cp-chip">' + escapeHtml(inventoryFacts.join(' • ')) + '</span>' : ''}
               ${mediaSummary.length ? '<span class="cp-chip">' + escapeHtml(mediaSummary.join(' • ')) + '</span>' : ''}
               <span class="cp-chip cp-chip-type">${escapeHtml(propType)}</span>
             </div>
@@ -1132,6 +1173,9 @@
         floors: extracted.floors,
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
+        building_name: extracted.building_name,
+        is_multi_unit: extracted.is_multi_unit,
+        price_range: extracted.price_range,
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
@@ -1139,6 +1183,11 @@
           zpid: extracted.source_listing_id,
           detailUrl: extracted.source_url || location.href,
           homeType: extracted.property_type || 'APARTMENT',
+          building_name: extracted.building_name,
+          is_multi_unit: extracted.is_multi_unit,
+          price_range: extracted.price_range,
+          floors: extracted.floors,
+          total_units: extracted.total_units,
           community_starting_rent: extracted.community_starting_rent,
           media: mediaItems,
           unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],

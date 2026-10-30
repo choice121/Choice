@@ -260,6 +260,7 @@
         rawUnitNumber.number ?? rawUnitNumber.label ?? rawUnitNumber.name ?? rawUnitNumber.value ?? null
       : rawUnitNumber;
     const unitLabel = unitNumber == null ? null : String(unitNumber).trim().replace(/^unit\s+/i, '');
+    const validUnitLabel = isValidZillowUnitLabel(unitLabel) ? unitLabel : null;
     const rawFloorPlan = value.floorPlanName ?? value.floor_plan_name ??
       value.floorplanName ?? value.floorPlan ?? value.floor_plan ?? value.layoutName ?? value.layout_name;
     const floorPlanName = rawFloorPlan && typeof rawFloorPlan === 'object'
@@ -297,21 +298,72 @@
       : priceValue;
     const rentDisplay = price == null ? null : String(price).trim();
     const rentAmount = price == null ? null : parseRent(price);
-    if (!unitLabel && !floorPlanName && bedrooms == null && squareFootage == null && rentAmount == null) return null;
+    if (unitLabel != null && !validUnitLabel && !floorPlanName) return null;
+    if (!validUnitLabel && !floorPlanName && bedrooms == null && baths.bathrooms == null && squareFootage == null) return null;
 
     return {
-      source_kind: unitLabel ? 'available_unit' : (sourceKind || 'floor_plan'),
-      unit_number: unitLabel || null,
+      source_kind: validUnitLabel ? 'available_unit' : 'floor_plan',
+      unit_number: validUnitLabel || null,
       floor_plan_name: floorPlanName == null ? null : String(floorPlanName).trim(),
       bedrooms,
       bathrooms: baths.bathrooms,
       half_bathrooms: baths.half_bathrooms,
       square_footage: squareFootage,
-      monthly_rent: unitLabel ? rentAmount : null,
-      starting_rent: unitLabel ? null : rentAmount,
+      monthly_rent: validUnitLabel ? rentAmount : null,
+      starting_rent: validUnitLabel ? null : rentAmount,
       rent_display: rentDisplay,
       source_order: sourceOrder,
     };
+  }
+
+  function isValidZillowUnitLabel(value) {
+    const label = String(value == null ? '' : value).trim().replace(/^#/, '');
+    return /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(label);
+  }
+
+  function zillowUnitOptionKey(option) {
+    if (option.source_kind === 'available_unit' && isValidZillowUnitLabel(option.unit_number)) {
+      return 'unit:' + String(option.unit_number).toLowerCase();
+    }
+    return [
+      'floor-plan',
+      String(option.floor_plan_name || '').trim().toLowerCase(),
+      option.bedrooms,
+      option.bathrooms,
+      option.square_footage,
+      (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
+        ? ''
+        : option.starting_rent,
+    ].join('|');
+  }
+
+  function zillowUnitOptionCompleteness(option) {
+    return [
+      option.floor_plan_name,
+      option.bedrooms,
+      option.bathrooms,
+      option.half_bathrooms,
+      option.square_footage,
+      option.monthly_rent,
+      option.starting_rent,
+    ].filter(value => value !== null && value !== undefined && value !== '').length;
+  }
+
+  function mergeZillowUnitOptions(...sources) {
+    const byKey = new Map();
+    sources.forEach(source => {
+      (Array.isArray(source) ? source : []).forEach(option => {
+        if (!option || typeof option !== 'object') return;
+        const key = zillowUnitOptionKey(option);
+        const existing = byKey.get(key);
+        if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
+          byKey.set(key, option);
+        }
+      });
+    });
+    return Array.from(byKey.values()).map((option, index) =>
+      Object.assign({}, option, { source_order: index })
+    );
   }
 
   function parseZillowUnitText(text, sourceOrder, sourceKind, unitNumber, floorPlanName) {
@@ -325,9 +377,7 @@
       .filter(match => !/\b(?:application|admin|deposit|fee|special|discount|concession)\b/i.test(
         normalized.slice(Math.max(0, match.index - 24), match.index)
       ));
-    const priceMatch = prices.length
-      ? (sourceKind === 'floor_plan' ? prices[0] : prices[prices.length - 1])
-      : null;
+    const priceMatch = prices.length ? prices[0] : null;
     const priceText = priceMatch ? priceMatch[0].replace(/\s+/g, '') : null;
     if (!priceText || (!unitNumber && !studio && !bedMatch && !bathMatch && !sqftMatch)) return null;
 
@@ -342,18 +392,16 @@
   }
 
   function extractZillowUnitOptions(prop, doc, pageData) {
-    const options = [];
-    const seen = new Set();
+    const options = new Map();
     const add = option => {
       if (!option) return;
-      const key = [
-        option.source_kind, option.unit_number, option.floor_plan_name, option.bedrooms,
-        option.bathrooms, option.square_footage, option.monthly_rent, option.starting_rent,
-      ].join('|');
-      if (seen.has(key)) return;
-      seen.add(key);
-      options.push(Object.assign({}, option, { source_order: options.length }));
+      const key = zillowUnitOptionKey(option);
+      const existing = options.get(key);
+      if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
+        options.set(key, option);
+      }
     };
+    const optionCount = () => options.size;
     const sourceArrays = [
       ['units', 'available_unit'], ['availableUnits', 'available_unit'],
       ['available_units', 'available_unit'], ['unitsAvailable', 'available_unit'],
@@ -364,7 +412,7 @@
     ];
     sourceArrays.forEach(([key, kind]) => {
       if (!Array.isArray(prop && prop[key])) return;
-      prop[key].forEach(item => add(parseZillowUnitOption(item, options.length, kind)));
+      prop[key].forEach(item => add(parseZillowUnitOption(item, optionCount(), kind)));
     });
 
     const visited = new Set();
@@ -382,7 +430,7 @@
       if (Array.isArray(node)) {
         if (/(?:unit|floor[\s_-]*plan|layout|inventory|rent[\s_-]*option)/i.test(parentKey)) {
           const kind = /floor|plan|layout/i.test(parentKey) ? 'floor_plan' : 'available_unit';
-          node.forEach(item => add(parseZillowUnitOption(item, options.length, kind)));
+          node.forEach(item => add(parseZillowUnitOption(item, optionCount(), kind)));
         }
         node.forEach(item => {
           if (item && typeof item === 'object') walkUnitArrays(item, parentKey, depth + 1);
@@ -423,30 +471,37 @@
           unitNumber = row.getAttribute('data-unit-number') || row.getAttribute('data-unit') ||
             row.getAttribute('data-apartment-number');
         }
-        const explicitUnit = text.match(/\bunit\s+([a-z0-9-]+)\b/i);
-        if (explicitUnit) unitNumber = explicitUnit[1];
+        const explicitUnit = text.match(/\bunit\s+#?([a-z0-9-]+)\b/i);
+        if (!unitNumber && explicitUnit && isValidZillowUnitLabel(explicitUnit[1])) unitNumber = explicitUnit[1];
+        if (!isValidZillowUnitLabel(unitNumber)) unitNumber = null;
         if (!unitNumber && row.querySelectorAll) {
           const cells = row.querySelectorAll('td, [role="cell"]');
           const firstCell = cells && cells.length ? String(cells[0].innerText || cells[0].textContent || '').trim() : '';
-          if (/^[a-z]?\d{2,}[a-z]?$/i.test(firstCell)) unitNumber = firstCell;
+          if (isValidZillowUnitLabel(firstCell)) unitNumber = firstCell;
         }
         rowTexts.push({ text, unitNumber, descriptor });
       });
     }
     const bodyText = doc && doc.body && typeof doc.body.innerText === 'string' ? doc.body.innerText : '';
     const lines = bodyText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const hasUnitLabel = line => {
+      const match = String(line || '').match(/\bunit\s+#?([a-z0-9-]+)\b/i);
+      return Boolean(match && isValidZillowUnitLabel(match[1]));
+    };
     for (let index = 0; index < lines.length; index++) {
-      if (!/\bunit\s+[a-z0-9-]+\b/i.test(lines[index])) continue;
+      if (!hasUnitLabel(lines[index])) continue;
       let end = index + 1;
-      while (end < lines.length && end < index + 8 && !/\bunit\s+[a-z0-9-]+\b/i.test(lines[end])) end++;
+      while (end < lines.length && end < index + 8 && !hasUnitLabel(lines[end])) end++;
       rowTexts.push({ text: lines.slice(index, end).join(' '), unitNumber: null, descriptor: 'body-unit-row' });
     }
 
     rowTexts.forEach(row => {
-      const explicitUnit = row.text.match(/\bunit\s+([a-z0-9-]+)\b/i);
-      const unitNumber = row.unitNumber || (explicitUnit && explicitUnit[1]);
+      const explicitUnit = row.text.match(/\bunit\s+#?([a-z0-9-]+)\b/i);
+      const unitNumber = isValidZillowUnitLabel(row.unitNumber)
+        ? row.unitNumber
+        : (explicitUnit && isValidZillowUnitLabel(explicitUnit[1]) ? explicitUnit[1] : null);
       if (unitNumber) {
-        add(parseZillowUnitText(row.text, options.length, 'available_unit', unitNumber, null));
+        add(parseZillowUnitText(row.text, optionCount(), 'available_unit', unitNumber, null));
       } else if (/floor[\s_-]*plan|floorplan|unit/i.test(row.descriptor)) {
         const firstLine = row.text.split(/\r?\n/).map(line => line.trim()).find(line =>
           line && !/^(?:studio|\d+(?:\.\d+)?\s*(?:bd|beds?|ba|baths?)|[\d,]+\s*(?:sqft|sq\s*ft))\b/i.test(line)
@@ -454,10 +509,12 @@
         const floorPlanName = firstLine && /^[a-z][a-z0-9 ._-]{0,24}$/i.test(firstLine)
           ? firstLine
           : null;
-        add(parseZillowUnitText(row.text, options.length, 'floor_plan', null, floorPlanName));
+        add(parseZillowUnitText(row.text, optionCount(), 'floor_plan', null, floorPlanName));
       }
     });
-    return options;
+    return Array.from(options.values()).map((option, index) =>
+      Object.assign({}, option, { source_order: index })
+    );
   }
 
   function hasUsefulZillowCommunityData(payload) {
@@ -521,6 +578,23 @@
       rent = match ? parseFloat(match[1]) : null;
     }
     return rent;
+  }
+
+  function formatZillowPriceRange(value) {
+    if (typeof value === 'string') return value.trim() || null;
+    if (typeof value === 'number' && Number.isFinite(value)) return '$' + value.toLocaleString();
+    if (!value || typeof value !== 'object') return null;
+    const min = value.min ?? value.minimum ?? value.lowPrice ?? value.low_price ?? null;
+    const max = value.max ?? value.maximum ?? value.highPrice ?? value.high_price ?? null;
+    const format = price => {
+      const amount = parseRent(price);
+      return amount == null ? null : '$' + amount.toLocaleString();
+    };
+    const minText = format(min);
+    const maxText = format(max);
+    if (minText && maxText) return minText + ' – ' + maxText;
+    if (minText) return minText + '+';
+    return null;
   }
 
   const TYPE_MAP = {
@@ -720,6 +794,7 @@
       monthly_rent: null, community_starting_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null,
       square_footage: null, year_built: null, lot_size_sqft: null, floors: null,
       garage_spaces: null, total_units: null, property_type: null, description: null, original_description: null,
+      building_name: null, is_multi_unit: null, price_range: null,
       neighborhood: null, county: null, location_context: null, pets_allowed: null,
       pet_types_allowed: null, available_date: null, listed_at: null, minimum_lease_months: null,
       smoking_allowed: null, security_deposit: null, pet_deposit: null, admin_fee: null,
@@ -794,6 +869,16 @@
     const county = prop.county || addr.county || null;
     const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || (prop.view3dHomeId ? 'https://www.zillow.com/view-3d-home/' + prop.view3dHomeId : null) || null;
     const propType = buildingPage ? 'APARTMENT' : detectPropType(prop.homeType, rawDesc, prop.title || '', street);
+    const rawBuildingNameValue = prop.buildingName || prop.communityName ||
+      (prop.building && (prop.building.name || prop.building.title)) ||
+      prop.name || (prop.title && prop.title !== 'Property Apartment Unit' ? prop.title : null);
+    const rawBuildingName = rawBuildingNameValue && typeof rawBuildingNameValue === 'object'
+      ? rawBuildingNameValue.name || rawBuildingNameValue.title || rawBuildingNameValue.label || null
+      : rawBuildingNameValue;
+    const buildingName = buildingPage && typeof rawBuildingName === 'string' &&
+      !/^(?:property|property apartment unit|apartment unit)$/i.test(rawBuildingName.trim())
+      ? rawBuildingName.trim()
+      : null;
 
     const ctxParts = [];
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
@@ -977,9 +1062,12 @@
       square_footage: buildingPage ? null : (sqft ? parseInt(String(sqft), 10) : null),
       year_built: yr ? parseInt(String(yr), 10) : null,
       lot_size_sqft: lotSizeSqft,
-      floors: safeI(prop.stories || rf.stories),
+      floors: safeI(prop.stories ?? prop.numberOfStories ?? rf.stories ?? rf.numberOfStories),
       garage_spaces: garageSpaces,
-      total_units: safeI(prop.unitCount),
+      total_units: safeI(prop.unitCount ?? prop.totalUnits ?? prop.numberOfUnitsTotal ?? rf.numberOfUnitsTotal),
+      building_name: buildingName,
+      is_multi_unit: buildingPage,
+      price_range: buildingPage ? formatZillowPriceRange(prop.priceRange ?? prop.price_range ?? prop.rentRange ?? prop.rent_range) : null,
       property_type: propType,
       description: prop.description || null,
       original_description: prop.description || rf.description || null,
@@ -1326,10 +1414,18 @@
     const domTitle = buildingPage
       ? (headingText || (address ? [address, city, state, zip].filter(Boolean).join(', ') : null))
       : (headingText || buildTitle(beds, domPropType, city, address, null, state, zip));
+    const buildingName = buildingPage && headingText &&
+      headingText !== address &&
+      !/^(?:property|property apartment unit|apartment unit)$/i.test(headingText.trim())
+      ? headingText.trim()
+      : null;
     const unitOptions = extractZillowUnitOptions(null, doc);
 
     return basePayload('zillow', sourceId, url, {
       title: domTitle,
+      building_name: buildingName,
+      is_multi_unit: buildingPage,
+      price_range: null,
       address: address || (!buildingPage && price ? 'Zillow Property' : null),
       city: city || null,
       state: state || null,
@@ -1402,20 +1498,19 @@
     }
 
     merged.media = mergeStructuredMedia(res && res.media, dom && dom.media, ld && ld.media);
-    const unitOptions = [];
-    const unitKeys = new Set();
-    [dom && dom.unit_options, res && res.unit_options].forEach(source => {
-      (Array.isArray(source) ? source : []).forEach(option => {
-        const key = [
-          option.source_kind, option.unit_number, option.floor_plan_name, option.bedrooms,
-          option.bathrooms, option.square_footage, option.monthly_rent, option.starting_rent,
-        ].join('|');
-        if (unitKeys.has(key)) return;
-        unitKeys.add(key);
-        unitOptions.push(Object.assign({}, option, { source_order: unitOptions.length }));
-      });
-    });
+    const unitOptions = mergeZillowUnitOptions(dom && dom.unit_options, res && res.unit_options);
     merged.unit_options = unitOptions;
+    if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
+      merged.is_multi_unit = true;
+      merged.building_name = merged.building_name || (dom && dom.building_name) || (res && res.building_name) || null;
+      if ((!merged.title || /^(?:property apartment unit|property apartment|apartment unit)$/i.test(merged.title)) &&
+          merged.address) {
+        merged.title = [merged.address, merged.city, merged.state, merged.zip].filter(Boolean).join(', ');
+      } else if ((!merged.title || /^(?:property apartment unit|property apartment|apartment unit)$/i.test(merged.title)) &&
+          merged.building_name) {
+        merged.title = merged.building_name;
+      }
+    }
     if (!merged.address && !merged.monthly_rent && !hasUsefulZillowCommunityData(merged)) return null;
 
     if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
@@ -2494,7 +2589,7 @@
 
     const safeFields = [
       'source_listing_id', 'title', 'address', 'city', 'state', 'zip',
-      'property_type', 'monthly_rent', 'community_starting_rent',
+      'property_type', 'building_name', 'is_multi_unit', 'price_range', 'monthly_rent', 'community_starting_rent',
       'bedrooms', 'bathrooms', 'half_bathrooms', 'square_footage',
       'year_built', 'lot_size_sqft', 'floors', 'total_units',
       'heating_type', 'cooling_type', 'has_central_air', 'has_basement',

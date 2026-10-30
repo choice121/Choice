@@ -113,6 +113,92 @@
       return null;
     }).filter(Boolean);
   }
+  function sourcePhotoCount(listing){
+    const identities = new Set();
+    imageUrls(listing.original_image_urls).forEach(function(url){
+      const zillowHash = url.match(/\/fp\/([a-f0-9]{16,})-/i);
+      identities.add(zillowHash ? zillowHash[1].toLowerCase() : url.split('?')[0].replace(/#.*$/, ''));
+    });
+    return identities.size;
+  }
+  function inventoryData(listing){
+    const sourceData = parseJSON(listing.original_data) || {};
+    const rawOptions = Array.isArray(sourceData.unit_options) ? sourceData.unit_options : [];
+    const units = new Map();
+    const plans = new Map();
+    const validUnitNumber = value =>
+      /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(String(value || '').trim().replace(/^#/, ''));
+    const quality = option =>
+      ['floor_plan_name','bedrooms','bathrooms','half_bathrooms','square_footage','monthly_rent','starting_rent']
+        .filter(field => option[field] != null && option[field] !== '').length;
+
+    rawOptions.forEach(function(option){
+      if(!option || typeof option !== 'object') return;
+      if(option.source_kind === 'available_unit' && validUnitNumber(option.unit_number)){
+        const key = String(option.unit_number).trim().toLowerCase();
+        const current = units.get(key);
+        if(!current || quality(option) > quality(current)) units.set(key, option);
+      } else if(option.source_kind === 'floor_plan'){
+        const key = [
+          String(option.floor_plan_name || '').trim().toLowerCase(),
+          option.bedrooms,
+          option.bathrooms,
+          option.square_footage,
+          (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
+            ? ''
+            : option.starting_rent,
+        ].join('|');
+        if(!plans.has(key)) plans.set(key, option);
+      }
+    });
+    return {
+      buildingName: listing.building_name || sourceData.building_name || null,
+      priceRange: listing.price_range || sourceData.price_range || null,
+      isMultiUnit: listing.is_multi_unit === true || sourceData.is_multi_unit === true || units.size > 0 || plans.size > 0,
+      totalUnits: listing.total_units ?? sourceData.total_units ?? null,
+      floors: listing.floors ?? sourceData.floors ?? null,
+      units: Array.from(units.values()),
+      floorPlans: Array.from(plans.values()),
+    };
+  }
+  function renderInventory(listing){
+    const inventory = inventoryData(listing);
+    if(!inventory.isMultiUnit && !inventory.buildingName && inventory.totalUnits == null && inventory.floors == null) return '';
+    const facts = [];
+    const totalUnits = Number(inventory.totalUnits);
+    const floors = Number(inventory.floors);
+    facts.push(Number.isFinite(totalUnits) && totalUnits > 0 ? `${S.esc(totalUnits.toLocaleString())} total units` : 'Total units not reported by source');
+    facts.push(`${inventory.units.length} available units found`);
+    facts.push(`${inventory.floorPlans.length} floor plans found`);
+    facts.push(Number.isFinite(floors) && floors > 0 ? `${S.esc(floors.toLocaleString())} building ${floors === 1 ? 'story' : 'stories'}` : 'Building stories not reported');
+    if(inventory.priceRange) facts.push(`Source price range: ${S.esc(inventory.priceRange)}`);
+    const options = inventory.units.map(option => ({ option, label: `Unit ${option.unit_number}` }))
+      .concat(inventory.floorPlans.map((option, index) => ({
+        option,
+        label: option.floor_plan_name || `Floor plan ${index + 1}`,
+      })));
+    const rows = options.slice(0, 40).map(({option, label}) => {
+      const details = [];
+      if(option.bedrooms === 0) details.push('Studio');
+      else if(option.bedrooms != null) details.push(`${S.esc(option.bedrooms)} bd`);
+      if(option.bathrooms != null) details.push(`${S.esc(option.bathrooms)} ba`);
+      if(option.square_footage != null) details.push(`${S.esc(Number(option.square_footage).toLocaleString())} sqft`);
+      const rent = option.monthly_rent != null
+        ? `$${Number(option.monthly_rent).toLocaleString()}/mo`
+        : option.starting_rent != null ? `From $${Number(option.starting_rent).toLocaleString()}/mo` : '';
+      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border)"><span><strong>${S.esc(label)}</strong>${details.length ? ` · ${details.join(' · ')}` : ''}</span>${rent ? `<strong>${S.esc(rent)}</strong>` : ''}</div>`;
+    }).join('');
+    const heading = inventory.buildingName
+      ? `<div style="margin-bottom:6px;font-weight:600">${S.esc(inventory.buildingName)}</div>`
+      : '';
+    return `<div class="pl-section">
+      <div class="pl-section-title">Building &amp; unit inventory</div>
+      ${heading}
+      <div class="pl-photo-count">${facts.join(' · ')}</div>
+      ${rows ? `<div style="margin-top:8px">${rows}</div>` : ''}
+      ${options.length > 40 ? `<div class="pl-photo-count" style="margin-top:6px">${options.length - 40} additional options are stored in the source data.</div>` : ''}
+    </div>`;
+  }
   function thumbUrl(l){
     const imgs = imageUrls(l.original_image_urls);
     return (imgs && imgs.length) ? imgs[0] : null;
@@ -665,7 +751,7 @@
     const editedFields = parseJSON(l.edited_fields) || [];
     const enriched = isEnriched(l);
     const srcType  = importSource(l);
-    const photoCount = imageUrls(l.original_image_urls).length;
+    const photoCount = sourcePhotoCount(l);
 
     return `
     <div class="pl-panel-hd">
@@ -691,7 +777,9 @@
 
     <div class="pl-panel-body">
 
-      <!-- Photos -->
+    ${renderInventory(l)}
+
+    <!-- Photos -->
       <div class="pl-section">
         <div class="pl-section-title">Photos from source ${photoCount ? `<span style="font-weight:400;color:var(--muted-2)">(${photoCount})</span>` : ''}</div>
         <div id="panel-photos-container">${photoCount ? '<span style="font-size:.75rem;color:var(--muted-2)">Loading…</span>' : ''}</div>

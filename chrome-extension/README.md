@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v42.0.0)
+# Choice Properties — Universal Chrome Extension (v43.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -30,10 +30,11 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Unit-option and video/tour/floor-plan counts for multifamily communities.
   - Deposit and application-fee defaults; pet policies are not imported or displayed.
 - **Zillow Community Listings**:
-  - Preserves each available-unit row's unit number, bed/bath count, square footage, and listed rent in source order.
+  - Preserves valid, distinct available-unit rows with unit number, bed/bath count, square footage, and listed rent; prose labels are rejected.
   - Captures floor-plan starting prices separately from unit-specific rents.
   - Leaves community-level rent, beds, baths, and square footage blank rather than copying the first unit's facts.
-  - Shows extracted unit and floor-plan facts and prices in the widget's details panel.
+  - Shows separate available-unit, floor-plan, total-building-unit, story, source price-range, and deduplicated-photo counts in the widget and pipeline review panel.
+  - Preserves the community name, multi-unit flag, reported unit count, building stories, and source price range in the pipeline record.
   - Stores the unit breakdown in the pipeline record's existing `original_data` field; no pipeline-schema changes are required.
 - **Zillow Media**: Collects ordered photo URLs, video sources/posters, 3D tours, and floor-plan links from structured and rendered page content.
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.

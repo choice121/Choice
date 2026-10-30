@@ -268,6 +268,9 @@ export interface PipelineRecordInput {
   floors?: number | null;
   garage_spaces?: number | null;
   total_units?: number | null;
+  building_name?: string | null;
+  is_multi_unit?: boolean | null;
+  price_range?: string | null;
   has_basement?: boolean | null;
   has_central_air?: boolean | null;
   virtual_tour_url?: string | null;
@@ -465,6 +468,11 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
+    building_name: safeStr(body.building_name),
+    is_multi_unit: safeBool(body.is_multi_unit),
+    price_range: safeStr(body.price_range),
+    floors: safeInt(body.floors),
+    total_units: safeInt(body.total_units),
     media:       mediaItems,
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
@@ -504,6 +512,9 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     floors:               safeInt(body.floors),
     garage_spaces:        finalGarageSpaces,
     total_units:          safeInt(body.total_units),
+    building_name:        safeStr(body.building_name),
+    is_multi_unit:        safeBool(body.is_multi_unit),
+    price_range:          safeStr(body.price_range),
     has_basement:         finalHasBasement,
     has_central_air:      finalHasCentralAir,
     virtual_tour_url:     safeStr(body.virtual_tour_url),

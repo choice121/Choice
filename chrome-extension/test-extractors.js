@@ -655,6 +655,50 @@ t('Zillow community parser reads nested unit inventory beside the property cache
   );
   assert.ok(!JSON.stringify(payload.unit_options).includes('availabilityDate'));
 });
+t('Zillow community inventory rejects prose labels, merges duplicate units, and preserves building counts', () => {
+  const property = {
+    zpid: 'Community123',
+    name: 'Hunters Hill',
+    address: { streetAddress: '18081 Midway Rd', city: 'Dallas', state: 'TX', zipcode: '75287' },
+    homeType: 'APARTMENT',
+    unitCount: 400,
+    stories: 4,
+    priceRange: { min: 1200, max: 1800 },
+    units: [
+      { unitNumber: 'to', bedrooms: 2, monthlyRent: 75 },
+      { unitNumber: 'for', monthlyRent: 34 },
+      { unitNumber: 'types', monthlyRent: 1390 },
+      { unitNumber: 'in', monthlyRent: 1375 },
+      { unitNumber: '1727', bedrooms: 1, bathrooms: 1, monthlyRent: 1111 },
+      { unitNumber: '1727', bedrooms: 1, bathrooms: 1, squareFootage: 600, monthlyRent: 914 },
+    ],
+    floorPlans: [{ startingRent: 75 }],
+    responsivePhotos: [
+      { url: 'https://photos.zillowstatic.com/fp/abcdef0123456789-uncropped_scaled_within_1536_1152.jpg' },
+      { url: 'https://photos.zillowstatic.com/fp/abcdef0123456789-p_h.jpg' },
+    ],
+  };
+  const communityDoc = doc(cache(property));
+  communityDoc.body = { innerText: 'Hunters Hill Apartments\nUnit to $75\nUnits from $75 to $1,500\nUnit 1727\n1 bd\n1 ba\n600 sqft\n$914' };
+
+  const payload = api.extract('https://www.zillow.com/apartments/dallas-tx/hunters-hill/Community123/', communityDoc);
+  assert.ok(payload);
+  assert.strictEqual(payload.title, '18081 Midway Rd, Dallas, TX 75287');
+  assert.strictEqual(payload.building_name, 'Hunters Hill');
+  assert.strictEqual(payload.is_multi_unit, true);
+  assert.strictEqual(payload.total_units, 400);
+  assert.strictEqual(payload.floors, 4);
+  assert.strictEqual(payload.price_range, '$1,200 – $1,800');
+  assert.deepStrictEqual(
+    payload.unit_options.map(unit => [unit.unit_number, unit.monthly_rent, unit.square_footage]),
+    [['1727', 914, 600]]
+  );
+  assert.strictEqual(JSON.parse(payload.original_image_urls).length, 1);
+  const report = api.diagnose('https://www.zillow.com/apartments/dallas-tx/hunters-hill/Community123/', communityDoc);
+  assert.strictEqual(report.facts.building_name, 'Hunters Hill');
+  assert.strictEqual(report.facts.is_multi_unit, true);
+  assert.strictEqual(report.facts.price_range, '$1,200 – $1,800');
+});
 t('diagnostics report extracted listing facts and page shape without raw descriptions or query data', () => {
   const d = doc(cache({
     zpid: 12345,

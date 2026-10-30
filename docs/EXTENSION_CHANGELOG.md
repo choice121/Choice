@@ -4,6 +4,17 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v43.0.0] - 2026-10-30
+### Correct Zillow Community Inventory
+- **Reject prose as unit identifiers**: Accept apartment unit numbers only when they match a unit-label shape, preventing words like “to”, “for”, and “types” from becoming fake units or rents.
+- **Deduplicate inventory**: Merge repeated unit and floor-plan records by identity and keep the most complete available facts.
+- **Preserve building metadata**: Carry the community name, multi-unit flag, reported unit count, building stories, and source price range into the pipeline record.
+- **Review inventory clearly**: Show separate available-unit, floor-plan, total-building-unit, story, source price-range, and deduplicated-photo counts in the extension and pipeline detail panel.
+- **Regression coverage**: Verify malformed unit rejection, duplicate resolution, source photo deduplication, and pipeline metadata persistence.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v43.0.0.
+
+---
+
 ## [v42.0.0] - 2026-10-30
 ### Harden Zillow JSON-LD Fallback
 - **Preserve primary extraction**: Treat Zillow JSON-LD as an optional fallback so malformed structured data cannot discard valid NextData or DOM listing results.

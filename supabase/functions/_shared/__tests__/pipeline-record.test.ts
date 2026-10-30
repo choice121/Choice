@@ -94,3 +94,33 @@ Deno.test('buildPipelineRecord preserves structured media entries from source im
   assertEquals(record.virtual_tour_url, 'https://my.matterport.com/show/?m=LEGACY123');
   assertEquals(record.total_bathrooms, 2.5);
 });
+
+Deno.test('buildPipelineRecord persists building identity and reported unit and story counts', () => {
+  const record = buildPipelineRecord({
+    source: 'zillow',
+    source_listing_id: 'COMMUNITY-123',
+    title: '18081 Midway Rd, Dallas, TX 75287',
+    address: '18081 Midway Rd',
+    city: 'Dallas',
+    state: 'TX',
+    zip: '75287',
+    property_type: 'APARTMENT',
+    building_name: 'Hunters Hill',
+    is_multi_unit: true,
+    price_range: '$1,200 - $1,800',
+    total_units: 400,
+    floors: 4,
+  });
+
+  assertEquals(record.building_name, 'Hunters Hill');
+  assertEquals(record.is_multi_unit, true);
+  assertEquals(record.price_range, '$1,200 - $1,800');
+  assertEquals(record.total_units, 400);
+  assertEquals(record.floors, 4);
+  const originalData = JSON.parse(record.original_data as string);
+  assertEquals(originalData.building_name, 'Hunters Hill');
+  assertEquals(originalData.is_multi_unit, true);
+  assertEquals(originalData.price_range, '$1,200 - $1,800');
+  assertEquals(originalData.total_units, 400);
+  assertEquals(originalData.floors, 4);
+});
