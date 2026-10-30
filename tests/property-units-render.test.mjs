@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { renderPropertyUnitsHtml } from '../js/property-units.mjs';
+import { renderPropertyUnitsHtml, summarizePropertyUnits } from '../js/property-units.mjs';
 
 const units = [{
   unit_number: null,
@@ -23,8 +23,8 @@ const html = renderPropertyUnitsHtml(units);
 assert.match(html, /1 bedroom layout/);
 assert.doesNotMatch(html, /Unit null|Unit undefined/);
 assert.match(html, /\$719/);
-assert.match(html, /1 bd/);
-assert.match(html, /1 ba/);
+assert.match(html, /1 bed/);
+assert.match(html, /1 bath/);
 assert.match(html, /447 sqft/);
 assert.match(html, /https:\/\/images\.example\.test\/unit-a\.jpg/);
 assert.doesNotMatch(html, /javascript:|available|security_deposit|2026-11-01/);
@@ -44,5 +44,44 @@ assert.match(groupedHtml, /First floor/);
 assert.match(groupedHtml, /Second floor/);
 assert.match(groupedHtml, /Unit A1/);
 assert.doesNotMatch(groupedHtml, /available/);
+
+const plans = [
+  {
+    unit_number: null,
+    floor_plan_name: 'A1',
+    bedrooms: 1,
+    bathrooms: 1,
+    square_footage: 616,
+    monthly_rent: 1070,
+    floor_plan_image_url: 'https://images.example.test/a1-plan.png',
+    amenities: ['Washer', 'Pet-friendly'],
+    available_date: '2026-11-01',
+  },
+  {
+    unit_number: null,
+    floor_plan_name: 'B2',
+    bedrooms: 2,
+    bathrooms: 2,
+    square_footage: 879,
+    monthly_rent: 1315,
+    floor_plan_image_url: 'javascript:alert(1)',
+    amenities: ['Central air'],
+  },
+];
+const planHtml = renderPropertyUnitsHtml(plans);
+const summary = summarizePropertyUnits(plans);
+assert.equal(summary.isCommunity, true);
+assert.equal(summary.count, 2);
+assert.equal(summary.minRent, 1070);
+assert.equal(summary.maxRent, 1315);
+assert.equal(summary.bedrooms, '1–2 beds');
+assert.equal(summary.bathrooms, '1–2 baths');
+assert.equal(summary.squareFootage, '616–879 sqft');
+assert.match(planHtml, /A1/);
+assert.match(planHtml, /B2/);
+assert.match(planHtml, /Compare this layout/);
+assert.match(planHtml, /Search layouts/);
+assert.match(planHtml, /https:\/\/images\.example\.test\/a1-plan\.png/);
+assert.doesNotMatch(planHtml, /javascript:|Pet-friendly|available_date|2026-11-01/);
 
 console.log('Property unit renderer tests passed.');

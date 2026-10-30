@@ -894,7 +894,7 @@ async function loadFeaturedListings() {
     }
     const { data: props, error } = await client
       .from('properties')
-      .select('*, landlords(contact_name, business_name, avatar_url, verified), property_photos(url, file_id, display_order)')
+      .select('*, landlords(contact_name, business_name, avatar_url, verified), property_photos(url, file_id, display_order), property_units(id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(6);
