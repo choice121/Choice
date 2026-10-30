@@ -58,7 +58,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 2. Unzip to a local folder.
 3. Open Chrome and navigate to `chrome://extensions`.
 4. Enable **Developer mode** (top-right toggle).
-5. Click **Load unpacked** and select the unzipped `chrome-extension` folder.
+5. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
 
 ---
 
