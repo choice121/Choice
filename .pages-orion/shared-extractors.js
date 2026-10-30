@@ -151,6 +151,53 @@
     return photos.slice(0, 50);
   }
 
+  function collectStructuredMedia(prop, virtualTourUrl) {
+    const media = [];
+    const seen = new Set();
+    const add = (value, hint) => {
+      const item = typeof value === 'string' ? { url: value } : value;
+      if (!item || typeof item !== 'object') return;
+      const url = item.url || item.href || item.src || item.embedUrl || item.embed_url;
+      if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+
+      const descriptor = [item.kind, item.type, item.mediaType, item.media_type, item.category, item.title, item.name, hint]
+        .filter(Boolean).join(' ').toLowerCase();
+      let kind = null;
+      if (/floor[\s_-]*plan|floorplan/.test(descriptor)) kind = 'floor_plan';
+      else if (/video|walkthrough|youtube|vimeo|\.mp4(?:\?|$)|\.webm(?:\?|$)|\.mov(?:\?|$)/i.test(descriptor + ' ' + url)) kind = 'video';
+      else if (/virtual[\s_-]*tour|3d[\s_-]*tour|matterport|insidemaps|view-3d|view-imx|tour3d/i.test(descriptor + ' ' + url)) kind = 'virtual_tour';
+      if (!kind) return;
+
+      const key = `${kind}::${url.trim().toLowerCase()}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      media.push({
+        kind,
+        title: item.title || item.name || (kind === 'floor_plan' ? 'Floor plan' : kind === 'video' ? 'Video walkthrough' : '3D Virtual Tour'),
+        floor_label: item.floor_label || item.floorLabel || item.floor || null,
+        provider: item.provider || item.source || null,
+        url: url.trim(),
+        poster_url: item.poster_url || item.posterUrl || item.thumbnailUrl || null,
+        display_order: Number.isInteger(item.display_order) ? item.display_order : media.length,
+        metadata: item.metadata || {},
+      });
+    };
+
+    const mediaFields = [
+      ['floorPlans', 'floor plan'], ['floor_plans', 'floor plan'], ['floorPlanImages', 'floor plan'],
+      ['videos', 'video'], ['propertyVideos', 'video'], ['virtualTours', 'virtual tour'],
+      ['virtual_tours', 'virtual tour'], ['tours', 'tour'], ['media', 'media'],
+    ];
+    mediaFields.forEach(([field, hint]) => {
+      const value = prop && prop[field];
+      if (Array.isArray(value)) value.forEach(item => add(item, hint));
+      else if (value) add(value, hint);
+    });
+
+    add(virtualTourUrl, 'virtual tour');
+    return media;
+  }
+
   function parseDate(v) {
     if (!v) return null;
     const s = String(v).trim();
@@ -380,6 +427,7 @@
       move_in_special: null, parking: null, amenities: null, appliances: null, flooring: null,
       utilities_included: null, heating_type: null, cooling_type: null, laundry_type: null,
       virtual_tour_url: null, has_basement: null, has_central_air: null,
+      media: [],
       original_image_urls: '[]', agent_name: null, broker_name: null,
       _import: 'browser-extension-v5.0-resilient'
     }, overrides);
@@ -661,6 +709,7 @@
       cooling_type: coolingType,
       laundry_type: laundryType,
       virtual_tour_url: vtour,
+      media: collectStructuredMedia(prop, vtour),
       has_basement: hasBasement,
       has_central_air: hasCentralAir,
       original_image_urls: JSON.stringify(collectPhotos(prop)),

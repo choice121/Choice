@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v31.0.4
+// Choice Properties — Live Content Script v33.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '31.0.4-live';
+  var VERSION  = '33.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1002,6 +1002,52 @@
 
   function dedupePhotoUrls(urls) {
     var seen = new Set();
+
+  function normalizeMediaArray(items) {
+    if (!Array.isArray(items)) return [];
+    var normalized = [];
+    var seen = new Set();
+
+    items.forEach(function (item) {
+      if (!item || typeof item !== 'object') return;
+      var rawUrl = typeof item.url === 'string' ? item.url.trim() : (typeof item.href === 'string' ? item.href.trim() : (typeof item.src === 'string' ? item.src.trim() : ''));
+      if (!rawUrl) return;
+
+      var kind = String(item.kind || item.type || '').trim().toLowerCase();
+      if (!kind) {
+        if (/matterport|virtual|tour|3d|view-3d|imx/i.test(rawUrl)) kind = 'virtual_tour';
+        else if (/youtube|vimeo|mp4|webm|mov|video/i.test(rawUrl)) kind = 'video';
+        else if (/floor|plan/i.test((item.title || item.label || ''))) kind = 'floor_plan';
+        else kind = 'photo';
+      }
+
+      if (kind === '3d_tour' || kind === 'tour_3d' || kind === 'tour3d') kind = 'tour_3d';
+      if (kind === 'virtual-tour' || kind === 'virtual_tour') kind = 'virtual_tour';
+      if (kind === 'floorplan' || kind === 'floor_plan') kind = 'floor_plan';
+      if (kind === 'video_walkthrough' || kind === 'walkthrough_video') kind = 'video';
+
+      var key = kind + '::' + rawUrl.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      normalized.push({
+        kind: kind,
+        title: item.title || item.name || (kind === 'video' ? 'Video walkthrough' : kind === 'floor_plan' ? 'Floor plan' : kind === 'tour_3d' ? '3D Virtual Tour' : 'Media'),
+        floor_label: item.floor_label || item.floorLabel || null,
+        provider: item.provider || item.source_provider || null,
+        url: rawUrl,
+        file_id: item.file_id || item.fileId || null,
+        poster_url: item.poster_url || item.posterUrl || null,
+        display_order: Number.isFinite(Number(item.display_order)) ? Number(item.display_order) : normalized.length,
+        is_hero: !!(item.is_hero || item.isHero),
+        width: item.width != null ? Number(item.width) : null,
+        height: item.height != null ? Number(item.height) : null,
+        metadata: item.metadata || {}
+      });
+    });
+
+    return normalized;
+  }
     var unique = [];
     if (!Array.isArray(urls)) return unique;
     urls.forEach(function (raw) {
@@ -1646,6 +1692,23 @@
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
+      var mediaItems = normalizeMediaArray(extracted.media);
+      if (!mediaItems.length && extracted.virtual_tour_url) {
+        mediaItems = [{
+          kind: 'virtual_tour',
+          title: '3D Virtual Tour',
+          floor_label: null,
+          provider: null,
+          url: extracted.virtual_tour_url,
+          file_id: null,
+          poster_url: null,
+          display_order: 0,
+          is_hero: false,
+          width: null,
+          height: null,
+          metadata: {}
+        }];
+      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1694,13 +1757,14 @@
         county: extracted.county,
         location_context: extracted.location_context,
         virtual_tour_url: extracted.virtual_tour_url,
+        media: mediaItems,
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v31.0.4-live',
+        _import: 'browser-extension-v33.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

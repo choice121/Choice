@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v33.0.0] - 2026-10-29
+### Structured Property Media Import
+- **Zillow Media Extraction**: Capture structured floor plans, walkthrough videos, and virtual tours from supported listing fields, preserving floor labels, providers, poster URLs, and display order.
+- **Pipeline Media Preservation**: Carry normalized media arrays through browser imports while retaining the legacy `virtual_tour_url` field for existing listings.
+- **Public Media Publishing**: Publish imported media items into `public.property_media` alongside the existing photo gallery.
+- **Regression Coverage**: Added a Zillow fixture for floor plans, videos, and 3D tours; Chromium and Orion package tests pass.
+- **Synchronized Packages**: Rebuilt Chromium and Orion extension packages as v33.0.0.
+
+---
+
 ## [v31.0.4] - 2026-10-26
 ### Zillow Apartment Building Extraction Recovery
 - **Preserve Rendered Listing Data**: Zillow NextData objects with empty address, rent, or photo fields no longer erase more complete values extracted from the visible page.

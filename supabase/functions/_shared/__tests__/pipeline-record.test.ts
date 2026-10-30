@@ -65,3 +65,30 @@ Deno.test('buildPipelineRecord omits prohibited listing facts and preserves unkn
   assertEquals(record.data_quality_score, qualityScore(record));
   assertEquals(JSON.parse(record.missing_fields as string).includes('available_date'), false);
 });
+
+Deno.test('buildPipelineRecord preserves structured media entries from source imports', () => {
+  const record = buildPipelineRecord({
+    source: 'zillow',
+    source_listing_id: 'ZPID-999',
+    address: '999 Maple Ave',
+    city: 'Tulsa',
+    state: 'OK',
+    zip: '74103',
+    monthly_rent: 2100,
+    bedrooms: 3,
+    bathrooms: 2.5,
+    virtual_tour_url: 'https://my.matterport.com/show/?m=LEGACY123',
+    media: [
+      { kind: 'floor_plan', title: 'Main Floor Plan', floor_label: 'Main Floor', url: 'https://cdn.example.com/main-floor.jpg' },
+      { kind: 'video', title: 'Walkthrough Video', url: 'https://cdn.example.com/walkthrough.mp4', provider: 'youtube' },
+      { kind: 'virtual_tour', title: '3D Tour', floor_label: '2nd Floor', url: 'https://my.matterport.com/show/?m=LEGACY123' },
+    ],
+  });
+
+  const originalData = JSON.parse(record.original_data as string);
+  assertEquals(Array.isArray(originalData.media), true);
+  assertEquals(originalData.media.length >= 2, true);
+  assertEquals(originalData.media.some((item: any) => item.kind === 'floor_plan'), true);
+  assertEquals(originalData.media.some((item: any) => item.kind === 'virtual_tour'), true);
+  assertEquals(record.virtual_tour_url, 'https://my.matterport.com/show/?m=LEGACY123');
+});
