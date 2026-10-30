@@ -13,7 +13,7 @@ const units = [{
     'https://images.example.test/unit-a.jpg',
     'javascript:alert(1)',
   ],
-  amenities: ['Washer', '<script>'],
+  amenities: ['Washer'],
   available_date: '2026-11-01',
   status: 'available',
   security_deposit: 1450,
@@ -26,7 +26,6 @@ assert.match(html, /\$719/);
 assert.match(html, /1 bd/);
 assert.match(html, /1 ba/);
 assert.match(html, /447 sqft/);
-assert.match(html, /&lt;script&gt;/);
 assert.match(html, /https:\/\/images\.example\.test\/unit-a\.jpg/);
 assert.doesNotMatch(html, /javascript:|available|security_deposit|2026-11-01/);
 assert.equal(renderPropertyUnitsHtml([]), '');

@@ -39,13 +39,23 @@ function secureUrl(value: unknown, optional = false): string | null | undefined 
   }
 }
 
+function stripHtml(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function normalizeStringList(value: unknown, maxItems: number, maxLength: number): string[] | undefined {
   if (value == null) return [];
   if (!Array.isArray(value) || value.length > maxItems) return undefined;
   const result: string[] = [];
   for (const raw of value) {
     if (typeof raw !== "string") return undefined;
-    const item = raw.trim().slice(0, maxLength);
+    const item = stripHtml(raw.trim().slice(0, maxLength));
     if (!item) continue;
     result.push(item);
   }
