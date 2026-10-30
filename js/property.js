@@ -6,6 +6,7 @@
 // ============================================================
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
+import { renderPropertyUnitsHtml } from '/js/property-units.mjs';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -199,6 +200,16 @@ async function loadProperty(id) {
       } catch (_) {
         prop.property_media = [];
       }
+      try {
+        const { data: unitData } = await client
+          .from('property_units')
+          .select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities')
+          .eq('property_id', cleanId)
+          .order('unit_number', { ascending: true });
+        prop.property_units = unitData || [];
+      } catch (_) {
+        prop.property_units = [];
+      }
     }
   } catch (e) {
     if (shareToken) {
@@ -212,13 +223,15 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, mediaRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, unitsRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
           client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          client.from('property_units').select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities').eq('property_id', cleanId).order('unit_number', { ascending: true }),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
         prop.property_media = mediaRes.data || [];
+        prop.property_units = unitsRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -747,6 +760,7 @@ function renderProperty(p) {
 
   // 3. Multi-Floor Media Section (Floor Plans, Videos, Virtual Tours)
   renderMultiFloorMedia(p);
+  renderPropertyUnits(p);
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
@@ -1078,6 +1092,21 @@ function getPropertyTours(p) {
   }
 
   return tours;
+}
+
+function renderPropertyUnits(p) {
+  const section = document.getElementById('unitLayoutsSection');
+  const grid = document.getElementById('unitLayoutsGrid');
+  if (!section || !grid) return;
+
+  const units = Array.isArray(p?.property_units) ? p.property_units : [];
+  const html = renderPropertyUnitsHtml(units);
+  if (!html) {
+    section.style.display = 'none';
+    return;
+  }
+  grid.innerHTML = html;
+  section.style.display = 'block';
 }
 
 // ── Multi-Floor Media Section Rendering ──────────────────────────────────
