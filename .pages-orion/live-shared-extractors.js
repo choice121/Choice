@@ -323,11 +323,25 @@
   }
 
   function getZillowRentBasis(doc) {
-    const text = doc && doc.body && typeof doc.body.innerText === 'string'
-      ? doc.body.innerText
-      : '';
-    if (/\btotal\s+monthly\s+(?:leasing\s+)?price\b/i.test(text)) return 'total_monthly_price';
-    if (/\bbase\s+rent\b/i.test(text)) return 'base_rent';
+    const headers = doc && typeof doc.querySelectorAll === 'function'
+      ? Array.from(doc.querySelectorAll('th, [role="columnheader"]'))
+        .map(header => String(header.innerText || header.textContent || '').trim())
+      : [];
+    if (headers.length) {
+      const hasTotalMonthlyPrice = headers.some(text => /\btotal\s+monthly\s+(?:leasing\s+)?price\b/i.test(text));
+      const hasBaseRent = headers.some(text => /\bbase\s+rent\b/i.test(text));
+      if (hasTotalMonthlyPrice !== hasBaseRent) {
+        return hasTotalMonthlyPrice ? 'total_monthly_price' : 'base_rent';
+      }
+      return null;
+    }
+
+    const text = doc && doc.body && typeof doc.body.innerText === 'string' ? doc.body.innerText : '';
+    const hasTotalMonthlyPrice = /\btotal\s+monthly\s+(?:leasing\s+)?price\b/i.test(text);
+    const hasBaseRent = /\bbase\s+rent\b/i.test(text);
+    if (hasTotalMonthlyPrice !== hasBaseRent) {
+      return hasTotalMonthlyPrice ? 'total_monthly_price' : 'base_rent';
+    }
     return null;
   }
 

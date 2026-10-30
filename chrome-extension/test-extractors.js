@@ -702,12 +702,13 @@ t('Zillow community inventory rejects prose labels, merges duplicate units, and 
 t('Zillow community unit prices retain their explicit price basis', () => {
   const url = 'https://www.zillow.com/apartments/dallas-tx/example-community/Community456/';
   const cases = [
-    ['Total monthly price', 'total_monthly_price'],
-    ['Base rent', 'base_rent'],
-    ['Pricing & availability', null],
+    ['Total monthly price', 'Base rent fees may apply', 'total_monthly_price'],
+    ['Base rent', 'Total monthly leasing prices are also shown in help text', 'base_rent'],
+    [null, 'Pricing & availability', null],
+    [['Base rent', 'Total monthly price'], 'Pricing & availability', null],
   ];
 
-  cases.forEach(([label, expected]) => {
+  cases.forEach(([header, bodyText, expected]) => {
     const communityDoc = doc(cache({
       zpid: 'Community456',
       name: 'Example Community',
@@ -715,7 +716,10 @@ t('Zillow community unit prices retain their explicit price basis', () => {
       homeType: 'APARTMENT',
       units: [{ unitNumber: 'A101', bedrooms: 1, bathrooms: 1, squareFootage: 650, monthlyRent: 1450 }],
     }));
-    communityDoc.body = { innerText: `Example Community\nUnit A101\n1 bd\n1 ba\n650 sqft\n$1,450\n${label}` };
+    communityDoc.body = { innerText: `Example Community\nUnit A101\n1 bd\n1 ba\n650 sqft\n$1,450\n${bodyText}` };
+    communityDoc.querySelectorAll = selector => selector === 'th, [role="columnheader"]'
+      ? (Array.isArray(header) ? header : header ? [header] : []).map(innerText => ({ innerText }))
+      : [];
 
     const payload = api.extract(url, communityDoc);
     assert.ok(payload);

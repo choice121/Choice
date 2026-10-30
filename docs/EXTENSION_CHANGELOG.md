@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v44.0.1] - 2026-10-30
+### Use Zillow Pricing Table Labels
+- **Avoid page-wide false matches**: Read rent basis from pricing-table column headings and leave conflicting or absent labels unknown.
+- **Actionable diagnostics**: Preserve rent-basis labels in safe extension diagnostic facts and unit summaries.
+- **Regression coverage**: Verify the visible table heading wins over unrelated page text and ambiguous labels remain unknown.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.1.
+
+---
+
 ## [v44.0.0] - 2026-10-30
 ### Preserve Zillow Unit Price Basis
 - **Avoid rent ambiguity**: Record whether Zillow labels unit prices as base rent or total monthly price; leave unclear labels unknown.

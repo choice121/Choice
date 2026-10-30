@@ -29,6 +29,7 @@ const FACT_FIELDS = new Set([
   "building_name",
   "is_multi_unit",
   "price_range",
+  "rent_basis",
   "monthly_rent",
   "community_starting_rent",
   "bedrooms",
@@ -70,6 +71,7 @@ const UNIT_FIELDS = new Set([
   "square_footage",
   "monthly_rent",
   "starting_rent",
+  "rent_basis",
   "source_order",
 ]);
 const MEDIA_FIELDS = new Set([
