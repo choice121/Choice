@@ -408,6 +408,51 @@
     }
   }
 
+  function mergeZillowFloorPlanFragments(source) {
+    const options = source.slice();
+    const groupKey = option => [option.bedrooms, option.bathrooms, option.half_bathrooms].join('|');
+    const groups = new Map();
+    options.forEach(option => {
+      if (!option || option.source_kind !== 'floor_plan' || option.bedrooms == null || option.bathrooms == null) return;
+      const key = groupKey(option);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(option);
+    });
+
+    const replacements = new Map();
+    const removed = new Set();
+    groups.forEach(group => {
+      const namedPrice = group.filter(option =>
+        option.floor_plan_name && option.starting_rent != null && option.square_footage == null
+      ).sort((a, b) => a.source_order - b.source_order);
+      const sizeOnly = group.filter(option =>
+        !option.floor_plan_name && option.starting_rent == null && option.square_footage != null
+      ).sort((a, b) => a.source_order - b.source_order);
+
+      if (namedPrice.length && namedPrice.length === sizeOnly.length) {
+        namedPrice.forEach((plan, index) => {
+          const size = sizeOnly[index];
+          replacements.set(plan, Object.assign({}, plan, {
+            square_footage: size.square_footage,
+            source_order: Math.min(plan.source_order, size.source_order),
+          }));
+          removed.add(size);
+        });
+      }
+
+      const hasNamedPlans = group.some(option => option.floor_plan_name);
+      if (hasNamedPlans) {
+        group.forEach(option => {
+          if (!option.floor_plan_name && option.square_footage == null && option.starting_rent == null) {
+            removed.add(option);
+          }
+        });
+      }
+    });
+
+    return options.filter(option => !removed.has(option)).map(option => replacements.get(option) || option);
+  }
+
   function mergeZillowUnitOptions(...sources) {
     const byKey = new Map();
     sources.forEach(source => {
@@ -416,7 +461,7 @@
         addZillowUnitOption(byKey, option);
       });
     });
-    return Array.from(byKey.values()).map((option, index) =>
+    return mergeZillowFloorPlanFragments(Array.from(byKey.values())).map((option, index) =>
       Object.assign({}, option, { source_order: index })
     );
   }
@@ -586,7 +631,7 @@
         add(parseZillowUnitText(row.text, optionCount(), 'floor_plan', null, floorPlanName));
       }
     });
-    return Array.from(options.values()).map((option, index) =>
+    return mergeZillowFloorPlanFragments(Array.from(options.values())).map((option, index) =>
       Object.assign({}, option, { source_order: index })
     );
   }
