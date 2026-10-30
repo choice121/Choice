@@ -4,7 +4,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const unitColumns = "id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities";
 
 type UnitPayload = {
-  unit_number: string;
+  unit_number: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
   square_footage: number | null;
@@ -53,18 +53,20 @@ function normalizeStringList(value: unknown, maxItems: number, maxLength: number
 }
 
 function normalizePayload(body: Record<string, unknown>): UnitPayload | null {
-  const unitNumber = typeof body.unit_number === "string" ? body.unit_number.trim().slice(0, 40) : "";
+  const unitNumber = typeof body.unit_number === "string" ? body.unit_number.trim().slice(0, 40) || null : null;
   const monthlyRent = optionalNumber(body.monthly_rent, 1, 100000);
   const bedrooms = optionalNumber(body.bedrooms, 0, 20);
   const bathrooms = optionalNumber(body.bathrooms, 0, 20);
   const squareFootage = optionalNumber(body.square_footage, 1, 100000);
   const floorPlanImageUrl = secureUrl(body.floor_plan_image_url, true);
+  const suppliedLayoutName = typeof body.floor_plan_name === "string" ? body.floor_plan_name.trim().slice(0, 120) || null : null;
+  const floorPlanName = suppliedLayoutName || (unitNumber ? null : bedrooms === 0 ? "Studio layout" : bedrooms != null ? `${bedrooms} bedroom layout` : squareFootage != null ? `${squareFootage} sqft layout` : null);
   const unitPhotosRaw = Array.isArray(body.unit_photos) ? body.unit_photos : [];
   const unitPhotos = unitPhotosRaw.map(url => secureUrl(url)).filter((url): url is string => typeof url === "string");
   const amenities = normalizeStringList(body.amenities, 80, 80);
 
   if (
-    !unitNumber || monthlyRent === null || monthlyRent === undefined ||
+    (!unitNumber && !floorPlanName) || monthlyRent === null || monthlyRent === undefined ||
     bedrooms === undefined || bathrooms === undefined || squareFootage === undefined ||
     floorPlanImageUrl === undefined || unitPhotos.length !== unitPhotosRaw.length || !amenities
   ) return null;
@@ -75,7 +77,7 @@ function normalizePayload(body: Record<string, unknown>): UnitPayload | null {
     bathrooms,
     square_footage: squareFootage,
     monthly_rent: monthlyRent,
-    floor_plan_name: typeof body.floor_plan_name === "string" ? body.floor_plan_name.trim().slice(0, 120) || null : null,
+    floor_plan_name: floorPlanName,
     floor_plan_image_url: floorPlanImageUrl,
     unit_photos: unitPhotos,
     amenities,
