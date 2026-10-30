@@ -44,11 +44,24 @@ function isZillowListingUrl(value) {
 function normalizeListing(item) {
   if (!item || item.listingStatus !== 'forRent') return null;
   const rent = Number(item.listingPrice?.amount);
-  if (!Number.isFinite(rent) || rent <= 0) return null;
   const address = item.listingAddress || {};
   if (!ZIP_CODES.includes(String(address.zipCode)) || address.state !== 'TX') return null;
   const propertyUrl = typeof item.propertyUrl === 'string' ? item.propertyUrl : '';
   if (!isZillowListingUrl(propertyUrl)) return null;
+  const rentOptions = (Array.isArray(item.units) ? item.units : [])
+    .map((unit) => {
+      const displayedPrice = typeof unit?.price === 'string' ? unit.price : null;
+      const amountMatch = displayedPrice?.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+      const startingRent = amountMatch ? Number(amountMatch[1].replaceAll(',', '')) : null;
+      return {
+        bedroom_label: unit?.beds == null ? null : String(unit.beds),
+        starting_rent_display: displayedPrice,
+        starting_rent: Number.isFinite(startingRent) && startingRent > 0 ? startingRent : null,
+      };
+    })
+    .filter((option) => option.starting_rent != null);
+  const hasExactListingRent = Number.isFinite(rent) && rent > 0;
+  if (!hasExactListingRent && !rentOptions.length) return null;
   const photoUrls = (Array.isArray(item.listingPhotos) ? item.listingPhotos : [])
     .map((photo) => photo?.url)
     .filter((url) => {
@@ -71,14 +84,15 @@ function normalizeListing(item) {
     city: address.city || null,
     state: address.state || null,
     zip: address.zipCode || null,
-    monthly_rent: rent,
+    monthly_rent: hasExactListingRent ? rent : null,
+    rent_options: rentOptions,
     bedrooms: optionalNumber(item.bedrooms),
     bathrooms: optionalNumber(item.bathrooms),
     square_footage: optionalNumber(item.livingArea),
     property_type: item.homeType || null,
     original_image_urls: photoUrls,
     publishable: false,
-    publish_blocker: 'Search results do not include the full source description; manual review and sanitization are required.',
+    publish_blocker: 'Search results omit the full source description and complete unit details; manual review and sanitization are required.',
   };
 }
 
@@ -156,13 +170,13 @@ await writeFile('zillow-smoke-test.json', `${JSON.stringify({
   mode,
   result_limit: MAX_RESULTS,
   max_charge_usd: mode === 'scrape' ? Number(MAX_CHARGE_USD) : 0,
-  scraped_at: new Date().toISOString(),
+  retrieved_at: new Date().toISOString(),
   actor_returned_count: rawItems.length,
   listing_status_counts: statusCounts,
   diagnostics,
   listing_count: listings.length,
   listings,
   publishable: false,
-  publish_note: 'Search results do not include the full source description; manual review and sanitization are required.',
+  publish_note: 'Search results do not include the full source description or complete unit details; manual review and sanitization are required.',
 }, null, 2)}\n`);
 console.log(`Saved ${listings.length} verified rentals from ${rawItems.length} actor results for review (${mode} mode).`);
