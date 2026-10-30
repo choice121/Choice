@@ -4,6 +4,43 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v44.0.4] - 2026-10-30
+### Recover Zillow Community Floor Plans
+- **Broader card detection**: Inspect rendered semantic and class-based plan cards when Zillow does not expose floor-plan test IDs.
+- **Preserve partial plan facts**: Keep valid plan names, bedroom/bath counts, and square footage even when a starting price is absent.
+- **Focused diagnostics**: Report a bounded count of candidate plan-card nodes alongside the safely extracted plan facts.
+- **Regression coverage**: Verify Waverly-style cards retain their names, sizes, bed/bath counts, and starting rents.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.4.
+
+---
+
+## [v44.0.2] - 2026-10-30
+### Avoid Guessing Zillow Rent Basis
+- **No page-wide fallback**: When no pricing-table heading is available, leave rent basis unknown rather than matching unrelated page text.
+- **Regression coverage**: Verify body text containing conflicting rent labels cannot override a missing table heading.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.2.
+
+---
+
+## [v44.0.1] - 2026-10-30
+### Use Zillow Pricing Table Labels
+- **Avoid page-wide false matches**: Read rent basis from pricing-table column headings and leave conflicting or absent labels unknown.
+- **Actionable diagnostics**: Preserve rent-basis labels in safe extension diagnostic facts and unit summaries.
+- **Regression coverage**: Verify the visible table heading wins over unrelated page text and ambiguous labels remain unknown.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.1.
+
+---
+
+## [v44.0.0] - 2026-10-30
+### Preserve Zillow Unit Price Basis
+- **Avoid rent ambiguity**: Record whether Zillow labels unit prices as base rent or total monthly price; leave unclear labels unknown.
+- **Pipeline review**: Display each unit's captured price basis and warn when legacy imports have no basis recorded.
+- **Publishing guard**: Block community records from the single-rental publish flow instead of encouraging operators to copy one unit's facts to the building.
+- **Regression coverage**: Verify both known price labels and unknown labels are preserved in extraction and diagnostics.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.0.
+
+---
+
 ## [v43.0.0] - 2026-10-30
 ### Correct Zillow Community Inventory
 - **Reject prose as unit identifiers**: Accept apartment unit numbers only when they match a unit-label shape, preventing words like “to”, “for”, and “types” from becoming fake units or rents.

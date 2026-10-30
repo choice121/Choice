@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v43.0.0
+// Choice Properties — Universal Content Script & UI Engine v44.0.4
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '43.0.0';
+  var VERSION  = '44.0.4';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -81,13 +81,14 @@
       data.zip,
       data.monthly_rent != null ? data.monthly_rent : data.rent,
       data.community_starting_rent,
+      data.rent_basis,
       data.bedrooms != null ? data.bedrooms : data.beds,
       data.bathrooms != null ? data.bathrooms : data.baths,
       data.square_footage != null ? data.square_footage : data.sqft,
       JSON.stringify((Array.isArray(data.unit_options) ? data.unit_options : []).map(function (unit) {
         return [
           unit.unit_number, unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
-          unit.square_footage, unit.monthly_rent, unit.starting_rent
+          unit.square_footage, unit.monthly_rent, unit.starting_rent, unit.rent_basis
         ].join(':');
       })),
       JSON.stringify((Array.isArray(data.media) ? data.media : []).map(function (item) {
@@ -438,6 +439,17 @@
     var inventoryFacts = [];
     if (extracted && extracted.total_units != null) inventoryFacts.push(Number(extracted.total_units).toLocaleString() + ' total units');
     if (extracted && extracted.floors != null) inventoryFacts.push(Number(extracted.floors).toLocaleString() + ' building stor' + (Number(extracted.floors) === 1 ? 'y' : 'ies'));
+    var rentBasis = extracted && extracted.rent_basis;
+    var rentBasisLabel = rentBasis === 'total_monthly_price'
+      ? 'Total monthly price'
+      : rentBasis === 'base_rent'
+        ? 'Base rent'
+        : 'Price basis not reported; verify before use';
+    var hasInventoryPrices = inventory.units.concat(inventory.floorPlans)
+      .some(function (unit) { return unit.monthly_rent != null || unit.starting_rent != null; });
+    if (hasInventoryPrices) {
+      inventoryFacts.push('Price basis: ' + rentBasisLabel);
+    }
     if (inventoryLabels.length) bedsBaths = inventoryLabels.join(' • ');
     var allInventoryOptions = inventory.units.concat(inventory.floorPlans);
     var unitDetailsHtml = allInventoryOptions.length
@@ -455,9 +467,15 @@
             var price = unit.monthly_rent != null
               ? '$' + Number(unit.monthly_rent).toLocaleString() + '/mo'
               : (unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
+            var unitRentBasis = unit.rent_basis || rentBasis;
+            var unitRentBasisLabel = unitRentBasis === 'total_monthly_price'
+              ? 'Total monthly price'
+              : unitRentBasis === 'base_rent'
+                ? 'Base rent'
+                : 'Price basis not reported';
             return '<div class="cp-unit-option-row"><span><strong>' + escapeHtml(name) + '</strong>' +
               (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
-              '</span>' + (price ? '<strong>' + escapeHtml(price) + '</strong>' : '') + '</div>';
+              '</span>' + (price ? '<strong>' + escapeHtml(price) + '<small style="display:block;text-align:right;font-size:10px;font-weight:400">' + escapeHtml(unitRentBasisLabel) + '</small></strong>' : '') + '</div>';
           }).join('') + '</div>' +
           (allInventoryOptions.length > 12
             ? '<div class="cp-unit-options-note">' + (allInventoryOptions.length - 12) + ' more options are included when saved.</div>'
@@ -1176,6 +1194,7 @@
         building_name: extracted.building_name,
         is_multi_unit: extracted.is_multi_unit,
         price_range: extracted.price_range,
+        rent_basis: extracted.rent_basis,
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
