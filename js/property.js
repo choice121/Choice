@@ -6,7 +6,7 @@
 // ============================================================
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
-import { renderPropertyUnitsHtml } from '/js/property-units.mjs';
+import { initPropertyUnits, renderPropertyUnitsHtml, summarizePropertyUnits } from '/js/property-units.mjs';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -501,10 +501,23 @@ function renderProperty(p) {
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
   const applyURL = buildApplyURL(p, shareToken);
+  const unitSummary = summarizePropertyUnits(p.property_units);
+  const isCommunity = unitSummary.isCommunity;
+  const communityRent = unitSummary.minRent ?? (Number(p.monthly_rent) > 0 ? Number(p.monthly_rent) : null);
+  const communityPriceLabel = communityRent != null
+    ? `From $${communityRent.toLocaleString()}`
+    : 'Explore layout pricing';
+  const communitySpecs = [unitSummary.bedrooms, unitSummary.bathrooms, unitSummary.squareFootage].filter(Boolean).join(' · ');
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
-  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
+  const ogSpecs = isCommunity
+    ? communitySpecs
+    : [p.bedrooms === 0 ? 'Studio' : (p.bedrooms != null ? `${p.bedrooms} bed` : ''), p.bathrooms != null ? `${p.bathrooms} bath` : ''].filter(Boolean).join(' · ');
+  const ogPrice = isCommunity
+    ? `${communityPriceLabel}${communityRent != null ? '/mo' : ''}`
+    : p.monthly_rent != null ? `$${Number(p.monthly_rent).toLocaleString()}/mo` : 'Rent TBD';
+  const ogDesc = `${[ogSpecs, ogPrice, p.address, p.city, p.state].filter(Boolean).join(' · ')}`;
   ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
@@ -561,7 +574,7 @@ function renderProperty(p) {
       "latitude": p.lat,
       "longitude": p.lng
     } : undefined,
-    "offers": {
+    "offers": !isCommunity && p.monthly_rent != null ? {
       "@type": "Offer",
       "price": p.monthly_rent,
       "priceCurrency": "USD",
@@ -573,16 +586,16 @@ function renderProperty(p) {
         "unitCode": "MON",
         "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
       }
-    },
-    "numberOfRooms": p.bedrooms,
-    "numberOfBathroomsTotal": p.bathrooms,
-    "floorSize": p.square_footage ? {
+    } : undefined,
+    "numberOfRooms": isCommunity ? undefined : p.bedrooms,
+    "numberOfBathroomsTotal": isCommunity ? undefined : p.bathrooms,
+    "floorSize": !isCommunity && p.square_footage ? {
       "@type": "QuantitativeValue",
       "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
-    "potentialAction": {
+    "potentialAction": !isCommunity ? {
       "@type": "RentAction",
       "name": "Apply for Lease",
       "target": {
@@ -593,7 +606,7 @@ function renderProperty(p) {
           "https://schema.org/MobileWebPlatform"
         ]
       }
-    }
+    } : undefined
   });
   document.head.appendChild(sd);
 
@@ -667,7 +680,9 @@ function renderProperty(p) {
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
 
-  document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
+  document.getElementById('detailPrice').innerHTML = isCommunity
+    ? `${communityPriceLabel}<span>${communityRent != null ? '/mo' : ''}</span>`
+    : `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('detailTitle').textContent = p.title;
   const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
   document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
@@ -701,15 +716,22 @@ function renderProperty(p) {
 
   // Meta row
   const metas = [];
-  if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
-  if (p.bathrooms) {
+  if (isCommunity) {
+    if (unitSummary.bedrooms) metas.push({ label:'Layouts', value: unitSummary.bedrooms, icon:'fa-bed' });
+    if (unitSummary.bathrooms) metas.push({ label:'Bathrooms', value: unitSummary.bathrooms, icon:'fa-bath' });
+    if (unitSummary.squareFootage) metas.push({ label:'Floor plan sizes', value: unitSummary.squareFootage, icon:'fa-ruler-combined' });
+    metas.push({ label:'Floor plans', value: unitSummary.count, icon:'fa-layer-group' });
+  } else if (p.bedrooms != null) {
+    metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
+  }
+  if (!isCommunity && p.bathrooms) {
     const numBaths = Number(p.bathrooms);
     const bathVal = (p.half_bathrooms && Number.isInteger(numBaths))
       ? `${p.bathrooms} + ½`
       : p.bathrooms;
     metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
   }
-  if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
+  if (!isCommunity && p.square_footage) metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
@@ -934,18 +956,22 @@ function renderProperty(p) {
   }
 
   // Sidebar
-  const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
-  const priceHtml = `${rentStr}<span>/month</span>`;
+  const rentStr = isCommunity
+    ? communityPriceLabel
+    : p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
+  const priceHtml = `${rentStr}<span>${isCommunity ? (communityRent != null ? '/mo' : '') : '/month'}</span>`;
   const sbPrice = document.getElementById('sidebarPrice');
   if (sbPrice) sbPrice.innerHTML = priceHtml;
   const sbStickyPrice = document.getElementById('sidebarStickyPrice');
-  if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>/mo</span>`;
+  if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>${isCommunity ? (communityRent != null ? '/mo' : '') : '/mo'}</span>`;
 
   const _availEl = document.getElementById('sidebarAvail');
   const _availStickyEl = document.getElementById('sidebarStickyAvail');
   if (_availEl) _availEl.style.display = 'none';
   if (_availStickyEl) _availStickyEl.style.display = 'none';
-  document.getElementById('sidebarRent').textContent = rentStr;
+  document.getElementById('sidebarRent').textContent = isCommunity
+    ? `${rentStr}${communityRent != null ? '/mo' : ''}`
+    : rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
     _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
@@ -954,8 +980,12 @@ function renderProperty(p) {
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
-  if (_feeAmtEl) {
+  if (_feeAmtEl && !isCommunity) {
     _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
+  }
+  if (isCommunity) {
+    const applyStripSub = document.querySelector('#applyStrip .prop-apply-strip-sub');
+    if (applyStripSub) applyStripSub.textContent = 'Compare the layouts below to review each option’s pricing and specifications.';
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -974,6 +1004,22 @@ function renderProperty(p) {
   const _wireApply = (id) => {
     const btn = document.getElementById(id);
     if (!btn) return;
+    if (isCommunity) {
+      btn.href = '#unitLayoutsSection';
+      btn.setAttribute('aria-label', 'Compare apartment floor plans');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = document.getElementById('unitLayoutsSection');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        section?.querySelector('[data-unit-filter="search"]')?.focus({ preventScroll: true });
+      });
+      btn.innerHTML = id === 'csCardApply'
+        ? 'Compare floor plans &nbsp;<i class="fas fa-arrow-right" style="font-size:13px"></i>'
+        : id === 'mobApplyBtn'
+          ? 'View layouts'
+          : 'Explore floor plans <i class="fas fa-arrow-right" style="font-size:13px"></i>';
+      return;
+    }
     btn.href = applyURL;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1014,7 +1060,14 @@ function renderProperty(p) {
 
   // Mobile sticky Apply bar — for active and private_placement listings
   if (p.status === 'active' || p.status === 'private_placement') {
-    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
+    document.getElementById('mobBarRent').textContent = isCommunity
+      ? `${communityPriceLabel}${communityRent != null ? '/mo' : ''}`
+      : `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
+    if (isCommunity) {
+      const mobilePriceLabel = document.querySelector('#mobile-apply-bar .mob-price span');
+      if (mobilePriceLabel) mobilePriceLabel.textContent = 'Layout pricing';
+      document.getElementById('mobile-apply-bar')?.setAttribute('aria-label', 'Explore apartment floor plans');
+    }
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -1126,6 +1179,7 @@ function renderPropertyUnits(p) {
     return;
   }
   grid.innerHTML = html;
+  initPropertyUnits(grid);
   section.style.display = 'block';
 }
 
