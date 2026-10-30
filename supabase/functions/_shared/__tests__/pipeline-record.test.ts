@@ -77,6 +77,7 @@ Deno.test('buildPipelineRecord preserves structured media entries from source im
     monthly_rent: 2100,
     bedrooms: 3,
     bathrooms: 2.5,
+    total_bathrooms: 2.5,
     virtual_tour_url: 'https://my.matterport.com/show/?m=LEGACY123',
     media: [
       { kind: 'floor_plan', title: 'Main Floor Plan', floor_label: 'Main Floor', url: 'https://cdn.example.com/main-floor.jpg' },
@@ -91,4 +92,5 @@ Deno.test('buildPipelineRecord preserves structured media entries from source im
   assertEquals(originalData.media.some((item: any) => item.kind === 'floor_plan'), true);
   assertEquals(originalData.media.some((item: any) => item.kind === 'virtual_tour'), true);
   assertEquals(record.virtual_tour_url, 'https://my.matterport.com/show/?m=LEGACY123');
+  assertEquals(record.total_bathrooms, 2.5);
 });

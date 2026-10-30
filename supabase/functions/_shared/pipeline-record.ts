@@ -261,6 +261,7 @@ export interface PipelineRecordInput {
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
+  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
@@ -284,7 +285,7 @@ export interface PipelineRecordInput {
   showing_instructions?: string | null;
   available_date?: string | null;
   minimum_lease_months?: number | null;
-  lease_terms?: string | null;
+  lease_terms?: string | string[] | null;
   pets_allowed?: boolean | null;
   pet_types_allowed?: string | null;
   pet_weight_limit?: number | null;
