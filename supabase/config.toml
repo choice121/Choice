@@ -10,6 +10,9 @@ verify_jwt = false
 [functions.property-units]
 verify_jwt = false
 
+[functions.property-hierarchy]
+verify_jwt = false
+
 [functions.receive-pipeline-import]
 verify_jwt = false
 

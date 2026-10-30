@@ -3,6 +3,8 @@
 
   const propertyId = new URLSearchParams(location.search).get('id');
   let units = [];
+  let buildings = [];
+  let floors = [];
   let dialog;
   let status;
 
@@ -41,7 +43,18 @@
       floor_plan_image_url: read('floor_plan_image_url')?.value.trim() || null,
       unit_photos: (read('unit_photos')?.value || '').split(/\r?\n/).map((url) => url.trim()).filter(Boolean),
       amenities: (read('amenities')?.value || '').split(',').map((item) => item.trim()).filter(Boolean),
+      building_id: read('building_id')?.value || null,
+      floor_id: read('floor_id')?.value || null,
     };
+  }
+
+  function hierarchyFields(unit = {}) {
+    const buildingOptions = buildings.map((building) => `<option value="${escapeHtml(building.id)}" ${unit.building_id === building.id ? 'selected' : ''}>${escapeHtml(building.name)}</option>`).join('');
+    const availableFloors = floors.filter((floor) => floor.building_id === unit.building_id);
+    const floorOptions = availableFloors.map((floor) => `<option value="${escapeHtml(floor.id)}" ${unit.floor_id === floor.id ? 'selected' : ''}>${escapeHtml(floor.floor_label)}</option>`).join('');
+    return `
+      <label>Building<select data-unit-field="building_id"><option value="">No building</option>${buildingOptions}</select></label>
+      <label>Floor<select data-unit-field="floor_id" ${unit.building_id ? '' : 'disabled'}><option value="">No floor</option>${floorOptions}</select></label>`;
   }
 
   function renderFormFields(unit = {}) {
@@ -54,6 +67,7 @@
         <label>Bathrooms<input data-unit-field="bathrooms" type="number" min="0" max="20" step="0.5" value="${escapeHtml(unit.bathrooms ?? '')}"></label>
         <label>Square feet<input data-unit-field="square_footage" type="number" min="1" max="100000" step="1" value="${escapeHtml(unit.square_footage ?? '')}"></label>
         <label>Monthly rent<input data-unit-field="monthly_rent" type="number" min="1" max="100000" step="1" required value="${escapeHtml(unit.monthly_rent ?? '')}"></label>
+        ${hierarchyFields(unit)}
         <label>Layout label<input data-unit-field="floor_plan_name" maxlength="120" placeholder="Studio layout" value="${escapeHtml(unit.floor_plan_name || '')}"></label>
         <label class="pu-wide">Floor-plan image URL<input data-unit-field="floor_plan_image_url" type="url" placeholder="https://..." value="${escapeHtml(unit.floor_plan_image_url || '')}"></label>
         <label class="pu-wide">Unit photo URLs <span class="pu-hint">One HTTPS URL per line</span><textarea data-unit-field="unit_photos" rows="3">${escapeHtml(photos.join('\n'))}</textarea></label>
@@ -94,7 +108,7 @@
         .pu-body{padding:16px 18px;overflow:auto;max-height:calc(100dvh - 90px)}
         .pu-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
         .pu-fields label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;font-weight:700}
-        .pu-fields input,.pu-fields textarea{min-width:0;width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit}
+        .pu-fields input,.pu-fields textarea,.pu-fields select{min-width:0;width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit}
         .pu-wide{grid-column:1/-1}
         .pu-hint{font-size:.65rem;font-weight:400;color:var(--muted)}
         .pu-add{padding:14px;margin-bottom:16px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2)}
@@ -127,13 +141,31 @@
     dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
     dialog.querySelector('#pu-add-form').addEventListener('submit', createUnit);
     dialog.querySelector('#pu-list').addEventListener('click', handleUnitAction);
+    dialog.addEventListener('change', (event) => {
+      const buildingSelect = event.target.closest('[data-unit-field="building_id"]');
+      if (!buildingSelect) return;
+      const root = buildingSelect.closest('form, .pu-row-body');
+      const floorSelect = root.querySelector('[data-unit-field="floor_id"]');
+      const selectedBuildingId = buildingSelect.value;
+      const selectedFloorId = floorSelect.value;
+      floorSelect.innerHTML = `<option value="">No floor</option>${floors.filter((floor) => floor.building_id === selectedBuildingId).map((floor) => `<option value="${escapeHtml(floor.id)}">${escapeHtml(floor.floor_label)}</option>`).join('')}`;
+      if (floors.some((floor) => floor.id === selectedFloorId && floor.building_id === selectedBuildingId)) floorSelect.value = selectedFloorId;
+      floorSelect.disabled = !selectedBuildingId;
+    });
     return dialog;
   }
 
   async function refresh() {
     message('Loading unit layouts...');
-    const result = await invoke({ action: 'list', property_id: propertyId });
+    const [result, hierarchy] = await Promise.all([
+      invoke({ action: 'list', property_id: propertyId }),
+      window.CP.sb().functions.invoke('property-hierarchy', { body: { action: 'list', property_id: propertyId } }),
+    ]);
+    if (hierarchy.error) throw new Error(hierarchy.error.message || 'Could not load building and floor data.');
+    if (hierarchy.data?.error) throw new Error(hierarchy.data.detail || hierarchy.data.error);
     units = Array.isArray(result.units) ? result.units : [];
+    buildings = Array.isArray(hierarchy.data?.buildings) ? hierarchy.data.buildings : [];
+    floors = Array.isArray(hierarchy.data?.floors) ? hierarchy.data.floors : [];
     renderList();
     message('Unit layouts saved to this property.');
   }

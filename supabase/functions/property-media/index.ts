@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 const mediaKinds = new Set(["floor_plan", "video", "virtual_tour", "tour_3d"]);
-const mediaColumns = "id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, created_at, updated_at";
+const mediaColumns = "id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id, created_at, updated_at";
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function response(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -42,6 +43,33 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
+  async function resolveScope(propertyId: string, body: Record<string, unknown>) {
+    const type = body.scope_type;
+    const id = body.scope_id;
+    if (type === "none") return { values: { building_id: null, floor_id: null, unit_id: null }, error: null };
+    if ((type !== "building" && type !== "floor" && type !== "unit") || typeof id !== "string" || !uuidPattern.test(id)) {
+      return { values: null, error: "invalid_media_scope" };
+    }
+    if (type === "building") {
+      const { data, error } = await supabase.from("property_buildings").select("id")
+        .eq("id", id).eq("property_id", propertyId).maybeSingle();
+      if (error) return { values: null, error: "media_scope_check_failed" };
+      if (!data) return { values: null, error: "building_not_found" };
+      return { values: { building_id: id, floor_id: null, unit_id: null }, error: null };
+    }
+    if (type === "floor") {
+      const { data, error } = await supabase.from("property_floors").select("id, building_id")
+        .eq("id", id).eq("property_id", propertyId).maybeSingle();
+      if (error) return { values: null, error: "media_scope_check_failed" };
+      if (!data) return { values: null, error: "floor_not_found" };
+      return { values: { building_id: data.building_id, floor_id: data.id, unit_id: null }, error: null };
+    }
+    const { data, error } = await supabase.from("property_units").select("id")
+      .eq("id", id).eq("property_id", propertyId).maybeSingle();
+    if (error) return { values: null, error: "media_scope_check_failed" };
+    if (!data) return { values: null, error: "unit_not_found" };
+    return { values: { building_id: null, floor_id: null, unit_id: data.id }, error: null };
+  }
   const { data: authData, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
   if (authError || !authData.user) return response({ error: "admin_auth_required" }, 401);
 
@@ -97,6 +125,11 @@ Deno.serve(async (req) => {
 
     const posterUrl = safeUrl(body.poster_url, true);
     if (body.poster_url && !posterUrl) return response({ error: "invalid_poster_url" }, 400);
+    const scope = await resolveScope(propertyId, {
+      scope_type: body.scope_type ?? "none",
+      scope_id: body.scope_id,
+    });
+    if (scope.error || !scope.values) return response({ error: scope.error || "invalid_media_scope" }, 400);
     const { data, error } = await supabase
       .from("property_media")
       .insert({
@@ -110,6 +143,7 @@ Deno.serve(async (req) => {
         poster_url: posterUrl,
         display_order: Number.isInteger(body.display_order) ? body.display_order : 0,
         metadata: body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata) ? body.metadata : {},
+        ...scope.values,
       })
       .select(mediaColumns)
       .single();
@@ -160,6 +194,11 @@ Deno.serve(async (req) => {
       const url = safeUrl(body.url);
       if (!url) return response({ error: "https_url_required" }, 400);
       patch.url = url;
+    }
+    if (Object.hasOwn(body, "scope_type")) {
+      const scope = await resolveScope(propertyId, body);
+      if (scope.error || !scope.values) return response({ error: scope.error || "invalid_media_scope" }, 400);
+      Object.assign(patch, scope.values);
     }
     const { data, error } = await supabase
       .from("property_media")

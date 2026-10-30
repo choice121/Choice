@@ -30,4 +30,19 @@ assert.match(html, /https:\/\/images\.example\.test\/unit-a\.jpg/);
 assert.doesNotMatch(html, /javascript:|available|security_deposit|2026-11-01/);
 assert.equal(renderPropertyUnitsHtml([]), '');
 
+const groupedHtml = renderPropertyUnitsHtml([
+  { unit_number: 'A1', bedrooms: 2, bathrooms: 1, monthly_rent: 1200, building_id: 'building-a', floor_id: 'floor-1', status: 'available' },
+  { unit_number: 'B1', bedrooms: 1, bathrooms: 1, monthly_rent: 900, building_id: 'building-a', floor_id: 'floor-2' },
+], [
+  { id: 'building-a', name: 'North Building' },
+], [
+  { id: 'floor-1', building_id: 'building-a', floor_label: 'First floor', sort_order: 0 },
+  { id: 'floor-2', building_id: 'building-a', floor_label: 'Second floor', sort_order: 1 },
+]);
+assert.match(groupedHtml, /North Building/);
+assert.match(groupedHtml, /First floor/);
+assert.match(groupedHtml, /Second floor/);
+assert.match(groupedHtml, /Unit A1/);
+assert.doesNotMatch(groupedHtml, /available/);
+
 console.log('Property unit renderer tests passed.');

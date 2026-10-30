@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
-const unitColumns = "id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities";
+const unitColumns = "id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id";
 
 type UnitPayload = {
   unit_number: string | null;
@@ -13,6 +13,8 @@ type UnitPayload = {
   floor_plan_image_url: string | null;
   unit_photos: string[];
   amenities: string[];
+  building_id: string | null;
+  floor_id: string | null;
 };
 
 function response(req: Request, body: Record<string, unknown>, status = 200): Response {
@@ -26,6 +28,13 @@ function optionalNumber(value: unknown, min: number, max: number): number | null
   if (value == null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max ? number : undefined;
+}
+
+function optionalUuid(value: unknown): string | null | undefined {
+  if (value == null || value === "") return null;
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : undefined;
 }
 
 function secureUrl(value: unknown, optional = false): string | null | undefined {
@@ -63,6 +72,9 @@ function normalizeStringList(value: unknown, maxItems: number, maxLength: number
 }
 
 function normalizePayload(body: Record<string, unknown>): UnitPayload | null {
+  const buildingId = optionalUuid(body.building_id);
+  const floorId = optionalUuid(body.floor_id);
+  if (buildingId === undefined || floorId === undefined || (floorId !== null && buildingId === null)) return null;
   const unitNumber = typeof body.unit_number === "string" ? body.unit_number.trim().slice(0, 40) || null : null;
   const monthlyRent = optionalNumber(body.monthly_rent, 1, 100000);
   const bedrooms = optionalNumber(body.bedrooms, 0, 20);
@@ -91,6 +103,8 @@ function normalizePayload(body: Record<string, unknown>): UnitPayload | null {
     floor_plan_image_url: floorPlanImageUrl,
     unit_photos: unitPhotos,
     amenities,
+    building_id: buildingId,
+    floor_id: floorId,
   };
 }
 
@@ -145,6 +159,20 @@ Deno.serve(async (req) => {
   if (action === "create" || action === "update") {
     const payload = normalizePayload(body);
     if (!payload) return response(req, { error: "invalid_unit_payload" }, 400);
+
+    if (payload.building_id) {
+      const { data: building, error } = await supabase
+        .from("property_buildings").select("id").eq("id", payload.building_id).eq("property_id", propertyId).maybeSingle();
+      if (error) return response(req, { error: "unit_hierarchy_check_failed" }, 500);
+      if (!building) return response(req, { error: "building_not_found" }, 400);
+    }
+    if (payload.floor_id) {
+      const { data: floor, error } = await supabase
+        .from("property_floors").select("id").eq("id", payload.floor_id)
+        .eq("property_id", propertyId).eq("building_id", payload.building_id).maybeSingle();
+      if (error) return response(req, { error: "unit_hierarchy_check_failed" }, 500);
+      if (!floor) return response(req, { error: "floor_not_found" }, 400);
+    }
 
     if (action === "create") {
       const { data, error } = await supabase

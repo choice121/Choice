@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
 
       const { data: media, error: mediaError } = await supabase
         .from("property_media")
-        .select("id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata")
+        .select("id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id")
         .in("property_id", propertyIds)
         .order("display_order", { ascending: true });
       if (mediaError) {
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
 
       const { data: units, error: unitError } = await supabase
         .from("property_units")
-        .select("id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities")
+        .select("id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id")
         .in("property_id", propertyIds)
         .order("unit_number", { ascending: true });
       if (unitError) {
@@ -123,9 +123,37 @@ Deno.serve(async (req) => {
         );
       }
 
+      const { data: buildings, error: buildingError } = await supabase
+        .from("property_buildings")
+        .select("id, property_id, name, building_code, sort_order")
+        .in("property_id", propertyIds)
+        .order("sort_order")
+        .order("name");
+      if (buildingError) {
+        return new Response(
+          JSON.stringify({ error: "property_buildings_lookup_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: floors, error: floorError } = await supabase
+        .from("property_floors")
+        .select("id, property_id, building_id, floor_label, floor_code, sort_order")
+        .in("property_id", propertyIds)
+        .order("sort_order")
+        .order("floor_label");
+      if (floorError) {
+        return new Response(
+          JSON.stringify({ error: "property_floors_lookup_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const photoMap: Record<string, Array<Record<string, unknown>>> = {};
       const mediaMap: Record<string, Array<Record<string, unknown>>> = {};
       const unitMap: Record<string, Array<Record<string, unknown>>> = {};
+      const buildingMap: Record<string, Array<Record<string, unknown>>> = {};
+      const floorMap: Record<string, Array<Record<string, unknown>>> = {};
       if (photos) {
         photos.forEach(ph => {
           photoMap[ph.property_id] = photoMap[ph.property_id] || [];
@@ -146,12 +174,26 @@ Deno.serve(async (req) => {
           unitMap[unit.property_id].push(unit);
         });
       }
+      if (buildings) {
+        buildings.forEach(building => {
+          buildingMap[building.property_id] = buildingMap[building.property_id] || [];
+          buildingMap[building.property_id].push(building);
+        });
+      }
+      if (floors) {
+        floors.forEach(floor => {
+          floorMap[floor.property_id] = floorMap[floor.property_id] || [];
+          floorMap[floor.property_id].push(floor);
+        });
+      }
 
       const enriched = (properties || []).map(prop => ({
         ...prop,
         property_photos: photoMap[prop.id] || [],
         property_media: mediaMap[prop.id] || [],
-        property_units: unitMap[prop.id] || []
+        property_units: unitMap[prop.id] || [],
+        property_buildings: buildingMap[prop.id] || [],
+        property_floors: floorMap[prop.id] || []
       }));
 
       return new Response(

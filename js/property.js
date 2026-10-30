@@ -193,7 +193,7 @@ async function loadProperty(id) {
       try {
         const { data: mediaData } = await client
           .from('property_media')
-          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
+          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id')
           .eq('property_id', cleanId)
           .order('display_order', { ascending: true });
         prop.property_media = mediaData || [];
@@ -203,12 +203,28 @@ async function loadProperty(id) {
       try {
         const { data: unitData } = await client
           .from('property_units')
-          .select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities')
+          .select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id')
           .eq('property_id', cleanId)
           .order('unit_number', { ascending: true });
         prop.property_units = unitData || [];
       } catch (_) {
         prop.property_units = [];
+      }
+      try {
+        const { data: buildingData } = await client.from('property_buildings')
+          .select('id, property_id, name, building_code, sort_order')
+          .eq('property_id', cleanId).order('sort_order').order('name');
+        prop.property_buildings = buildingData || [];
+      } catch (_) {
+        prop.property_buildings = [];
+      }
+      try {
+        const { data: floorData } = await client.from('property_floors')
+          .select('id, property_id, building_id, floor_label, floor_code, sort_order')
+          .eq('property_id', cleanId).order('sort_order').order('floor_label');
+        prop.property_floors = floorData || [];
+      } catch (_) {
+        prop.property_floors = [];
       }
     }
   } catch (e) {
@@ -223,15 +239,19 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, mediaRes, unitsRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, unitsRes, buildingsRes, floorsRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          client.from('property_units').select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities').eq('property_id', cleanId).order('unit_number', { ascending: true }),
+          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          client.from('property_units').select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id').eq('property_id', cleanId).order('unit_number', { ascending: true }),
+          client.from('property_buildings').select('id, property_id, name, building_code, sort_order').eq('property_id', cleanId).order('sort_order').order('name'),
+          client.from('property_floors').select('id, property_id, building_id, floor_label, floor_code, sort_order').eq('property_id', cleanId).order('sort_order').order('floor_label'),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
         prop.property_media = mediaRes.data || [];
         prop.property_units = unitsRes.data || [];
+        prop.property_buildings = buildingsRes.data || [];
+        prop.property_floors = floorsRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -1061,7 +1081,7 @@ function getPropertyTours(p) {
             id: item.id || `media-tour-${idx}`,
             kind: item.kind,
             title: item.title || (item.kind === 'video' ? 'Video Walkthrough' : '3D Virtual Tour'),
-            floor_label: item.floor_label || null,
+            floor_label: getMediaFloorLabel(p, item) || null,
             provider: item.provider || null,
             url: item.url.trim(),
             poster_url: item.poster_url || null,
@@ -1100,13 +1120,32 @@ function renderPropertyUnits(p) {
   if (!section || !grid) return;
 
   const units = Array.isArray(p?.property_units) ? p.property_units : [];
-  const html = renderPropertyUnitsHtml(units);
+  const html = renderPropertyUnitsHtml(units, p?.property_buildings || [], p?.property_floors || []);
   if (!html) {
     section.style.display = 'none';
     return;
   }
   grid.innerHTML = html;
   section.style.display = 'block';
+}
+
+function getMediaFloorLabel(property, item) {
+  const buildings = new Map((property.property_buildings || []).map(building => [building.id, building]));
+  const floors = new Map((property.property_floors || []).map(floor => [floor.id, floor]));
+  const units = new Map((property.property_units || []).map(unit => [unit.id, unit]));
+  if (item.unit_id) {
+    const unit = units.get(item.unit_id);
+    if (unit?.unit_number) return `Unit ${unit.unit_number}`;
+  }
+  if (item.floor_id) {
+    const floor = floors.get(item.floor_id);
+    if (floor) {
+      const building = buildings.get(floor.building_id);
+      return [building?.name, floor.floor_label].filter(Boolean).join(' · ');
+    }
+  }
+  if (item.building_id) return buildings.get(item.building_id)?.name || item.floor_label || '';
+  return item.floor_label || '';
 }
 
 // ── Multi-Floor Media Section Rendering ──────────────────────────────────
@@ -1155,7 +1194,7 @@ function renderMultiFloorMedia(p) {
       floorPlansList.push(item);
     }
 
-    const rawFloor = (item.floor_label || '').trim();
+    const rawFloor = String(getMediaFloorLabel(p, item) || '').trim();
     const floorKey = rawFloor || 'General / Entire Home';
     if (!groups.has(floorKey)) {
       groups.set(floorKey, []);

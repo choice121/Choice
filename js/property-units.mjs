@@ -34,10 +34,13 @@ function unitPhotoUrls(value) {
     .slice(0, 8);
 }
 
-export function renderPropertyUnitsHtml(units) {
+export function renderPropertyUnitsHtml(units, buildings = [], floors = []) {
   if (!Array.isArray(units) || units.length === 0) return '';
 
-  return units.map(unit => {
+  const buildingById = new Map((Array.isArray(buildings) ? buildings : []).map(building => [building.id, building]));
+  const floorById = new Map((Array.isArray(floors) ? floors : []).map(floor => [floor.id, floor]));
+
+  function renderUnit(unit) {
     const unitNumber = typeof unit.unit_number === 'string' ? unit.unit_number.trim() : '';
     const bedrooms = Number(unit.bedrooms);
     const layoutLabel = unit.floor_plan_name || (unitNumber
@@ -77,5 +80,53 @@ export function renderPropertyUnitsHtml(units) {
         ${mediaPhotos}
       </div>
     </article>`;
-  }).join('');
+  }
+
+  const assigned = new Map();
+  const unassigned = [];
+  for (const unit of units) {
+    if (!unit?.building_id || !buildingById.has(unit.building_id)) {
+      unassigned.push(unit);
+      continue;
+    }
+    const key = `${unit.building_id}:${unit.floor_id || ''}`;
+    if (!assigned.has(key)) assigned.set(key, []);
+    assigned.get(key).push(unit);
+  }
+
+  if (!assigned.size) return units.map(renderUnit).join('');
+
+  const sections = [];
+  for (const building of buildings) {
+    const buildingUnits = [...assigned.entries()]
+      .filter(([key]) => key.startsWith(`${building.id}:`))
+      .flatMap(([, groupedUnits]) => groupedUnits);
+    if (!buildingUnits.length) continue;
+
+    const floorGroups = new Map();
+    for (const unit of buildingUnits) {
+      const floor = unit.floor_id ? floorById.get(unit.floor_id) : null;
+      const key = floor?.id || '';
+      if (!floorGroups.has(key)) floorGroups.set(key, { floor, units: [] });
+      floorGroups.get(key).units.push(unit);
+    }
+    const floorSections = [...floorGroups.values()]
+      .sort((a, b) => (a.floor?.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.floor?.sort_order ?? Number.MAX_SAFE_INTEGER))
+      .map(group => `<section class="unit-layout-floor">
+        <h4>${escapeHtml(group.floor?.floor_label || 'Building units')}</h4>
+        <div class="unit-layout-grid">${group.units.map(renderUnit).join('')}</div>
+      </section>`)
+      .join('');
+    sections.push(`<section class="unit-layout-building">
+      <h3>${escapeHtml(building.name || 'Building')}</h3>
+      ${floorSections}
+    </section>`);
+  }
+  if (unassigned.length) {
+    sections.push(`<section class="unit-layout-building">
+      <h3>Other unit layouts</h3>
+      <div class="unit-layout-grid">${unassigned.map(renderUnit).join('')}</div>
+    </section>`);
+  }
+  return sections.join('');
 }
