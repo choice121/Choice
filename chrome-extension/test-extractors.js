@@ -226,6 +226,46 @@ t('Zillow structured media', () => {
   assert.deepStrictEqual(media.map(item => item.kind), ['floor_plan', 'video', 'virtual_tour']);
   assert.strictEqual(media[0].floor_label, 'Main Floor');
 });
+t('Structured media extraction across portal data shapes', () => {
+  const mediaItems = [
+    { kind: 'floor_plan', title: 'Main Floor', floor_label: 'Main Floor', url: 'https://cdn.example.com/main-floor.jpg' },
+    { kind: 'video', title: 'Walkthrough', url: 'https://cdn.example.com/walkthrough.mp4' },
+    { kind: 'virtual_tour', title: '3D Tour', url: 'https://my.matterport.com/show/?m=PORTAL123' },
+  ];
+  const expectedKinds = ['floor_plan', 'video', 'virtual_tour'];
+  const extractors = [
+    ['Realtor', api.extractRealtor, R, { property_id: 'media-realtor', address: { line: '1 Test St', city: 'Austin', state_code: 'TX', postal_code: '78701' }, price: 1800, beds: 2, baths: 1, floorPlans: [mediaItems[0]], videos: [mediaItems[1]], virtual_tours: [mediaItems[2]] }],
+    ['Apartments.com', api.extractApartments, A, { id: 'media-apartments', address: { street: '2 Test St', city: 'Houston', state: 'TX', zip: '77002' }, price: 1500, bedrooms: 1, bathrooms: 1, videos: [mediaItems[1]] }],
+    ['Redfin', api.extractRedfin, F, { propertyId: 'media-redfin', address: { streetAddress: '3 Test St', city: 'Plano', state: 'TX', zip: '75074' }, price: 1900, beds: 2, baths: 1, floorPlans: [mediaItems[0]], videos: [mediaItems[1]], virtualTours: [mediaItems[2]] }],
+    ['Opendoor', api.extractOpendoor, O, { id: 'media-opendoor', address: { streetAddress: '4 Test St', city: 'Dallas', state: 'TX', zip: '75202' }, price: 2100, beds: 3, baths: 2, floorPlans: [mediaItems[0]], videos: [mediaItems[1]], virtualTours: [mediaItems[2]] }],
+    ['Progress Residential', api.extractProgressResidential, PR, { id: 'media-progress', streetAddress: '5 Test St', city: 'San Antonio', state: 'TX', zip: '78201', marketRent: 2000, bedrooms: 3, bathrooms: 2, floorPlans: [mediaItems[0]], videos: [mediaItems[1]], virtualTours: [mediaItems[2]] }],
+  ];
+
+  extractors.forEach(([name, extract, url, property]) => {
+    const data = { props: { pageProps: {} } };
+    if (name === 'Realtor') data.props.pageProps.initialReduxState = { propertyDetails: property };
+    else if (name === 'Redfin') data.props.pageProps.initialReduxState = { searchResults: { homeDetails: property } };
+    else if (name === 'Opendoor') data.props.pageProps.home = property;
+    else if (name === 'Progress Residential') data.props.pageProps.property = property;
+    else data.props.pageProps.listing = property;
+
+    const payload = extract(doc(data), url);
+    assert.deepStrictEqual(payload.media.map(item => item.kind), name === 'Apartments.com' ? ['video'] : expectedKinds, `${name} media kinds`);
+    if (name === 'Apartments.com') assert.strictEqual(payload.virtual_tour_url, null, 'video URL must not be stored as a legacy 3D tour');
+  });
+
+  const jsonLd = {
+    '@type': 'Residence',
+    name: '6 Test St',
+    address: { streetAddress: '6 Test St', addressLocality: 'Austin', addressRegion: 'TX', postalCode: '78701' },
+    offers: { price: 1750 },
+    floorPlan: { name: 'First Floor', url: mediaItems[0].url },
+    video: { '@type': 'VideoObject', name: 'Walkthrough', contentUrl: mediaItems[1].url },
+    virtualTour: { name: '3D Tour', url: mediaItems[2].url },
+  };
+  const jsonLdPayload = api.extractFromJsonLd({ querySelectorAll: () => [{ textContent: JSON.stringify(jsonLd) }] }, 'https://example.com/listing', 'realtor');
+  assert.deepStrictEqual(jsonLdPayload.media.map(item => item.kind), expectedKinds);
+});
 t('Realtor payload', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
@@ -286,6 +326,37 @@ t('Zillow DOM rent range uses the starting rent', () => {
   d.body = { innerText: '$1,500 – $2,000/mo rent' };
   const p = api.extractZillow(d, Z);
   assert.strictEqual(p.monthly_rent, 1500);
+});
+t('Zillow DOM extracts clearly labeled tours, videos, and floor plans', () => {
+  const mediaElements = [
+    {
+      tagName: 'IFRAME',
+      src: 'https://my.matterport.com/show/?m=DOM123',
+      getAttribute: (name) => name === 'src' ? 'https://my.matterport.com/show/?m=DOM123' : name === 'title' ? 'Main Floor 3D Tour' : null,
+    },
+    {
+      tagName: 'VIDEO',
+      src: 'https://cdn.example.com/walkthrough.mp4',
+      getAttribute: (name) => name === 'src' ? 'https://cdn.example.com/walkthrough.mp4' : name === 'title' ? 'Property Walkthrough' : null,
+    },
+    {
+      tagName: 'IMG',
+      src: 'https://cdn.example.com/second-floor-plan.jpg',
+      getAttribute: (name) => name === 'src' ? 'https://cdn.example.com/second-floor-plan.jpg' : name === 'alt' ? 'Second Floor Plan' : null,
+    },
+  ];
+  const d = doc({});
+  d.querySelector = () => null;
+  d.querySelectorAll = (selector) => selector === 'iframe[src], video[src], video source[src], a[href], img[alt], img[title]'
+    ? mediaElements
+    : [];
+  d.body = { innerText: '' };
+
+  const payload = api.extractZillowFromDom(d, Z);
+  assert.deepStrictEqual(payload.media.map(item => item.kind), ['virtual_tour', 'video', 'floor_plan']);
+  assert.strictEqual(payload.virtual_tour_url, 'https://my.matterport.com/show/?m=DOM123');
+  assert.strictEqual(payload.media[0].floor_label, 'Main Floor');
+  assert.strictEqual(payload.media[2].floor_label, 'Second Floor');
 });
 t('Zillow DOM extracts lazy-loaded gallery photos and ignores non-photo CDN assets', () => {
   const photoUrls = Array.from({ length: 11 }, (_, index) =>

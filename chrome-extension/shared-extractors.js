@@ -157,15 +157,15 @@
     const add = (value, hint) => {
       const item = typeof value === 'string' ? { url: value } : value;
       if (!item || typeof item !== 'object') return;
-      const url = item.url || item.href || item.src || item.embedUrl || item.embed_url;
+      const url = item.url || item.href || item.src || item.embedUrl || item.embed_url || item.contentUrl || item.content_url;
       if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
 
-      const descriptor = [item.kind, item.type, item.mediaType, item.media_type, item.category, item.title, item.name, hint]
+      const descriptor = [item.kind, item.type, item['@type'], item.mediaType, item.media_type, item.category, item.title, item.name, hint]
         .filter(Boolean).join(' ').toLowerCase();
       let kind = null;
       if (/floor[\s_-]*plan|floorplan/.test(descriptor)) kind = 'floor_plan';
       else if (/video|walkthrough|youtube|vimeo|\.mp4(?:\?|$)|\.webm(?:\?|$)|\.mov(?:\?|$)/i.test(descriptor + ' ' + url)) kind = 'video';
-      else if (/virtual[\s_-]*tour|3d[\s_-]*tour|matterport|insidemaps|view-3d|view-imx|tour3d/i.test(descriptor + ' ' + url)) kind = 'virtual_tour';
+      else if (/virtual[\s_-]*tour|3d[\s_-]*tour|matterport|insidemaps|view-3d|view-imx|tour3d|\btour\b/i.test(descriptor + ' ' + url)) kind = 'virtual_tour';
       if (!kind) return;
 
       const key = `${kind}::${url.trim().toLowerCase()}`;
@@ -185,8 +185,10 @@
 
     const mediaFields = [
       ['floorPlans', 'floor plan'], ['floor_plans', 'floor plan'], ['floorPlanImages', 'floor plan'],
-      ['videos', 'video'], ['propertyVideos', 'video'], ['virtualTours', 'virtual tour'],
-      ['virtual_tours', 'virtual tour'], ['tours', 'tour'], ['media', 'media'],
+      ['floorPlan', 'floor plan'], ['floorplan', 'floor plan'], ['floor_plan', 'floor plan'],
+      ['videos', 'video'], ['video', 'video'], ['propertyVideos', 'video'],
+      ['virtualTours', 'virtual tour'], ['virtual_tours', 'virtual tour'],
+      ['virtualTour', 'virtual tour'], ['threeDimensionalTours', '3d tour'], ['tours', 'virtual tour'], ['media', 'media'],
     ];
     mediaFields.forEach(([field, hint]) => {
       const value = prop && prop[field];
@@ -196,6 +198,67 @@
 
     add(virtualTourUrl, 'virtual tour');
     return media;
+  }
+
+  function collectDomMedia(doc) {
+    const groups = { floorPlans: [], videos: [], virtualTours: [] };
+    const orderByKey = new Map();
+    if (!doc || typeof doc.querySelectorAll !== 'function') return [];
+
+    const elements = doc.querySelectorAll('iframe[src], video[src], video source[src], a[href], img[alt], img[title]');
+    elements.forEach(el => {
+      const tag = String(el.tagName || '').toLowerCase();
+      const url = el.currentSrc || el.src || el.href || el.getAttribute('src') || el.getAttribute('href') || '';
+      if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+
+      const label = [
+        el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('alt'),
+        el.getAttribute('data-testid'), el.getAttribute('class'), el.textContent,
+      ].filter(Boolean).join(' ').trim();
+      const descriptor = `${label} ${url}`;
+      const item = {
+        url,
+        title: label.slice(0, 120),
+        floor_label: (label.match(/\b(?:basement|ground|main|lower|upper|attic|penthouse|first|second|third|fourth)(?:\s+(?:floor|level))?\b|\b\d+(?:st|nd|rd|th)?\s+(?:floor|level)\b/i) || [])[0] || null,
+      };
+
+      let kind = null;
+      if (/floor[\s_-]*plan|floorplan/i.test(label)) {
+        groups.floorPlans.push(item);
+        kind = 'floor_plan';
+      } else if (tag === 'video' || tag === 'source' || /youtube\.com|youtu\.be|vimeo\.com|\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(url) || /video|walkthrough/i.test(label)) {
+        groups.videos.push(item);
+        kind = 'video';
+      } else if (/virtual[\s_-]*tour|3d[\s_-]*tour|matterport|insidemaps|view-3d|view-imx|tour3d/i.test(descriptor)) {
+        groups.virtualTours.push(item);
+        kind = 'virtual_tour';
+      }
+      if (kind) orderByKey.set(`${kind}::${url.trim().toLowerCase()}`, orderByKey.size);
+    });
+
+    const media = collectStructuredMedia(groups, null);
+    media.sort((left, right) => {
+      const leftOrder = orderByKey.get(`${left.kind}::${left.url.toLowerCase()}`) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = orderByKey.get(`${right.kind}::${right.url.toLowerCase()}`) ?? Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder;
+    });
+    media.forEach((item, index) => { item.display_order = index; });
+    return media;
+  }
+
+  function mergeStructuredMedia(...sources) {
+    const merged = [];
+    const seen = new Set();
+    sources.forEach(source => {
+      (Array.isArray(source) ? source : []).forEach(item => {
+        if (!item || typeof item.url !== 'string') return;
+        const key = `${item.kind}::${item.url.trim().toLowerCase()}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(item);
+      });
+    });
+    return merged;
   }
 
   function parseDate(v) {
@@ -780,6 +843,8 @@
 
     const zpidMatch = (url.match(/(\d+)_zpid/i) || [])[1];
     const sourceId = zpidMatch || String(prop.identifier || prop.sku || prop['@id'] || Date.now());
+    const media = collectStructuredMedia(prop, null);
+    const virtualTour = media.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
 
     return basePayload(sourceName, sourceId, url, {
       title: prop.name || (street ? buildTitle(beds, 'APARTMENT', city, street) : null),
@@ -797,6 +862,8 @@
         : normalizeType(prop['@type'] || 'APARTMENT'),
       description: desc,
       original_description: desc,
+      virtual_tour_url: virtualTour ? virtualTour.url : null,
+      media,
       original_image_urls: JSON.stringify(dedupZillowPhotos(photos).slice(0, 50)),
     });
   }
@@ -988,6 +1055,8 @@
     const sourceId = zpidMatch || (buildingIdMatch && buildingIdMatch[1]) || String(Date.now());
 
     const rawDomDesc = (description || '') + ' ' + summaryText;
+    const domMedia = collectDomMedia(doc);
+    const domVirtualTour = domMedia.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
     const harvestedDom = extractFeaturesFromNarrative(rawDomDesc);
     const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
     const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '', address || '');
@@ -1022,6 +1091,8 @@
       has_central_air: harvestedDom.has_central_air ?? null,
       description,
       original_description: description || null,
+      virtual_tour_url: domVirtualTour ? domVirtualTour.url : null,
+      media: domMedia,
       original_image_urls: JSON.stringify(dedupZillowPhotos(normalizedPhotos).slice(0, 50)),
       _import: 'zillow-dom-deep-scanner'
     });
@@ -1058,6 +1129,12 @@
     const bestPhotos = [resPhotos, domPhotos, ldPhotos].sort((a, b) => b.length - a.length)[0] || [];
     if (bestPhotos.length > 0) {
       merged.original_image_urls = JSON.stringify(bestPhotos.slice(0, 50));
+    }
+
+    merged.media = mergeStructuredMedia(res && res.media, dom && dom.media, ld && ld.media);
+    if (!merged.virtual_tour_url) {
+      const tour = merged.media.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
+      if (tour) merged.virtual_tour_url = tour.url;
     }
 
     // Ensure street address isn't just city
@@ -1116,6 +1193,8 @@
 
     const rTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, propType, city, street, null, state, zip);
 
+    const virtualTourUrl = prop.virtual_tour_url || prop.tour3d_url || (Array.isArray(prop.virtual_tours) && prop.virtual_tours[0] && (prop.virtual_tours[0].href || prop.virtual_tours[0].url)) || null;
+
     return basePayload('realtor', String(prop.property_id || prop.rdc_web_url || ''), url, {
       title: rTitle,
       address: street, city, state, zip, lat, lng,
@@ -1129,7 +1208,8 @@
       neighborhood: prop.neighborhood_name || null,
       county: prop.county || null,
       available_date: parseDate(prop.available_date || prop.date_available),
-      virtual_tour_url: prop.virtual_tour_url || prop.tour3d_url || (Array.isArray(prop.virtual_tours) && prop.virtual_tours[0] && (prop.virtual_tours[0].href || prop.virtual_tours[0].url)) || null,
+      virtual_tour_url: virtualTourUrl,
+      media: collectStructuredMedia(prop, virtualTourUrl),
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1186,7 +1266,8 @@
       neighborhood: prop.neighborhood || null,
       pets_allowed: prop.petsAllowed != null ? !!prop.petsAllowed : null,
       available_date: parseDate(prop.availableDate || prop.availabilityDate),
-      virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || (Array.isArray(prop.videos) && prop.videos[0] && (prop.videos[0].url || prop.videos[0].src)) || null,
+      virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || null,
+      media: collectStructuredMedia(prop, prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || null),
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1244,6 +1325,7 @@
       neighborhood: prop.neighborhood || null,
       available_date: parseDate(prop.availableDate || prop.dateAvailable),
       virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || null,
+      media: collectStructuredMedia(prop, prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || null),
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1417,6 +1499,8 @@
 
     const odTitle = (prop.title && String(prop.title).trim()) || buildTitle(beds, propType, city, street, null, state, zip);
 
+    const virtualTourUrl = prop.virtualTourUrl || prop.matterportUrl || prop.tour3d || (dom ? dom.virtual_tour_url : null) || null;
+
     return basePayload('opendoor', sourceId, url, {
       title: odTitle,
       address: street, city, state, zip, lat, lng,
@@ -1435,7 +1519,8 @@
       hoa_fee: prop.hoaFee != null ? safeI(prop.hoaFee) : (dom ? dom.hoa_fee : null),
       garage_spaces: prop.garageSpaces != null ? safeI(prop.garageSpaces) : (dom ? dom.garage_spaces : null),
       available_date: parseDate(prop.availableDate || prop.listDate || (dom ? dom.available_date : null)),
-      virtual_tour_url: prop.virtualTourUrl || prop.tour3d || (dom ? dom.virtual_tour_url : null) || null,
+      virtual_tour_url: virtualTourUrl,
+      media: collectStructuredMedia(prop, virtualTourUrl),
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
@@ -1567,6 +1652,8 @@
     });
 
     const propType = detectPropType(null, rawDesc, street);
+    const domMedia = collectDomMedia(doc);
+    const domVirtualTour = domMedia.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
 
     return basePayload('opendoor', idFromUrl, url, {
       title: buildTitle(beds, propType, city, street),
@@ -1586,6 +1673,8 @@
       application_fee: 50,
       security_deposit: rent,
       minimum_lease_months: null,
+      virtual_tour_url: domVirtualTour ? domVirtualTour.url : null,
+      media: domMedia,
       original_image_urls: JSON.stringify(validPhotos.slice(0, 50)),
       _import: 'opendoor-dom-deep-scanner'
     });
@@ -1665,6 +1754,7 @@
         pets_allowed: true,
         available_date: parseDate(prop.availableDate || prop.readyDate),
         virtual_tour_url: prop.virtualTourUrl || prop.matterportUrl || (dom ? dom.virtual_tour_url : null) || null,
+        media: collectStructuredMedia(prop, prop.virtualTourUrl || prop.matterportUrl || (dom ? dom.virtual_tour_url : null) || null),
         original_image_urls: JSON.stringify(photos.slice(0, 50)),
       });
     }
@@ -1681,6 +1771,8 @@
       const domPhotos = (() => {
         try { return JSON.parse((dom && dom.original_image_urls) || '[]'); } catch (_) { return []; }
       })();
+      const mergedMedia = mergeStructuredMedia(dom && dom.media, ld.media);
+      const mergedTour = mergedMedia.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
       return basePayload('progress_residential', String(
         (doc && doc.querySelector && doc.querySelector('[data-property-node-path]') &&
           doc.querySelector('[data-property-node-path]').getAttribute('data-property-node-path')) ||
@@ -1696,6 +1788,8 @@
         monthly_rent: (ld.monthly_rent != null ? ld.monthly_rent : (dom && dom.monthly_rent)),
         lat: ld.lat != null ? ld.lat : (dom && dom.lat),
         lng: ld.lng != null ? ld.lng : (dom && dom.lng),
+        virtual_tour_url: (dom && dom.virtual_tour_url) || ld.virtual_tour_url || (mergedTour && mergedTour.url) || null,
+        media: mergedMedia,
         original_image_urls: JSON.stringify([...new Set(domPhotos.concat(ldPhotos))].slice(0, 50)),
       }));
     }
@@ -1819,6 +1913,9 @@
     })();
     const rawDesc = description || (ld && ld.description) || '';
     const propType = detectPropType(null, rawDesc, titleText);
+    const domMedia = collectDomMedia(doc);
+    const mergedMedia = mergeStructuredMedia(domMedia, ld && ld.media);
+    const mergedTour = mergedMedia.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
     return basePayload('invitation_homes', String(
       (ld && ld.source_listing_id) || idFromUrl
     ), url, Object.assign({}, ld || {}, {
@@ -1837,6 +1934,8 @@
       square_footage: ld && ld.square_footage != null ? ld.square_footage : (sqftMatch ? parseInt(sqftMatch[1].replace(/,/g, ''), 10) : null),
       property_type: (ld && ld.property_type) || propType,
       description: (ld && ld.description) || description,
+      virtual_tour_url: (ld && ld.virtual_tour_url) || (mergedTour && mergedTour.url) || null,
+      media: mergedMedia,
       original_image_urls: JSON.stringify([...new Set(photos.concat(ldPhotos))].slice(0, 50)),
       pets_allowed: ld && ld.pets_allowed != null ? ld.pets_allowed : /pet friendly|pets allowed|dogs? allowed|cats? allowed/i.test(bodyText) ? true : null,
     }));
@@ -1889,6 +1988,8 @@
     });
 
     const cjTitle = (doc && doc.querySelector && doc.querySelector('.listing-title, .property-title, h1, .rental-title')?.textContent?.trim()) || buildTitle(beds, propType, city, street, fullTitle, state, zip);
+    const domMedia = collectDomMedia(doc);
+    const domVirtualTour = domMedia.find(item => item.kind === 'virtual_tour' || item.kind === 'tour_3d');
 
     return basePayload('cj_real_estate', idFromUrl, url, {
       title: cjTitle,
@@ -1900,6 +2001,8 @@
       description: rawDesc || null,
       original_description: rawDesc || null,
       pets_allowed: true,
+      virtual_tour_url: domVirtualTour ? domVirtualTour.url : null,
+      media: domMedia,
       original_image_urls: JSON.stringify(photos.slice(0, 50)),
     });
   }
