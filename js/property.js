@@ -1463,7 +1463,7 @@ function openVirtualTourModal(p, activeTourItem = null) {
       <div id="virtualTourModal" class="vt-modal" role="dialog" aria-modal="true" aria-labelledby="vtModalAddress" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;align-items:center;justify-content:center">
         <div id="vtModalBackdrop" style="position:absolute;inset:0;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"></div>
         <div id="vtModalDialog" class="vt-modal-dialog" style="position:relative;width:94vw;max-width:1150px;height:84vh;background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:18px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;z-index:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.08);background:#090d16;gap:12px">
+          <div id="vtModalHeader" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.08);background:#090d16;gap:12px">
             <div style="display:flex;align-items:center;gap:10px;min-width:0">
               <span id="vtModalIcon" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(2,132,199,0.2);color:#38bdf8;font-size:15px;flex-shrink:0"><i class="fas fa-cube"></i></span>
               <div style="min-width:0">
@@ -1476,9 +1476,6 @@ function openVirtualTourModal(p, activeTourItem = null) {
             <div id="vtSwitcherContainer" class="vt-switcher-wrap" style="display:none" role="tablist" aria-label="Available tours"></div>
 
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              <a id="vtExternalLinkBtn" href="#" target="_blank" rel="noopener noreferrer" title="Open in new window" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-                <i class="fas fa-external-link-alt"></i> <span class="hide-mobile">External Link</span>
-              </a>
               <button id="vtFullscreenBtn" type="button" aria-label="Toggle Fullscreen" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
                 <i class="fas fa-expand"></i> <span class="hide-mobile">Fullscreen</span>
               </button>
@@ -1500,7 +1497,6 @@ function openVirtualTourModal(p, activeTourItem = null) {
   const iconEl = document.getElementById('vtModalIcon');
   const dialog = document.getElementById('vtModalDialog');
   const fullscreenBtn = document.getElementById('vtFullscreenBtn');
-  const externalLinkBtn = document.getElementById('vtExternalLinkBtn');
   const closeBtn = document.getElementById('vtCloseBtn');
   const backdrop = document.getElementById('vtModalBackdrop');
   const switcherContainer = document.getElementById('vtSwitcherContainer');
@@ -1515,10 +1511,6 @@ function openVirtualTourModal(p, activeTourItem = null) {
       const titleSuffix = tour.title ? ` • ${tour.title}` : '';
       const floorSuffix = tour.floor_label ? ` (${tour.floor_label})` : '';
       addrEl.textContent = `${p.address || ''}${p.city ? ', ' + p.city : ''}${titleSuffix}${floorSuffix}`;
-    }
-
-    if (externalLinkBtn) {
-      externalLinkBtn.href = url;
     }
 
     if (tour.kind === 'video') {
@@ -1570,11 +1562,11 @@ function openVirtualTourModal(p, activeTourItem = null) {
     else if (/matterport\.com/i.test(url)) {
       let mpUrl = url;
       if (!mpUrl.includes('play=')) mpUrl += (mpUrl.includes('?') ? '&' : '?') + 'play=1&qs=1';
-      playerHtml = `<iframe src="${esc(mpUrl)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+      playerHtml = `<iframe src="${esc(mpUrl)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
     }
     // InsideMaps
     else if (/insidemaps\.com/i.test(url)) {
-      playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+      playerHtml = `<iframe src="${esc(url)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
     }
     // Zillow 3D / IMX
     else if (/zillow\.com\/(view-3d-home|view-imx)/i.test(url)) {
@@ -1582,30 +1574,19 @@ function openVirtualTourModal(p, activeTourItem = null) {
       if (!embedUrl.includes('hidePhotos=')) {
         embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'hidePhotos=true&initialViewType=pano';
       }
-      playerHtml = `<iframe src="${esc(embedUrl)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+      playerHtml = `<iframe src="${esc(embedUrl)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; spatial-tracking; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
     }
-    // Valid HTTPS iframe embed with fallback banner
+    // Keep other HTTPS tour providers inside the Choice viewer.
     else if (/^https?:\/\//i.test(url)) {
-      playerHtml = `
-        <iframe src="${esc(url)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>
-        <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);padding:6px 14px;border-radius:9999px;font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px;z-index:10;pointer-events:auto">
-          <span>Having trouble loading this viewer?</span>
-          <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;text-decoration:underline;font-weight:600">Open in new tab <i class="fas fa-external-link-alt" style="font-size:10px"></i></a>
-        </div>
-      `;
+      playerHtml = `<iframe src="${esc(url)}" title="Interactive property tour" allow="fullscreen; accelerometer; gyroscope; spatial-tracking; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
     }
-    // Invalid / blocked / un-embeddable URL fallback
+    // Keep unsupported or malformed tour links in an in-page error state.
     else {
       playerHtml = `
-        <div class="vt-fallback-box">
+        <div class="vt-fallback-box" role="status">
           <div class="vt-fallback-icon"><i class="fas fa-cube"></i></div>
-          <h4 class="vt-fallback-title">Explore Interactive 3D Tour</h4>
-          <p class="vt-fallback-desc">This interactive property tour is hosted on an external secure platform.</p>
-          <div class="vt-fallback-actions">
-            <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="floor-card-btn primary" style="width:auto;padding:10px 20px">
-              <i class="fas fa-external-link-alt"></i> Open Tour in New Window
-            </a>
-          </div>
+          <h4 class="vt-fallback-title">Tour unavailable</h4>
+          <p class="vt-fallback-desc">This tour link cannot be opened in the on-page viewer.</p>
         </div>
       `;
     }
