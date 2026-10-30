@@ -437,6 +437,73 @@
     return labels.join('');
   }
 
+  function sourceMediaItems(l){
+    const originalData = parseJSON(l.original_data);
+    const rawItems = originalData && Array.isArray(originalData.media) ? originalData.media : [];
+    const items = [];
+    const seen = new Set();
+
+    rawItems.forEach(function(item, index){
+      if(!item || typeof item !== 'object' || typeof item.url !== 'string') return;
+      let url;
+      try {
+        url = new URL(item.url.trim());
+        if(url.protocol !== 'https:' && url.protocol !== 'http:') return;
+      } catch(_) { return; }
+      const kind = ['floor_plan','video','virtual_tour','tour_3d'].includes(item.kind) ? item.kind : null;
+      if(!kind) return;
+      const key = `${kind}::${url.href.toLowerCase()}`;
+      if(seen.has(key)) return;
+      seen.add(key);
+      items.push({
+        id: item.id || `source-media-${index}`,
+        kind,
+        title: item.title || (kind === 'floor_plan' ? 'Floor plan' : kind === 'video' ? 'Video walkthrough' : '3D virtual tour'),
+        floor_label: item.floor_label || null,
+        provider: item.provider || null,
+        url: url.href,
+      });
+    });
+
+    const legacyTour = typeof l.virtual_tour_url === 'string' ? l.virtual_tour_url.trim() : '';
+    if(legacyTour){
+      try {
+        const url = new URL(legacyTour);
+        if((url.protocol === 'https:' || url.protocol === 'http:') && !items.some(item => item.url.replace(/\/+$/, '').toLowerCase() === url.href.replace(/\/+$/, '').toLowerCase())){
+          items.push({ id: 'legacy-tour', kind: 'virtual_tour', title: '3D virtual tour', floor_label: null, provider: null, url: url.href });
+        }
+      } catch(_) {}
+    }
+
+    return items;
+  }
+
+  function renderSourceMedia(l){
+    const items = sourceMediaItems(l);
+    if(!items.length) return '';
+
+    const rows = items.map(function(item){
+      const isFloorPlan = item.kind === 'floor_plan';
+      const isDirectVideo = item.kind === 'video' && /\.(?:mp4|webm|mov)(?:[?#].*)?$/i.test(item.url);
+      const kindLabel = item.kind === 'floor_plan' ? 'Floor plan' : item.kind === 'video' ? 'Video' : '3D tour';
+      const preview = isFloorPlan
+        ? `<a href="${S.esc(item.url)}" target="_blank" rel="noopener"><img src="${S.esc(item.url)}" alt="${S.esc(item.title)}" loading="lazy" referrerpolicy="no-referrer" style="display:block;width:100%;max-height:180px;object-fit:contain;background:var(--surface-2);border-radius:4px"></a>`
+        : isDirectVideo
+          ? `<video controls preload="metadata" playsinline style="display:block;width:100%;max-height:220px;background:#111;border-radius:4px"><source src="${S.esc(item.url)}"></video>`
+          : '';
+      return `<div style="min-width:0;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+          <span class="qs-badge">${kindLabel}</span>
+          <div style="min-width:0;flex:1"><strong>${S.esc(item.title)}</strong>${item.floor_label ? `<div style="font-size:.75rem;color:var(--muted-2);margin-top:2px">${S.esc(item.floor_label)}</div>` : ''}</div>
+          <a class="btn btn-sm btn-outline" href="${S.esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>
+        </div>
+        ${preview}
+      </div>`;
+    }).join('');
+
+    return `<div class="pl-section"><div class="pl-section-title">Media from source <span style="font-weight:400;color:var(--muted-2)">(${items.length})</span></div>${rows}</div>`;
+  }
+
   function missingTags(l){
     const m = parseJSON(l.missing_fields) || [];
     if(!m.length) return '<span style="font-size:.75rem;color:var(--success)">✓ All key fields present</span>';
@@ -492,6 +559,8 @@
         <div class="pl-section-title">Photos from source ${photoCount ? `<span style="font-weight:400;color:var(--muted-2)">(${photoCount})</span>` : ''}</div>
         <div id="panel-photos-container">${photoCount ? '<span style="font-size:.75rem;color:var(--muted-2)">Loading…</span>' : ''}</div>
       </div>
+
+      ${renderSourceMedia(l)}
 
       <!-- Missing fields -->
       <div class="pl-section">
