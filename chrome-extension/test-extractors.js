@@ -209,7 +209,7 @@ t('detect Progress Residential', () => assert.strictEqual(api.detect(PR).id, 'pr
 t('detect CJ Real Estate', () => assert.strictEqual(api.detect(CJ).id, 'cj_real_estate'));
 t('detect AppFolio', () => assert.strictEqual(api.detect(AF).id, 'cj_real_estate'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
-t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, null); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
+t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, null); assert.strictEqual(p.available_date, null); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
 t('Zillow structured media', () => {
   const d = doc(cache({
     zpid: 98765432,
@@ -306,7 +306,8 @@ t('Zillow multi-unit starting rent with plus sign', () => {
   }));
   const p = api.extract(ZMULTI, d);
   assert.ok(p);
-  assert.strictEqual(p.monthly_rent, 1450);
+  assert.strictEqual(p.monthly_rent, null);
+  assert.strictEqual(p.community_starting_rent, 1450);
   assert.strictEqual(p.total_units, 12);
 });
 t('Zillow DOM starting rent with plus sign', () => {
@@ -347,7 +348,7 @@ t('Zillow DOM extracts clearly labeled tours, videos, and floor plans', () => {
   ];
   const d = doc({});
   d.querySelector = () => null;
-  d.querySelectorAll = (selector) => selector === 'iframe[src], video[src], video source[src], a[href], img[alt], img[title]'
+  d.querySelectorAll = (selector) => selector.includes('iframe[src]')
     ? mediaElements
     : [];
   d.body = { innerText: '' };
@@ -451,7 +452,8 @@ t('Zillow building page extracts nested cache data, visible address, rent, and g
   assert.strictEqual(payload.city, 'Dallas');
   assert.strictEqual(payload.state, 'TX');
   assert.strictEqual(payload.zip, '75216');
-  assert.strictEqual(payload.monthly_rent, 1450);
+  assert.strictEqual(payload.monthly_rent, null);
+  assert.strictEqual(payload.community_starting_rent, 1450);
   assert.strictEqual(JSON.parse(payload.original_image_urls).length, 11);
 
   paseoDoc.getElementById = () => null;
@@ -459,6 +461,97 @@ t('Zillow building page extracts nested cache data, visible address, rent, and g
   assert.strictEqual(domOnlyPayload.source_listing_id, '5YLsV5');
   assert.strictEqual(domOnlyPayload.address, '4836 Sunnyvale St');
   assert.strictEqual(JSON.parse(domOnlyPayload.original_image_urls).length, 11);
+});
+t('Zillow apartment communities preserve unit rows and media without flattening a sample unit', () => {
+  const communityUrl = 'https://www.zillow.com/apartments/haltom-city-tx/range-vista/CqWYZs/';
+  const communityRows = [
+    ['2305', '1', '1', '604', '$1,538'],
+    ['9303', '1', '1', '604', '$1,538'],
+    ['9304', '1', '1', '604', '$1,538'],
+    ['2307', '1', '1', '800', '$1,642'],
+    ['4203', '1', '1', '800', '$1,667'],
+    ['8303', '1', '1', '800', '$1,753'],
+    ['10302', '2', '2', '1,142', '$2,053'],
+    ['10307', '2', '2', '1,142', '$2,053'],
+    ['11302', '2', '2', '1,142', '$2,053'],
+    ['2111', '3', '2', '1,365', '$2,548'],
+    ['2302', '3', '2', '1,365', '$2,668'],
+    ['2311', '3', '2', '1,365', '$2,668'],
+  ].map(([unit, beds, baths, sqft, rent]) => `Unit ${unit} ${beds} bd, ${baths} ba ${sqft} sqft Dec 4 ${rent}`);
+  const rows = communityRows.map(text => ({ innerText: text, textContent: text }));
+  const video = {
+    tagName: 'VIDEO',
+    currentSrc: 'https://videos.zillowstatic.com/community-tour.mp4',
+    poster: 'https://photos.zillowstatic.com/fp/community-tour.jpg',
+    getAttribute: () => null,
+  };
+  const property = {
+    zpid: 461916207,
+    title: 'Range Vista Apartments',
+    address: { streetAddress: '4700 Fossil Vista Dr', city: 'Haltom City', state: 'TX', zipcode: '76137' },
+    homeType: 'APARTMENT',
+    price: 1538,
+    bedrooms: 1,
+    bathrooms: 1,
+    livingArea: 604,
+    units: communityRows.map((text, index) => {
+      const [, unit, beds, baths, sqft, rent] = text.match(/Unit (\S+) (\d+) bd, (\d+) ba ([\d,]+) sqft .*?(\$[\d,]+)/);
+      return {
+        unitNumber: unit,
+        bedrooms: beds,
+        bathrooms: baths,
+        squareFootage: sqft,
+        monthlyRent: rent,
+        availabilityDate: `2026-12-${String(index + 1).padStart(2, '0')}`,
+      };
+    }),
+    responsivePhotos: [{
+      mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/community-photo-1.jpg' }] },
+    }],
+    videos: [{ url: 'https://videos.zillowstatic.com/community-tour.mp4', title: 'Community video' }],
+    amenityCategories: [{ category: 'Pet policy', amenities: ['Pet Friendly'] }],
+  };
+  const communityDoc = doc(cache(property));
+  communityDoc.title = 'Range Vista Apartments - Zillow';
+  communityDoc.body = {
+    innerText: [
+      'Range Vista Apartments in Haltom City, TX',
+      'Apartment building',
+      '4700 Fossil Vista Dr, Haltom City, TX 76137',
+      ...communityRows,
+    ].join('\n'),
+  };
+  communityDoc.querySelector = selector => selector.includes('h1')
+    ? { textContent: 'Range Vista Apartments' }
+    : null;
+  communityDoc.querySelectorAll = selector => {
+    if (selector.includes('application/ld+json')) return [];
+    if (selector.startsWith('tr,')) return rows;
+    if (selector.includes('rent') || selector.includes('price')) return [];
+    if (selector.startsWith('img,')) return [];
+    if (selector.startsWith('iframe[')) return [video];
+    return [];
+  };
+
+  assert.strictEqual(api.detect(communityUrl).id, 'zillow');
+  const payload = api.extractZillow(communityDoc, communityUrl);
+  assert.ok(payload);
+  assert.strictEqual(payload.title, '4700 Fossil Vista Dr, Haltom City, TX 76137');
+  assert.strictEqual(payload.property_type, 'APARTMENT');
+  assert.strictEqual(payload.monthly_rent, null);
+  assert.strictEqual(payload.bedrooms, null);
+  assert.strictEqual(payload.bathrooms, null);
+  assert.strictEqual(payload.square_footage, null);
+  assert.strictEqual(payload.unit_options.length, 12);
+  assert.deepStrictEqual(
+    payload.unit_options.slice(0, 3).map(unit => [unit.unit_number, unit.bedrooms, unit.bathrooms, unit.square_footage, unit.monthly_rent]),
+    [['2305', 1, 1, 604, 1538], ['9303', 1, 1, 604, 1538], ['9304', 1, 1, 604, 1538]]
+  );
+  assert.strictEqual(payload.unit_options[11].unit_number, '2311');
+  assert.ok(payload.media.some(item => item.kind === 'video'));
+  assert.strictEqual(payload.pets_allowed, null);
+  assert.ok(!JSON.stringify(payload.unit_options).includes('availabilityDate'));
+  assert.ok(!JSON.stringify(payload.unit_options).includes('Dec 4'));
 });
 t('Zillow does not substitute Zestimate for asking rent or treat unknown features as false', () => {
   const d = doc(cache({ zpid: 222, address: { streetAddress: '2 Unknown St', city: 'Nowhere', state: 'TX' }, rentZestimate: 1750 }));

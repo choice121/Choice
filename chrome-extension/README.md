@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v38.0.1)
+# Choice Properties — Universal Chrome Extension (v39.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -8,7 +8,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 
 | Platform | URL Patterns Supported | Extraction Method |
 | :--- | :--- | :--- |
-| **Zillow** | `zillow.com/homedetails/*`, `zillow.com/b/*` | `__NEXT_DATA__` + `gdpClientCache` + JSON-LD |
+| **Zillow** | `zillow.com/homedetails/*`, `zillow.com/b/*`, `zillow.com/apartments/*` | `__NEXT_DATA__` + `gdpClientCache` + JSON-LD + rendered unit rows |
 | **Realtor.com** | `realtor.com/realestateandhomes-detail/*` | `__NEXT_DATA__` (`pageProps.initialState`) |
 | **Apartments.com** | `apartments.com/*` | Microdata / JSON-LD + Dynamic DOM Table |
 | **Redfin** | `redfin.com/*` | `__NEXT_DATA__` + `reactServerState` |
@@ -27,7 +27,14 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Exact detected photo total shown for the current listing (no ambiguous `+N` remainder).
   - Mini photo thumbnail ribbon for instant visual preview.
   - Detected architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.) for review.
-  - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
+  - Unit-option and video/tour/floor-plan counts for multifamily communities.
+  - Deposit and application-fee defaults; pet policies are not imported or displayed.
+- **Zillow Community Listings**:
+  - Preserves each available-unit row's unit number, bed/bath count, square footage, and listed rent in source order.
+  - Captures floor-plan starting prices separately from unit-specific rents.
+  - Leaves community-level rent, beds, baths, and square footage blank rather than copying the first unit's facts.
+  - Stores the unit breakdown in the pipeline record's existing `original_data` field; no pipeline-schema changes are required.
+- **Zillow Media**: Collects ordered photo URLs, video sources/posters, 3D tours, and floor-plan links from structured and rendered page content.
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
 - **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch folders or create a new folder (with any name, including numbers, and optional description) directly on Zillow, auto-collapsing immediately once configured.
 - **Sticky Default Folder Persistence**: Any folder created or selected automatically becomes the persistent default folder for all subsequent 1-click "Save to Pipeline" imports until changed.
@@ -65,6 +72,6 @@ Whenever making modifications to the extension:
    ```
 3. Verify test suite:
    - Compiles all 3 variants (`chrome-extension`, `.pages-orion`, `supabase/functions`).
-   - Executes 20 automated test cases.
+   - Executes the extractor regression suite.
    - Bumps version and updates `extension-meta.json` and `public/choice-properties-extension.zip`.
 4. Record all changes in `docs/EXTENSION_CHANGELOG.md`.

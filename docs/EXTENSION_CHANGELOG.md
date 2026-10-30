@@ -4,6 +4,18 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v39.0.0] - 2026-10-30
+### Zillow Apartment Community Extraction
+- **Community-Level Accuracy**: Keep building-page rent and bedroom/bathroom/square-footage fields empty instead of copying the first unit's facts.
+- **Unit Rows**: Preserve unit numbers, beds, baths, square footage, and unit-specific rent in the source order; keep floor-plan starting rents distinct.
+- **Media Coverage**: Improve rendered video, poster, virtual-tour, and floor-plan media detection and show media/unit counts in the importer.
+- **Pipeline Preservation**: Store unit options in the existing `original_data` field without altering the pipeline schema; omit unit availability dates and pet policies.
+- **Community Starting Rent**: Display building-level starting rent separately without treating it as an individual unit's monthly rent.
+- **Regression Coverage**: Add a 12-row Range Vista-style fixture and retain support for single-family Zillow pages.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v39.0.0.
+
+---
+
 ## [v38.0.1] - 2026-10-30
 ### Use Asking Rent for Zillow Imports
 - **Estimate Rejection**: Keep Zillow rent estimates out of staged asking-rent fields when no explicit listing price is available.

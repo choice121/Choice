@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v38.0.1
+// Choice Properties — Universal Content Script & UI Engine v39.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '38.0.1';
+  var VERSION  = '39.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -80,9 +80,19 @@
       data.state,
       data.zip,
       data.monthly_rent != null ? data.monthly_rent : data.rent,
+      data.community_starting_rent,
       data.bedrooms != null ? data.bedrooms : data.beds,
       data.bathrooms != null ? data.bathrooms : data.baths,
       data.square_footage != null ? data.square_footage : data.sqft,
+      JSON.stringify((Array.isArray(data.unit_options) ? data.unit_options : []).map(function (unit) {
+        return [
+          unit.unit_number, unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
+          unit.square_footage, unit.monthly_rent, unit.starting_rent
+        ].join(':');
+      })),
+      JSON.stringify((Array.isArray(data.media) ? data.media : []).map(function (item) {
+        return item ? [item.kind, item.url].join(':') : '';
+      })),
       photos.length,
       data.description ? String(data.description).length : 0
     ].join('|');
@@ -377,6 +387,8 @@
     if (extracted && (extracted.monthly_rent || extracted.rent)) {
       var rentNum = extracted.monthly_rent || extracted.rent;
       rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
+    } else if (extracted && extracted.community_starting_rent) {
+      rentStr = 'Starting at $' + Number(extracted.community_starting_rent).toLocaleString() + '/mo';
     }
 
     var bedsBaths = 'Listing details';
@@ -387,6 +399,8 @@
       if (extracted.square_footage) {
         bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
       }
+    } else if (extracted && Array.isArray(extracted.unit_options) && extracted.unit_options.length > 0) {
+      bedsBaths = extracted.unit_options.length + ' unit details';
     }
 
     var photoUrls = [];
@@ -398,8 +412,18 @@
     }
     photoUrls = dedupePhotoUrls(photoUrls);
     var photoCount = photoUrls.length;
-    var photoBadgeClass = photoCount >= 6 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeClass = 'cp-chip-photos';
     var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
+    var extractedMedia = extracted && Array.isArray(extracted.media) ? extracted.media : [];
+    var mediaCounts = {
+      video: extractedMedia.filter(function (item) { return item && item.kind === 'video'; }).length,
+      virtual_tour: extractedMedia.filter(function (item) { return item && (item.kind === 'virtual_tour' || item.kind === 'tour_3d'); }).length,
+      floor_plan: extractedMedia.filter(function (item) { return item && item.kind === 'floor_plan'; }).length
+    };
+    var mediaSummary = [];
+    if (mediaCounts.video) mediaSummary.push(mediaCounts.video + (mediaCounts.video === 1 ? ' video' : ' videos'));
+    if (mediaCounts.virtual_tour) mediaSummary.push(mediaCounts.virtual_tour + (mediaCounts.virtual_tour === 1 ? ' 3D tour' : ' 3D tours'));
+    if (mediaCounts.floor_plan) mediaSummary.push(mediaCounts.floor_plan + (mediaCounts.floor_plan === 1 ? ' floor plan' : ' floor plans'));
 
     var propType = (extracted && extracted.property_type) ? extracted.property_type.replace(/_/g, ' ') : 'Property';
     var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
@@ -454,6 +478,7 @@
               <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
               <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip ${photoBadgeClass}">${escapeHtml(photoBadgeText)}</span>
+              ${mediaSummary.length ? '<span class="cp-chip">' + escapeHtml(mediaSummary.join(' • ')) + '</span>' : ''}
               <span class="cp-chip cp-chip-type">${escapeHtml(propType)}</span>
             </div>
 
@@ -1043,8 +1068,19 @@
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
+        original_data: JSON.stringify({
+          zpid: extracted.source_listing_id,
+          detailUrl: extracted.source_url || location.href,
+          homeType: extracted.property_type || 'APARTMENT',
+          community_starting_rent: extracted.community_starting_rent,
+          media: mediaItems,
+          unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],
+          _source: extracted.source || 'zillow',
+          _import: 'browser-extension-v' + VERSION
+        }),
         available_date: null,
-        pets_allowed: true,
+        pets_allowed: null,
+        pet_types_allowed: null,
         application_fee: 50,
         security_deposit: rentVal,
         last_months_rent: extracted.last_months_rent,
