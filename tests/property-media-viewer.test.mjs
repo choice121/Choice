@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { isPlayableTourMedia } from '../js/tour-media.mjs';
 
 // Test Fixtures & Logic Mirror for headless testing
 function normalizeUrl(u) {
@@ -241,4 +242,16 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   console.log('✅ Test 6 Passed: Unit Floor is kept separate from internal floor labels');
 }
 
-console.log('--- ALL PROPERTY MEDIA TESTS PASSED (6/6) ---');
+// Test 7: Reject image thumbnails and provider landing pages as tours
+{
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://www.zillow.com/s3/hdp/home-details/images/third-party-virtual-tour/cc_ft_768.jpg' }), false);
+  assert.equal(isPlayableTourMedia({ kind: 'video', url: 'https://www.insidemaps.com/app/walkthrough-tour/' }), false);
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://my.matterport.com/show/?m=50084live' }), false);
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://tour.example.com/virtual-tour/12345' }), false);
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://my.matterport.com/show/?m=abc123def45' }), true);
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://www.propertypanorama.com/instaview/ntreis/21409428' }), true);
+  assert.equal(isPlayableTourMedia({ kind: 'video', url: 'https://cdn.example.test/walkthrough.mp4' }), true);
+  console.log('✅ Test 7 Passed: Only playable tour/video URLs are accepted');
+}
+
+console.log('--- ALL PROPERTY MEDIA TESTS PASSED (7/7) ---');

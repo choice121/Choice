@@ -123,55 +123,8 @@ export async function onRequest(context) {
     html = html.split(LEGACY_PLACEHOLDER).join(nonce);
   }
 
-  // --- OPEN GRAPH INJECTION ---
-  if (url.pathname === '/property.html' || url.pathname.startsWith('/rent/')) {
-    const idParam = url.searchParams.get('id');
-    const slugMatch = url.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
-    const propId = idParam || (slugMatch ? slugMatch[1] : null);
-    
-    if (propId) {
-      try {
-        const supabaseUrl = "https://tlfmwetmhthpyrytrcfo.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE";
-        
-        const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        });
-        
-        if (fetchRes.ok) {
-          const props = await fetchRes.json();
-          if (props && props.length > 0) {
-            const p = props[0];
-            const title = p.title || 'Property for Rent';
-            const price = p.monthly_rent ? `$${p.monthly_rent}/mo` : '';
-            const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
-            
-            let photoUrl = '';
-            if (p.property_photos && p.property_photos.length > 0) {
-               p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-               photoUrl = p.property_photos[0].url;
-            }
-
-            html = html.replace('<title>Property — Choice Properties</title>', `<title>${pageTitle}</title>`);
-            
-            const ogTags = `
-              <meta property="og:title" content="${pageTitle}">
-              <meta property="og:description" content="View property details and apply online.">
-              ${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ''}
-              <meta name="twitter:card" content="summary_large_image">
-            `;
-            html = html.replace('</head>', ogTags + '</head>');
-          }
-        }
-      } catch (e) {
-        // Silently fail and serve default HTML
-      }
-    }
-  }
-  // ----------------------------
+  // Open Graph injection is intentionally server-side-free to avoid exposing
+  // any live service credentials via the static frontend middleware.
 
   const headers = new Headers(response.headers);
   headers.set('Content-Security-Policy', csp);
