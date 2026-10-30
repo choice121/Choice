@@ -699,6 +699,34 @@ t('Zillow community inventory rejects prose labels, merges duplicate units, and 
   assert.strictEqual(report.facts.is_multi_unit, true);
   assert.strictEqual(report.facts.price_range, '$1,200 – $1,800');
 });
+t('Zillow community unit prices retain their explicit price basis', () => {
+  const url = 'https://www.zillow.com/apartments/dallas-tx/example-community/Community456/';
+  const cases = [
+    ['Total monthly price', 'total_monthly_price'],
+    ['Base rent', 'base_rent'],
+    ['Pricing & availability', null],
+  ];
+
+  cases.forEach(([label, expected]) => {
+    const communityDoc = doc(cache({
+      zpid: 'Community456',
+      name: 'Example Community',
+      address: { streetAddress: '10 Main St', city: 'Dallas', state: 'TX', zipcode: '75201' },
+      homeType: 'APARTMENT',
+      units: [{ unitNumber: 'A101', bedrooms: 1, bathrooms: 1, squareFootage: 650, monthlyRent: 1450 }],
+    }));
+    communityDoc.body = { innerText: `Example Community\nUnit A101\n1 bd\n1 ba\n650 sqft\n$1,450\n${label}` };
+
+    const payload = api.extract(url, communityDoc);
+    assert.ok(payload);
+    assert.strictEqual(payload.rent_basis, expected);
+    assert.strictEqual(payload.unit_options[0].rent_basis, expected);
+
+    const report = api.diagnose(url, communityDoc);
+    assert.strictEqual(report.facts.rent_basis ?? null, expected);
+    assert.strictEqual(report.unit_options[0].rent_basis, expected);
+  });
+});
 t('diagnostics report extracted listing facts and page shape without raw descriptions or query data', () => {
   const d = doc(cache({
     zpid: 12345,

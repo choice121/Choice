@@ -42,6 +42,11 @@
   async function validateForPublish(listing) {
     const failures = [];
     const desc = listing.description || '';
+    const inventory = inventoryData(listing);
+
+    if (inventory.isMultiUnit) {
+      failures.push('This is an apartment community, not one rental unit. The current publish flow does not support community listings; do not copy unit facts into the building-level fields.');
+    }
 
     // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
     // Listings are pre-screened on import and published regardless of photo count.
@@ -151,15 +156,21 @@
         if(!plans.has(key)) plans.set(key, option);
       }
     });
+    const optionPriceBasis = rawOptions.find(option => option && option.rent_basis)?.rent_basis || null;
     return {
       buildingName: listing.building_name || sourceData.building_name || null,
       priceRange: listing.price_range || sourceData.price_range || null,
+      priceBasis: listing.rent_basis || sourceData.rent_basis || optionPriceBasis,
       isMultiUnit: listing.is_multi_unit === true || sourceData.is_multi_unit === true || units.size > 0 || plans.size > 0,
       totalUnits: listing.total_units ?? sourceData.total_units ?? null,
       floors: listing.floors ?? sourceData.floors ?? null,
       units: Array.from(units.values()),
       floorPlans: Array.from(plans.values()),
     };
+  }
+  function optionsHavePrices(inventory){
+    return inventory.units.concat(inventory.floorPlans)
+      .some(option => option.monthly_rent != null || option.starting_rent != null);
   }
   function renderInventory(listing){
     const inventory = inventoryData(listing);
@@ -172,6 +183,12 @@
     facts.push(`${inventory.floorPlans.length} floor plans found`);
     facts.push(Number.isFinite(floors) && floors > 0 ? `${S.esc(floors.toLocaleString())} building ${floors === 1 ? 'story' : 'stories'}` : 'Building stories not reported');
     if(inventory.priceRange) facts.push(`Source price range: ${S.esc(inventory.priceRange)}`);
+    const priceBasisLabel = inventory.priceBasis === 'total_monthly_price'
+      ? 'Total monthly price'
+      : inventory.priceBasis === 'base_rent'
+        ? 'Base rent'
+        : 'Price basis not recorded';
+    if(optionsHavePrices(inventory)) facts.push(`Unit price basis: ${priceBasisLabel}`);
     const options = inventory.units.map(option => ({ option, label: `Unit ${option.unit_number}` }))
       .concat(inventory.floorPlans.map((option, index) => ({
         option,
@@ -186,7 +203,13 @@
       const rent = option.monthly_rent != null
         ? `$${Number(option.monthly_rent).toLocaleString()}/mo`
         : option.starting_rent != null ? `From $${Number(option.starting_rent).toLocaleString()}/mo` : '';
-      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border)"><span><strong>${S.esc(label)}</strong>${details.length ? ` · ${details.join(' · ')}` : ''}</span>${rent ? `<strong>${S.esc(rent)}</strong>` : ''}</div>`;
+      const optionBasis = option.rent_basis || inventory.priceBasis;
+      const optionBasisLabel = optionBasis === 'total_monthly_price'
+        ? 'Total monthly price'
+        : optionBasis === 'base_rent'
+          ? 'Base rent'
+          : 'Price basis not recorded';
+      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border)"><span><strong>${S.esc(label)}</strong>${details.length ? ` · ${details.join(' · ')}` : ''}</span>${rent ? `<strong>${S.esc(rent)}<small style="display:block;text-align:right;font-weight:400;color:var(--muted-2)">${S.esc(optionBasisLabel)}</small></strong>` : ''}</div>`;
     }).join('');
     const heading = inventory.buildingName
       ? `<div style="margin-bottom:6px;font-weight:600">${S.esc(inventory.buildingName)}</div>`
@@ -194,6 +217,7 @@
     return `<div class="pl-section">
       <div class="pl-section-title">Building &amp; unit inventory</div>
       ${heading}
+      ${inventory.isMultiUnit ? `<div class="pl-photo-count" style="margin:8px 0;padding:10px;border:1px solid #f59e0b;border-radius:6px;color:#b45309">Community import — the current publish flow supports one rental unit only. Keep this record in review; do not publish it as a standalone rental.</div>` : ''}
       <div class="pl-photo-count">${facts.join(' · ')}</div>
       ${rows ? `<div style="margin-top:8px">${rows}</div>` : ''}
       ${options.length > 40 ? `<div class="pl-photo-count" style="margin-top:6px">${options.length - 40} additional options are stored in the source data.</div>` : ''}

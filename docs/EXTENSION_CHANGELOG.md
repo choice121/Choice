@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v44.0.0] - 2026-10-30
+### Preserve Zillow Unit Price Basis
+- **Avoid rent ambiguity**: Record whether Zillow labels unit prices as base rent or total monthly price; leave unclear labels unknown.
+- **Pipeline review**: Display each unit's captured price basis and warn when legacy imports have no basis recorded.
+- **Publishing guard**: Block community records from the single-rental publish flow instead of encouraging operators to copy one unit's facts to the building.
+- **Regression coverage**: Verify both known price labels and unknown labels are preserved in extraction and diagnostics.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v44.0.0.
+
+---
+
 ## [v43.0.0] - 2026-10-30
 ### Correct Zillow Community Inventory
 - **Reject prose as unit identifiers**: Accept apartment unit numbers only when they match a unit-label shape, preventing words like “to”, “for”, and “types” from becoming fake units or rents.

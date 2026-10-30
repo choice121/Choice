@@ -316,6 +316,15 @@
     };
   }
 
+  function getZillowRentBasis(doc) {
+    const text = doc && doc.body && typeof doc.body.innerText === 'string'
+      ? doc.body.innerText
+      : '';
+    if (/\btotal\s+monthly\s+(?:leasing\s+)?price\b/i.test(text)) return 'total_monthly_price';
+    if (/\bbase\s+rent\b/i.test(text)) return 'base_rent';
+    return null;
+  }
+
   function isValidZillowUnitLabel(value) {
     const label = String(value == null ? '' : value).trim().replace(/^#/, '');
     return /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(label);
@@ -792,6 +801,7 @@
       source, source_listing_id: id, source_url: url,
       title: null, address: null, city: null, state: null, zip: null, lat: null, lng: null,
       monthly_rent: null, community_starting_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null,
+      rent_basis: null,
       square_footage: null, year_built: null, lot_size_sqft: null, floors: null,
       garage_spaces: null, total_units: null, property_type: null, description: null, original_description: null,
       building_name: null, is_multi_unit: null, price_range: null,
@@ -1499,7 +1509,9 @@
 
     merged.media = mergeStructuredMedia(res && res.media, dom && dom.media, ld && ld.media);
     const unitOptions = mergeZillowUnitOptions(dom && dom.unit_options, res && res.unit_options);
-    merged.unit_options = unitOptions;
+    const rentBasis = getZillowRentBasis(doc);
+    merged.rent_basis = rentBasis;
+    merged.unit_options = unitOptions.map(option => Object.assign({}, option, { rent_basis: rentBasis }));
     if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
       merged.is_multi_unit = true;
       merged.building_name = merged.building_name || (dom && dom.building_name) || (res && res.building_name) || null;
@@ -2589,7 +2601,7 @@
 
     const safeFields = [
       'source_listing_id', 'title', 'address', 'city', 'state', 'zip',
-      'property_type', 'building_name', 'is_multi_unit', 'price_range', 'monthly_rent', 'community_starting_rent',
+      'property_type', 'building_name', 'is_multi_unit', 'price_range', 'rent_basis', 'monthly_rent', 'community_starting_rent',
       'bedrooms', 'bathrooms', 'half_bathrooms', 'square_footage',
       'year_built', 'lot_size_sqft', 'floors', 'total_units',
       'heating_type', 'cooling_type', 'has_central_air', 'has_basement',
@@ -2622,6 +2634,7 @@
         square_footage: unit.square_footage ?? null,
         monthly_rent: unit.monthly_rent ?? null,
         starting_rent: unit.starting_rent ?? null,
+        rent_basis: unit.rent_basis ?? extracted.rent_basis ?? null,
         source_order: unit.source_order ?? null,
       }))
       : [];
