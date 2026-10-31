@@ -141,7 +141,7 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 - The homepage loads several style layers, including `cp-design.css`, `cp-marketing.css`, `premium-design.css`, and `home-experience.css`.
 - React/Vite dependencies exist, but `scripts/copy-static-to-dist.js` copies static pages/assets; verify actual build behavior before choosing a stack.
 - Cloudflare Pages is the documented host; actual control-plane access is not confirmed.
-- GitHub write access was confirmed on 2026-10-30. Core redesign PRs #56–#63 were merged to `main` on 2026-10-31; final merge commit: `70e1eba5e009b153fbc3b6c99763031e838fcd50`. Follow-up marketplace-copy accuracy work is in open PR #64 from branch `fix/marketplace-release-readiness` and is not yet merged.
+- GitHub write access was confirmed on 2026-10-30. Core redesign PRs #56–#63 were merged to `main` on 2026-10-31; final merge commit: `70e1eba5e009b153fbc3b6c99763031e838fcd50`. Follow-up marketplace-copy accuracy PR #64 was squash-merged to `main` on 2026-10-31 as `87af1b1d7722669bcb3836f0961c73d14026959e`. The owner reported completing Cloudflare deployment confirmation, but this workflow did not independently verify the Cloudflare deployment record or live site.
 - The Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` had no GitHub status checks; do not treat an empty status list as passing tests. GitHub workflow success alone did not verify Cloudflare Pages production deployment. No browser/build/network test was run. Cloudflare dashboard settings and production deployment remain unverified.
 - Do not put credentials in project docs.
 
