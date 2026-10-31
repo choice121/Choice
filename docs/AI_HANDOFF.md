@@ -8,6 +8,13 @@ Redesign the existing Choice Properties public rental marketplace as a unified, 
 ## Preserve
 Do not casually rewrite or break application/submission/payment flows, admin, tenant/landlord dashboards, auth, Supabase integrations, property importer/browser extension, scraper/publishing pipeline, or policy pages. Do not change database schema/data or ingestion behavior without explicit approval.
 
+## Current active work
+- Phase 8 is being prepared on branch `phase-8/property-media-reliability`; it is not merged or deployed.
+- The property detail page already has photo gallery, tour modal, floor-media grouping, and unit/building/floor rendering code. A read-only current database snapshot showed 0 unit, building, and floor rows and only 13 property-media rows, so the feature architecture exists but live coverage/data cannot yet be considered complete.
+- Phase 8 connects the existing playable-tour URL validator to production rendering, rejects unsupported media URLs, adds common Vimeo URL support, enables keyboard activation for media thumbnails, and corrects floor filter button semantics.
+- Do not claim the full Zillow-inspired experience is complete. Browser/device tests, real media verification, performance measurement, and Cloudflare deployment verification remain open.
+- Continue in phases; do not create or populate unit/building/floor data or change schema without explicit approval.
+
 ## Critical repository rules
 - Follow root instructions and `.agents/` rules.
 - Existing HTML comments specify edit → GitHub push → Cloudflare Pages and prohibit `npm install`, starting a server, creating `config.js`, local DB connections/migrations, and runtime/workflow/environment configuration.
