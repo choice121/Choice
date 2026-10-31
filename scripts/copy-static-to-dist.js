@@ -21,10 +21,6 @@ function copyRecursive(src, dest) {
       copyRecursive(path.join(src, entry), path.join(dest, entry));
     }
   } else {
-    // If destination file exists (e.g. from vite build), only copy if not dist/index.html
-    if (path.resolve(dest) === path.resolve(DIST_DIR, 'index.html')) {
-      return; // Keep Vite built index.html as main SPA root
-    }
     fs.copyFileSync(src, dest);
   }
 }
