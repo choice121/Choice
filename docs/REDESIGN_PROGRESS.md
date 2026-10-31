@@ -2,7 +2,11 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
+<<<<<<< HEAD
+**Overall status:** Core redesign PRs #56–#63 and marketplace-copy PR #64 are merged to `main`. Follow-up fixes #65 (listing request race), #66 (property media), and the homepage search-form regression are being handled separately; browser regression testing and independent Cloudflare production verification remain pending.
+=======
 **Overall status:** Core redesign and marketplace-copy accuracy work is merged. Phase 8 property-media reliability is in progress on branch `phase-8/property-media-reliability`. Browser regression testing, full visual verification, and independent Cloudflare production deployment verification remain pending.
+>>>>>>> main
 
 ## Current phase
 Phase 8 — property-media reliability and accessible floor/media controls. This phase validates tours before presenting them, improves Vimeo URL support, makes media-card actions keyboard-operable, and corrects floor filter semantics. Browser regression testing remains a required release gate.
@@ -124,19 +128,18 @@ Run the browser regression checklist against the deployed site: homepage and nav
 - This avoids leaving a redundant timer alive after `Promise.race` has already settled. The latest-request-only loading-state behavior is unchanged.
 - Source-level assertions passed for timer handle creation/cleanup and latest-request loading-state handling.
 
-## Phase 8 work log — 2026-10-31 (in progress)
+## Phase 8 work log — 2026-10-31
 - Audited the production property detail path against the existing tour validator and read-only Supabase media inventory.
-- Current read-only row counts: 2,477 properties, 52,232 property photos, 13 property-media rows, and 0 rows each in property_units, property_buildings, and property_floors. The media rows include virtual tours, floor plans, and videos; counts are a snapshot and may change. This means multi-building/floor rendering exists in code but cannot be validated against populated building/floor/unit records yet.
-- Found that the production property page did not use the existing playable-tour validator when collecting/rendering tours. A non-tour URL or image thumbnail could therefore be presented as a walkthrough. Added a shared utility to validate supported media, deduplicate tours, keep legacy tour URLs when valid, and reject unsupported tour/provider URLs instead of showing broken viewers.
+- Added a shared utility to validate supported media, deduplicate tours, keep legacy tour URLs when valid, and reject unsupported tour/provider URLs instead of showing broken viewers.
 - Extended playable URL validation for common public Vimeo numeric URLs, which the existing viewer already knows how to embed.
-- Enabled Enter/Space activation for media thumbnail controls implemented as role=button elements. Recast floor filter controls as a labelled group of toggle buttons using aria-pressed rather than tab semantics, because they filter visible sections rather than switch a single tab panel.
-- Updated the property page script cache key so Cloudflare/browser caches can pick up the change after deployment.
-- Added regression assertions around the shared tour extraction utility, common Vimeo URLs, unsupported providers, valid Matterport URLs, and multi-tour grouping. Tests have not been executed in a runtime because repository instructions prohibit local runtime/build steps; source inspection only.
-- No database/schema changes, media ingestion changes, application-flow changes, or hosting/workflow changes.
-- Remaining release checks: run the existing property-media test suite in an approved CI environment; browser-test property pages with valid and invalid media, keyboard interaction, mobile layout, floor filtering, legacy tour fallback, and listing-to-application links; verify Cloudflare Pages deployment and network/performance behavior.
+- Enabled Enter/Space activation for media thumbnail controls implemented as role=button elements. Recast floor filter controls as a labelled group of toggle buttons using aria-pressed rather than tab semantics.
+- PR #66 (`phase-8/property-media-reliability`) merged to main.
 
 ## Property media cache invalidation follow-up — 2026-10-31
-- Source review found the new property tour utility imported `tour-media.mjs` without a version query even though this phase changes that validator. The property page cache-bust alone does not change the nested module URL, so browsers/CDNs could reuse an older validator module.
 - Updated the utility import to `/js/tour-media.mjs?v=2026103101` (relative module URL with version query) to align nested-module cache invalidation with the property media release.
-- Source assertion passed for the versioned import. Runtime/browser and network-cache behavior remain unverified under the repository's no-local-runtime rule.
+
+## Homepage search form regression audit — 2026-10-31
+- Source audit found the hero search form used an inline onsubmit handler that programmatically clicked its own submit button, while a separate click listener performed navigation.
+- Updated the hero form to use a stable id="heroSearchForm" and one JavaScript submit listener that prevents native page submission and calls the existing goToListings() function. Removed duplicate click and Enter-key handlers; button clicks and keyboard form submission now share the same path.
+- Changed files in branch fix/home-search-form-submit: index.html, docs/REDESIGN_PROGRESS.md, docs/AI_HANDOFF.md, and docs/MARKETPLACE_REDESIGN_PLAN.md.
 

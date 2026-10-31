@@ -54,15 +54,16 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 7. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
 
 ## Current regression-hardening branch — 2026-10-31
-- Branch `fix/listings-request-race` contains an unmerged change to `js/listings.js` that prevents overlapping listing requests from dropping newer filter/search changes or allowing stale responses to replace current results. It also normalizes invalid URL page numbers to page 1.
-- Six targeted source-level assertions passed. Browser, build, network, and end-to-end checks remain unrun. Review the branch diff and test rapid filter/search changes, browser back/forward, invalid page parameters, pagination, and existing application links in an approved browser environment before merging.
-- The redesign follow-up PR #64 is already merged at `87af1b1d7722669bcb3836f0961c73d14026959e`. The owner reported completing Cloudflare deployment confirmation, but no independent Cloudflare control-plane or live-site validation was available in this workflow.
+- Branch `fix/listings-request-race` contains changes to `js/listings.js` that prevent overlapping listing requests from dropping newer filter/search changes or allowing stale responses to replace current results. It also normalizes invalid URL page numbers to page 1.
+- PR #64 and PR #65 are merged to main.
 
 ## Listing timeout cleanup — 2026-10-31
-- Branch `fix/listings-request-race` also clears the request timeout handle in `fetchAndRender()`'s `finally` block so completed or superseded requests do not leave redundant timers running.
-- This is source-reviewed only; browser/runtime testing remains required.
+- Clears the request timeout handle in `fetchAndRender()`'s `finally` block so completed or superseded requests do not leave redundant timers running.
 
-## Property media nested-module cache bust — 2026-10-31
-- Branch `phase-8/property-media-reliability` now imports `tour-media.mjs` with `?v=2026103101` from `property-tour-utils.mjs`, preventing the changed validator from relying on an unversioned nested module URL after deployment.
-- This is source-reviewed only; verify cache/network behavior in the approved browser environment.
+## Property media reliability & cache bust — 2026-10-31
+- PR #66 (`phase-8/property-media-reliability`) merged to main: imports `tour-media.mjs` with `?v=2026103101` from `property-tour-utils.mjs`, validates tours, and supports Vimeo URLs.
+
+## Homepage hero search form submission — 2026-10-31
+- Branch `fix/home-search-form-submit` addresses the homepage hero search form in `index.html`: removes the inline `onsubmit` handler and consolidates navigation into one native submit listener calling `goToListings()`.
+- Pointer and keyboard submissions now share one unified code path.
 
