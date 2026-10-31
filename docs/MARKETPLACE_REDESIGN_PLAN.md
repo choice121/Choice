@@ -98,8 +98,13 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 **Acceptance:** standalone homes remain clean; unit links use real IDs; no unapproved migration. Browser validation remains pending.
 
 ## Phase 6 — Cross-page integration, accessibility, performance
-Review keyboard focus, contrast, labels, alt text, reduced motion, image loading, layout shifts, fonts/icons, video/3D loading, canonical URLs, metadata, redirects, and deep links. Check protected flows for unintended effects.
-**Acceptance:** regression results and untestable items are documented; property facts/photo order remain intact.
+- [x] Change property card image loading so all cards default to lazy loading and only the explicitly selected first result image is eager/high priority.
+- [x] Keep homepage featured cards lazy by default because they appear below the hero and city content.
+- [ ] Review keyboard focus, contrast, labels, alt text, reduced motion, layout shifts, fonts/icons, video/3D loading, canonical URLs, metadata, redirects, and deep links.
+- [ ] Check protected flows for unintended effects using only permitted validation methods.
+- [ ] Document all regression results and untestable items.
+
+**Acceptance:** regression results and untestable items are documented; property facts/photo order remain intact. Browser/network validation remains pending.
 
 ## Phase 7 — Regression and release handoff
 Run permitted checks; inspect diffs; verify commit/deployment where access permits; update statuses, issues, and next actions.
