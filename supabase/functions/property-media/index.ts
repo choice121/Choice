@@ -7,8 +7,7 @@ const corsHeaders = {
 };
 
 const mediaKinds = new Set(["floor_plan", "video", "virtual_tour", "tour_3d"]);
-const mediaColumns = "id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id, created_at, updated_at";
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const mediaColumns = "id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, created_at, updated_at";
 
 function response(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,33 +42,6 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
-  async function resolveScope(propertyId: string, body: Record<string, unknown>) {
-    const type = body.scope_type;
-    const id = body.scope_id;
-    if (type === "none") return { values: { building_id: null, floor_id: null, unit_id: null }, error: null };
-    if ((type !== "building" && type !== "floor" && type !== "unit") || typeof id !== "string" || !uuidPattern.test(id)) {
-      return { values: null, error: "invalid_media_scope" };
-    }
-    if (type === "building") {
-      const { data, error } = await supabase.from("property_buildings").select("id")
-        .eq("id", id).eq("property_id", propertyId).maybeSingle();
-      if (error) return { values: null, error: "media_scope_check_failed" };
-      if (!data) return { values: null, error: "building_not_found" };
-      return { values: { building_id: id, floor_id: null, unit_id: null }, error: null };
-    }
-    if (type === "floor") {
-      const { data, error } = await supabase.from("property_floors").select("id, building_id")
-        .eq("id", id).eq("property_id", propertyId).maybeSingle();
-      if (error) return { values: null, error: "media_scope_check_failed" };
-      if (!data) return { values: null, error: "floor_not_found" };
-      return { values: { building_id: data.building_id, floor_id: data.id, unit_id: null }, error: null };
-    }
-    const { data, error } = await supabase.from("property_units").select("id")
-      .eq("id", id).eq("property_id", propertyId).maybeSingle();
-    if (error) return { values: null, error: "media_scope_check_failed" };
-    if (!data) return { values: null, error: "unit_not_found" };
-    return { values: { building_id: null, floor_id: null, unit_id: data.id }, error: null };
-  }
   const { data: authData, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
   if (authError || !authData.user) return response({ error: "admin_auth_required" }, 401);
 
@@ -125,11 +97,6 @@ Deno.serve(async (req) => {
 
     const posterUrl = safeUrl(body.poster_url, true);
     if (body.poster_url && !posterUrl) return response({ error: "invalid_poster_url" }, 400);
-    const scope = await resolveScope(propertyId, {
-      scope_type: body.scope_type ?? "none",
-      scope_id: body.scope_id,
-    });
-    if (scope.error || !scope.values) return response({ error: scope.error || "invalid_media_scope" }, 400);
     const { data, error } = await supabase
       .from("property_media")
       .insert({
@@ -143,37 +110,11 @@ Deno.serve(async (req) => {
         poster_url: posterUrl,
         display_order: Number.isInteger(body.display_order) ? body.display_order : 0,
         metadata: body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata) ? body.metadata : {},
-        ...scope.values,
       })
       .select(mediaColumns)
       .single();
     if (error) return response({ error: "media_create_failed", detail: error.message }, 500);
     return response({ media: data }, 201);
-  }
-
-  if (action === "reorder") {
-    const ids = Array.isArray(body.ids) ? body.ids : (Array.isArray(body.order) ? body.order : null);
-    if (!ids || ids.length > 100 || ids.some((id) => typeof id !== "string") || new Set(ids).size !== ids.length) {
-      return response({ error: "invalid_media_order" }, 400);
-    }
-    const { data: existing, error: existingError } = await supabase
-      .from("property_media")
-      .select("id")
-      .eq("property_id", propertyId);
-    if (existingError) return response({ error: "media_order_load_failed", detail: existingError.message }, 500);
-    const existingIds = new Set((existing || []).map((item) => item.id));
-    if (ids.some((id) => !existingIds.has(id))) {
-      return response({ error: "media_order_mismatch" }, 400);
-    }
-    for (const [displayOrder, id] of ids.entries()) {
-      const { error } = await supabase
-        .from("property_media")
-        .update({ display_order: displayOrder, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("property_id", propertyId);
-      if (error) return response({ error: "media_order_save_failed", detail: error.message }, 500);
-    }
-    return response({ saved: true });
   }
 
   const mediaId = typeof body.id === "string" ? body.id : "";
@@ -195,11 +136,6 @@ Deno.serve(async (req) => {
       if (!url) return response({ error: "https_url_required" }, 400);
       patch.url = url;
     }
-    if (Object.hasOwn(body, "scope_type")) {
-      const scope = await resolveScope(propertyId, body);
-      if (scope.error || !scope.values) return response({ error: scope.error || "invalid_media_scope" }, 400);
-      Object.assign(patch, scope.values);
-    }
     const { data, error } = await supabase
       .from("property_media")
       .update(patch)
@@ -211,6 +147,31 @@ Deno.serve(async (req) => {
     return response({ media: data });
   }
 
+  if (action === "reorder") {
+    const ids = body.ids;
+    if (!Array.isArray(ids) || ids.length > 100 || ids.some((id) => typeof id !== "string") || new Set(ids).size !== ids.length) {
+      return response({ error: "invalid_media_order" }, 400);
+    }
+    const { data: existing, error: existingError } = await supabase
+      .from("property_media")
+      .select("id")
+      .eq("property_id", propertyId);
+    if (existingError) return response({ error: "media_order_load_failed" }, 500);
+    const existingIds = new Set((existing || []).map((item) => item.id));
+    if (ids.length !== existingIds.size || ids.some((id) => !existingIds.has(id))) {
+      return response({ error: "media_order_mismatch" }, 400);
+    }
+    for (const [displayOrder, id] of ids.entries()) {
+      const { error } = await supabase
+        .from("property_media")
+        .update({ display_order: displayOrder, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("property_id", propertyId);
+      if (error) return response({ error: "media_order_save_failed", detail: error.message }, 500);
+    }
+    return response({ saved: true });
+  }
+
   if (action === "delete") {
     const { data: existing, error: lookupError } = await supabase
       .from("property_media")
@@ -219,22 +180,6 @@ Deno.serve(async (req) => {
       .eq("property_id", propertyId)
       .single();
     if (lookupError || !existing) return response({ error: "media_not_found" }, 404);
-
-    // Server-side orphan cleanup if file_id exists
-    if (existing.file_id) {
-      const ikPrivateKey = Deno.env.get("IMAGEKIT_PRIVATE_KEY");
-      if (ikPrivateKey) {
-        try {
-          await fetch(`https://api.imagekit.io/v1/files/${existing.file_id}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Basic ${btoa(ikPrivateKey + ":")}`,
-            },
-          });
-        } catch (_) {}
-      }
-    }
-
     const { error } = await supabase
       .from("property_media")
       .delete()

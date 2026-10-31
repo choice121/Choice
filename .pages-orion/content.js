@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Orion Content Bridge v44.0.5
+// Choice Properties — Orion Content Bridge v31.0.4
 //
 // The bundled live UI is loaded by manifest.json before this bridge. Keeping
 // the UI local means an unavailable Pages request cannot disable the extension.

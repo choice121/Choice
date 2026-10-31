@@ -1,7 +1,5 @@
 # Choice Properties — ImageKit Integration & Storage Architecture
 
-> ⚠️ **NOTICE (DIRECTIVE 2 ENFORCEMENT)**: Per owner Directive 2 in `AGENTS.md`, mandatory upload to ImageKit is decommissioned for standard scraping and publishing. Direct high-resolution source CDN URLs (Zillow CDN, Opendoor CDN, Realtor CDN) are ingested directly into `original_image_urls` and `property_photos` with zero upload latency. ImageKit remains configured as an optional fallback only.
-
 ## 1. Overview
 Choice Properties utilizes ImageKit as its authoritative, optimized CDN for all property photographs across the marketplace. This prevents hotlink expiration (from Zillow, Realtor, or local MLS CDNs), improves page load speeds via WebP compression, and ensures consistent asset management.
 

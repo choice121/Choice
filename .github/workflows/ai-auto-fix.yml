@@ -1,0 +1,69 @@
+# Phase 3 monitoring — AI fix-PR loop.
+#
+# Polls public.agent_issues every 30 minutes. For each eligible issue
+# (open, fingerprint set, severity != security, attempts < 3), asks
+# GitHub Models to propose a patch, and opens a PR for human review.
+#
+# SAFETY:
+#   - Hard-disabled until secret AUTO_FIX_ENABLED='true' is set.
+#   - Will NEVER edit files on the deny-list (migrations, RLS, auth,
+#     middleware, generate-config, .github, apply/).
+#   - NEVER auto-merges. Always opens a PR.
+#   - Per-issue lifetime cap of 3 attempts.
+#   - Per-run cap of 1 issue (avoids burst of bad PRs).
+#   - Skips kind='security' entirely — humans only.
+
+name: AI fix-PR loop
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'Process a specific agent_issues.id (overrides queue)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  models: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check kill switch
+        id: gate
+        run: |
+          if [ "${{ secrets.AUTO_FIX_ENABLED }}" != "true" ]; then
+            echo "::notice::AUTO_FIX_ENABLED is not 'true' — skipping. Set the secret to enable."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run AI fix loop
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MODEL: ${{ vars.AI_FIX_MODEL || 'openai/gpt-4o-mini' }}
+          ISSUE_ID_OVERRIDE: ${{ inputs.issue_id }}
+        run: node scripts/ai-auto-fix.mjs

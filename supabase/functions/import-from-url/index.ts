@@ -265,7 +265,6 @@ Deno.serve(async (req) => {
     source_url: parsedUrl.url.toString(),
     import_method: "admin-url-import-v1",
     fetched_at: new Date().toISOString(),
-    media: extracted.media,
   });
 
   const photoUrls = (() => {

@@ -53,48 +53,6 @@
     return '<span class="property-card-price-dollar">$</span>' + n.toLocaleString();
   }
 
-  function summarizeCommunityLayouts(units) {
-    if (!Array.isArray(units)) return null;
-    const plans = units.filter(unit =>
-      unit &&
-      typeof unit.floor_plan_name === 'string' &&
-      unit.floor_plan_name.trim() &&
-      !(typeof unit.unit_number === 'string' && unit.unit_number.trim())
-    );
-    if (!plans.length) return null;
-
-    function values(field) {
-      return [...new Set(plans
-        .map(unit => unit[field] == null || unit[field] === '' ? NaN : Number(unit[field]))
-        .filter(value => Number.isFinite(value) && value >= 0))]
-        .sort((a, b) => a - b);
-    }
-
-    function range(list, suffix) {
-      if (!list.length) return '';
-      const first = list[0];
-      const last = list[list.length - 1];
-      if (first === 0 && suffix === 'bed') {
-        if (list.length === 1) return 'Studio';
-        return list.length === 2 ? `Studio, ${last} bed${last === 1 ? '' : 's'}` : `Studio–${last} beds`;
-      }
-      if (first === last) return first === 0 && suffix === 'bed' ? 'Studio' : `${first} ${suffix}${first === 1 ? '' : 's'}`;
-      return `${first}–${last} ${suffix}s`;
-    }
-
-    const rents = values('monthly_rent').filter(value => value > 0);
-    const sqft = values('square_footage').filter(value => value > 0);
-    return {
-      count: plans.length,
-      minRent: rents.length ? rents[0] : null,
-      bedrooms: range(values('bedrooms'), 'bed'),
-      bathrooms: range(values('bathrooms'), 'bath'),
-      sqft: sqft.length
-        ? `~${Math.round(sqft[0] / 25) * 25}${sqft[0] === sqft[sqft.length - 1] ? '' : `–~${Math.round(sqft[sqft.length - 1] / 25) * 25}`} sqft`
-        : '',
-    };
-  }
-
   // ── Listed date label ────────────────────────────────────────
   // Prefer the original listing date from the source site when it exists.
   // Only fall back to the import date if the source listing date is missing,
@@ -115,9 +73,6 @@
     opts = opts || {};
     const imgSizes = opts.imgSizes ||
       '(max-width: 399px) calc(100vw - 32px), (max-width: 899px) calc(50vw - 28px), (max-width: 1319px) calc(33vw - 32px), calc(25vw - 32px)';
-    // Only the first above-the-fold result may compete for high-priority image loading.
-    // Homepage featured cards and all non-first cards stay lazy-loaded.
-    const priorityFirstImage = opts.priorityFirstImage === true;
 
     const rawPhotos = (p.photo_urls && p.photo_urls.length) ? p.photo_urls : ['/assets/placeholder-property.jpg'];
     // TEMPORARY DIRECTIVE: Image reordering is disabled.
@@ -133,7 +88,6 @@
       photos = reordered;
     }
     const title  = esc(p.title || 'Rental property');
-    const community = summarizeCommunityLayouts(p.property_units);
     const rawId  = p.id;
     const id     = esc(p.id);
     let propUrl = rawId ? ('/property.html?id=' + encodeURIComponent(rawId)) : '/listings.html';
@@ -163,8 +117,8 @@
           (imgSrcset ? ' srcset="' + escAttr(imgSrcset) + '"' : '') +
           ' alt="' + title + ' photo ' + (i + 1) + '"' +
           ' sizes="' + imgSizes + '"' +
-          ' loading="' + (i === 0 && priorityFirstImage ? 'eager' : 'lazy') + '"' +
-          (i === 0 && priorityFirstImage ? ' fetchpriority="high"' : '') +
+          ' loading="' + (i === 0 ? 'eager' : 'lazy') + '"' +
+          (i === 0 ? ' fetchpriority="high"' : '') +
           ' referrerpolicy="no-referrer"' +
           ' decoding="async"' +
           ' onerror="this.onerror=null;this.srcset=\'\';this.src=\'/assets/placeholder-property.jpg\';">' +
@@ -174,15 +128,9 @@
 
     // ── Specs row — beds + baths + sqft (sqft is rounded to ~25 increments) ─
     var specParts = [];
-    if (community) {
-      if (community.bedrooms) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + esc(community.bedrooms) + '</span>');
-      if (community.bathrooms) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + esc(community.bathrooms) + '</span>');
-      if (community.sqft) specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>' + esc(community.sqft) + '</span>');
-    } else {
-      if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed' + (Number(p.bedrooms) === 1 ? '' : 's')) + '</span>');
-      if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath' + (Number(p.bathrooms) === 1 ? '' : 's') + '</span>');
-    }
-    if (!community && p.square_footage) {
+    if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed' + (Number(p.bedrooms) === 1 ? '' : 's')) + '</span>');
+    if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath' + (Number(p.bathrooms) === 1 ? '' : 's') + '</span>');
+    if (p.square_footage) {
       var roundedSqft = Math.round(Number(p.square_footage) / 25) * 25;
       specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>~' + roundedSqft.toLocaleString() + ' sqft</span>');
     }
@@ -196,18 +144,8 @@
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
     }
 
-    var mediaItems = Array.isArray(p.property_media) ? p.property_media : [];
-    var hasVideoTour = mediaItems.some(function(item) {
-      return item && item.kind === 'video' && typeof item.url === 'string' && item.url.trim();
-    });
-    var hasThreeDTour = !!(p.virtual_tour_url && String(p.virtual_tour_url).trim()) || mediaItems.some(function(item) {
-      return item && (item.kind === 'virtual_tour' || item.kind === 'tour_3d') && typeof item.url === 'string' && item.url.trim();
-    });
-    var mediaBadges = [];
-    if (hasThreeDTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-cube" aria-hidden="true"></i> 3D tour</span>');
-    if (hasVideoTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-play" aria-hidden="true"></i> Video tour</span>');
-    var mediaBadgesHtml = mediaBadges.length
-      ? '<div class="property-card-media-badges" role="group" aria-label="Available property media for ' + title + '">' + mediaBadges.join('') + '</div>'
+    var tourChipHtml = p.virtual_tour_url
+      ? '<div class="property-card-tour-chip"><i class="fas fa-cube"></i> 3D Tour</div>'
       : '';
 
     var listedLabel = listedDateLabel(p.listed_at, p.imported_at || p.created_at);
@@ -220,9 +158,9 @@
     if (photos.length > 1) {
       if (photos.length <= 6) {
         var dotItems = photos.map(function(_, i) {
-          return '<button class="property-card-dot' + (i === 0 ? ' active' : '') + '" type="button" data-idx="' + i + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show photo ' + (i + 1) + ' of ' + title + '"></button>';
+          return '<button class="property-card-dot' + (i === 0 ? ' active' : '') + '" type="button" data-idx="' + i + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="View photo ' + (i + 1) + '"></button>';
         }).join('');
-        dotsHtml = '<div class="property-card-dots" role="group" aria-label="Photo selection for ' + title + '">' + dotItems + '</div>';
+        dotsHtml = '<div class="property-card-dots" role="tablist">' + dotItems + '</div>';
       } else {
         photoCountHtml = '<div class="property-card-photo-count"><i class="fas fa-camera"></i> ' + photos.length + '</div>';
       }
@@ -232,15 +170,8 @@
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
     // ── Price ─────────────────────────────────────────────────
-    var cardRent = community ? community.minRent : p.monthly_rent;
-    var rentHtml = community && cardRent == null ? 'See layouts' : fmtRent(cardRent);
-    var rentUnit = Number(cardRent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
-    var communityPricePrefix = community && cardRent != null
-      ? '<span class="property-card-community-prefix">From </span>'
-      : '';
-    var communitySummary = community
-      ? '<div class="property-card-community-summary">' + community.count + (community.count === 1 ? ' floor plan' : ' floor plans') + '</div>'
-      : '';
+    var rentHtml = fmtRent(p.monthly_rent);
+    var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
 
     return (
       '<article class="property-card" id="card-' + id + '" data-id="' + id + '"' + (p.featured ? ' data-featured="1"' : '') + '>' +
@@ -250,22 +181,22 @@
           '<div class="property-card-slides">' + slidesHtml + '</div>' +
           // Featured / verified badge — top-left (self-positioned via .property-card-badge)
           badge +
-          // Tour availability
-          mediaBadgesHtml +
+          // 3D Tour badge
+          tourChipHtml +
           // Carousel position indicators — bottom-center
           dotsHtml +
           // Photo count — bottom-right (only when >6 photos)
           photoCountHtml +
           // Save heart — top-right, sole action on the photo
           '<div class="property-card-actions">' +
-            '<button class="property-card-save" type="button" data-id="' + id + '" data-title="' + title + '" aria-label="Save rental: ' + title + '" aria-pressed="false">' +
-              '<i class="far fa-heart" aria-hidden="true"></i>' +
+            '<button class="property-card-save" type="button" data-id="' + id + '" aria-label="Save property">' +
+              '<i class="far fa-heart"></i>' +
             '</button>' +
           '</div>' +
           // Carousel arrows — desktop only (hidden on touch via CSS)
           (photos.length > 1
-            ? '<button class="property-card-arrow property-card-arrow--prev" type="button" aria-label="Previous photo of ' + title + '"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>' +
-              '<button class="property-card-arrow property-card-arrow--next" type="button" aria-label="Next photo of ' + title + '"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>'
+            ? '<button class="property-card-arrow property-card-arrow--prev" type="button" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>' +
+              '<button class="property-card-arrow property-card-arrow--next" type="button" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>'
             : '') +
         '</div>' +
 
@@ -280,10 +211,9 @@
           '</div>' +
           // 3. Specs — beds + baths + sqft
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
-          communitySummary +
           // 4. Footer — price pinned to bottom (no divider)
           '<div class="property-card-footer">' +
-            '<div class="property-card-price">' + communityPricePrefix + rentHtml + rentUnit + '</div>' +
+            '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +
             (p.city && p.state
               ? '<span class="prop-city-badge" title="' + esc(p.city) + ', ' + esc(p.state) + '" aria-label="Location: ' + esc(p.city) + ', ' + esc(p.state) + '">' +
                   '<i class="fas fa-location-dot"></i> ' + esc(p.city) + ', ' + esc(p.state) +

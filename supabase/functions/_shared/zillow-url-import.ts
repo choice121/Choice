@@ -184,69 +184,6 @@ function photoUrl(value: unknown): string | null {
   return textValue(largest?.url || photo.url || photo.href || photo.src);
 }
 
-function collectZillowMedia(property: Record<string, unknown>): Record<string, unknown>[] {
-  const media: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
-  const add = (value: unknown, hint: string) => {
-    const item = typeof value === "string" ? { url: value } : objectValue(value);
-    const rawUrl = textValue(item.url || item.href || item.src || item.embedUrl || item.embed_url || item.contentUrl);
-    if (!rawUrl) return;
-
-    let url: URL;
-    try {
-      url = new URL(rawUrl);
-      if (url.protocol !== "https:" && url.protocol !== "http:") return;
-    } catch {
-      return;
-    }
-
-    const description = [
-      item.kind, item.type, item.mediaType, item.media_type, item.category,
-      item.title, item.name, item.label, hint, url.href,
-    ].map(textValue).filter(Boolean).join(" ").toLowerCase();
-    let kind: string | null = null;
-    if (/floor[\s_-]*plan|floorplan/.test(description)) kind = "floor_plan";
-    else if (/video|walkthrough|youtube|vimeo|\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(description)) kind = "video";
-    else if (/virtual[\s_-]*tour|3d[\s_-]*tour|matterport|insidemaps|view-3d|view-imx|tour3d|\btour\b/i.test(description)) kind = "virtual_tour";
-    if (!kind) return;
-
-    const key = `${kind}::${url.href.toLowerCase()}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    media.push({
-      kind,
-      title: textValue(item.title || item.name || item.label) || (kind === "floor_plan" ? "Floor plan" : kind === "video" ? "Video walkthrough" : "3D virtual tour"),
-      floor_label: textValue(item.floor_label || item.floorLabel || item.floor),
-      provider: textValue(item.provider || item.source),
-      url: url.href,
-      poster_url: textValue(item.poster_url || item.posterUrl || item.thumbnailUrl),
-      display_order: media.length,
-      metadata: objectValue(item.metadata),
-    });
-  };
-
-  const mediaFields: Array<[string, string]> = [
-    ["floorPlans", "floor plan"], ["floor_plans", "floor plan"],
-    ["floorPlanImages", "floor plan"], ["floorPlan", "floor plan"],
-    ["floorplan", "floor plan"], ["floor_plan", "floor plan"],
-    ["videos", "video"], ["video", "video"], ["propertyVideos", "video"],
-    ["virtualTours", "virtual tour"], ["virtual_tours", "virtual tour"],
-    ["virtualTour", "virtual tour"], ["threeDimensionalTours", "3d tour"],
-    ["tours", "virtual tour"], ["media", "media"],
-  ];
-  mediaFields.forEach(([field, hint]) => {
-    const value = property[field];
-    if (Array.isArray(value)) value.forEach(item => add(item, hint));
-    else if (value) add(value, hint);
-  });
-
-  const legacyTour = property.virtualTourUrl || property.threeDimensionalTourUrl ||
-    property.tour3d || property.view3dUrl ||
-    (property.view3dHomeId ? `https://www.zillow.com/view-3d-home/${property.view3dHomeId}` : null);
-  if (legacyTour) add(legacyTour, "virtual tour");
-  return media;
-}
-
 /**
  * Return only listing facts tied to the requested Zillow ID. The asking rent
  * comes from Zillow's price field, never from rentZestimate.
@@ -328,8 +265,6 @@ export function extractVerifiedZillowRental(
   const heating = featureStrings(resoFacts.heating);
   const cooling = featureStrings(resoFacts.cooling);
   const laundry = featureStrings(resoFacts.laundryFeatures);
-  const media = collectZillowMedia(property);
-  const virtualTour = media.find(item => item.kind === "virtual_tour" || item.kind === "tour_3d");
 
   return {
     title,
@@ -359,8 +294,6 @@ export function extractVerifiedZillowRental(
     agent_name: textValue(attribution.agentName || property.agentName),
     broker_name: textValue(
       attribution.brokerName || property.brokerName || property.brokerageName),
-    virtual_tour_url: virtualTour ? virtualTour.url : null,
-    media,
     source_status: status,
     original_image_urls: JSON.stringify(photos),
   };

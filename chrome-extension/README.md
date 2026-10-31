@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v44.0.5)
+# Choice Properties — Universal Chrome Extension (v31.0.4)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -8,7 +8,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 
 | Platform | URL Patterns Supported | Extraction Method |
 | :--- | :--- | :--- |
-| **Zillow** | `zillow.com/homedetails/*`, `zillow.com/b/*`, `zillow.com/apartments/*` | `__NEXT_DATA__` + `gdpClientCache` + JSON-LD + rendered unit rows |
+| **Zillow** | `zillow.com/homedetails/*`, `zillow.com/b/*` | `__NEXT_DATA__` + `gdpClientCache` + JSON-LD |
 | **Realtor.com** | `realtor.com/realestateandhomes-detail/*` | `__NEXT_DATA__` (`pageProps.initialState`) |
 | **Apartments.com** | `apartments.com/*` | Microdata / JSON-LD + Dynamic DOM Table |
 | **Redfin** | `redfin.com/*` | `__NEXT_DATA__` + `reactServerState` |
@@ -27,18 +27,7 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Exact detected photo total shown for the current listing (no ambiguous `+N` remainder).
   - Mini photo thumbnail ribbon for instant visual preview.
   - Detected architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.) for review.
-  - Unit-option and video/tour/floor-plan counts for multifamily communities.
-  - Deposit and application-fee defaults; pet policies are not imported or displayed.
-- **Zillow Community Listings**:
-  - Preserves valid, distinct available-unit rows with unit number, bed/bath count, square footage, and listed rent; prose labels are rejected.
-  - Captures floor-plan starting prices separately from unit-specific rents.
-  - Preserves Zillow's explicit unit price label (`Base rent` or `Total monthly price`); unknown labels stay unclassified.
-  - Leaves community-level rent, beds, baths, and square footage blank rather than copying the first unit's facts.
-  - Shows separate available-unit, floor-plan, total-building-unit, story, source price-range, and deduplicated-photo counts in the widget and pipeline review panel.
-  - Preserves the community name, multi-unit flag, reported unit count, building stories, and source price range in the pipeline record.
-  - Stores the unit breakdown in the pipeline record's existing `original_data` field; no pipeline-schema changes are required.
-  - Community imports remain review-only because the current publishing flow requires one individual rental unit.
-- **Zillow Media**: Collects ordered photo URLs, video sources/posters, 3D tours, and floor-plan links from structured and rendered page content.
+  - Complete policy overview (Deposit 1x Rent, $50 App Fee, Pet Friendly).
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
 - **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch folders or create a new folder (with any name, including numbers, and optional description) directly on Zillow, auto-collapsing immediately once configured.
 - **Sticky Default Folder Persistence**: Any folder created or selected automatically becomes the persistent default folder for all subsequent 1-click "Save to Pipeline" imports until changed.
@@ -50,8 +39,6 @@ A browser extension that allows Choice Properties agents to save rental listings
   - **Strict Stripping**: Never outputs lease duration or smoking policies.
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 - **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
-- **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts—including candidate floor-plan card counts—to the admin inbox. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
-- **Resilient Zillow JSON-LD Fallback**: Ignore malformed optional JSON-LD when primary listing data was extracted, and handle schema.org `@type` values supplied as strings or arrays.
 - **Source-Fact Accuracy**: Zillow estimates are not substituted for asking rent, and unavailable, lease-term, and smoking-policy fields are omitted from imports. Unknown feature facts stay unknown; generic cooling/window units do not imply central air, while explicit "No basement" wording is captured as false.
 - **Location Intelligence Integration**: Property pages can load cached, server-side Geoapify nearby places and approximate neighborhood context. Details are documented in [`docs/LOCATION_ENRICHMENT.md`](../docs/LOCATION_ENRICHMENT.md); no school ratings, attendance boundaries, or walk/travel times are inferred.
 
@@ -64,7 +51,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 2. Unzip to a local folder.
 3. Open Chrome and navigate to `chrome://extensions`.
 4. Enable **Developer mode** (top-right toggle).
-5. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
+5. Click **Load unpacked** and select the unzipped `chrome-extension` folder.
 
 ---
 
@@ -78,8 +65,6 @@ Whenever making modifications to the extension:
    ```
 3. Verify test suite:
    - Compiles all 3 variants (`chrome-extension`, `.pages-orion`, `supabase/functions`).
-   - Executes the extractor regression suite.
+   - Executes 20 automated test cases.
    - Bumps version and updates `extension-meta.json` and `public/choice-properties-extension.zip`.
 4. Record all changes in `docs/EXTENSION_CHANGELOG.md`.
-
-Submitted reports can be reviewed at `/admin/extension-diagnostics.html` by an authenticated admin.

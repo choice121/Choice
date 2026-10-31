@@ -21,7 +21,6 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
 
 // Inline config (Orion doesn't reliably support importScripts)
 const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
-const DIAGNOSTICS_URL = EDGE_URL.replace(/\/receive-pipeline-import\/?$/, '/extension-diagnostics');
 const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
 const MAX_QUEUE_ITEMS = 75;
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -435,33 +434,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         }
       } else {
         sendResponse({ ok: false, error: 'Network error' });
-      }
-    })();
-    return true;
-  }
-
-  if (msg.type === 'SEND_DIAGNOSTIC') {
-    (async () => {
-      try {
-        const response = await fetch(DIAGNOSTICS_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-import-secret': SECRET,
-          },
-          body: JSON.stringify({
-            action: 'submit',
-            extension_version: chrome.runtime.getManifest().version,
-            diagnostic: msg.diagnostic,
-          }),
-          signal: AbortSignal.timeout(15_000),
-        });
-        const result = await response.json().catch(() => ({}));
-        sendResponse(response.ok && result.ok
-          ? result
-          : { ok: false, error: result.error || 'Diagnostics server rejected the report' });
-      } catch (error) {
-        sendResponse({ ok: false, error: error && error.message ? error.message : 'Diagnostics network error' });
       }
     })();
     return true;

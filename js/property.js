@@ -6,8 +6,6 @@
 // ============================================================
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
-import { initPropertyUnits, renderPropertyUnitsHtml, summarizePropertyUnits } from '/js/property-units.mjs';
-import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '/js/property-tour-utils.mjs?v=2026103101';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -194,38 +192,12 @@ async function loadProperty(id) {
       try {
         const { data: mediaData } = await client
           .from('property_media')
-          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id')
+          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
           .eq('property_id', cleanId)
           .order('display_order', { ascending: true });
         prop.property_media = mediaData || [];
       } catch (_) {
         prop.property_media = [];
-      }
-      try {
-        const { data: unitData } = await client
-          .from('property_units')
-          .select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id')
-          .eq('property_id', cleanId)
-          .order('unit_number', { ascending: true });
-        prop.property_units = unitData || [];
-      } catch (_) {
-        prop.property_units = [];
-      }
-      try {
-        const { data: buildingData } = await client.from('property_buildings')
-          .select('id, property_id, name, building_code, sort_order')
-          .eq('property_id', cleanId).order('sort_order').order('name');
-        prop.property_buildings = buildingData || [];
-      } catch (_) {
-        prop.property_buildings = [];
-      }
-      try {
-        const { data: floorData } = await client.from('property_floors')
-          .select('id, property_id, building_id, floor_label, floor_code, sort_order')
-          .eq('property_id', cleanId).order('sort_order').order('floor_label');
-        prop.property_floors = floorData || [];
-      } catch (_) {
-        prop.property_floors = [];
       }
     }
   } catch (e) {
@@ -240,19 +212,13 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, mediaRes, unitsRes, buildingsRes, floorsRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata, building_id, floor_id, unit_id').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          client.from('property_units').select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name, floor_plan_image_url, unit_photos, amenities, building_id, floor_id').eq('property_id', cleanId).order('unit_number', { ascending: true }),
-          client.from('property_buildings').select('id, property_id, name, building_code, sort_order').eq('property_id', cleanId).order('sort_order').order('name'),
-          client.from('property_floors').select('id, property_id, building_id, floor_label, floor_code, sort_order').eq('property_id', cleanId).order('sort_order').order('floor_label'),
+          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
         prop.property_media = mediaRes.data || [];
-        prop.property_units = unitsRes.data || [];
-        prop.property_buildings = buildingsRes.data || [];
-        prop.property_floors = floorsRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -502,23 +468,10 @@ function renderProperty(p) {
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
   const applyURL = buildApplyURL(p, shareToken);
-  const unitSummary = summarizePropertyUnits(p.property_units);
-  const isCommunity = unitSummary.isCommunity;
-  const communityRent = unitSummary.minRent ?? (Number(p.monthly_rent) > 0 ? Number(p.monthly_rent) : null);
-  const communityPriceLabel = communityRent != null
-    ? `From $${communityRent.toLocaleString()}`
-    : 'Explore layout pricing';
-  const communitySpecs = [unitSummary.bedrooms, unitSummary.bathrooms, unitSummary.squareFootage].filter(Boolean).join(' · ');
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
-  const ogSpecs = isCommunity
-    ? communitySpecs
-    : [p.bedrooms === 0 ? 'Studio' : (p.bedrooms != null ? `${p.bedrooms} bed` : ''), p.bathrooms != null ? `${p.bathrooms} bath` : ''].filter(Boolean).join(' · ');
-  const ogPrice = isCommunity
-    ? `${communityPriceLabel}${communityRent != null ? '/mo' : ''}`
-    : p.monthly_rent != null ? `$${Number(p.monthly_rent).toLocaleString()}/mo` : 'Rent TBD';
-  const ogDesc = `${[ogSpecs, ogPrice, p.address, p.city, p.state].filter(Boolean).join(' · ')}`;
+  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
   ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
@@ -575,7 +528,7 @@ function renderProperty(p) {
       "latitude": p.lat,
       "longitude": p.lng
     } : undefined,
-    "offers": !isCommunity && p.monthly_rent != null ? {
+    "offers": {
       "@type": "Offer",
       "price": p.monthly_rent,
       "priceCurrency": "USD",
@@ -587,16 +540,16 @@ function renderProperty(p) {
         "unitCode": "MON",
         "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
       }
-    } : undefined,
-    "numberOfRooms": isCommunity ? undefined : p.bedrooms,
-    "numberOfBathroomsTotal": isCommunity ? undefined : p.bathrooms,
-    "floorSize": !isCommunity && p.square_footage ? {
+    },
+    "numberOfRooms": p.bedrooms,
+    "numberOfBathroomsTotal": p.bathrooms,
+    "floorSize": p.square_footage ? {
       "@type": "QuantitativeValue",
       "value": p.square_footage,
       "unitCode": "FTK"
     } : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
-    "potentialAction": !isCommunity ? {
+    "potentialAction": {
       "@type": "RentAction",
       "name": "Apply for Lease",
       "target": {
@@ -607,7 +560,7 @@ function renderProperty(p) {
           "https://schema.org/MobileWebPlatform"
         ]
       }
-    } : undefined
+    }
   });
   document.head.appendChild(sd);
 
@@ -681,9 +634,7 @@ function renderProperty(p) {
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
 
-  document.getElementById('detailPrice').innerHTML = isCommunity
-    ? `${communityPriceLabel}<span>${communityRent != null ? '/mo' : ''}</span>`
-    : `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
+  document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
   document.getElementById('detailTitle').textContent = p.title;
   const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
   document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
@@ -717,28 +668,20 @@ function renderProperty(p) {
 
   // Meta row
   const metas = [];
-  if (isCommunity) {
-    if (unitSummary.bedrooms) metas.push({ label:'Layouts', value: unitSummary.bedrooms, icon:'fa-bed' });
-    if (unitSummary.bathrooms) metas.push({ label:'Bathrooms', value: unitSummary.bathrooms, icon:'fa-bath' });
-    if (unitSummary.squareFootage) metas.push({ label:'Floor plan sizes', value: unitSummary.squareFootage, icon:'fa-ruler-combined' });
-    metas.push({ label:'Floor plans', value: unitSummary.count, icon:'fa-layer-group' });
-  } else if (p.bedrooms != null) {
-    metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
-  }
-  if (!isCommunity && p.bathrooms) {
+  if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
+  if (p.bathrooms) {
     const numBaths = Number(p.bathrooms);
     const bathVal = (p.half_bathrooms && Number.isInteger(numBaths))
       ? `${p.bathrooms} + ½`
       : p.bathrooms;
     metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
   }
-  if (!isCommunity && p.square_footage) metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
+  if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
   if (p.floors > 1)       metas.push({ label:'Floors', value: p.floors, icon:'fa-layer-group' });
-  if (p.unit_floor)       metas.push({ label:'Unit Floor', value: p.unit_floor, icon:'fa-building' });
   if (p.lot_size_sqft)    metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   if (p.has_basement === true)    metas.push({ label:'Basement',    value:'Yes', icon:'fa-dungeon' });
   if (p.has_central_air === true) metas.push({ label:'Central Air', value:'Yes', icon:'fa-snowflake' });
@@ -769,41 +712,67 @@ function renderProperty(p) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
-  // ── Unified Tours & Multi-Floor Media Integration ──────────────────────
-  const allTours = getPropertyTours(p);
-  p._allTours = allTours;
-
-  // 1. Photo Mosaic Hero 3D Tour Button
-  const mosaicTourBtn = document.getElementById('mosaicTourBtn');
-  if (mosaicTourBtn) {
-    if (allTours.length > 0) {
-      mosaicTourBtn.style.display = 'inline-flex';
-      mosaicTourBtn.onclick = (e) => {
-        e.stopPropagation();
-        openVirtualTourModal(p, allTours[0]);
-      };
-    } else {
-      mosaicTourBtn.style.display = 'none';
-    }
-  }
-
-  // 2. Primary 3D Tour CTA next to Description
-  if (allTours.length > 0) {
+  if (p.virtual_tour_url) {
     const vtBtn = document.createElement('button');
     vtBtn.type = 'button';
     vtBtn.className = 'btn btn-outline';
     vtBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.875rem;cursor:pointer';
-    const primaryTour = allTours[0];
-    vtBtn.innerHTML = primaryTour.kind === 'video'
-      ? '<i class="fas fa-play" style="color:#e11d48"></i> Watch Video Walkthrough'
-      : '<i class="fas fa-cube" style="color:#0284c7"></i> Explore 3D Virtual Tour';
-    vtBtn.addEventListener('click', () => openVirtualTourModal(p, primaryTour));
+    vtBtn.innerHTML = '<i class="fas fa-cube" style="color:#0284c7"></i> Explore 3D Virtual Tour';
+    vtBtn.addEventListener('click', () => openVirtualTourModal(p));
     descEl.closest('.detail-section').appendChild(vtBtn);
+
+    const mosaicTourBtn = document.getElementById('mosaicTourBtn');
+    if (mosaicTourBtn) {
+      mosaicTourBtn.style.display = 'inline-flex';
+      mosaicTourBtn.onclick = (e) => {
+        e.stopPropagation();
+        openVirtualTourModal(p);
+      };
+    }
   }
 
-  // 3. Multi-Floor Media Section (Floor Plans, Videos, Virtual Tours)
-  renderMultiFloorMedia(p);
-  renderPropertyUnits(p);
+  // Render additional media (videos, floor plans, tours) from property_media
+  if (Array.isArray(p.property_media) && p.property_media.length) {
+    const groups = {};
+    p.property_media.forEach((item) => {
+      if (!item || typeof item.url !== 'string') return;
+      let url;
+      try {
+        url = new URL(item.url);
+      } catch (_) {
+        return;
+      }
+      if (url.protocol !== 'https:') return;
+      (groups[item.kind] = groups[item.kind] || []).push({ ...item, url: url.href });
+    });
+    const section = descEl.closest('.detail-section');
+    Object.keys(groups).forEach(kind => {
+      if (kind === 'virtual_tour') return;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
+      groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
+        const link = document.createElement('a');
+        link.href = m.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'btn btn-outline';
+        link.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
+        if (kind === 'floor_plan') {
+          const image = document.createElement('img');
+          image.src = m.url;
+          image.alt = m.title || 'Floor plan';
+          image.loading = 'lazy';
+          image.style.cssText = 'width:120px;max-height:90px;object-fit:contain';
+          link.appendChild(image);
+        }
+        const label = document.createElement('span');
+        label.textContent = m.title || kind.replace('_', ' ');
+        link.appendChild(label);
+        wrap.appendChild(link);
+      });
+      if (wrap.childElementCount) section.appendChild(wrap);
+    });
+  }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
@@ -820,11 +789,6 @@ function renderProperty(p) {
     return [];
   };
 
-  // Repository rule: never render pet-policy or smoking-policy content on public property pages.
-  const isRestrictedPropertyDetail = (value) =>
-    /smok/i.test(String(value || '')) ||
-    /\b(?:pets?|dogs?|cats?|animals?)\b/i.test(String(value || ''));
-
   p.amenities = safeArr(p.amenities);
   p.appliances = safeArr(p.appliances);
   p.flooring = safeArr(p.flooring);
@@ -832,50 +796,46 @@ function renderProperty(p) {
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
+    hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
-      hasAmenities = true;
       document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
+    } else {
+      document.getElementById('amenitiesGrid').innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
     }
   }
   if (p.appliances?.length) {
-    const applianceItems = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
-      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`);
-    if (applianceItems.length) {
-      hasAmenities = true;
-      document.getElementById('appliancesSection').style.display = '';
-      document.getElementById('appliancesGrid').innerHTML = applianceItems.join('');
-    }
+    hasAmenities = true;
+    document.getElementById('appliancesSection').style.display = '';
+    document.getElementById('appliancesGrid').innerHTML = p.appliances
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
-    const flooringItems = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !isRestrictedPropertyDetail(f))
-      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`);
-    if (flooringItems.length) {
-      hasAmenities = true;
-      const flooringSec = document.getElementById('appliancesSection');
-      let flooringDiv = document.getElementById('flooringSection');
-      if (!flooringDiv) {
-        flooringDiv = document.createElement('div');
-        flooringDiv.id = 'flooringSection';
-        flooringDiv.style.marginTop = '20px';
-        flooringDiv.innerHTML = `
-          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
-          <div class="amenities-grid" id="flooringGrid"></div>`;
-        flooringSec.insertAdjacentElement('afterend', flooringDiv);
-      }
-      flooringDiv.style.display = '';
-      document.getElementById('flooringGrid').innerHTML = flooringItems.join('');
+    hasAmenities = true;
+    const flooringSec = document.getElementById('appliancesSection');
+    let flooringDiv = document.getElementById('flooringSection');
+    if (!flooringDiv) {
+      flooringDiv = document.createElement('div');
+      flooringDiv.id = 'flooringSection';
+      flooringDiv.style.marginTop = '20px';
+      flooringDiv.innerHTML = `
+        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
+        <div class="amenities-grid" id="flooringGrid"></div>`;
+      flooringSec.insertAdjacentElement('afterend', flooringDiv);
     }
+    flooringDiv.style.display = '';
+    document.getElementById('flooringGrid').innerHTML = p.flooring
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
+      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included
-    .filter(u => u && !isRestrictedPropertyDetail(u))
+    .filter(u => u && !/smok/i.test(u))
     .map(u => `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
   if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
@@ -966,22 +926,18 @@ function renderProperty(p) {
   }
 
   // Sidebar
-  const rentStr = isCommunity
-    ? communityPriceLabel
-    : p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
-  const priceHtml = `${rentStr}<span>${isCommunity ? (communityRent != null ? '/mo' : '') : '/month'}</span>`;
+  const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
+  const priceHtml = `${rentStr}<span>/month</span>`;
   const sbPrice = document.getElementById('sidebarPrice');
   if (sbPrice) sbPrice.innerHTML = priceHtml;
   const sbStickyPrice = document.getElementById('sidebarStickyPrice');
-  if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>${isCommunity ? (communityRent != null ? '/mo' : '') : '/mo'}</span>`;
+  if (sbStickyPrice) sbStickyPrice.innerHTML = `${rentStr}<span>/mo</span>`;
 
   const _availEl = document.getElementById('sidebarAvail');
   const _availStickyEl = document.getElementById('sidebarStickyAvail');
   if (_availEl) _availEl.style.display = 'none';
   if (_availStickyEl) _availStickyEl.style.display = 'none';
-  document.getElementById('sidebarRent').textContent = isCommunity
-    ? `${rentStr}${communityRent != null ? '/mo' : ''}`
-    : rentStr;
+  document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
     _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
@@ -990,12 +946,8 @@ function renderProperty(p) {
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
-  if (_feeAmtEl && !isCommunity) {
+  if (_feeAmtEl) {
     _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
-  }
-  if (isCommunity) {
-    const applyStripSub = document.querySelector('#applyStrip .prop-apply-strip-sub');
-    if (applyStripSub) applyStripSub.textContent = 'Compare the layouts below to review each option’s pricing and specifications.';
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -1014,22 +966,6 @@ function renderProperty(p) {
   const _wireApply = (id) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    if (isCommunity) {
-      btn.href = '#unitLayoutsSection';
-      btn.setAttribute('aria-label', 'Compare apartment floor plans');
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const section = document.getElementById('unitLayoutsSection');
-        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        section?.querySelector('[data-unit-filter="search"]')?.focus({ preventScroll: true });
-      });
-      btn.innerHTML = id === 'csCardApply'
-        ? 'Compare floor plans &nbsp;<i class="fas fa-arrow-right" style="font-size:13px"></i>'
-        : id === 'mobApplyBtn'
-          ? 'View layouts'
-          : 'Explore floor plans <i class="fas fa-arrow-right" style="font-size:13px"></i>';
-      return;
-    }
     btn.href = applyURL;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1070,14 +1006,7 @@ function renderProperty(p) {
 
   // Mobile sticky Apply bar — for active and private_placement listings
   if (p.status === 'active' || p.status === 'private_placement') {
-    document.getElementById('mobBarRent').textContent = isCommunity
-      ? `${communityPriceLabel}${communityRent != null ? '/mo' : ''}`
-      : `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
-    if (isCommunity) {
-      const mobilePriceLabel = document.querySelector('#mobile-apply-bar .mob-price span');
-      if (mobilePriceLabel) mobilePriceLabel.textContent = 'Layout pricing';
-      document.getElementById('mobile-apply-bar')?.setAttribute('aria-label', 'Explore apartment floor plans');
-    }
+    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -1121,343 +1050,33 @@ function loadLeaflet() {
   });
 }
 
-// ── Unified Property Tours Extraction & Deduplication ───────────────────
-function getPropertyTours(p) {
-  return collectPlayablePropertyTours(p, getMediaFloorLabel);
-}
-
-function renderPropertyUnits(p) {
-  const section = document.getElementById('unitLayoutsSection');
-  const grid = document.getElementById('unitLayoutsGrid');
-  if (!section || !grid) return;
-
-  const units = Array.isArray(p?.property_units) ? p.property_units : [];
-  const html = renderPropertyUnitsHtml(units, p?.property_buildings || [], p?.property_floors || []);
-  if (!html) {
-    section.style.display = 'none';
-    return;
-  }
-  grid.innerHTML = html;
-  initPropertyUnits(grid);
-  section.style.display = 'block';
-}
-
-function getMediaFloorLabel(property, item) {
-  const buildings = new Map((property.property_buildings || []).map(building => [building.id, building]));
-  const floors = new Map((property.property_floors || []).map(floor => [floor.id, floor]));
-  const units = new Map((property.property_units || []).map(unit => [unit.id, unit]));
-  if (item.unit_id) {
-    const unit = units.get(item.unit_id);
-    if (unit?.unit_number) return `Unit ${unit.unit_number}`;
-  }
-  if (item.floor_id) {
-    const floor = floors.get(item.floor_id);
-    if (floor) {
-      const building = buildings.get(floor.building_id);
-      return [building?.name, floor.floor_label].filter(Boolean).join(' · ');
-    }
-  }
-  if (item.building_id) return buildings.get(item.building_id)?.name || item.floor_label || '';
-  return item.floor_label || '';
-}
-
-// ── Multi-Floor Media Section Rendering ──────────────────────────────────
-function renderMultiFloorMedia(p) {
-  const container = document.getElementById('floorMediaContainer');
-  const section = document.getElementById('propertyMediaSection');
-  const divider = document.getElementById('dividerBeforeMedia');
-  const navWrap = document.getElementById('floorNavWrap');
-  if (!container || !section) return;
-
-  const rawMedia = Array.isArray(p.property_media)
-    ? p.property_media.filter(isRenderablePropertyMedia).map(item => ({ ...item, kind: String(item.kind || '').toLowerCase() }))
-    : [];
-  
-  // Ensure legacy virtual tour is represented in media items if not already migrated
-  const allTours = getPropertyTours(p);
-  p._allTours = allTours;
-  const legacyTour = allTours.find(t => t.id === 'legacy-vt');
-  if (legacyTour && !rawMedia.some(m => m.id === 'legacy-vt')) {
-    rawMedia.push(legacyTour);
-  }
-
-  if (!rawMedia.length) {
-    section.style.display = 'none';
-    if (divider) divider.style.display = 'none';
-    return;
-  }
-
-  section.style.display = 'block';
-  if (divider) divider.style.display = 'block';
-
-  // Group media by floor_label
-  const groups = new Map();
-  const floorPlansList = [];
-
-  rawMedia.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-
-  rawMedia.forEach(item => {
-    if (!item || typeof item.url !== 'string') return;
-    try {
-      const parsed = new URL(item.url);
-      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
-    } catch (_) {
-      return;
-    }
-
-    if (item.kind === 'floor_plan') {
-      floorPlansList.push(item);
-    }
-
-    const rawFloor = String(getMediaFloorLabel(p, item) || '').trim();
-    const floorKey = rawFloor || 'General / Entire Home';
-    if (!groups.has(floorKey)) {
-      groups.set(floorKey, []);
-    }
-    groups.get(floorKey).push(item);
-  });
-
-  p._allFloorPlans = floorPlansList;
-
-  const FLOOR_RANK = {
-    'basement': 1,
-    'lower': 2,
-    'ground': 3,
-    'level 1': 4,
-    'floor 1': 4,
-    '1st': 4,
-    'level 2': 5,
-    'floor 2': 5,
-    '2nd': 5,
-    'level 3': 6,
-    'floor 3': 6,
-    '3rd': 6,
-    'attic': 7,
-    'penthouse': 8,
-    'general / entire home': 99
-  };
-  function getFloorRank(name) {
-    const k = String(name || '').toLowerCase().trim();
-    if (FLOOR_RANK[k] !== undefined) return FLOOR_RANK[k];
-    if (k.includes('1') || k.includes('main') || k.includes('ground') || k.includes('first')) return 4;
-    if (k.includes('2') || k.includes('second')) return 5;
-    if (k.includes('3') || k.includes('third')) return 6;
-    return 50;
-  }
-
-  const sortedKeys = Array.from(groups.keys()).sort((a, b) => getFloorRank(a) - getFloorRank(b));
-  const sortedGroups = new Map(sortedKeys.map(k => [k, groups.get(k)]));
-
-  // Build Floor Navigation Tabs if >= 2 groups
-  if (sortedGroups.size > 1 && navWrap) {
-    navWrap.style.display = 'flex';
-    navWrap.setAttribute('role', 'group');
-    navWrap.setAttribute('aria-label', 'Filter property media by floor');
-    navWrap.innerHTML = `
-      <button type="button" class="floor-nav-tab active" data-floor="all" aria-pressed="true">
-        <span>All Levels</span>
-        <span class="tab-count">${rawMedia.length}</span>
-      </button>
-      ${Array.from(sortedGroups.entries()).map(([floor, items]) => `
-        <button type="button" class="floor-nav-tab" data-floor="${esc(floor)}" aria-pressed="false">
-          <span>${esc(floor)}</span>
-          <span class="tab-count">${items.length}</span>
-        </button>
-      `).join('')}
-    `;
-
-    navWrap.querySelectorAll('.floor-nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        navWrap.querySelectorAll('.floor-nav-tab').forEach(t => {
-          t.classList.remove('active');
-          t.setAttribute('aria-pressed', 'false');
-        });
-        tab.classList.add('active');
-        tab.setAttribute('aria-pressed', 'true');
-
-        const selectedFloor = tab.dataset.floor;
-        container.querySelectorAll('.floor-group-section').forEach(groupEl => {
-          if (selectedFloor === 'all' || groupEl.dataset.floor === selectedFloor) {
-            groupEl.style.display = 'block';
-          } else {
-            groupEl.style.display = 'none';
-          }
-        });
-      });
-    });
-  } else if (navWrap) {
-    navWrap.style.display = 'none';
-  }
-
-  // Render floor groups
-  let html = '';
-  for (const [floor, items] of sortedGroups.entries()) {
-    const isGeneral = floor === 'General / Entire Home';
-    html += `
-      <section class="floor-group-section" data-floor="${esc(floor)}" aria-label="${esc(floor)} media">
-        <div class="floor-group-header">
-          <h3 class="floor-group-title">
-            <i class="fas ${isGeneral ? 'fa-home' : 'fa-layer-group'}" style="color:var(--m-brand)"></i>
-            <span>${esc(floor)}</span>
-          </h3>
-          <span class="floor-group-badge">${items.length} ${items.length === 1 ? 'item' : 'items'}</span>
-        </div>
-        <div class="floor-media-grid">
-          ${items.map(item => renderMediaCard(item, p)).join('')}
-        </div>
-      </section>
-    `;
-  }
-  container.innerHTML = html;
-
-  // Event handlers
-  function wireKeyboardActivation(element) {
-    element.addEventListener('keydown', event => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      element.click();
-    });
-  }
-
-  container.querySelectorAll('[data-action="open-floor-plan"]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      const itemId = el.dataset.id;
-      const target = p._allFloorPlans?.find(f => f.id === itemId) || floorPlansList[0];
-      if (target) openFloorPlanModal(target, p._allFloorPlans || [target]);
-    });
-    if (el.getAttribute('role') === 'button') wireKeyboardActivation(el);
-  });
-
-  container.querySelectorAll('[data-action="open-tour"]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      const itemId = el.dataset.id;
-      const target = p._allTours?.find(t => t.id === itemId);
-      if (target) openVirtualTourModal(p, target);
-    });
-    if (el.getAttribute('role') === 'button') wireKeyboardActivation(el);
-  });
-}
-
-function renderMediaCard(item, p) {
-  const kind = item.kind;
-  const isFloorPlan = kind === 'floor_plan';
-  const isTour = kind === 'virtual_tour' || kind === 'tour_3d';
-  const isVideo = kind === 'video';
-
-  let badgeHtml = '';
-  let thumbHtml = '';
-  let actionBtnHtml = '';
-
-  if (isFloorPlan) {
-    badgeHtml = `<span class="floor-card-badge"><i class="fas fa-draw-polygon"></i> Floor Plan</span>`;
-    thumbHtml = `
-      <div class="floor-card-thumb-wrap" data-action="open-floor-plan" data-id="${esc(item.id)}" tabindex="0" role="button" aria-label="View ${esc(item.title || 'Floor Plan')} in full resolution">
-        <img class="floor-card-thumb contain" src="${esc(item.url)}" alt="${esc(item.title || 'Floor Plan')}" loading="lazy">
-        <div class="floor-card-overlay-btn" aria-hidden="true">
-          <span class="floor-card-overlay-icon"><i class="fas fa-search-plus"></i></span>
-        </div>
-      </div>
-    `;
-    actionBtnHtml = `
-      <button type="button" class="floor-card-btn primary" data-action="open-floor-plan" data-id="${esc(item.id)}">
-        <i class="fas fa-expand"></i> View Full Plan
-      </button>
-    `;
-  } else if (isTour) {
-    const providerLabel = item.provider || (item.url.includes('matterport') ? 'Matterport' : (item.url.includes('zillow') ? 'Zillow 3D' : (item.url.includes('insidemaps') ? 'InsideMaps' : 'Interactive 3D')));
-    badgeHtml = `<span class="floor-card-badge tour-badge"><i class="fas fa-cube"></i> ${esc(providerLabel)}</span>`;
-    const posterSrc = item.poster_url || (Array.isArray(p.property_photos) && p.property_photos[0]?.url) || '/assets/placeholder-property.jpg';
-    thumbHtml = `
-      <div class="floor-card-thumb-wrap" data-action="open-tour" data-id="${esc(item.id)}" tabindex="0" role="button" aria-label="Explore ${esc(item.title || '3D Virtual Tour')}">
-        <img class="floor-card-thumb" src="${esc(posterSrc)}" alt="${esc(item.title || '3D Tour Preview')}" loading="lazy">
-        <div class="floor-card-overlay-btn" aria-hidden="true" style="opacity:1;background:rgba(15,23,42,0.4)">
-          <span class="floor-card-overlay-icon" style="background:#0284c7;color:#fff"><i class="fas fa-cube"></i></span>
-        </div>
-      </div>
-    `;
-    actionBtnHtml = `
-      <button type="button" class="floor-card-btn primary" data-action="open-tour" data-id="${esc(item.id)}" style="background:#0284c7;border-color:#0284c7">
-        <i class="fas fa-cube"></i> Explore 3D Tour
-      </button>
-    `;
-  } else if (isVideo) {
-    const providerLabel = item.provider || 'Video Walkthrough';
-    badgeHtml = `<span class="floor-card-badge video-badge"><i class="fas fa-play"></i> ${esc(providerLabel)}</span>`;
-    const posterSrc = item.poster_url || (Array.isArray(p.property_photos) && p.property_photos[0]?.url) || '/assets/placeholder-property.jpg';
-    thumbHtml = `
-      <div class="floor-card-thumb-wrap" data-action="open-tour" data-id="${esc(item.id)}" tabindex="0" role="button" aria-label="Watch ${esc(item.title || 'Video Walkthrough')}">
-        <img class="floor-card-thumb" src="${esc(posterSrc)}" alt="${esc(item.title || 'Video Preview')}" loading="lazy">
-        <div class="floor-card-overlay-btn" aria-hidden="true" style="opacity:1;background:rgba(15,23,42,0.4)">
-          <span class="floor-card-overlay-icon" style="background:#e11d48;color:#fff"><i class="fas fa-play"></i></span>
-        </div>
-      </div>
-    `;
-    actionBtnHtml = `
-      <button type="button" class="floor-card-btn primary" data-action="open-tour" data-id="${esc(item.id)}" style="background:#e11d48;border-color:#e11d48">
-        <i class="fas fa-play"></i> Watch Walkthrough
-      </button>
-    `;
-  }
-
-  return `
-    <article class="floor-media-card" data-media-id="${esc(item.id)}">
-      ${badgeHtml}
-      ${thumbHtml}
-      <div class="floor-card-body">
-        <div>
-          <h4 class="floor-card-title">${esc(item.title || (isFloorPlan ? 'Floor Plan' : (isTour ? '3D Virtual Tour' : 'Video Walkthrough')))}</h4>
-          <div class="floor-card-meta">
-            ${item.floor_label ? `<span><i class="fas fa-layer-group"></i> ${esc(item.floor_label)}</span>` : ''}
-            ${item.provider ? `<span><i class="fas fa-tag"></i> ${esc(item.provider)}</span>` : ''}
-          </div>
-        </div>
-        <div class="floor-card-actions">
-          ${actionBtnHtml}
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-// ── Virtual Tour Modal with Multi-Tour Support & Embed Fallback ───────────
-function openVirtualTourModal(p, activeTourItem = null) {
-  if (!p) return;
-  const tours = getPropertyTours(p);
-  if (!tours.length) return;
-
-  let currentTour = activeTourItem || tours[0];
-
+function openVirtualTourModal(p) {
+  if (!p || !p.virtual_tour_url) return;
   let modal = document.getElementById('virtualTourModal');
   if (!modal) {
     const wrap = document.createElement('div');
     wrap.innerHTML = `
       <div id="virtualTourModal" class="vt-modal" role="dialog" aria-modal="true" aria-labelledby="vtModalAddress" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;align-items:center;justify-content:center">
         <div id="vtModalBackdrop" style="position:absolute;inset:0;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"></div>
-        <div id="vtModalDialog" class="vt-modal-dialog" style="position:relative;width:94vw;max-width:1150px;height:84vh;background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:18px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;z-index:1">
-          <div id="vtModalHeader" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.08);background:#090d16;gap:12px">
-            <div style="display:flex;align-items:center;gap:10px;min-width:0">
-              <span id="vtModalIcon" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(2,132,199,0.2);color:#38bdf8;font-size:15px;flex-shrink:0"><i class="fas fa-cube"></i></span>
-              <div style="min-width:0">
-                <div id="vtModalEyebrow" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#38bdf8">Interactive 3D Virtual Walkthrough</div>
-                <div id="vtModalAddress" style="font-size:14px;font-weight:600;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Property Tour</div>
+        <div id="vtModalDialog" class="vt-modal-dialog" style="position:relative;width:94vw;max-width:1100px;height:82vh;background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:18px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;z-index:1">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);background:#090d16">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(2,132,199,0.2);color:#38bdf8;font-size:15px"><i class="fas fa-cube"></i></span>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#38bdf8">Interactive 3D Virtual Walkthrough</div>
+                <div id="vtModalAddress" style="font-size:14px;font-weight:600;color:#f8fafc">Property Tour</div>
               </div>
             </div>
-
-            <!-- Tour Switcher (if multiple tours exist) -->
-            <div id="vtSwitcherContainer" class="vt-switcher-wrap" style="display:none" role="tablist" aria-label="Available tours"></div>
-
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:8px">
               <button id="vtFullscreenBtn" type="button" aria-label="Toggle Fullscreen" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-                <i class="fas fa-expand"></i> <span class="hide-mobile">Fullscreen</span>
+                <i class="fas fa-expand"></i> Fullscreen
               </button>
               <button id="vtCloseBtn" type="button" aria-label="Close Tour" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#e2e8f0;width:32px;height:32px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:14px">
                 <i class="fas fa-times"></i>
               </button>
             </div>
           </div>
-          <div id="vtModalBody" style="flex:1;width:100%;height:100%;position:relative;background:#000;overflow:hidden"></div>
+          <div id="vtModalBody" style="flex:1;width:100%;height:100%;position:relative;background:#000"></div>
         </div>
       </div>`;
     document.body.appendChild(wrap.firstElementChild);
@@ -1466,113 +1085,47 @@ function openVirtualTourModal(p, activeTourItem = null) {
 
   const body = document.getElementById('vtModalBody');
   const addrEl = document.getElementById('vtModalAddress');
-  const eyebrowEl = document.getElementById('vtModalEyebrow');
-  const iconEl = document.getElementById('vtModalIcon');
   const dialog = document.getElementById('vtModalDialog');
   const fullscreenBtn = document.getElementById('vtFullscreenBtn');
   const closeBtn = document.getElementById('vtCloseBtn');
   const backdrop = document.getElementById('vtModalBackdrop');
-  const switcherContainer = document.getElementById('vtSwitcherContainer');
   if (!modal || !body) return;
 
-  const previousFocusedElement = document.activeElement;
+  const url = String(p.virtual_tour_url).trim();
+  if (addrEl) addrEl.textContent = `${p.address || ''}${p.city ? ', ' + p.city : ''}`;
 
-  function renderTour(tour) {
-    currentTour = tour;
-    const url = String(tour.url || '').trim();
-    if (addrEl) {
-      const titleSuffix = tour.title ? ` • ${tour.title}` : '';
-      const floorSuffix = tour.floor_label ? ` (${tour.floor_label})` : '';
-      addrEl.textContent = `${p.address || ''}${p.city ? ', ' + p.city : ''}${titleSuffix}${floorSuffix}`;
+  let playerHtml = '';
+  // Check provider
+  if (/youtube\.com|youtu\.be/i.test(url)) {
+    const ytMatch = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*)/);
+    const ytId = (ytMatch && ytMatch[1]?.length === 11) ? ytMatch[1] : '';
+    playerHtml = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/vimeo\.com/i.test(url)) {
+    const vmMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/);
+    const vmId = vmMatch ? vmMatch[3] : '';
+    playerHtml = `<iframe src="https://player.vimeo.com/video/${vmId}?autoplay=1&title=0&byline=0&portrait=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+    playerHtml = `<video src="${esc(url)}" controls autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000"></video>`;
+  } else if (/matterport\.com/i.test(url)) {
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/insidemaps\.com/i.test(url)) {
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (/zillow\.com\/(view-3d-home|view-imx)/i.test(url)) {
+    // Clean embed for Zillow 3D / IMX walkthroughs
+    let embedUrl = url;
+    if (!embedUrl.includes('hidePhotos=')) {
+      embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'hidePhotos=true&initialViewType=pano';
     }
-
-    if (tour.kind === 'video') {
-      if (eyebrowEl) eyebrowEl.textContent = 'Video Walkthrough';
-      if (iconEl) iconEl.innerHTML = '<i class="fas fa-play" style="color:#e11d48"></i>';
-    } else {
-      if (eyebrowEl) eyebrowEl.textContent = 'Interactive 3D Virtual Walkthrough';
-      if (iconEl) iconEl.innerHTML = '<i class="fas fa-cube" style="color:#38bdf8"></i>';
-    }
-
-    // Update switcher tabs
-    if (switcherContainer && tours.length > 1) {
-      switcherContainer.style.display = 'flex';
-      switcherContainer.innerHTML = tours.map(t => {
-        const isActive = t.id === tour.id;
-        const tabLabel = t.floor_label ? `${t.floor_label}` : (t.title || (t.kind === 'video' ? 'Video' : '3D Tour'));
-        return `<button type="button" class="vt-switcher-btn ${isActive ? 'active' : ''}" data-tour-id="${esc(t.id)}">${esc(tabLabel)}</button>`;
-      }).join('');
-
-      switcherContainer.querySelectorAll('.vt-switcher-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const targetId = btn.dataset.tourId;
-          const selected = tours.find(t => t.id === targetId);
-          if (selected) renderTour(selected);
-        });
-      });
-    } else if (switcherContainer) {
-      switcherContainer.style.display = 'none';
-    }
-
-    let playerHtml = '';
-    // YouTube
-    if (/youtube\.com|youtu\.be/i.test(url)) {
-      const ytMatch = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*)/);
-      const ytId = (ytMatch && ytMatch[1]?.length === 11) ? ytMatch[1] : '';
-      playerHtml = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // Vimeo
-    else if (/vimeo\.com/i.test(url)) {
-      const vmMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/);
-      const vmId = vmMatch ? vmMatch[3] : '';
-      playerHtml = `<iframe src="https://player.vimeo.com/video/${vmId}?autoplay=1&title=0&byline=0&portrait=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // Direct Video file (.mp4, .webm, .mov or video kind)
-    else if (tour.kind === 'video' || /\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
-      playerHtml = `<video src="${esc(url)}" controls autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000" ${tour.poster_url ? `poster="${esc(tour.poster_url)}"` : ''}></video>`;
-    }
-    // Matterport
-    else if (/matterport\.com/i.test(url)) {
-      let mpUrl = url;
-      if (!mpUrl.includes('play=')) mpUrl += (mpUrl.includes('?') ? '&' : '?') + 'play=1&qs=1';
-      playerHtml = `<iframe src="${esc(mpUrl)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // InsideMaps
-    else if (/insidemaps\.com/i.test(url)) {
-      playerHtml = `<iframe src="${esc(url)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // Zillow 3D / IMX
-    else if (/zillow\.com\/(view-3d-home|view-imx)/i.test(url)) {
-      let embedUrl = url;
-      if (!embedUrl.includes('hidePhotos=')) {
-        embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'hidePhotos=true&initialViewType=pano';
-      }
-      playerHtml = `<iframe src="${esc(embedUrl)}" title="Interactive 3D property tour" allow="fullscreen; accelerometer; gyroscope; spatial-tracking; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // Keep other HTTPS tour providers inside the Choice viewer.
-    else if (/^https?:\/\//i.test(url)) {
-      playerHtml = `<iframe src="${esc(url)}" title="Interactive property tour" allow="fullscreen; accelerometer; gyroscope; spatial-tracking; xr-spatial-tracking" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
-    }
-    // Keep unsupported or malformed tour links in an in-page error state.
-    else {
-      playerHtml = `
-        <div class="vt-fallback-box" role="status">
-          <div class="vt-fallback-icon"><i class="fas fa-cube"></i></div>
-          <h4 class="vt-fallback-title">Tour unavailable</h4>
-          <p class="vt-fallback-desc">This tour link cannot be opened in the on-page viewer.</p>
-        </div>
-      `;
-    }
-
-    body.innerHTML = playerHtml;
+    playerHtml = `<iframe src="${esc(embedUrl)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else {
+    // Generic secure iframe fallback
+    playerHtml = `<iframe src="${esc(url)}" allow="fullscreen; accelerometer; gyroscope; spatial-tracking" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
   }
 
-  renderTour(currentTour);
-
+  body.innerHTML = playerHtml;
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
-  if (closeBtn) closeBtn.focus();
 
   function closeModal() {
     modal.style.display = 'none';
@@ -1580,17 +1133,10 @@ function openVirtualTourModal(p, activeTourItem = null) {
     body.innerHTML = '';
     document.body.style.overflow = '';
     if (dialog) dialog.classList.remove('fullscreen');
-    document.removeEventListener('keydown', keyHandler);
-    if (previousFocusedElement && typeof previousFocusedElement.focus === 'function') {
-      previousFocusedElement.focus();
-    }
   }
 
   if (closeBtn) closeBtn.onclick = closeModal;
   if (backdrop) backdrop.onclick = closeModal;
-  modal.onclick = (e) => {
-    if (e.target === modal || e.target === backdrop) closeModal();
-  };
   if (fullscreenBtn) {
     fullscreenBtn.onclick = () => {
       if (dialog) dialog.classList.toggle('fullscreen');
@@ -1600,172 +1146,7 @@ function openVirtualTourModal(p, activeTourItem = null) {
   const keyHandler = (e) => {
     if (e.key === 'Escape') {
       closeModal();
-    }
-  };
-  document.addEventListener('keydown', keyHandler);
-}
-
-// ── Accessible Floor Plan Lightbox Modal ─────────────────────────────────
-function openFloorPlanModal(activeItem, allFloorPlans = []) {
-  if (!activeItem || !activeItem.url) return;
-
-  let modal = document.getElementById('floorPlanModal');
-  if (!modal) {
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <div id="floorPlanModal" class="fp-modal" role="dialog" aria-modal="true" aria-labelledby="fpModalTitle" style="display:none">
-        <div id="fpModalBackdrop" style="position:absolute;inset:0"></div>
-        <div class="fp-dialog" id="fpModalDialog">
-          <div class="fp-head">
-            <div style="display:flex;align-items:center;gap:10px;min-width:0">
-              <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(0,106,255,0.12);color:var(--m-brand);font-size:15px;flex-shrink:0"><i class="fas fa-draw-polygon"></i></span>
-              <div style="min-width:0">
-                <h3 id="fpModalTitle" style="font-size:15px;font-weight:700;color:var(--m-ink);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Floor Plan</h3>
-                <div id="fpModalFloor" style="font-size:12px;color:var(--m-muted)">Level layout</div>
-              </div>
-            </div>
-            
-            <div id="fpFloorSwitcher" style="display:flex;align-items:center;gap:6px"></div>
-
-            <div class="fp-controls">
-              <button type="button" class="fp-btn" id="fpZoomIn" aria-label="Zoom in" title="Zoom In"><i class="fas fa-search-plus"></i></button>
-              <button type="button" class="fp-btn" id="fpZoomOut" aria-label="Zoom out" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
-              <button type="button" class="fp-btn" id="fpReset" aria-label="Reset zoom" title="Reset Zoom"><i class="fas fa-undo"></i></button>
-              <a id="fpDownloadBtn" href="#" target="_blank" rel="noopener noreferrer" class="fp-btn" aria-label="Open original image" title="Open in new window"><i class="fas fa-external-link-alt"></i></a>
-              <button type="button" class="fp-btn" id="fpCloseBtn" aria-label="Close" style="background:var(--m-brand);color:#fff;border-color:var(--m-brand)"><i class="fas fa-times"></i></button>
-            </div>
-          </div>
-          <div class="fp-body" id="fpModalBody">
-            <img id="fpModalImg" class="fp-image" src="" alt="Floor plan high-resolution layout">
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(wrap.firstElementChild);
-    modal = document.getElementById('floorPlanModal');
-  }
-
-  const img = document.getElementById('fpModalImg');
-  const titleEl = document.getElementById('fpModalTitle');
-  const floorEl = document.getElementById('fpModalFloor');
-  const downloadBtn = document.getElementById('fpDownloadBtn');
-  const closeBtn = document.getElementById('fpCloseBtn');
-  const backdrop = document.getElementById('fpModalBackdrop');
-  const switcher = document.getElementById('fpFloorSwitcher');
-  const zoomInBtn = document.getElementById('fpZoomIn');
-  const zoomOutBtn = document.getElementById('fpZoomOut');
-  const resetBtn = document.getElementById('fpReset');
-
-  let currentZoom = 1;
-  let panX = 0, panY = 0, isDragging = false, startX = 0, startY = 0;
-  const previousFocusedElement = document.activeElement;
-
-  function updateTransform() {
-    if (img) img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
-  }
-
-  function loadFloorPlan(item) {
-    currentZoom = 1;
-    panX = 0;
-    panY = 0;
-    if (img) {
-      updateTransform();
-      img.src = item.url;
-      img.alt = item.title || 'Floor Plan';
-    }
-    if (titleEl) titleEl.textContent = item.title || 'Floor Plan';
-    if (floorEl) floorEl.textContent = item.floor_label ? `Level / Floor: ${item.floor_label}` : 'Architectural Layout';
-    if (downloadBtn) downloadBtn.href = item.url;
-
-    if (switcher && allFloorPlans.length > 1) {
-      switcher.style.display = 'flex';
-      switcher.innerHTML = allFloorPlans.map((fp, i) => `
-        <button type="button" class="fp-btn ${fp.id === item.id ? 'active' : ''}" data-fp-id="${esc(fp.id)}" style="${fp.id === item.id ? 'background:var(--m-brand);color:#fff;border-color:var(--m-brand)' : ''}">
-          ${esc(fp.floor_label || `Plan ${i + 1}`)}
-        </button>
-      `).join('');
-
-      switcher.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const target = allFloorPlans.find(f => f.id === btn.dataset.fpId);
-          if (target) loadFloorPlan(target);
-        });
-      });
-    } else if (switcher) {
-      switcher.style.display = 'none';
-    }
-  }
-
-  loadFloorPlan(activeItem);
-
-  if (zoomInBtn) {
-    zoomInBtn.onclick = () => {
-      currentZoom = Math.min(3, currentZoom + 0.25);
-      updateTransform();
-    };
-  }
-  if (zoomOutBtn) {
-    zoomOutBtn.onclick = () => {
-      currentZoom = Math.max(0.5, currentZoom - 0.25);
-      if (currentZoom === 1) { panX = 0; panY = 0; }
-      updateTransform();
-    };
-  }
-  if (resetBtn) {
-    resetBtn.onclick = () => {
-      currentZoom = 1;
-      panX = 0;
-      panY = 0;
-      updateTransform();
-    };
-  }
-
-  if (img) {
-    img.style.cursor = 'grab';
-    img.onmousedown = (e) => {
-      if (currentZoom <= 1) return;
-      isDragging = true;
-      startX = e.clientX - panX;
-      startY = e.clientY - panY;
-      img.style.cursor = 'grabbing';
-      e.preventDefault();
-    };
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      panX = e.clientX - startX;
-      panY = e.clientY - startY;
-      updateTransform();
-    });
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-      if (img) img.style.cursor = currentZoom > 1 ? 'grab' : 'default';
-    });
-  }
-
-  modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
-  if (closeBtn) closeBtn.focus();
-
-  function closeModal() {
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-    document.removeEventListener('keydown', keyHandler);
-    if (previousFocusedElement && typeof previousFocusedElement.focus === 'function') {
-      previousFocusedElement.focus();
-    }
-  }
-
-  if (closeBtn) closeBtn.onclick = closeModal;
-  if (backdrop) backdrop.onclick = closeModal;
-  modal.onclick = (e) => {
-    if (e.target === modal || e.target === backdrop) closeModal();
-  };
-
-  const keyHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeModal();
+      document.removeEventListener('keydown', keyHandler);
     }
   };
   document.addEventListener('keydown', keyHandler);
@@ -1986,16 +1367,7 @@ function renderGallery(photos) {
     if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
   }
 
-  mosaicMain.setAttribute('role', 'button');
-  mosaicMain.setAttribute('tabindex', '0');
-  mosaicMain.setAttribute('aria-label', 'Open property photo gallery');
-  mosaicMain.addEventListener('click', () => openLightbox(photoIndex));
-  mosaicMain.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openLightbox(photoIndex);
-    }
-  });
+  mosaicMain.addEventListener('click', () => openLightbox(0));
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
@@ -2008,7 +1380,7 @@ function renderGallery(photos) {
       const remaining = photos.length - 5;
       const lqUrl = lqipUrl(url);
       return `
-        <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open property photo ${idx+1}">
+        <div class="mosaic-cell" data-idx="${idx}">
           ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
           <img src="${CONFIG.img(url,'gallery')}"
                srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
@@ -2042,13 +1414,7 @@ function renderGallery(photos) {
     // Fade out each cell's LQIP placeholder once its image loads;
     // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
-      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx, 10)));
-      cell.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openLightbox(parseInt(cell.dataset.idx, 10));
-        }
-      });
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
       cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('dragstart', e => e.preventDefault());
       const img = cell.querySelector('img');

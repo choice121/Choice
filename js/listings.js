@@ -40,7 +40,6 @@ let totalPages     = 1;
 let totalCount     = 0;
 let currentView    = 'list';
 let isLoading      = false;
-let activeFetchId  = 0; // Monotonic request id; stale responses must not overwrite newer filter state.
 let mapInstance    = null;
 let mapMarkers     = [];
 let savedIds       = loadSavedIds();
@@ -123,8 +122,7 @@ function readURL() {
   activeMinBaths = p.get('minbaths') || '';
   activeType     = p.get('type')     || 'all';
   sortBy         = p.get('sort')     || 'newest';
-  const requestedPage = Number.parseInt(p.get('page') || '1', 10);
-  currentPage = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  currentPage    = parseInt(p.get('page') || '1', 10);
   if (isAdminMode && p.get('landlord')) adminLandlordId = p.get('landlord');
 }
 
@@ -854,7 +852,7 @@ async function adminCSVExport() {
     // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
     const filterDropdown = document.getElementById('moreFiltersDropdown');
     if (filterDropdown && sessionStorage.getItem('filters_dropdown_open') === 'true') {
-      setFiltersDropdownOpen(true);
+      filterDropdown.classList.add('open');
     }
     await fetchAndRender();
     window.addEventListener('popstate', async () => {
@@ -870,9 +868,7 @@ async function adminCSVExport() {
 
 // ── Core fetch ────────────────────────────────────────────────────────────
 async function fetchAndRender() {
-  // A newer search/filter request supersedes any in-flight request. Without this,
-  // fast filter changes can be ignored or stale results can overwrite the latest state.
-  const requestId = ++activeFetchId;
+  if (isLoading) return;
   isLoading = true;
 
   showSkeletons();
@@ -891,14 +887,10 @@ async function fetchAndRender() {
       }
     }
 
-    let fetchTimeoutId = null;
-  try {
-    const fetchTimeout = new Promise((_, reject) => {
-      fetchTimeoutId = setTimeout(
-        () => reject(new Error('Request timed out. Please check your connection and try again.')),
-        10000
-      );
-    });
+    try {
+    const fetchTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
+    );
     const fetchPromise = (isAdminMode && !activeShareToken && !(activeTargetIds && activeTargetIds.length))
       ? CP.Properties.getListingsAdmin({
           q:       activeSearch,
@@ -932,7 +924,6 @@ async function fetchAndRender() {
           per_page:  PER_PAGE,
         });
     const result = await Promise.race([fetchPromise, fetchTimeout]);
-    if (requestId !== activeFetchId) return;
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
@@ -959,13 +950,10 @@ async function fetchAndRender() {
       if (countEl) countEl.textContent = `${total.toLocaleString()} propert${total === 1 ? 'y' : 'ies'}`;
     }
   } catch (err) {
-    if (requestId !== activeFetchId) return;
     console.error('fetchAndRender error:', err);
     renderError(err?.message);
   } finally {
-    // A successful or superseded request should not leave its timeout running.
-    if (fetchTimeoutId !== null) clearTimeout(fetchTimeoutId);
-    if (requestId === activeFetchId) isLoading = false;
+    isLoading = false;
   }
 }
 
@@ -1043,14 +1031,11 @@ function renderProperties(props) {
     return;
   }
 
-  grid.innerHTML = props.map((p, index) => buildCard(p, index)).join('');
+  grid.innerHTML = props.map(p => buildCard(p)).join('');
 
   // Mark saved state only — click events handled by delegated listeners (P1-A)
   grid.querySelectorAll('.property-card-save').forEach(btn => {
-    const isSaved = savedIds.has(btn.dataset.id);
-    btn.setAttribute('aria-pressed', isSaved ? 'true' : 'false');
-    btn.setAttribute('aria-label', (isSaved ? 'Remove saved rental: ' : 'Save rental: ') + (btn.dataset.title || 'this property'));
-    if (isSaved) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>'; }
+    if (savedIds.has(btn.dataset.id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
   });
 
   // Admin mode: overlay status badges and edit buttons on each card
@@ -1094,10 +1079,9 @@ function renderPagination() {
 
 /* ─── Build card ─── */
 // Delegates to the unified card builder in /js/card-builder.js
-function buildCard(p, index) {
+function buildCard(p) {
   return buildPropertyCard(p, {
     imgSizes: '(max-width: 599px) calc(100vw - 32px), 300px',
-    priorityFirstImage: index === 0,
   });
 }
 
@@ -1349,8 +1333,6 @@ document.getElementById('btnListView').addEventListener('click', () => {
   document.getElementById('mapPanel').style.display = 'none';
   document.getElementById('btnListView').classList.add('active');
   document.getElementById('btnMapView').classList.remove('active');
-  document.getElementById('btnListView').setAttribute('aria-pressed', 'true');
-  document.getElementById('btnMapView').setAttribute('aria-pressed', 'false');
 });
 document.getElementById('btnMapView').addEventListener('click', async () => {
   currentView = 'map';
@@ -1358,8 +1340,6 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   document.getElementById('mapPanel').style.display = 'block';
   document.getElementById('btnMapView').classList.add('active');
   document.getElementById('btnListView').classList.remove('active');
-  document.getElementById('btnMapView').setAttribute('aria-pressed', 'true');
-  document.getElementById('btnListView').setAttribute('aria-pressed', 'false');
   // Show loading spinner while Leaflet loads
   const mapSpinner = document.getElementById('mapLoadingSpinner');
   if (mapSpinner) mapSpinner.style.display = 'flex';
@@ -1370,18 +1350,6 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   // Do not fetch redundantly. The list view already fetched `pageProperties`.
   initMap(pageProperties);
 });
-
-function setFiltersDropdownOpen(isOpen) {
-  const dropdown = document.getElementById('moreFiltersDropdown');
-  if (!dropdown) return;
-  const open = Boolean(isOpen);
-  dropdown.classList.toggle('open', open);
-  ['moreFiltersBtn', 'mobileFiltersBtn'].forEach(id => {
-    const button = document.getElementById(id);
-    if (button) button.setAttribute('aria-expanded', String(open));
-  });
-  sessionStorage.setItem('filters_dropdown_open', open ? 'true' : 'false');
-}
 
 /* ─── Filters ─── */
 function setupFilters() {
@@ -1413,7 +1381,9 @@ function setupFilters() {
   document.getElementById('moreFiltersBtn').addEventListener('click', e => {
       e.stopPropagation();
       const dropdown = document.getElementById('moreFiltersDropdown');
-      setFiltersDropdownOpen(!dropdown.classList.contains('open'));
+      dropdown.classList.toggle('open');
+      const isOpen = dropdown.classList.contains('open');
+      sessionStorage.setItem('filters_dropdown_open', isOpen ? 'true' : 'false');
     });
 
     // Fix 2: Mobile Filters button opens the same dropdown bottom-sheet
@@ -1422,7 +1392,8 @@ function setupFilters() {
       mfBtn.addEventListener('click', e => {
         e.stopPropagation();
         const dropdown = document.getElementById('moreFiltersDropdown');
-        setFiltersDropdownOpen(!dropdown.classList.contains('open'));
+        dropdown.classList.toggle('open');
+        sessionStorage.setItem('filters_dropdown_open', dropdown.classList.contains('open') ? 'true' : 'false');
       });
     }
 
@@ -1437,11 +1408,13 @@ function setupFilters() {
         const el = document.getElementById(id); if (el) el.value = '';
       });
       window.clearAllFilters();
-      setFiltersDropdownOpen(false);
+      document.getElementById('moreFiltersDropdown').classList.remove('open');
+      sessionStorage.setItem('filters_dropdown_open', 'false');
     });
   document.addEventListener('click', e => {
     if (!document.getElementById('moreFiltersWrap').contains(e.target)) {
-      setFiltersDropdownOpen(false);
+      document.getElementById('moreFiltersDropdown').classList.remove('open');
+      sessionStorage.setItem('filters_dropdown_open', 'false');
     }
   });
 
@@ -1459,7 +1432,8 @@ function setupFilters() {
       activeBeds = '';
       activeMinBeds = advBeds;
     }
-    setFiltersDropdownOpen(false);
+    document.getElementById('moreFiltersDropdown').classList.remove('open');
+    sessionStorage.setItem('filters_dropdown_open', 'false');
     refreshResults();
     showToast('Filters applied', 'success');
   });
@@ -1470,7 +1444,8 @@ function setupFilters() {
       if (control) control.value = '';
     });
     window.clearAllFilters();
-    setFiltersDropdownOpen(false);
+    document.getElementById('moreFiltersDropdown').classList.remove('open');
+    sessionStorage.setItem('filters_dropdown_open', 'false');
   });
 }
 
@@ -1528,31 +1503,19 @@ async function toggleSave(id, btn) {
     if (saved) {
       savedIds.add(id);
       btn.classList.add('saved');
-      btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>';
-      btn.setAttribute('aria-pressed', 'true');
-      btn.setAttribute('aria-label', 'Remove saved rental: ' + (btn.dataset.title || 'this property'));
+      btn.innerHTML = '<i class="fas fa-heart"></i>';
       showToast('Property saved!', 'success');
     } else {
       savedIds.delete(id);
       btn.classList.remove('saved');
-      btn.innerHTML = '<i class="far fa-heart" aria-hidden="true"></i>';
-      btn.setAttribute('aria-pressed', 'false');
-      btn.setAttribute('aria-label', 'Save rental: ' + (btn.dataset.title || 'this property'));
+      btn.innerHTML = '<i class="far fa-heart"></i>';
     }
   } catch(_) {
     // Fallback: localStorage only
     if (savedIds.has(id)) {
-      savedIds.delete(id);
-      btn.classList.remove('saved');
-      btn.innerHTML = '<i class="far fa-heart" aria-hidden="true"></i>';
-      btn.setAttribute('aria-pressed', 'false');
-      btn.setAttribute('aria-label', 'Save rental: ' + (btn.dataset.title || 'this property'));
+      savedIds.delete(id); btn.classList.remove('saved'); btn.innerHTML = '<i class="far fa-heart"></i>';
     } else {
-      savedIds.add(id);
-      btn.classList.add('saved');
-      btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>';
-      btn.setAttribute('aria-pressed', 'true');
-      btn.setAttribute('aria-label', 'Remove saved rental: ' + (btn.dataset.title || 'this property'));
+      savedIds.add(id); btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>';
       showToast('Property saved!', 'success');
     }
     localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));

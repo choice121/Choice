@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v44.0.5
+// Choice Properties — Live Content Script v31.0.4
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '44.0.5-live';
+  var VERSION  = '31.0.4-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1002,52 +1002,6 @@
 
   function dedupePhotoUrls(urls) {
     var seen = new Set();
-
-  function normalizeMediaArray(items) {
-    if (!Array.isArray(items)) return [];
-    var normalized = [];
-    var seen = new Set();
-
-    items.forEach(function (item) {
-      if (!item || typeof item !== 'object') return;
-      var rawUrl = typeof item.url === 'string' ? item.url.trim() : (typeof item.href === 'string' ? item.href.trim() : (typeof item.src === 'string' ? item.src.trim() : ''));
-      if (!rawUrl) return;
-
-      var kind = String(item.kind || item.type || '').trim().toLowerCase();
-      if (!kind) {
-        if (/matterport|virtual|tour|3d|view-3d|imx/i.test(rawUrl)) kind = 'virtual_tour';
-        else if (/youtube|vimeo|mp4|webm|mov|video/i.test(rawUrl)) kind = 'video';
-        else if (/floor|plan/i.test((item.title || item.label || ''))) kind = 'floor_plan';
-        else kind = 'photo';
-      }
-
-      if (kind === '3d_tour' || kind === 'tour_3d' || kind === 'tour3d') kind = 'tour_3d';
-      if (kind === 'virtual-tour' || kind === 'virtual_tour') kind = 'virtual_tour';
-      if (kind === 'floorplan' || kind === 'floor_plan') kind = 'floor_plan';
-      if (kind === 'video_walkthrough' || kind === 'walkthrough_video') kind = 'video';
-
-      var key = kind + '::' + rawUrl.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      normalized.push({
-        kind: kind,
-        title: item.title || item.name || (kind === 'video' ? 'Video walkthrough' : kind === 'floor_plan' ? 'Floor plan' : kind === 'tour_3d' ? '3D Virtual Tour' : 'Media'),
-        floor_label: item.floor_label || item.floorLabel || null,
-        provider: item.provider || item.source_provider || null,
-        url: rawUrl,
-        file_id: item.file_id || item.fileId || null,
-        poster_url: item.poster_url || item.posterUrl || null,
-        display_order: Number.isFinite(Number(item.display_order)) ? Number(item.display_order) : normalized.length,
-        is_hero: !!(item.is_hero || item.isHero),
-        width: item.width != null ? Number(item.width) : null,
-        height: item.height != null ? Number(item.height) : null,
-        metadata: item.metadata || {}
-      });
-    });
-
-    return normalized;
-  }
     var unique = [];
     if (!Array.isArray(urls)) return unique;
     urls.forEach(function (raw) {
@@ -1174,12 +1128,6 @@
               <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip cp-chip-photos" id="cp-photos-chip">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
-            <div class="cp-diagnostics-control">
-              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
-              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
-                Sends listing facts and page structure only. No cookies, session data, or full page text.
-              </span>
-            </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -1187,6 +1135,8 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
+                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
             </div>
           </div>
@@ -1340,8 +1290,6 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
-    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
-    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -1559,36 +1507,6 @@
       }
     });
 
-    diagnosticsBtn.addEventListener('click', async function () {
-      diagnosticsBtn.disabled = true;
-      diagnosticsStatus.textContent = 'Analyzing this listing…';
-      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
-      try {
-        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
-          throw new Error('Diagnostics are unavailable in this extension build');
-        }
-        if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
-          throw new Error('Extension background service is unavailable');
-        }
-        var report = window.CP_Extractors.diagnose(location.href, document);
-        var response = await new Promise(function (resolve, reject) {
-          EXTENSION_API.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
-            var runtimeError = EXTENSION_API.runtime.lastError;
-            if (runtimeError) reject(new Error(runtimeError.message));
-            else resolve(result);
-          });
-        });
-        if (!response || !response.ok) throw new Error(response && response.error || 'Report could not be sent');
-        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
-        diagnosticsStatus.classList.add('cp-diagnostic-success');
-      } catch (error) {
-        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
-        diagnosticsStatus.classList.add('cp-diagnostic-error');
-      } finally {
-        diagnosticsBtn.disabled = false;
-      }
-    });
-
     saveBtn.addEventListener('click', handleSave);
     if (miniSaveBtn) {
       miniSaveBtn.addEventListener('click', function (event) {
@@ -1728,23 +1646,6 @@
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
-      var mediaItems = normalizeMediaArray(extracted.media);
-      if (!mediaItems.length && extracted.virtual_tour_url) {
-        mediaItems = [{
-          kind: 'virtual_tour',
-          title: '3D Virtual Tour',
-          floor_label: null,
-          provider: null,
-          url: extracted.virtual_tour_url,
-          file_id: null,
-          poster_url: null,
-          display_order: 0,
-          is_hero: false,
-          width: null,
-          height: null,
-          metadata: {}
-        }];
-      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1793,14 +1694,13 @@
         county: extracted.county,
         location_context: extracted.location_context,
         virtual_tour_url: extracted.virtual_tour_url,
-        media: mediaItems,
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v44.0.5-live',
+        _import: 'browser-extension-v31.0.4-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

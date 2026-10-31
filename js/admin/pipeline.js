@@ -42,11 +42,6 @@
   async function validateForPublish(listing) {
     const failures = [];
     const desc = listing.description || '';
-    const inventory = inventoryData(listing);
-
-    if (inventory.isMultiUnit) {
-      failures.push('This is an apartment community, not one rental unit. The current publish flow does not support community listings; do not copy unit facts into the building-level fields.');
-    }
 
     // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
     // Listings are pre-screened on import and published regardless of photo count.
@@ -117,111 +112,6 @@
       if (item && typeof item === 'object' && typeof item.url === 'string') return item.url;
       return null;
     }).filter(Boolean);
-  }
-  function sourcePhotoCount(listing){
-    const identities = new Set();
-    imageUrls(listing.original_image_urls).forEach(function(url){
-      const zillowHash = url.match(/\/fp\/([a-f0-9]{16,})-/i);
-      identities.add(zillowHash ? zillowHash[1].toLowerCase() : url.split('?')[0].replace(/#.*$/, ''));
-    });
-    return identities.size;
-  }
-  function inventoryData(listing){
-    const sourceData = parseJSON(listing.original_data) || {};
-    const rawOptions = Array.isArray(sourceData.unit_options) ? sourceData.unit_options : [];
-    const units = new Map();
-    const plans = new Map();
-    const validUnitNumber = value =>
-      /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(String(value || '').trim().replace(/^#/, ''));
-    const quality = option =>
-      ['floor_plan_name','bedrooms','bathrooms','half_bathrooms','square_footage','monthly_rent','starting_rent']
-        .filter(field => option[field] != null && option[field] !== '').length;
-
-    rawOptions.forEach(function(option){
-      if(!option || typeof option !== 'object') return;
-      if(option.source_kind === 'available_unit' && validUnitNumber(option.unit_number)){
-        const key = String(option.unit_number).trim().toLowerCase();
-        const current = units.get(key);
-        if(!current || quality(option) > quality(current)) units.set(key, option);
-      } else if(option.source_kind === 'floor_plan'){
-        const key = [
-          String(option.floor_plan_name || '').trim().toLowerCase(),
-          option.bedrooms,
-          option.bathrooms,
-          option.square_footage,
-          (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
-            ? ''
-            : option.starting_rent,
-        ].join('|');
-        if(!plans.has(key)) plans.set(key, option);
-      }
-    });
-    const optionPriceBasis = rawOptions.find(option => option && option.rent_basis)?.rent_basis || null;
-    return {
-      buildingName: listing.building_name || sourceData.building_name || null,
-      priceRange: listing.price_range || sourceData.price_range || null,
-      priceBasis: listing.rent_basis || sourceData.rent_basis || optionPriceBasis,
-      isMultiUnit: listing.is_multi_unit === true || sourceData.is_multi_unit === true || units.size > 0 || plans.size > 0,
-      totalUnits: listing.total_units ?? sourceData.total_units ?? null,
-      floors: listing.floors ?? sourceData.floors ?? null,
-      units: Array.from(units.values()),
-      floorPlans: Array.from(plans.values()),
-    };
-  }
-  function optionsHavePrices(inventory){
-    return inventory.units.concat(inventory.floorPlans)
-      .some(option => option.monthly_rent != null || option.starting_rent != null);
-  }
-  function renderInventory(listing){
-    const inventory = inventoryData(listing);
-    if(!inventory.isMultiUnit && !inventory.buildingName && inventory.totalUnits == null && inventory.floors == null) return '';
-    const facts = [];
-    const totalUnits = Number(inventory.totalUnits);
-    const floors = Number(inventory.floors);
-    facts.push(Number.isFinite(totalUnits) && totalUnits > 0 ? `${S.esc(totalUnits.toLocaleString())} total units` : 'Total units not reported by source');
-    facts.push(`${inventory.units.length} available units found`);
-    facts.push(`${inventory.floorPlans.length} floor plans found`);
-    facts.push(Number.isFinite(floors) && floors > 0 ? `${S.esc(floors.toLocaleString())} building ${floors === 1 ? 'story' : 'stories'}` : 'Building stories not reported');
-    if(inventory.priceRange) facts.push(`Source price range: ${S.esc(inventory.priceRange)}`);
-    const priceBasisLabel = inventory.priceBasis === 'total_monthly_price'
-      ? 'Total monthly price'
-      : inventory.priceBasis === 'base_rent'
-        ? 'Base rent'
-        : 'Price basis not recorded';
-    if(optionsHavePrices(inventory)) facts.push(`Unit price basis: ${priceBasisLabel}`);
-    const options = inventory.units.map(option => ({ option, label: `Unit ${option.unit_number}` }))
-      .concat(inventory.floorPlans.map((option, index) => ({
-        option,
-        label: option.floor_plan_name || `Floor plan ${index + 1}`,
-      })));
-    const rows = options.slice(0, 40).map(({option, label}) => {
-      const details = [];
-      if(option.bedrooms === 0) details.push('Studio');
-      else if(option.bedrooms != null) details.push(`${S.esc(option.bedrooms)} bd`);
-      if(option.bathrooms != null) details.push(`${S.esc(option.bathrooms)} ba`);
-      if(option.square_footage != null) details.push(`${S.esc(Number(option.square_footage).toLocaleString())} sqft`);
-      const rent = option.monthly_rent != null
-        ? `$${Number(option.monthly_rent).toLocaleString()}/mo`
-        : option.starting_rent != null ? `From $${Number(option.starting_rent).toLocaleString()}/mo` : '';
-      const optionBasis = option.rent_basis || inventory.priceBasis;
-      const optionBasisLabel = optionBasis === 'total_monthly_price'
-        ? 'Total monthly price'
-        : optionBasis === 'base_rent'
-          ? 'Base rent'
-          : 'Price basis not recorded';
-      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border)"><span><strong>${S.esc(label)}</strong>${details.length ? ` · ${details.join(' · ')}` : ''}</span>${rent ? `<strong>${S.esc(rent)}<small style="display:block;text-align:right;font-weight:400;color:var(--muted-2)">${S.esc(optionBasisLabel)}</small></strong>` : ''}</div>`;
-    }).join('');
-    const heading = inventory.buildingName
-      ? `<div style="margin-bottom:6px;font-weight:600">${S.esc(inventory.buildingName)}</div>`
-      : '';
-    return `<div class="pl-section">
-      <div class="pl-section-title">Building &amp; unit inventory</div>
-      ${heading}
-      ${inventory.isMultiUnit ? `<div class="pl-photo-count" style="margin:8px 0;padding:10px;border:1px solid #f59e0b;border-radius:6px;color:#b45309">Community import — the current publish flow supports one rental unit only. Keep this record in review; do not publish it as a standalone rental.</div>` : ''}
-      <div class="pl-photo-count">${facts.join(' · ')}</div>
-      ${rows ? `<div style="margin-top:8px">${rows}</div>` : ''}
-      ${options.length > 40 ? `<div class="pl-photo-count" style="margin-top:6px">${options.length - 40} additional options are stored in the source data.</div>` : ''}
-    </div>`;
   }
   function thumbUrl(l){
     const imgs = imageUrls(l.original_image_urls);
@@ -547,210 +437,6 @@
     return labels.join('');
   }
 
-  function sourceMediaItems(l){
-    const originalData = parseJSON(l.original_data);
-    const rawItems = originalData && Array.isArray(originalData.media) ? originalData.media : [];
-    const items = [];
-    const seen = new Set();
-
-    rawItems.forEach(function(item, index){
-      if(!item || typeof item !== 'object' || typeof item.url !== 'string') return;
-      let url;
-      try {
-        url = new URL(item.url.trim());
-        if(url.protocol !== 'https:' && url.protocol !== 'http:') return;
-      } catch(_) { return; }
-      const kind = ['floor_plan','video','virtual_tour','tour_3d'].includes(item.kind) ? item.kind : null;
-      if(!kind) return;
-      const key = `${kind}::${url.href.toLowerCase()}`;
-      if(seen.has(key)) return;
-      seen.add(key);
-      items.push({
-        id: item.id || `source-media-${index}`,
-        kind,
-        title: item.title || (kind === 'floor_plan' ? 'Floor plan' : kind === 'video' ? 'Video walkthrough' : '3D virtual tour'),
-        floor_label: item.floor_label || null,
-        provider: item.provider || null,
-        url: url.href,
-        poster_url: item.poster_url || null,
-        metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : {},
-      });
-    });
-
-    const legacyTour = typeof l.virtual_tour_url === 'string' ? l.virtual_tour_url.trim() : '';
-    if(legacyTour){
-      try {
-        const url = new URL(legacyTour);
-        if((url.protocol === 'https:' || url.protocol === 'http:') && !items.some(item => item.url.replace(/\/+$/, '').toLowerCase() === url.href.replace(/\/+$/, '').toLowerCase())){
-          items.push({ id: 'legacy-tour', kind: 'virtual_tour', title: '3D virtual tour', floor_label: null, provider: null, url: url.href, poster_url: null, metadata: {} });
-        }
-      } catch(_) {}
-    }
-
-    return items;
-  }
-
-  function renderSourceMediaItem(item, editable){
-    const isDirectVideo = item.kind === 'video' && /\.(?:mp4|webm|mov)(?:[?#].*)?$/i.test(item.url || '');
-    const preview = item.kind === 'floor_plan' && item.url
-      ? `<a href="${S.esc(item.url)}" target="_blank" rel="noopener"><img src="${S.esc(item.url)}" alt="${S.esc(item.title)}" loading="lazy" referrerpolicy="no-referrer" style="display:block;width:100%;max-height:180px;object-fit:contain;background:var(--surface-2);border-radius:4px"></a>`
-      : isDirectVideo
-        ? `<video controls preload="metadata" playsinline style="display:block;width:100%;max-height:220px;background:#111;border-radius:4px"><source src="${S.esc(item.url)}"></video>`
-        : '';
-    const fields = editable ? `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0">
-        <label class="pl-field"><span>Type</span><select data-media-field="kind">
-          <option value="floor_plan"${item.kind === 'floor_plan' ? ' selected' : ''}>Floor plan</option>
-          <option value="video"${item.kind === 'video' ? ' selected' : ''}>Video</option>
-          <option value="virtual_tour"${item.kind === 'virtual_tour' ? ' selected' : ''}>Virtual tour</option>
-          <option value="tour_3d"${item.kind === 'tour_3d' ? ' selected' : ''}>3D tour</option>
-        </select></label>
-        <label class="pl-field"><span>Title</span><input data-media-field="title" maxlength="120" value="${S.esc(item.title)}"></label>
-        <label class="pl-field"><span>Floor / level</span><input data-media-field="floor_label" maxlength="60" value="${S.esc(item.floor_label || '')}"></label>
-        <label class="pl-field"><span>Provider</span><input data-media-field="provider" maxlength="60" value="${S.esc(item.provider || '')}"></label>
-        <label class="pl-field" style="grid-column:1/-1"><span>URL</span><input data-media-field="url" type="url" value="${S.esc(item.url || '')}"></label>
-        <label class="pl-field" style="grid-column:1/-1"><span>Poster image URL</span><input data-media-field="poster_url" type="url" value="${S.esc(item.poster_url || '')}"></label>
-      </div>` : '';
-    const actions = editable ? `<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">
-      <button class="btn btn-sm btn-ghost" type="button" data-media-action="up" aria-label="Move media up" title="Move up">↑</button>
-      <button class="btn btn-sm btn-ghost" type="button" data-media-action="down" aria-label="Move media down" title="Move down">↓</button>
-        <button class="btn btn-sm btn-danger" type="button" data-media-action="remove">Remove</button>
-    </div>` : '';
-      const openLink = item.url ? `<a class="btn btn-sm btn-outline" href="${S.esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : '';
-    return `<article data-source-media-row data-source-media-id="${S.esc(item.id || '')}" style="min-width:0;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span class="qs-badge">${S.esc(String(item.kind).replace('_', ' '))}</span>${openLink}</div>
-      ${fields}${preview}${actions}
-    </article>`;
-  }
-
-  function renderSourceMedia(l){
-    const items = sourceMediaItems(l);
-    const editable = l.status !== 'published' && l.status !== 'archived';
-    const rows = items.map(item => renderSourceMediaItem(item, editable)).join('');
-    return `<div class="pl-section" id="pl-source-media-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="pl-section-title">Media from source <span style="font-weight:400;color:var(--muted-2)">(${items.length})</span></div>${editable ? '<button class="btn btn-sm btn-outline" type="button" data-media-action="add">Add media</button>' : ''}</div>
-      <div id="pl-source-media-list">${rows || '<p class="pl-photo-count">No source media found.</p>'}</div>
-      ${editable ? '<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-sm btn-primary" type="button" data-media-action="save">Save media changes</button></div><p id="pl-source-media-status" class="pl-photo-count" role="status" aria-live="polite"></p>' : ''}
-    </div>`;
-  }
-
-  function collectSourceMediaEdits(l){
-    const section = document.getElementById('pl-source-media-section');
-    if(!section) return [];
-    const originalById = new Map(sourceMediaItems(l).map(item => [String(item.id), item]));
-    const seen = new Set();
-    const items = [];
-
-    section.querySelectorAll('[data-source-media-row]').forEach((row, index) => {
-      const read = field => row.querySelector(`[data-media-field="${field}"]`)?.value.trim() || '';
-      const kind = read('kind');
-      const title = read('title').slice(0, 120);
-      if(!['floor_plan','video','virtual_tour','tour_3d'].includes(kind)) throw new Error('Choose a valid media type.');
-      if(!title) throw new Error('Every media item needs a title.');
-
-      let url;
-      try { url = new URL(read('url')); if(url.protocol !== 'https:') throw new Error(); }
-      catch(_) { throw new Error('Media URLs must use HTTPS.'); }
-      const posterRaw = read('poster_url');
-      let posterUrl = null;
-      if(posterRaw){
-        try { posterUrl = new URL(posterRaw).href; if(!posterUrl.startsWith('https://')) throw new Error(); }
-        catch(_) { throw new Error('Poster image URLs must use HTTPS.'); }
-      }
-
-      const key = `${kind}::${url.href.toLowerCase()}`;
-      if(seen.has(key)) throw new Error('Remove duplicate media URLs before saving.');
-      seen.add(key);
-      const previous = originalById.get(row.dataset.sourceMediaId || '');
-      items.push({
-        kind,
-        title,
-        floor_label: read('floor_label').slice(0, 60) || null,
-        provider: read('provider').slice(0, 60) || null,
-        url: url.href,
-        poster_url: posterUrl,
-        display_order: index,
-        metadata: previous?.metadata || {},
-      });
-    });
-    return items;
-  }
-
-  async function saveSourceMedia(id){
-    const section = document.getElementById('pl-source-media-section');
-    const status = section?.querySelector('#pl-source-media-status');
-    const saveButton = section?.querySelector('[data-media-action="save"]');
-    if(!section || !_current) return;
-    let media;
-    try { media = collectSourceMediaEdits(_current); }
-    catch(error) { if(status) status.textContent = error.message || 'Check media fields and try again.'; S.toast(error.message || 'Check media fields and try again.', 'error'); return; }
-
-    if(saveButton){ saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
-    if(status) status.textContent = 'Saving media…';
-    try {
-      const { data, error } = await CP.sb().functions.invoke('pipeline-media', { body: { pipeline_id: id, media } });
-      if(error) throw error;
-      if(data?.error) throw new Error(data.detail || data.error);
-
-      const currentData = parseJSON(_current.original_data);
-      const updatedData = currentData && typeof currentData === 'object' && !Array.isArray(currentData) ? { ...currentData } : {};
-      updatedData.media = data.media || media;
-      _current.original_data = JSON.stringify(updatedData);
-      _current.virtual_tour_url = data.virtual_tour_url || null;
-      const editedFields = parseJSON(_current.edited_fields);
-      _current.edited_fields = JSON.stringify([...new Set([...(Array.isArray(editedFields) ? editedFields : []), 'media'])]);
-      if(_current.status === 'scraped') _current.status = 'edited';
-      const index = _pageData.findIndex(item => item.id === id);
-      if(index >= 0) _pageData[index] = _current;
-      _cClear();
-      refreshCard(id);
-      fetchCounts().catch(()=>{});
-      section.outerHTML = renderSourceMedia(_current);
-      wireSourceMediaControls(id);
-      S.toast('Media changes saved', 'success');
-    } catch(error) {
-      if(status) status.textContent = error.message || 'Could not save media changes.';
-      S.toast('Media save failed: ' + (error.message || 'unknown'), 'error');
-    } finally {
-      const currentButton = document.querySelector('#pl-source-media-section [data-media-action="save"]');
-      if(currentButton){ currentButton.disabled = false; currentButton.textContent = 'Save media changes'; }
-    }
-  }
-
-  function wireSourceMediaControls(id){
-    const section = document.getElementById('pl-source-media-section');
-    const list = section?.querySelector('#pl-source-media-list');
-    if(!section || !list || section.dataset.controlsWired === 'true') return;
-    section.dataset.controlsWired = 'true';
-
-    section.addEventListener('click', event => {
-      const button = event.target.closest('[data-media-action]');
-      if(!button) return;
-      const action = button.dataset.mediaAction;
-      if(action === 'save'){
-        saveSourceMedia(id);
-        return;
-      }
-      if(action === 'add'){
-        const item = { id: '', kind: 'video', title: 'Video walkthrough', floor_label: null, provider: null, url: '', poster_url: null, metadata: {} };
-        list.querySelector('.pl-photo-count')?.remove();
-        list.insertAdjacentHTML('beforeend', renderSourceMediaItem(item, true));
-        list.querySelector('[data-source-media-row]:last-child [data-media-field="title"]')?.focus();
-        return;
-      }
-
-      const row = button.closest('[data-source-media-row]');
-      if(!row) return;
-      if(action === 'remove'){
-        row.remove();
-      } else if(action === 'up' && row.previousElementSibling){
-        list.insertBefore(row, row.previousElementSibling);
-      } else if(action === 'down' && row.nextElementSibling){
-        list.insertBefore(row.nextElementSibling, row);
-      }
-    });
-  }
-
   function missingTags(l){
     const m = parseJSON(l.missing_fields) || [];
     if(!m.length) return '<span style="font-size:.75rem;color:var(--success)">✓ All key fields present</span>';
@@ -775,7 +461,7 @@
     const editedFields = parseJSON(l.edited_fields) || [];
     const enriched = isEnriched(l);
     const srcType  = importSource(l);
-    const photoCount = sourcePhotoCount(l);
+    const photoCount = imageUrls(l.original_image_urls).length;
 
     return `
     <div class="pl-panel-hd">
@@ -801,15 +487,11 @@
 
     <div class="pl-panel-body">
 
-    ${renderInventory(l)}
-
-    <!-- Photos -->
+      <!-- Photos -->
       <div class="pl-section">
         <div class="pl-section-title">Photos from source ${photoCount ? `<span style="font-weight:400;color:var(--muted-2)">(${photoCount})</span>` : ''}</div>
         <div id="panel-photos-container">${photoCount ? '<span style="font-size:.75rem;color:var(--muted-2)">Loading…</span>' : ''}</div>
       </div>
-
-      ${renderSourceMedia(l)}
 
       <!-- Missing fields -->
       <div class="pl-section">
@@ -819,7 +501,13 @@
 
       <!-- Core fields -->
       <div class="pl-section">
-        <div class="pl-section-title">Listing details</div>
+        <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Listing details</span>
+          <button type="button" class="btn btn-sm btn-outline" id="pl-relocate-btn" title="72rem;padding:2px 8px;display:flex;align-items:center;gap:4px;opacity:0.6;cursor:not-allowed">
+            <svg class="i i-sm" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Relocate / Change Address (Disabled)
+          </button>
+        </div>
         <div class="pl-form-grid full">${fi('title','Title', l.title,'text',true,true)}</div>
         <div class="pl-form-grid" style="margin-top:10px">
           ${fi('address','Street address', l.address,'text',true)}
@@ -1014,7 +702,6 @@
     const panel    = document.getElementById('pl-panel');
     const backdrop = document.getElementById('pl-backdrop');
     panel.innerHTML = renderPanel(l);
-      wireSourceMediaControls(l.id);
     requestAnimationFrame(() => {
       panel.classList.add('open');
       backdrop.classList.add('open');
@@ -1036,6 +723,8 @@
       const pubBtn = panel.querySelector('.pl-pub-btn-panel');
       if(pubBtn) pubBtn.addEventListener('click', () => doPublish(l.id));
 
+      const relocateBtn = panel.querySelector('#pl-relocate-btn');
+      if(relocateBtn) relocateBtn.addEventListener('click', () => openRelocateModal(l));
 
       const compareBtn = panel.querySelector('#pl-compare-desc-btn');
       if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
@@ -1444,6 +1133,178 @@ function wirePanelPhotoActions(){
     }
   }
 
+  // ── Relocate & Synthetic Address Generation Modal ──────────────────────────
+  function openRelocateModal(l){
+    const modal = document.createElement('div');
+    modal.id = 'pl-relocate-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:var(--surface,#131b2e);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:16px;max-width:540px;width:100%;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);color:var(--text,#fff);display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,rgba(255,255,255,.1));padding-bottom:12px">
+          <h3 style="margin:0;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px">
+            <svg class="i" style="width:18px;height:18px;color:var(--brand,#006aff)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Relocate & Generate Address
+          </h3>
+          <button style="background:none;border:none;color:var(--muted-2,#94a3b8);font-size:1.2rem;cursor:pointer;padding:4px" id="pl-relocate-x">✕</button>
+        </div>
+
+        <div style="font-size:.84rem;color:var(--muted,#cbd5e1);line-height:1.45">
+          Generate an authentic, 
+        </div>
+
+        <div style="background:rgba(255,255,255,.04);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:10px;padding:12px;font-size:.82rem">
+          <span style="color:var(--muted-2,#94a3b8)">Current Listing:</span>
+          <div style="font-weight:600;margin-top:2px;color:#fff">${S.esc(l.address || '(No address)')}, ${S.esc(l.city || '')}, ${S.esc(l.state || '')} ${S.esc(l.zip || '')}</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="relocate-mode" value="cross_location" checked>
+                <span>Target City / ZIP</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="relocate-mode" value="same_block_alias">
+                <span>Same-Block (+8)</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="relocate-target-group">
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Target Destination (City, State, or ZIP)</label>
+            <input type="text" id="relocate-target-input" placeholder="e.g. Tulsa, OK or 74104 or Charlotte, NC" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.15));background:rgba(0,0,0,.25);color:#fff;font-size:.88rem">
+          </div>
+
+          <div id="relocate-preview-box" style="display:none;background:rgba(0,106,255,.08);border:1px solid rgba(0,106,255,.3);border-radius:10px;padding:12px;font-size:.82rem">
+            <div style="font-weight:700;color:var(--brand,#006aff);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+              <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Generated & Verified Address:
+            </div>
+            <div id="relocate-preview-addr" style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:4px"></div>
+            <div id="relocate-preview-meta" style="color:var(--muted-2,#94a3b8);font-size:.75rem"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--border,rgba(255,255,255,.1));padding-top:16px">
+          <button type="button" class="btn btn-ghost btn-sm" id="pl-relocate-cancel">Cancel</button>
+          <button type="button" class="btn btn-outline btn-sm" id="pl-relocate-generate-btn">
+            Generate & Preview
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="pl-relocate-apply-btn" disabled>
+            Apply to Listing
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    const closeRelocateModal = () => modal.remove();
+    modal.querySelector('#pl-relocate-x').addEventListener('click', closeRelocateModal);
+    modal.querySelector('#pl-relocate-cancel').addEventListener('click', closeRelocateModal);
+
+    const modeRadios = modal.querySelectorAll('input[name="relocate-mode"]');
+    const targetGroup = modal.querySelector('#relocate-target-group');
+    const targetInput = modal.querySelector('#relocate-target-input');
+    const previewBox = modal.querySelector('#relocate-preview-box');
+    const previewAddr = modal.querySelector('#relocate-preview-addr');
+    const previewMeta = modal.querySelector('#relocate-preview-meta');
+    const genBtn = modal.querySelector('#pl-relocate-generate-btn');
+    const applyBtn = modal.querySelector('#pl-relocate-apply-btn');
+
+    let currentGenerated = null;
+
+    modeRadios.forEach(r => r.addEventListener('change', () => {
+      targetGroup.style.display = r.value === 'same_block_alias' ? 'none' : 'block';
+    }));
+
+    genBtn.addEventListener('click', async () => {
+      const mode = modal.querySelector('input[name="relocate-mode"]:checked')?.value || 'cross_location';
+      const targetQuery = targetInput.value.trim();
+
+      if (mode === 'cross_location' && !targetQuery) {
+        S.toast('Please enter a target city, state, or ZIP code', 'error');
+        targetInput.focus();
+        return;
+      }
+
+      genBtn.disabled = true;
+      genBtn.textContent = 'Generating…';
+      applyBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/relocate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            property: l,
+            targetQuery,
+            mode,
+            apply: false
+          })
+        });
+
+        const data = await res.json();
+        if (!data.ok || !data.result) {
+          throw new Error(data.error || 'Failed to generate address');
+        }
+
+        currentGenerated = data.result;
+        previewAddr.textContent = currentGenerated.newTitle;
+        previewMeta.textContent = `Coordinates: ${currentGenerated.newLat}, ${currentGenerated.newLng} · Method: ${currentGenerated.method}`;
+
+        previewBox.style.display = 'block';
+        applyBtn.disabled = false;
+        S.toast('Address generated successfully!', 'success');
+      } catch (err) {
+        S.toast(err.message, 'error');
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = 'Re-Generate';
+      }
+    });
+
+    applyBtn.addEventListener('click', () => {
+      if (!currentGenerated) return;
+
+      const panel = document.getElementById('pl-panel');
+      if (panel) {
+        const fTitle = panel.querySelector('#pf-title');
+        const fAddr = panel.querySelector('#pf-address');
+        const fCity = panel.querySelector('#pf-city');
+        const fState = panel.querySelector('#pf-state');
+        const fZip = panel.querySelector('#pf-zip');
+        const fCounty = panel.querySelector('#pf-county');
+        const fDesc = panel.querySelector('#pf-description');
+
+        if (fTitle) { fTitle.value = currentGenerated.newTitle; fTitle.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fAddr) { fAddr.value = currentGenerated.newAddress; fAddr.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fCity) { fCity.value = currentGenerated.newCity; fCity.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fState) { fState.value = currentGenerated.newState; fState.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fZip) { fZip.value = currentGenerated.newZip; fZip.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fCounty) { fCounty.value = currentGenerated.newCounty; fCounty.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fDesc && currentGenerated.newDescription) { fDesc.value = currentGenerated.newDescription; fDesc.dispatchEvent(new Event('input', { bubbles: true })); }
+
+        // Update local in-memory property snapshot
+        l.address = currentGenerated.newAddress;
+        l.title = currentGenerated.newTitle;
+        l.city = currentGenerated.newCity;
+        l.state = currentGenerated.newState;
+        l.zip = currentGenerated.newZip;
+        l.county = currentGenerated.newCounty;
+        l.lat = currentGenerated.newLat;
+        l.lng = currentGenerated.newLng;
+        l.description = currentGenerated.newDescription;
+
+        // Auto-save patch to database
+        doSave(l.id);
+        S.toast('Relocated address applied and saved to pipeline!', 'success');
+      }
+
+      closeRelocateModal();
+    });
+  }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -1964,6 +1825,154 @@ function wirePanelPhotoActions(){
   function wireImportButton(){
     const btn = document.getElementById('pl-import-url-btn');
     if(btn) btn.addEventListener('click', openImportModal);
+
+    const bulkRelocateBtn = document.getElementById('pl-bulk-relocate-btn');
+    if(bulkRelocateBtn) bulkRelocateBtn.addEventListener('click', openBulkRelocateModal);
+  }
+
+  function openBulkRelocateModal(){
+    const selectedIds = Array.from(_selected);
+    const count = selectedIds.length;
+    const targetListings = count > 0 
+      ? _listings.filter(l => selectedIds.includes(l.id))
+      : visibleListings();
+
+    if (targetListings.length === 0) {
+      S.toast('No listings available to relocate', 'error');
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-bulk-relocate-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:var(--surface,#131b2e);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:16px;max-width:540px;width:100%;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);color:var(--text,#fff);display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,rgba(255,255,255,.1));padding-bottom:12px">
+          <h3 style="margin:0;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px">
+            <svg class="i" style="width:18px;height:18px;color:var(--brand,#006aff)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Bulk Relocate & Generate Addresses
+          </h3>
+          <button style="background:none;border:none;color:var(--muted-2,#94a3b8);font-size:1.2rem;cursor:pointer;padding:4px" id="pl-bulk-x">✕</button>
+        </div>
+
+        <div style="font-size:.84rem;color:var(--muted,#cbd5e1);line-height:1.45">
+          Batch relocate <strong>${targetListings.length}</strong> ${count > 0 ? 'selected' : 'visible'} listing(s) to a target city or ZIP code. Each property receives a unique, verified residential street address with live coordinates.
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="bulk-relocate-mode" value="cross_location" checked>
+                <span>Target City / ZIP</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="bulk-relocate-mode" value="same_block_alias">
+                <span>Same-Block (+8)</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="bulk-target-group">
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Target Destination (City, State, or ZIP)</label>
+            <input type="text" id="bulk-target-input" placeholder="e.g. Tulsa, OK or 74104 or Charlotte, NC" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.15));background:rgba(0,0,0,.25);color:#fff;font-size:.88rem">
+          </div>
+
+          <div id="bulk-progress-box" style="display:none;background:rgba(255,255,255,.04);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted-2,#94a3b8);margin-bottom:6px">
+              <span id="bulk-progress-status">Relocating listings…</span>
+              <span id="bulk-progress-count">0 / ${targetListings.length}</span>
+            </div>
+            <div style="width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+              <div id="bulk-progress-bar" style="width:0%;height:100%;background:var(--brand,#006aff);transition:width .2s ease"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--border,rgba(255,255,255,.1));padding-top:16px">
+          <button type="button" class="btn btn-ghost btn-sm" id="pl-bulk-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="pl-bulk-start-btn">
+            Start Bulk length})
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    const closeBulkModal = () => modal.remove();
+    modal.querySelector('#pl-bulk-x').addEventListener('click', closeBulkModal);
+    modal.querySelector('#pl-bulk-cancel').addEventListener('click', closeBulkModal);
+
+    const modeRadios = modal.querySelectorAll('input[name="bulk-relocate-mode"]');
+    const targetGroup = modal.querySelector('#bulk-target-group');
+    const targetInput = modal.querySelector('#bulk-target-input');
+    const startBtn = modal.querySelector('#pl-bulk-start-btn');
+    const progressBox = modal.querySelector('#bulk-progress-box');
+    const progressStatus = modal.querySelector('#bulk-progress-status');
+    const progressCount = modal.querySelector('#bulk-progress-count');
+    const progressBar = modal.querySelector('#bulk-progress-bar');
+
+    modeRadios.forEach(r => r.addEventListener('change', () => {
+      targetGroup.style.display = r.value === 'same_block_alias' ? 'none' : 'block';
+    }));
+
+    startBtn.addEventListener('click', async () => {
+      const mode = modal.querySelector('input[name="bulk-relocate-mode"]:checked')?.value || 'cross_location';
+      const targetQuery = targetInput.value.trim();
+
+      if (mode === 'cross_location' && !targetQuery) {
+        S.toast('Please enter a target city, state, or ZIP code', 'error');
+        targetInput.focus();
+        return;
+      }
+
+      startBtn.disabled = true;
+      progressBox.style.display = 'block';
+
+      let successCount = 0;
+      for (let i = 0; i < targetListings.length; i++) {
+        const item = targetListings[i];
+        progressStatus.textContent = `Relocating [${i + 1}/${targetListings.length}]: ${item.address || item.id}…`;
+        progressCount.textContent = `${i + 1} / ${targetListings.length}`;
+        progressBar.style.width = `${Math.round(((i + 1) / targetListings.length) * 100)}%`;
+
+        try {
+          const res = await fetch('/api/relocate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              property: item,
+              targetQuery,
+              mode,
+              apply: true
+            })
+          });
+
+          const data = await res.json();
+          if (data.ok && data.result) {
+            successCount++;
+            // Update in-memory listing
+            item.address = data.result.newAddress;
+            item.title = data.result.newTitle;
+            item.city = data.result.newCity;
+            item.state = data.result.newState;
+            item.zip = data.result.newZip;
+            item.county = data.result.newCounty;
+            item.lat = data.result.newLat;
+            item.lng = data.result.newLng;
+            item.description = data.result.newDescription;
+          }
+        } catch (err) {
+          console.error('[bulk-relocate] error for', item.id, err);
+        }
+      }
+
+      S.toast(`Bulk `, 'success');
+      renderList(visibleListings(), false);
+      wireCardEvents();
+      setTimeout(closeBulkModal, 1000);
+    });
   }
 
   function wireRefreshButton(){

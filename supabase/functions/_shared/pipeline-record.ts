@@ -234,7 +234,7 @@ export function normalizeTimestamp(v: unknown): string | null {
   const iso = s.includes('T') || s.includes('Z') || s.includes(' ') ? s : `${s}T00:00:00Z`;
   try {
     const d = new Date(iso);
-    if (!isNaN(d.getTime())) return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+    if (!isNaN(d.getTime())) return d.toISOString();
   } catch { /* ignore */ }
   return s;
 }
@@ -258,20 +258,15 @@ export interface PipelineRecordInput {
   lng?: number | null;
   location_context?: string | null;
   property_type?: string | null;
-  rent_basis?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
-  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
   floors?: number | null;
   garage_spaces?: number | null;
   total_units?: number | null;
-  building_name?: string | null;
-  is_multi_unit?: boolean | null;
-  price_range?: string | null;
   has_basement?: boolean | null;
   has_central_air?: boolean | null;
   virtual_tour_url?: string | null;
@@ -289,7 +284,7 @@ export interface PipelineRecordInput {
   showing_instructions?: string | null;
   available_date?: string | null;
   minimum_lease_months?: number | null;
-  lease_terms?: string | string[] | null;
+  lease_terms?: string | null;
   pets_allowed?: boolean | null;
   pet_types_allowed?: string | null;
   pet_weight_limit?: number | null;
@@ -310,7 +305,6 @@ export interface PipelineRecordInput {
   agent_image_url?: string | null;
   poster_landlord_id?: string | null;
   original_data?: string | null;
-  unit_options?: unknown;
   edited_fields?: string | null;
   inferred_features?: string | null;
   listed_at?: string | null;
@@ -325,131 +319,6 @@ export interface PipelineRecordInput {
   scraped_at?: string | null;
   updated_at?: string | null;
   _import?: string | null;
-  media?: unknown;
-}
-
-function normalizeMediaRecord(item: unknown): Record<string, unknown> | null {
-  if (!item || typeof item !== 'object') return null;
-  const raw = item as Record<string, unknown>;
-  const url = safeStr(raw.url) ?? safeStr(raw.href) ?? safeStr(raw.src);
-  if (!url) return null;
-
-  let kind = safeStr(raw.kind) ?? safeStr(raw.type) ?? 'photo';
-  const normalizedKind = String(kind).trim().toLowerCase();
-  const kindMap: Record<string, string> = {
-    '3d_tour': 'tour_3d',
-    'tour_3d': 'tour_3d',
-    'tour3d': 'tour_3d',
-    'virtual-tour': 'virtual_tour',
-    'virtual_tour': 'virtual_tour',
-    'video_walkthrough': 'video',
-    'walkthrough_video': 'video',
-    'video-tour': 'video',
-    'floorplan': 'floor_plan',
-    'floor_plan': 'floor_plan',
-    'photo': 'photo',
-    'image': 'photo',
-  };
-
-  const mappedKind = kindMap[normalizedKind] ?? (
-    /matterport|virtual|tour|3d/i.test(url) ? 'virtual_tour' : /youtube|vimeo|mp4|mov|webm|video/i.test(url) ? 'video' : 'photo'
-  );
-
-  const displayOrder = Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0;
-  const metadata = raw.metadata && typeof raw.metadata === 'object' ? raw.metadata : {};
-
-  return {
-    kind: mappedKind,
-    title: safeStr(raw.title) ?? (
-      mappedKind === 'video' ? 'Video walkthrough' : mappedKind === 'floor_plan' ? 'Floor plan' : mappedKind === 'tour_3d' ? '3D Virtual Tour' : 'Media'
-    ),
-    floor_label: safeStr(raw.floor_label) ?? safeStr(raw.floorLabel) ?? null,
-    provider: safeStr(raw.provider) ?? safeStr(raw.source_provider) ?? null,
-    url,
-    file_id: safeStr(raw.file_id) ?? safeStr(raw.fileId) ?? null,
-    poster_url: safeStr(raw.poster_url) ?? safeStr(raw.posterUrl) ?? null,
-    display_order: displayOrder,
-    is_hero: safeBool(raw.is_hero) ?? safeBool(raw.isHero) ?? false,
-    width: safeInt(raw.width),
-    height: safeInt(raw.height),
-    metadata,
-  };
-}
-
-function normalizeMediaCollection(media: unknown): Record<string, unknown>[] {
-  const allMedia: unknown[] = Array.isArray(media) ? media : [];
-  const normalized: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
-
-  for (const item of allMedia) {
-    const record = normalizeMediaRecord(item);
-    if (!record || !record.url) continue;
-    const key = `${String(record.kind)}::${String(record.url).trim().toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    normalized.push(record);
-  }
-
-  return normalized;
-}
-
-function normalizeUnitOptionRecord(item: unknown): Record<string, unknown> | null {
-  if (!item || typeof item !== 'object') return null;
-  const raw = item as Record<string, unknown>;
-  const sourceKind = safeStr(raw.source_kind) ?? safeStr(raw.sourceKind) ?? safeStr(raw.kind) ?? 'available_unit';
-  const unitNumber = safeStr(raw.unit_number) ?? safeStr(raw.unitNumber) ?? null;
-  const floorPlanName = safeStr(raw.floor_plan_name) ?? safeStr(raw.floorPlanName) ?? null;
-  const bedrooms = safeFloat(raw.bedrooms) ?? safeFloat(raw.beds) ?? null;
-  const bathrooms = safeFloat(raw.bathrooms) ?? safeFloat(raw.baths) ?? null;
-  const halfBathrooms = safeInt(raw.half_bathrooms) ?? safeInt(raw.halfBathrooms) ?? null;
-  const squareFootage = safeInt(raw.square_footage) ?? safeInt(raw.sqft) ?? null;
-  const monthlyRent = safeInt(raw.monthly_rent) ?? safeInt(raw.rent) ?? null;
-  const startingRent = safeInt(raw.starting_rent) ?? safeInt(raw.startingRent) ?? null;
-  const rentBasis = safeStr(raw.rent_basis) ?? safeStr(raw.rentBasis) ?? null;
-
-  if (!unitNumber && !floorPlanName && bedrooms == null && bathrooms == null && halfBathrooms == null && squareFootage == null && monthlyRent == null && startingRent == null && !rentBasis) {
-    return null;
-  }
-
-  return {
-    source_kind: sourceKind,
-    unit_number: unitNumber,
-    floor_plan_name: floorPlanName,
-    bedrooms,
-    bathrooms,
-    half_bathrooms: halfBathrooms,
-    square_footage: squareFootage,
-    monthly_rent: monthlyRent,
-    starting_rent: startingRent,
-    rent_basis: rentBasis,
-  };
-}
-
-function normalizeUnitOptionsCollection(unitOptions: unknown): Record<string, unknown>[] {
-  const allUnits: unknown[] = Array.isArray(unitOptions) ? unitOptions : [];
-  const normalized: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
-
-  for (const item of allUnits) {
-    const record = normalizeUnitOptionRecord(item);
-    if (!record) continue;
-    const key = JSON.stringify({
-      source_kind: record.source_kind,
-      unit_number: record.unit_number,
-      floor_plan_name: record.floor_plan_name,
-      bedrooms: record.bedrooms,
-      bathrooms: record.bathrooms,
-      square_footage: record.square_footage,
-      monthly_rent: record.monthly_rent,
-      starting_rent: record.starting_rent,
-      rent_basis: record.rent_basis,
-    });
-    if (seen.has(key)) continue;
-    seen.add(key);
-    normalized.push(record);
-  }
-
-  return normalized;
 }
 
 export function buildPipelineRecord(body: PipelineRecordInput): Record<string, unknown> {
@@ -462,28 +331,6 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const publishedAt = normalizeTimestamp(body.published_at) ?? null;
   const sourceStatus = safeStr(body.source_status) ?? 'available';
   const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
-  const mediaItems = normalizeMediaCollection(body.media);
-  const unitOptions = normalizeUnitOptionsCollection(body.unit_options);
-  const legacyTour = safeStr(body.virtual_tour_url);
-  if (legacyTour) {
-    const hasLegacyTour = mediaItems.some((item) => String(item.kind) === 'virtual_tour' || String(item.kind) === 'tour_3d');
-    if (!hasLegacyTour) {
-      mediaItems.unshift({
-        kind: 'virtual_tour',
-        title: '3D Virtual Tour',
-        floor_label: null,
-        provider: null,
-        url: legacyTour,
-        file_id: null,
-        poster_url: null,
-        display_order: 0,
-        is_hero: false,
-        width: null,
-        height: null,
-        metadata: {},
-      });
-    }
-  }
 
   const title = safeStr(body.title) ??
     (safeStr(body.address)
@@ -530,14 +377,6 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
-    building_name: safeStr(body.building_name),
-    is_multi_unit: safeBool(body.is_multi_unit),
-    price_range: safeStr(body.price_range),
-    rent_basis: safeStr(body.rent_basis),
-    floors: safeInt(body.floors),
-    total_units: safeInt(body.total_units),
-    media:       mediaItems,
-    unit_options: unitOptions,
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
@@ -576,15 +415,11 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     floors:               safeInt(body.floors),
     garage_spaces:        finalGarageSpaces,
     total_units:          safeInt(body.total_units),
-    building_name:        safeStr(body.building_name),
-    is_multi_unit:        safeBool(body.is_multi_unit),
-    price_range:          safeStr(body.price_range),
     has_basement:         finalHasBasement,
     has_central_air:      finalHasCentralAir,
     virtual_tour_url:     safeStr(body.virtual_tour_url),
 
     // Financials
-    rent_basis:           safeStr(body.rent_basis),
     monthly_rent:         safeInt(body.monthly_rent),
     security_deposit:     safeInt(body.security_deposit),
     last_months_rent:     safeInt(body.last_months_rent),
@@ -638,7 +473,6 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
     original_data:        safeStr(body.original_data) ?? originalData,
-    unit_options:         unitOptions,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,

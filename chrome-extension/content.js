@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v44.0.5
+// Choice Properties — Universal Content Script & UI Engine v31.0.4
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -14,7 +14,7 @@
 
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '44.0.5';
+  var VERSION  = '31.0.4';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -80,20 +80,9 @@
       data.state,
       data.zip,
       data.monthly_rent != null ? data.monthly_rent : data.rent,
-      data.community_starting_rent,
-      data.rent_basis,
       data.bedrooms != null ? data.bedrooms : data.beds,
       data.bathrooms != null ? data.bathrooms : data.baths,
       data.square_footage != null ? data.square_footage : data.sqft,
-      JSON.stringify((Array.isArray(data.unit_options) ? data.unit_options : []).map(function (unit) {
-        return [
-          unit.unit_number, unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
-          unit.square_footage, unit.monthly_rent, unit.starting_rent, unit.rent_basis
-        ].join(':');
-      })),
-      JSON.stringify((Array.isArray(data.media) ? data.media : []).map(function (item) {
-        return item ? [item.kind, item.url].join(':') : '';
-      })),
       photos.length,
       data.description ? String(data.description).length : 0
     ].join('|');
@@ -290,82 +279,6 @@
     return urls;
   }
 
-  function normalizeMediaArray(items) {
-    if (!Array.isArray(items)) return [];
-    var normalized = [];
-    var seen = new Set();
-
-    items.forEach(function (item) {
-      if (!item || typeof item !== 'object') return;
-      var rawUrl = typeof item.url === 'string' ? item.url.trim() : (typeof item.href === 'string' ? item.href.trim() : (typeof item.src === 'string' ? item.src.trim() : ''));
-      if (!rawUrl) return;
-
-      var kind = String(item.kind || item.type || '').trim().toLowerCase();
-      if (!kind) {
-        if (/matterport|virtual|tour|3d|view-3d|imx/i.test(rawUrl)) kind = 'virtual_tour';
-        else if (/youtube|vimeo|mp4|webm|mov|video/i.test(rawUrl)) kind = 'video';
-        else if (/floor|plan/i.test((item.title || item.label || ''))) kind = 'floor_plan';
-        else kind = 'photo';
-      }
-
-      if (kind === '3d_tour' || kind === 'tour_3d' || kind === 'tour3d') kind = 'tour_3d';
-      if (kind === 'virtual-tour' || kind === 'virtual_tour') kind = 'virtual_tour';
-      if (kind === 'floorplan' || kind === 'floor_plan') kind = 'floor_plan';
-      if (kind === 'video_walkthrough' || kind === 'walkthrough_video') kind = 'video';
-
-      var key = kind + '::' + rawUrl.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      normalized.push({
-        kind: kind,
-        title: item.title || item.name || (kind === 'video' ? 'Video walkthrough' : kind === 'floor_plan' ? 'Floor plan' : kind === 'tour_3d' ? '3D Virtual Tour' : 'Media'),
-        floor_label: item.floor_label || item.floorLabel || null,
-        provider: item.provider || item.source_provider || null,
-        url: rawUrl,
-        file_id: item.file_id || item.fileId || null,
-        poster_url: item.poster_url || item.posterUrl || null,
-        display_order: Number.isFinite(Number(item.display_order)) ? Number(item.display_order) : normalized.length,
-        is_hero: !!(item.is_hero || item.isHero),
-        width: item.width != null ? Number(item.width) : null,
-        height: item.height != null ? Number(item.height) : null,
-        metadata: item.metadata || {}
-      });
-    });
-
-    return normalized;
-  }
-
-  function isValidUnitNumber(value) {
-    var label = String(value == null ? '' : value).trim().replace(/^#/, '');
-    return /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(label);
-  }
-
-  function summarizeUnitOptions(options) {
-    var units = new Map();
-    var plans = new Map();
-    (Array.isArray(options) ? options : []).forEach(function (option) {
-      if (!option || typeof option !== 'object') return;
-      if (isValidUnitNumber(option.unit_number)) {
-        var unitKey = String(option.unit_number).trim().toLowerCase();
-        if (!units.has(unitKey)) units.set(unitKey, option);
-        return;
-      }
-      if (option.source_kind !== 'floor_plan') return;
-      var planKey = [
-        String(option.floor_plan_name || '').trim().toLowerCase(),
-        option.bedrooms,
-        option.bathrooms,
-        option.square_footage,
-        (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
-          ? ''
-          : option.starting_rent,
-      ].join('|');
-      if (!plans.has(planKey)) plans.set(planKey, option);
-    });
-    return { units: Array.from(units.values()), floorPlans: Array.from(plans.values()) };
-  }
-
   function dedupePhotoUrls(urls) {
     var seen = new Set();
     var unique = [];
@@ -418,8 +331,6 @@
     if (extracted && (extracted.monthly_rent || extracted.rent)) {
       var rentNum = extracted.monthly_rent || extracted.rent;
       rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
-    } else if (extracted && extracted.community_starting_rent) {
-      rentStr = 'Starting at $' + Number(extracted.community_starting_rent).toLocaleString() + '/mo';
     }
 
     var bedsBaths = 'Listing details';
@@ -431,58 +342,6 @@
         bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
       }
     }
-    var unitOptions = extracted && Array.isArray(extracted.unit_options) ? extracted.unit_options : [];
-    var inventory = summarizeUnitOptions(unitOptions);
-    var inventoryLabels = [];
-    if (inventory.units.length) inventoryLabels.push(inventory.units.length + ' available unit' + (inventory.units.length === 1 ? '' : 's') + ' found');
-    if (inventory.floorPlans.length) inventoryLabels.push(inventory.floorPlans.length + ' floor plan' + (inventory.floorPlans.length === 1 ? '' : 's'));
-    var inventoryFacts = [];
-    if (extracted && extracted.total_units != null) inventoryFacts.push(Number(extracted.total_units).toLocaleString() + ' total units');
-    if (extracted && extracted.floors != null) inventoryFacts.push(Number(extracted.floors).toLocaleString() + ' building stor' + (Number(extracted.floors) === 1 ? 'y' : 'ies'));
-    var rentBasis = extracted && extracted.rent_basis;
-    var rentBasisLabel = rentBasis === 'total_monthly_price'
-      ? 'Total monthly price'
-      : rentBasis === 'base_rent'
-        ? 'Base rent'
-        : 'Price basis not reported; verify before use';
-    var hasInventoryPrices = inventory.units.concat(inventory.floorPlans)
-      .some(function (unit) { return unit.monthly_rent != null || unit.starting_rent != null; });
-    if (hasInventoryPrices) {
-      inventoryFacts.push('Price basis: ' + rentBasisLabel);
-    }
-    if (inventoryLabels.length) bedsBaths = inventoryLabels.join(' • ');
-    var allInventoryOptions = inventory.units.concat(inventory.floorPlans);
-    var unitDetailsHtml = allInventoryOptions.length
-      ? '<div class="cp-unit-options-preview">' +
-          '<div class="cp-unit-options-heading">' + escapeHtml(inventoryLabels.join(' · ')) + '</div>' +
-          '<div class="cp-unit-options-list">' + allInventoryOptions.slice(0, 12).map(function (unit, index) {
-            var name = unit.unit_number
-              ? 'Unit ' + unit.unit_number
-              : (unit.floor_plan_name || 'Option ' + (index + 1));
-            var facts = [];
-            if (unit.bedrooms === 0) facts.push('Studio');
-            else if (unit.bedrooms != null) facts.push(unit.bedrooms + ' bd');
-            if (unit.bathrooms != null) facts.push(unit.bathrooms + ' ba');
-            if (unit.square_footage != null) facts.push(Number(unit.square_footage).toLocaleString() + ' sqft');
-            var price = unit.monthly_rent != null
-              ? '$' + Number(unit.monthly_rent).toLocaleString() + '/mo'
-              : (unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
-            var unitRentBasis = unit.rent_basis || rentBasis;
-            var unitRentBasisLabel = unitRentBasis === 'total_monthly_price'
-              ? 'Total monthly price'
-              : unitRentBasis === 'base_rent'
-                ? 'Base rent'
-                : 'Price basis not reported';
-            return '<div class="cp-unit-option-row"><span><strong>' + escapeHtml(name) + '</strong>' +
-              (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
-              '</span>' + (price ? '<strong>' + escapeHtml(price) + '<small style="display:block;text-align:right;font-size:10px;font-weight:400">' + escapeHtml(unitRentBasisLabel) + '</small></strong>' : '') + '</div>';
-          }).join('') + '</div>' +
-          (allInventoryOptions.length > 12
-            ? '<div class="cp-unit-options-note">' + (allInventoryOptions.length - 12) + ' more options are included when saved.</div>'
-            : '') +
-          (inventoryFacts.length ? '<div class="cp-unit-options-note">' + escapeHtml(inventoryFacts.join(' · ')) + '</div>' : '') +
-        '</div>'
-      : '';
 
     var photoUrls = [];
     if (extracted) {
@@ -493,22 +352,12 @@
     }
     photoUrls = dedupePhotoUrls(photoUrls);
     var photoCount = photoUrls.length;
-    var photoBadgeClass = 'cp-chip-photos';
+    var photoBadgeClass = photoCount >= 6 ? 'cp-chip-photos' : 'cp-chip-warn';
     var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
-    var extractedMedia = extracted && Array.isArray(extracted.media) ? extracted.media : [];
-    var mediaCounts = {
-      video: extractedMedia.filter(function (item) { return item && item.kind === 'video'; }).length,
-      virtual_tour: extractedMedia.filter(function (item) { return item && (item.kind === 'virtual_tour' || item.kind === 'tour_3d'); }).length,
-      floor_plan: extractedMedia.filter(function (item) { return item && item.kind === 'floor_plan'; }).length
-    };
-    var mediaSummary = [];
-    if (mediaCounts.video) mediaSummary.push(mediaCounts.video + (mediaCounts.video === 1 ? ' video' : ' videos'));
-    if (mediaCounts.virtual_tour) mediaSummary.push(mediaCounts.virtual_tour + (mediaCounts.virtual_tour === 1 ? ' 3D tour' : ' 3D tours'));
-    if (mediaCounts.floor_plan) mediaSummary.push(mediaCounts.floor_plan + (mediaCounts.floor_plan === 1 ? ' floor plan' : ' floor plans'));
 
     var propType = (extracted && extracted.property_type) ? extracted.property_type.replace(/_/g, ' ') : 'Property';
-    var addressStr = extracted && (extracted.address || extracted.title) ? (extracted.address || extracted.title) : 'Detected Listing';
-    if (extracted && extracted.city && extracted.state && !String(addressStr).toLowerCase().includes(String(extracted.city).toLowerCase())) {
+    var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
+    if (extracted && extracted.city && extracted.state) {
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
@@ -559,10 +408,6 @@
               <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
               <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip ${photoBadgeClass}">${escapeHtml(photoBadgeText)}</span>
-              ${extracted && extracted.building_name ? '<span class="cp-chip">' + escapeHtml(extracted.building_name) + '</span>' : ''}
-              ${extracted && extracted.price_range ? '<span class="cp-chip">Source price range: ' + escapeHtml(extracted.price_range) + '</span>' : ''}
-              ${inventoryFacts.length ? '<span class="cp-chip">' + escapeHtml(inventoryFacts.join(' • ')) + '</span>' : ''}
-              ${mediaSummary.length ? '<span class="cp-chip">' + escapeHtml(mediaSummary.join(' • ')) + '</span>' : ''}
               <span class="cp-chip cp-chip-type">${escapeHtml(propType)}</span>
             </div>
 
@@ -576,13 +421,6 @@
               </div>
             ` : ''}
 
-            <div class="cp-diagnostics-control">
-              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
-              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
-                Sends listing facts and page structure only. No cookies, session data, or full page text.
-              </span>
-            </div>
-
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -590,8 +428,9 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
+                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
-              ${unitDetailsHtml}
             </div>
           </div>
 
@@ -751,8 +590,6 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
-    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
-    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -973,40 +810,6 @@
       }
     });
 
-    diagnosticsBtn.addEventListener('click', async function () {
-      diagnosticsBtn.disabled = true;
-      diagnosticsStatus.textContent = 'Analyzing this listing…';
-      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
-      try {
-        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
-          throw new Error('Diagnostics are unavailable in this extension build');
-        }
-        var report = window.CP_Extractors.diagnose(location.href, document);
-        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-          throw new Error('Extension background service is unavailable');
-        }
-        var response = await new Promise(function (resolve, reject) {
-          chrome.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              resolve(result);
-            }
-          });
-        });
-        if (!response || !response.ok) {
-          throw new Error(response && response.error || 'Report could not be sent');
-        }
-        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
-        diagnosticsStatus.classList.add('cp-diagnostic-success');
-      } catch (error) {
-        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
-        diagnosticsStatus.classList.add('cp-diagnostic-error');
-      } finally {
-        diagnosticsBtn.disabled = false;
-      }
-    });
-
     saveBtn.addEventListener('click', handleSave);
 
     copyLinkBtn.addEventListener('click', function () {
@@ -1151,23 +954,6 @@
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
-      var mediaItems = normalizeMediaArray(extracted.media);
-      if (!mediaItems.length && extracted.virtual_tour_url) {
-        mediaItems = [{
-          kind: 'virtual_tour',
-          title: '3D Virtual Tour',
-          floor_label: null,
-          provider: null,
-          url: extracted.virtual_tour_url,
-          file_id: null,
-          poster_url: null,
-          display_order: 0,
-          is_hero: false,
-          width: null,
-          height: null,
-          metadata: {}
-        }];
-      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1191,31 +977,11 @@
         floors: extracted.floors,
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
-        building_name: extracted.building_name,
-        is_multi_unit: extracted.is_multi_unit,
-        price_range: extracted.price_range,
-        rent_basis: extracted.rent_basis,
         property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
-        original_data: JSON.stringify({
-          zpid: extracted.source_listing_id,
-          detailUrl: extracted.source_url || location.href,
-          homeType: extracted.property_type || 'APARTMENT',
-          building_name: extracted.building_name,
-          is_multi_unit: extracted.is_multi_unit,
-          price_range: extracted.price_range,
-          floors: extracted.floors,
-          total_units: extracted.total_units,
-          community_starting_rent: extracted.community_starting_rent,
-          media: mediaItems,
-          unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],
-          _source: extracted.source || 'zillow',
-          _import: 'browser-extension-v' + VERSION
-        }),
         available_date: null,
-        pets_allowed: null,
-        pet_types_allowed: null,
+        pets_allowed: true,
         application_fee: 50,
         security_deposit: rentVal,
         last_months_rent: extracted.last_months_rent,
@@ -1236,7 +1002,6 @@
         county: extracted.county,
         location_context: extracted.location_context,
         virtual_tour_url: extracted.virtual_tour_url,
-        media: mediaItems,
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,

@@ -1,23 +1,27 @@
+    <title>How Managed Rentals Work — Choice Properties</title>
+    <meta name="description" content="Learn how Choice Properties management handles rental applications, decisions, leasing, and move-in.">
+    <meta property="og:description" content="Learn how Choice Properties management handles rental applications, decisions, leasing, and move-in.">
+  <title>How Managed Rentals Work — Choice Properties</title>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1793455473796"></script>
+  <script src="/js/cp-error-reporter.js?v=1793216200813"></script>
   <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <link rel="manifest" href="/manifest.json">
-  <title>How the Rental Process Works — Choice Properties</title>
-  <meta name="description" content="Learn how to compare rental listings and review application instructions before taking the next step.">
+  <title>How It Works for Landlords — Choice Properties</title>
+  <meta name="description" content="List your rental property and receive qualified applications through Choice Properties. Free to list, no subscription required.">
   <link rel="canonical" href="https://choice-properties-site.pages.dev/how-it-works.html">
   <meta property="og:title" content="How It Works — Choice Properties">
-  <meta property="og:description" content="Browse rental listings, review details, and learn about application steps.">
+  <meta property="og:description" content="List your rental property and receive qualified applications. Free to list, no subscription required.">
   <meta property="og:image" content="/assets/og-cover.jpg">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://choice-properties-site.pages.dev/how-it-works.html">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="How It Works — Choice Properties">
-  <meta name="twitter:description" content="Browse available rental listings and review application steps.">
+  <meta name="twitter:description" content="List your rental property and receive qualified applications. Free to list.">
   <meta name="twitter:image" content="/assets/og-cover.jpg">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,8 +29,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1793455473796">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1793455473796">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1793216200813">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1793216200813">
 </head>
 <body data-portal="public" data-page="how-it-works">
 
@@ -53,12 +57,12 @@
   </div>
   <div class="nav-drawer-body mv2-nav-drawer-body">
     <a href="/listings.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings.html"><i class="fas fa-home"></i> Browse Listings</a>
-    <a href="/listings.html?view=cities" class="nav-drawer-link mv2-nav-drawer-link"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
+    <a href="/listings/" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings/"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
     <a href="/how-to-apply.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
     <a href="/faq.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
-    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>
+    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>    <a href="/landlord/register.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
     <div class="nav-drawer-divider"></div>
-    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> How It Works</a>
+    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
     <a href="/about.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
     <a href="#" class="nav-drawer-link mv2-nav-drawer-link nav-drawer-theme-toggle" data-theme-toggle role="button" aria-pressed="false">
         <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
@@ -68,7 +72,7 @@
   
   </div>
   <div class="nav-drawer-cta">
-    <a href="/about.html" class="btn btn-primary btn-full" id="drawerAuthLink">About Choice Properties</a>
+    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
   </div>
   <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="tel:7077063137">707-706-3137 (Text Only)</a></div>
 </nav>
@@ -96,7 +100,7 @@
       <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
         <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
       </a>
-      <a href="/how-it-works.html" class="nav-link mv2-nav-link" data-nav-path="/how-it-works.html">How It Works</a>
+      <a href="/landlord/register.html" class="nav-link mv2-nav-link nav-link--landlord mv2-nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
     </div>
       <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
           <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"></i>
@@ -116,8 +120,8 @@
   <div class="container">
     <div class="info-hero-inner mv2-info-hero-inner">
       <div class="section-eyebrow">For Renters</div>
-      <h1 class="info-hero-title mv2-info-hero-title">A clear path from search to <em>next steps.</em></h1>
-      <p class="info-hero-sub mv2-info-hero-sub">Review each listing's details and follow its application instructions.</p>
+      <h1 class="info-hero-title mv2-info-hero-title">A clear path from application to <em>move-in.</em></h1>
+      <p class="info-hero-sub mv2-info-hero-sub">Choice Properties management supports each step.</p>
     </div>
   </div>
 </div>
@@ -131,7 +135,7 @@
           <div class="step-card">
             <div class="step-number">01</div>
             <div class="step-icon"><i class="fas fa-user-plus"></i></div>
-            <div class="step-title">Browse Listings</div>
+            <div class="step-title">Browse Managed Homes</div>
             <div class="step-desc">Compare current listings, location, rent, and property details.</div>
           </div>
           <div class="step-card">
@@ -144,22 +148,22 @@
             <div class="step-number">03</div>
             <div class="step-icon"><i class="fas fa-inbox"></i></div>
             <div class="step-title">Management Review</div>
-            <div class="step-desc">The team responsible for the listing reviews completed applications and shares updates according to that listing's process.</div>
+            <div class="step-desc">Choice Properties management reviews the completed application and shares updates.</div>
           </div>
           <div class="step-card">
             <div class="step-number">04</div>
             <div class="step-icon"><i class="fas fa-handshake"></i></div>
             <div class="step-title">Lease and Move-In</div>
-            <div class="step-desc">If approved, follow the listing contact's instructions for the next steps, which may include arranging a viewing and coordinating lease details.</div>
+            <div class="step-desc">If approved, our team coordinates the lease and provides the next steps.</div>
           </div>
         </div>
       </div>
 
       <div class="info-section mv2-info-section">
-        <h2>Before You Apply</h2>
+        <h2>Support from One Management Team</h2>
         <ul>
-          <li>The application review process and contact details are provided with the listing</li>
-          <li>Use the available application status or contact channel for updates</li>
+          <li>Choice Properties management reviews applications and communicates decisions</li>
+          <li>Application status tracking and direct support</li>
           <li>Clear listing details and a $50 fee per adult being screened</li>
           <li>Lease coordination and electronic signing</li>
         </ul>
@@ -168,7 +172,7 @@
       <div class="info-cta">
         <div class="info-cta-text">
           <h3>Ready to browse?</h3>
-          <p>Explore current rental listings.</p>
+          <p>View current Choice Properties rentals.</p>
         </div>
         <a href="/listings.html" class="btn btn-primary btn-lg">Browse Listings</a>
       </div>
@@ -189,20 +193,21 @@
             </div>
             <div class="footer-logo-text mv2-footer-logo-text">Choice Properties</div>
           </div>
-          <p class="footer-desc mv2-footer-desc">Rental listings and application guidance across select markets.</p>
+          <p class="footer-desc mv2-footer-desc">A clear, structured rental marketplace. Connecting quality tenants with verified landlords — expanding nationwide with active listings in select markets.</p>
           <a href="tel:7077063137" class="footer-link mv2-footer-link" style="display:inline-flex;align-items:center;gap:6px" data-cfg-phone><i class="fas fa-phone"></i> 707-706-3137</a>
         </div>
         <div>
           <div class="footer-col-title mv2-footer-col-title">Renters</div>
           <a href="/listings.html" class="footer-link mv2-footer-link">Browse Listings</a>
-          <a href="/listings.html?view=cities" class="footer-link mv2-footer-link">Browse by City</a>
+          <a href="/listings/" class="footer-link mv2-footer-link">Browse by City</a>
           <a href="/how-to-apply.html" class="footer-link mv2-footer-link">How to Apply</a>
           <a href="/faq.html" class="footer-link mv2-footer-link">FAQ</a>
           <a href="/tenant/portal.html" class="footer-link mv2-footer-link" target="_blank" rel="noopener noreferrer">Track Application</a>
         </div>
         <div>
-          <div class="footer-col-title mv2-footer-col-title">Management</div>
-          <a href="/about.html" class="footer-link mv2-footer-link">About Choice Properties</a>
+          <div class="footer-col-title mv2-footer-col-title">Landlords</div>
+          <a href="/landlord/register.html" class="footer-link mv2-footer-link">List a Property</a>
+          <a href="/landlord/login.html" class="footer-link mv2-footer-link">Landlord Login</a>
           <a href="/how-it-works.html" class="footer-link mv2-footer-link">How It Works</a>
         </div>
         <div>
@@ -236,7 +241,7 @@
   </div>
 
 <script defer src="/config.js"></script>
-<script type="module" src="/js/cp-api.js?v=1793455473796"></script>
-<script defer src="/js/components.js?v=1793455473796"></script>
+<script type="module" src="/js/cp-api.js?v=1793216200813"></script>
+<script defer src="/js/components.js?v=1793216200813"></script>
 </body>
 </html>

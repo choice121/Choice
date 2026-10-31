@@ -21,6 +21,10 @@ function copyRecursive(src, dest) {
       copyRecursive(path.join(src, entry), path.join(dest, entry));
     }
   } else {
+    // If destination file exists (e.g. from vite build), only copy if not dist/index.html
+    if (path.resolve(dest) === path.resolve(DIST_DIR, 'index.html')) {
+      return; // Keep Vite built index.html as main SPA root
+    }
     fs.copyFileSync(src, dest);
   }
 }
@@ -62,7 +66,6 @@ const filesToCopy = [
   '_headers',
   '_redirects',
   'about.html',
-  'application-credit-policy.html',
   'co-applicant-consent.html',
   'fair-housing.html',
   'faq.html',
@@ -91,13 +94,6 @@ const filesToCopy = [
 ];
 
 filesToCopy.forEach((file) => {
-  if (file === 'index.html' && fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
-    const existing = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf-8');
-    if (existing.includes('/assets/index-') || existing.includes('crossorigin')) {
-      console.log('✅ Preserving Vite-compiled dist/index.html');
-      return;
-    }
-  }
   const src = path.join(ROOT_DIR, file);
   const dest = path.join(DIST_DIR, file);
   if (fs.existsSync(src)) {

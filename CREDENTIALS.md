@@ -12,7 +12,7 @@ This file covers everything a new developer or AI assistant needs to get fully o
 | **Chrome Extension** | `chrome-extension/` | Secondary tool. Adds a "Save to Pipeline" button on open listing pages in your browser. |
 | **Live site** | Cloudflare Pages | https://choice-properties-site.pages.dev — NOT hosted on Replit. Replit only runs the scraper. |
 
-> **AI assistants:** Read `README.md` and `AGENTS.md` first. They contain the full project overview, platform rules, and scraping directives. Do not treat this as a Chrome extension project.
+> **AI assistants:** Read `replit.md` first. It has the full project overview, architecture diagram, and scraping instructions. Do not treat this as a Chrome extension project.
 
 ---
 
@@ -102,7 +102,7 @@ Scripts that run automated tasks on Replit use the Supabase service role key for
 
 | File | What it covers |
 |---|---|
-| `README.md` & `AGENTS.md` | Full project overview, platform rules, and mandatory directives |
+| `replit.md` | Full project overview, architecture, how to run scraping jobs, file map |
 | `SCRAPING_PROMPT.md` | Copy-paste prompt for AI-assisted scraping jobs |
 | `scraper/PIPELINE_USAGE.md` | `PipelineOrchestrator` API, `BatchCriteria` reference, new-city template |
 | `scraper/PLATFORM_RULES.md` | Mandatory rules enforced automatically by `enrichment.py` |

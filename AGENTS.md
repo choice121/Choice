@@ -1,14 +1,26 @@
 # Choice Properties — AI Agent Rules & Directives
 
-> ### 🚫 DIRECTIVE 1 — ADDRESS CHANGING & RELOCATION: PERMANENTLY DISABLED & REMOVED
-> **STATUS: PERMANENTLY DECOMMISSIONED & DISABLED ACROSS ENTIRE PROJECT (OWNER DIRECTIVE)**
+> ### 🚀 DIRECTIVE 1 — ADDRESS CHANGING, 
+> **STATUS: FULLY ENABLED ACROSS ENTIRE PROJECT & PIPELINE (OWNER AUTHORIZED)**
 > 
-> 1. **Address Relocation Completely Removed**:
->    - The address relocation feature, synthetic address aliasing, and municipal address relocation are completely removed from the pipeline, admin UI, backend, and codebase.
->    - All properties retain their authentic source physical address. Synthetic or relocated addresses are strictly prohibited.
-> 2. **Authentic Source Identity**:
->    - Properties must always be handled with their true physical location, parcel, and address facts.
->    - Do NOT generate or run relocation endpoints or batch scripts.
+> 1. **Universal Multi-City Verified Municipal Protocol (ANY US City / ANY State)**:
+>    - g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
+>    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official ** Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
+> 2. **Flexible In-State & Out-of-State Sourcing with In-State Area Separation Protocol**:
+>    - Sourcing may be out-of-state OR within the same destination state depending on the operator target.
+>    - **In-State Area Separation Enforcement**: When sourcing properties within the same destination state, the system strictly enforces publishing to a distinct geographic area/corridor.
+>    - The relocated address must NEVER share the same ZIP code (`target_zip !== source_zip`) or immediate local neighborhood/street block as the original source listing, ensuring complete privacy and preventing local collision.
+> 3. **Multi-ZIP Geographic Distribution Rule**:
+>    - When publishing or relocating to any destination municipality, you must **NOT** dump all properties into a single ZIP code.
+>    - Distribute properties across the valid residential ZIP codes covering that municipality and its adjacent residential corridors, unless the user explicitly mandates a single specified ZIP code (e.g. "all in 75217").
+> 4. **The Mandatory Universal CLI Runner for Future AIs**:
+>    - Future AI assistants MUST NOT write custom or un
+>      ```bash
+>      node scripts/
+>      # Advanced filters: beds, baths, sqft, price targeting, and status
+>      node scripts/
+>      ```
+>    - The runner automatically enforces flexible sourcing with in-state area separation, 
 
 > ### 🚀 DIRECTIVE 2 — STRICT ORIGINAL IMAGE ORDER & DIRECT SOURCE CDN INGESTION
 > 1. **Zero Photo Count Gate (Complete Removal of Photo Count Restrictions Across Entire Project)**:

@@ -63,27 +63,6 @@
   --m-ease: cubic-bezier(.4,0,.2,1);
   --m-ease-out: cubic-bezier(.2,.8,.2,1);
   --m-z-nav: 50;
-
-  /* Shared public-site system tokens. Additive aliases for incremental
-     page-by-page adoption; existing component values remain unchanged. */
-  --m-font-xs: 12px;
-  --m-font-sm: 13px;
-  --m-font-md: 15px;
-  --m-font-lg: 18px;
-  --m-font-xl: 24px;
-  --m-font-2xl: 32px;
-  --m-line-tight: 1.2;
-  --m-line-normal: 1.5;
-  --m-line-relaxed: 1.65;
-  --m-control-sm: 36px;
-  --m-control-md: 44px;
-  --m-control-lg: 52px;
-  --m-focus-ring: 0 0 0 3px rgba(0, 106, 255, .22);
-  --m-content-narrow: 760px;
-  --m-content-wide: 1280px;
-  --m-motion-fast: 120ms;
-  --m-motion-standard: 200ms;
-  --m-motion-slow: 320ms;
 }
 
 /* ── Marketing scope reset ─────────────────────────────────────────
@@ -132,15 +111,15 @@ body[data-portal="public"] .btn {
   gap: var(--m-s-2);
   padding: 10px 18px;
   border-radius: var(--m-r);
-  font-size: var(--m-font-md);
+  font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: all var(--m-motion-standard) var(--m-ease);
-  min-height: var(--m-control-md);
+  transition: all var(--m-dur) var(--m-ease);
+  min-height: 40px;
 }
 body[data-portal="public"] .btn-primary {
   background: var(--m-brand);
@@ -1836,20 +1815,6 @@ body[data-portal="public"] .property-card-type-chip {
   pointer-events: none;
   box-shadow: 0 1px 6px rgba(0,0,0,0.25);
 }
-body[data-portal="public"] .property-card-media-badges {
-  position: absolute; top: 12px; left: 12px; z-index: 8;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
-  max-width: calc(100% - 64px); pointer-events: none;
-}
-body[data-portal="public"] .property-card[data-featured="1"] .property-card-media-badges { top: 44px; }
-body[data-portal="public"] .property-card-media-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  max-width: 100%; padding: 5px 9px; border-radius: 100px;
-  overflow: hidden; color: #fff; background: rgba(18, 30, 43, 0.82);
-  font-size: 10px; font-weight: 700; line-height: 1.2; white-space: nowrap;
-  text-overflow: ellipsis; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-}
-body[data-portal="public"] .property-card-media-badge i { font-size: 9px; }
 body[data-portal="public"] .property-card-photo-count {
   position: absolute; bottom: 10px; right: 10px; z-index: 7;
   background: rgba(0,0,0,0.52); color: rgba(255,255,255,0.92);
@@ -1881,12 +1846,6 @@ body[data-portal="public"] .property-card-type {
 body[data-portal="public"] .property-card-price-dollar { color: var(--m-brand); }
 body[data-portal="public"] .property-card-price-unit {
   font-size: 13px; font-weight: 500; color: var(--m-muted-2); letter-spacing: 0;
-}
-body[data-portal="public"] .property-card-community-prefix {
-  color: var(--m-muted-2); font-size: 11px; font-weight: 650; margin-right: 3px;
-}
-body[data-portal="public"] .property-card-community-summary {
-  margin: -3px 0 8px; color: var(--m-muted-2); font-size: 11px; font-weight: 650;
 }
 body[data-portal="public"] .property-card-specs {
   display: flex; align-items: center; flex-wrap: wrap;
@@ -9037,141 +8996,3 @@ body[data-embedded="true"] .detail-breadcrumb {
   display: none !important;
   min-height: 0 !important;
 }
-
-
-/* =====================================================================
-   PHASE 1 — shared public interaction and accessibility baseline.
-   Keep scoped to public pages; portal-wide rules live in cp-design.css.
-   ===================================================================== */
-body[data-portal="public"] .field-input,
-body[data-portal="public"] .field-select,
-body[data-portal="public"] .form-input,
-body[data-portal="public"] .contact-form-group input,
-body[data-portal="public"] .mv2-contact-card input,
-body[data-portal="public"] .mv2-contact-card select {
-  min-height: var(--m-control-md);
-  font-size: 16px;
-}
-
-body[data-portal="public"] .field-textarea,
-body[data-portal="public"] .form-textarea,
-body[data-portal="public"] .contact-form-group textarea,
-body[data-portal="public"] .mv2-contact-card textarea {
-  font-size: 16px;
-}
-
-body[data-portal="public"] .field-input:focus-visible,
-body[data-portal="public"] .field-select:focus-visible,
-body[data-portal="public"] .field-textarea:focus-visible,
-body[data-portal="public"] .form-input:focus-visible,
-body[data-portal="public"] .form-textarea:focus-visible,
-body[data-portal="public"] .contact-form-group input:focus-visible,
-body[data-portal="public"] .contact-form-group textarea:focus-visible,
-body[data-portal="public"] .mv2-contact-card input:focus-visible,
-body[data-portal="public"] .mv2-contact-card select:focus-visible,
-body[data-portal="public"] .mv2-contact-card textarea:focus-visible,
-body[data-portal="public"] .btn:focus-visible,
-body[data-portal="public"] .mv2-btn:focus-visible,
-body[data-portal="public"] .mv2-search-btn:focus-visible {
-  outline: 2px solid var(--m-brand);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body[data-portal="public"] .btn,
-  body[data-portal="public"] .mv2-btn,
-  body[data-portal="public"] .mv2-search-btn,
-  body[data-portal="public"] .property-card,
-  body[data-portal="public"] .nav-link,
-  body[data-portal="public"] .mv2-cities__pill {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  body[data-portal="public"] .btn:hover,
-  body[data-portal="public"] .mv2-btn:hover,
-  body[data-portal="public"] .mv2-search-btn:hover,
-  body[data-portal="public"] .property-card:hover,
-  body[data-portal="public"] .mv2-cities__pill:hover {
-    transform: none !important;
-  }
-}
-
-
-/* Phase 3 — property-card carousel controls: visible, reachable touch targets. */
-body[data-portal="public"] .property-card-dots {
-  pointer-events: auto;
-  gap: 2px;
-}
-
-body[data-portal="public"] .property-card-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  transition: none;
-}
-
-body[data-portal="public"] .property-card-dot::before {
-  content: "";
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, .58);
-  transition: background 160ms ease, width 180ms ease;
-}
-
-body[data-portal="public"] .property-card-dot.active {
-  width: 24px;
-  height: 24px;
-  background: transparent;
-}
-
-body[data-portal="public"] .property-card-dot.active::before {
-  width: 14px;
-  background: #fff;
-}
-
-body[data-portal="public"] .property-card-save:focus-visible,
-body[data-portal="public"] .property-card-share:focus-visible,
-body[data-portal="public"] .property-card-dot:focus-visible,
-body[data-portal="public"] .property-card-arrow:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 106, 255, .75);
-}
-
-body[data-portal="public"] .property-card-img:focus-within .property-card-arrow {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body[data-portal="public"] .property-card-dot::before {
-    transition: none;
-  }
-}
-
-
-/* Phase 4 — keyboard affordances for the property photo mosaic. */
-body[data-portal="public"][data-page="property"] #mosaicMain:focus-visible,
-body[data-portal="public"][data-page="property"] .mosaic-cell:focus-visible {
-  outline: 3px solid var(--m-brand, #006aff);
-  outline-offset: -3px;
-}
-
-body[data-portal="public"][data-page="property"] #mosaicMain {
-  cursor: zoom-in;
-}
-
-body[data-portal="public"][data-page="property"] .mosaic-cell[role="button"] {
-  cursor: zoom-in;
-}
-

@@ -289,8 +289,6 @@ function _attachPhotoArrays(row) {
 // Standard select fragment used by every property fetch below.
 const PROPERTIES_SELECT_FULL =
   '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(id, url, file_id, display_order, is_hero)';
-const PROPERTIES_SELECT_WITH_LAYOUTS =
-  `${PROPERTIES_SELECT_FULL}, property_units(id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name)`;
 
 // ── Property type normalization ─────────────────────────────────────────────
 // The scraper writes UPPER_SNAKE values (SINGLE_FAMILY, TOWNHOMES, APARTMENT,
@@ -393,7 +391,7 @@ const Properties = {
         // Hydrate property_photos and landlords so cards have full imagery & landlord verification
         const landlordIds = [...new Set(rows.map(r => r.landlord_id).filter(Boolean))];
         try {
-          const [photosRes, landlordsRes, unitsRes] = await Promise.all([
+          const [photosRes, landlordsRes] = await Promise.all([
             sb()
               .from('property_photos')
               .select('id, property_id, url, file_id, display_order, is_hero')
@@ -404,15 +402,8 @@ const Properties = {
                   .from('landlords')
                   .select('id, user_id, contact_name, business_name, avatar_url, verified, tagline')
                   .in('id', landlordIds)
-              : Promise.resolve({ data: [] }),
-            sb()
-              .from('property_units')
-              .select('id, property_id, unit_number, bedrooms, bathrooms, square_footage, monthly_rent, floor_plan_name')
-              .in('property_id', propIds)
-              .is('unit_number', null)
-              .order('unit_number', { ascending: true })
+              : Promise.resolve({ data: [] })
           ]);
-          if (unitsRes.error) return _ok(null, unitsRes.error);
 
           const photosByProp = {};
           (photosRes.data || []).forEach(ph => {
@@ -425,15 +416,8 @@ const Properties = {
             landlordsById[l.id] = l;
           });
 
-          const unitsByProp = {};
-          (unitsRes.data || []).forEach(unit => {
-            if (!unitsByProp[unit.property_id]) unitsByProp[unit.property_id] = [];
-            unitsByProp[unit.property_id].push(unit);
-          });
-
           rows.forEach(r => {
             r.property_photos = photosByProp[r.id] || [];
-            r.property_units = unitsByProp[r.id] || [];
             if (r.landlord_id && landlordsById[r.landlord_id]) {
               r.landlords = landlordsById[r.landlord_id];
             }
@@ -503,10 +487,9 @@ const Properties = {
 
     let q = sb()
       .from('properties')
-      .select(PROPERTIES_SELECT_WITH_LAYOUTS, { count: 'exact' });
+      .select(PROPERTIES_SELECT_FULL, { count: 'exact' });
 
     q = q.eq('status', 'active');
-    q = q.is('property_units.unit_number', null);
 
     // Text search - uses the GIN-indexed search_tsv generated column.
     // Falls back to ilike on title only if the term contains characters
@@ -594,29 +577,11 @@ const Properties = {
     const { data, error, count } = await q;
     if (error) return { ok: false, data: null, error: error.message };
     const total = count ?? 0;
-    const rows = (data || []).map(_attachPhotoArrays);
-    const propertyIds = rows.map(row => row.id).filter(Boolean);
-    if (propertyIds.length) {
-      const { data: mediaRows, error: mediaError } = await sb()
-        .from('property_media')
-        .select('property_id, kind, url')
-        .in('property_id', propertyIds);
-      if (mediaError) {
-        console.warn('Listing media could not be loaded:', mediaError.message);
-      } else {
-        const mediaByProperty = new Map();
-        (mediaRows || []).forEach(item => {
-          if (!mediaByProperty.has(item.property_id)) mediaByProperty.set(item.property_id, []);
-          mediaByProperty.get(item.property_id).push({ kind: item.kind, url: item.url });
-        });
-        rows.forEach(row => { row.property_media = mediaByProperty.get(row.id) || []; });
-      }
-    }
     return {
       ok: true,
       error: null,
       data: {
-        rows,
+        rows:        (data || []).map(_attachPhotoArrays),
         total,
         page,
         per_page:    PAGE_SIZE,

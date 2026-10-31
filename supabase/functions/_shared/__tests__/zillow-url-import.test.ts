@@ -55,21 +55,3 @@ Deno.test("uses the visible rental label when Zillow omits a status field", () =
   const page = pageFor({ zpid: 123, price: "$2,800" }, "House for rent");
   assert(isExplicitZillowRentalPage(page, "123"), "Expected the explicit rental page label to pass.");
 });
-
-Deno.test("extracts structured media for the pipeline publisher", () => {
-  const page = pageFor({
-    zpid: 123,
-    homeStatus: "FOR_RENT",
-    price: 2800,
-    floorPlans: [{ url: "https://cdn.example.com/plan.png", title: "First floor" }],
-    videos: [{ url: "https://cdn.example.com/walkthrough.mp4" }],
-    virtualTourUrl: "https://my.matterport.com/show/?m=abc",
-  });
-  const extracted = extractVerifiedZillowRental(page, "123");
-  const media = extracted?.media as Array<Record<string, unknown>> | undefined;
-
-  assert(media?.length === 3, "Expected floor plan, video, and tour media.");
-  assert(media[0].kind === "floor_plan", "Expected floor plan media first.");
-  assert(media[1].kind === "video", "Expected video media second.");
-  assert(media[2].kind === "virtual_tour", "Expected tour media third.");
-});
