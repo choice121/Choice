@@ -50,3 +50,8 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 - Branch `fix/listings-request-race` contains an unmerged change to `js/listings.js` that prevents overlapping listing requests from dropping newer filter/search changes or allowing stale responses to replace current results. It also normalizes invalid URL page numbers to page 1.
 - Six targeted source-level assertions passed. Browser, build, network, and end-to-end checks remain unrun. Review the branch diff and test rapid filter/search changes, browser back/forward, invalid page parameters, pagination, and existing application links in an approved browser environment before merging.
 - The redesign follow-up PR #64 is already merged at `87af1b1d7722669bcb3836f0961c73d14026959e`. The owner reported completing Cloudflare deployment confirmation, but no independent Cloudflare control-plane or live-site validation was available in this workflow.
+
+
+## Listing timeout cleanup — 2026-10-31
+- Branch `fix/listings-request-race` also clears the request timeout handle in `fetchAndRender()`'s `finally` block so completed or superseded requests do not leave redundant timers running.
+- This is source-reviewed only; browser/runtime testing remains required.
