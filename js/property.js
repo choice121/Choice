@@ -1169,7 +1169,9 @@ function renderMultiFloorMedia(p) {
   const navWrap = document.getElementById('floorNavWrap');
   if (!container || !section) return;
 
-  const rawMedia = Array.isArray(p.property_media) ? p.property_media.filter(isRenderablePropertyMedia) : [];
+  const rawMedia = Array.isArray(p.property_media)
+    ? p.property_media.filter(isRenderablePropertyMedia).map(item => ({ ...item, kind: String(item.kind || '').toLowerCase() }))
+    : [];
   
   // Ensure legacy virtual tour is represented in media items if not already migrated
   const allTours = getPropertyTours(p);
@@ -1249,13 +1251,15 @@ function renderMultiFloorMedia(p) {
   // Build Floor Navigation Tabs if >= 2 groups
   if (sortedGroups.size > 1 && navWrap) {
     navWrap.style.display = 'flex';
+    navWrap.setAttribute('role', 'group');
+    navWrap.setAttribute('aria-label', 'Filter property media by floor');
     navWrap.innerHTML = `
-      <button type="button" class="floor-nav-tab active" data-floor="all" role="tab" aria-selected="true">
+      <button type="button" class="floor-nav-tab active" data-floor="all" aria-pressed="true">
         <span>All Levels</span>
         <span class="tab-count">${rawMedia.length}</span>
       </button>
       ${Array.from(sortedGroups.entries()).map(([floor, items]) => `
-        <button type="button" class="floor-nav-tab" data-floor="${esc(floor)}" role="tab" aria-selected="false">
+        <button type="button" class="floor-nav-tab" data-floor="${esc(floor)}" aria-pressed="false">
           <span>${esc(floor)}</span>
           <span class="tab-count">${items.length}</span>
         </button>
@@ -1266,10 +1270,10 @@ function renderMultiFloorMedia(p) {
       tab.addEventListener('click', () => {
         navWrap.querySelectorAll('.floor-nav-tab').forEach(t => {
           t.classList.remove('active');
-          t.setAttribute('aria-selected', 'false');
+          t.setAttribute('aria-pressed', 'false');
         });
         tab.classList.add('active');
-        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('aria-pressed', 'true');
 
         const selectedFloor = tab.dataset.floor;
         container.querySelectorAll('.floor-group-section').forEach(groupEl => {
