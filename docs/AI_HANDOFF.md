@@ -9,11 +9,12 @@ Redesign the existing Choice Properties public rental marketplace as a unified, 
 Do not casually rewrite or break application/submission/payment flows, admin, tenant/landlord dashboards, auth, Supabase integrations, property importer/browser extension, scraper/publishing pipeline, or policy pages. Do not change database schema/data or ingestion behavior without explicit approval.
 
 ## Current active work
-- Phase 8 is being prepared on branch `phase-8/property-media-reliability`; it is not merged or deployed.
-- The property detail page already has photo gallery, tour modal, floor-media grouping, and unit/building/floor rendering code. A read-only current database snapshot showed 0 unit, building, and floor rows and only 13 property-media rows, so the feature architecture exists but live coverage/data cannot yet be considered complete.
-- Phase 8 connects the existing playable-tour URL validator to production rendering, rejects unsupported media URLs, adds common Vimeo URL support, enables keyboard activation for media thumbnails, and corrects floor filter button semantics.
-- Do not claim the full Zillow-inspired experience is complete. Browser/device tests, real media verification, performance measurement, and Cloudflare deployment verification remain open.
-- Continue in phases; do not create or populate unit/building/floor data or change schema without explicit approval.
+- PRs #65 (listing request race), #66 (property media), and #67 (homepage search submission) are merged to `main` as confirmed through GitHub's pull-request API.
+- The owner reports that Cloudflare deployment succeeded, but the live site is still reported to display the old design. The current release patch adds a final public-marketplace stylesheet, versions its stylesheet URLs, marks the expected HTML revision, and disables caching for the root HTML route.
+- Next release gate: confirm the live homepage exposes `data-ui-release="2026-10-31-final"` and that the new CSS loads, then test homepage search, rapid filters, pagination/back-forward, property photos/tours, keyboard controls, and mobile layouts in a real browser.
+- The property detail page supports photo gallery, tour modal, floor-media grouping, and unit/building/floor rendering. A read-only database snapshot showed 0 unit, building, and floor rows and only 13 property-media rows, so multi-floor functionality cannot be considered verified against populated live records.
+- Do not claim the complete Zillow-inspired experience is verified until browser/device tests, real media checks, performance measurement, and Cloudflare deployment configuration are confirmed.
+- Do not create or populate unit/building/floor data or change schema without explicit approval.
 
 ## Critical repository rules
 - Follow root instructions and `.agents/` rules.
@@ -33,25 +34,23 @@ Do not casually rewrite or break application/submission/payment flows, admin, te
 - `package.json` build script is `AIS_BUILD=true node generate-config.js && AIS_BUILD=true node scripts/copy-static-to-dist.js`; copy script populates `dist/` with static files. Vite/React are declared but are not invoked by this script. Do not install dependencies or run local build/server under the current repository instruction.
 - `_headers`, `_redirects`, and `.cfpagesignore` show Cloudflare Pages static routing/security setup. Actual Cloudflare dashboard values (build command, output directory, production branch, auto-deploy) are still unverified.
 - The root pages reference `.agents/instructions.md`, but the path is absent on `main` (404 and no `.agents/` directory in the root listing). Follow available `AGENTS.md` and `AI_AGENT_GUIDE.md`; do not invent missing rules.
-- No local runtime, browser test, build, migration, or database write was run. No production behavior has been changed.
+- No local runtime, build, or browser test was run. No migration or database write was performed. The final release patch is currently on `fix/final-marketplace-release` and is not yet merged.
 
 ## Separate security finding (do not silently remediate)
 The Supabase project advisor reports `public.description_enrichment_audit` has RLS disabled (critical). No changes were made. Owner should review required access and policies before enabling RLS; enabling without a policy may break legitimate workflows. This is separate from the visual redesign.
 ## Current state
-- Plan, progress tracker, and handoff documents were merged to `main` through PR #56. The full redesign stack #56–#63 was merged by commit `70e1eba5e009b153fbc3b6c99763031e838fcd50`.
-- Phase 0 repository architecture and read-only Supabase schema discovery are documented in `docs/REDESIGN_PROGRESS.md`.
-- Phase 0 repository-side discovery is complete; Cloudflare Pages dashboard settings still require confirmation.
+- The core redesign #56–#63 and marketplace copy #64 are merged. PRs #65, #66, and #67 are also confirmed merged to `main` through GitHub API.
+- Repository architecture and read-only Supabase schema discovery are documented in `docs/REDESIGN_PROGRESS.md`.
+- The owner reports successful Cloudflare deployment, but the current complaint is that the live UI still looks old. Cloudflare Pages project/build/output settings and the actual live response are not accessible in this workflow and remain to be confirmed.
 - Phase 1 has started on branch `phase-1/design-system`. An additive set of shared public-site tokens was added to `css/cp-marketing.css` in commit `1b8373d848b54fd61957e36a0c3b794e25c290c4` (font scale, line-height, control heights, focus-ring, content widths, motion durations). The shared `.btn` component now consumes the 15px type, 44px minimum height, and standard motion tokens in commit `39305eee825dec35fd31e8c9cbc9f12d46fe8820`. A scoped accessibility baseline was added in commit `bb693c6e64cfcf04e70b819abd5a4dee73ff126d`: 44px common form controls, 16px common form text, visible keyboard focus for common controls, and reduced-motion behavior. No markup, JavaScript, routes, listing data, application flow, database, or portal logic changed.
 - No local build/server or browser test was performed because repository instructions prohibit local runtime steps. The owner reported confirming the Cloudflare deployment in chat; this workflow did not independently inspect the Cloudflare deployment record or validate the live site.
 
 ## Next actions
-1. Core redesign PRs #56–#63 are merged to `main` at `70e1eba5e009b153fbc3b6c99763031e838fcd50`. Follow-up PR #64 was squash-merged to `main` as `87af1b1d7722669bcb3836f0961c73d14026959e`. Its changes remove unsupported “verified” and fixed application-duration claims, replace unsupported named testimonials with feature descriptions, align public copy with the rental-marketplace model, update navigation labels, fix malformed metadata at the start of `how-it-works.html`, and synchronize the mobile/advanced filter buttons' `aria-expanded` state with the dropdown. Source-level assertions and the Cloudflare-Only Enforcement workflow passed; browser/build/network regression tests were not run. The owner reported completing Cloudflare deployment confirmation, but this workflow did not independently inspect the deployment record or test the live site. Preserve search IDs (`searchInput`, `bedroomsFilter`, `maxRentFilter`, `searchBtn`), query behavior, active/private placement rules, property IDs/canonical URLs, original photo order/hero image, application links, and all account workflows. Respect `AGENTS.md` display restrictions.
-2. Do not run prohibited local build/server/install commands. Record exact validation limitations and review every diff.
-3. Review the follow-up branch diff/PR, complete browser regression testing in an approved environment, and verify Cloudflare Pages build/output/production branch/auto-deploy settings before claiming the production site is updated.
-4. Keep the security finding on `public.description_enrichment_audit` separate from the redesign; owner decides policy/remediation.
-5. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, image order, and all account/application/admin workflows.
-6. After each phase, update plan/progress/handoff, commit/push, and verify deployment only where evidence is available.
-7. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
+1. Review and merge `fix/final-marketplace-release` after inspecting its diff; it adds the final public CSS polish, cache-busted CSS URLs, release marker, root no-store header, and reconciles the stale progress notes.
+2. After deployment, inspect the live document source for `data-ui-release="2026-10-31-final"` and confirm `/css/marketplace-final-polish.css?v=20261031` returns successfully. If the marker is absent, the issue is the Cloudflare project/branch/output/deployment target rather than the new CSS rules.
+3. Complete real-browser tests for homepage search, rapid filter changes, pagination/back-forward, property photos/tours, keyboard controls, and mobile layouts. Do not mark those tests as passed before running them.
+4. Verify Cloudflare Pages build command, output directory, production branch, and deployed commit in the dashboard; expected repository-side output is `dist/` from `npm run build`, but dashboard values are not confirmed here.
+5. Keep the security finding on `public.description_enrichment_audit` separate from the redesign; owner decides policy/remediation. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, original image order, and all account/application/admin workflows.
 
 ## Current regression-hardening branch — 2026-10-31
 - Branch `fix/listings-request-race` contains changes to `js/listings.js` that prevent overlapping listing requests from dropping newer filter/search changes or allowing stale responses to replace current results. It also normalizes invalid URL page numbers to page 1.
