@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phases 1–4 have scoped implementation work in stacked pull requests; Phase 5 community/floor-plan behavior audited against the current data snapshot.
+**Overall status:** IN PROGRESS — Phases 1–5 have scoped implementation/audit work in stacked pull requests; Phase 6 image-loading performance and cross-page integration work started.
 
 ## Current phase
-Phase 5 — communities, buildings, floor plans, and units (data audit complete; no synthetic UI/data added; visual validation pending).
+Phase 6 — cross-page integration, accessibility, performance (in progress; property-card image priority is limited to the first search result; visual validation pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -77,8 +77,16 @@ Phase 5 — communities, buildings, floor plans, and units (data audit complete;
 - Validation: repository source inspection and prior read-only schema snapshot only; no browser/build/local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified.
 
+## Phase 6 work log — 2026-10-30
+- Changed the shared card builder so all card images default to lazy loading; only callers explicitly setting `priorityFirstImage: true` make the first card image eager/high priority.
+- Updated listing rendering to pass the card index and prioritize only the first result card image. Homepage featured cards remain lazy by default because they appear below the hero and city content.
+- This reduces the previous behavior where every property card's first photo was marked eager/high priority, which could cause many listing images to compete for bandwidth.
+- Changed files: `js/card-builder.js`, `js/listings.js`.
+- Validation: source-level checks only; no browser, network waterfall, build, or local-server test was run because repository instructions prohibit local runtime steps.
+- Deployment status: Unverified.
+
 ## Next exact action
-Continue Phase 6 cross-page integration, accessibility, performance, and URL/query preservation. Phase 5 intentionally adds no frontend data because the schema snapshot contains no units/buildings/floors. Keep visual validation and Cloudflare deployment marked pending.
+Continue Phase 6 audit for duplicated CSS, focus visibility, URL/query state, responsive card and property detail behavior, and performance regressions. Then perform the permitted release checklist and record what could not be verified. Keep browser validation and Cloudflare deployment marked pending.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed
