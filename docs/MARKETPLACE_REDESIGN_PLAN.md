@@ -64,8 +64,14 @@ Preserve listing data, links, query parameters, metadata, and redirects.
 **Acceptance:** search works; property links resolve; responsive layout reviewed; results documented. Browser validation remains pending.
 
 ## Phase 3 — Search results and cards
-Standardize card hierarchy/image treatment; review filters, sorting, URL state, pagination/loading, reset, and result counts; add suitable skeleton/empty/error states; avoid expensive per-card media loading.
-**Acceptance:** filters retain meaning; only supported facts appear; listing-to-detail navigation works on mobile and desktop.
+- [x] Add property-specific accessible labels and aria-pressed state to card save buttons; keep state in sync in homepage and listing handlers.
+- [x] Use a labelled group for carousel photo buttons, provide property-specific labels, and mark decorative icons hidden from assistive technology.
+- [x] Increase carousel dot hit areas to 24×24px, enable pointer interaction, and reveal image arrows on keyboard focus.
+- [ ] Standardize card hierarchy/image treatment; review filters, sorting, URL state, pagination/loading, reset, and result counts.
+- [ ] Review skeleton/empty/error states and avoid expensive per-card media loading.
+- [ ] Validate listing-to-detail navigation and card behavior in an approved browser environment.
+
+**Acceptance:** filters retain meaning; only supported facts appear; listing-to-detail navigation works on mobile and desktop. Browser validation remains pending.
 
 ## Phase 4 — Property detail and rich media
 Improve gallery, navigation, image error states, facts/description hierarchy, and valid video/3D display. Preserve original photo order and existing application behavior.
