@@ -91,6 +91,13 @@ const filesToCopy = [
 ];
 
 filesToCopy.forEach((file) => {
+  if (file === 'index.html' && fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+    const existing = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf-8');
+    if (existing.includes('/assets/index-') || existing.includes('crossorigin')) {
+      console.log('✅ Preserving Vite-compiled dist/index.html');
+      return;
+    }
+  }
   const src = path.join(ROOT_DIR, file);
   const dest = path.join(DIST_DIR, file);
   if (fs.existsSync(src)) {
