@@ -852,7 +852,7 @@ async function adminCSVExport() {
     // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
     const filterDropdown = document.getElementById('moreFiltersDropdown');
     if (filterDropdown && sessionStorage.getItem('filters_dropdown_open') === 'true') {
-      filterDropdown.classList.add('open');
+      setFiltersDropdownOpen(true);
     }
     await fetchAndRender();
     window.addEventListener('popstate', async () => {
@@ -1359,6 +1359,18 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   initMap(pageProperties);
 });
 
+function setFiltersDropdownOpen(isOpen) {
+  const dropdown = document.getElementById('moreFiltersDropdown');
+  if (!dropdown) return;
+  const open = Boolean(isOpen);
+  dropdown.classList.toggle('open', open);
+  ['moreFiltersBtn', 'mobileFiltersBtn'].forEach(id => {
+    const button = document.getElementById(id);
+    if (button) button.setAttribute('aria-expanded', String(open));
+  });
+  sessionStorage.setItem('filters_dropdown_open', open ? 'true' : 'false');
+}
+
 /* ─── Filters ─── */
 function setupFilters() {
   document.querySelectorAll('.filter-pill[data-filter]').forEach(pill => {
@@ -1389,9 +1401,7 @@ function setupFilters() {
   document.getElementById('moreFiltersBtn').addEventListener('click', e => {
       e.stopPropagation();
       const dropdown = document.getElementById('moreFiltersDropdown');
-      dropdown.classList.toggle('open');
-      const isOpen = dropdown.classList.contains('open');
-      sessionStorage.setItem('filters_dropdown_open', isOpen ? 'true' : 'false');
+      setFiltersDropdownOpen(!dropdown.classList.contains('open'));
     });
 
     // Fix 2: Mobile Filters button opens the same dropdown bottom-sheet
@@ -1400,8 +1410,7 @@ function setupFilters() {
       mfBtn.addEventListener('click', e => {
         e.stopPropagation();
         const dropdown = document.getElementById('moreFiltersDropdown');
-        dropdown.classList.toggle('open');
-        sessionStorage.setItem('filters_dropdown_open', dropdown.classList.contains('open') ? 'true' : 'false');
+        setFiltersDropdownOpen(!dropdown.classList.contains('open'));
       });
     }
 
@@ -1416,13 +1425,11 @@ function setupFilters() {
         const el = document.getElementById(id); if (el) el.value = '';
       });
       window.clearAllFilters();
-      document.getElementById('moreFiltersDropdown').classList.remove('open');
-      sessionStorage.setItem('filters_dropdown_open', 'false');
+      setFiltersDropdownOpen(false);
     });
   document.addEventListener('click', e => {
     if (!document.getElementById('moreFiltersWrap').contains(e.target)) {
-      document.getElementById('moreFiltersDropdown').classList.remove('open');
-      sessionStorage.setItem('filters_dropdown_open', 'false');
+      setFiltersDropdownOpen(false);
     }
   });
 
@@ -1440,8 +1447,7 @@ function setupFilters() {
       activeBeds = '';
       activeMinBeds = advBeds;
     }
-    document.getElementById('moreFiltersDropdown').classList.remove('open');
-    sessionStorage.setItem('filters_dropdown_open', 'false');
+    setFiltersDropdownOpen(false);
     refreshResults();
     showToast('Filters applied', 'success');
   });
@@ -1452,8 +1458,7 @@ function setupFilters() {
       if (control) control.value = '';
     });
     window.clearAllFilters();
-    document.getElementById('moreFiltersDropdown').classList.remove('open');
-    sessionStorage.setItem('filters_dropdown_open', 'false');
+    setFiltersDropdownOpen(false);
   });
 }
 
