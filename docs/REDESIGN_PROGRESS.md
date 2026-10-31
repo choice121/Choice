@@ -99,8 +99,14 @@ Release verification and content-accuracy follow-up (source-level review only; b
 - Reworked homepage trust/process sections so they describe browsing, comparing, reviewing details, and application instructions rather than claiming all properties are Choice-managed, photos are always verified, or fees/holding arrangements apply uniformly.
 - Aligned public navigation labels and the About / How It Works pages with the rental-marketplace model; corrected the How It Works page's stray pre-doctype metadata fragment and renter/landlord title mismatch.
 - Added `aria-controls`/`aria-expanded` to the advanced/mobile filter disclosure buttons and synchronized both controls with the dropdown's open/closed state in the listings-page JavaScript.
-- Changed files: `index.html`, `listings.html`, `property.html`, `js/listings.js`, `components/nav.html`, `components/footer.html`, `about.html`, `how-it-works.html`. This follow-up is in open PR #64 from branch `fix/marketplace-release-readiness`; it is not merged or deployed yet.
+- Changed files: `index.html`, `listings.html`, `property.html`, `js/listings.js`, `components/nav.html`, `components/footer.html`, `about.html`, `how-it-works.html`. Follow-up PR #64 was squash-merged to `main` on 2026-10-31 as commit `87af1b1d7722669bcb3836f0961c73d14026959e`.
 - Validation: GitHub source reads and targeted string assertions only. No local build, browser, live HTTP, or Cloudflare deployment test was run; repository rules prohibit local runtime steps and Cloudflare control-plane access is unavailable.
 
+## Release follow-up — 2026-10-31
+- PR #64 (`fix/marketplace-release-readiness`) was squash-merged to `main`; merge commit: `87af1b1d7722669bcb3836f0961c73d14026959e`.
+- The owner reported completing the Cloudflare deployment confirmation in chat. This is owner-reported status only; no Cloudflare control-plane record or live HTTP check was available to this workflow.
+- The GitHub Cloudflare-Only Enforcement workflow associated with the PR head completed successfully, but it is not a browser regression test and does not prove production deployment.
+- Browser/visual, responsive, network, and end-to-end application-flow regression checks remain pending. Repository rules prohibit local runtime/build steps; use an approved browser environment.
+
 ## Next exact action
-Review the follow-up diff and PR, then run visual/browser regression tests in an approved environment. Verify Cloudflare Pages build command, output directory, production branch, auto-deploy behavior, and the production deployment matching `70e1eba5e009b153fbc3b6c99763031e838fcd50` (or the eventual follow-up merge commit) before claiming the site is live. Keep the Supabase RLS finding separate from the redesign.
+Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
