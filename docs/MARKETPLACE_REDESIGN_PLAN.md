@@ -30,15 +30,17 @@ Unify the existing Choice Properties public website into a polished, responsive 
 - Add useful loading, empty, image-failure, and recoverable-error states.
 
 ## Phase 0 — Repository discovery (must precede visual work)
-- [ ] Read root instructions and applicable `.agents/` instructions.
-- [ ] Verify Cloudflare Pages build command, output directory, deploy branch, and auto-deploy behavior.
-- [ ] Trace `package.json`, `generate-config.js`, `scripts/copy-static-to-dist.js`, and actual Vite configuration without running prohibited commands.
-- [ ] Map `index.html`, `listings.html`, `property.html`, shared public pages, CSS, JavaScript, and style dependencies.
-- [ ] Trace listing data, photo arrays, video/3D URLs, floor plans, communities, buildings, and units.
-- [ ] If an approved Supabase connection is available, inspect schema read-only; no writes/migrations.
-- [ ] Record critical flows: search → results → detail → application; auth; admin; tenant/landlord portals; importer.
-- [ ] Record permitted validation methods and limitations.
-**Acceptance:** verified architecture notes and a safe strategy; no production behavior changed.
+- [x] Read root instructions; the referenced `.agents/instructions.md` is absent on `main` (404/no `.agents/` directory), so record this as an instruction-path discrepancy.
+- [ ] Verify Cloudflare Pages dashboard build command, output directory, production branch, and auto-deploy behavior (repository-side build script inspected; dashboard values unavailable).
+- [x] Trace `package.json`, `generate-config.js`, `scripts/copy-static-to-dist.js`, and `vite.config.ts` without running prohibited commands.
+- [x] Map `index.html`, `listings.html`, `property.html`, shared public CSS/JavaScript, and style dependencies.
+- [x] Trace listing data, photo arrays, video/3D URLs, floor plans, communities, buildings, and units.
+- [x] Inspect Supabase public schema read-only; no writes/migrations.
+- [x] Record critical flows: search → results → detail → application; auth; admin; tenant/landlord portals; importer.
+- [x] Record permitted validation methods and limitations.
+**Acceptance:** repository-side architecture, data model, and safe strategy documented; no production behavior changed. Cloudflare dashboard settings remain a release prerequisite.
+
+**Phase 0 findings:** See `docs/REDESIGN_PROGRESS.md` and `docs/AI_HANDOFF.md` for the static build path, public page/data-flow map, missing `.agents/instructions.md` discrepancy, read-only Supabase schema summary, and the separate critical RLS advisory for `public.description_enrichment_audit`. No remediation was applied.
 
 ## Phase 1 — Design system and shared public UI
 Define design tokens (color, type, spacing, radii, shadows, widths, focus, motion); standardize shared nav, buttons, form controls, badges, cards; resolve CSS conflicts only when impact is understood.
