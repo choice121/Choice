@@ -34,11 +34,11 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 - Plan, progress tracker, and handoff documents are committed on branch `docs/marketplace-redesign-plan`; PR #56 is open and has not been merged.
 - Phase 0 repository architecture and read-only Supabase schema discovery are documented in `docs/REDESIGN_PROGRESS.md`.
 - Phase 0 repository-side discovery is complete; Cloudflare Pages dashboard settings still require confirmation.
-- Phase 1 has started on branch `phase-1/design-system`. An additive set of shared public-site tokens was added to `css/cp-marketing.css` in commit `1b8373d848b54fd61957e36a0c3b794e25c290c4` (font scale, line-height, control heights, focus-ring, content widths, motion durations). Existing component styles and behavior were not changed.
+- Phase 1 has started on branch `phase-1/design-system`. An additive set of shared public-site tokens was added to `css/cp-marketing.css` in commit `1b8373d848b54fd61957e36a0c3b794e25c290c4` (font scale, line-height, control heights, focus-ring, content widths, motion durations). The shared `.btn` component now consumes the 15px type, 44px minimum height, and standard motion tokens in commit `39305eee825dec35fd31e8c9cbc9f12d46fe8820`. No markup, JavaScript, routes, listing data, application flow, database, or portal logic changed.
 - No build, browser test, local server, or live deployment verification was performed; repository instructions prohibit local runtime steps.
 
 ## Next actions
-1. Continue Phase 1 on `phase-1/design-system`: audit public buttons, form controls, badges, and focus styles; change only scoped rules whose impact is understood.
+1. Continue Phase 1 on `phase-1/design-system`: audit public form controls, badges, navigation, and focus styles; change only scoped rules whose impact is understood. PR #57 is open against `docs/marketplace-redesign-plan`.
 2. Do not run prohibited local build/server/install commands. Record exact validation limitations and review every diff.
 3. Keep Cloudflare Pages build command, output directory, production branch, and auto-deploy settings marked unverified until confirmed through an approved method.
 4. Keep the security finding on `public.description_enrichment_audit` separate from the redesign; owner decides policy/remediation.
