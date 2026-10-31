@@ -1031,7 +1031,7 @@ function renderProperties(props) {
     return;
   }
 
-  grid.innerHTML = props.map(p => buildCard(p)).join('');
+  grid.innerHTML = props.map((p, index) => buildCard(p, index)).join('');
 
   // Mark saved state only — click events handled by delegated listeners (P1-A)
   grid.querySelectorAll('.property-card-save').forEach(btn => {
@@ -1082,9 +1082,10 @@ function renderPagination() {
 
 /* ─── Build card ─── */
 // Delegates to the unified card builder in /js/card-builder.js
-function buildCard(p) {
+function buildCard(p, index) {
   return buildPropertyCard(p, {
     imgSizes: '(max-width: 599px) calc(100vw - 32px), 300px',
+    priorityFirstImage: index === 0,
   });
 }
 
