@@ -38,7 +38,7 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 - No build, browser test, local server, or live deployment verification was performed; repository instructions prohibit local runtime steps.
 
 ## Next actions
-1. Phase 1 foundation is in PR #57 against `docs/marketplace-redesign-plan`; visual/browser validation remains pending. Continue Phase 2 homepage/search-entry work on a child branch based on `phase-1/design-system`. On the homepage, avoid copy implying every listing is owned or managed by Choice Properties; preserve the search element IDs and query behavior.
+1. Phase 1 foundation is in PR #57 against `docs/marketplace-redesign-plan`; visual/browser validation remains pending. Phase 2 changes are on child branch `phase-2/homepage-search-entry`: homepage copy now refers to rental listings rather than implying Choice manages all listings; the trust strip now describes user actions instead of unverified guarantees; mobile hero search input/select text is 16px. Preserve search element IDs (`searchInput`, `bedroomsFilter`, `maxRentFilter`, `searchBtn`) and existing query behavior. Continue with Phase 3 listing cards/results; visual validation remains pending.
 2. Do not run prohibited local build/server/install commands. Record exact validation limitations and review every diff.
 3. Keep Cloudflare Pages build command, output directory, production branch, and auto-deploy settings marked unverified until confirmed through an approved method.
 4. Keep the security finding on `public.description_enrichment_audit` separate from the redesign; owner decides policy/remediation.

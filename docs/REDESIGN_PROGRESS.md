@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; visual validation and later phase adoption remain pending.
+**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; Phase 2 homepage/search-entry improvements started.
 
 ## Current phase
-Phase 1 — design system and shared public UI (in progress; token foundation added, adoption and visual validation pending).
+Phase 2 — homepage and search entry (in progress; messaging and mobile search input readability updated; visual validation pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -26,7 +26,7 @@ Phase 1 — design system and shared public UI (in progress; token foundation ad
 - [x] Phase 0 — repository architecture and read-only schema discovery
 - [ ] Phase 0 — verify Cloudflare Pages dashboard build/output/branch/auto-deploy settings
 - [ ] Phase 1 — design system and shared public UI (in progress)
-- [ ] Phase 2 — homepage and search entry
+- [ ] Phase 2 — homepage and search entry (in progress)
 - [ ] Phase 3 — search results and property cards
 - [ ] Phase 4 — property detail and rich media
 - [ ] Phase 5 — communities/buildings/floor plans/units
@@ -41,8 +41,16 @@ Phase 1 — design system and shared public UI (in progress; token foundation ad
 - Commits: `1b8373d848b54fd61957e36a0c3b794e25c290c4` (tokens) and `39305eee825dec35fd31e8c9cbc9f12d46fe8820` (shared button adoption) on `phase-1/design-system`.
 - Deployment status: Unavailable / not verified. Cloudflare dashboard settings are still unknown; do not claim this is live.
 
+## Phase 2 work log — 2026-10-30
+- Updated homepage hero copy to describe browsing rental listings rather than implying every listing is managed by Choice Properties.
+- Replaced trust-strip claims about verified landlords, management, encryption, and real-time updates with functional descriptions of search, browsing, comparing, online applications, and next steps. This avoids presenting unverified operational guarantees as facts.
+- Increased homepage hero search input/select text to 16px on mobile to improve legibility and avoid iOS automatic input zoom.
+- Changed files: `index.html`, `css/home-experience.css`.
+- Validation: confirmed exact source blocks and successful GitHub file updates. No browser, build, local server, or visual regression test was run because repository instructions prohibit local runtime steps.
+- Deployment status: Unverified; Cloudflare settings have not been inspected.
+
 ## Next exact action
-Phase 1 implementation foundation is in PR #57. Continue the planned sequence with Phase 2 homepage/search-entry work on a child branch, while keeping visual validation explicitly pending. Cloudflare build/output/branch/auto-deploy settings remain a separate release-verification item.
+Continue Phase 2 review of homepage responsive layout and search semantics, then move into Phase 3 listing cards/results. Phase 1 implementation is in PR #57; this work is on child branch `phase-2/homepage-search-entry` and will be proposed separately. Keep visual validation explicitly pending. Cloudflare build/output/branch/auto-deploy settings remain a separate release-verification item.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed

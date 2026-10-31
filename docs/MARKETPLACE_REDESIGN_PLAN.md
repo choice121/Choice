@@ -54,8 +54,14 @@ Unify the existing Choice Properties public website into a polished, responsive 
 **Acceptance:** documented and used shared tokens; mobile/desktop states considered; no routes or controls broken; no unjustified framework migration. Cloudflare deployment settings must be confirmed before release verification.
 
 ## Phase 2 — Homepage and search entry
-Improve homepage hierarchy and search entry using supported existing functionality. Preserve listing data, links, query parameters, metadata, and redirects.
-**Acceptance:** search works; property links resolve; responsive layout reviewed; results documented.
+- [x] Replace hero copy that implied all listings are managed by Choice Properties with accurate rental-listing language.
+- [x] Replace unverified operational trust-strip claims with functional descriptions of the renter journey.
+- [x] Set mobile hero search input/select text to 16px for readability and to avoid iOS automatic input zoom.
+- [ ] Review responsive hero, location search, quick filters, city links, featured listings, and primary CTA.
+- [ ] Validate search query mapping and keyboard/mobile behavior in an approved browser environment.
+
+Preserve listing data, links, query parameters, metadata, and redirects.
+**Acceptance:** search works; property links resolve; responsive layout reviewed; results documented. Browser validation remains pending.
 
 ## Phase 3 — Search results and cards
 Standardize card hierarchy/image treatment; review filters, sorting, URL state, pagination/loading, reset, and result counts; add suitable skeleton/empty/error states; avoid expensive per-card media loading.

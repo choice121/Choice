@@ -439,6 +439,12 @@ html[data-theme="dark"] body[data-portal="public"][data-page="home"] .stats-bar 
     min-height: 52px;
   }
 
+  /* Keep mobile form text at 16px to avoid iOS input zoom and improve legibility. */
+  body[data-portal="public"][data-page="home"] .mv2-hero__search-field input,
+  body[data-portal="public"][data-page="home"] .mv2-hero__search-field select {
+    font-size: 16px;
+  }
+
   body[data-portal="public"][data-page="home"] .trust-strip-inner {
     justify-content: flex-start;
     gap: 13px 20px;
