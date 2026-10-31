@@ -1,4 +1,4 @@
-import { isPlayableTourMedia } from './tour-media.mjs';
+import { isPlayableTourMedia } from './tour-media.mjs?v=2026103101';
 
 const TOUR_KINDS = new Set(['video', 'virtual_tour', 'tour_3d']);
 const MEDIA_KINDS = new Set(['floor_plan', ...TOUR_KINDS]);
