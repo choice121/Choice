@@ -63,6 +63,8 @@ Phase 4 — property details and rich media (in progress; gallery keyboard acces
 - Made secondary mosaic cells keyboard-operable with button semantics, focusability, property-photo labels, and Enter/Space activation.
 - Changed main-gallery activation to open the currently displayed photo rather than always resetting to photo 1. Photo array order and first-source-photo hero behavior are unchanged.
 - Added visible focus treatment for gallery controls and accessible labels/controls for previous/next photo buttons.
+- Renamed the visible “Lease” tab to “Fees & details” because its contents are application fee, certain listing-specific fees/specials, and showing instructions—not lease terms.
+- Added a public-detail filter to suppress pet-policy and smoking-policy terms from amenity, appliance, flooring, and utility labels; empty filtered groups no longer create placeholder amenity content.
 - Changed files: `property.html`, `js/property.js`, `css/cp-marketing.css`.
 - Validation: source-level checks and successful GitHub updates only. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified; Cloudflare settings have not been inspected.
