@@ -67,6 +67,7 @@ Preserve listing data, links, query parameters, metadata, and redirects.
 - [x] Add property-specific accessible labels and aria-pressed state to card save buttons; keep state in sync in homepage and listing handlers.
 - [x] Use a labelled group for carousel photo buttons, provide property-specific labels, and mark decorative icons hidden from assistive technology.
 - [x] Increase carousel dot hit areas to 24×24px, enable pointer interaction, and reveal image arrows on keyboard focus.
+- [x] Associate advanced filter labels with controls and synchronize `aria-pressed` on Grid/Map view buttons.
 - [ ] Standardize card hierarchy/image treatment; review filters, sorting, URL state, pagination/loading, reset, and result counts.
 - [ ] Review skeleton/empty/error states and avoid expensive per-card media loading.
 - [ ] Validate listing-to-detail navigation and card behavior in an approved browser environment.
