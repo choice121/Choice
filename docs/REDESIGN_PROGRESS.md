@@ -112,6 +112,18 @@ Phase 8 — property-media reliability and accessible floor/media controls. This
 Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
 
 
+## Listings regression-hardening follow-up — 2026-10-31
+- Static source review found a request-race defect in `js/listings.js`: when a request was in flight, a subsequent filter/search request could be dropped by the `isLoading` guard; removing the guard without stale-response protection would also allow older results to overwrite newer filter state.
+- Added a monotonically increasing request ID. Each new request supersedes prior requests; stale success/error results are ignored, and only the latest request clears the loading state.
+- Sanitized the URL `page` parameter so invalid, non-integer, zero, or negative values normalize to page 1 instead of being passed through to the listing query.
+- Changed file: `js/listings.js`. Branch: `fix/listings-request-race`; merged to main.
+- Validation: six targeted source-level assertions passed for page normalization, request IDs, stale-success/error suppression, latest-request loading cleanup, and removal of the obsolete early-return guard.
+
+## Listing timeout cleanup audit — 2026-10-31
+- Extended the listing-request race fix to retain the 10-second timeout handle and clear it in `finally`, including when a request succeeds, fails, or is superseded by a newer request.
+- This avoids leaving a redundant timer alive after `Promise.race` has already settled. The latest-request-only loading-state behavior is unchanged.
+- Source-level assertions passed for timer handle creation/cleanup and latest-request loading-state handling.
+
 ## Phase 8 work log — 2026-10-31 (in progress)
 - Audited the production property detail path against the existing tour validator and read-only Supabase media inventory.
 - Current read-only row counts: 2,477 properties, 52,232 property photos, 13 property-media rows, and 0 rows each in property_units, property_buildings, and property_floors. The media rows include virtual tours, floor plans, and videos; counts are a snapshot and may change. This means multi-building/floor rendering exists in code but cannot be validated against populated building/floor/unit records yet.
@@ -123,8 +135,8 @@ Run the browser regression checklist against the deployed site: homepage and nav
 - No database/schema changes, media ingestion changes, application-flow changes, or hosting/workflow changes.
 - Remaining release checks: run the existing property-media test suite in an approved CI environment; browser-test property pages with valid and invalid media, keyboard interaction, mobile layout, floor filtering, legacy tour fallback, and listing-to-application links; verify Cloudflare Pages deployment and network/performance behavior.
 
-
 ## Property media cache invalidation follow-up — 2026-10-31
 - Source review found the new property tour utility imported `tour-media.mjs` without a version query even though this phase changes that validator. The property page cache-bust alone does not change the nested module URL, so browsers/CDNs could reuse an older validator module.
 - Updated the utility import to `/js/tour-media.mjs?v=2026103101` (relative module URL with version query) to align nested-module cache invalidation with the property media release.
 - Source assertion passed for the versioned import. Runtime/browser and network-cache behavior remain unverified under the repository's no-local-runtime rule.
+
