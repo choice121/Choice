@@ -109,13 +109,13 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 
 ## Phase 7 — Regression and release handoff
 - [x] Record source-level checks and their exact scope.
-- [x] Record stacked PR order (#56 → #57 → #58 → #59 → #60 → #61 → #62) and confirm they remain open/unmerged.
+- [x] Record the core redesign sequence and merge status; PRs #56–#67 are merged to `main`.
 - [x] Record that Phase 6 head has no GitHub status checks; do not represent an empty check list as passing CI.
 - [x] Record prohibited/unavailable validation steps and the unverified Cloudflare control-plane settings.
 - [ ] Complete browser/visual and network validation in an approved environment.
 - [ ] Confirm Cloudflare Pages build command, output directory, production branch, and auto-deploy behavior.
 - [x] Merge core redesign PRs #56–#63 in dependency order.
-- [ ] Review and merge the follow-up marketplace-copy accuracy PR after source review; complete browser regression testing where permitted.
+- [x] Review and merge the follow-up marketplace-copy accuracy PR (#64); browser regression testing remains pending.
 - [ ] Verify Cloudflare Pages settings and production deployment before claiming the changes are live.
 
 **Acceptance:** docs match actual code and PR state; limitations are explicit; deployment is claimed only when verified.
@@ -150,7 +150,7 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 Homepage, results/cards, property details, and supported media/multi-unit experiences share a coherent responsive system; existing application/account systems remain intact; validation is recorded; every phase has a GitHub commit and updated docs; another developer can resume from the handoff/progress docs without this conversation.
 
 
-## Phase 8 — Rich media reliability and floor controls (in progress)
+## Phase 8 — Rich media reliability and floor controls (implementation merged; validation pending)
 - [x] Connect production tour extraction and media rendering to the existing playable-URL validator.
 - [x] Reject unsupported tour/provider URLs and image thumbnails presented as tour URLs.
 - [x] Support common public Vimeo numeric URLs, matching the viewer's existing embed behavior.
@@ -173,3 +173,10 @@ Homepage, results/cards, property details, and supported media/multi-unit experi
 - [ ] Accessibility review covers keyboard, screen readers, focus, contrast, reduced motion, labels, and touch targets.
 - [ ] Performance is measured on mobile and desktop with image priority/lazy-loading, layout shifts, request counts, and media loading reviewed.
 - [ ] GitHub checks, browser/device tests, network checks, and Cloudflare Pages production deployment are documented accurately. Do not call the experience complete until the relevant checks pass.
+
+
+## Final public UI release patch — 2026-10-31
+- Added a dedicated final stylesheet scoped to public homepage, listings, and property detail pages; listings now use a responsive property-card grid at desktop/tablet/mobile breakpoints, with aligned card hierarchy and controls.
+- Bumped public CSS URLs and added `data-ui-release="2026-10-31-final"` to the public page body elements so the deployed HTML revision can be identified without guessing.
+- Added an explicit no-store rule for the root route; existing `/*.html` and `/css/*` rules already require revalidation.
+- Browser visual testing is still required. If the live page does not expose the release marker after this branch is merged/deployed, investigate the Cloudflare Pages project, production branch, build command, output directory, and deployed commit before further styling changes.
