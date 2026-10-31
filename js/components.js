@@ -75,9 +75,7 @@
     if (nav) {
       nav.querySelectorAll('a[href^="/landlord/"]').forEach(function (link) { link.remove(); });
       nav.querySelectorAll('a[href="/how-it-works.html"]').forEach(function (link) {
-        if (link.id === 'drawerListPropertyLink' || link.classList.contains('nav-link--landlord')) {
-          link.textContent = 'How We Manage Rentals';
-        }
+        link.textContent = 'How It Works';
       });
       var cta = nav.querySelector('.nav-drawer-cta');
       var ctaLink = cta && cta.querySelector('a');
@@ -86,14 +84,14 @@
         ctaLink.textContent = 'About Choice Properties';
       }
       nav.querySelectorAll('.nav-logo-tagline').forEach(function (tagline) {
-        tagline.textContent = 'Managed Rentals';
+        tagline.textContent = 'Rental Marketplace';
       });
     }
 
     var footer = document.getElementById('site-footer');
     if (footer) {
       footer.querySelectorAll('.footer-desc').forEach(function (description) {
-        description.textContent = 'Rental homes managed by Choice Properties, with direct application and resident support.';
+        description.textContent = 'Rental listings and application guidance across select markets.';
       });
       footer.querySelectorAll('a[href="/application-credit-policy.html"]').forEach(function (link) {
         link.textContent = 'Application Fee Adjustments';
@@ -102,24 +100,17 @@
       columns.forEach(function (column) {
         var title = column.querySelector('.footer-col-title');
         if (title && title.textContent.trim().toLowerCase() === 'landlords') {
-          title.textContent = 'Management';
+          title.textContent = 'Company';
           var links = column.querySelectorAll('a');
           if (links[0]) { links[0].href = '/about.html'; links[0].textContent = 'About Choice Properties'; }
-          if (links[1]) { links[1].href = '/how-it-works.html'; links[1].textContent = 'How We Manage Rentals'; }
+          if (links[1]) { links[1].href = '/how-it-works.html'; links[1].textContent = 'How It Works'; }
           Array.prototype.slice.call(links, 2).forEach(function (link) { link.remove(); });
         }
         column.querySelectorAll('a[href^="/landlord/"]').forEach(function (link) { link.remove(); });
       });
-      footer.querySelectorAll('a[href="/listings/"]').forEach(function (link) {
-        link.href = '/listings.html?view=cities';
-      });
-      footer.querySelectorAll('a[href="/listings.html"]').forEach(function (link) {
-        if (link.search.indexOf('view=cities') === -1) {
-          link.href = '/listings.html?view=cities';
-        }
-      });
     }
   }
+
 
   /* ─────────────────────────────────────────────────────────────
    * setupMobileDrawer  (M-7: skip-link + focus trap)
