@@ -40,6 +40,7 @@ let totalPages     = 1;
 let totalCount     = 0;
 let currentView    = 'list';
 let isLoading      = false;
+let activeFetchId  = 0; // Monotonic request id; stale responses must not overwrite newer filter state.
 let mapInstance    = null;
 let mapMarkers     = [];
 let savedIds       = loadSavedIds();
@@ -122,7 +123,8 @@ function readURL() {
   activeMinBaths = p.get('minbaths') || '';
   activeType     = p.get('type')     || 'all';
   sortBy         = p.get('sort')     || 'newest';
-  currentPage    = parseInt(p.get('page') || '1', 10);
+  const requestedPage = Number.parseInt(p.get('page') || '1', 10);
+  currentPage = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   if (isAdminMode && p.get('landlord')) adminLandlordId = p.get('landlord');
 }
 
@@ -868,7 +870,9 @@ async function adminCSVExport() {
 
 // ── Core fetch ────────────────────────────────────────────────────────────
 async function fetchAndRender() {
-  if (isLoading) return;
+  // A newer search/filter request supersedes any in-flight request. Without this,
+  // fast filter changes can be ignored or stale results can overwrite the latest state.
+  const requestId = ++activeFetchId;
   isLoading = true;
 
   showSkeletons();
@@ -924,6 +928,7 @@ async function fetchAndRender() {
           per_page:  PER_PAGE,
         });
     const result = await Promise.race([fetchPromise, fetchTimeout]);
+    if (requestId !== activeFetchId) return;
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
@@ -950,10 +955,11 @@ async function fetchAndRender() {
       if (countEl) countEl.textContent = `${total.toLocaleString()} propert${total === 1 ? 'y' : 'ies'}`;
     }
   } catch (err) {
+    if (requestId !== activeFetchId) return;
     console.error('fetchAndRender error:', err);
     renderError(err?.message);
   } finally {
-    isLoading = false;
+    if (requestId === activeFetchId) isLoading = false;
   }
 }
 
