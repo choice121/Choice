@@ -99,7 +99,7 @@ Release verification and content-accuracy follow-up (source-level review only; b
 - Reworked homepage trust/process sections so they describe browsing, comparing, reviewing details, and application instructions rather than claiming all properties are Choice-managed, photos are always verified, or fees/holding arrangements apply uniformly.
 - Aligned public navigation labels and the About / How It Works pages with the rental-marketplace model; corrected the How It Works page's stray pre-doctype metadata fragment and renter/landlord title mismatch.
 - Added `aria-controls`/`aria-expanded` to the advanced/mobile filter disclosure buttons and synchronized both controls with the dropdown's open/closed state in the listings-page JavaScript.
-- Changed files: `index.html`, `listings.html`, `property.html`, `js/listings.js`, `components/nav.html`, `components/footer.html`, `about.html`, `how-it-works.html`. This follow-up is on branch `fix/marketplace-release-readiness`; it is not merged or deployed yet.
+- Changed files: `index.html`, `listings.html`, `property.html`, `js/listings.js`, `components/nav.html`, `components/footer.html`, `about.html`, `how-it-works.html`. This follow-up is in open PR #64 from branch `fix/marketplace-release-readiness`; it is not merged or deployed yet.
 - Validation: GitHub source reads and targeted string assertions only. No local build, browser, live HTTP, or Cloudflare deployment test was run; repository rules prohibit local runtime steps and Cloudflare control-plane access is unavailable.
 
 ## Next exact action
