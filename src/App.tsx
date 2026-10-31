@@ -46,19 +46,19 @@ type PropertyRecord = {
   monthly_rent?: number;
   bedrooms?: number;
   bathrooms?: number;
+  half_bathrooms?: number;
   square_footage?: number;
   property_type?: string;
-  property_kind?: string;
   description?: string;
   status?: string;
   landlords?: { business_name?: string; contact_name?: string } | null;
   property_photos?: Array<{ url?: string; display_order?: number; is_hero?: boolean }>;
-  media?: PropertyMediaItem[] | Array<string | { url?: string; src?: string; href?: string; title?: string; kind?: string; type?: string; display_order?: number; is_hero?: boolean; }>;
-  units?: PropertyUnitItem[];
-  unit_options?: Array<Record<string, unknown>> | null;
-  original_image_urls?: string[] | string | null;
-  tour_url?: string;
+  virtual_tour_url?: string;
   neighborhood?: string;
+  building_name?: string;
+  is_multi_unit?: boolean;
+  price_range?: string;
+  created_at?: string;
 };
 
 const normalizeType = (value?: string) => {
@@ -173,37 +173,23 @@ const normalizeImportedUnits = (property: PropertyRecord): PropertyUnitItem[] =>
 };
 
 const toDisplayProperty = (property: PropertyRecord): Property => {
-  const photoEntries = Array.isArray(property.property_photos) ? property.property_photos : [];
-  const legacyUrls = photoEntries.map((photo) => photo.url).filter((url): url is string => Boolean(url));
+  const photoEntries = (Array.isArray(property.property_photos) ? [...property.property_photos] : [])
+    .filter((photo) => photo && typeof photo.url === 'string' && photo.url.trim().length > 0)
+    .sort((a, b) => {
+      if (a.is_hero && !b.is_hero) return -1;
+      if (!a.is_hero && b.is_hero) return 1;
+      return (a.display_order ?? 999) - (b.display_order ?? 999);
+    });
 
-  const parsedOriginalUrls = (() => {
-    if (Array.isArray(property.original_image_urls)) return property.original_image_urls.filter((value): value is string => Boolean(value));
-    if (typeof property.original_image_urls === 'string') {
-      try {
-        const parsed = JSON.parse(property.original_image_urls);
-        if (Array.isArray(parsed)) return parsed.filter((value): value is string => typeof value === 'string' && Boolean(value));
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  })();
+  const uniquePhotoUrls = Array.from(new Set(photoEntries.map((photo) => photo.url as string)));
+  const image = uniquePhotoUrls[0] || 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80';
+  const gallery = uniquePhotoUrls.length ? uniquePhotoUrls.slice(0, 12).map((url) => getOptimizedImage(url, 'gallery')) : [image];
 
-  const allPhotoUrls = [...legacyUrls, ...parsedOriginalUrls, ...normalizeImportedMedia(property.media).map((media) => media.url)];
-  const uniquePhotoUrls = Array.from(new Set(allPhotoUrls.filter(Boolean))) as string[];
-
-  const image = photoEntries.find((photo) => photo.is_hero || photo.display_order === 0)?.url
-    || uniquePhotoUrls[0]
-    || 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80';
-
-  const gallery = Array.from(new Set([image, ...uniquePhotoUrls])).slice(0, 6).map((url) => getOptimizedImage(url, 'gallery'));
   const address = property.address || `${property.city || 'Market'}, ${property.state || ''} ${property.zip || ''}`.trim();
-  const title = property.title || `${address || property.city || 'Market'}, ${property.city || property.state || 'Market'}`;
-  const media = normalizeImportedMedia(property.media).length
-    ? normalizeImportedMedia(property.media)
-    : gallery.map((url, index) => ({ kind: 'photo', title: index === 0 ? 'Hero view' : `View ${index + 1}`, url }));
+  const title = property.title || `${address}, ${property.city}, ${property.state} ${property.zip || ''}`.trim();
+  const media = gallery.map((url, index) => ({ kind: 'photo' as const, title: index === 0 ? 'Hero view' : `View ${index + 1}`, url }));
 
-  const propertyType = normalizeType(property.property_type || property.property_kind || property.title);
+  const propertyType = normalizeType(property.property_type || property.title);
 
   return {
     id: property.id,
@@ -221,11 +207,11 @@ const toDisplayProperty = (property: PropertyRecord): Property => {
     gallery,
     media,
     units: normalizeImportedUnits(property),
-    tourUrl: property.tour_url || undefined,
+    tourUrl: property.virtual_tour_url || undefined,
     neighborhood: property.neighborhood || property.city || 'Neighborhood',
     moveIn: property.status === 'active' ? 'Available now' : 'Soon',
     description: property.description || 'A well-appointed home with modern finishes and a comfortable layout.',
-    features: ['Updated interiors', 'Flexible move-in', 'Well-located', 'Convenient access'],
+    features: ['Verified address', 'Direct application', 'Prompt management', '$50 application fee'],
   };
 };
 
@@ -240,33 +226,67 @@ function usePropertyData() {
 
     const load = async () => {
       try {
-        const cfg = window.CONFIG;
-        const client = window.supabase && cfg
-          ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
-              auth: { persistSession: false, autoRefreshToken: false },
-            })
-          : null;
+        const cfg = (typeof window !== 'undefined' && window.CONFIG) ? window.CONFIG : null;
+        const supabaseUrl = cfg?.SUPABASE_URL || 'https://tlfmwetmhthpyrytrcfo.supabase.co';
+        const supabaseKey = cfg?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxODMwMjQsImV4cCI6MjA5MDc1OTAyNH0.sqjt9_oMKDoorA8Tzed1hlkH5zEQGZvFskAG3Qr9CFw';
 
-        if (!client) {
-          if (!ignore) {
-            setRecords([]);
-            setLoading(false);
+        const selectFields = 'id,title,address,city,state,zip,monthly_rent,bedrooms,bathrooms,half_bathrooms,square_footage,property_type,status,description,virtual_tour_url,neighborhood,building_name,is_multi_unit,price_range,created_at,landlords(business_name,contact_name),property_photos(url,display_order,is_hero)';
+
+        let loadedData: PropertyRecord[] | null = null;
+
+        // 1. Try window.supabase client if initialized
+        if (typeof window !== 'undefined' && window.supabase) {
+          try {
+            const client = window.supabase.createClient(supabaseUrl, supabaseKey, {
+              auth: { persistSession: false, autoRefreshToken: false },
+            });
+            const { data, error } = await client
+              .from('properties')
+              .select(selectFields)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(200);
+
+            if (!error && data && data.length) {
+              loadedData = data as PropertyRecord[];
+            }
+          } catch (e) {
+            console.warn('Supabase JS client load attempt:', e);
           }
-          return;
         }
 
-        const { data, error } = await client
-          .from('properties')
-          .select('id,title,address,city,state,zip,monthly_rent,bedrooms,bathrooms,square_footage,property_type,property_kind,status,description,tour_url,neighborhood,media,unit_options,units,created_at,landlords(business_name,contact_name),property_photos(url,display_order,is_hero),original_image_urls')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(24);
+        // 2. Direct fetch fallback (always reliable regardless of window.supabase timing)
+        if (!loadedData || !loadedData.length) {
+          try {
+            const restUrl = `${supabaseUrl}/rest/v1/properties?select=${encodeURIComponent(selectFields)}&status=eq.active&order=created_at.desc&limit=200`;
+            const res = await fetch(restUrl, {
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Accept': 'application/json'
+              }
+            });
+            if (res.ok) {
+              const json = await res.json();
+              if (Array.isArray(json) && json.length) {
+                loadedData = json as PropertyRecord[];
+              }
+            }
+          } catch (e) {
+            console.warn('Direct fetch attempt:', e);
+          }
+        }
 
         if (!ignore) {
-          setRecords(error || !data || !data.length ? [] : (data as PropertyRecord[]));
+          if (loadedData && loadedData.length) {
+            setRecords(loadedData);
+          } else {
+            setRecords([]);
+          }
           setLoading(false);
         }
-      } catch {
+      } catch (err) {
+        console.error('Failed to load properties:', err);
         if (!ignore) {
           setRecords([]);
           setLoading(false);
@@ -557,10 +577,10 @@ function ListingsPage() {
   }, [records]);
 
   const quickFilters = [
-    { label: 'Move-in ready', value: 'move in' },
-    { label: 'Budget $2k', value: '2000' },
-    { label: 'Pet friendly', value: 'pet' },
-    { label: 'Luxury', value: 'luxury' },
+    { label: 'Single Family', value: 'House' },
+    { label: 'Apartment', value: 'Apartment' },
+    { label: 'Budget $1.5k', value: '1500' },
+    { label: 'Townhomes', value: 'Townhome' },
   ];
 
   return (
@@ -801,12 +821,12 @@ function PropertyPage() {
             <div><small>Beds</small><strong>{property.beds}</strong></div>
             <div><small>Baths</small><strong>{property.baths}</strong></div>
             <div><small>Sqft</small><strong>{property.sqft.toLocaleString()}</strong></div>
-            <div><small>Move-in</small><strong>{property.moveIn}</strong></div>
+            <div><small>App Fee</small><strong>$50</strong></div>
           </div>
           <div className="summary-bullet-list">
+            <div><span>Application fee</span><strong>$50 per adult</strong></div>
             <div><span>Tour available</span><strong>Virtual + in-person</strong></div>
-            <div><span>School district</span><strong>Top-rated nearby</strong></div>
-            <div><span>Avg. rent</span><strong>{formatMoney(Math.max(property.price - 140, 1100))}</strong></div>
+            <div><span>Direct lease</span><strong>Standard Choice terms</strong></div>
           </div>
 
           <div className="summary-actions">
