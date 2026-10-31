@@ -45,3 +45,8 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 5. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, image order, and all account/application/admin workflows.
 6. After each phase, update plan/progress/handoff, commit/push, and verify deployment only where evidence is available.
 7. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
+
+## Latest source audit — 2026-10-31
+- Branch fix/home-search-form-submit addresses a homepage hero search form issue found in index.html: remove the inline onsubmit handler that clicked its own submit button and consolidate navigation into one native submit listener calling the existing goToListings() function.
+- The old click and Enter-key listeners were removed so pointer and keyboard submissions use one code path. Source-level checks passed; no local runtime/build/browser test was run because repository instructions prohibit local runtime steps.
+- PR #65 (listing request race) and PR #66 (property media reliability) were still open and unmerged at audit time. Treat them as independent review items; do not claim the site is fully tested or production-ready until the required browser regression and deployment checks are completed.
