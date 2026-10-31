@@ -110,3 +110,20 @@ Release verification and content-accuracy follow-up (source-level review only; b
 
 ## Next exact action
 Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
+
+
+## Listings regression-hardening follow-up — 2026-10-31
+- Static source review found a request-race defect in `js/listings.js`: when a request was in flight, a subsequent filter/search request could be dropped by the `isLoading` guard; removing the guard without stale-response protection would also allow older results to overwrite newer filter state.
+- Added a monotonically increasing request ID. Each new request supersedes prior requests; stale success/error results are ignored, and only the latest request clears the loading state.
+- Sanitized the URL `page` parameter so invalid, non-integer, zero, or negative values normalize to page 1 instead of being passed through to the listing query.
+- Changed file: `js/listings.js`. Branch: `fix/listings-request-race`; not merged yet.
+- Validation: six targeted source-level assertions passed for page normalization, request IDs, stale-success/error suppression, latest-request loading cleanup, and removal of the obsolete early-return guard. No browser, build, live-network, or end-to-end test was run; follow repository restrictions and use an approved browser environment.
+
+## Next exact action
+Review the diff in the follow-up PR, then test rapid filter/search changes and malformed `?page=` values in an approved browser environment. Confirm that the latest query always wins, loading indicators settle, URL/back-button state stays coherent, and pagination/navigation/application links still work. Keep the Supabase `public.description_enrichment_audit` RLS review separate from this UI work.
+
+
+## Listing timeout cleanup audit — 2026-10-31
+- Extended the listing-request race fix to retain the 10-second timeout handle and clear it in `finally`, including when a request succeeds, fails, or is superseded by a newer request.
+- This avoids leaving a redundant timer alive after `Promise.race` has already settled. The latest-request-only loading-state behavior is unchanged.
+- Source-level assertions passed for timer handle creation/cleanup and latest-request loading-state handling. No runtime/browser test was run due to repository restrictions.
