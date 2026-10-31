@@ -819,6 +819,11 @@ function renderProperty(p) {
     return [];
   };
 
+  // Repository rule: never render pet-policy or smoking-policy content on public property pages.
+  const isRestrictedPropertyDetail = (value) =>
+    /smok/i.test(String(value || '')) ||
+    /\b(?:pets?|dogs?|cats?|animals?)\b/i.test(String(value || ''));
+
   p.amenities = safeArr(p.amenities);
   p.appliances = safeArr(p.appliances);
   p.flooring = safeArr(p.flooring);
@@ -828,7 +833,7 @@ function renderProperty(p) {
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
@@ -859,13 +864,13 @@ function renderProperty(p) {
     }
     flooringDiv.style.display = '';
     document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !isRestrictedPropertyDetail(f))
       .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included
-    .filter(u => u && !/smok/i.test(u))
+    .filter(u => u && !isRestrictedPropertyDetail(u))
     .map(u => `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
   if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
