@@ -121,3 +121,9 @@ Run the browser regression checklist against the deployed site: homepage and nav
 
 ## Next exact action
 Review the diff in the follow-up PR, then test rapid filter/search changes and malformed `?page=` values in an approved browser environment. Confirm that the latest query always wins, loading indicators settle, URL/back-button state stays coherent, and pagination/navigation/application links still work. Keep the Supabase `public.description_enrichment_audit` RLS review separate from this UI work.
+
+
+## Listing timeout cleanup audit — 2026-10-31
+- Extended the listing-request race fix to retain the 10-second timeout handle and clear it in `finally`, including when a request succeeds, fails, or is superseded by a newer request.
+- This avoids leaving a redundant timer alive after `Promise.race` has already settled. The latest-request-only loading-state behavior is unchanged.
+- Source-level assertions passed for timer handle creation/cleanup and latest-request loading-state handling. No runtime/browser test was run due to repository restrictions.
