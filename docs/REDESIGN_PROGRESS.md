@@ -52,8 +52,9 @@ Phase 3 — search results and property cards (in progress; card labels, saved-s
 ## Phase 3 work log — 2026-10-30
 - Property-card save buttons now include a property-specific accessible label and `aria-pressed` state. Homepage and listings-page handlers update that state and label as a property is saved/unsaved.
 - Carousel dot controls now use a labelled group rather than `tablist` (they are buttons, not ARIA tabs), and labels identify the photo and property. Decorative icon glyphs are hidden from assistive technology.
+- Added explicit `for` associations to advanced filter labels. The Grid/Map switch is now a labelled group with `aria-pressed` state synchronized by the view-toggle handlers.
 - Fixed carousel-dot usability: indicators have 24×24px hit areas, their parent accepts pointer events, keyboard focus is visible, and hidden desktop arrows reveal when keyboard focus enters the image area.
-- Changed files: `js/card-builder.js`, `js/listings.js`, `index.html`, `css/cp-marketing.css`.
+- Changed files: `js/card-builder.js`, `js/listings.js`, `index.html`, `listings.html`, `css/cp-marketing.css`.
 - Validation: source-level checks confirmed expected snippets and successful GitHub file updates. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified; Cloudflare settings have not been inspected.
 
