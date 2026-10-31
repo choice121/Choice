@@ -247,8 +247,7 @@
         and apply online when you find the right fit.
       </p>
 
-      <form class="mv2-hero__search" role="search" aria-label="Search rentals"
-            onsubmit="event.preventDefault(); document.getElementById('searchBtn').click(); return false;">
+      <form id="heroSearchForm" class="mv2-hero__search" role="search" aria-label="Search rentals">
         <div class="mv2-hero__search-row">
           <div class="mv2-hero__search-field">
             <i class="fas fa-search" aria-hidden="true"></i>
@@ -986,8 +985,10 @@ function animateFeaturedCards() {
 
 
 // Hero search → redirect to listings page with params
-document.getElementById('searchBtn').addEventListener('click', goToListings);
-document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') goToListings(); });
+document.getElementById('heroSearchForm').addEventListener('submit', event => {
+  event.preventDefault();
+  goToListings();
+});
 
 function goToListings() {
   const q       = document.getElementById('searchInput').value.trim();
