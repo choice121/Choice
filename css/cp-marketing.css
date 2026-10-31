@@ -9096,3 +9096,65 @@ body[data-portal="public"] .mv2-search-btn:focus-visible {
     transform: none !important;
   }
 }
+
+
+/* Phase 3 — property-card carousel controls: visible, reachable touch targets. */
+body[data-portal="public"] .property-card-dots {
+  pointer-events: auto;
+  gap: 2px;
+}
+
+body[data-portal="public"] .property-card-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: none;
+}
+
+body[data-portal="public"] .property-card-dot::before {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, .58);
+  transition: background 160ms ease, width 180ms ease;
+}
+
+body[data-portal="public"] .property-card-dot.active {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+}
+
+body[data-portal="public"] .property-card-dot.active::before {
+  width: 14px;
+  background: #fff;
+}
+
+body[data-portal="public"] .property-card-save:focus-visible,
+body[data-portal="public"] .property-card-share:focus-visible,
+body[data-portal="public"] .property-card-dot:focus-visible,
+body[data-portal="public"] .property-card-arrow:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 106, 255, .75);
+}
+
+body[data-portal="public"] .property-card-img:focus-within .property-card-arrow {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"] .property-card-dot::before {
+    transition: none;
+  }
+}
