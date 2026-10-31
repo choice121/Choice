@@ -63,6 +63,27 @@
   --m-ease: cubic-bezier(.4,0,.2,1);
   --m-ease-out: cubic-bezier(.2,.8,.2,1);
   --m-z-nav: 50;
+
+  /* Shared public-site system tokens. Additive aliases for incremental
+     page-by-page adoption; existing component values remain unchanged. */
+  --m-font-xs: 12px;
+  --m-font-sm: 13px;
+  --m-font-md: 15px;
+  --m-font-lg: 18px;
+  --m-font-xl: 24px;
+  --m-font-2xl: 32px;
+  --m-line-tight: 1.2;
+  --m-line-normal: 1.5;
+  --m-line-relaxed: 1.65;
+  --m-control-sm: 36px;
+  --m-control-md: 44px;
+  --m-control-lg: 52px;
+  --m-focus-ring: 0 0 0 3px rgba(0, 106, 255, .22);
+  --m-content-narrow: 760px;
+  --m-content-wide: 1280px;
+  --m-motion-fast: 120ms;
+  --m-motion-standard: 200ms;
+  --m-motion-slow: 320ms;
 }
 
 /* ── Marketing scope reset ─────────────────────────────────────────
