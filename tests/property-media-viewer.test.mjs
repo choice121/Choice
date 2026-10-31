@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { isPlayableTourMedia } from '../js/tour-media.mjs';
-import { collectPlayablePropertyTours } from '../js/property-tour-utils.mjs';
+import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '../js/property-tour-utils.mjs';
 
 // Test Fixtures & Logic Mirror for headless testing
 function normalizeUrl(u) {
@@ -211,4 +211,13 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   console.log('✅ Test 7 Passed: Only playable tour/video URLs are accepted');
 }
 
-console.log('--- ALL PROPERTY MEDIA TESTS PASSED (7/7) ---');
+// Test 8: Production media filtering rejects broken viewer candidates before rendering
+{
+  assert.equal(isRenderablePropertyMedia({ kind: 'virtual_tour', url: 'https://www.zillow.com/s3/hdp/home-details/images/third-party-virtual-tour/cc_ft_768.jpg' }), false);
+  assert.equal(isRenderablePropertyMedia({ kind: 'virtual_tour', url: 'https://tours.customprovider.com/tour/456' }), false);
+  assert.equal(isRenderablePropertyMedia({ kind: 'floor_plan', url: 'https://cdn.example.test/floor-plan.png' }), true);
+  assert.equal(isRenderablePropertyMedia({ kind: 'video', url: 'https://cdn.example.test/walkthrough.mp4' }), true);
+  console.log('✅ Test 8 Passed: Production media rendering accepts supported media only');
+}
+
+console.log('--- ALL PROPERTY MEDIA TESTS DEFINED (8 groups) ---');
