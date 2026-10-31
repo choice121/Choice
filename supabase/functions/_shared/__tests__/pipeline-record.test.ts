@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { assertEquals } from 'https://deno.land/std@0.220.0/assert/mod.ts';
 import { buildPipelineRecord, qualityScore } from '../pipeline-record.ts';
 
@@ -123,4 +124,35 @@ Deno.test('buildPipelineRecord persists building identity and reported unit and 
   assertEquals(originalData.price_range, '$1,200 - $1,800');
   assertEquals(originalData.total_units, 400);
   assertEquals(originalData.floors, 4);
+});
+
+Deno.test('buildPipelineRecord retains structured unit inventory from source imports', () => {
+  const record = buildPipelineRecord({
+    source: 'zillow',
+    source_listing_id: 'COMMUNITY-UNIT-456',
+    address: '2000 Lakeview Ave',
+    city: 'Austin',
+    state: 'TX',
+    zip: '78701',
+    property_type: 'APARTMENT',
+    building_name: 'Lakeview Commons',
+    is_multi_unit: true,
+    total_units: 76,
+    floors: 5,
+    unit_options: [
+      { source_kind: 'available_unit', unit_number: 'A101', bedrooms: 1, bathrooms: 1, square_footage: 650, monthly_rent: 1450, rent_basis: 'base_rent' },
+      { source_kind: 'available_unit', unit_number: 'B204', bedrooms: 2, bathrooms: 2, square_footage: 930, monthly_rent: 1895, rent_basis: 'total_monthly_price' },
+      { source_kind: 'floor_plan', floor_plan_name: 'Deluxe 2BR', bedrooms: 2, bathrooms: 2, square_footage: 980, starting_rent: 1795 },
+    ],
+  });
+
+  const originalData = JSON.parse(record.original_data as string);
+  assertEquals(Array.isArray(originalData.unit_options), true);
+  assertEquals(originalData.unit_options.length, 3);
+  assertEquals(originalData.unit_options[0].unit_number, 'A101');
+  assertEquals(originalData.unit_options[1].rent_basis, 'total_monthly_price');
+
+  const unitOptions = record.unit_options as Array<Record<string, unknown>>;
+  assertEquals(unitOptions.length, 3);
+  assertEquals(unitOptions[2].floor_plan_name, 'Deluxe 2BR');
 });
