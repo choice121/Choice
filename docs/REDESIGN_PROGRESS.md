@@ -122,3 +122,9 @@ Run the browser regression checklist against the deployed site: homepage and nav
 - Added regression assertions around the shared tour extraction utility, common Vimeo URLs, unsupported providers, valid Matterport URLs, and multi-tour grouping. Tests have not been executed in a runtime because repository instructions prohibit local runtime/build steps; source inspection only.
 - No database/schema changes, media ingestion changes, application-flow changes, or hosting/workflow changes.
 - Remaining release checks: run the existing property-media test suite in an approved CI environment; browser-test property pages with valid and invalid media, keyboard interaction, mobile layout, floor filtering, legacy tour fallback, and listing-to-application links; verify Cloudflare Pages deployment and network/performance behavior.
+
+
+## Property media cache invalidation follow-up — 2026-10-31
+- Source review found the new property tour utility imported `tour-media.mjs` without a version query even though this phase changes that validator. The property page cache-bust alone does not change the nested module URL, so browsers/CDNs could reuse an older validator module.
+- Updated the utility import to `/js/tour-media.mjs?v=2026103101` (relative module URL with version query) to align nested-module cache invalidation with the property media release.
+- Source assertion passed for the versioned import. Runtime/browser and network-cache behavior remain unverified under the repository's no-local-runtime rule.
