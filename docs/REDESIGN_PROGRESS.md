@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; Phase 2 homepage/search-entry improvements started.
+**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; Phase 2 homepage/search-entry changes committed; Phase 3 card accessibility work started.
 
 ## Current phase
-Phase 2 — homepage and search entry (in progress; messaging and mobile search input readability updated; visual validation pending).
+Phase 3 — search results and property cards (in progress; card labels, saved-state announcements, and carousel controls improved; visual validation pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -27,7 +27,7 @@ Phase 2 — homepage and search entry (in progress; messaging and mobile search 
 - [ ] Phase 0 — verify Cloudflare Pages dashboard build/output/branch/auto-deploy settings
 - [ ] Phase 1 — design system and shared public UI (in progress)
 - [ ] Phase 2 — homepage and search entry (in progress)
-- [ ] Phase 3 — search results and property cards
+- [ ] Phase 3 — search results and property cards (in progress)
 - [ ] Phase 4 — property detail and rich media
 - [ ] Phase 5 — communities/buildings/floor plans/units
 - [ ] Phase 6 — integration, accessibility, performance
@@ -49,8 +49,16 @@ Phase 2 — homepage and search entry (in progress; messaging and mobile search 
 - Validation: confirmed exact source blocks and successful GitHub file updates. No browser, build, local server, or visual regression test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified; Cloudflare settings have not been inspected.
 
+## Phase 3 work log — 2026-10-30
+- Property-card save buttons now include a property-specific accessible label and `aria-pressed` state. Homepage and listings-page handlers update that state and label as a property is saved/unsaved.
+- Carousel dot controls now use a labelled group rather than `tablist` (they are buttons, not ARIA tabs), and labels identify the photo and property. Decorative icon glyphs are hidden from assistive technology.
+- Fixed carousel-dot usability: indicators have 24×24px hit areas, their parent accepts pointer events, keyboard focus is visible, and hidden desktop arrows reveal when keyboard focus enters the image area.
+- Changed files: `js/card-builder.js`, `js/listings.js`, `index.html`, `css/cp-marketing.css`.
+- Validation: source-level checks confirmed expected snippets and successful GitHub file updates. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
+- Deployment status: Unverified; Cloudflare settings have not been inspected.
+
 ## Next exact action
-Continue Phase 2 review of homepage responsive layout and search semantics, then move into Phase 3 listing cards/results. Phase 1 implementation is in PR #57; this work is on child branch `phase-2/homepage-search-entry` and will be proposed separately. Keep visual validation explicitly pending. Cloudflare build/output/branch/auto-deploy settings remain a separate release-verification item.
+Continue Phase 3 audit of results layout, card responsive behavior, sorting/filter controls, and URL/query preservation. Then proceed to Phase 4 property detail and media. Phase 2 PR #58 is based on Phase 1 PR #57; this branch is stacked on Phase 2. Keep browser validation and deployment marked pending.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed
