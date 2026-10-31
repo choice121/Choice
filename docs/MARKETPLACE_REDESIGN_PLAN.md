@@ -1,6 +1,6 @@
 # Choice Properties Marketplace Redesign — Implementation Plan
 
-**Status:** Planning / discovery  
+**Status:** In progress — Phase 1 design-token foundation  
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`
 
@@ -43,8 +43,15 @@ Unify the existing Choice Properties public website into a polished, responsive 
 **Phase 0 findings:** See `docs/REDESIGN_PROGRESS.md` and `docs/AI_HANDOFF.md` for the static build path, public page/data-flow map, missing `.agents/instructions.md` discrepancy, read-only Supabase schema summary, and the separate critical RLS advisory for `public.description_enrichment_audit`. No remediation was applied.
 
 ## Phase 1 — Design system and shared public UI
-Define design tokens (color, type, spacing, radii, shadows, widths, focus, motion); standardize shared nav, buttons, form controls, badges, cards; resolve CSS conflicts only when impact is understood.
-**Acceptance:** documented tokens; mobile/desktop states considered; no routes or controls broken; no unjustified framework migration.
+- [x] Audit existing shared public CSS layers and token blocks.
+- [x] Add an additive shared token vocabulary in `css/cp-marketing.css` for type scale, line-height, control heights, focus-ring, content widths, and motion durations.
+- [ ] Audit shared nav, buttons, form controls, badges, cards, and focus styles for duplicate/conflicting rules.
+- [x] Apply the shared type, minimum control-height, and motion tokens to the common public `.btn` component.
+- [x] Add scoped public form-control sizing, keyboard-focus outlines, and reduced-motion handling for shared interactive components.
+- [ ] Audit and adopt tokens in selected public form controls, badges, and navigation where changes are safe and impact is understood.
+- [ ] Review mobile/desktop states in a browser and document validation limitations (pending because repository instructions prohibit local runtime/browser testing in the current workflow).
+
+**Acceptance:** documented and used shared tokens; mobile/desktop states considered; no routes or controls broken; no unjustified framework migration. Cloudflare deployment settings must be confirmed before release verification.
 
 ## Phase 2 — Homepage and search entry
 Improve homepage hierarchy and search entry using supported existing functionality. Preserve listing data, links, query parameters, metadata, and redirects.
@@ -92,7 +99,7 @@ Run permitted checks; inspect diffs; verify commit/deployment where access permi
 - The homepage loads several style layers, including `cp-design.css`, `cp-marketing.css`, `premium-design.css`, and `home-experience.css`.
 - React/Vite dependencies exist, but `scripts/copy-static-to-dist.js` copies static pages/assets; verify actual build behavior before choosing a stack.
 - Cloudflare Pages is the documented host; actual control-plane access is not confirmed.
-- GitHub write access was confirmed on 2026-10-30 by successfully creating the branch `docs/marketplace-redesign-plan`; documentation still needs to be committed and verified.
+- GitHub write access was confirmed on 2026-10-30. Documentation PR #56 is open and unmerged. Phase 1 implementation is being worked on separately in `phase-1/design-system`.
 - Do not put credentials in project docs.
 
 ## Definition of done
