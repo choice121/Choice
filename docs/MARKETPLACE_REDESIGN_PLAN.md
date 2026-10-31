@@ -107,8 +107,15 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 **Acceptance:** regression results and untestable items are documented; property facts/photo order remain intact. Browser/network validation remains pending.
 
 ## Phase 7 — Regression and release handoff
-Run permitted checks; inspect diffs; verify commit/deployment where access permits; update statuses, issues, and next actions.
-**Acceptance:** docs match shipped code; limitations are explicit; deployment claimed only when verified.
+- [x] Record source-level checks and their exact scope.
+- [x] Record stacked PR order (#56 → #57 → #58 → #59 → #60 → #61 → #62) and confirm they remain open/unmerged.
+- [x] Record that Phase 6 head has no GitHub status checks; do not represent an empty check list as passing CI.
+- [x] Record prohibited/unavailable validation steps and the unverified Cloudflare control-plane settings.
+- [ ] Complete browser/visual and network validation in an approved environment.
+- [ ] Confirm Cloudflare Pages build command, output directory, production branch, and auto-deploy behavior.
+- [ ] Review and merge PRs in dependency order only after validation; verify deployment before claiming it is live.
+
+**Acceptance:** docs match actual code and PR state; limitations are explicit; deployment is claimed only when verified.
 
 ## Mandatory per-phase delivery protocol
 1. Read current progress/handoff docs and inspect current branch/commit.
@@ -132,7 +139,8 @@ Run permitted checks; inspect diffs; verify commit/deployment where access permi
 - The homepage loads several style layers, including `cp-design.css`, `cp-marketing.css`, `premium-design.css`, and `home-experience.css`.
 - React/Vite dependencies exist, but `scripts/copy-static-to-dist.js` copies static pages/assets; verify actual build behavior before choosing a stack.
 - Cloudflare Pages is the documented host; actual control-plane access is not confirmed.
-- GitHub write access was confirmed on 2026-10-30. Documentation PR #56 is open and unmerged. Phase 1 implementation is being worked on separately in `phase-1/design-system`.
+- GitHub write access was confirmed on 2026-10-30. PRs #56–#62 are open, unmerged, and stacked in dependency order: #56 documentation baseline → #57 Phase 1 → #58 Phase 2 → #59 Phase 3 → #60 Phase 4 → #61 Phase 5 audit → #62 Phase 6.
+- Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` returned no GitHub status checks. No browser/build/network test was run. Cloudflare dashboard settings and production deployment remain unverified.
 - Do not put credentials in project docs.
 
 ## Definition of done

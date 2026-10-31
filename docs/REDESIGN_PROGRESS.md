@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phases 1–5 have scoped implementation/audit work in stacked pull requests; Phase 6 image-loading performance and cross-page integration work started.
+**Overall status:** IN PROGRESS — Phase implementation work is staged in stacked PRs #56–#62; Phase 7 release handoff is in progress. None of these PRs is merged.
 
 ## Current phase
-Phase 6 — cross-page integration, accessibility, performance (in progress; property-card image priority is limited to the first search result; visual validation pending).
+Phase 7 — regression and release handoff (source-level review recorded; browser validation, CI checks, and Cloudflare deployment verification remain pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -25,13 +25,13 @@ Phase 6 — cross-page integration, accessibility, performance (in progress; pro
 ## Phase checklist
 - [x] Phase 0 — repository architecture and read-only schema discovery
 - [ ] Phase 0 — verify Cloudflare Pages dashboard build/output/branch/auto-deploy settings
-- [ ] Phase 1 — design system and shared public UI (in progress)
-- [ ] Phase 2 — homepage and search entry (in progress)
-- [ ] Phase 3 — search results and property cards (in progress)
-- [ ] Phase 4 — property detail and rich media
-- [ ] Phase 5 — communities/buildings/floor plans/units
-- [ ] Phase 6 — integration, accessibility, performance
-- [ ] Phase 7 — regression and release handoff
+- [x] Phase 1 — shared design/accessibility foundation implemented (PR #57; visual validation pending)
+- [x] Phase 2 — homepage/search-entry copy and mobile text improvements implemented (PR #58; visual validation pending)
+- [x] Phase 3 — property-card and listing-control accessibility improvements implemented (PR #59; browser validation pending)
+- [x] Phase 4 — property gallery accessibility and detail-content corrections implemented (PR #60; browser validation pending)
+- [x] Phase 5 — community/unit/floor-plan schema audit documented (PR #61; no synthetic data added)
+- [x] Phase 6 — property-card image-loading priority optimization implemented (PR #62; network validation pending)
+- [ ] Phase 7 — regression and release handoff (in progress)
 
 ## Phase 1 work log — 2026-10-30
 - Added an additive shared public design-token set to `css/cp-marketing.css`: font-size aliases, line-height values, control heights, focus-ring token, content-width aliases, and motion-duration aliases. Applied the shared 15px type token, 44px minimum control-height token, and standard motion token to the common public `.btn` component.
@@ -85,17 +85,13 @@ Phase 6 — cross-page integration, accessibility, performance (in progress; pro
 - Validation: source-level checks only; no browser, network waterfall, build, or local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified.
 
-## Next exact action
-Continue Phase 6 audit for duplicated CSS, focus visibility, URL/query state, responsive card and property detail behavior, and performance regressions. Then perform the permitted release checklist and record what could not be verified. Keep browser validation and Cloudflare deployment marked pending.
-## Required record for each phase
-- Status: Not started / In progress / Blocked / Complete
-- Goal and work completed
-- Files changed and reasons
-- Validation run and exact outcomes
-- Commit SHA/GitHub URL
-- Deployment status: Verified / Pending / Unavailable
-- Known issues/risks
-- Next exact action
+## Phase 7 work log — 2026-10-30
+- Source-level assertions passed for key requirements: homepage copy no longer claims all homes are managed by Choice; property card save state exposes `aria-pressed`; carousel group labels and 24×24px controls are present; Grid/Map state and advanced filter label associations are present; property gallery keyboard activation and focus styles are present; pet/smoking terms are filtered from structured amenity lists; photo reordering remains disabled; first result image alone is high priority.
+- GitHub PR status review: PRs #56–#62 are open, unmerged, and reported mergeable. They are intentionally stacked in order: #56 → #57 → #58 → #59 → #60 → #61 → #62.
+- GitHub combined status for Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` returned no status checks (`statuses: []`). This is not a passing test result.
+- No build, browser, visual regression, network waterfall, or live deployment test was run because repository instructions prohibit local runtime steps and browser/Cloudflare control-plane access is unavailable in this workflow.
+- Cloudflare build command, output directory, production branch, auto-deploy behavior, and current production deployment remain unverified.
+- Separate security risk remains open: RLS disabled on `public.description_enrichment_audit`; no database changes were made.
 
-## Immediate next action
-Continue Phase 1 on `phase-1/design-system`; verify token adoption and public shared styles without running prohibited local build/server steps. Keep Cloudflare dashboard settings marked unverified and do not claim deployment.
+## Next exact action
+Review and validate the stacked PRs through an approved browser/testing environment. Confirm Cloudflare Pages project settings through the dashboard before treating any merge as a verified deployment. Merge PRs in dependency order only after review; do not claim live status until deployment evidence exists. Keep the RLS finding separate from this visual redesign.
