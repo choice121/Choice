@@ -891,10 +891,14 @@ async function fetchAndRender() {
       }
     }
 
-    try {
-    const fetchTimeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
-    );
+    let fetchTimeoutId = null;
+  try {
+    const fetchTimeout = new Promise((_, reject) => {
+      fetchTimeoutId = setTimeout(
+        () => reject(new Error('Request timed out. Please check your connection and try again.')),
+        10000
+      );
+    });
     const fetchPromise = (isAdminMode && !activeShareToken && !(activeTargetIds && activeTargetIds.length))
       ? CP.Properties.getListingsAdmin({
           q:       activeSearch,
@@ -959,6 +963,8 @@ async function fetchAndRender() {
     console.error('fetchAndRender error:', err);
     renderError(err?.message);
   } finally {
+    // A successful or superseded request should not leave its timeout running.
+    if (fetchTimeoutId !== null) clearTimeout(fetchTimeoutId);
     if (requestId === activeFetchId) isLoading = false;
   }
 }
