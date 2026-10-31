@@ -204,7 +204,7 @@
     if (hasThreeDTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-cube" aria-hidden="true"></i> 3D tour</span>');
     if (hasVideoTour) mediaBadges.push('<span class="property-card-media-badge"><i class="fas fa-play" aria-hidden="true"></i> Video tour</span>');
     var mediaBadgesHtml = mediaBadges.length
-      ? '<div class="property-card-media-badges" aria-label="Available property media">' + mediaBadges.join('') + '</div>'
+      ? '<div class="property-card-media-badges" role="group" aria-label="Available property media for ' + title + '">' + mediaBadges.join('') + '</div>'
       : '';
 
     var listedLabel = listedDateLabel(p.listed_at, p.imported_at || p.created_at);
@@ -217,9 +217,9 @@
     if (photos.length > 1) {
       if (photos.length <= 6) {
         var dotItems = photos.map(function(_, i) {
-          return '<button class="property-card-dot' + (i === 0 ? ' active' : '') + '" type="button" data-idx="' + i + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="View photo ' + (i + 1) + '"></button>';
+          return '<button class="property-card-dot' + (i === 0 ? ' active' : '') + '" type="button" data-idx="' + i + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show photo ' + (i + 1) + ' of ' + title + '"></button>';
         }).join('');
-        dotsHtml = '<div class="property-card-dots" role="tablist">' + dotItems + '</div>';
+        dotsHtml = '<div class="property-card-dots" role="group" aria-label="Photo selection for ' + title + '">' + dotItems + '</div>';
       } else {
         photoCountHtml = '<div class="property-card-photo-count"><i class="fas fa-camera"></i> ' + photos.length + '</div>';
       }
@@ -255,14 +255,14 @@
           photoCountHtml +
           // Save heart — top-right, sole action on the photo
           '<div class="property-card-actions">' +
-            '<button class="property-card-save" type="button" data-id="' + id + '" aria-label="Save property">' +
-              '<i class="far fa-heart"></i>' +
+            '<button class="property-card-save" type="button" data-id="' + id + '" data-title="' + title + '" aria-label="Save rental: ' + title + '" aria-pressed="false">' +
+              '<i class="far fa-heart" aria-hidden="true"></i>' +
             '</button>' +
           '</div>' +
           // Carousel arrows — desktop only (hidden on touch via CSS)
           (photos.length > 1
-            ? '<button class="property-card-arrow property-card-arrow--prev" type="button" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>' +
-              '<button class="property-card-arrow property-card-arrow--next" type="button" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>'
+            ? '<button class="property-card-arrow property-card-arrow--prev" type="button" aria-label="Previous photo of ' + title + '"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>' +
+              '<button class="property-card-arrow property-card-arrow--next" type="button" aria-label="Next photo of ' + title + '"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>'
             : '') +
         '</div>' +
 

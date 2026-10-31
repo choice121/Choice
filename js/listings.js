@@ -1035,7 +1035,10 @@ function renderProperties(props) {
 
   // Mark saved state only — click events handled by delegated listeners (P1-A)
   grid.querySelectorAll('.property-card-save').forEach(btn => {
-    if (savedIds.has(btn.dataset.id)) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>'; }
+    const isSaved = savedIds.has(btn.dataset.id);
+    btn.setAttribute('aria-pressed', isSaved ? 'true' : 'false');
+    btn.setAttribute('aria-label', (isSaved ? 'Remove saved rental: ' : 'Save rental: ') + (btn.dataset.title || 'this property'));
+    if (isSaved) { btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>'; }
   });
 
   // Admin mode: overlay status badges and edit buttons on each card
@@ -1333,6 +1336,8 @@ document.getElementById('btnListView').addEventListener('click', () => {
   document.getElementById('mapPanel').style.display = 'none';
   document.getElementById('btnListView').classList.add('active');
   document.getElementById('btnMapView').classList.remove('active');
+  document.getElementById('btnListView').setAttribute('aria-pressed', 'true');
+  document.getElementById('btnMapView').setAttribute('aria-pressed', 'false');
 });
 document.getElementById('btnMapView').addEventListener('click', async () => {
   currentView = 'map';
@@ -1340,6 +1345,8 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   document.getElementById('mapPanel').style.display = 'block';
   document.getElementById('btnMapView').classList.add('active');
   document.getElementById('btnListView').classList.remove('active');
+  document.getElementById('btnMapView').setAttribute('aria-pressed', 'true');
+  document.getElementById('btnListView').setAttribute('aria-pressed', 'false');
   // Show loading spinner while Leaflet loads
   const mapSpinner = document.getElementById('mapLoadingSpinner');
   if (mapSpinner) mapSpinner.style.display = 'flex';
@@ -1503,19 +1510,31 @@ async function toggleSave(id, btn) {
     if (saved) {
       savedIds.add(id);
       btn.classList.add('saved');
-      btn.innerHTML = '<i class="fas fa-heart"></i>';
+      btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>';
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', 'Remove saved rental: ' + (btn.dataset.title || 'this property'));
       showToast('Property saved!', 'success');
     } else {
       savedIds.delete(id);
       btn.classList.remove('saved');
-      btn.innerHTML = '<i class="far fa-heart"></i>';
+      btn.innerHTML = '<i class="far fa-heart" aria-hidden="true"></i>';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', 'Save rental: ' + (btn.dataset.title || 'this property'));
     }
   } catch(_) {
     // Fallback: localStorage only
     if (savedIds.has(id)) {
-      savedIds.delete(id); btn.classList.remove('saved'); btn.innerHTML = '<i class="far fa-heart"></i>';
+      savedIds.delete(id);
+      btn.classList.remove('saved');
+      btn.innerHTML = '<i class="far fa-heart" aria-hidden="true"></i>';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', 'Save rental: ' + (btn.dataset.title || 'this property'));
     } else {
-      savedIds.add(id); btn.classList.add('saved'); btn.innerHTML = '<i class="fas fa-heart"></i>';
+      savedIds.add(id);
+      btn.classList.add('saved');
+      btn.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>';
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', 'Remove saved rental: ' + (btn.dataset.title || 'this property'));
       showToast('Property saved!', 'success');
     }
     localStorage.setItem('cp_saved', JSON.stringify([...savedIds]));
