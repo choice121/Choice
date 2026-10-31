@@ -234,7 +234,7 @@ export function normalizeTimestamp(v: unknown): string | null {
   const iso = s.includes('T') || s.includes('Z') || s.includes(' ') ? s : `${s}T00:00:00Z`;
   try {
     const d = new Date(iso);
-    if (!isNaN(d.getTime())) return d.toISOString();
+    if (!isNaN(d.getTime())) return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
   } catch { /* ignore */ }
   return s;
 }
@@ -258,6 +258,7 @@ export interface PipelineRecordInput {
   lng?: number | null;
   location_context?: string | null;
   property_type?: string | null;
+  rent_basis?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
@@ -309,6 +310,7 @@ export interface PipelineRecordInput {
   agent_image_url?: string | null;
   poster_landlord_id?: string | null;
   original_data?: string | null;
+  unit_options?: unknown;
   edited_fields?: string | null;
   inferred_features?: string | null;
   listed_at?: string | null;
@@ -391,6 +393,65 @@ function normalizeMediaCollection(media: unknown): Record<string, unknown>[] {
   return normalized;
 }
 
+function normalizeUnitOptionRecord(item: unknown): Record<string, unknown> | null {
+  if (!item || typeof item !== 'object') return null;
+  const raw = item as Record<string, unknown>;
+  const sourceKind = safeStr(raw.source_kind) ?? safeStr(raw.sourceKind) ?? safeStr(raw.kind) ?? 'available_unit';
+  const unitNumber = safeStr(raw.unit_number) ?? safeStr(raw.unitNumber) ?? null;
+  const floorPlanName = safeStr(raw.floor_plan_name) ?? safeStr(raw.floorPlanName) ?? null;
+  const bedrooms = safeFloat(raw.bedrooms) ?? safeFloat(raw.beds) ?? null;
+  const bathrooms = safeFloat(raw.bathrooms) ?? safeFloat(raw.baths) ?? null;
+  const halfBathrooms = safeInt(raw.half_bathrooms) ?? safeInt(raw.halfBathrooms) ?? null;
+  const squareFootage = safeInt(raw.square_footage) ?? safeInt(raw.sqft) ?? null;
+  const monthlyRent = safeInt(raw.monthly_rent) ?? safeInt(raw.rent) ?? null;
+  const startingRent = safeInt(raw.starting_rent) ?? safeInt(raw.startingRent) ?? null;
+  const rentBasis = safeStr(raw.rent_basis) ?? safeStr(raw.rentBasis) ?? null;
+
+  if (!unitNumber && !floorPlanName && bedrooms == null && bathrooms == null && halfBathrooms == null && squareFootage == null && monthlyRent == null && startingRent == null && !rentBasis) {
+    return null;
+  }
+
+  return {
+    source_kind: sourceKind,
+    unit_number: unitNumber,
+    floor_plan_name: floorPlanName,
+    bedrooms,
+    bathrooms,
+    half_bathrooms: halfBathrooms,
+    square_footage: squareFootage,
+    monthly_rent: monthlyRent,
+    starting_rent: startingRent,
+    rent_basis: rentBasis,
+  };
+}
+
+function normalizeUnitOptionsCollection(unitOptions: unknown): Record<string, unknown>[] {
+  const allUnits: unknown[] = Array.isArray(unitOptions) ? unitOptions : [];
+  const normalized: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+
+  for (const item of allUnits) {
+    const record = normalizeUnitOptionRecord(item);
+    if (!record) continue;
+    const key = JSON.stringify({
+      source_kind: record.source_kind,
+      unit_number: record.unit_number,
+      floor_plan_name: record.floor_plan_name,
+      bedrooms: record.bedrooms,
+      bathrooms: record.bathrooms,
+      square_footage: record.square_footage,
+      monthly_rent: record.monthly_rent,
+      starting_rent: record.starting_rent,
+      rent_basis: record.rent_basis,
+    });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(record);
+  }
+
+  return normalized;
+}
+
 export function buildPipelineRecord(body: PipelineRecordInput): Record<string, unknown> {
   const source = normalizeSource(body.source);
   const propType = normalizePropType(body.property_type);
@@ -402,6 +463,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
   const sourceStatus = safeStr(body.source_status) ?? 'available';
   const lastVerifiedAt = normalizeTimestamp(body.last_verified_at) ?? null;
   const mediaItems = normalizeMediaCollection(body.media);
+  const unitOptions = normalizeUnitOptionsCollection(body.unit_options);
   const legacyTour = safeStr(body.virtual_tour_url);
   if (legacyTour) {
     const hasLegacyTour = mediaItems.some((item) => String(item.kind) === 'virtual_tour' || String(item.kind) === 'tour_3d');
@@ -471,9 +533,11 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     building_name: safeStr(body.building_name),
     is_multi_unit: safeBool(body.is_multi_unit),
     price_range: safeStr(body.price_range),
+    rent_basis: safeStr(body.rent_basis),
     floors: safeInt(body.floors),
     total_units: safeInt(body.total_units),
     media:       mediaItems,
+    unit_options: unitOptions,
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
@@ -520,6 +584,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     virtual_tour_url:     safeStr(body.virtual_tour_url),
 
     // Financials
+    rent_basis:           safeStr(body.rent_basis),
     monthly_rent:         safeInt(body.monthly_rent),
     security_deposit:     safeInt(body.security_deposit),
     last_months_rent:     safeInt(body.last_months_rent),
@@ -573,6 +638,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
     original_data:        safeStr(body.original_data) ?? originalData,
+    unit_options:         unitOptions,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,
