@@ -2,14 +2,10 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
-<<<<<<< HEAD
-**Overall status:** Core redesign PRs #56–#63 and marketplace-copy PR #64 are merged to `main`. Follow-up fixes #65 (listing request race), #66 (property media), and the homepage search-form regression are being handled separately; browser regression testing and independent Cloudflare production verification remain pending.
-=======
-**Overall status:** Core redesign and marketplace-copy accuracy work is merged. Phase 8 property-media reliability is in progress on branch `phase-8/property-media-reliability`. Browser regression testing, full visual verification, and independent Cloudflare production deployment verification remain pending.
->>>>>>> main
+**Overall status:** Core redesign PRs #56–#63, marketplace-copy PR #64, and follow-up fixes #65 (listing request race), #66 (property media), and #67 (homepage search submission) are merged to `main`. The owner reports successful Cloudflare deployment, but the live site is still reported to show the old UI. Production visual verification and Cloudflare project/build configuration confirmation remain pending.
 
 ## Current phase
-Phase 8 — property-media reliability and accessible floor/media controls. This phase validates tours before presenting them, improves Vimeo URL support, makes media-card actions keyboard-operable, and corrects floor filter semantics. Browser regression testing remains a required release gate.
+Final release verification — resolve the reported production/source mismatch, apply final public-marketplace visual polish, verify the Cloudflare Pages project and output settings, then complete browser regression testing. PR #66's property-media reliability changes are merged; browser/device and real-media verification remain open.
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -143,3 +139,11 @@ Run the browser regression checklist against the deployed site: homepage and nav
 - Updated the hero form to use a stable id="heroSearchForm" and one JavaScript submit listener that prevents native page submission and calls the existing goToListings() function. Removed duplicate click and Enter-key handlers; button clicks and keyboard form submission now share the same path.
 - Changed files in branch fix/home-search-form-submit: index.html, docs/REDESIGN_PROGRESS.md, docs/AI_HANDOFF.md, and docs/MARKETPLACE_REDESIGN_PLAN.md.
 
+
+
+## Final UI release patch — 2026-10-31
+- Confirmed through GitHub API that PRs #65, #66, and #67 are merged to `main`.
+- Added `css/marketplace-final-polish.css` for a consistent public marketplace treatment: responsive property-card grid, improved card hierarchy, filter/results controls, homepage featured-card polish, property-detail surface styling, and visible focus states. It is scoped to the public homepage, listings, and property detail pages.
+- Bumped public-page CSS query versions to `20261031` and added `data-ui-release="2026-10-31-final"` to the three page bodies. The marker gives a quick source-level check that the expected HTML revision is actually being served.
+- Added explicit no-store caching for the root route in `_headers`; existing HTML and CSS headers already require revalidation.
+- Validation: GitHub source review and source-level assertions only. No local runtime/build, live HTTP verification, browser visual test, or Cloudflare dashboard inspection was available. Do not claim the visual release passes until the live page contains the release marker and browser checks are completed.
