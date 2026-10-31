@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { isPlayableTourMedia } from '../js/tour-media.mjs';
 import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '../js/property-tour-utils.mjs';
 
-// Test Fixtures & Logic Mirror for headless testing
+// Production tour utility plus focused media-viewer fixtures
 function normalizeUrl(u) {
   if (!u || typeof u !== 'string') return '';
   return u.trim().replace(/\/+$/, '').toLowerCase();
@@ -220,4 +220,4 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   console.log('✅ Test 8 Passed: Production media rendering accepts supported media only');
 }
 
-console.log('--- ALL PROPERTY MEDIA TESTS DEFINED (8 groups) ---');
+console.log('--- ALL PROPERTY MEDIA TESTS PASSED (8 groups) ---');
