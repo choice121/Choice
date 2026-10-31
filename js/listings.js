@@ -1336,6 +1336,8 @@ document.getElementById('btnListView').addEventListener('click', () => {
   document.getElementById('mapPanel').style.display = 'none';
   document.getElementById('btnListView').classList.add('active');
   document.getElementById('btnMapView').classList.remove('active');
+  document.getElementById('btnListView').setAttribute('aria-pressed', 'true');
+  document.getElementById('btnMapView').setAttribute('aria-pressed', 'false');
 });
 document.getElementById('btnMapView').addEventListener('click', async () => {
   currentView = 'map';
@@ -1343,6 +1345,8 @@ document.getElementById('btnMapView').addEventListener('click', async () => {
   document.getElementById('mapPanel').style.display = 'block';
   document.getElementById('btnMapView').classList.add('active');
   document.getElementById('btnListView').classList.remove('active');
+  document.getElementById('btnMapView').setAttribute('aria-pressed', 'true');
+  document.getElementById('btnListView').setAttribute('aria-pressed', 'false');
   // Show loading spinner while Leaflet loads
   const mapSpinner = document.getElementById('mapLoadingSpinner');
   if (mapSpinner) mapSpinner.style.display = 'flex';
