@@ -79,6 +79,8 @@ Preserve listing data, links, query parameters, metadata, and redirects.
 - [x] Make mosaic side photos keyboard-operable with labelled controls and Enter/Space activation.
 - [x] Ensure clicking the main image opens the currently displayed photo, not always the first photo.
 - [x] Add visible focus styling and accessible previous/next photo labels.
+- [x] Rename the visible “Lease” tab to “Fees & details” because its content is fee and showing information, not lease terms.
+- [x] Suppress pet-policy and smoking-policy terms in public amenity/appliance/flooring/utility lists and avoid empty placeholder groups.
 - [ ] Continue reviewing gallery navigation, image error states, facts/description hierarchy, and valid video/3D display.
 - [ ] Preserve original photo order and existing application behavior; do not invent facts/media.
 - [ ] Validate responsive detail page, gallery, and application links in an approved browser environment.
