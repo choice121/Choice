@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
-**Overall status:** Core redesign PRs #56–#63 are merged to `main` at `70e1eba5e009b153fbc3b6c99763031e838fcd50`. A follow-up marketplace-copy accuracy pass is on branch `fix/marketplace-release-readiness`. Browser regression testing and Cloudflare production deployment verification remain pending.
+**Overall status:** Core redesign PRs #56–#63 and marketplace-copy PR #64 are merged to `main`. Follow-up fixes #65 (listing request race), #66 (property media), and the homepage search-form regression are being handled separately; browser regression testing and independent Cloudflare production verification remain pending.
 
 ## Current phase
 Release verification and content-accuracy follow-up (source-level review only; browser regression testing and Cloudflare production deployment verification remain pending).
@@ -110,3 +110,11 @@ Release verification and content-accuracy follow-up (source-level review only; b
 
 ## Next exact action
 Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
+
+
+## Homepage search form regression audit — 2026-10-31
+- Source audit found the hero search form used an inline onsubmit handler that programmatically clicked its own submit button, while a separate click listener performed navigation. This was redundant and could cause recursive submission behavior; inline event handlers are also incompatible with a strict CSP that blocks inline handlers.
+- Updated the hero form to use a stable id="heroSearchForm" and one JavaScript submit listener that prevents native page submission and calls the existing goToListings() function. Removed duplicate click and Enter-key handlers; button clicks and keyboard form submission now share the same path.
+- Changed files in branch fix/home-search-form-submit: index.html, docs/REDESIGN_PROGRESS.md, docs/AI_HANDOFF.md, and docs/MARKETPLACE_REDESIGN_PLAN.md.
+- Validation performed: source-level assertions confirmed the old inline handler and click wiring were removed, the form ID occurs once, and the submit handler invokes the existing navigation function. No local runtime/build/browser test was run, in accordance with repository restrictions. Cloudflare production deployment is not independently verified.
+- Related work remains separate: PR #65 listing-request race fix and PR #66 property-media reliability remain open and unmerged at the time of this audit. Do not treat this homepage fix as proof of overall browser regression completion.
