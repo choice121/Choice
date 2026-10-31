@@ -115,6 +115,9 @@
     opts = opts || {};
     const imgSizes = opts.imgSizes ||
       '(max-width: 399px) calc(100vw - 32px), (max-width: 899px) calc(50vw - 28px), (max-width: 1319px) calc(33vw - 32px), calc(25vw - 32px)';
+    // Only the first above-the-fold result may compete for high-priority image loading.
+    // Homepage featured cards and all non-first cards stay lazy-loaded.
+    const priorityFirstImage = opts.priorityFirstImage === true;
 
     const rawPhotos = (p.photo_urls && p.photo_urls.length) ? p.photo_urls : ['/assets/placeholder-property.jpg'];
     // TEMPORARY DIRECTIVE: Image reordering is disabled.
@@ -160,8 +163,8 @@
           (imgSrcset ? ' srcset="' + escAttr(imgSrcset) + '"' : '') +
           ' alt="' + title + ' photo ' + (i + 1) + '"' +
           ' sizes="' + imgSizes + '"' +
-          ' loading="' + (i === 0 ? 'eager' : 'lazy') + '"' +
-          (i === 0 ? ' fetchpriority="high"' : '') +
+          ' loading="' + (i === 0 && priorityFirstImage ? 'eager' : 'lazy') + '"' +
+          (i === 0 && priorityFirstImage ? ' fetchpriority="high"' : '') +
           ' referrerpolicy="no-referrer"' +
           ' decoding="async"' +
           ' onerror="this.onerror=null;this.srcset=\'\';this.src=\'/assets/placeholder-property.jpg\';">' +
