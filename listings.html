@@ -238,7 +238,7 @@
 <div class="filter-bar mv2-filter-bar">
   <div class="filter-bar-inner">
     <!-- Mobile-only Filters button (Fix 2) -->
-      <button class="mobile-filters-btn" id="mobileFiltersBtn">
+      <button type="button" class="mobile-filters-btn" id="mobileFiltersBtn" aria-controls="moreFiltersDropdown" aria-expanded="false">
         <i class="fas fa-sliders-h"></i> Filters
         <span class="mobile-filters-badge" id="mobileFiltersBadge" style="display:none"></span>
       </button>
@@ -255,7 +255,7 @@
     <button class="filter-pill" data-filter="parking"><i class="fas fa-car"></i> Parking</button>
 
     <div class="filter-dropdown-wrap" id="moreFiltersWrap">
-      <button class="filter-pill" id="moreFiltersBtn">
+      <button type="button" class="filter-pill" id="moreFiltersBtn" aria-controls="moreFiltersDropdown" aria-expanded="false">
         <i class="fas fa-sliders-h"></i> More Filters
         <span class="filter-active-badge" id="filterActiveBadge" style="display:none"></span>
       </button>
