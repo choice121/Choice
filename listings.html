@@ -268,7 +268,7 @@
             </button>
           </div>
         <div class="filter-dropdown-row">
-          <label>Min Bedrooms</label>
+          <label for="advMinBeds">Min Bedrooms</label>
           <select id="advMinBeds">
             <option value="">Any</option>
             <option value="0">Studio</option>
@@ -278,7 +278,7 @@
           </select>
         </div>
         <div class="filter-dropdown-row">
-          <label>Min Bathrooms</label>
+          <label for="advMinBaths">Min Bathrooms</label>
           <select id="advMinBaths">
             <option value="">Any</option>
             <option value="1">1+</option>
@@ -287,15 +287,15 @@
           </select>
         </div>
         <div class="filter-dropdown-row">
-          <label>Min Price</label>
+          <label for="advMinRent">Min Price</label>
           <input type="number" id="advMinRent" placeholder="e.g. 800" min="0" step="50">
         </div>
         <div class="filter-dropdown-row">
-          <label>Max Price</label>
+          <label for="advMaxRent">Max Price</label>
           <input type="number" id="advMaxRent" placeholder="e.g. 1500" min="0" step="50">
         </div>
         <div class="filter-dropdown-row">
-          <label>Laundry</label>
+          <label for="advLaundryFilter">Laundry</label>
           <select id="advLaundryFilter">
             <option value="">Any</option>
             <option value="in-unit">In-Unit W/D</option>
@@ -306,7 +306,7 @@
           </select>
         </div>
         <div class="filter-dropdown-row">
-          <label>Heating</label>
+          <label for="advHeatingFilter">Heating</label>
           <select id="advHeatingFilter">
             <option value="">Any</option>
             <option value="gas-forced-air">Gas Forced Air</option>
@@ -336,12 +336,12 @@
         <h2 class="listings-heading mv2-listings-heading" id="listingsHeading">Results</h2>
       </div>
       <div class="listings-controls">
-        <div class="view-toggle">
-          <button class="view-toggle-btn active" id="btnListView" aria-label="Grid view">
-            <i class="fas fa-th-large"></i> Grid
+        <div class="view-toggle" role="group" aria-label="Listing display mode">
+          <button type="button" class="view-toggle-btn active" id="btnListView" aria-label="Grid view" aria-pressed="true">
+            <i class="fas fa-th-large" aria-hidden="true"></i> Grid
           </button>
-          <button class="view-toggle-btn" id="btnMapView" aria-label="Map view">
-            <i class="fas fa-map"></i> Map
+          <button type="button" class="view-toggle-btn" id="btnMapView" aria-label="Map view" aria-pressed="false">
+            <i class="fas fa-map" aria-hidden="true"></i> Map
           </button>
         </div>
         <div class="listings-sort">
