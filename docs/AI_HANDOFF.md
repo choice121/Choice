@@ -52,3 +52,7 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 5. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, image order, and all account/application/admin workflows.
 6. After each phase, update plan/progress/handoff, commit/push, and verify deployment only where evidence is available.
 7. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
+
+## Property media nested-module cache bust — 2026-10-31
+- Branch `phase-8/property-media-reliability` now imports `tour-media.mjs` with `?v=2026103101` from `property-tour-utils.mjs`, preventing the changed validator from relying on an unversioned nested module URL after deployment.
+- This is source-reviewed only; verify cache/network behavior in the approved browser environment.
