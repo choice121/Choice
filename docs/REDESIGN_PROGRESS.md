@@ -2,10 +2,14 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
+<<<<<<< HEAD
 **Overall status:** Core redesign PRs #56–#63 and marketplace-copy PR #64 are merged to `main`. Follow-up fixes #65 (listing request race), #66 (property media), and the homepage search-form regression are being handled separately; browser regression testing and independent Cloudflare production verification remain pending.
+=======
+**Overall status:** Core redesign and marketplace-copy accuracy work is merged. Phase 8 property-media reliability is in progress on branch `phase-8/property-media-reliability`. Browser regression testing, full visual verification, and independent Cloudflare production deployment verification remain pending.
+>>>>>>> main
 
 ## Current phase
-Release verification and content-accuracy follow-up (source-level review only; browser regression testing and Cloudflare production deployment verification remain pending).
+Phase 8 — property-media reliability and accessible floor/media controls. This phase validates tours before presenting them, improves Vimeo URL support, makes media-card actions keyboard-operable, and corrects floor filter semantics. Browser regression testing remains a required release gate.
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -14,7 +18,7 @@ Release verification and content-accuracy follow-up (source-level review only; b
 - The repository describes Cloudflare Pages as the host and points to GitHub push → Pages deployment. `_headers`, `_redirects`, and `.cfpagesignore` confirm static Pages routing/security configuration. Actual Pages dashboard build command, output directory, connected branch, and auto-deploy settings cannot be independently verified with the available access. Expected repository-side build output is `dist/`; confirm dashboard values before release.
 - Public entry pages are `index.html`, `listings.html`, and `property.html`. Homepage and results share `cp-design.css`, `cp-marketing.css`, and `card-builder.js`; homepage additionally loads `premium-design.css` and `home-experience.css`. Property detail logic is in `js/property.js`; results logic is in `js/listings.js`; common API/query logic is in `js/cp-api.js`; unit rendering is in `js/property-units.mjs`; tour URL validation is in `js/tour-media.mjs`.
 - Listing queries use Supabase `public.properties` with `status = active`; public results are paginated and filtered through `CP.Properties.getListings`. Property cards use ordered `property_photos` and supported media metadata. Detail pages read `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, and `property_floors`; share-token handling supports private placement listings.
-- Read-only Supabase schema discovery completed for project `Choice` (`tlfmwetmhthpyrytrcfo`). Schema confirms `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, `property_floors`, `property_shares`, and `property_share_properties`. Current table counts reported by metadata: 2,477 properties; 67,102 photos; 13 media rows; 0 rows in units/buildings/floors. These counts are only a discovery snapshot, not product guarantees.
+- Read-only Supabase schema discovery completed for project `Choice` (`tlfmwetmhthpyrytrcfo`). Schema confirms `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, `property_floors`, `property_shares`, and `property_share_properties`. A direct read-only SQL count currently reports 2,477 properties; 52,232 photos; 13 media rows; 0 rows in units/buildings/floors. Earlier table metadata reported 67,102 photos, so reconcile this discrepancy before setting a performance baseline. Counts are snapshots, not product guarantees.
 - Critical journeys located in code: homepage search → `listings.html` query params → paginated results → `property.html?id=...` → configured application URL; property detail also exposes inquiry/contact, saved-property, photo gallery, tour, map, and related listings logic. Existing admin/tenant/landlord/auth/apply routes and importer/publishing files are separate and must remain untouched by visual-only changes.
 - Validation constraints: repository reads and read-only Supabase schema metadata were used. No build, local server, install, migrations, database writes, or live visual/browser tests were run.
 
@@ -112,9 +116,30 @@ Release verification and content-accuracy follow-up (source-level review only; b
 Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
 
 
+## Listings regression-hardening follow-up — 2026-10-31
+- Static source review found a request-race defect in `js/listings.js`: when a request was in flight, a subsequent filter/search request could be dropped by the `isLoading` guard; removing the guard without stale-response protection would also allow older results to overwrite newer filter state.
+- Added a monotonically increasing request ID. Each new request supersedes prior requests; stale success/error results are ignored, and only the latest request clears the loading state.
+- Sanitized the URL `page` parameter so invalid, non-integer, zero, or negative values normalize to page 1 instead of being passed through to the listing query.
+- Changed file: `js/listings.js`. Branch: `fix/listings-request-race`; merged to main.
+- Validation: six targeted source-level assertions passed for page normalization, request IDs, stale-success/error suppression, latest-request loading cleanup, and removal of the obsolete early-return guard.
+
+## Listing timeout cleanup audit — 2026-10-31
+- Extended the listing-request race fix to retain the 10-second timeout handle and clear it in `finally`, including when a request succeeds, fails, or is superseded by a newer request.
+- This avoids leaving a redundant timer alive after `Promise.race` has already settled. The latest-request-only loading-state behavior is unchanged.
+- Source-level assertions passed for timer handle creation/cleanup and latest-request loading-state handling.
+
+## Phase 8 work log — 2026-10-31
+- Audited the production property detail path against the existing tour validator and read-only Supabase media inventory.
+- Added a shared utility to validate supported media, deduplicate tours, keep legacy tour URLs when valid, and reject unsupported tour/provider URLs instead of showing broken viewers.
+- Extended playable URL validation for common public Vimeo numeric URLs, which the existing viewer already knows how to embed.
+- Enabled Enter/Space activation for media thumbnail controls implemented as role=button elements. Recast floor filter controls as a labelled group of toggle buttons using aria-pressed rather than tab semantics.
+- PR #66 (`phase-8/property-media-reliability`) merged to main.
+
+## Property media cache invalidation follow-up — 2026-10-31
+- Updated the utility import to `/js/tour-media.mjs?v=2026103101` (relative module URL with version query) to align nested-module cache invalidation with the property media release.
+
 ## Homepage search form regression audit — 2026-10-31
-- Source audit found the hero search form used an inline onsubmit handler that programmatically clicked its own submit button, while a separate click listener performed navigation. This was redundant and could cause recursive submission behavior; inline event handlers are also incompatible with a strict CSP that blocks inline handlers.
+- Source audit found the hero search form used an inline onsubmit handler that programmatically clicked its own submit button, while a separate click listener performed navigation.
 - Updated the hero form to use a stable id="heroSearchForm" and one JavaScript submit listener that prevents native page submission and calls the existing goToListings() function. Removed duplicate click and Enter-key handlers; button clicks and keyboard form submission now share the same path.
 - Changed files in branch fix/home-search-form-submit: index.html, docs/REDESIGN_PROGRESS.md, docs/AI_HANDOFF.md, and docs/MARKETPLACE_REDESIGN_PLAN.md.
-- Validation performed: source-level assertions confirmed the old inline handler and click wiring were removed, the form ID occurs once, and the submit handler invokes the existing navigation function. No local runtime/build/browser test was run, in accordance with repository restrictions. Cloudflare production deployment is not independently verified.
-- Related work remains separate: PR #65 listing-request race fix and PR #66 property-media reliability remain open and unmerged at the time of this audit. Do not treat this homepage fix as proof of overall browser regression completion.
+

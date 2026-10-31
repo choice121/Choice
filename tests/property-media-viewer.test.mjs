@@ -1,59 +1,10 @@
 import assert from 'node:assert/strict';
 import { isPlayableTourMedia } from '../js/tour-media.mjs';
+import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '../js/property-tour-utils.mjs';
 
-// Test Fixtures & Logic Mirror for headless testing
-function normalizeUrl(u) {
-  if (!u || typeof u !== 'string') return '';
-  return u.trim().replace(/\/+$/, '').toLowerCase();
-}
+// Production tour utility plus focused media-viewer fixtures
 
-function getPropertyTours(p) {
-  if (!p) return [];
-  const tours = [];
-  const seenUrls = new Set();
-
-  if (Array.isArray(p.property_media)) {
-    p.property_media.forEach((item, idx) => {
-      if (!item || typeof item.url !== 'string') return;
-      if (item.kind === 'virtual_tour' || item.kind === 'tour_3d' || item.kind === 'video') {
-        const norm = normalizeUrl(item.url);
-        if (norm && !seenUrls.has(norm)) {
-          seenUrls.add(norm);
-          tours.push({
-            id: item.id || `media-tour-${idx}`,
-            kind: item.kind,
-            title: item.title || (item.kind === 'video' ? 'Video Walkthrough' : '3D Virtual Tour'),
-            floor_label: item.floor_label || null,
-            provider: item.provider || null,
-            url: item.url.trim(),
-            poster_url: item.poster_url || null,
-            display_order: Number.isInteger(item.display_order) ? item.display_order : idx
-          });
-        }
-      }
-    });
-  }
-
-  if (p.virtual_tour_url && typeof p.virtual_tour_url === 'string') {
-    const rawLegacy = p.virtual_tour_url.trim();
-    const norm = normalizeUrl(rawLegacy);
-    if (norm && !seenUrls.has(norm)) {
-      seenUrls.add(norm);
-      tours.unshift({
-        id: 'legacy-vt',
-        kind: 'virtual_tour',
-        title: '3D Virtual Tour',
-        floor_label: null,
-        provider: null,
-        url: rawLegacy,
-        poster_url: null,
-        display_order: -1
-      });
-    }
-  }
-
-  return tours;
-}
+const getPropertyTours = property => collectPlayablePropertyTours(property, (_property, item) => item?.floor_label || null);
 
 function groupMediaByFloor(mediaItems) {
   const groups = new Map();
@@ -130,7 +81,7 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
 {
   const p = {
     id: 'test-2',
-    virtual_tour_url: 'https://my.matterport.com/show/?m=LEGACY999',
+    virtual_tour_url: 'https://my.matterport.com/show/?m=LEGACY99999',
     property_media: [
       {
         id: 'pm-fp1',
@@ -144,7 +95,7 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   const tours = getPropertyTours(p);
   assert.equal(tours.length, 1, 'Should include legacy tour if not present in property_media');
   assert.equal(tours[0].id, 'legacy-vt');
-  assert.equal(tours[0].url, 'https://my.matterport.com/show/?m=LEGACY999');
+  assert.equal(tours[0].url, 'https://my.matterport.com/show/?m=LEGACY99999');
   console.log('✅ Test 2 Passed: Legacy virtual_tour_url preserved when property_media has none');
 }
 
@@ -153,8 +104,8 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   const p = {
     id: 'test-3',
     property_media: [
-      { id: 't1', kind: 'tour_3d', title: 'Main Level 3D Tour', floor_label: 'Main Level', url: 'https://my.matterport.com/show/?m=AAA' },
-      { id: 't2', kind: 'virtual_tour', title: 'Second Floor 3D Tour', floor_label: 'Level 2', url: 'https://my.matterport.com/show/?m=BBB' },
+      { id: 't1', kind: 'tour_3d', title: 'Main Level 3D Tour', floor_label: 'Main Level', url: 'https://my.matterport.com/show/?m=AAA12345678' },
+      { id: 't2', kind: 'virtual_tour', title: 'Second Floor 3D Tour', floor_label: 'Level 2', url: 'https://my.matterport.com/show/?m=BBB12345678' },
       { id: 't3', kind: 'video', title: 'Full Walkthrough Video', floor_label: null, url: 'https://example.com/walkthrough.mp4' }
     ]
   };
@@ -251,7 +202,18 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://my.matterport.com/show/?m=abc123def45' }), true);
   assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://www.propertypanorama.com/instaview/ntreis/21409428' }), true);
   assert.equal(isPlayableTourMedia({ kind: 'video', url: 'https://cdn.example.test/walkthrough.mp4' }), true);
+  assert.equal(isPlayableTourMedia({ kind: 'video', url: 'https://vimeo.com/76979871' }), true, 'Common public Vimeo video URLs should be accepted');
+  assert.equal(isPlayableTourMedia({ kind: 'virtual_tour', url: 'https://tours.customprovider.com/tour/456' }), false, 'Unknown providers should not be treated as playable embeds');
   console.log('✅ Test 7 Passed: Only playable tour/video URLs are accepted');
 }
 
-console.log('--- ALL PROPERTY MEDIA TESTS PASSED (7/7) ---');
+// Test 8: Production media filtering rejects broken viewer candidates before rendering
+{
+  assert.equal(isRenderablePropertyMedia({ kind: 'virtual_tour', url: 'https://www.zillow.com/s3/hdp/home-details/images/third-party-virtual-tour/cc_ft_768.jpg' }), false);
+  assert.equal(isRenderablePropertyMedia({ kind: 'virtual_tour', url: 'https://tours.customprovider.com/tour/456' }), false);
+  assert.equal(isRenderablePropertyMedia({ kind: 'floor_plan', url: 'https://cdn.example.test/floor-plan.png' }), true);
+  assert.equal(isRenderablePropertyMedia({ kind: 'video', url: 'https://cdn.example.test/walkthrough.mp4' }), true);
+  console.log('✅ Test 8 Passed: Production media rendering accepts supported media only');
+}
+
+console.log('--- ALL PROPERTY MEDIA TESTS PASSED (8 groups) ---');

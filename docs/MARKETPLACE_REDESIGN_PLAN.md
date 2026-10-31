@@ -1,6 +1,6 @@
 # Choice Properties Marketplace Redesign — Implementation Plan
 
-**Status:** Core redesign PRs #56–#63 merged to `main`; follow-up copy accuracy and release verification in progress  
+**Status:** Core redesign and marketplace-copy accuracy changes are in `main`; Phase 8 property-media reliability is in progress on `phase-8/property-media-reliability`. Browser/visual regression, performance measurement, and independent production deployment verification remain open.  
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`
 
@@ -148,3 +148,28 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 
 ## Definition of done
 Homepage, results/cards, property details, and supported media/multi-unit experiences share a coherent responsive system; existing application/account systems remain intact; validation is recorded; every phase has a GitHub commit and updated docs; another developer can resume from the handoff/progress docs without this conversation.
+
+
+## Phase 8 — Rich media reliability and floor controls (in progress)
+- [x] Connect production tour extraction and media rendering to the existing playable-URL validator.
+- [x] Reject unsupported tour/provider URLs and image thumbnails presented as tour URLs.
+- [x] Support common public Vimeo numeric URLs, matching the viewer's existing embed behavior.
+- [x] Make role=button media thumbnail controls respond to Enter and Space.
+- [x] Represent floor filters as a labelled group of toggle buttons with `aria-pressed`, rather than tab semantics for a multi-section filter.
+- [x] Update the property page cache key and add regression assertions against the production media utility.
+- [ ] Execute the property media test suite in an approved CI/runtime environment.
+- [ ] Browser-test valid and invalid tours, multiple tours, legacy tour fallback, floor filtering, keyboard use, mobile layout, and the application journey.
+- [ ] Verify tour embeds against actual provider URLs and inspect blocked-embed/fallback behavior.
+- [ ] Measure page performance and network payloads; do not preload video/3D embeds before user intent.
+- Current read-only Supabase snapshot: 2,477 properties, 52,232 property photos, 13 property-media rows, and zero unit/building/floor rows. This is a snapshot, not a guarantee. UI support exists, but multi-unit/floor experience cannot be considered end-to-end validated without populated records.
+
+## Completion criteria for the full Zillow-inspired property experience
+- [ ] Consistent responsive information architecture across home, search results, cards, property details, and shared navigation.
+- [ ] Property gallery retains original source photo order, opens the selected image, handles missing/broken images, and supports touch and keyboard.
+- [ ] Real property facts are displayed consistently; no invented data or unsupported availability/lease claims.
+- [ ] Multi-building, multi-floor, floor-plan, and unit views render from real linked data, with useful empty states when none exists.
+- [ ] Only validated video and 3D tours are presented; supported providers embed correctly, unknown/broken providers get a safe, clear fallback, and media is lazy-loaded.
+- [ ] Search/filter/pagination/URL state, save actions, map/list modes, deep links, and application links survive regression testing.
+- [ ] Accessibility review covers keyboard, screen readers, focus, contrast, reduced motion, labels, and touch targets.
+- [ ] Performance is measured on mobile and desktop with image priority/lazy-loading, layout shifts, request counts, and media loading reviewed.
+- [ ] GitHub checks, browser/device tests, network checks, and Cloudflare Pages production deployment are documented accurately. Do not call the experience complete until the relevant checks pass.
