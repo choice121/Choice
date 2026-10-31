@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
-**Overall status:** Core redesign PRs #56–#63, marketplace-copy PR #64, and follow-up fixes #65 (listing request race), #66 (property media), and #67 (homepage search submission) are merged to `main`. The owner reports successful Cloudflare deployment, but the live site is still reported to show the old UI. Production visual verification and Cloudflare project/build configuration confirmation remain pending.
+**Overall status:** Core redesign PRs #56–#63, marketplace-copy PR #64, follow-up fixes #65–#67, and final UI/cache polish PR #68 are merged to `main`. The owner reports successful Cloudflare deployment, but the live site is still reported to show the old UI. Production visual verification and Cloudflare project/build configuration confirmation remain pending.
 
 ## Current phase
 Final release verification — resolve the reported production/source mismatch, apply final public-marketplace visual polish, verify the Cloudflare Pages project and output settings, then complete browser regression testing. PR #66's property-media reliability changes are merged; browser/device and real-media verification remain open.
@@ -142,7 +142,7 @@ Run the browser regression checklist against the deployed site: homepage and nav
 
 
 ## Final UI release patch — 2026-10-31
-- Confirmed through GitHub API that PRs #65, #66, and #67 are merged to `main`.
+- Confirmed through GitHub API that PRs #65, #66, #67, and #68 are merged to `main`; PR #68 merge commit is `fecdb7f2ebfa62e6592d3af989feafdc08ba90fb`.
 - Added `css/marketplace-final-polish.css` for a consistent public marketplace treatment: responsive property-card grid, improved card hierarchy, filter/results controls, homepage featured-card polish, property-detail surface styling, and visible focus states. It is scoped to the public homepage, listings, and property detail pages.
 - Bumped public-page CSS query versions to `20261031` and added `data-ui-release="2026-10-31-final"` to the three page bodies. The marker gives a quick source-level check that the expected HTML revision is actually being served.
 - Added explicit no-store caching for the root route in `_headers`; existing HTML and CSS headers already require revalidation.
