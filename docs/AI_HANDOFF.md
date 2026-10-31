@@ -17,21 +17,29 @@ Do not casually rewrite or break application/submission/payment flows, admin, te
 - Verify actual build/deploy behavior before introducing React/TypeScript or changing tooling.
 - Never claim a test, push, or deployment succeeded without evidence.
 
-## Known architecture
-- Public pages: `index.html`, `listings.html`, `property.html`.
-- Homepage loads multiple CSS layers: `cp-design.css`, `cp-marketing.css`, `premium-design.css`, `home-experience.css`.
-- `package.json` contains React/Vite dependencies, but `scripts/copy-static-to-dist.js` copies static HTML/assets. Verify actual production build behavior.
-- Cloudflare Pages is documented as the host. Cloudflare control-plane access is unverified.
-- GitHub repository: `choice121/Choice`.
-- GitHub write access was confirmed after the user completed setup: repository listing showed admin/push permissions and branch `docs/marketplace-redesign-plan` was created successfully.
+## Verified architecture and data flow
+- Public entry pages: `index.html`, `listings.html`, and `property.html`.
+- Shared frontend: `js/cp-api.js` (Supabase client/query helpers), `js/card-builder.js` (property cards), `js/listings.js` (results/search/map), `js/property.js` (details/gallery/tours), `js/property-units.mjs` (floor plans/units), and `js/tour-media.mjs` (supported media URL checks).
+- Homepage CSS stack: `css/cp-design.css`, `css/cp-marketing.css`, `css/premium-design.css`, `css/home-experience.css`. Listings use the shared design/marketing styles; property detail has its own inline styles plus shared CSS.
+- Supabase public schema read-only inspection confirmed `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, `property_floors`, `property_shares`, and `property_share_properties`. Current schema metadata reported 2,477 property rows, 67,102 photos, 13 property_media rows, and 0 rows in the unit/building/floor tables at inspection time.
+- Listing queries restrict normal public browsing to `status = active`; private-placement detail access is token-aware. The frontend supports property photo ordering, video/3D media, buildings/floors, unit/floor-plan data, and share-token links.
+- `package.json` build script is `AIS_BUILD=true node generate-config.js && AIS_BUILD=true node scripts/copy-static-to-dist.js`; copy script populates `dist/` with static files. Vite/React are declared but are not invoked by this script. Do not install dependencies or run local build/server under the current repository instruction.
+- `_headers`, `_redirects`, and `.cfpagesignore` show Cloudflare Pages static routing/security setup. Actual Cloudflare dashboard values (build command, output directory, production branch, auto-deploy) are still unverified.
+- The root pages reference `.agents/instructions.md`, but the path is absent on `main` (404 and no `.agents/` directory in the root listing). Follow available `AGENTS.md` and `AI_AGENT_GUIDE.md`; do not invent missing rules.
+- No local runtime, browser test, build, migration, or database write was run. No production behavior has been changed.
 
+## Separate security finding (do not silently remediate)
+The Supabase project advisor reports `public.description_enrichment_audit` has RLS disabled (critical). No changes were made. Owner should review required access and policies before enabling RLS; enabling without a policy may break legitimate workflows. This is separate from the visual redesign.
 ## Current state
-The implementation plan, progress tracker, and AI handoff documents are being committed to `docs/` on branch `docs/marketplace-redesign-plan`. No redesign implementation code has been changed. Confirm the files and commits on GitHub before continuing.
+- Plan, progress tracker, and handoff documents are committed on branch `docs/marketplace-redesign-plan`; PR #56 is open and has not been merged.
+- Phase 0 repository architecture and read-only Supabase schema discovery are documented in `docs/REDESIGN_PROGRESS.md`.
+- Phase 0 is complete for repository-side discovery, but Cloudflare Pages dashboard settings still require confirmation.
+- No redesign implementation code has been changed.
 
 ## Next actions
-1. Finish committing `docs/MARKETPLACE_REDESIGN_PLAN.md`, `docs/REDESIGN_PROGRESS.md`, and `docs/AI_HANDOFF.md` to the documentation branch.
-2. Verify file contents and commit SHAs; open a pull request to `main` rather than bypassing branch protections.
-3. Continue Phase 0 discovery in the master plan.
-4. Update progress docs when build/deployment facts are verified.
-5. Only then start Phase 1. After every phase, make scoped changes, validate, inspect diffs, update docs, commit/push, and verify deployment where possible.
-6. If blocked, record evidence, the exact blocker, next action, and required access/approval. Do not silently skip the phase or begin unrelated work.
+1. Confirm Cloudflare Pages build command, output directory, production branch, and auto-deploy setting (dashboard access was not available during discovery).
+2. Keep the security finding on `public.description_enrichment_audit` separate from the redesign; owner decides policy/remediation.
+3. Once deployment settings are confirmed, start Phase 1 on the redesign branch: propose scoped design tokens/shared UI changes before editing implementation files.
+4. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, image order, and all account/application/admin workflows.
+5. After each phase, validate only with permitted methods, inspect diffs, update plan/progress/handoff, commit/push, and verify deployment where possible.
+6. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
