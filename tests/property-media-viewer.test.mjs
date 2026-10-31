@@ -3,10 +3,6 @@ import { isPlayableTourMedia } from '../js/tour-media.mjs';
 import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '../js/property-tour-utils.mjs';
 
 // Production tour utility plus focused media-viewer fixtures
-function normalizeUrl(u) {
-  if (!u || typeof u !== 'string') return '';
-  return u.trim().replace(/\/+$/, '').toLowerCase();
-}
 
 const getPropertyTours = property => collectPlayablePropertyTours(property, (_property, item) => item?.floor_label || null);
 
