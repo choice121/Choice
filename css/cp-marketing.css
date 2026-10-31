@@ -9175,9 +9175,3 @@ body[data-portal="public"][data-page="property"] .mosaic-cell[role="button"] {
   cursor: zoom-in;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  body[data-portal="public"][data-page="property"] #mosaicMain,
-  body[data-portal="public"][data-page="property"] .mosaic-cell {
-    scroll-behavior: auto;
-  }
-}
