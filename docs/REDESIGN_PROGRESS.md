@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phase 1 design-token foundation started; Cloudflare dashboard settings remain unverified.
+**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; visual validation and later phase adoption remain pending.
 
 ## Current phase
 Phase 1 — design system and shared public UI (in progress; token foundation added, adoption and visual validation pending).
@@ -35,13 +35,14 @@ Phase 1 — design system and shared public UI (in progress; token foundation ad
 
 ## Phase 1 work log — 2026-10-30
 - Added an additive shared public design-token set to `css/cp-marketing.css`: font-size aliases, line-height values, control heights, focus-ring token, content-width aliases, and motion-duration aliases. Applied the shared 15px type token, 44px minimum control-height token, and standard motion token to the common public `.btn` component.
+- Added scoped public form-control sizing (44px minimum height and 16px input text for common form fields) and visible keyboard-focus outlines for common public forms/buttons. Added reduced-motion handling for shared public buttons, cards, and city pills.
 - Existing token values and component rules were left intact; this change creates a common vocabulary for incremental adoption in later public-page phases. No markup, JavaScript, routes, data, application flows, or portal logic was changed.
 - Validation: inspected the existing token block and reduced-motion rules before editing; verified the expected insertion point and successful GitHub file update. No browser, build, local server, or visual regression test was run because repository instructions prohibit those local runtime steps.
 - Commits: `1b8373d848b54fd61957e36a0c3b794e25c290c4` (tokens) and `39305eee825dec35fd31e8c9cbc9f12d46fe8820` (shared button adoption) on `phase-1/design-system`.
 - Deployment status: Unavailable / not verified. Cloudflare dashboard settings are still unknown; do not claim this is live.
 
 ## Next exact action
-Continue Phase 1 by auditing shared public form-control, badge, navigation, and focus styles for duplicate/conflicting rules. Make only scoped changes where impact is clear. Review the diff and PR #57. Cloudflare build/output/branch/auto-deploy settings remain a separate release-verification item.
+Phase 1 implementation foundation is in PR #57. Continue the planned sequence with Phase 2 homepage/search-entry work on a child branch, while keeping visual validation explicitly pending. Cloudflare build/output/branch/auto-deploy settings remain a separate release-verification item.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed
