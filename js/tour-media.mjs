@@ -13,7 +13,14 @@ function isYouTubeUrl(url) {
 }
 
 function isVimeoUrl(url) {
-  return /(?:^|\.)vimeo\.com$/i.test(url.hostname) && /\/video\/?\d+(?:\/|$)/.test(url.pathname);
+  const host = url.hostname.toLowerCase().replace(/^www\./, '');
+  if (!['vimeo.com', 'player.vimeo.com'].includes(host)) return false;
+  const path = url.pathname;
+  return /^\/\d+\/?$/.test(path)
+    || /^\/video\/\d+\/?$/.test(path)
+    || /^\/channels\/[^/]+\/\d+\/?$/.test(path)
+    || /^\/groups\/[^/]+\/videos\/\d+\/?$/.test(path)
+    || /^\/album\/\d+\/video\/\d+\/?$/.test(path);
 }
 
 export function isPlayableTourMedia(item) {
