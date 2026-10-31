@@ -1,6 +1,6 @@
 # Choice Properties Marketplace Redesign — Implementation Plan
 
-**Status:** In progress — Phase 1 design-token foundation  
+**Status:** Core redesign PRs #56–#63 merged to `main`; follow-up copy accuracy and release verification in progress  
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`
 
@@ -113,7 +113,9 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 - [x] Record prohibited/unavailable validation steps and the unverified Cloudflare control-plane settings.
 - [ ] Complete browser/visual and network validation in an approved environment.
 - [ ] Confirm Cloudflare Pages build command, output directory, production branch, and auto-deploy behavior.
-- [ ] Review and merge PRs in dependency order only after validation; verify deployment before claiming it is live.
+- [x] Merge core redesign PRs #56–#63 in dependency order.
+- [ ] Review and merge the follow-up marketplace-copy accuracy PR after source review; complete browser regression testing where permitted.
+- [ ] Verify Cloudflare Pages settings and production deployment before claiming the changes are live.
 
 **Acceptance:** docs match actual code and PR state; limitations are explicit; deployment is claimed only when verified.
 
@@ -139,8 +141,8 @@ Show only real available floor plans, units, prices, facts, images, and tour lin
 - The homepage loads several style layers, including `cp-design.css`, `cp-marketing.css`, `premium-design.css`, and `home-experience.css`.
 - React/Vite dependencies exist, but `scripts/copy-static-to-dist.js` copies static pages/assets; verify actual build behavior before choosing a stack.
 - Cloudflare Pages is the documented host; actual control-plane access is not confirmed.
-- GitHub write access was confirmed on 2026-10-30. PRs #56–#62 are open, unmerged, and stacked in dependency order: #56 documentation baseline → #57 Phase 1 → #58 Phase 2 → #59 Phase 3 → #60 Phase 4 → #61 Phase 5 audit → #62 Phase 6.
-- Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` returned no GitHub status checks. No browser/build/network test was run. Cloudflare dashboard settings and production deployment remain unverified.
+- GitHub write access was confirmed on 2026-10-30. Core redesign PRs #56–#63 were merged to `main` on 2026-10-31; final merge commit: `70e1eba5e009b153fbc3b6c99763031e838fcd50`. Follow-up marketplace-copy accuracy work is on branch `fix/marketplace-release-readiness` and is not yet merged.
+- The Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` had no GitHub status checks; do not treat an empty status list as passing tests. GitHub workflow success alone did not verify Cloudflare Pages production deployment. No browser/build/network test was run. Cloudflare dashboard settings and production deployment remain unverified.
 - Do not put credentials in project docs.
 
 ## Definition of done
