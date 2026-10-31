@@ -75,8 +75,15 @@ Preserve listing data, links, query parameters, metadata, and redirects.
 **Acceptance:** filters retain meaning; only supported facts appear; listing-to-detail navigation works on mobile and desktop. Browser validation remains pending.
 
 ## Phase 4 — Property detail and rich media
-Improve gallery, navigation, image error states, facts/description hierarchy, and valid video/3D display. Preserve original photo order and existing application behavior.
-**Acceptance:** no broken media sections; original first photo remains primary; existing IDs and application path work; no invented facts.
+- [x] Make the main gallery image keyboard-operable with button semantics, focusability, and Enter/Space activation.
+- [x] Make mosaic side photos keyboard-operable with labelled controls and Enter/Space activation.
+- [x] Ensure clicking the main image opens the currently displayed photo, not always the first photo.
+- [x] Add visible focus styling and accessible previous/next photo labels.
+- [ ] Continue reviewing gallery navigation, image error states, facts/description hierarchy, and valid video/3D display.
+- [ ] Preserve original photo order and existing application behavior; do not invent facts/media.
+- [ ] Validate responsive detail page, gallery, and application links in an approved browser environment.
+
+**Acceptance:** no broken media sections; original first photo remains primary; existing IDs and application path work; no invented facts. Browser validation remains pending.
 
 ## Phase 5 — Communities, buildings, floor plans, units
 Verify actual schema/API fields and relationships before UI work. Show only real available floor plans, units, prices, facts, images, and tour links. Document data gaps; obtain approval before schema/ingestion changes.
