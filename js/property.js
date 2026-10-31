@@ -846,7 +846,7 @@ function renderProperty(p) {
     hasAmenities = true;
     document.getElementById('appliancesSection').style.display = '';
     document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
