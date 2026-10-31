@@ -831,41 +831,45 @@ function renderProperty(p) {
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
-    hasAmenities = true;
     const amenityItems = p.amenities
       .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
+      hasAmenities = true;
       document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
-    } else {
-      document.getElementById('amenitiesGrid').innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
     }
   }
   if (p.appliances?.length) {
-    hasAmenities = true;
-    document.getElementById('appliancesSection').style.display = '';
-    document.getElementById('appliancesGrid').innerHTML = p.appliances
+    const applianceItems = p.appliances
       .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
-      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`);
+    if (applianceItems.length) {
+      hasAmenities = true;
+      document.getElementById('appliancesSection').style.display = '';
+      document.getElementById('appliancesGrid').innerHTML = applianceItems.join('');
+    }
   }
   if (p.flooring?.length) {
-    hasAmenities = true;
-    const flooringSec = document.getElementById('appliancesSection');
-    let flooringDiv = document.getElementById('flooringSection');
-    if (!flooringDiv) {
-      flooringDiv = document.createElement('div');
-      flooringDiv.id = 'flooringSection';
-      flooringDiv.style.marginTop = '20px';
-      flooringDiv.innerHTML = `
-        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
-        <div class="amenities-grid" id="flooringGrid"></div>`;
-      flooringSec.insertAdjacentElement('afterend', flooringDiv);
-    }
-    flooringDiv.style.display = '';
-    document.getElementById('flooringGrid').innerHTML = p.flooring
+    const flooringItems = p.flooring
       .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !isRestrictedPropertyDetail(f))
-      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
+      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`);
+    if (flooringItems.length) {
+      hasAmenities = true;
+      const flooringSec = document.getElementById('appliancesSection');
+      let flooringDiv = document.getElementById('flooringSection');
+      if (!flooringDiv) {
+        flooringDiv = document.createElement('div');
+        flooringDiv.id = 'flooringSection';
+        flooringDiv.style.marginTop = '20px';
+        flooringDiv.innerHTML = `
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
+          <div class="amenities-grid" id="flooringGrid"></div>`;
+        flooringSec.insertAdjacentElement('afterend', flooringDiv);
+      }
+      flooringDiv.style.display = '';
+      document.getElementById('flooringGrid').innerHTML = flooringItems.join('');
+    }
   }
 
   const utilRows = [];
