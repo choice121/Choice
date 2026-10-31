@@ -2013,7 +2013,16 @@ function renderGallery(photos) {
     if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
   }
 
-  mosaicMain.addEventListener('click', () => openLightbox(0));
+  mosaicMain.setAttribute('role', 'button');
+  mosaicMain.setAttribute('tabindex', '0');
+  mosaicMain.setAttribute('aria-label', 'Open property photo gallery');
+  mosaicMain.addEventListener('click', () => openLightbox(photoIndex));
+  mosaicMain.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLightbox(photoIndex);
+    }
+  });
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
@@ -2026,7 +2035,7 @@ function renderGallery(photos) {
       const remaining = photos.length - 5;
       const lqUrl = lqipUrl(url);
       return `
-        <div class="mosaic-cell" data-idx="${idx}">
+        <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open property photo ${idx+1}">
           ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
           <img src="${CONFIG.img(url,'gallery')}"
                srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
@@ -2060,7 +2069,13 @@ function renderGallery(photos) {
     // Fade out each cell's LQIP placeholder once its image loads;
     // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
-      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx, 10)));
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openLightbox(parseInt(cell.dataset.idx, 10));
+        }
+      });
       cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('dragstart', e => e.preventDefault());
       const img = cell.querySelector('img');
