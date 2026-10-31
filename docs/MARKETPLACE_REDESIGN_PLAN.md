@@ -46,7 +46,8 @@ Unify the existing Choice Properties public website into a polished, responsive 
 - [x] Audit existing shared public CSS layers and token blocks.
 - [x] Add an additive shared token vocabulary in `css/cp-marketing.css` for type scale, line-height, control heights, focus-ring, content widths, and motion durations.
 - [ ] Audit shared nav, buttons, form controls, badges, cards, and focus styles for duplicate/conflicting rules.
-- [ ] Adopt the new tokens in selected shared public components where changes are safe and impact is understood.
+- [x] Apply the shared type, minimum control-height, and motion tokens to the common public `.btn` component.
+- [ ] Audit and adopt tokens in selected public form controls, badges, and navigation where changes are safe and impact is understood.
 - [ ] Review mobile/desktop states and document validation limitations.
 
 **Acceptance:** documented and used shared tokens; mobile/desktop states considered; no routes or controls broken; no unjustified framework migration. Cloudflare deployment settings must be confirmed before release verification.
