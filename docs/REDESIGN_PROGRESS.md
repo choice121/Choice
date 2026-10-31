@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phases 1–3 have scoped implementation work in stacked pull requests; Phase 4 property detail/media accessibility work started.
+**Overall status:** IN PROGRESS — Phases 1–4 have scoped implementation work in stacked pull requests; Phase 5 community/floor-plan behavior audited against the current data snapshot.
 
 ## Current phase
-Phase 4 — property details and rich media (in progress; gallery keyboard access and current-photo behavior improved; visual validation pending).
+Phase 5 — communities, buildings, floor plans, and units (data audit complete; no synthetic UI/data added; visual validation pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -69,8 +69,16 @@ Phase 4 — property details and rich media (in progress; gallery keyboard acces
 - Validation: source-level checks and successful GitHub updates only. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified; Cloudflare settings have not been inspected.
 
+## Phase 5 work log — 2026-10-30
+- Read-only schema discovery snapshot: `property_units` 0 rows, `property_buildings` 0 rows, `property_floors` 0 rows, `property_media` 13 rows. Counts are a discovery snapshot, not a permanent guarantee.
+- Reviewed `renderPropertyUnits` and `renderMultiFloorMedia`: the unit/floor-plan section is hidden when no unit markup exists, and the media section is hidden when no valid media items exist. No fake unit counts, rent ranges, floor plans, or building data were added.
+- Current unit/floor-plan behavior remains driven by `property_units`, `property_buildings`, `property_floors`, and valid `property_media` records. Original media ordering rules remain in place.
+- Changed files: documentation only (`docs/REDESIGN_PROGRESS.md`, `docs/AI_HANDOFF.md`, `docs/MARKETPLACE_REDESIGN_PLAN.md`).
+- Validation: repository source inspection and prior read-only schema snapshot only; no browser/build/local-server test was run because repository instructions prohibit local runtime steps.
+- Deployment status: Unverified.
+
 ## Next exact action
-Continue Phase 4 review of property details, media ordering, tours, floor plans, and mobile application/contact actions. Preserve all non-negotiable display restrictions in `AGENTS.md`. Phase 4 work is on child branch `phase-4/property-detail-media`, stacked on Phase 3. Keep browser validation and deployment marked pending.
+Continue Phase 6 cross-page integration, accessibility, performance, and URL/query preservation. Phase 5 intentionally adds no frontend data because the schema snapshot contains no units/buildings/floors. Keep visual validation and Cloudflare deployment marked pending.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed
