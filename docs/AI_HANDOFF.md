@@ -8,6 +8,13 @@ Redesign the existing Choice Properties public rental marketplace as a unified, 
 ## Preserve
 Do not casually rewrite or break application/submission/payment flows, admin, tenant/landlord dashboards, auth, Supabase integrations, property importer/browser extension, scraper/publishing pipeline, or policy pages. Do not change database schema/data or ingestion behavior without explicit approval.
 
+## Current active work
+- Phase 8 is being prepared on branch `phase-8/property-media-reliability`; it is not merged or deployed.
+- The property detail page already has photo gallery, tour modal, floor-media grouping, and unit/building/floor rendering code. A read-only current database snapshot showed 0 unit, building, and floor rows and only 13 property-media rows, so the feature architecture exists but live coverage/data cannot yet be considered complete.
+- Phase 8 connects the existing playable-tour URL validator to production rendering, rejects unsupported media URLs, adds common Vimeo URL support, enables keyboard activation for media thumbnails, and corrects floor filter button semantics.
+- Do not claim the full Zillow-inspired experience is complete. Browser/device tests, real media verification, performance measurement, and Cloudflare deployment verification remain open.
+- Continue in phases; do not create or populate unit/building/floor data or change schema without explicit approval.
+
 ## Critical repository rules
 - Follow root instructions and `.agents/` rules.
 - Existing HTML comments specify edit → GitHub push → Cloudflare Pages and prohibit `npm install`, starting a server, creating `config.js`, local DB connections/migrations, and runtime/workflow/environment configuration.
@@ -21,7 +28,7 @@ Do not casually rewrite or break application/submission/payment flows, admin, te
 - Public entry pages: `index.html`, `listings.html`, and `property.html`.
 - Shared frontend: `js/cp-api.js` (Supabase client/query helpers), `js/card-builder.js` (property cards), `js/listings.js` (results/search/map), `js/property.js` (details/gallery/tours), `js/property-units.mjs` (floor plans/units), and `js/tour-media.mjs` (supported media URL checks).
 - Homepage CSS stack: `css/cp-design.css`, `css/cp-marketing.css`, `css/premium-design.css`, `css/home-experience.css`. Listings use the shared design/marketing styles; property detail has its own inline styles plus shared CSS.
-- Supabase public schema read-only inspection confirmed `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, `property_floors`, `property_shares`, and `property_share_properties`. Current schema metadata reported 2,477 property rows, 67,102 photos, 13 property_media rows, and 0 rows in the unit/building/floor tables at inspection time.
+- Supabase public schema read-only inspection confirmed `properties`, `property_photos`, `property_media`, `property_units`, `property_buildings`, `property_floors`, `property_shares`, and `property_share_properties`. Current direct read-only SQL count: 2,477 properties, 52,232 photos, 13 property_media rows, and 0 rows in the unit/building/floor tables. Earlier table metadata reported 67,102 photos; reconcile this discrepancy before setting a performance baseline.
 - Listing queries restrict normal public browsing to `status = active`; private-placement detail access is token-aware. The frontend supports property photo ordering, video/3D media, buildings/floors, unit/floor-plan data, and share-token links.
 - `package.json` build script is `AIS_BUILD=true node generate-config.js && AIS_BUILD=true node scripts/copy-static-to-dist.js`; copy script populates `dist/` with static files. Vite/React are declared but are not invoked by this script. Do not install dependencies or run local build/server under the current repository instruction.
 - `_headers`, `_redirects`, and `.cfpagesignore` show Cloudflare Pages static routing/security setup. Actual Cloudflare dashboard values (build command, output directory, production branch, auto-deploy) are still unverified.
@@ -51,7 +58,11 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 - Six targeted source-level assertions passed. Browser, build, network, and end-to-end checks remain unrun. Review the branch diff and test rapid filter/search changes, browser back/forward, invalid page parameters, pagination, and existing application links in an approved browser environment before merging.
 - The redesign follow-up PR #64 is already merged at `87af1b1d7722669bcb3836f0961c73d14026959e`. The owner reported completing Cloudflare deployment confirmation, but no independent Cloudflare control-plane or live-site validation was available in this workflow.
 
-
 ## Listing timeout cleanup — 2026-10-31
 - Branch `fix/listings-request-race` also clears the request timeout handle in `fetchAndRender()`'s `finally` block so completed or superseded requests do not leave redundant timers running.
 - This is source-reviewed only; browser/runtime testing remains required.
+
+## Property media nested-module cache bust — 2026-10-31
+- Branch `phase-8/property-media-reliability` now imports `tour-media.mjs` with `?v=2026103101` from `property-tour-utils.mjs`, preventing the changed validator from relying on an unversioned nested module URL after deployment.
+- This is source-reviewed only; verify cache/network behavior in the approved browser environment.
+
