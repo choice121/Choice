@@ -45,3 +45,8 @@ The Supabase project advisor reports `public.description_enrichment_audit` has R
 5. Preserve search parameters, active/private placement rules, property IDs/canonical URLs, application links, image order, and all account/application/admin workflows.
 6. After each phase, update plan/progress/handoff, commit/push, and verify deployment only where evidence is available.
 7. If blocked, record the evidence and exact next action; do not silently skip controls or begin unrelated work.
+
+## Current regression-hardening branch — 2026-10-31
+- Branch `fix/listings-request-race` contains an unmerged change to `js/listings.js` that prevents overlapping listing requests from dropping newer filter/search changes or allowing stale responses to replace current results. It also normalizes invalid URL page numbers to page 1.
+- Six targeted source-level assertions passed. Browser, build, network, and end-to-end checks remain unrun. Review the branch diff and test rapid filter/search changes, browser back/forward, invalid page parameters, pagination, and existing application links in an approved browser environment before merging.
+- The redesign follow-up PR #64 is already merged at `87af1b1d7722669bcb3836f0961c73d14026959e`. The owner reported completing Cloudflare deployment confirmation, but no independent Cloudflare control-plane or live-site validation was available in this workflow.
