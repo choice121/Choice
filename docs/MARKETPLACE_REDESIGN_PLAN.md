@@ -57,6 +57,7 @@ Unify the existing Choice Properties public website into a polished, responsive 
 - [x] Replace hero copy that implied all listings are managed by Choice Properties with accurate rental-listing language.
 - [x] Replace unverified operational trust-strip claims with functional descriptions of the renter journey.
 - [x] Set mobile hero search input/select text to 16px for readability and to avoid iOS automatic input zoom.
+- [x] Source-audit and consolidate hero search form submission into one native submit handler so click and keyboard submission share the existing query-navigation path.
 - [ ] Review responsive hero, location search, quick filters, city links, featured listings, and primary CTA.
 - [ ] Validate search query mapping and keyboard/mobile behavior in an approved browser environment.
 
