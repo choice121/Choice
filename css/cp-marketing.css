@@ -132,15 +132,15 @@ body[data-portal="public"] .btn {
   gap: var(--m-s-2);
   padding: 10px 18px;
   border-radius: var(--m-r);
-  font-size: 14.5px;
+  font-size: var(--m-font-md);
   font-weight: 600;
   letter-spacing: -0.01em;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: all var(--m-dur) var(--m-ease);
-  min-height: 40px;
+  transition: all var(--m-motion-standard) var(--m-ease);
+  min-height: var(--m-control-md);
 }
 body[data-portal="public"] .btn-primary {
   background: var(--m-brand);
