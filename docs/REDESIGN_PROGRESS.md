@@ -1,11 +1,11 @@
 # Marketplace Redesign — Progress Tracker
 
-**Last updated:** 2026-10-30  
+**Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phase implementation work is staged in stacked PRs #56–#62; Phase 7 release handoff is in progress. None of these PRs is merged.
+**Overall status:** Core redesign PRs #56–#63 are merged to `main` at `70e1eba5e009b153fbc3b6c99763031e838fcd50`. A follow-up marketplace-copy accuracy pass is on branch `fix/marketplace-release-readiness`. Browser regression testing and Cloudflare production deployment verification remain pending.
 
 ## Current phase
-Phase 7 — regression and release handoff (source-level review recorded; browser validation, CI checks, and Cloudflare deployment verification remain pending).
+Release verification and content-accuracy follow-up (source-level review only; browser regression testing and Cloudflare production deployment verification remain pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -31,7 +31,7 @@ Phase 7 — regression and release handoff (source-level review recorded; browse
 - [x] Phase 4 — property gallery accessibility and detail-content corrections implemented (PR #60; browser validation pending)
 - [x] Phase 5 — community/unit/floor-plan schema audit documented (PR #61; no synthetic data added)
 - [x] Phase 6 — property-card image-loading priority optimization implemented (PR #62; network validation pending)
-- [ ] Phase 7 — regression and release handoff (in progress)
+- [x] Phase 7 — release handoff documented; production deployment and browser validation remain open release gates
 
 ## Phase 1 work log — 2026-10-30
 - Added an additive shared public design-token set to `css/cp-marketing.css`: font-size aliases, line-height values, control heights, focus-ring token, content-width aliases, and motion-duration aliases. Applied the shared 15px type token, 44px minimum control-height token, and standard motion token to the common public `.btn` component.
@@ -87,11 +87,19 @@ Phase 7 — regression and release handoff (source-level review recorded; browse
 
 ## Phase 7 work log — 2026-10-30
 - Source-level assertions passed for key requirements: homepage copy no longer claims all homes are managed by Choice; property card save state exposes `aria-pressed`; carousel group labels and 24×24px controls are present; Grid/Map state and advanced filter label associations are present; property gallery keyboard activation and focus styles are present; pet/smoking terms are filtered from structured amenity lists; photo reordering remains disabled; first result image alone is high priority.
-- GitHub PR status review: PRs #56–#62 are open, unmerged, and reported mergeable. They are intentionally stacked in order: #56 → #57 → #58 → #59 → #60 → #61 → #62.
+- GitHub PRs #56–#63 were merged to `main`; final redesign merge commit is `70e1eba5e009b153fbc3b6c99763031e838fcd50`. This corrects the earlier staged-PR status recorded when this work log was written.
 - GitHub combined status for Phase 6 head commit `2c6d83159ddd8eb7d3e60c2389c80620a1c0b54e` returned no status checks (`statuses: []`). This is not a passing test result.
 - No build, browser, visual regression, network waterfall, or live deployment test was run because repository instructions prohibit local runtime steps and browser/Cloudflare control-plane access is unavailable in this workflow.
 - Cloudflare build command, output directory, production branch, auto-deploy behavior, and current production deployment remain unverified.
 - Separate security risk remains open: RLS disabled on `public.description_enrichment_audit`; no database changes were made.
 
+## Follow-up marketplace-copy accuracy pass — 2026-10-31
+- Removed unsupported verification and fixed-duration application claims from core homepage/listing metadata and listing-page hero copy.
+- Replaced named renter testimonials that had no supporting source in the repository with neutral descriptions of actual marketplace functions.
+- Reworked homepage trust/process sections so they describe browsing, comparing, reviewing details, and application instructions rather than claiming all properties are Choice-managed, photos are always verified, or fees/holding arrangements apply uniformly.
+- Aligned public navigation labels and the About / How It Works pages with the rental-marketplace model; corrected the How It Works page's stray pre-doctype metadata fragment and renter/landlord title mismatch.
+- Changed files: `index.html`, `listings.html`, `property.html`, `components/nav.html`, `about.html`, `how-it-works.html`. This follow-up is on branch `fix/marketplace-release-readiness`; it is not merged or deployed yet.
+- Validation: GitHub source reads and targeted string assertions only. No local build, browser, live HTTP, or Cloudflare deployment test was run; repository rules prohibit local runtime steps and Cloudflare control-plane access is unavailable.
+
 ## Next exact action
-Review and validate the stacked PRs through an approved browser/testing environment. Confirm Cloudflare Pages project settings through the dashboard before treating any merge as a verified deployment. Merge PRs in dependency order only after review; do not claim live status until deployment evidence exists. Keep the RLS finding separate from this visual redesign.
+Review the follow-up diff and PR, then run visual/browser regression tests in an approved environment. Verify Cloudflare Pages build command, output directory, production branch, auto-deploy behavior, and the production deployment matching `70e1eba5e009b153fbc3b6c99763031e838fcd50` (or the eventual follow-up merge commit) before claiming the site is live. Keep the Supabase RLS finding separate from the redesign.
