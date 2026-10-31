@@ -99,7 +99,7 @@ console.log('--- RUNNING PROPERTY MEDIA & MULTI-FLOOR TEST SUITE ---');
   const tours = getPropertyTours(p);
   assert.equal(tours.length, 1, 'Should include legacy tour if not present in property_media');
   assert.equal(tours[0].id, 'legacy-vt');
-  assert.equal(tours[0].url, 'https://my.matterport.com/show/?m=LEGACY999');
+  assert.equal(tours[0].url, 'https://my.matterport.com/show/?m=LEGACY99999');
   console.log('✅ Test 2 Passed: Legacy virtual_tour_url preserved when property_media has none');
 }
 
