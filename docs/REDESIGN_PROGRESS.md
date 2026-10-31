@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-30  
 **Repository:** `choice121/Choice`  
-**Overall status:** IN PROGRESS — Phase 1 shared design/accessibility foundation implemented; Phase 2 homepage/search-entry changes committed; Phase 3 card accessibility work started.
+**Overall status:** IN PROGRESS — Phases 1–3 have scoped implementation work in stacked pull requests; Phase 4 property detail/media accessibility work started.
 
 ## Current phase
-Phase 3 — search results and property cards (in progress; card labels, saved-state announcements, and carousel controls improved; visual validation pending).
+Phase 4 — property details and rich media (in progress; gallery keyboard access and current-photo behavior improved; visual validation pending).
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -58,8 +58,19 @@ Phase 3 — search results and property cards (in progress; card labels, saved-s
 - Validation: source-level checks confirmed expected snippets and successful GitHub file updates. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
 - Deployment status: Unverified; Cloudflare settings have not been inspected.
 
+## Phase 4 work log — 2026-10-30
+- Made the primary photo mosaic keyboard-operable with button semantics, focusability, an accessible name, and Enter/Space activation.
+- Made secondary mosaic cells keyboard-operable with button semantics, focusability, property-photo labels, and Enter/Space activation.
+- Changed main-gallery activation to open the currently displayed photo rather than always resetting to photo 1. Photo array order and first-source-photo hero behavior are unchanged.
+- Added visible focus treatment for gallery controls and accessible labels/controls for previous/next photo buttons.
+- Renamed the visible “Lease” tab to “Fees & details” because its contents are application fee, certain listing-specific fees/specials, and showing instructions—not lease terms.
+- Added a public-detail filter to suppress pet-policy and smoking-policy terms from amenity, appliance, flooring, and utility labels; empty filtered groups no longer create placeholder amenity content.
+- Changed files: `property.html`, `js/property.js`, `css/cp-marketing.css`.
+- Validation: source-level checks and successful GitHub updates only. No browser/build/local-server test was run because repository instructions prohibit local runtime steps.
+- Deployment status: Unverified; Cloudflare settings have not been inspected.
+
 ## Next exact action
-Continue Phase 3 audit of results layout, card responsive behavior, sorting/filter controls, and URL/query preservation. Then proceed to Phase 4 property detail and media. Phase 2 PR #58 is based on Phase 1 PR #57; this branch is stacked on Phase 2. Keep browser validation and deployment marked pending.
+Continue Phase 4 review of property details, media ordering, tours, floor plans, and mobile application/contact actions. Preserve all non-negotiable display restrictions in `AGENTS.md`. Phase 4 work is on child branch `phase-4/property-detail-media`, stacked on Phase 3. Keep browser validation and deployment marked pending.
 ## Required record for each phase
 - Status: Not started / In progress / Blocked / Complete
 - Goal and work completed

@@ -1448,14 +1448,14 @@
   <div class="prop-split-photos" id="propSplitPhotos">
     <!-- Mosaic / swipe gallery (populated by JS) -->
     <div class="gallery-mosaic skeleton-loading" id="gallery">
-      <div class="mosaic-main" id="mosaicMain">
-        <img class="mosaic-main-img" id="mosaicMainImg" src="" alt="Property photo" fetchpriority="high" decoding="async" referrerpolicy="no-referrer">
+      <div class="mosaic-main" id="mosaicMain" role="button" tabindex="0" aria-label="Open property photo gallery">
+        <img class="mosaic-main-img" id="mosaicMainImg" src="" alt="Property photo 1" fetchpriority="high" decoding="async" referrerpolicy="no-referrer">
         <div class="mosaic-touch-shield" id="mosaicTouchShield" aria-hidden="true"></div>
       </div>
       <div class="mosaic-side" id="mosaicSide"></div>
       <!-- Mobile swipe nav -->
-      <button type="button" class="mosaic-nav-btn prev" id="mosaicPrev" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>
-      <button type="button" class="mosaic-nav-btn next" id="mosaicNext" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>
+      <button type="button" class="mosaic-nav-btn prev" id="mosaicPrev" aria-label="Previous property photo" aria-controls="mosaicMainImg"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+      <button type="button" class="mosaic-nav-btn next" id="mosaicNext" aria-label="Next property photo" aria-controls="mosaicMainImg"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
       <div class="mosaic-mobile-count" id="mosaicMobileCount" aria-live="polite">1 / 1</div>
       <!-- 3D Virtual Tour floating button (shown when property has virtual_tour_url) -->
       <button type="button" class="mosaic-tour-btn" id="mosaicTourBtn" style="display:none" aria-label="Explore 3D Virtual Tour">
@@ -1629,7 +1629,7 @@
           <i class="fas fa-bolt"></i> Utilities
         </button>
         <button class="detail-tab" data-panel="panelLease" id="tabLease" role="tab" aria-selected="false" aria-controls="panelLease" style="display:none">
-          <i class="fas fa-file-contract"></i> Lease
+          <i class="fas fa-receipt" aria-hidden="true"></i> Fees &amp; details
         </button>
       </div>
       <div class="detail-tab-panel active" id="panelAmenities" role="tabpanel" aria-labelledby="tabAmenities">

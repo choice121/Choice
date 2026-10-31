@@ -819,6 +819,11 @@ function renderProperty(p) {
     return [];
   };
 
+  // Repository rule: never render pet-policy or smoking-policy content on public property pages.
+  const isRestrictedPropertyDetail = (value) =>
+    /smok/i.test(String(value || '')) ||
+    /\b(?:pets?|dogs?|cats?|animals?)\b/i.test(String(value || ''));
+
   p.amenities = safeArr(p.amenities);
   p.appliances = safeArr(p.appliances);
   p.flooring = safeArr(p.flooring);
@@ -826,46 +831,50 @@ function renderProperty(p) {
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
-    hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
+      hasAmenities = true;
       document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
-    } else {
-      document.getElementById('amenitiesGrid').innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
     }
   }
   if (p.appliances?.length) {
-    hasAmenities = true;
-    document.getElementById('appliancesSection').style.display = '';
-    document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
-      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+    const applianceItems = p.appliances
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !isRestrictedPropertyDetail(a))
+      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`);
+    if (applianceItems.length) {
+      hasAmenities = true;
+      document.getElementById('appliancesSection').style.display = '';
+      document.getElementById('appliancesGrid').innerHTML = applianceItems.join('');
+    }
   }
   if (p.flooring?.length) {
-    hasAmenities = true;
-    const flooringSec = document.getElementById('appliancesSection');
-    let flooringDiv = document.getElementById('flooringSection');
-    if (!flooringDiv) {
-      flooringDiv = document.createElement('div');
-      flooringDiv.id = 'flooringSection';
-      flooringDiv.style.marginTop = '20px';
-      flooringDiv.innerHTML = `
-        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
-        <div class="amenities-grid" id="flooringGrid"></div>`;
-      flooringSec.insertAdjacentElement('afterend', flooringDiv);
+    const flooringItems = p.flooring
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !isRestrictedPropertyDetail(f))
+      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`);
+    if (flooringItems.length) {
+      hasAmenities = true;
+      const flooringSec = document.getElementById('appliancesSection');
+      let flooringDiv = document.getElementById('flooringSection');
+      if (!flooringDiv) {
+        flooringDiv = document.createElement('div');
+        flooringDiv.id = 'flooringSection';
+        flooringDiv.style.marginTop = '20px';
+        flooringDiv.innerHTML = `
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px">Flooring</div>
+          <div class="amenities-grid" id="flooringGrid"></div>`;
+        flooringSec.insertAdjacentElement('afterend', flooringDiv);
+      }
+      flooringDiv.style.display = '';
+      document.getElementById('flooringGrid').innerHTML = flooringItems.join('');
     }
-    flooringDiv.style.display = '';
-    document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
-      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
   if (p.utilities_included?.length) utilRows.push(...p.utilities_included
-    .filter(u => u && !/smok/i.test(u))
+    .filter(u => u && !isRestrictedPropertyDetail(u))
     .map(u => `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
   if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
@@ -2013,7 +2022,16 @@ function renderGallery(photos) {
     if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
   }
 
-  mosaicMain.addEventListener('click', () => openLightbox(0));
+  mosaicMain.setAttribute('role', 'button');
+  mosaicMain.setAttribute('tabindex', '0');
+  mosaicMain.setAttribute('aria-label', 'Open property photo gallery');
+  mosaicMain.addEventListener('click', () => openLightbox(photoIndex));
+  mosaicMain.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLightbox(photoIndex);
+    }
+  });
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
@@ -2026,7 +2044,7 @@ function renderGallery(photos) {
       const remaining = photos.length - 5;
       const lqUrl = lqipUrl(url);
       return `
-        <div class="mosaic-cell" data-idx="${idx}">
+        <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open property photo ${idx+1}">
           ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
           <img src="${CONFIG.img(url,'gallery')}"
                srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
@@ -2060,7 +2078,13 @@ function renderGallery(photos) {
     // Fade out each cell's LQIP placeholder once its image loads;
     // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
-      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx, 10)));
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openLightbox(parseInt(cell.dataset.idx, 10));
+        }
+      });
       cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('dragstart', e => e.preventDefault());
       const img = cell.querySelector('img');

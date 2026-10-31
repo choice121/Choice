@@ -9158,3 +9158,20 @@ body[data-portal="public"] .property-card-img:focus-within .property-card-arrow 
     transition: none;
   }
 }
+
+
+/* Phase 4 — keyboard affordances for the property photo mosaic. */
+body[data-portal="public"][data-page="property"] #mosaicMain:focus-visible,
+body[data-portal="public"][data-page="property"] .mosaic-cell:focus-visible {
+  outline: 3px solid var(--m-brand, #006aff);
+  outline-offset: -3px;
+}
+
+body[data-portal="public"][data-page="property"] #mosaicMain {
+  cursor: zoom-in;
+}
+
+body[data-portal="public"][data-page="property"] .mosaic-cell[role="button"] {
+  cursor: zoom-in;
+}
+
