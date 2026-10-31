@@ -88,8 +88,14 @@ Preserve listing data, links, query parameters, metadata, and redirects.
 **Acceptance:** no broken media sections; original first photo remains primary; existing IDs and application path work; no invented facts. Browser validation remains pending.
 
 ## Phase 5 — Communities, buildings, floor plans, units
-Verify actual schema/API fields and relationships before UI work. Show only real available floor plans, units, prices, facts, images, and tour links. Document data gaps; obtain approval before schema/ingestion changes.
-**Acceptance:** standalone homes remain clean; unit links use real IDs; no unapproved migration.
+- [x] Confirm the actual tables and fields used by the property page: `property_units`, `property_buildings`, `property_floors`, and `property_media`.
+- [x] Review current renderer behavior: empty unit/floor-plan markup hides the unit section; absent/invalid media hides the media section.
+- [x] Record discovery snapshot counts: 0 `property_units`, 0 `property_buildings`, 0 `property_floors`, 13 `property_media`. These counts may change over time.
+- [x] Do not invent community/unit data or add empty placeholder content.
+- [ ] Recheck counts and relationships before future UI work when actual multi-unit inventory exists.
+
+Show only real available floor plans, units, prices, facts, images, and tour links. Document data gaps; obtain approval before schema/ingestion changes.
+**Acceptance:** standalone homes remain clean; unit links use real IDs; no unapproved migration. Browser validation remains pending.
 
 ## Phase 6 — Cross-page integration, accessibility, performance
 Review keyboard focus, contrast, labels, alt text, reduced motion, image loading, layout shifts, fonts/icons, video/3D loading, canonical URLs, metadata, redirects, and deep links. Check protected flows for unintended effects.
