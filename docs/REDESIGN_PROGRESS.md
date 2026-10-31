@@ -2,10 +2,10 @@
 
 **Last updated:** 2026-10-31  
 **Repository:** `choice121/Choice`  
-**Overall status:** Core redesign PRs #56–#63 are merged to `main` at `70e1eba5e009b153fbc3b6c99763031e838fcd50`. A follow-up marketplace-copy accuracy pass is on branch `fix/marketplace-release-readiness`. Browser regression testing and Cloudflare production deployment verification remain pending.
+**Overall status:** Core redesign and marketplace-copy accuracy work is merged. Phase 8 property-media reliability is in progress on branch `phase-8/property-media-reliability`. Browser regression testing, full visual verification, and independent Cloudflare production deployment verification remain pending.
 
 ## Current phase
-Release verification and content-accuracy follow-up (source-level review only; browser regression testing and Cloudflare production deployment verification remain pending).
+Phase 8 — property-media reliability and accessible floor/media controls. This phase validates tours before presenting them, improves Vimeo URL support, makes media-card actions keyboard-operable, and corrects floor filter semantics. Browser regression testing remains a required release gate.
 
 ## Verified architecture and data flow
 - Root rules in `AGENTS.md` and `AI_AGENT_GUIDE.md` were reviewed. The HTML pages repeat a deploy-only instruction: edit → GitHub push → Cloudflare Pages; do not install dependencies, start a server, create `config.js`, connect to a local database, run migrations, or change runtimes/workflows/environments.
@@ -110,3 +110,15 @@ Release verification and content-accuracy follow-up (source-level review only; b
 
 ## Next exact action
 Run the browser regression checklist against the deployed site: homepage and navigation; search/filter state and URL parameters; listing cards, save controls, grid/map switching and pagination; property detail/gallery keyboard controls and application links; About and How It Works pages; mobile layout, focus visibility, reduced motion, and image failures. Record pass/fail and screenshots or reproduction steps. Do not change Supabase schema or the `description_enrichment_audit` RLS finding as part of this UI phase; it remains a separate security review.
+
+
+## Phase 8 work log — 2026-10-31 (in progress)
+- Audited the production property detail path against the existing tour validator and read-only Supabase media inventory.
+- Current read-only row counts: 2,477 properties, 52,232 property photos, 13 property-media rows, and 0 rows each in property_units, property_buildings, and property_floors. The media rows include virtual tours, floor plans, and videos; counts are a snapshot and may change. This means multi-building/floor rendering exists in code but cannot be validated against populated building/floor/unit records yet.
+- Found that the production property page did not use the existing playable-tour validator when collecting/rendering tours. A non-tour URL or image thumbnail could therefore be presented as a walkthrough. Added a shared utility to validate supported media, deduplicate tours, keep legacy tour URLs when valid, and reject unsupported tour/provider URLs instead of showing broken viewers.
+- Extended playable URL validation for common public Vimeo numeric URLs, which the existing viewer already knows how to embed.
+- Enabled Enter/Space activation for media thumbnail controls implemented as role=button elements. Recast floor filter controls as a labelled group of toggle buttons using aria-pressed rather than tab semantics, because they filter visible sections rather than switch a single tab panel.
+- Updated the property page script cache key so Cloudflare/browser caches can pick up the change after deployment.
+- Added regression assertions around the shared tour extraction utility, common Vimeo URLs, unsupported providers, valid Matterport URLs, and multi-tour grouping. Tests have not been executed in a runtime because repository instructions prohibit local runtime/build steps; source inspection only.
+- No database/schema changes, media ingestion changes, application-flow changes, or hosting/workflow changes.
+- Remaining release checks: run the existing property-media test suite in an approved CI environment; browser-test property pages with valid and invalid media, keyboard interaction, mobile layout, floor filtering, legacy tour fallback, and listing-to-application links; verify Cloudflare Pages deployment and network/performance behavior.
