@@ -7,6 +7,7 @@
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
 import { initPropertyUnits, renderPropertyUnitsHtml, summarizePropertyUnits } from '/js/property-units.mjs';
+import { collectPlayablePropertyTours, isRenderablePropertyMedia } from '/js/property-tour-utils.mjs?v=2026103101';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -1122,58 +1123,7 @@ function loadLeaflet() {
 
 // ── Unified Property Tours Extraction & Deduplication ───────────────────
 function getPropertyTours(p) {
-  if (!p) return [];
-  const tours = [];
-  const seenUrls = new Set();
-
-  function normalizeUrl(u) {
-    if (!u || typeof u !== 'string') return '';
-    return u.trim().replace(/\/+$/, '').toLowerCase();
-  }
-
-  // 1. Tours from property_media
-  if (Array.isArray(p.property_media)) {
-    p.property_media.forEach((item, idx) => {
-      if (!item || typeof item.url !== 'string') return;
-      if (item.kind === 'virtual_tour' || item.kind === 'tour_3d' || item.kind === 'video') {
-        const norm = normalizeUrl(item.url);
-        if (norm && !seenUrls.has(norm)) {
-          seenUrls.add(norm);
-          tours.push({
-            id: item.id || `media-tour-${idx}`,
-            kind: item.kind,
-            title: item.title || (item.kind === 'video' ? 'Video Walkthrough' : '3D Virtual Tour'),
-            floor_label: getMediaFloorLabel(p, item) || null,
-            provider: item.provider || null,
-            url: item.url.trim(),
-            poster_url: item.poster_url || null,
-            display_order: Number.isInteger(item.display_order) ? item.display_order : idx
-          });
-        }
-      }
-    });
-  }
-
-  // 2. Legacy properties.virtual_tour_url
-  if (p.virtual_tour_url && typeof p.virtual_tour_url === 'string') {
-    const rawLegacy = p.virtual_tour_url.trim();
-    const norm = normalizeUrl(rawLegacy);
-    if (norm && !seenUrls.has(norm)) {
-      seenUrls.add(norm);
-      tours.unshift({
-        id: 'legacy-vt',
-        kind: 'virtual_tour',
-        title: '3D Virtual Tour',
-        floor_label: null,
-        provider: null,
-        url: rawLegacy,
-        poster_url: null,
-        display_order: -1
-      });
-    }
-  }
-
-  return tours;
+  return collectPlayablePropertyTours(p, getMediaFloorLabel);
 }
 
 function renderPropertyUnits(p) {
@@ -1219,7 +1169,7 @@ function renderMultiFloorMedia(p) {
   const navWrap = document.getElementById('floorNavWrap');
   if (!container || !section) return;
 
-  const rawMedia = Array.isArray(p.property_media) ? [...p.property_media] : [];
+  const rawMedia = Array.isArray(p.property_media) ? p.property_media.filter(isRenderablePropertyMedia) : [];
   
   // Ensure legacy virtual tour is represented in media items if not already migrated
   const allTours = getPropertyTours(p);
@@ -1357,6 +1307,14 @@ function renderMultiFloorMedia(p) {
   container.innerHTML = html;
 
   // Event handlers
+  function wireKeyboardActivation(element) {
+    element.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      element.click();
+    });
+  }
+
   container.querySelectorAll('[data-action="open-floor-plan"]').forEach(el => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1364,6 +1322,7 @@ function renderMultiFloorMedia(p) {
       const target = p._allFloorPlans?.find(f => f.id === itemId) || floorPlansList[0];
       if (target) openFloorPlanModal(target, p._allFloorPlans || [target]);
     });
+    if (el.getAttribute('role') === 'button') wireKeyboardActivation(el);
   });
 
   container.querySelectorAll('[data-action="open-tour"]').forEach(el => {
@@ -1371,8 +1330,9 @@ function renderMultiFloorMedia(p) {
       e.preventDefault();
       const itemId = el.dataset.id;
       const target = p._allTours?.find(t => t.id === itemId);
-      openVirtualTourModal(p, target || allTours[0]);
+      if (target) openVirtualTourModal(p, target);
     });
+    if (el.getAttribute('role') === 'button') wireKeyboardActivation(el);
   });
 }
 
