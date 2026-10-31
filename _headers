@@ -9,6 +9,9 @@
   # so each HTML response carries a fresh nonce. Do NOT add it back here —
   # _headers wins on conflict and would defeat the rotation.
 
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /css/*
   Cache-Control: public, max-age=0, must-revalidate
 
