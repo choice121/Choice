@@ -976,13 +976,10 @@ function renderProperty(p) {
   _wireApply('sidebarApplyBtn');
   _wireApply('csCardApply');
 
-  // Wire "Track your application" link to internal application portal
+  // Wire "Track your application" link to internal tenant portal
   const _trackLink = document.getElementById('trackAppLink');
   if (_trackLink) {
-    const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
-      ? CONFIG.APPLY_FORM_URL
-      : '/apply';
-    _trackLink.href = _applyBase + '/?path=dashboard';
+    _trackLink.href = '/tenant/portal.html';
   }
 
   // Guard apply button for non-active listings (allow active and private_placement)

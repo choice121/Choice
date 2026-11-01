@@ -35,6 +35,7 @@ apply/config.js
 node_modules/
 package-lock.json.bak
 bun.lock
+.aistudio/
 
 # ============================================================
 # REPLIT — ALL FILES IGNORED (project runs on Cloudflare only)

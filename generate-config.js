@@ -405,14 +405,14 @@ htmlFiles.forEach(function(file) {
   // Step D: inject nav + footer into their placeholder slots
   if (buildNavHtml) {
     const afterNav = src.replace(
-      /<div\s+id="site-nav"\s*><\/div>/g,
+      /<div\s+id="site-nav"[^>]*>(?:[\s\S]*?<\/nav>\s*)?<\/div>/g,
       `<div id="site-nav" data-server-injected="1">${buildNavHtml}</div>`
     );
     if (afterNav !== src) { src = afterNav; modified = true; }
   }
   if (buildFooterHtml) {
     const afterFooter = src.replace(
-      /<div\s+id="site-footer"\s*><\/div>/g,
+      /<div\s+id="site-footer"[^>]*>(?:[\s\S]*?<\/footer>\s*)?<\/div>/g,
       `<div id="site-footer" data-server-injected="1">${buildFooterHtml}</div>`
     );
     if (afterFooter !== src) { src = afterFooter; modified = true; }

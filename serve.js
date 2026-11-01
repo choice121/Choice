@@ -36,6 +36,28 @@ const server = http.createServer((req, res) => {
     return handleAssistantApi(req, res);
   }
 
+  // Cloudflare Pages _redirects parity
+  if (cleanUrl === '/admin' || cleanUrl === '/admin/') {
+    res.writeHead(302, { 'Location': '/admin/dashboard.html' });
+    return res.end();
+  }
+  if (cleanUrl === '/apply.html') {
+    res.writeHead(302, { 'Location': '/apply/' });
+    return res.end();
+  }
+  if (cleanUrl === '/landlord' || cleanUrl === '/landlord/' || (cleanUrl.startsWith('/landlord/') && !cleanUrl.includes('.'))) {
+    res.writeHead(302, { 'Location': '/admin/login.html' });
+    return res.end();
+  }
+  if (cleanUrl === '/landlord-platform-agreement.html') {
+    res.writeHead(302, { 'Location': '/how-it-works.html' });
+    return res.end();
+  }
+  if (cleanUrl === '/listings' || cleanUrl === '/listings/') {
+    res.writeHead(302, { 'Location': '/listings.html?view=cities' });
+    return res.end();
+  }
+
   // Handle /api/relocate endpoint
   if (cleanUrl === '/api/relocate' && req.method === 'POST') {
     let bodyData = '';
