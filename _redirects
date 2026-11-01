@@ -18,7 +18,7 @@
 /landlord/*                  /admin/login.html                            302
 # Listings and cities routes
 /listings                   /listings.html                               200
-/listings/                  /listings.html                               302
+/listings/                  /listings.html                               200
 /cities                     /listings.html?view=cities                   302
 /browse-by-city             /listings.html?view=cities                   302
 # --- Block source / config / docs from being served on the CDN -----------
