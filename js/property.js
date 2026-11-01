@@ -3977,6 +3977,223 @@ async function initCommunityInventory(p) {
   let selectedFloor = 'all';
   let selectedBeds = 'all';
 
+  
+  // Interactive Building Stack / Site Map Visualizer
+  let selectedStackFloor = 'all';
+
+  function renderBuildingStack() {
+    const stackContainer = document.getElementById('buildingStackVisualizer');
+    if (!stackContainer) return;
+
+    if (!floors.length) {
+      stackContainer.style.display = 'none';
+      return;
+    }
+    stackContainer.style.display = 'block';
+
+    const maxFloor = Math.max(...floors, 1);
+    let tiersHtml = '';
+    for (let f = maxFloor; f >= 1; f--) {
+      const floorUnits = units.filter(u => Number(u.unit_floor) === f);
+      const isSelected = String(selectedStackFloor) === String(f);
+
+      tiersHtml += '<div class="building-stack-tier ' + (isSelected ? 'active' : '') + '" data-stack-floor="' + f + '">' +
+        '<div class="building-stack-tier-label">' +
+          '<i class="fas fa-building"></i> Floor ' + f +
+          '<span class="building-stack-count">' + floorUnits.length + ' unit' + (floorUnits.length === 1 ? '' : 's') + '</span>' +
+        '</div>' +
+        '<div class="building-stack-units-row">' +
+          (floorUnits.length ? floorUnits.map(u => 
+            '<div class="building-stack-unit-chip ' + (selectedFloor == f ? 'highlighted' : '') + '" onclick="document.getElementById(\'unit-' + esc(u.id || u.unit_number) + '\')?.scrollIntoView({behavior:'smooth', block:'center'});">' +
+              '<span class="unit-num">' + esc(u.unit_number) + '</span>' +
+              '<span class="unit-rent">
+    let filtered = units.slice();
+    if (selectedFloor !== 'all') {
+      filtered = filtered.filter(u => String(u.unit_floor) === String(selectedFloor));
+    }
+    if (selectedBeds !== 'all') {
+      if (selectedBeds === '0') {
+        filtered = filtered.filter(u => Number(u.bedrooms) === 0);
+      } else if (selectedBeds === '3+') {
+        filtered = filtered.filter(u => Number(u.bedrooms) >= 3);
+      } else {
+        filtered = filtered.filter(u => Number(u.bedrooms) === Number(selectedBeds));
+      }
+    }
+
+    // Floor filter pills
+    let floorFiltersHtml = '';
+    if (floors.length > 1) {
+      floorFiltersHtml = '<div class="community-filter-row">' +
+        '<span class="community-filter-label"><i class="fas fa-layer-group"></i> Floor</span>' +
+        '<button type="button" class="community-pill-btn ' + (selectedFloor === 'all' ? 'active' : '') + '" data-floor="all">' +
+          'All Floors <span class="count-badge">' + units.length + '</span>' +
+        '</button>' +
+        floors.map(f => {
+          const count = units.filter(u => String(u.unit_floor) === String(f)).length;
+          return '<button type="button" class="community-pill-btn ' + (String(selectedFloor) === String(f) ? 'active' : '') + '" data-floor="' + f + '">' +
+            'Floor ' + f + ' <span class="count-badge">' + count + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>';
+    }
+
+    // Bedroom filter pills
+    const bedCounts = { all: units.length, 0: 0, 1: 0, 2: 0, '3+': 0 };
+    units.forEach(u => {
+      const b = Number(u.bedrooms);
+      if (b === 0) bedCounts[0]++;
+      else if (b === 1) bedCounts[1]++;
+      else if (b === 2) bedCounts[2]++;
+      else if (b >= 3) bedCounts['3+']++;
+    });
+
+    let bedFiltersHtml = '';
+    if (units.length > 2) {
+      bedFiltersHtml = '<div class="community-filter-row">' +
+        '<span class="community-filter-label"><i class="fas fa-bed"></i> Beds</span>' +
+        '<button type="button" class="community-pill-btn ' + (selectedBeds === 'all' ? 'active' : '') + '" data-beds="all">' +
+          'All Layouts <span class="count-badge">' + units.length + '</span>' +
+        '</button>' +
+        (bedCounts[0] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '0' ? 'active' : '') + '" data-beds="0">Studio <span class="count-badge">' + bedCounts[0] + '</span></button>' : '') +
+        (bedCounts[1] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '1' ? 'active' : '') + '" data-beds="1">1 Bed <span class="count-badge">' + bedCounts[1] + '</span></button>' : '') +
+        (bedCounts[2] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '2' ? 'active' : '') + '" data-beds="2">2 Beds <span class="count-badge">' + bedCounts[2] + '</span></button>' : '') +
+        (bedCounts['3+'] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '3+' ? 'active' : '') + '" data-beds="3+">3+ Beds <span class="count-badge">' + bedCounts['3+'] + '</span></button>' : '') +
+      '</div>';
+    }
+
+    // Units cards list
+    let unitsListHtml = '';
+    if (filtered.length > 0) {
+      unitsListHtml = '<div class="community-units-list">' +
+        filtered.map(u => {
+          const applyHref = (window.CP?.buildApplyURL)
+            ? window.CP.buildApplyURL(p, shareToken, {
+                unit: u.unit_number,
+                rent: u.monthly_rent,
+                floor: u.unit_floor,
+                bedrooms: u.bedrooms,
+                bathrooms: u.bathrooms,
+                unit_id: u.id,
+              })
+            : ('/apply/?id=' + encodeURIComponent(p.id) + '&unit=' + encodeURIComponent(u.unit_number));
+
+          const bedText = u.bedrooms === 0 ? 'Studio' : (u.bedrooms != null ? u.bedrooms + ' Bed' + (u.bedrooms === 1 ? '' : 's') : '');
+          const bathText = u.bathrooms != null ? u.bathrooms + ' Bath' + (u.bathrooms === 1 ? '' : 's') : '';
+          const sqftText = u.square_footage ? ('~' + (Math.round(Number(u.square_footage) / 25) * 25) + ' sqft') : '';
+          const floorText = u.unit_floor != null ? ('Floor ' + u.unit_floor) : '';
+          const rentText = u.monthly_rent ? ('$' + Number(u.monthly_rent).toLocaleString()) : (p.monthly_rent ? ('$' + Number(p.monthly_rent).toLocaleString()) : 'Contact for Rent');
+
+          return '<div class="community-unit-card" id="unit-' + esc(u.id || u.unit_number) + '">' +
+            '<div class="community-unit-left">' +
+              '<div class="community-unit-title-row">' +
+                '<span class="community-unit-number">' + esc(u.unit_number) + '</span>' +
+                (floorText ? '<span class="community-floor-tag"><i class="fas fa-stairs"></i> ' + esc(floorText) + '</span>' : '') +
+                (u.floor_plan_name ? '<span style="font-size:0.8rem;font-weight:600;color:var(--m-muted)">' + esc(u.floor_plan_name) + '</span>' : '') +
+              '</div>' +
+              '<div class="community-unit-specs">' +
+                (bedText ? '<span><i class="fas fa-bed"></i> ' + esc(bedText) + '</span>' : '') +
+                (bathText ? '<span>·</span><span><i class="fas fa-bath"></i> ' + esc(bathText) + '</span>' : '') +
+                (sqftText ? '<span>·</span><span><i class="fas fa-ruler-combined"></i> ' + esc(sqftText) + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="community-unit-right">' +
+              '<div class="community-unit-price">' + rentText + ' <small>/mo</small></div>' +
+              '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">' +
+                'Apply for Unit <i class="fas fa-arrow-right" style="font-size:11px"></i>' +
+              '</a>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    } else {
+      unitsListHtml = '<div style="padding:24px;text-align:center;background:var(--m-surface,#f8fafc);border-radius:12px;color:var(--m-muted)">' +
+        '<i class="fas fa-filter" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.6"></i>' +
+        'No units currently match the selected floor or bedroom filter.' +
+      '</div>';
+    }
+
+    // Floor plans gallery (if floor plan diagrams/images exist)
+    let floorPlansHtml = '';
+    if (floorPlans.length > 0) {
+      floorPlansHtml = '<div style="margin-top:24px">' +
+        '<div style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--m-muted,#64748b);margin-bottom:12px">' +
+          '<i class="fas fa-drafting-compass"></i> Architectural Floor Plans' +
+        '</div>' +
+        '<div class="community-floorplan-gallery">' +
+          floorPlans.map((fp, i) =>
+            '<div class="community-fp-card" onclick="window.open('' + esc(fp.url) + '', '_blank')">' +
+              '<div class="community-fp-thumb">' +
+                '<img src="' + esc(fp.url) + '" alt="' + esc(fp.title || 'Floor Plan') + '" loading="lazy">' +
+              '</div>' +
+              '<div class="community-fp-info">' +
+                '<div class="community-fp-title">' + esc(fp.title || 'Floor Plan ' + (i + 1)) + '</div>' +
+                (fp.floor_label ? '<div class="community-fp-meta"><i class="fas fa-layer-group"></i> ' + esc(fp.floor_label) + '</div>' : '') +
+              '</div>' +
+            '</div>'
+          ).join('') +
+        '</div>' +
+      '</div>';
+    }
+
+    content.innerHTML = '<div class="community-inv-wrap">' +
+      ((floorFiltersHtml || bedFiltersHtml) ? ('<div class="community-filters-bar">' + floorFiltersHtml + bedFiltersHtml + '</div>') : '') +
+      unitsListHtml +
+      floorPlansHtml +
+    '</div>';
+
+    // Attach filter click handlers
+    content.querySelectorAll('[data-floor]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedFloor = btn.getAttribute('data-floor');
+        renderBuildingStack();
+  renderInventoryUI();
+      });
+    });
+    content.querySelectorAll('[data-beds]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedBeds = btn.getAttribute('data-beds');
+        renderInventoryUI();
+      });
+    });
+  }
+
+  renderInventoryUI();
+}
+ + (u.monthly_rent ? Number(u.monthly_rent).toLocaleString() : 'TBD') + '</span>' +
+            '</div>'
+          ).join('') : '<span class="building-stack-empty">No active units listed on this level</span>') +
+        '</div>' +
+      '</div>';
+    }
+
+    stackContainer.innerHTML = '<div class="building-stack-card">' +
+      '<div class="building-stack-header">' +
+        '<div>' +
+          '<div style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--m-brand)">Interactive Building Stack</div>' +
+          '<div style="font-size:1.1rem;font-weight:800;color:var(--m-ink)">Floor-by-Floor Visualizer</div>' +
+        '</div>' +
+        '<button type="button" class="community-pill-btn ' + (selectedStackFloor === 'all' ? 'active' : '') + '" data-stack-floor="all" style="font-size:0.78rem">' +
+          'Show All Floors' +
+        '</button>' +
+      '</div>' +
+      '<div class="building-stack-tiers">' +
+        tiersHtml +
+      '</div>' +
+    '</div>';
+
+    stackContainer.querySelectorAll('[data-stack-floor]').forEach(el => {
+      el.addEventListener('click', () => {
+        const fl = el.getAttribute('data-stack-floor');
+        selectedStackFloor = fl;
+        selectedFloor = fl;
+        renderInventoryUI();
+      });
+    });
+  }
+
   function renderInventoryUI() {
     let filtered = units.slice();
     if (selectedFloor !== 'all') {
