@@ -392,6 +392,9 @@ class RentalApplication {
             const city  = p.get('city')  || '';
             const state = p.get('state') || '';
             const rent  = p.get('rent')  || '';
+            const unit  = p.get('unit')  || p.get('unit_number') || '';
+            const floor = p.get('floor') || '';
+            const plan  = p.get('plan')  || '';
             const fee   = '50';
             const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
 
@@ -399,7 +402,7 @@ class RentalApplication {
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
 
             // Store context on instance for later use (success page, etc.)
-            this.state.propertyContext = { id, name, addr, city, state, rent, shareToken };
+            this.state.propertyContext = { id, name, addr, city, state, rent, unit, floor, plan, shareToken };
 
             // Populate hidden inputs so FormData serialises them automatically
             const setHidden = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -408,6 +411,8 @@ class RentalApplication {
             setHidden('hiddenPropertyCity',  city);
             setHidden('hiddenPropertyState', state);
             setHidden('hiddenListedRent',    rent);
+            setHidden('hiddenPropertyUnit',  unit);
+            setHidden('hiddenPropertyFloor', floor);
               // Additional property context params
               const zip        = p.get('zip')         || '';
               const deposit    = p.get('deposit')     || '';
@@ -575,7 +580,7 @@ class RentalApplication {
             }
 
             // Show the property context banner (with extended listing details)
-            this._showPropertyBanner({ id, name, addr, city, state, rent, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee });
+            this._showPropertyBanner({ id, name, addr, city, state, rent, unit, floor, plan, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee });
 
             // Pre-populate the pet policy hint so it is ready when the user selects "Yes" for pets
             this._applyPetPolicyHint();
@@ -590,10 +595,13 @@ class RentalApplication {
     // PROPERTY CONTEXT BANNER — shown between header and progress bar.
     // Lets applicants confirm they're applying for the right property.
     // ─────────────────────────────────────────────────────────────────────
-    _showPropertyBanner({ id, name, addr, city, state, rent, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee }) {
+    _showPropertyBanner({ id, name, addr, city, state, rent, unit, floor, plan, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee }) {
         if (!name && !addr && !city) return;
 
-        const displayName = name || 'Selected Property';
+        let displayName = name || 'Selected Property';
+        if (unit) {
+            displayName = name ? `${name} — Unit ${unit}` : `Unit ${unit}`;
+        }
         const locationParts = [city, state].filter(Boolean).map(s => this._escHtml(s));
         const locationLine = locationParts.length ? locationParts.join(', ') : '';
         const rentLine = rent
@@ -603,8 +611,10 @@ class RentalApplication {
         const metaParts = [locationLine, rentLine].filter(Boolean);
         const metaLine = metaParts.join(' &nbsp;·&nbsp; ');
 
-        // Build listing detail chips (beds / baths / deposit / available / lease terms)
+        // Build listing detail chips (unit / floor / beds / baths / deposit / available / lease terms)
         const chips = [];
+        if (unit)    chips.push('<span class="pcb-chip" style="background:#006aff;color:#fff;font-weight:700"><i class="fas fa-door-open"></i> Unit ' + this._escHtml(unit) + '</span>');
+        if (floor)   chips.push('<span class="pcb-chip"><i class="fas fa-stairs"></i> Floor ' + this._escHtml(floor) + '</span>');
         if (beds)    chips.push('<span class="pcb-chip"><i class="fas fa-bed"></i> ' + this._escHtml(beds) + ' Bed</span>');
         if (baths)   chips.push('<span class="pcb-chip"><i class="fas fa-bath"></i> ' + this._escHtml(baths) + ' Bath</span>');
         if (deposit) chips.push('<span class="pcb-chip"><i class="fas fa-dollar-sign"></i> $' + parseFloat(deposit).toLocaleString('en-US') + ' Deposit</span>');

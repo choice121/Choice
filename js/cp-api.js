@@ -671,6 +671,34 @@ const Properties = {
     if (data) _attachPhotoArrays(data);
     return _ok(data, error);
   },
+  // Multi-unit & multi-floor community unit resolver
+  async getCommunityUnits(communityId) {
+    if (!communityId) return { ok: true, data: { units: [], floors: [] }, error: null };
+    const cleanId = String(communityId).trim();
+    try {
+      const { data, error } = await sb()
+        .from('properties')
+        .select('id, title, address, unit_number, unit_floor, bedrooms, bathrooms, half_bathrooms, square_footage, monthly_rent, status, price_range, property_photos(id, url, file_id, display_order, is_hero)')
+        .eq('parent_property_id', cleanId)
+        .order('unit_floor', { ascending: true })
+        .order('unit_number', { ascending: true });
+      if (error) {
+        console.warn('[cp-api] getCommunityUnits query issue:', error);
+        return { ok: false, data: null, error: error.message };
+      }
+      const units = (data || []).map(_attachPhotoArrays);
+      const floorSet = new Set();
+      units.forEach(u => {
+        if (u.unit_floor != null && !isNaN(Number(u.unit_floor))) {
+          floorSet.add(Number(u.unit_floor));
+        }
+      });
+      const floors = Array.from(floorSet).sort((a, b) => a - b);
+      return { ok: true, data: { units, floors }, error: null };
+    } catch (err) {
+      return { ok: false, data: null, error: err.message || String(err) };
+    }
+  },
   // I-026: NOTE - this method is not currently used by new-listing.html.
   // That page calls generate_property_id() RPC + .insert() directly so it
   // can cache the propId in localStorage for retry-safe photo uploads.
@@ -1107,7 +1135,12 @@ function esc(str) {
 // Defined here so they live in one place and are accessible
 // via both window.CP (inline scripts) and ES named exports below.
 
-function buildApplyURL(property, shareToken = '') {
+function buildApplyURL(property, shareToken = '', unitOptions = {}) {
+  const targetRent = (unitOptions && unitOptions.rent != null) ? unitOptions.rent : (property.monthly_rent || null);
+  const targetUnit = (unitOptions && unitOptions.unit) || property.unit_number || null;
+  const targetFloor = (unitOptions && unitOptions.floor != null) ? unitOptions.floor : (property.unit_floor != null ? property.unit_floor : null);
+  const targetBeds = (unitOptions && unitOptions.bedrooms != null) ? unitOptions.bedrooms : (property.bedrooms != null ? property.bedrooms : null);
+  const targetBaths = (unitOptions && unitOptions.bathrooms != null) ? unitOptions.bathrooms : (property.bathrooms != null ? property.bathrooms : null);
   // -- Layer 1: sessionStorage (same-origin only) ----------------------------
   // Stores full context for same-origin use. Legacy cross-origin forms
   // cannot read sessionStorage - they rely entirely on the URL params below.
@@ -1120,7 +1153,9 @@ function buildApplyURL(property, shareToken = '') {
       city:             property.city,
       state:            property.state,
       zip:              property.zip              || '',
-      monthly_rent:     property.monthly_rent     || null,
+      monthly_rent:     targetRent,
+      unit_number:      targetUnit,
+      unit_floor:       targetFloor,
       security_deposit: property.security_deposit || null,
       application_fee:  property.application_fee  != null ? property.application_fee  : 50,
       available_date:   property.available_date   || null,
@@ -1164,6 +1199,10 @@ function buildApplyURL(property, shareToken = '') {
 
   // -- Identity & location ---------------------------------------------------
   p.set('id',    property.id);
+  if (targetUnit) p.set('unit', String(targetUnit).trim());
+  if (targetFloor != null) p.set('floor', String(targetFloor));
+  if (unitOptions && unitOptions.unit_id) p.set('unit_id', String(unitOptions.unit_id));
+  if (unitOptions && unitOptions.plan_name) p.set('plan', String(unitOptions.plan_name));
   if (property.title)   p.set('pn',    property.title.substring(0, 120));
   if (property.address) p.set('addr',  property.address.substring(0, 100));
   if (property.city)    p.set('city',  property.city);
@@ -1171,7 +1210,7 @@ function buildApplyURL(property, shareToken = '') {
   if (property.zip)     p.set('zip',   property.zip);
 
   // -- Financials ------------------------------------------------------------
-  if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
+  if (targetRent) p.set('rent', targetRent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
   p.set('fee', (property.application_fee != null && Number(property.application_fee) > 0) ? property.application_fee : 50); // Choice Properties standard: always $50
 

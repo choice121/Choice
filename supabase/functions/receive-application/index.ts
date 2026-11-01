@@ -347,6 +347,8 @@ Deno.serve(async (req: Request) => {
     dob: dob || null,
     ssn: (() => { const raw = fv(fields['SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
     property_address: enforcedAddress,
+    property_unit: fv(fields['Property Unit']) || null,
+    property_floor: fv(fields['Property Floor']) ? parseInt(fv(fields['Property Floor']), 10) : null,
     property_id: submittedPropertyId,
     requested_move_in_date: fv(fields['Requested Move-in Date']) || null,
     desired_lease_term: fv(fields['Desired Lease Term']) || null,

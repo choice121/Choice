@@ -128,22 +128,36 @@
       );
     }).join('');
 
+    // ── Multi-unit community detection ────────────────────────
+    var isCommunity = !!(p.is_multi_unit || (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (p.total_units > 1 || p.price_range)));
+
     // ── Specs row — beds + baths + sqft (sqft is rounded to ~25 increments) ─
     var specParts = [];
+    if (p.unit_number && !isCommunity) {
+      specParts.push('<span class="property-card-spec-item"><i class="fas fa-door-open"></i>Unit ' + esc(p.unit_number) + '</span>');
+    }
     if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed' + (Number(p.bedrooms) === 1 ? '' : 's')) + '</span>');
     if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath' + (Number(p.bathrooms) === 1 ? '' : 's') + '</span>');
     if (p.square_footage) {
       var roundedSqft = Math.round(Number(p.square_footage) / 25) * 25;
       specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>~' + roundedSqft.toLocaleString() + ' sqft</span>');
     }
+    if (isCommunity && p.total_units) {
+      specParts.push('<span class="property-card-spec-item"><i class="fas fa-layer-group"></i>' + p.total_units + ' Units</span>');
+    }
+    if (isCommunity && p.floors && p.floors > 1) {
+      specParts.push('<span class="property-card-spec-item"><i class="fas fa-stairs"></i>' + p.floors + ' Floors</span>');
+    }
     var specsHtml = specParts.map(function (s, i) {
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
 
-    // ── Badge — priority: featured only (Private placement badges completely disabled) ──
+    // ── Badge — priority: featured, then community ──
     var badge = '';
     if (p.featured) {
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
+    } else if (isCommunity) {
+      badge = '<div class="property-card-badge badge-community"><i class="fas fa-building"></i> Community</div>';
     }
 
     var tourChipHtml = p.virtual_tour_url
@@ -172,8 +186,18 @@
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
     // ── Price ─────────────────────────────────────────────────
-    var rentHtml = fmtRent(p.monthly_rent);
-    var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
+    var rentHtml;
+    var rentUnit;
+    if (isCommunity && p.price_range) {
+      rentHtml = esc(p.price_range);
+      rentUnit = '<span class="property-card-price-unit">/mo</span>';
+    } else if (isCommunity && Number(p.monthly_rent) > 0) {
+      rentHtml = '<span style="font-size:0.75rem;font-weight:600;margin-right:3px;color:var(--m-muted,#64748b)">From</span>' + fmtRent(p.monthly_rent);
+      rentUnit = '<span class="property-card-price-unit">/mo</span>';
+    } else {
+      rentHtml = fmtRent(p.monthly_rent);
+      rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
+    }
 
     return (
       '<article class="property-card" id="card-' + id + '" data-id="' + id + '"' + (p.featured ? ' data-featured="1"' : '') + '>' +
