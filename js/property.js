@@ -50,8 +50,18 @@ updateNav();
 
 const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
-const isEmbedded = params.get('embedded') === 'true';
-const shareToken = params.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || '';
+const sanitizeShareToken = (t) => String(t || '').trim().replace(/^[{'"]+|[}'"]+$/g, '').trim();
+const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
+const hashParams = new URLSearchParams(rawHash);
+const shareToken = sanitizeShareToken(
+  params.get('share') || 
+  params.get('token') || 
+  hashParams.get('share') || 
+  hashParams.get('token') || 
+  (rawHash.startsWith('share=') ? rawHash.slice(6) : '') ||
+  (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || 
+  ''
+);
 if (shareToken) {
   try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
 }
@@ -189,6 +199,16 @@ async function loadProperty(id) {
         .single();
       if (error || !data) throw new Error(error ? error.message : 'Not found');
       prop = data;
+      try {
+        const { data: mediaData } = await client
+          .from('property_media')
+          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
+          .eq('property_id', cleanId)
+          .order('display_order', { ascending: true });
+        prop.property_media = mediaData || [];
+      } catch (_) {
+        prop.property_media = [];
+      }
     }
   } catch (e) {
     if (shareToken) {
@@ -202,11 +222,13 @@ async function loadProperty(id) {
       const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
       if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
         prop = rpcData[0];
-        const [photosRes, landlordRes] = await Promise.all([
+        const [photosRes, mediaRes, landlordRes] = await Promise.all([
           client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          client.from('property_media').select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata').eq('property_id', cleanId).order('display_order', { ascending: true }),
           prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
         ]);
         prop.property_photos = photosRes.data || [];
+        prop.property_media = mediaRes.data || [];
         if (landlordRes?.data) prop.landlords = landlordRes.data;
         fallbackSuccess = true;
       }
@@ -491,7 +513,6 @@ function renderProperty(p) {
   sd.type = 'application/ld+json';
   const amenities = [];
   if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
-  if (p.pets_allowed) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Pets Allowed",   "value": true });
   if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
   if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
   if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
@@ -632,7 +653,6 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
@@ -668,7 +688,6 @@ function renderProperty(p) {
   }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
@@ -712,7 +731,6 @@ function renderProperty(p) {
     vtBtn.addEventListener('click', () => openVirtualTourModal(p));
     descEl.closest('.detail-section').appendChild(vtBtn);
 
-    // Also wire up hero mosaic tour button if present
     const mosaicTourBtn = document.getElementById('mosaicTourBtn');
     if (mosaicTourBtn) {
       mosaicTourBtn.style.display = 'inline-flex';
@@ -721,6 +739,49 @@ function renderProperty(p) {
         openVirtualTourModal(p);
       };
     }
+  }
+
+  // Render additional media (videos, floor plans, tours) from property_media
+  if (Array.isArray(p.property_media) && p.property_media.length) {
+    const groups = {};
+    p.property_media.forEach((item) => {
+      if (!item || typeof item.url !== 'string') return;
+      let url;
+      try {
+        url = new URL(item.url);
+      } catch (_) {
+        return;
+      }
+      if (url.protocol !== 'https:') return;
+      (groups[item.kind] = groups[item.kind] || []).push({ ...item, url: url.href });
+    });
+    const section = descEl.closest('.detail-section');
+    Object.keys(groups).forEach(kind => {
+      if (kind === 'virtual_tour') return;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
+      groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
+        const link = document.createElement('a');
+        link.href = m.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'btn btn-outline';
+        link.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
+        if (kind === 'floor_plan') {
+          const image = document.createElement('img');
+          image.src = m.url;
+          image.alt = m.title || 'Floor plan';
+          image.loading = 'lazy';
+          image.style.cssText = 'width:120px;max-height:90px;object-fit:contain';
+          link.appendChild(image);
+        }
+        const label = document.createElement('span');
+        label.textContent = m.title || kind.replace('_', ' ');
+        link.appendChild(label);
+        wrap.appendChild(link);
+      });
+      if (wrap.childElementCount) section.appendChild(wrap);
+    });
   }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
@@ -801,18 +862,11 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  const leaseAppFee = (p.application_fee != null && Number(p.application_fee) > 0) ? Number(p.application_fee) : 50;
-  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${leaseAppFee.toLocaleString()}</div>`);
+  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $50 per adult being screened</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
-  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
-  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
-  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
-  if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
-  if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -898,17 +952,12 @@ function renderProperty(p) {
   if (_depEl) {
     _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   }
-  // Flat $50 application fee is the platform standard. If a property has no
-  // explicit fee, default to $50 rather than showing "Free" (which contradicts
-  // the marketing promise and the scraper normalization rules).
-  const _appFee = (p.application_fee != null && p.application_fee > 0)
-    ? Number(p.application_fee)
-    : 50;
+  const _appFee = 50;
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
   if (_feeAmtEl) {
-    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
+    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -937,13 +986,10 @@ function renderProperty(p) {
   _wireApply('sidebarApplyBtn');
   _wireApply('csCardApply');
 
-  // Wire "Track your application" link to internal application portal
+  // Wire "Track your application" link to internal tenant portal
   const _trackLink = document.getElementById('trackAppLink');
   if (_trackLink) {
-    const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
-      ? CONFIG.APPLY_FORM_URL
-      : '/apply';
-    _trackLink.href = _applyBase + '/?path=dashboard';
+    _trackLink.href = '/tenant/portal.html';
   }
 
   // Guard apply button for non-active listings (allow active and private_placement)
@@ -979,7 +1025,6 @@ function renderProperty(p) {
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 
   // ── Enrichment sections ──
-  try { renderRenterRequirements(p); } catch (e) { console.warn('[property] renderRenterRequirements error:', e); }
   try { renderPropFacts(p); } catch (e) { console.warn('[property] renderPropFacts error:', e); }
   try { renderScoresSection(p); } catch (e) { console.warn('[property] renderScoresSection error:', e); }
   try { loadSimilarListings(p); } catch (e) { console.warn('[property] loadSimilarListings error:', e); }
@@ -1957,7 +2002,7 @@ document.getElementById('sendInquiryBtn').addEventListener('click', async () => 
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
   } else {
-    showToast('Message sent! The landlord will be in touch soon.', 'success');
+    showToast('Message sent! Choice Properties management will be in touch soon.', 'success');
     btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
 
     // Clear form fields after successful send
@@ -2582,7 +2627,7 @@ function buildAdminEditDrawer(prop) {
           </div>
           <div class="adw-field">
             <label class="adw-label" for="adwAppFee">App Fee ($)</label>
-            <input class="adw-input" id="adwAppFee" type="number" min="0" value="${p.application_fee??''}">
+            <input class="adw-input" id="adwAppFee" type="number" min="50" max="50" value="50" readonly>
           </div>
         </div>
         <div class="adw-row">
@@ -3433,37 +3478,9 @@ function renderRenterRequirements(p) {
   if (!section) return;
   injectEnrichmentStyles();
 
-  const reqs = [];
+   const reqs = [];
 
-  if (p.pets_allowed != null) {
-    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
-    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
-    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
-    reqs.push({
-      icon: 'fa-paw',
-      label: 'Pets',
-      value: petVal,
-      type: p.pets_allowed ? 'req-emerald' : 'req-rose'
-    });
-  }
-  if (p.minimum_credit_score) {
-    reqs.push({
-      icon: 'fa-chart-line',
-      label: 'Min. credit score',
-      value: Number(p.minimum_credit_score).toLocaleString() + '+',
-      type: 'req-blue'
-    });
-  }
-  if (p.minimum_income_multiplier) {
-    reqs.push({
-      icon: 'fa-coins',
-      label: 'Min. income',
-      value: p.minimum_income_multiplier + '× monthly rent',
-      type: 'req-amber'
-    });
-  }
-
-  if (!reqs.length) return;
+   if (!reqs.length) return;
 
   section.style.display = '';
   section.innerHTML = `

@@ -42,10 +42,7 @@
 
   function cityPageUrl(city, state) {
     if (!city || !state) return null;
-    var stateSlug = _STATE_SLUG[String(state).toUpperCase()] || toSlug(state);
-    var citySlug  = toSlug(city);
-    if (!stateSlug || !citySlug) return null;
-    return '/listings/' + stateSlug + '/' + citySlug;
+    return '/listings.html?' + new URLSearchParams({ city: city, state: state });
   }
 
   // ── Rent formatter ──────────────────────────────────────────
@@ -97,11 +94,13 @@
     if (rawId && typeof window !== 'undefined' && window.location) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const share = urlParams.get('share');
-        const shareHash = new URLSearchParams(window.location.hash.slice(1)).get('share');
+        const hashStr = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
+        const hashParams = new URLSearchParams(hashStr);
+        const rawShare = urlParams.get('share') || hashParams.get('share') || (typeof window.__CP_ACTIVE_SHARE_TOKEN__ === 'string' ? window.__CP_ACTIVE_SHARE_TOKEN__ : '') || '';
+        const cleanShare = rawShare ? String(rawShare).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim() : '';
         const fromP = opts.from_p || urlParams.get('p') || urlParams.get('ids') || urlParams.get('from_p');
-        if (share || shareHash) {
-          propUrl += '#share=' + encodeURIComponent(share || shareHash);
+        if (cleanShare) {
+          propUrl += '#share=' + encodeURIComponent(cleanShare);
         } else if (fromP) {
           propUrl += '&from_p=' + encodeURIComponent(fromP);
         }
@@ -172,14 +171,6 @@
     // ── Address ───────────────────────────────────────────────
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
-    // ── Pet policy chip — shown when pets are allowed ─────────
-    var petChip = '';
-    if (p.pets_allowed === true) {
-      petChip = '<span class="property-card-pet-chip"><i class="fas fa-paw"></i> Pets OK</span>';
-    } else if (p.pets_allowed === false) {
-      petChip = '<span class="property-card-pet-chip property-card-pet-chip--no"><i class="fas fa-ban"></i> No Pets</span>';
-    }
-
     // ── Price ─────────────────────────────────────────────────
     var rentHtml = fmtRent(p.monthly_rent);
     var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
@@ -222,8 +213,6 @@
           '</div>' +
           // 3. Specs — beds + baths + sqft
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
-          // 3b. Pet policy chip
-          (petChip ? '<div class="property-card-pet-row">' + petChip + '</div>' : '') +
           // 4. Footer — price pinned to bottom (no divider)
           '<div class="property-card-footer">' +
             '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +

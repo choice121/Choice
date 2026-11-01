@@ -23,6 +23,7 @@ const MIME_TYPES = {
   '.xml': 'application/xml; charset=utf-8',
   '.pdf': 'application/pdf',
   '.txt': 'text/plain; charset=utf-8',
+  '.zip': 'application/zip',
   '.map': 'application/json; charset=utf-8'
 };
 
@@ -195,6 +196,14 @@ const server = http.createServer((req, res) => {
   // If path is a directory, look for index.html inside it
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     filePath = path.join(filePath, 'index.html');
+  }
+
+  // If not found directly, check inside public/ directory
+  if (!fs.existsSync(filePath)) {
+    const publicCandidate = path.join(PUBLIC_DIR, 'public', safePath);
+    if (fs.existsSync(publicCandidate) && !fs.statSync(publicCandidate).isDirectory()) {
+      filePath = publicCandidate;
+    }
   }
 
   // If not found directly, check with .html extension

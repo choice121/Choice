@@ -99,7 +99,20 @@ Deno.serve(async (req) => {
         .in("property_id", propertyIds)
         .order("display_order", { ascending: true });
 
+      const { data: media, error: mediaError } = await supabase
+        .from("property_media")
+        .select("id, property_id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata")
+        .in("property_id", propertyIds)
+        .order("display_order", { ascending: true });
+      if (mediaError) {
+        return new Response(
+          JSON.stringify({ error: "property_media_lookup_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const photoMap: Record<string, Array<Record<string, unknown>>> = {};
+      const mediaMap: Record<string, Array<Record<string, unknown>>> = {};
       if (photos) {
         photos.forEach(ph => {
           photoMap[ph.property_id] = photoMap[ph.property_id] || [];
@@ -107,9 +120,17 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (media) {
+        media.forEach(item => {
+          mediaMap[item.property_id] = mediaMap[item.property_id] || [];
+          mediaMap[item.property_id].push(item);
+        });
+      }
+
       const enriched = (properties || []).map(prop => ({
         ...prop,
-        property_photos: photoMap[prop.id] || []
+        property_photos: photoMap[prop.id] || [],
+        property_media: mediaMap[prop.id] || []
       }));
 
       return new Response(

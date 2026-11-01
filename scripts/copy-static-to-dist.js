@@ -88,6 +88,7 @@ const filesToCopy = [
   'chat.html',
   'setup-credentials.html',
   '404.html',
+  'co-applicant-consent.html',
   'extension-meta.json',
   'extension-updates.xml',
 ];
@@ -108,6 +109,13 @@ for (const zipName of ['choice-properties-extension.zip', 'choice-properties-ori
     fs.copyFileSync(zipSrc, path.join(DIST_DIR, zipName));
     console.log(`✅ Copied public/${zipName} to dist/${zipName}`);
   }
+}
+
+// Copy versioned extensions directory to dist/extensions for direct versioned downloads
+const extensionsSrc = path.join(ROOT_DIR, 'public', 'extensions');
+if (fs.existsSync(extensionsSrc)) {
+  copyRecursive(extensionsSrc, path.join(DIST_DIR, 'extensions'));
+  console.log('✅ Copied public/extensions/ to dist/extensions/');
 }
 
 console.log('🎉 Successfully populated dist/ with all static admin, landlord, tenant, apply, and platform resources.');

@@ -330,6 +330,37 @@ function _typeFilterOr(canonicalType) {
 }
 
 const Properties = {
+    async getLocationIndex() {
+      const PAGE_SIZE = 1000;
+      const rows = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await sb()
+          .from('properties')
+          .select('city,state')
+          .eq('status', 'active')
+          .not('city', 'is', null)
+          .not('state', 'is', null)
+          .order('state', { ascending: true })
+          .order('city', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) return _ok(null, error);
+        rows.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+      }
+
+      const locations = new Map();
+      rows.forEach(row => {
+        const city = String(row.city || '').trim();
+        const state = String(row.state || '').trim();
+        if (!city || !state) return;
+        const key = `${state.toLowerCase()}|${city.toLowerCase()}`;
+        const location = locations.get(key) || { city, state, count: 0 };
+        location.count++;
+        locations.set(key, location);
+      });
+      return _ok([...locations.values()], null);
+    },
+
   // getListings - server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
   // Returns { ok, data: { rows, total, page, per_page, total_pages }, error }
@@ -342,10 +373,14 @@ const Properties = {
     if (filters.share_token || (filters.target_ids && Array.isArray(filters.target_ids) && filters.target_ids.length > 0)) {
       let rows = [];
       if (filters.share_token) {
+        const cleanToken = String(filters.share_token).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim();
         const { data, error } = await sb().functions.invoke('property-share', {
-          body: { action: 'resolve', token: filters.share_token },
+          body: { action: 'resolve', token: cleanToken },
         });
-        if (error) return { ok: false, data: null, error: error.message };
+        if (error) {
+          const errMsg = (data && (data.error || data.message)) || error.message || 'share_not_found';
+          return { ok: false, data: null, error: errMsg, isShareError: true };
+        }
         rows = Array.isArray(data?.properties) ? data.properties.slice() : [];
       } else {
         // Legacy ID-only links can resolve public listings, never private ones.
@@ -573,6 +608,8 @@ const Properties = {
 
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status);
     if (filters.landlord) q = q.eq('landlord_id', filters.landlord);
+    if (filters.city) q = q.ilike('city', filters.city);
+    if (filters.state) q = q.eq('state', filters.state);
 
     if (filters.q) {
       const term = filters.q.trim();
@@ -627,7 +664,7 @@ const Properties = {
   async getOne(id) {
     // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
     // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
+     const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero), property_media(id, kind, url, display_order, is_hero, metadata)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }
@@ -1289,7 +1326,7 @@ async function updateNav() {
         .from('applications')
         .select(
           'id,app_id,created_at,updated_at,status,payment_status,payment_date,' +
-          'admin_notes,application_fee,property_id,property_address,' +
+          'admin_notes,application_fee,application_fee_per_adult,screened_adult_count,property_id,property_address,' +
           'first_name,last_name,email,phone,dob,ssn,' +
           'requested_move_in_date,desired_lease_term,' +
           'current_address,residency_duration,current_rent_amount,reason_for_leaving,' +
@@ -1308,7 +1345,9 @@ async function updateNav() {
           'has_pets,pet_details,total_occupants,additional_occupants,ever_evicted,smoker,' +
           'preferred_contact_method,preferred_time,' +
           'vehicle_make,vehicle_model,vehicle_year,vehicle_license_plate,' +
-          'has_co_applicant,co_applicant_ssn,landlord_email,document_urls,' +
+          'has_co_applicant,co_applicant_first_name,co_applicant_last_name,co_applicant_email,co_applicant_phone,co_applicant_dob,co_applicant_ssn,' +
+          'co_applicant_role,co_applicant_consent,co_applicant_consent_timestamp,co_applicant_consent_version,co_applicant_employer,co_applicant_job_title,co_applicant_monthly_income,co_applicant_employment_duration,' +
+          'landlord_email,document_urls,' +
           'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,' +
           'monthly_rent,security_deposit,move_in_costs,lease_notes,lease_pdf_url,' +
           'tenant_signature,signature_timestamp,' +
