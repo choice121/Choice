@@ -53,9 +53,13 @@ const server = http.createServer((req, res) => {
     res.writeHead(302, { 'Location': '/how-it-works.html' });
     return res.end();
   }
-  if (cleanUrl === '/listings' || cleanUrl === '/listings/') {
+  if (cleanUrl === '/cities' || cleanUrl === '/browse-by-city') {
     res.writeHead(302, { 'Location': '/listings.html?view=cities' });
     return res.end();
+  }
+  if (cleanUrl === '/listings' || cleanUrl === '/listings/') {
+    req.url = '/listings.html' + (req.url.includes('?') ? '?' + req.url.split('?')[1] : '');
+    cleanUrl = '/listings.html';
   }
 
   // Handle /api/relocate endpoint

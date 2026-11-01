@@ -94,11 +94,13 @@
     if (rawId && typeof window !== 'undefined' && window.location) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const share = urlParams.get('share');
-        const shareHash = new URLSearchParams(window.location.hash.slice(1)).get('share');
+        const hashStr = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
+        const hashParams = new URLSearchParams(hashStr);
+        const rawShare = urlParams.get('share') || hashParams.get('share') || (typeof window.__CP_ACTIVE_SHARE_TOKEN__ === 'string' ? window.__CP_ACTIVE_SHARE_TOKEN__ : '') || '';
+        const cleanShare = rawShare ? String(rawShare).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim() : '';
         const fromP = opts.from_p || urlParams.get('p') || urlParams.get('ids') || urlParams.get('from_p');
-        if (share || shareHash) {
-          propUrl += '#share=' + encodeURIComponent(share || shareHash);
+        if (cleanShare) {
+          propUrl += '#share=' + encodeURIComponent(cleanShare);
         } else if (fromP) {
           propUrl += '&from_p=' + encodeURIComponent(fromP);
         }

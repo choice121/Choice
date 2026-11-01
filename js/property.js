@@ -50,8 +50,18 @@ updateNav();
 
 const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
-const isEmbedded = params.get('embedded') === 'true';
-const shareToken = params.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || '';
+const sanitizeShareToken = (t) => String(t || '').trim().replace(/^[{'"]+|[}'"]+$/g, '').trim();
+const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
+const hashParams = new URLSearchParams(rawHash);
+const shareToken = sanitizeShareToken(
+  params.get('share') || 
+  params.get('token') || 
+  hashParams.get('share') || 
+  hashParams.get('token') || 
+  (rawHash.startsWith('share=') ? rawHash.slice(6) : '') ||
+  (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || 
+  ''
+);
 if (shareToken) {
   try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
 }

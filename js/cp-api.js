@@ -373,10 +373,14 @@ const Properties = {
     if (filters.share_token || (filters.target_ids && Array.isArray(filters.target_ids) && filters.target_ids.length > 0)) {
       let rows = [];
       if (filters.share_token) {
+        const cleanToken = String(filters.share_token).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim();
         const { data, error } = await sb().functions.invoke('property-share', {
-          body: { action: 'resolve', token: filters.share_token },
+          body: { action: 'resolve', token: cleanToken },
         });
-        if (error) return { ok: false, data: null, error: error.message };
+        if (error) {
+          const errMsg = (data && (data.error || data.message)) || error.message || 'share_not_found';
+          return { ok: false, data: null, error: errMsg, isShareError: true };
+        }
         rows = Array.isArray(data?.properties) ? data.properties.slice() : [];
       } else {
         // Legacy ID-only links can resolve public listings, never private ones.

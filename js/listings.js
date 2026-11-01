@@ -109,7 +109,16 @@ function fmtRent(value) {
 function readURL() {
   const p = new URLSearchParams(window.location.search);
   const targetIdsRaw = p.get('p') || p.get('ids') || '';
-  activeShareToken = p.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
+  const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
+  const hashParams = new URLSearchParams(rawHash);
+  const rawShare = p.get('share') || hashParams.get('share') || hashParams.get('token') || (rawHash.startsWith('share=') ? rawHash.slice(6) : '') || '';
+  activeShareToken = rawShare ? String(rawShare).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim() : '';
+  if (activeShareToken) {
+    try { sessionStorage.setItem('cp_active_share_token', activeShareToken); } catch (_) {}
+  } else {
+    try { activeShareToken = sessionStorage.getItem('cp_active_share_token') || ''; } catch (_) {}
+  }
+  window.__CP_ACTIVE_SHARE_TOKEN__ = activeShareToken;
   activeTargetIds = !activeShareToken && targetIdsRaw ? targetIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   activeSearch   = p.get('q')        || '';
   activeBeds     = p.get('beds')     || '';
