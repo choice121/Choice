@@ -1,0 +1,19 @@
+{
+  "locations": ["Dallas, TX", "Arlington, TX"],
+  "fallback_locations": ["Euless, TX", "Grapevine, TX"],
+  "beds_exact": 1,
+  "baths_min": 1.0,
+  "rent_min": 1000,
+  "rent_max": 1500,
+  "rent_floor": 1000,
+  "rent_cap": 1300,
+  "allowed_types": ["APARTMENT", "CONDOS", "SINGLE_FAMILY", "TOWNHOMES"],
+  "target": 8,
+  "past_days": 60,
+  "limit": 150,
+  "min_score": 70,
+  "batch_name": "Dallas Metro 1BR",
+  "folder_name": "Dallas Metro 1BR",
+  "dry_run": false,
+  "strict_watermarks": true
+}

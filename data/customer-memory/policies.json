@@ -1,0 +1,10 @@
+{
+  "application_fee": 50,
+  "review_window_hours": "24–72 hours",
+  "reapplication_days": 7,
+  "reapplication_count": 2,
+  "security_deposit_rule": "Equal to 1x monthly rent in DB; never quote in initial descriptions",
+  "pet_policy": "Pet friendly (dogs and cats welcome)",
+  "viewing_policy": "Application reviewed prior to private tour scheduling",
+  "holding_policy": "Applicable holding fees credit toward first month rent upon approved application"
+}

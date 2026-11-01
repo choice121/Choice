@@ -1,0 +1,109 @@
+name: Cloudflare-Only Enforcement
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  enforce-cloudflare-only:
+    name: Block Replit Artifacts & Validate Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Reject Replit configuration files
+        run: |
+          FORBIDDEN_FILES=(".replit" "replit.nix" "replit.md" "REPLIT_SAFETY.md" "server.js" "scripts/generate-config-replit.js")
+          FOUND=()
+          for f in "${FORBIDDEN_FILES[@]}"; do
+            if [ -f "$f" ]; then
+              FOUND+=("$f")
+            fi
+          done
+          if [ ${#FOUND[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ BUILD FAILED — Replit artifacts detected in repository"
+            echo ""
+            echo "   The following Replit-specific files must not exist in this repo:"
+            for f in "${FOUND[@]}"; do
+              echo "     • $f"
+            done
+            echo ""
+            echo "   This project runs exclusively on Cloudflare Pages."
+            echo "   Remove these files and push again."
+            echo ""
+            exit 1
+          fi
+          echo "✅ No Replit artifacts found."
+
+      - name: Reject forbidden backend packages
+        run: |
+          FORBIDDEN=("express" "fastify" "koa" "pg" "postgres" "mysql" "mysql2" "sqlite" "better-sqlite3" "prisma" "drizzle-orm" "sequelize" "typeorm" "knex" "@neondatabase/serverless")
+          if [ ! -f package.json ]; then
+            echo "✅ No package.json — skipping dependency check."
+            exit 0
+          fi
+          FOUND=()
+          for pkg in "${FORBIDDEN[@]}"; do
+            if grep -q "\"$pkg\"" package.json; then
+              FOUND+=("$pkg")
+            fi
+          done
+          if [ ${#FOUND[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ BUILD FAILED — Forbidden backend packages in package.json:"
+            for p in "${FOUND[@]}"; do
+              echo "     • $p"
+            done
+            echo ""
+            echo "   This is a static site. No backend packages are permitted."
+            echo ""
+            exit 1
+          fi
+          echo "✅ No forbidden packages found."
+
+      - name: Reject committed config.js (contains secrets)
+        run: |
+          if git ls-files --error-unmatch config.js 2>/dev/null; then
+            echo ""
+            echo "❌ BUILD FAILED — config.js is committed to the repository."
+            echo "   This file contains credentials and is generated at Cloudflare build time."
+            echo "   It must be gitignored and never committed."
+            echo "   Run: git rm --cached config.js && git commit -m 'Remove committed config.js'"
+            echo ""
+            exit 1
+          fi
+          echo "✅ config.js is not tracked in git."
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate build script executes cleanly
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IMAGEKIT_URL: ${{ secrets.IMAGEKIT_URL }}
+          IMAGEKIT_PUBLIC_KEY: ${{ secrets.IMAGEKIT_PUBLIC_KEY }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
+          COMPANY_NAME: "Choice Properties"
+          COMPANY_EMAIL: ${{ secrets.COMPANY_EMAIL }}
+          COMPANY_PHONE: ${{ secrets.COMPANY_PHONE }}
+          COMPANY_TAGLINE: "Your trust is our standard."
+          COMPANY_ADDRESS: ${{ secrets.COMPANY_ADDRESS }}
+          APPLY_FORM_URL: ${{ secrets.APPLY_FORM_URL }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "⚠  Supabase secrets not configured in GitHub — skipping build validation."
+            echo "   Add SUPABASE_URL, SUPABASE_ANON_KEY, IMAGEKIT_URL, IMAGEKIT_PUBLIC_KEY, SITE_URL"
+            echo "   to GitHub repository secrets to enable full build validation."
+            exit 0
+          fi
+          node generate-config.js
+          echo "✅ Build script completed successfully."

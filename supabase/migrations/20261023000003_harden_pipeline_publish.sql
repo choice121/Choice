@@ -1,0 +1,188 @@
+-- Harden pipeline_publish: remove anon access, enforce required facts, drop prohibited display fields.
+CREATE OR REPLACE FUNCTION public.pipeline_publish(
+  p_id          text,
+  p_landlord_id uuid DEFAULT NULL,
+  p_status      text DEFAULT 'active'
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pipeline
+AS $$
+DECLARE
+  p             pipeline.pipeline_properties%ROWTYPE;
+  new_id        text;
+  v_listed      date;
+  v_imported_at timestamptz;
+  v_photos      jsonb;
+  v_elem        jsonb;
+  v_url         text;
+  v_file_id     text;
+  v_width       int;
+  v_height      int;
+  v_order       int := 1;
+  v_pub_status  property_status;
+  v_photo_count int := 0;
+BEGIN
+  SELECT * INTO p FROM pipeline.pipeline_properties WHERE id = p_id;
+  IF NOT FOUND THEN
+    RETURN json_build_object('ok', false, 'error', 'Listing not found in pipeline');
+  END IF;
+
+  IF p.title IS NULL OR p.address IS NULL OR p.city IS NULL
+     OR p.state IS NULL OR p.zip IS NULL OR p.monthly_rent IS NULL
+     OR p.bedrooms IS NULL OR p.bathrooms IS NULL THEN
+    RETURN json_build_object('ok', false, 'error', 'Required fields missing');
+  END IF;
+
+  -- Photo gate: at least one valid source photo URL required.
+  v_photos := NULL;
+  IF p.local_image_paths IS NOT NULL AND p.local_image_paths <> '' AND p.local_image_paths <> '[]' THEN
+    BEGIN v_photos := p.local_image_paths::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
+  END IF;
+  IF v_photos IS NULL OR jsonb_array_length(v_photos) = 0 THEN
+    IF p.original_image_urls IS NOT NULL AND p.original_image_urls <> '' AND p.original_image_urls <> '[]' THEN
+      BEGIN v_photos := p.original_image_urls::jsonb; EXCEPTION WHEN OTHERS THEN v_photos := NULL; END;
+    END IF;
+  END IF;
+  IF v_photos IS NULL OR jsonb_typeof(v_photos) <> 'array' OR jsonb_array_length(v_photos) = 0 THEN
+    RETURN json_build_object('ok', false, 'error', 'No photos available; cannot publish');
+  END IF;
+
+  IF p_status = 'private_placement' THEN
+    v_pub_status := 'private_placement'::property_status;
+  ELSE
+    v_pub_status := 'active'::property_status;
+  END IF;
+
+  BEGIN
+    IF p.listed_at IS NOT NULL AND p.listed_at <> '' THEN
+      v_listed := p.listed_at::date;
+    ELSE
+      v_listed := NULL;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_listed := NULL;
+  END;
+
+  v_imported_at := COALESCE(p.imported_at, p.scraped_at, now());
+  new_id := 'prop_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12);
+
+  INSERT INTO public.properties (
+    id, landlord_id, status,
+    title, description, original_description, showing_instructions,
+    address, city, state, zip, county, neighborhood,
+    lat, lng,
+    property_type, year_built, floors,
+    unit_number, total_units,
+    bedrooms, bathrooms, half_bathrooms, total_bathrooms, square_footage,
+    lot_size_sqft, garage_spaces,
+    monthly_rent, security_deposit, last_months_rent,
+    application_fee, pet_deposit, admin_fee, move_in_special,
+    available_date, lease_terms, minimum_lease_months,
+    pets_allowed, pet_details, pet_weight_limit,
+    smoking_allowed,
+    parking, parking_fee,
+    amenities, appliances, utilities_included, flooring,
+    heating_type, cooling_type, laundry_type,
+    location_context, virtual_tour_url,
+    has_basement, has_central_air,
+    listed_at, source_last_updated_at, imported_at, source_status, last_verified_at
+  ) VALUES (
+    new_id,
+    COALESCE(p_landlord_id, p.poster_landlord_id::uuid),
+    v_pub_status,
+    p.title, p.description, COALESCE(p.original_description, p.description), p.showing_instructions,
+    p.address, p.city, p.state, p.zip, p.county, p.neighborhood,
+    p.lat, p.lng,
+    p.property_type, p.year_built, p.floors,
+    p.unit_number, p.total_units,
+    p.bedrooms, p.bathrooms, p.half_bathrooms, COALESCE(p.total_bathrooms, p.bathrooms), p.square_footage,
+    p.lot_size_sqft, p.garage_spaces,
+    p.monthly_rent,
+    p.security_deposit,
+    p.last_months_rent,
+    50,
+    p.pet_deposit, p.admin_fee, p.move_in_special,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL, NULL,
+    NULL,
+    p.parking, p.parking_fee,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    p.heating_type, p.cooling_type, p.laundry_type,
+    p.location_context, p.virtual_tour_url,
+    p.has_basement,
+    p.has_central_air,
+    v_listed,
+    p.source_last_updated_at,
+    v_imported_at,
+    COALESCE(p.source_status, 'available'),
+    p.last_verified_at
+  );
+
+  v_order := 1;
+  FOR v_elem IN SELECT * FROM jsonb_array_elements(v_photos)
+  LOOP
+    v_url := NULL;
+    v_file_id := NULL;
+    v_width := NULL;
+    v_height := NULL;
+
+    IF jsonb_typeof(v_elem) = 'string' THEN
+      v_url := v_elem #>> '{}';
+    ELSIF jsonb_typeof(v_elem) = 'object' THEN
+      v_url := v_elem->>'url';
+      v_file_id := v_elem->>'fileId';
+      IF v_elem ? 'width' AND jsonb_typeof(v_elem->'width') = 'number' THEN
+        v_width := (v_elem->>'width')::int;
+      END IF;
+      IF v_elem ? 'height' AND jsonb_typeof(v_elem->'height') = 'number' THEN
+        v_height := (v_elem->>'height')::int;
+      END IF;
+    END IF;
+
+    IF v_url IS NOT NULL AND length(v_url) > 5 THEN
+      INSERT INTO public.property_photos (
+        id, property_id, url, file_id, width, height, display_order, is_hero, watermark_status, created_at
+      ) VALUES (
+        gen_random_uuid(),
+        new_id,
+        v_url,
+        v_file_id,
+        v_width,
+        v_height,
+        v_order,
+        (v_order = 1),
+        'clean',
+        CURRENT_TIMESTAMP
+      );
+      v_order := v_order + 1;
+      v_photo_count := v_photo_count + 1;
+    END IF;
+  END LOOP;
+
+  IF v_photo_count = 0 THEN
+    DELETE FROM public.properties WHERE id = new_id;
+    RETURN json_build_object('ok', false, 'error', 'No valid photos inserted');
+  END IF;
+
+  UPDATE pipeline.pipeline_properties
+  SET status             = 'published',
+      choice_property_id = new_id,
+      imported_at        = COALESCE(imported_at, now()),
+      published_at       = now()::text,
+      updated_at         = now()
+  WHERE id = p_id;
+
+  RETURN json_build_object('ok', true, 'choice_property_id', new_id, 'status', v_pub_status, 'photos', v_photo_count);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.pipeline_publish(text,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.pipeline_publish(text,uuid,text) TO authenticated, service_role;

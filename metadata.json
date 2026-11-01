@@ -1,0 +1,6 @@
+{
+  "name": "Choice Properties",
+  "description": "Browse verified rental listings across the United States. Apartments, houses, and condos — apply online in minutes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

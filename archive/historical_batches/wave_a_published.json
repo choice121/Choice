@@ -1,0 +1,35 @@
+[
+  {
+    "pipeline_id": "PP-4DDECAA9",
+    "property_id": "ba506749-1923-46cc-b4bb-88189901cef0",
+    "address": "7304 Park Place Ct",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44102",
+    "rent": 3550,
+    "beds": 3,
+    "baths": 3
+  },
+  {
+    "pipeline_id": "PP-A8A0837F",
+    "property_id": "9831b82b-630d-4aaa-95bb-d3c2858a60c0",
+    "address": "4480 W 148th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44135",
+    "rent": 1600,
+    "beds": 3,
+    "baths": 2
+  },
+  {
+    "pipeline_id": "PP-3FB1BF3B",
+    "property_id": "4081-w-158th-st-PP-39FE3",
+    "address": "4081 W 158th St",
+    "city": "Cleveland",
+    "state": "OH",
+    "zip": "44135",
+    "rent": 2200,
+    "beds": 3,
+    "baths": 2
+  }
+]
