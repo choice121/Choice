@@ -223,6 +223,59 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── Server-side parsing and validation — additional household applicants ──
+  interface AdditionalApplicant {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    dob: string;
+    ssn?: string;
+    role?: string;
+    employer?: string;
+    job_title?: string;
+    monthly_income?: number | string;
+    employment_duration?: string;
+  }
+  let additionalApplicants: AdditionalApplicant[] = [];
+  const rawExtra = fv(fields['additional_applicants_json']);
+  if (rawExtra) {
+    try {
+      const parsed = JSON.parse(rawExtra);
+      if (Array.isArray(parsed)) {
+        additionalApplicants = parsed.filter(a => a && (a.first_name || a.email));
+      }
+    } catch (e) {
+      console.warn('Failed to parse additional_applicants_json:', e);
+    }
+  }
+
+  for (let i = 0; i < additionalApplicants.length; i++) {
+    const extra = additionalApplicants[i];
+    const eFirst = (extra.first_name || '').trim();
+    const eLast = (extra.last_name || '').trim();
+    const eEmail = (extra.email || '').trim().toLowerCase();
+    const eDob = (extra.dob || '').trim();
+    const eRole = (extra.role || 'Co-applicant').trim();
+
+    if (!eFirst || !eLast || !eEmail || !eEmail.includes('@') || eEmail.length > 254) {
+      return jsonErr(400, `A complete name and valid email are required for additional adult applicant #${i + 2}.`);
+    }
+    if (!['Co-applicant', 'Guarantor'].includes(eRole)) {
+      return jsonErr(400, `Select whether additional adult applicant #${i + 2} is a co-applicant or guarantor.`);
+    }
+    if (!eDob) {
+      return jsonErr(400, `A valid date of birth is required for additional adult applicant #${i + 2}.`);
+    }
+    const extraAge = ageInYears(eDob);
+    if (extraAge === null || extraAge < 18) {
+      return jsonErr(400, `Additional adult applicant #${i + 2} must be 18 years of age or older.`);
+    }
+    if (extraAge > 120) {
+      return jsonErr(400, `Please enter a valid date of birth for additional adult applicant #${i + 2}.`);
+    }
+  }
+
   // ── Property is required, fee/rent/deposit must come from DB, never client ─
   const submittedPropertyId = fv(fields['Property ID']);
   if (!submittedPropertyId) {
@@ -283,7 +336,7 @@ Deno.serve(async (req: Request) => {
     if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
   }
 
-  const screenedAdultCount = hasCoApplicant ? 2 : 1;
+  const screenedAdultCount = 1 + (hasCoApplicant ? 1 : 0) + additionalApplicants.length;
   const applicationFeePerAdult = 50;
   const enforcedFee = screenedAdultCount * applicationFeePerAdult;
   const enforcedRent    = typeof prop.monthly_rent      === 'number' ? prop.monthly_rent      : null;
@@ -469,6 +522,23 @@ Deno.serve(async (req: Request) => {
   const databaseAppId = insertedApp.id;
   let coApplicantConsentLink: string | null = null;
   if (hasCoApplicant) {
+    const { error: coAppErr } = await supabase.from('co_applicants').insert({
+      app_id: appId,
+      first_name: coFirstName,
+      last_name: coLastName,
+      email: coEmail,
+      phone: fv(fields['Co-Applicant Phone']) || null,
+      dob: coDob,
+      ssn: fv(fields['Co-Applicant SSN']) ? ('XXX-XX-' + fv(fields['Co-Applicant SSN']).replace(/\D/g, '').slice(-4)) : null,
+      role: coRole,
+      employer: fv(fields['Co-Applicant Employer']) || null,
+      job_title: fv(fields['Co-Applicant Job Title']) || null,
+      monthly_income: fNum(fields['Co-Applicant Monthly Income']),
+      employment_duration: fv(fields['Co-Applicant Employment Duration']) || null,
+      consent: false
+    });
+    if (coAppErr) console.warn('Primary co-applicant row insert error:', coAppErr.message);
+
     const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
     const token = btoa(String.fromCharCode(...tokenBytes))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -483,6 +553,64 @@ Deno.serve(async (req: Request) => {
       console.error('Co-applicant consent token insert failed:', tokenError.message);
     } else {
       coApplicantConsentLink = `${getSiteUrl()}/co-applicant-consent.html#token=${token}`;
+    }
+  }
+
+  // Persist additional adult household applicants
+  for (let i = 0; i < additionalApplicants.length; i++) {
+    const extra = additionalApplicants[i];
+    const extraFirst = (extra.first_name || '').trim();
+    const extraLast = (extra.last_name || '').trim();
+    const extraEmail = (extra.email || '').trim().toLowerCase();
+    const extraPhone = extra.phone ? extra.phone.trim() : null;
+    const extraDob = (extra.dob || '').trim();
+    const extraRole = (extra.role || 'Co-applicant').trim();
+    const extraEmployer = extra.employer ? extra.employer.trim() : null;
+    const extraJobTitle = extra.job_title ? extra.job_title.trim() : null;
+    const extraIncome = extra.monthly_income ? Number(extra.monthly_income) : null;
+    const extraDuration = extra.employment_duration ? extra.employment_duration.trim() : null;
+    const extraSsn = extra.ssn ? ('XXX-XX-' + String(extra.ssn).replace(/\D/g, '').slice(-4)) : null;
+
+    const { error: extraInsertErr } = await supabase.from('co_applicants').insert({
+      app_id: appId,
+      first_name: extraFirst,
+      last_name: extraLast,
+      email: extraEmail,
+      phone: extraPhone,
+      dob: extraDob,
+      ssn: extraSsn,
+      role: extraRole,
+      employer: extraEmployer,
+      job_title: extraJobTitle,
+      monthly_income: extraIncome,
+      employment_duration: extraDuration,
+      consent: false
+    });
+    if (extraInsertErr) console.warn(`Additional applicant #${i + 2} insert error:`, extraInsertErr.message);
+
+    // Mint token for additional applicant
+    const extraBytes = crypto.getRandomValues(new Uint8Array(32));
+    const extraToken = btoa(String.fromCharCode(...extraBytes))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    const extraTokenHash = await sha256Hex(extraToken);
+    const { error: extraTokenErr } = await supabase.from('co_applicant_consent_tokens').insert({
+      application_id: databaseAppId,
+      token_hash: extraTokenHash,
+      recipient_email: extraEmail,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    if (!extraTokenErr) {
+      const extraConsentLink = `${getSiteUrl()}/co-applicant-consent.html#token=${extraToken}`;
+      try {
+        await sendEmail({
+          to: extraEmail,
+          subject: `Action required: authorize screening for Choice Properties application ${appId}`,
+          html: coApplicantScreeningConsentHtml(extraFirst, appId, extraConsentLink),
+        });
+        await logEmail('co_applicant_consent_invitation', extraEmail, 'sent', 'resend');
+      } catch (extraMailErr) {
+        console.warn(`Additional applicant #${i + 2} email failed:`, extraMailErr);
+      }
     }
   }
 

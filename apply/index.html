@@ -26,7 +26,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1793578532485"></script>
+  <script src="/js/cp-error-reporter.js?v=1793590190034"></script>
     <meta charset="UTF-8">
       <meta name="description" content="Apply to rent a Choice Properties unit. Complete your rental application online in minutes.">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +35,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=1793578532485">
+    <link rel="stylesheet" href="css/style.css?v=1793590190034">
 </head>
 <body>
 
@@ -494,8 +494,16 @@
                         </div>
                     </div>
 
+                    <div id="additionalApplicantsContainer"></div>
+
+                    <div style="margin-top: 14px; margin-bottom: 18px;">
+                        <button type="button" id="btnAddApplicant" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1.5px dashed var(--primary, #006aff); background: #f0f7ff; color: var(--primary, #006aff); font-weight: 600; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-user-plus"></i> <span data-i18n="addAnotherAdult">+ Add Another Adult Applicant or Guarantor</span>
+                        </button>
+                    </div>
+
                     <div class="form-group" role="status">
-                        <p data-i18n="coApplicantConsentNotice">We will email the additional adult a separate link to review and authorize screening. Their screening cannot begin until they complete that step.</p>
+                        <p data-i18n="coApplicantConsentNotice">We will email each additional adult a separate link to review and authorize screening. Their screening cannot begin until they complete that step.</p>
                     </div>
                 </div>
                 <!-- ===== END CO-APPLICANT SECTION ===== -->
@@ -1072,7 +1080,7 @@
 
                         <div class="custom-checkbox">
                             <input type="checkbox" id="feeAcknowledge" name="feeAcknowledge" value="on" required>
-                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I understand that the application fee is $50 for each adult applicant or guarantor being screened, and that the total shown above is due after submission. Adult occupants who are not applying or being screened are not charged. Nothing is charged when I submit. If reapplying after a non-approval, I should contact management before payment to verify eligibility for the 30-day courtesy. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.</label>
+                            <label for="feeAcknowledge" data-i18n="feeAcknowledge">I understand that the application fee is $50 for each adult applicant or guarantor being screened, and that the total shown above is due after submission. Adult occupants who are not applying or being screened are not charged. Nothing is charged when I submit. If reapplying after a non-approval, application credits are valid for 30 days, cover the total household applicants that applied, and are applied towards move-in costs upon lease execution. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.</label>
                         </div>
 
                         <div class="custom-checkbox">
@@ -1146,7 +1154,7 @@
     </div>
 
     <script src="config.js"></script>
-      <script src="js/script.js?v=1793578532485_billing_allocation"></script>
+      <script src="js/script.js?v=1793590190034_billing_allocation"></script>
 
     <style>
         #devTestFillBtn {

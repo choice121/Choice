@@ -356,7 +356,11 @@ class RentalApplication {
 
     _updateApplicationFee() {
         const hasCoApplicant = document.getElementById('hasCoApplicant')?.checked === true;
-        const adultCount = hasCoApplicant ? 2 : 1;
+        const extraApplicants = (typeof this.getAdditionalApplicantsData === 'function')
+            ? this.getAdditionalApplicantsData()
+            : (this._extraApplicants || []);
+        const extraCount = Array.isArray(extraApplicants) ? extraApplicants.length : 0;
+        const adultCount = 1 + (hasCoApplicant ? 1 : 0) + extraCount;
         const fee = adultCount * 50;
         this.state.applicationFee = fee;
 
@@ -372,10 +376,239 @@ class RentalApplication {
         }
         if (breakdown) {
             breakdown.textContent = isSpanish
-                ? `${adultCount} solicitante${adultCount === 1 ? '' : 's'} adulto${adultCount === 1 ? '' : 's'} × $50 = $${fee} en total.`
-                : `${adultCount} adult${adultCount === 1 ? '' : 's'} being screened × $50 = $${fee} total.`;
+                ? `${adultCount} solicitante${adultCount === 1 ? '' : 's'} adulto${adultCount === 1 ? '' : 's'} × $50 = $${fee} en total (Crédito de 30 días aplicado a costos de mudanza para todos los solicitantes).`
+                : `${adultCount} adult applicant${adultCount === 1 ? '' : 's'} being screened × $50 = $${fee} total (30-day move-in credit covers all applicants).`;
         }
         if (hiddenFee) hiddenFee.value = String(fee);
+    }
+
+    addAdditionalApplicant(initialData = {}) {
+        if (!this._extraApplicants) this._extraApplicants = [];
+        const applicantId = initialData.id || ('applicant_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+        const applicant = {
+            id: applicantId,
+            first_name: initialData.first_name || '',
+            last_name: initialData.last_name || '',
+            email: initialData.email || '',
+            phone: initialData.phone || '',
+            dob: initialData.dob || '',
+            ssn: initialData.ssn || '',
+            role: initialData.role || 'Co-applicant',
+            employer: initialData.employer || '',
+            job_title: initialData.job_title || '',
+            monthly_income: initialData.monthly_income || '',
+            employment_duration: initialData.employment_duration || ''
+        };
+        this._extraApplicants.push(applicant);
+        this.renderAdditionalApplicantCard(applicant);
+        this._updateApplicationFee();
+        this.saveProgress();
+    }
+
+    removeAdditionalApplicant(applicantId) {
+        if (!this._extraApplicants) return;
+        this._extraApplicants = this._extraApplicants.filter(a => a.id !== applicantId);
+        const card = document.querySelector(`.additional-applicant-card[data-applicant-id="${applicantId}"]`);
+        if (card) card.remove();
+        this._renumberAdditionalApplicantCards();
+        this._updateApplicationFee();
+        this.saveProgress();
+    }
+
+    _renumberAdditionalApplicantCards() {
+        const container = document.getElementById('additionalApplicantsContainer');
+        if (!container) return;
+        const cards = container.querySelectorAll('.additional-applicant-card');
+        const isSpanish = this.state.language === 'es';
+        cards.forEach((c, idx) => {
+            const numEl = c.querySelector('.applicant-number');
+            if (numEl) {
+                numEl.textContent = isSpanish
+                    ? `Adulto Adicional #${idx + 2}`
+                    : `Additional Adult Applicant #${idx + 2}`;
+            }
+        });
+    }
+
+    renderAdditionalApplicantCard(applicant) {
+        const container = document.getElementById('additionalApplicantsContainer');
+        if (!container) return;
+        const isSpanish = this.state.language === 'es';
+        const cardIndex = container.querySelectorAll('.additional-applicant-card').length;
+        const card = document.createElement('div');
+        card.className = 'additional-applicant-card';
+        card.dataset.applicantId = applicant.id;
+
+        card.innerHTML = `
+            <div class="additional-applicant-header">
+                <div class="additional-applicant-title">
+                    <i class="fas fa-user-plus"></i>
+                    <span class="applicant-number">${isSpanish ? `Adulto Adicional #${cardIndex + 2}` : `Additional Adult Applicant #${cardIndex + 2}`}</span>
+                </div>
+                <button type="button" class="btn-remove-applicant" aria-label="Remove applicant">
+                    <i class="fas fa-trash-alt"></i> ${isSpanish ? 'Eliminar' : 'Remove'}
+                </button>
+            </div>
+
+            <!-- Role selector -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label class="required">${isSpanish ? 'Tipo de Solicitante' : 'Applicant Role'}</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="radio" id="role_co_${applicant.id}" name="extra_${applicant.id}_role" value="Co-applicant" ${applicant.role !== 'Guarantor' ? 'checked' : ''}>
+                        <label for="role_co_${applicant.id}">${isSpanish ? 'Co-solicitante (Vivirá en la propiedad)' : 'Co-applicant (Will live in property)'}</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="radio" id="role_guar_${applicant.id}" name="extra_${applicant.id}_role" value="Guarantor" ${applicant.role === 'Guarantor' ? 'checked' : ''}>
+                        <label for="role_guar_${applicant.id}">${isSpanish ? 'Garante / Co-firmante (No vivirá en la propiedad)' : 'Guarantor (Will not live in property)'}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal details -->
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'Nombre' : 'First Name'}</label>
+                        <input type="text" data-extra-field="first_name" required value="${applicant.first_name ? applicant.first_name.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'Apellido' : 'Last Name'}</label>
+                        <input type="text" data-extra-field="last_name" required value="${applicant.last_name ? applicant.last_name.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'Correo Electrónico' : 'Email'}</label>
+                        <input type="email" data-extra-field="email" required value="${applicant.email ? applicant.email.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'Teléfono' : 'Phone'}</label>
+                        <input type="tel" data-extra-field="phone" required inputmode="tel" value="${applicant.phone ? applicant.phone.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'Fecha de Nacimiento' : 'Date of Birth'}</label>
+                        <input type="date" data-extra-field="dob" required value="${applicant.dob ? applicant.dob.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label class="required">${isSpanish ? 'SSN (Últimos 4 dígitos)' : 'SSN (Last 4)'}</label>
+                        <input type="password" data-extra-field="ssn" maxlength="4" inputmode="numeric" required value="${applicant.ssn ? applicant.ssn.replace(/"/g, '&quot;') : ''}">
+                        <div class="error-message"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment & Income -->
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label>${isSpanish ? 'Empleador' : 'Employer'}</label>
+                        <input type="text" data-extra-field="employer" value="${applicant.employer ? applicant.employer.replace(/"/g, '&quot;') : ''}">
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label>${isSpanish ? 'Puesto / Título' : 'Job Title'}</label>
+                        <input type="text" data-extra-field="job_title" value="${applicant.job_title ? applicant.job_title.replace(/"/g, '&quot;') : ''}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label>${isSpanish ? 'Ingreso Mensual Bruto ($)' : 'Gross Monthly Income ($)'}</label>
+                        <input type="text" data-extra-field="monthly_income" placeholder="e.g. 4000" value="${applicant.monthly_income ? String(applicant.monthly_income).replace(/"/g, '&quot;') : ''}">
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label>${isSpanish ? 'Tiempo de Empleo' : 'Length of Employment'}</label>
+                        <input type="text" data-extra-field="employment_duration" placeholder="e.g. 2 years" value="${applicant.employment_duration ? applicant.employment_duration.replace(/"/g, '&quot;') : ''}">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Wire remove button
+        const removeBtn = card.querySelector('.btn-remove-applicant');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                this.removeAdditionalApplicant(applicant.id);
+            });
+        }
+
+        // Wire inputs for live synchronization & auto-save
+        const inputs = card.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                this.syncAdditionalApplicantFromCard(card, applicant.id);
+                this.saveProgress();
+            });
+            input.addEventListener('change', () => {
+                this.syncAdditionalApplicantFromCard(card, applicant.id);
+                this.saveProgress();
+            });
+        });
+
+        container.appendChild(card);
+    }
+
+    syncAdditionalApplicantFromCard(card, applicantId) {
+        if (!this._extraApplicants) return;
+        const applicant = this._extraApplicants.find(a => a.id === applicantId);
+        if (!applicant) return;
+        const getVal = (name) => {
+            const el = card.querySelector(`[data-extra-field="${name}"]`);
+            return el ? el.value.trim() : '';
+        };
+        const getRadio = (name) => {
+            const checked = card.querySelector(`input[name="extra_${applicantId}_${name}"]:checked`);
+            return checked ? checked.value : 'Co-applicant';
+        };
+        applicant.first_name = getVal('first_name');
+        applicant.last_name = getVal('last_name');
+        applicant.email = getVal('email').toLowerCase();
+        applicant.phone = getVal('phone');
+        applicant.dob = getVal('dob');
+        applicant.ssn = getVal('ssn');
+        applicant.role = getRadio('role');
+        applicant.employer = getVal('employer');
+        applicant.job_title = getVal('job_title');
+        applicant.monthly_income = getVal('monthly_income');
+        applicant.employment_duration = getVal('employment_duration');
+    }
+
+    getAdditionalApplicantsData() {
+        if (!this._extraApplicants) this._extraApplicants = [];
+        const container = document.getElementById('additionalApplicantsContainer');
+        if (container) {
+            const cards = container.querySelectorAll('.additional-applicant-card');
+            cards.forEach(card => {
+                const applicantId = card.dataset.applicantId;
+                if (applicantId) this.syncAdditionalApplicantFromCard(card, applicantId);
+            });
+        }
+        return this._extraApplicants;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -1393,6 +1626,52 @@ class RentalApplication {
                     }
                 });
             }
+
+            // Validate any additional applicant cards
+            const extraCards = document.querySelectorAll('#additionalApplicantsContainer .additional-applicant-card');
+            extraCards.forEach(card => {
+                const reqInputs = card.querySelectorAll('input[required]');
+                reqInputs.forEach(input => {
+                    const val = input.value.trim();
+                    if (!val) {
+                        this.showError(input, this.state.language === 'en' ? 'Required' : 'Campo obligatorio');
+                        input.classList.add('is-invalid');
+                        isStepValid = false;
+                        if (!firstInvalidField) firstInvalidField = input;
+                    } else if (input.type === 'email' && !val.includes('@')) {
+                        this.showError(input, this.state.language === 'en' ? 'Valid email required' : 'Correo válido requerido');
+                        input.classList.add('is-invalid');
+                        isStepValid = false;
+                        if (!firstInvalidField) firstInvalidField = input;
+                    } else if (input.dataset.extraField === 'ssn' && val.replace(/\D/g, '').length !== 4) {
+                        this.showError(input, this.state.language === 'en' ? 'Enter 4 digits' : 'Ingrese 4 dígitos');
+                        input.classList.add('is-invalid');
+                        isStepValid = false;
+                        if (!firstInvalidField) firstInvalidField = input;
+                    } else if (input.dataset.extraField === 'dob') {
+                        const parsed = this._parseLocalDate(val);
+                        if (!parsed) {
+                            this.showError(input, this.state.language === 'en' ? 'Valid DOB required' : 'Fecha de nacimiento requerida');
+                            input.classList.add('is-invalid');
+                            isStepValid = false;
+                            if (!firstInvalidField) firstInvalidField = input;
+                        } else {
+                            const now = new Date();
+                            const age = now.getFullYear() - parsed.getFullYear() - ((now.getMonth() < parsed.getMonth() || (now.getMonth() === parsed.getMonth() && now.getDate() < parsed.getDate())) ? 1 : 0);
+                            if (age < 18) {
+                                this.showError(input, this.state.language === 'en' ? 'Must be 18+' : 'Debe tener 18+');
+                                input.classList.add('is-invalid');
+                                isStepValid = false;
+                                if (!firstInvalidField) firstInvalidField = input;
+                            } else {
+                                this.clearError(input);
+                            }
+                        }
+                    } else {
+                        this.clearError(input);
+                    }
+                });
+            });
         }
         if (stepNumber === 5) {
               // Validate "Preferred Contact Method" — at least one checkbox required
@@ -1514,11 +1793,17 @@ class RentalApplication {
                 } else {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) { el.removeAttribute('required'); el.value = ''; }
+                        if (el) { el.removeAttribute('required'); }
                     });
                     const inputs = coApplicantSection.querySelectorAll('input, select, textarea');
                     inputs.forEach(input => this.clearError(input));
                 }
+            });
+        }
+        const btnAddApplicant = document.getElementById('btnAddApplicant');
+        if (btnAddApplicant) {
+            btnAddApplicant.addEventListener('click', () => {
+                this.addAdditionalApplicant();
             });
         }
         const vehicleYes = document.getElementById('vehicleYes');
@@ -2069,20 +2354,16 @@ class RentalApplication {
             try {
                 const data = JSON.parse(saved);
 
-                // Property-context guard: if the current URL is for a different property
-                // than what was saved, wipe the stale data and start fresh.
-                // This prevents a half-filled application for Property A from loading
-                // when the user clicks "Apply" on Property B.
+                // User directive: Never wipe or discard applicant data on property switch or resume.
+                // All applicant personal, household, employment, and additional applicants persist across sessions.
                 const _curP = new URLSearchParams(window.location.search);
                 const _curFingerprint = _curP.get('id') || _curP.get('addr') || '';
-                const _savedFingerprint = data._propertyFingerprint || '';
-                if (_curFingerprint && _savedFingerprint && _curFingerprint !== _savedFingerprint) {
-                    try { localStorage.removeItem(this.config.LOCAL_STORAGE_KEY); } catch(e) {}
-                    return; // Different property — start completely fresh
+                if (_curFingerprint) {
+                    data._propertyFingerprint = _curFingerprint;
                 }
 
-                // SSN and DOB are kept in the saved draft so applicants don't have to re-enter them on resume.
-                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents']);
+                // Restore form fields — keep 100% of entered fields including SSN and DOB
+                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents', '_extraApplicants', 'additional_applicants_json']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
 
@@ -2097,7 +2378,6 @@ class RentalApplication {
                     if (firstEl.type === 'radio') {
                         els.forEach(el => { if (el.value === value) el.checked = true; });
                     } else if (firstEl.type === 'checkbox') {
-                          // [L1 fix] Handle array (multi-checkbox group) and single values
                           if (Array.isArray(value)) {
                               els.forEach(el => { el.checked = value.includes(el.value); });
                           } else {
@@ -2107,6 +2387,17 @@ class RentalApplication {
                           firstEl.value = value;
                     }
                 });
+
+                // Restore dynamic additional applicants
+                if (Array.isArray(data._extraApplicants) && data._extraApplicants.length > 0) {
+                    const container = document.getElementById('additionalApplicantsContainer');
+                    if (container) container.innerHTML = '';
+                    this._extraApplicants = [];
+                    data._extraApplicants.forEach(item => {
+                        this.addAdditionalApplicant(item);
+                    });
+                }
+
                 if (data._language) this.state.language = data._language;
                 if (data._currentStep && data._currentStep > 1) {
                     const stepNum = parseInt(data._currentStep, 10);
@@ -2122,7 +2413,7 @@ class RentalApplication {
                         }, 10);
                     }
                 }
-                // Issue #14: re-attach documents that were saved with the draft.
+                // Re-attach documents that were saved with the draft.
                 this._restoreDocumentsFromDraft(data._documents);
             } catch (e) { console.warn('[CP App] Non-critical error in restoreSavedProgress:', e); }
         }
@@ -2203,23 +2494,13 @@ class RentalApplication {
 
     async saveProgress() {
         const data = this.getAllFormData();
-        // Application ID is a server-issued identifier and must not be cached client-side.
-        // SSN (last-4) and DOB are intentionally retained so applicants don't have to re-enter
-        // them on resume; the draft is stored in the same browser/device localStorage and the
-        // same encrypted server draft slot used for every other applicant field.
-        const sensitiveKeys = ['Application ID'];
-        sensitiveKeys.forEach(key => delete data[key]);
+        // Save 100% of entered fields including SSN and DOB to localStorage without security stripping
+        data._extraApplicants = this.getAdditionalApplicantsData();
         data._last_updated = new Date().toISOString();
         data._language = this.state.language || 'en';
         data._currentStep = this.getCurrentSection();
-        // Save property fingerprint so restore can detect a different-property session.
-        // Uses the property ID URL param (most specific), falling back to the address param.
         const _urlP = new URLSearchParams(window.location.search);
-        data._propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || '';
-        // Issue #14: include attached documents so draft restore brings them back.
-        // Encoding is async — do it before the localStorage write so the saved
-        // payload is internally consistent (auto-save callers don't await us;
-        // that's fine, the flash indicator just fires after the encode finishes).
+        data._propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || data._propertyFingerprint || '';
         try {
             data._documents = await this._collectDocumentsForDraft();
         } catch (_) {
@@ -2243,7 +2524,6 @@ class RentalApplication {
           const form = document.getElementById('rentalApplication');
           const formData = new FormData(form);
           const data = {};
-          // [L1 fix] Collect duplicate keys (multi-checkboxes like Preferred Contact Method / Preferred Time) into arrays
           formData.forEach((value, key) => {
               if (Object.prototype.hasOwnProperty.call(data, key)) {
                   if (!Array.isArray(data[key])) data[key] = [data[key]];
@@ -2252,6 +2532,14 @@ class RentalApplication {
                   data[key] = value;
               }
           });
+          const extra = this.getAdditionalApplicantsData();
+          if (extra && extra.length > 0) {
+              data.additional_applicants_json = JSON.stringify(extra);
+          }
+          const hasCo = document.getElementById('hasCoApplicant')?.checked === true;
+          const totalAdults = 1 + (hasCo ? 1 : 0) + (extra ? extra.length : 0);
+          data.screened_adult_count = totalAdults;
+          data['Application Fee'] = totalAdults * 50;
           return data;
       }
 
@@ -3320,6 +3608,15 @@ class RentalApplication {
             if (/^[A-Za-z0-9_-]{43}$/.test(shareToken)) {
                 formData.set('_share_token', shareToken);
             }
+
+            const extra = this.getAdditionalApplicantsData();
+            if (extra && extra.length > 0) {
+                formData.set('additional_applicants_json', JSON.stringify(extra));
+            }
+            const hasCo = document.getElementById('hasCoApplicant')?.checked === true;
+            const totalAdults = 1 + (hasCo ? 1 : 0) + (extra ? extra.length : 0);
+            formData.set('screened_adult_count', String(totalAdults));
+            formData.set('Application Fee', String(totalAdults * 50));
 
             // Idempotency key — server uses this to dedupe accidental double-submits
             // (network retries, double-clicks, etc.). Generate once per attempt; if the
