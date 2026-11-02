@@ -14,7 +14,7 @@
 // preserved.
 // ============================================================
 
-const ID_RE = /^PROP-[A-Z0-9]{8}$/i;
+const ID_RE = /^(prop[-_][a-z0-9_-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 function slugSeg(s) {
   return String(s || '')
@@ -45,7 +45,7 @@ export async function onRequestGet({ request, env }) {
 
   // Look up the row to build the canonical slug.
   const res = await fetch(
-    `${SUPA}/rest/v1/properties?id=eq.${encodeURIComponent(id.toUpperCase())}` +
+    `${SUPA}/rest/v1/properties?id=ilike.${encodeURIComponent(id)}` +
       `&status=eq.active&select=id,city,state,bedrooms,property_type`,
     { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } }
   );

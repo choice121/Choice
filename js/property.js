@@ -89,7 +89,7 @@ if (isEmbedded) {
 function resolvePropertyId() {
   const fromQuery = (params.get('id') || '').trim();
   if (fromQuery) return fromQuery.toLowerCase();
-  const m = window.location.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
+  const m = window.location.pathname.match(/(prop[-_][a-z0-9_-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
   return m ? m[1].toLowerCase() : '';
 }
 const propertyId = resolvePropertyId();
@@ -646,7 +646,10 @@ function renderProperty(p) {
   if (existingPpBadge) existingPpBadge.remove();
 
   document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
-  document.getElementById('detailTitle').textContent = p.title;
+  const cleanTitle = (p.address && p.city && p.state)
+    ? `${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`.trim()
+    : (p.title || 'Property Details');
+  document.getElementById('detailTitle').textContent = cleanTitle;
   const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
   document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
 
@@ -809,27 +812,33 @@ function renderProperty(p) {
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a))
       .slice(0, 12)
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
-      document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
+      const amGrid = document.getElementById('amenitiesGrid');
+      if (amGrid) amGrid.innerHTML = amenityItems.join('');
     } else {
-      document.getElementById('amenitiesGrid').innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
+      const amGrid = document.getElementById('amenitiesGrid');
+      if (amGrid) amGrid.innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
     }
   }
   if (p.appliances?.length) {
     hasAmenities = true;
-    document.getElementById('appliancesSection').style.display = '';
-    document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
-      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+    const appSec = document.getElementById('appliancesSection');
+    if (appSec) appSec.style.display = '';
+    const appGrid = document.getElementById('appliancesGrid');
+    if (appGrid) {
+      appGrid.innerHTML = p.appliances
+        .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a))
+        .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+    }
   }
   if (p.flooring?.length) {
     hasAmenities = true;
-    const flooringSec = document.getElementById('appliancesSection');
+    const flooringSec = document.getElementById('appliancesSection') || document.getElementById('amenitiesSection');
     let flooringDiv = document.getElementById('flooringSection');
-    if (!flooringDiv) {
+    if (!flooringDiv && flooringSec) {
       flooringDiv = document.createElement('div');
       flooringDiv.id = 'flooringSection';
       flooringDiv.style.marginTop = '20px';
@@ -838,10 +847,13 @@ function renderProperty(p) {
         <div class="amenities-grid" id="flooringGrid"></div>`;
       flooringSec.insertAdjacentElement('afterend', flooringDiv);
     }
-    flooringDiv.style.display = '';
-    document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
-      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
+    if (flooringDiv) flooringDiv.style.display = '';
+    const flooringGrid = document.getElementById('flooringGrid');
+    if (flooringGrid) {
+      flooringGrid.innerHTML = p.flooring
+        .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f) && !/pet|dog|cat/i.test(f))
+        .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
+    }
   }
 
   const utilRows = [];
@@ -2813,8 +2825,8 @@ function buildAdminEditDrawer(prop) {
   }
 
   overlay.addEventListener('click', closeDrawer);
-  document.getElementById('adwCloseBtn').addEventListener('click', closeDrawer);
-  document.getElementById('adwCancelBtn').addEventListener('click', closeDrawer);
+  document.getElementById('adwCloseBtn')?.addEventListener('click', closeDrawer);
+  document.getElementById('adwCancelBtn')?.addEventListener('click', closeDrawer);
   document.getElementById('adwDeleteBtn')?.addEventListener('click', (e) => {
     executeAdminDeleteProperty(prop, e.currentTarget);
   });
@@ -3084,8 +3096,9 @@ function buildAdminEditDrawer(prop) {
   });
 
   // ── Save ──
-  document.getElementById('adwSaveBtn').addEventListener('click', async () => {
+  document.getElementById('adwSaveBtn')?.addEventListener('click', async () => {
     const sb = document.getElementById('adwSaveBtn');
+    if (!sb) return;
     sb.disabled = true;
     sb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
