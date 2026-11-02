@@ -21,3 +21,16 @@ verify_jwt = false
 
 [functions.import-from-url]
 verify_jwt = false
+
+[functions.send-inquiry]
+verify_jwt = false
+
+[functions.send-message]
+verify_jwt = false
+
+[functions.imagekit-upload]
+verify_jwt = false
+
+[functions.imagekit-delete]
+verify_jwt = false
+
