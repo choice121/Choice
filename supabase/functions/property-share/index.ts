@@ -79,10 +79,10 @@ Deno.serve(async (req) => {
 
       const propertyIds = linkData.map(l => l.property_id);
 
-      // Fetch properties
+      // Fetch properties - safely project only client-safe public fields
       const { data: properties, error: propError } = await supabase
         .from("properties")
-        .select("*")
+        .select("id, title, description, address, city, state, zip, county, neighborhood, lat, lng, property_type, year_built, floors, unit_number, total_units, bedrooms, bathrooms, half_bathrooms, total_bathrooms, square_footage, lot_size_sqft, garage_spaces, monthly_rent, security_deposit, application_fee, available_date, lease_terms, minimum_lease_months, pets_allowed, smoking_allowed, parking, parking_fee, amenities, appliances, utilities_included, flooring, heating_type, cooling_type, laundry_type, location_context, virtual_tour_url, has_basement, has_central_air, status, created_at, updated_at, ai_features, is_multi_unit, building_name, price_range, unit_floor")
         .in("id", propertyIds);
 
       if (propError) {

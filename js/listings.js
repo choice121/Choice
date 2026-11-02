@@ -1018,7 +1018,7 @@ function renderProperties(props) {
   const heading   = document.getElementById('listingsHeading');
   const hasTargetIds = activeTargetIds && activeTargetIds.length > 0;
   const hasShare = !!activeShareToken;
-  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
+  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeCity || activeState || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
 
   if (heading) {
     if (hasShare) {
