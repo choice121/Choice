@@ -77,10 +77,15 @@ const server = http.createServer((req, res) => {
       res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end('<h1>404 Not Found</h1>', 'utf-8');
     } else {
-      res.writeHead(200, {
+      const headers = {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*'
-      });
+      };
+      if (ext === '.zip') {
+        headers['Content-Disposition'] = `attachment; filename="${path.basename(filePath)}"`;
+        headers['Content-Length'] = content.length;
+      }
+      res.writeHead(200, headers);
       res.end(content);
     }
   });
