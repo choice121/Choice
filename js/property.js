@@ -70,6 +70,7 @@ let _nearbyMarkerLayer = null;
 let _nearbyLegendControl = null;
 let _locationSnapshot = null;
 let _propertyLatLng = null;
+const isEmbedded = params.get('embedded') === 'true' || window.self !== window.top;
 if (isEmbedded) {
   document.body.setAttribute('data-embedded', 'true');
 }

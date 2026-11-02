@@ -50,7 +50,7 @@ updateNav();
 
 const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
-const isEmbedded = params.get('embedded') === 'true';
+const isEmbedded = params.get('embedded') === 'true' || window.self !== window.top;
 const shareToken = params.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
 let _propertyMap = null;
 let _nearbyMarkerLayer = null;

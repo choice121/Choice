@@ -24,7 +24,7 @@ const CSP_TEMPLATE = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
   "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
-  "img-src 'self' data: blob: https://ik.imagekit.io https://*.supabase.co https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://maps.geoapify.com https://images.unsplash.com https://*.zillowstatic.com https://photos.zillowstatic.com https://*.rdcpix.com https://ap.rdcpix.com https://*.realtor.com https://*.rentpath.com https://*.trulia.com https://*.apartments.com https://*.redfin.com https://*.opendoor.com https://images.opendoor.com https://*.rentprogress.com https://photos.rentprogress.com",
+  "img-src 'self' data: blob: https://ik.imagekit.io https://*.supabase.co https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://maps.geoapify.com https://images.unsplash.com https://*.zillowstatic.com https://photos.zillowstatic.com https://*.rdcpix.com https://ap.rdcpix.com https://*.realtor.com https://*.rentpath.com https://*.trulia.com https://*.apartments.com https://*.redfin.com https://*.opendoor.com https://images.opendoor.com https://*.rentprogress.com https://photos.rentprogress.com https://*.invitationhomes.com https://invitationhomes.com https://*.appfolio.com https://appfolio.com https://*.amazonaws.com https://*.cloudinary.com https://*.fastly.net",
   "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://api.ipify.org https://api.my-ip.io https://ipapi.co https://nominatim.openstreetmap.org https://api.geoapify.com https://upload.imagekit.io https://api.imagekit.io",
   "frame-src 'self' https://maps.google.com https://www.google.com",
   "worker-src 'self' blob:",
@@ -127,8 +127,8 @@ export async function onRequest(context) {
     
     if (propId) {
       try {
-        const supabaseUrl = "https://tlfmwetmhthpyrytrcfo.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE";
+        const supabaseUrl = (context.env && context.env.SUPABASE_URL) || "https://tlfmwetmhthpyrytrcfo.supabase.co";
+        const supabaseKey = (context.env && (context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_ANON_KEY)) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE";
         
         const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
           headers: {
