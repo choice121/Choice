@@ -4349,3 +4349,28 @@ async function initCommunityInventory(p) {
 
   renderInventoryUI();
 }
+
+
+// Enhanced Geoapify Geocoding & Address Lookup Helper
+async function geocodeAddressGeoapify(addressStr) {
+  const apiKey = window.CONFIG?.GEOAPIFY_API_KEY || 'bea2afb13c904abea5cb2c2693541dcf';
+  if (!apiKey) return null;
+  try {
+    const res = await fetch('https://api.geoapify.com/v1/geocode/search?text=' + encodeURIComponent(addressStr) + '&apiKey=' + apiKey);
+    const json = await res.json();
+    if (json && Array.isArray(json.features) && json.features.length > 0) {
+      const props = json.features[0].properties;
+      return {
+        lat: props.lat,
+        lng: props.lon,
+        formatted: props.formatted,
+        city: props.city,
+        state: props.state_code || props.state,
+        zip: props.postcode
+      };
+    }
+  } catch (err) {
+    console.warn('[geocoder] Geoapify lookup error:', err);
+  }
+  return null;
+}
