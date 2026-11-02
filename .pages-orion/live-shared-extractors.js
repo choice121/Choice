@@ -779,10 +779,15 @@
     if (/\bmicrowaves?\b/i.test(text)) appSet.add('Microwave');
     if (/\b(?:garbage\s*disposal|disposal)\b/i.test(text)) appSet.add('Garbage Disposal');
     if (/\bfreezer\b/i.test(text)) appSet.add('Freezer');
-    if (/\b(?:full\s*size\s*washer|washer\s*(?:and|&)\s*dryer|washer\s*and\s*dryer\s*units?)\b/i.test(text)) {
+
+    // Strict distinction: washer hookups/connections do NOT mean included appliances
+    const hasHookupsOnly = /\b(?:washer\s*(?:and|&)\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?|laundry\s*hookups?|hookups?\s*for\s*(?:washer|laundry)|washer\/dryer\s*connections?|w\/d\s*connections?)\b/i.test(text);
+    const hasIncludedWasherDryer = /\b(?:washer\s*(?:and|&)\s*dryer\s*(?:included|provided|in\s*unit|in-unit|units?\s*included)|in-unit\s*washer|washer\s*and\s*dryer\s*appliances?|full\s*size\s*washer\s*and\s*dryer)\b/i.test(text);
+
+    if (hasIncludedWasherDryer || (!hasHookupsOnly && /\b(?:washer\s*(?:and|&)\s*dryer|full\s*size\s*washer)\b/i.test(text) && !/\bhookups?\b/i.test(text) && !/\bconnections?\b/i.test(text))) {
       appSet.add('Washer');
       appSet.add('Dryer');
-    } else {
+    } else if (!hasHookupsOnly && !/\bhookups?\b/i.test(text)) {
       if (/\bwashers?\b/i.test(text) && !/\bdishwasher/i.test(text)) appSet.add('Washer');
       if (/\bdryers?\b/i.test(text)) appSet.add('Dryer');
     }
@@ -790,10 +795,13 @@
 
     // 2. Garage / Parking
     const garageMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*garage\b/i);
-    if (garageMatch) {
+    const carportMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*carport\b/i);
+    if (garageMatch && !/\b(?:no\s*garage|without\s*garage)\b/i.test(text)) {
       res.garage_spaces = parseInt(garageMatch[1], 10);
       res.parking = `${garageMatch[1]}-Car Garage`;
-    } else if (/\b(?:attached\s*garage|2-car\s*garage|garage)\b/i.test(text)) {
+    } else if (carportMatch) {
+      res.parking = `${carportMatch[1]}-Car Carport`;
+    } else if (/\b(?:attached\s*garage|2-car\s*garage|detached\s*garage|garage)\b/i.test(text) && !/\b(?:no\s*garage|without\s*garage|carport)\b/i.test(text)) {
       res.parking = 'Attached Garage';
     } else if (/\bcarport\b/i.test(text)) {
       res.parking = 'Carport';
@@ -804,7 +812,7 @@
     // 3. Laundry
     if (/\b(?:separate\s*laundry\s*room|laundry\s*room|in-unit\s*washer|in\s*unit\s*washer|washer\s*and\s*dryer\s*in\s*unit)\b/i.test(text)) {
       res.laundry_type = 'In Unit (Dedicated Laundry Room)';
-    } else if (/\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?)\b/i.test(text)) {
+    } else if (hasHookupsOnly || /\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?|laundry\s*hookups?)\b/i.test(text)) {
       res.laundry_type = 'Washer/Dryer Hookups';
     } else if (/\b(?:shared\s*laundry|on-site\s*laundry)\b/i.test(text)) {
       res.laundry_type = 'On-Site Laundry';
@@ -832,7 +840,16 @@
     // 6. Amenities
     const extraAmenities = [];
     if (/\b(?:swimming\s*pool|pool)\b/i.test(text)) extraAmenities.push('Swimming Pool');
-    if (/\b(?:private\s*backyard|backyard|fenced\s*yard|large\s*yard|landscaped\s*backyard)\b/i.test(text)) extraAmenities.push('Private Fenced Yard');
+    // Strict Fenced Yard distinction: ONLY add Private Fenced Yard if fence or fenced is explicitly stated!
+    if (/\b(?:fenced\s*(?:in\s*)?(?:back)?yard|fenced\s*backyard|privately\s*fenced|fenced\s*patio|fence\s*around)\b/i.test(text)) {
+      extraAmenities.push('Private Fenced Yard');
+    } else if (/\b(?:private\s*backyard|backyard|large\s*yard|landscaped\s*backyard|spacious\s*yard)\b/i.test(text)) {
+      if (/\bfence\b/i.test(text)) {
+        extraAmenities.push('Private Fenced Yard');
+      } else {
+        extraAmenities.push('Backyard');
+      }
+    }
     if (/\b(?:patio|balcony|deck)\b/i.test(text)) extraAmenities.push('Patio / Outdoor Living Area');
     if (/\bfireplaces?\b/i.test(text)) extraAmenities.push('Fireplace');
     if (/\bbasement\b/i.test(text) && !/\bno\s*basement\b/i.test(text)) {
@@ -877,6 +894,15 @@
     return TYPE_MAP[t] || t || 'SINGLE_FAMILY';
   }
   function buildTitle(beds, propType, city, street, rawTitle, state, zip, baths, sqft, yearBuilt) {
+    if (street && city && state && zip) {
+      return `${street}, ${city}, ${state} ${zip}`;
+    }
+    if (street && city && state) {
+      return `${street}, ${city}, ${state}`;
+    }
+    if (street && city) {
+      return `${street}, ${city}`;
+    }
     const typeNames = {
       'SINGLE_FAMILY': 'Single-Family Home',
       'TOWNHOUSE': 'Townhome',
@@ -2027,7 +2053,7 @@
       square_footage: sqft ? parseInt(String(sqft), 10) : null,
       year_built: yr ? parseInt(String(yr), 10) : null,
       property_type: propType,
-      description: cleanForSaleText(rawDesc) || null,
+      description: rawDesc || null,
       original_description: rawDesc || null,
       pets_allowed: true,
       application_fee: 50,
@@ -2185,7 +2211,7 @@
       half_bathrooms: bathH,
       square_footage: sqft,
       property_type: propType,
-      description: cleanForSaleText(rawDesc) || null,
+      description: rawDesc || null,
       original_description: rawDesc || null,
       pets_allowed: true,
       application_fee: 50,

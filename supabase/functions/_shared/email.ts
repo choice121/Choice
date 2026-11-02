@@ -189,13 +189,10 @@ export function applicationConfirmationHtml(
   const safeLastName = escapeHtml(fields?.['Last Name']);
   const safeAppId = escapeHtml(appId);
   const safePropertyAddress = escapeHtml(propertyAddress || 'To be confirmed');
-  const feeRaw = fields?.['Application Fee'];
-  const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
-  const hasFee = feeNum > 0;
-  const freeApp = feeNum === 0;
-  const feeDisplay = hasFee ? `$${feeNum.toFixed(0)}` : (freeApp ? 'Free' : 'Per property terms');
   const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
-  const screenedAdultCount = Number(fields?.['screened_adult_count']) || (feeNum > 0 ? Math.round(feeNum / 50) : (hasCoApplicant ? 2 : 1));
+  const screenedAdultCount = Number(fields?.['screened_adult_count']) || (hasCoApplicant ? 2 : 1);
+  const feeNum = enforcedFee != null && enforcedFee > 0 ? enforcedFee : (screenedAdultCount * 50);
+  const feeDisplay = `$${feeNum.toFixed(0)}`;
   const feeBreakdown = `${screenedAdultCount} adult applicant${screenedAdultCount === 1 ? '' : 's'} × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
@@ -222,7 +219,7 @@ export function applicationConfirmationHtml(
 <body>
 <div class="email-wrapper">
   ${buildEmailHeader('Application Successfully Received', appId)}
-  ${hasFee ? '<div class="status-line status-pending">&#x23F3; &nbsp; Awaiting Application Fee &middot; Review Pending</div>' : freeApp ? '<div class="status-line" style="color:#166534;background:#f0fdf4">&#x2713; &nbsp; Application Received &middot; No Fee Required &middot; Entering Review</div>' : '<div class="status-line status-pending">&#x23F3; &nbsp; Application Received &middot; Review Pending</div>'}
+  <div class="status-line status-pending">&#x23F3; &nbsp; Awaiting Application Fee &middot; Review Pending</div>
   <div class="email-body">
     <p class="greeting">Dear ${safeFirstName},</p>
     <p class="intro-text">Thank you for choosing Choice Properties. We have successfully received your rental application and your file is now in our system. This confirmation serves as your official acknowledgment that your submission has been recorded.</p>
@@ -344,24 +341,17 @@ export function adminNotificationHtml(
   const safeEmail = escapeHtml(email);
   const safeAppId = escapeHtml(appId);
   const safePropertyAddress = escapeHtml(propertyAddress || 'Not specified');
-  const feeRaw = fields?.['Application Fee'];
-  const feeNum = enforcedFee != null ? enforcedFee : (feeRaw != null ? Number(feeRaw) : -1);
-  const hasFee = feeNum > 0;
-  const freeApp = feeNum === 0;
-  const feeDisplay = hasFee ? `$${feeNum.toFixed(2)}` : (freeApp ? 'Free \u2014 No Fee' : 'Per property terms');
   const hasCoApplicant = ['true', 'yes', '1', 'on'].includes(String(fields?.['Has Co-Applicant'] || '').toLowerCase());
-  const screenedAdultCount = hasCoApplicant ? 2 : 1;
+  const screenedAdultCount = Number(fields?.['screened_adult_count']) || (hasCoApplicant ? 2 : 1);
+  const feeNum = enforcedFee != null && enforcedFee > 0 ? enforcedFee : (screenedAdultCount * 50);
+  const feeDisplay = `$${feeNum.toFixed(2)}`;
   const feeBreakdown = `${screenedAdultCount} adult applicant${screenedAdultCount === 1 ? '' : 's'} × $50 = ${feeDisplay} total`;
   const payMethods = [
     fields?.['Primary Payment Method'],
     fields?.['Alternative Payment Method'],
     fields?.['Third Choice Payment Method'],
   ].filter(Boolean).map(escapeHtml) as string[];
-  const adminPaymentSection = hasFee
-    ? `<div class="section"><div class="section-label" style="color:#1d4ed8;">\ud83d\udcb3 Payment Coordination \u2014 Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant\u2019s Preferred Method</h4><p><strong>${feeBreakdown}</strong></p>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${safeFirstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'\u2605 ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click \u201cMark paid\u201d.</p>` : '<p>No payment method preference specified \u2014 contact applicant directly to arrange.</p>'}</div></div>`
-    : freeApp
-      ? `<div class="section"><div class="callout green"><h4>\u2713 No Application Fee</h4><p>No payment collection required \u2014 proceed directly to review.</p></div></div>`
-      : '';
+  const adminPaymentSection = `<div class="section"><div class="section-label" style="color:#1d4ed8;">💳 Payment Coordination — Act First</div><div class="callout amber"><h4>Collect ${feeDisplay} Application Fee via Applicant’s Preferred Method</h4><p><strong>${feeBreakdown}</strong></p>${payMethods.length ? `<p style="margin-bottom:10px;"><strong>Contact ${safeFirstName} using:</strong></p><div style="margin-bottom:8px;">${payMethods.map((m, i) => `<span class="pay-pill" style="${i===0?'background:#1e3a8a;color:#fff;font-weight:700;':''}">${i===0?'★ ':''}${m}</span>`).join('')}</div><p style="font-size:12px;color:#6b7280;margin-top:8px;">Once payment is received, open the application in the admin panel and click “Mark paid”.</p>` : '<p>No payment method preference specified — contact applicant directly to arrange.</p>'}</div></div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -374,10 +364,10 @@ export function adminNotificationHtml(
 <body>
 <div class="email-wrapper">
   ${buildEmailHeader('New Application Received', appId)}
-  ${hasFee ? '<div class="status-line status-pending">&#x26A1; &nbsp; Action Required \u2014 Contact Applicant Within 24 Hours to Collect Fee</div>' : freeApp ? '<div class="status-line" style="color:#166534;background:#f0fdf4">\ud83d\udccb &nbsp; New Application \u2014 No Fee \u2014 Proceed Directly to Review</div>' : '<div class="status-line status-pending">&#x26A1; &nbsp; New Application Received \u2014 Review Required</div>'}
+  <div class="status-line status-pending">&#x26A1; &nbsp; Action Required — Contact Applicant Within 24 Hours to Collect Fee</div>
   <div class="email-body">
     <p class="greeting">New Application Alert,</p>
-    <p class="intro-text">${hasFee ? 'A new rental application has been submitted. Contact the applicant to arrange payment of the application fee using their preferred method below, then mark as paid once confirmed.' : freeApp ? 'A new rental application has been submitted for a no-fee property. No payment collection required \u2014 proceed directly to review.' : 'A new rental application has been submitted. Review the application and take the appropriate next steps.'}</p>
+    <p class="intro-text">A new rental application has been submitted. Contact the applicant to arrange payment of the application fee using their preferred method below, then mark as paid once confirmed.</p>
 
     ${adminPaymentSection}
 
