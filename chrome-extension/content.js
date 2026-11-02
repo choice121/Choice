@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v50.0.0
+// Choice Properties — Universal Content Script & UI Engine v52.1.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -12,9 +12,46 @@
   if (window.__CP_CONTENT_LOADED__) return;
   window.__CP_CONTENT_LOADED__ = true;
 
-  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
-  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '50.0.0';
+  function resolveConfigValue(name, fallback) {
+    var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
+    var candidates = [
+      config[name],
+      config[name.toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1')],
+      window && window.__CP_IMPORT_SECRET__
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i] != null && String(candidates[i]).trim() !== '') return String(candidates[i]);
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        var localConfigRaw = localStorage.getItem('cp_config');
+        if (localConfigRaw) {
+          var localConfig = JSON.parse(localConfigRaw);
+          if (localConfig && typeof localConfig === 'object') {
+            if (localConfig[name] != null && String(localConfig[name]).trim() !== '') return String(localConfig[name]);
+            if (localConfig[name.toLowerCase()] != null && String(localConfig[name.toLowerCase()]).trim() !== '') return String(localConfig[name.toLowerCase()]);
+            if (localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()] != null && String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]).trim() !== '') return String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]);
+          }
+        }
+        if (name === 'IMPORT_SECRET') {
+          var storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
+          if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
+        }
+        if (name === 'EDGE_URL') {
+          var storedEdge = localStorage.getItem('cp_pipeline_edge_url');
+          if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
+        }
+      }
+    } catch (e) {}
+    return fallback;
+  }
+
+  var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
+  var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
+  var VERSION  = '52.1.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -245,6 +282,15 @@
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
     if (!activeWidget || activeWidget._userPositioned) return;
+
+    if (window.innerWidth <= 480) {
+      activeWidget.style.right = '6px';
+      activeWidget.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
+      activeWidget.style.width = 'min(276px, calc(100vw - 12px))';
+      activeWidget.style.maxWidth = 'calc(100vw - 12px)';
+      return;
+    }
+
     var bottomOffset = 24;
 
     var stickySelectors = [
@@ -270,7 +316,10 @@
       }
     }
 
+    activeWidget.style.right = '24px';
     activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
+    activeWidget.style.width = 'min(320px, calc(100vw - 18px))';
+    activeWidget.style.maxWidth = 'calc(100vw - 18px)';
   }
 
   // ── Extract Photo URLs Helper ───────────────────────────────
@@ -1312,6 +1361,25 @@
     }
   }
 
+  function describeSaveError(rawError) {
+    var message = rawError && typeof rawError === 'string' ? rawError : (rawError && rawError.message ? rawError.message : 'Save failed');
+    var text = String(message).trim();
+    if (!text) return 'Save failed';
+    if (/invalid import secret|401|not configured|missing.*secret|secret.*invalid/i.test(text)) {
+      return 'Import secret missing or invalid. Update extension config and retry.';
+    }
+    if (/timed out|timeout|background save timed out/i.test(text)) {
+      return 'Save timed out. Please retry.';
+    }
+    if (/network|fetch|connection|failed to fetch|load failed|receiving end|message port/i.test(text)) {
+      return 'Network connection error. Please retry.';
+    }
+    if (/too large|payload is too large/i.test(text)) {
+      return 'Listing payload too large. Try fewer photos.';
+    }
+    return text.length > 60 ? text.slice(0, 60) + '…' : text;
+  }
+
   async function submitPayload(payload) {
     var lastResponse = null;
     for (var attempt = 0; attempt < 3; attempt++) {
@@ -1331,10 +1399,18 @@
         } else {
           var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-import-secret': SECRET
+            },
             body: JSON.stringify(payload),
           });
-          lastResponse = await saveRes.json();
+          var saveBody = await saveRes.json().catch(function () { return null; });
+          if (!saveRes.ok) {
+            lastResponse = { ok: false, error: (saveBody && saveBody.error) || 'Server rejected import (HTTP ' + saveRes.status + ')' };
+          } else {
+            lastResponse = saveBody || { ok: true };
+          }
         }
         if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) {
           return lastResponse;
@@ -1350,7 +1426,8 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
-    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
+    var friendly = describeSaveError(msg);
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(friendly) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     setTimeout(function () {
