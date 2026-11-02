@@ -131,16 +131,23 @@ function _ok(data, error) {
 // -- Auth helpers ------------------------------------------
 const Auth = {
   async getUser() {
-    // I-406: auth.getUser() always makes a server round-trip to validate the JWT.
-    // For anonymous visitors (nothing in localStorage) this triggers an unnecessary
-    // network request that can surface as a 406/401 console error when a stale token
-    // exists. Check the local session first; only hit the server if we have a token.
-    const { data: sd } = await sb().auth.getSession();
-    if (!sd?.session) return null;
-    const { data } = await sb().auth.getUser();
-    return data?.user || null;
+    try {
+      const { data: sd } = await sb().auth.getSession();
+      if (!sd?.session) return null;
+      const { data } = await sb().auth.getUser();
+      return data?.user || null;
+    } catch {
+      return null;
+    }
   },
-  async getSession()    { const { data } = await sb().auth.getSession(); return data?.session || null; },
+  async getSession() {
+    try {
+      const { data } = await sb().auth.getSession();
+      return data?.session || null;
+    } catch {
+      return null;
+    }
+  },
   // Returns a valid access token, or null if the session is invalid/expired.
   //
   // Strategy (updated):
