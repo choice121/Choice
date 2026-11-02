@@ -932,6 +932,53 @@ t('Zillow URL zpid match passthrough', () => {
   const p = api.extractZillow(ZD, ZGOOD);
   assert.strictEqual(p.source_url, ZGOOD, 'should keep URL when zpid matches');
 });
+t('Zillow prefers the complete property object for apartment community cache entries', () => {
+  const property = {
+    zpid: 7777777,
+    address: { streetAddress: '500 Harbor Dr', city: 'Miami', state: 'FL', zipcode: '33101' },
+    price: 3000,
+    bedrooms: 2,
+    bathrooms: 2,
+    homeType: 'APARTMENT',
+    responsivePhotos: [{ mixedSources: { jpeg: [{ width: 1600, url: 'https://photos.zillowstatic.com/fp/aaa111bbb222ccc333ddd444eee555fff-uncropped_scaled_within_1536_1152.jpg' }] } }],
+  };
+  const cacheData = {
+    property,
+    unitSummary: { zpid: 8888888, unitNumber: 'A102', monthlyRent: 2800 },
+  };
+  const d = doc({ props: { pageProps: { componentProps: { gdpClientCache: { sampleUnit: cacheData.unitSummary, home: cacheData.property } } } } });
+  const p = api.extractZillowNextData(d, 'https://www.zillow.com/apartments/miami-fl/harbor-ridge/7777777/');
+  assert.strictEqual(p.source_listing_id, '7777777');
+  assert.strictEqual(p.community_starting_rent, 3000);
+  assert.strictEqual(p.address, '500 Harbor Dr');
+  assert.strictEqual(p.city, 'Miami');
+  assert.strictEqual(p.state, 'FL');
+  assert.strictEqual(p.zip, '33101');
+  assert.strictEqual(p.is_multi_unit, true);
+});
+t('Zillow DOM media detection captures video walkthrough URLs', () => {
+  const videoNode = {
+    tagName: 'VIDEO',
+    src: 'https://example.com/tour.mp4',
+    poster: 'https://example.com/poster.jpg',
+    getAttribute: (name) => name === 'data-video-url' ? 'https://example.com/tour.mp4' : null,
+    textContent: 'Property walkthrough',
+    currentSrc: 'https://example.com/tour.mp4',
+  };
+  const d = {
+    querySelector: () => null,
+    querySelectorAll: (selector) => {
+      if (selector.includes('video') || selector.includes('iframe') || selector.includes('img')) return [videoNode];
+      if (selector.includes('application/ld+json')) return [];
+      return [];
+    },
+    body: { innerText: '3 Beds 2 Baths 1800 Sq Ft Tour video' },
+    title: 'Example Home',
+  };
+  const p = api.extractZillowFromDom(d, 'https://www.zillow.com/homedetails/123-Example-St-Dallas-TX-75201/12345678_zpid/');
+  assert.ok(Array.isArray(p.media));
+  assert.ok(p.media.some(item => item.kind === 'video' && /tour\.mp4/i.test(item.url)));
+});
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail > 0 ? 1 : 0);

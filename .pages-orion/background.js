@@ -20,9 +20,50 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
 }
 
 // Inline config (Orion doesn't reliably support importScripts)
-const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+function resolveRuntimeConfigValue(name, fallback) {
+  const config = (typeof window !== 'undefined' && window.CP_CONFIG) ? window.CP_CONFIG : {};
+  const candidates = [
+    config[name],
+    config[name.toLowerCase()],
+    config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
+    config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
+    config[name.replace(/([A-Z])/g, '_$1')],
+    window && window.__CP_IMPORT_SECRET__
+  ];
+  for (const value of candidates) {
+    if (value != null && String(value).trim() !== '') return String(value);
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('cp_config');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          const nested = [
+            parsed[name],
+            parsed[name.toLowerCase()],
+            parsed[name.replace(/([A-Z])/g, '_$1').toLowerCase()]
+          ];
+          for (const value of nested) {
+            if (value != null && String(value).trim() !== '') return String(value);
+          }
+        }
+      }
+      if (name === 'IMPORT_SECRET') {
+        const storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
+        if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
+      }
+      if (name === 'EDGE_URL') {
+        const storedEdge = localStorage.getItem('cp_pipeline_edge_url');
+        if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
+      }
+    }
+  } catch (_) {}
+  return fallback;
+}
+const EDGE_URL = resolveRuntimeConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
 const DIAGNOSTICS_URL = EDGE_URL.replace(/\/receive-pipeline-import\/?$/, '/extension-diagnostics');
-const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
+const SECRET = resolveRuntimeConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
 const MAX_QUEUE_ITEMS = 75;
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_WIDTH = 1600;

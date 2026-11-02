@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v50.0.0
+// Choice Properties — Live Content Script v52.3.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -16,14 +16,55 @@
   var EXTENSION_API = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome :
     ((typeof browser !== 'undefined' && browser.runtime) ? browser : null);
 
-  // Prevent multiple executions
-  if (window.__CP_LIVE_CONTENT_LOADED__) return;
+  // Prevent multiple executions for the same version while letting newer builds reload correctly.
+  if (window.__CP_LIVE_CONTENT_LOADED__ && window.__CP_LIVE_CONTENT_VERSION__ === VERSION) return;
   window.__CP_LIVE_CONTENT_LOADED__ = true;
+  window.__CP_LIVE_CONTENT_VERSION__ = VERSION;
+
+  function resolveConfigValue(name, fallback) {
+    var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
+    var candidates = [
+      config[name],
+      config[name.toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1')],
+      window && window.__CP_IMPORT_SECRET__
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i] != null && String(candidates[i]).trim() !== '') return String(candidates[i]);
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        var localConfigRaw = localStorage.getItem('cp_config');
+        if (localConfigRaw) {
+          var localConfig = JSON.parse(localConfigRaw);
+          if (localConfig && typeof localConfig === 'object') {
+            for (var j = 0; j < candidates.length; j++) {
+              if (candidates[j] != null && String(candidates[j]).trim() !== '') return String(candidates[j]);
+            }
+            if (localConfig[name] != null && String(localConfig[name]).trim() !== '') return String(localConfig[name]);
+            if (localConfig[name.toLowerCase()] != null && String(localConfig[name.toLowerCase()]).trim() !== '') return String(localConfig[name.toLowerCase()]);
+            if (localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()] != null && String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]).trim() !== '') return String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]);
+          }
+        }
+        if (name === 'IMPORT_SECRET') {
+          var storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
+          if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
+        }
+        if (name === 'EDGE_URL') {
+          var storedEdge = localStorage.getItem('cp_pipeline_edge_url');
+          if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
+        }
+      }
+    } catch (e) {}
+    return fallback;
+  }
 
   // ── Configuration ──────────────────────────────────────────
-  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
-  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '50.0.0-live';
+  var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
+  var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
+  var VERSION  = '52.3.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -173,8 +214,9 @@
         bottom: max(16px, env(safe-area-inset-bottom));
         right: max(12px, env(safe-area-inset-right));
         z-index: 2147483647;
-        width: 360px;
-        max-width: calc(100vw - 32px);
+        width: min(320px, calc(100vw - 18px));
+        max-width: calc(100vw - 18px);
+        max-height: min(58vh, 520px);
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
@@ -183,10 +225,10 @@
         box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: #f8fafc;
-        overflow: hidden;
+        overflow: auto;
         transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
         box-sizing: border-box;
-        touch-action: none;
+        touch-action: pan-y;
       }
       #cp-widget-container.cp-dragging {
         opacity: 0.98;
@@ -709,22 +751,27 @@
       }
       @media (max-width: 480px) {
         #cp-widget-container {
-          width: calc(100vw - 20px);
-          max-width: calc(100vw - 20px);
-          right: 10px;
+          width: min(276px, calc(100vw - 12px));
+          max-width: calc(100vw - 12px);
+          right: 6px;
+          bottom: max(8px, env(safe-area-inset-bottom));
+          border-radius: 16px;
           backdrop-filter: none;
           -webkit-backdrop-filter: none;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
           transition: opacity 0.15s ease;
         }
         #cp-widget-container.cp-minimized {
           width: auto;
-          max-width: calc(100vw - 20px);
-          border-radius: 26px;
+          max-width: calc(100vw - 14px);
+          border-radius: 20px;
         }
         #cp-widget-container.cp-mobile-save-compact .cp-mini-trigger {
           gap: 8px;
-          padding: 6px 7px 6px 10px;
+          padding: 7px 10px 7px 10px;
+        }
+        .cp-mini-trigger > span {
+          max-width: min(38vw, 150px);
         }
         .cp-header {
           padding: 8px 10px;
@@ -824,6 +871,15 @@
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
     if (!activeWidget || activeWidget._userPositioned) return;
+
+    if (window.innerWidth <= 480) {
+      activeWidget.style.right = '6px';
+      activeWidget.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
+      activeWidget.style.width = 'min(276px, calc(100vw - 12px))';
+      activeWidget.style.maxWidth = 'calc(100vw - 12px)';
+      return;
+    }
+
     var bottomOffset = 24;
 
     // Check Zillow's sticky bottom bars or action panels
@@ -850,7 +906,10 @@
       }
     }
 
+    activeWidget.style.right = '24px';
     activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
+    activeWidget.style.width = 'min(320px, calc(100vw - 18px))';
+    activeWidget.style.maxWidth = 'calc(100vw - 18px)';
   }
 
   function scheduleWidgetPositionUpdate() {
@@ -1800,7 +1859,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v50.0.0-live',
+        _import: 'browser-extension-v52.3.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1873,6 +1932,25 @@
       isSaving = false;
       setError('Network connection error');
     }
+  }
+
+  function describeSaveError(rawError) {
+    var message = rawError && typeof rawError === 'string' ? rawError : (rawError && rawError.message ? rawError.message : 'Save failed');
+    var text = String(message).trim();
+    if (!text) return 'Save failed';
+    if (/invalid import secret|401|not configured|missing.*secret|secret.*invalid/i.test(text)) {
+      return 'Import secret missing or invalid. Update extension config and retry.';
+    }
+    if (/timed out|timeout|background save timed out/i.test(text)) {
+      return 'Save timed out. Please retry.';
+    }
+    if (/network|fetch|connection|failed to fetch|receiving end|message port/i.test(text)) {
+      return 'Network connection error. Please retry.';
+    }
+    if (/too large|payload is too large/i.test(text)) {
+      return 'Listing payload too large. Try fewer photos.';
+    }
+    return text.length > 60 ? text.slice(0, 60) + '…' : text;
   }
 
   async function submitPayload(payload) {
@@ -1957,13 +2035,14 @@
       activeWidget.classList.remove('cp-minimized');
       isMinimized = false;
     }
-    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
+    var friendly = describeSaveError(msg);
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(friendly) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     if (miniSaveBtn) {
       miniSaveBtn.disabled = false;
       miniSaveBtn.textContent = 'Retry';
-      miniSaveBtn.title = msg;
+      miniSaveBtn.title = friendly;
     }
     setTimeout(function () {
       if (saveBtn) {

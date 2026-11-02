@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v49.0.0
+// Choice Properties — Universal Content Script & UI Engine v52.1.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -9,12 +9,50 @@
 (function () {
   'use strict';
 
-  if (window.__CP_CONTENT_LOADED__) return;
+  if (window.__CP_CONTENT_LOADED__ && window.__CP_CONTENT_VERSION__ === VERSION) return;
   window.__CP_CONTENT_LOADED__ = true;
+  window.__CP_CONTENT_VERSION__ = VERSION;
 
-  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
-  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '49.0.0';
+  function resolveConfigValue(name, fallback) {
+    var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
+    var candidates = [
+      config[name],
+      config[name.toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
+      config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
+      config[name.replace(/([A-Z])/g, '_$1')],
+      window && window.__CP_IMPORT_SECRET__
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i] != null && String(candidates[i]).trim() !== '') return String(candidates[i]);
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        var localConfigRaw = localStorage.getItem('cp_config');
+        if (localConfigRaw) {
+          var localConfig = JSON.parse(localConfigRaw);
+          if (localConfig && typeof localConfig === 'object') {
+            if (localConfig[name] != null && String(localConfig[name]).trim() !== '') return String(localConfig[name]);
+            if (localConfig[name.toLowerCase()] != null && String(localConfig[name.toLowerCase()]).trim() !== '') return String(localConfig[name.toLowerCase()]);
+            if (localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()] != null && String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]).trim() !== '') return String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]);
+          }
+        }
+        if (name === 'IMPORT_SECRET') {
+          var storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
+          if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
+        }
+        if (name === 'EDGE_URL') {
+          var storedEdge = localStorage.getItem('cp_pipeline_edge_url');
+          if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
+        }
+      }
+    } catch (e) {}
+    return fallback;
+  }
+
+  var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
+  var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
+  var VERSION  = '52.1.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
