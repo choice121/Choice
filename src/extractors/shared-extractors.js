@@ -50,10 +50,33 @@
     return node;
   }
 
+  function scoreZillowProperty(value) {
+    if (!value || typeof value !== 'object' || value.zpid == null) return -1;
+    let score = 0;
+    const nestedAddress = value.address || {};
+    const hasStreet = Boolean(
+      nestedAddress.streetAddress || value.streetAddress ||
+      (typeof nestedAddress === 'string' && /\d/.test(nestedAddress)) ||
+      (typeof value.streetAddress === 'string' && /\d/.test(value.streetAddress))
+    );
+    const hasLocation = Boolean((nestedAddress.city || value.city) && (nestedAddress.state || value.state || nestedAddress.region || value.region));
+    if (hasStreet) score += 9;
+    if (hasLocation) score += 5;
+    if (value.price != null || value.unformattedPrice != null || value.rent != null) score += 8;
+    if (value.bedrooms != null || value.baths != null || value.bathrooms != null || value.homeType) score += 4;
+    if (Array.isArray(value.photos) || Array.isArray(value.responsivePhotos) || Array.isArray(value.hugePhotos) || Array.isArray(value.largePhotos)) score += 3;
+    if (value.unitCount != null || value.totalUnits != null || value.numberOfUnitsTotal != null) score += 2;
+    if (Array.isArray(value.units) || Array.isArray(value.unitTypes) || Array.isArray(value.availableUnits) || Array.isArray(value.floorPlans)) score += 1;
+    if (!hasStreet && !hasLocation && !value.price && !value.homeType && !value.bedrooms && !value.bathrooms) score -= 6;
+    return score;
+  }
+
   function findZillowProperty(root) {
     const stack = [{ value: root, depth: 0, key: '' }];
     const seen = new Set();
     let visited = 0;
+    let best = null;
+    let bestScore = -Infinity;
 
     while (stack.length && visited < 20000) {
       const current = stack.pop();
@@ -65,11 +88,11 @@
       seen.add(value);
       visited++;
 
-      if (value.zpid != null && (
-        value.address || value.streetAddress || value.price != null ||
-        value.bedrooms != null || value.homeType || value.responsivePhotos ||
-        value.photos || value.hugePhotos
-      )) return value;
+      const candidateScore = scoreZillowProperty(value);
+      if (candidateScore > bestScore) {
+        bestScore = candidateScore;
+        best = value;
+      }
 
       for (const key of Object.keys(value)) {
         const child = value[key];
@@ -78,6 +101,28 @@
         } else if (typeof child === 'string' && /gdpClientCache/i.test(key)) {
           stack.push({ value: child, depth: current.depth + 1, key });
         }
+      }
+    }
+    return best;
+  }
+
+  function pickZillowCacheProperty(node) {
+    if (!node || typeof node !== 'object') return null;
+    if (node.zpid != null && (node.address || node.price != null || node.homeType || node.bedrooms != null || node.responsivePhotos || node.units)) {
+      return node;
+    }
+    if (node.property && node.property.zpid != null) return node.property;
+    if (node.data && node.data.property && node.data.property.zpid != null) return node.data.property;
+    for (const value of Object.values(node)) {
+      if (value && typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          const picked = pickZillowCacheProperty(parsed);
+          if (picked) return picked;
+        } catch (_) {}
+      } else if (value && typeof value === 'object') {
+        const picked = pickZillowCacheProperty(value);
+        if (picked) return picked;
       }
     }
     return null;
@@ -210,12 +255,17 @@
         el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('alt'),
         el.getAttribute('data-testid'), el.getAttribute('class'), el.textContent,
       ].filter(Boolean).join(' ').trim();
-      const candidates = [
+      const rawCandidates = [
         el.currentSrc, el.src, el.href, el.getAttribute('src'), el.getAttribute('href'),
         el.getAttribute('data-video-url'), el.getAttribute('data-virtual-tour-url'),
         el.getAttribute('data-floor-plan-url'), el.getAttribute('data-media-url'),
+        el.getAttribute('data-src'), el.getAttribute('poster'),
       ];
-      if (tag === 'video' && el.poster) candidates.push(el.poster);
+      if (tag === 'video' && el.poster) rawCandidates.push(el.poster);
+      const candidates = rawCandidates.filter((value, index, arr) => {
+        if (typeof value !== 'string') return false;
+        return value.startsWith('http') && arr.findIndex(candidate => candidate === value) === index;
+      });
       candidates.forEach(url => {
         if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
         const descriptor = `${label} ${url}`;
@@ -965,6 +1015,10 @@
       ['props', 'pageProps', 'initialData', 'gdpClientCache'],
       ['props', 'pageProps', 'gdpClientCache'],
       ['props', 'pageProps', 'initialReduxState', 'gdpClientCache'],
+      ['props', 'pageProps', 'initialState', 'clientCache', 'gdpClientCache'],
+      ['props', 'pageProps', 'initialState', 'gdpClientCache'],
+      ['props', 'pageProps', 'initialState', 'clientCache', 'property'],
+      ['props', 'pageProps', 'initialState', 'property'],
     ];
     for (const path of cachePaths) {
       if (prop) break;
@@ -973,14 +1027,8 @@
         for (const key of path) { node = node[key]; if (!node) break; }
         if (!node) continue;
         const cache = typeof node === 'string' ? JSON.parse(node) : node;
-        if (!cache || typeof cache !== 'object') continue;
-        for (const k of Object.keys(cache)) {
-          const v = cache[k];
-          if (!v || typeof v !== 'object') continue;
-          if (v.property && v.property.zpid) { prop = v.property; break; }
-          if (v.data && v.data.property && v.data.property.zpid) { prop = v.data.property; break; }
-          if (v.zpid !== undefined && (v.bedrooms !== undefined || v.price !== undefined || v.address !== undefined)) { prop = v; break; }
-        }
+        const candidate = pickZillowCacheProperty(cache);
+        if (candidate) { prop = candidate; break; }
       } catch (_) {}
     }
     if (!prop) {

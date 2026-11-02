@@ -9,8 +9,9 @@
 (function () {
   'use strict';
 
-  if (window.__CP_CONTENT_LOADED__) return;
+  if (window.__CP_CONTENT_LOADED__ && window.__CP_CONTENT_VERSION__ === VERSION) return;
   window.__CP_CONTENT_LOADED__ = true;
+  window.__CP_CONTENT_VERSION__ = VERSION;
 
   function resolveConfigValue(name, fallback) {
     var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
