@@ -66,6 +66,8 @@ const filesToCopy = [
   '_headers',
   '_redirects',
   'about.html',
+  'application-credit-policy.html',
+  'download-extension.html',
   'fair-housing.html',
   'faq.html',
   'health.html',
@@ -92,6 +94,14 @@ const filesToCopy = [
   'extension-meta.json',
   'extension-updates.xml',
 ];
+
+// Automatically copy any other root HTML files if present
+const rootEntries = fs.readdirSync(ROOT_DIR);
+for (const entry of rootEntries) {
+  if (entry.endsWith('.html') && !filesToCopy.includes(entry)) {
+    filesToCopy.push(entry);
+  }
+}
 
 filesToCopy.forEach((file) => {
   const src = path.join(ROOT_DIR, file);

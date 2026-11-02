@@ -1,7 +1,16 @@
-import { assertEquals } from 'https://deno.land/std@0.220.0/assert/mod.ts';
+import nodeTest from 'node:test';
+import assertNode from 'node:assert/strict';
 import { buildPipelineRecord, qualityScore } from '../pipeline-record.ts';
 
-Deno.test('buildPipelineRecord preserves source provenance and keeps listing dates separate from import/publication dates', () => {
+const testRunner = (typeof Deno !== 'undefined'
+  ? Deno.test
+  : nodeTest) as (name: string, fn: () => void | Promise<void>) => void;
+
+function assertEquals(actual: unknown, expected: unknown, message?: string): void {
+  assertNode.deepStrictEqual(actual, expected, message);
+}
+
+testRunner('buildPipelineRecord preserves source provenance and keeps listing dates separate from import/publication dates', () => {
   const record = buildPipelineRecord({
     source: 'zillow',
     source_listing_id: 'ZPID-123',
@@ -23,13 +32,13 @@ Deno.test('buildPipelineRecord preserves source provenance and keeps listing dat
   });
 
   assertEquals(record.listed_at, '2024-04-15');
-  assertEquals(record.source_last_updated_at, '2026-09-20T12:00:00Z');
-  assertEquals(record.imported_at, '2026-09-28T10:00:00Z');
-  assertEquals(record.published_at, '2026-09-28T13:30:00Z');
+  assertEquals(record.source_last_updated_at, '2026-09-20T12:00:00.000Z');
+  assertEquals(record.imported_at, '2026-09-28T10:00:00.000Z');
+  assertEquals(record.published_at, '2026-09-28T13:30:00.000Z');
   assertEquals(record.source_status, 'available');
 });
 
-Deno.test('buildPipelineRecord omits prohibited listing facts and preserves unknown features', () => {
+testRunner('buildPipelineRecord omits prohibited listing facts and preserves unknown features', () => {
   const record = buildPipelineRecord({
     source: 'zillow',
     source_listing_id: 'ZPID-456',
