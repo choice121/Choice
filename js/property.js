@@ -6,6 +6,7 @@
 // ============================================================
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
+import { normalizePhotoList, getPrimaryPhoto } from '/js/property-photo-utils.js';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -624,8 +625,9 @@ function renderProperty(p) {
     return reordered;
   }
 
-  // Gallery
-  allPhotos = p.photo_urls?.length ? optimizePhotoOrder(p.photo_urls) : ['/assets/placeholder-property.jpg'];
+  // Gallery: normalize to a valid, deduplicated list so broken/empty media
+  // cannot leave the details page stuck in a perpetual loading state.
+  allPhotos = normalizePhotoList(optimizePhotoOrder(p.photo_urls));
   try {
     renderGallery(allPhotos);
   } catch (e) {
@@ -1362,6 +1364,7 @@ function renderMap(p) {
 
 /* ── Gallery Mosaic ── */
 function renderGallery(photos) {
+  const safePhotos = normalizePhotoList(Array.isArray(photos) ? photos : []);
   photoIndex = 0;
   const mainImg    = document.getElementById('mosaicMainImg');
   const mosaicMain = document.getElementById('mosaicMain');
@@ -1370,12 +1373,15 @@ function renderGallery(photos) {
   const mobileCount = document.getElementById('mosaicMobileCount');
   const prevBtn    = document.getElementById('mosaicPrev');
   const nextBtn    = document.getElementById('mosaicNext');
+  if (!mainImg || !mosaicMain || !mosaicSide || !prevBtn || !nextBtn) {
+    return;
+  }
 
   // Remove skeleton once we have real photos to show
-  document.getElementById('gallery').classList.remove('skeleton-loading');
+  document.getElementById('gallery')?.classList.remove('skeleton-loading');
 
   // Hero image — LCP candidate, load at high priority with srcset for retina
-  const heroUrl = photos[0];
+  const heroUrl = getPrimaryPhoto(safePhotos);
   mainImg.src    = CONFIG.img(heroUrl, 'gallery');
   if (CONFIG.IMAGEKIT_URL && heroUrl && heroUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
     mainImg.srcset = `${CONFIG.img(heroUrl, 'card')} 600w, ${CONFIG.img(heroUrl, 'gallery')} 1200w, ${CONFIG.img(heroUrl, 'gallery_2x')} 2400w`;
@@ -1388,7 +1394,7 @@ function renderGallery(photos) {
   mainImg.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
 
   // LQIP blur-up for hero image — tiny blurred placeholder fades out once full image loads
-  const heroLqip = lqipUrl(photos[0]);
+  const heroLqip = lqipUrl(safePhotos[0]);
   if (heroLqip) {
     const lqBg = document.createElement('div');
     lqBg.className = 'lqip-bg';
@@ -1410,12 +1416,12 @@ function renderGallery(photos) {
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
   // Side 2×2 grid — use gallery preset for crisp quality, lazy-load each cell
-  const sidePanels = photos.slice(1, 5);
+  const sidePanels = safePhotos.slice(1, 5);
   if (sidePanels.length > 0) {
     mosaicSide.innerHTML = sidePanels.map((url, i) => {
       const idx = i + 1;
-      const isLast = (i === sidePanels.length - 1) && (photos.length > 5);
-      const remaining = photos.length - 5;
+      const isLast = (i === sidePanels.length - 1) && (safePhotos.length > 5);
+      const remaining = Math.max(safePhotos.length - 5, 0);
       const lqUrl = lqipUrl(url);
       return `
         <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open photo ${idx + 1} in the gallery">
@@ -1479,18 +1485,18 @@ function renderGallery(photos) {
   }
 
   if (expandBtn) {
-    expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
-    expandBtn.hidden = photos.length < 2;
-    expandBtn.setAttribute('aria-label', `See all ${photos.length} property photos`);
+    expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${safePhotos.length}</span>`;
+    expandBtn.hidden = safePhotos.length < 2;
+    expandBtn.setAttribute('aria-label', `See all ${safePhotos.length} property photos`);
     expandBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       openLightbox(photoIndex, true);
     });
   }
 
-  if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
-  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
-  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
+  if (mobileCount) mobileCount.textContent = `1 / ${safePhotos.length}`;
+  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length));
+  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % safePhotos.length));
 
   // Touch swipe on mosaic (mobile carousel) — velocity-aware
   let touchX = 0, touchT = 0;
@@ -1503,7 +1509,7 @@ function renderGallery(photos) {
     const dt   = Date.now() - touchT;
     const vel  = Math.abs(diff) / dt; // px/ms
     if (Math.abs(diff) > 30 || vel > 0.3) {
-      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
+      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + safePhotos.length) % safePhotos.length);
     }
   }, { passive: true });
 
@@ -1528,16 +1534,17 @@ function renderGallery(photos) {
   document.getElementById('galleryExpand').addEventListener('click', () => openLightbox(photoIndex));
 
   // Build thumbnail strip
-  buildGalleryStrip(photos);
+  buildGalleryStrip(safePhotos);
 }
 
 /* ── Thumbnail Strip ── */
 function buildGalleryStrip(photos) {
+  const safePhotos = normalizePhotoList(Array.isArray(photos) ? photos : []);
   const strip = document.getElementById('galleryStrip');
   if (!strip) return;
-  if (photos.length < 2) { strip.style.display = 'none'; return; }
+  if (safePhotos.length < 2) { strip.style.display = 'none'; return; }
 
-  strip.innerHTML = photos.map((url, i) => `
+  strip.innerHTML = safePhotos.map((url, i) => `
     <button class="gallery-strip-thumb${i === 0 ? ' active' : ''}"
             data-idx="${i}" role="listitem"
             aria-label="View photo ${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">
@@ -1571,23 +1578,26 @@ function showPhoto(idx) {
   photoIndex = idx;
   const mainImg = document.getElementById('mosaicMainImg');
   const mosaicMain = document.getElementById('mosaicMain');
+  if (!mainImg || !allPhotos.length) return;
+  const safeIdx = Math.min(Math.max(idx, 0), allPhotos.length - 1);
+  const curUrl = allPhotos[safeIdx];
   mainImg.style.opacity = '0';
   mainImg.style.transition = 'opacity 150ms';
   setTimeout(() => {
-    const curUrl = allPhotos[idx];
     mainImg.src = CONFIG.img(curUrl, 'gallery');
     if (CONFIG.IMAGEKIT_URL && curUrl && curUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
       mainImg.srcset = `${CONFIG.img(curUrl, 'card')} 600w, ${CONFIG.img(curUrl, 'gallery')} 1200w, ${CONFIG.img(curUrl, 'gallery_2x')} 2400w`;
     } else {
       mainImg.srcset = '';
     }
-    mainImg.alt    = `Property photo ${idx + 1}`;
-    if (mosaicMain) mosaicMain.setAttribute('aria-label', `Open photo ${idx + 1} in the gallery`);
+    mainImg.alt    = `Property photo ${safeIdx + 1}`;
+    if (mosaicMain) mosaicMain.setAttribute('aria-label', `Open photo ${safeIdx + 1} in the gallery`);
     mainImg.style.opacity = '1';
   }, 150);
   const mobileCount = document.getElementById('mosaicMobileCount');
-  if (mobileCount) mobileCount.textContent = `${idx + 1} / ${allPhotos.length}`;
-  syncStripActive(idx);
+  if (mobileCount) mobileCount.textContent = `${safeIdx + 1} / ${allPhotos.length}`;
+  syncStripActive(safeIdx);
+  photoIndex = safeIdx;
 }
 
 /* ── Lightbox ── */
