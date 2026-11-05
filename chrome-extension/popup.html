@@ -9,7 +9,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    width: 280px;
+    width: 340px;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     font-size: 13px;
     background: #0f1117;
@@ -259,6 +259,98 @@
   .toggle input:checked + .slider::before {
     transform: translateX(15px);
   }
+
+  .gallery-reference {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(129,140,248,.28);
+    border-radius: 9px;
+    background: rgba(99,102,241,.08);
+  }
+
+  .gallery-reference h2 {
+    margin-bottom: 5px;
+    color: #fff;
+    font-size: 12px;
+  }
+
+  .gallery-reference p,
+  .gallery-reference .reference-note {
+    margin: 0 0 9px;
+    color: rgba(255,255,255,.55);
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .gallery-reference input {
+    display: block;
+    width: 100%;
+    margin: 7px 0;
+    padding: 8px 9px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 6px;
+    background: #171a24;
+    color: #fff;
+    font: inherit;
+  }
+
+  .gallery-reference button {
+    width: 100%;
+    min-height: 34px;
+    margin-top: 7px;
+    border: 0;
+    border-radius: 6px;
+    background: #6366f1;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .gallery-reference button:disabled {
+    opacity: .48;
+    cursor: wait;
+  }
+
+  .gallery-reference button.secondary {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.07);
+  }
+
+  #gallery-reference-status {
+    min-height: 15px;
+    margin: 8px 0 0;
+    color: #c7d2fe;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  #gallery-reference-status.error { color: #fca5a5; }
+  #gallery-reference-status.success { color: #86efac; }
+
+  #gallery-reference-link {
+    display: none;
+    margin-top: 7px;
+    color: #a5b4fc;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  #gallery-reference-recent {
+    margin-top: 8px;
+    font-size: 10px;
+  }
+
+  #gallery-reference-recent a {
+    display: block;
+    margin-top: 4px;
+    color: #a5b4fc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -273,7 +365,7 @@
     </svg>
   </div>
   <div class="header-text">
-    <h1>Import to Choice <span id="ext-version-pill" style="font-size:10px;font-weight:600;background:rgba(99,102,241,0.25);color:#a5b4fc;padding:2px 6px;border-radius:4px;border:1px solid rgba(165,180,252,0.3);margin-left:4px">v52.3.0</span></h1>
+    <h1>Import to Choice <span id="ext-version-pill" style="font-size:10px;font-weight:600;background:rgba(99,102,241,0.25);color:#a5b4fc;padding:2px 6px;border-radius:4px;border:1px solid rgba(165,180,252,0.3);margin-left:4px">v52.5.0</span></h1>
     <p>Listing → Pipeline importer</p>
   </div>
 </div>
@@ -334,6 +426,25 @@
     </div>
   </div>
 
+  <section class="gallery-reference" aria-labelledby="gallery-reference-title">
+    <h2 id="gallery-reference-title">Zillow gallery reference</h2>
+    <p>Capture the visible gallery layout and controls. Open a photo first to capture its viewer state.</p>
+    <div id="gallery-reference-login">
+      <input id="gallery-reference-email" type="email" autocomplete="username" placeholder="Choice admin email" aria-label="Choice admin email">
+      <input id="gallery-reference-password" type="password" autocomplete="current-password" placeholder="Choice admin password" aria-label="Choice admin password">
+      <button id="gallery-reference-login-button" type="button">Connect Choice admin account</button>
+    </div>
+    <div id="gallery-reference-connected" hidden>
+      <p>Connected. Your password is not stored; the extension keeps a refresh token in this browser.</p>
+      <button id="gallery-reference-capture-button" type="button">Capture this Zillow gallery state</button>
+      <button id="gallery-reference-logout-button" class="secondary" type="button">Disconnect account</button>
+    </div>
+    <p class="reference-note">Saves measured layout, image dimensions, and visible photo-control labels only. No photo files, image URLs, page text, or browsing history are sent. The report link grants read access to that report.</p>
+    <div id="gallery-reference-status" role="status" aria-live="polite"></div>
+    <a id="gallery-reference-link" target="_blank" rel="noopener noreferrer"></a>
+    <div id="gallery-reference-recent" aria-label="Recent gallery reports"></div>
+  </section>
+
 </div>
 
 <div class="footer">
@@ -349,5 +460,6 @@
 </div>
 
 <script src="popup.js"></script>
+<script src="gallery-reference.js"></script>
 </body>
 </html>

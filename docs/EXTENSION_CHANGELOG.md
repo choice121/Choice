@@ -4,6 +4,18 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.5.0] - 2026-11-05
+### Save Privacy-Minimized Zillow Gallery References
+- **One-click capture**: Add a popup action to measure visible gallery image boxes, ancestor layout styles, and photo-related control labels on the active Zillow tab.
+- **Explicit state capture**: Users can capture the listing gallery and separately capture the single-photo viewer after opening it.
+- **Private report storage**: Require a Choice admin account to create reports; store records in a service-role-only table and return an unguessable read-only link.
+- **Privacy boundaries**: Exclude image URLs and bytes, full page text/HTML, cookies, and browsing history; validate and allowlist report fields server-side.
+- **Viewport precision**: Measure only gallery-sized images and controls intersecting the current viewport, avoiding off-screen page content and verification-screen logos.
+- **Regression coverage**: Run extension validation and the existing extractor suite after version synchronization.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.5.0.
+
+---
+
 ## [v44.0.5] - 2026-10-30
 ### Recover Zillow Community Floor Plans
 - **Broader card detection**: Inspect rendered semantic and class-based plan cards when Zillow does not expose floor-plan test IDs.

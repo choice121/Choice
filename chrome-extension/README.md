@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v52.3.0)
+# Choice Properties — Universal Chrome Extension (v52.5.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -51,6 +51,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 - **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
 - **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts—including candidate floor-plan card counts—to the admin inbox. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
+- **Zillow Gallery Reference**: The popup can capture measured gallery image/container geometry, a small allowlist of computed layout styles, and visible photo-control labels from a Zillow page. It never uploads image URLs or bytes, full page text/HTML, cookies, or browser history. Saving requires a Choice admin sign-in and creates a durable report with a random read-only link; anyone with that link can read the minimized report.
 - **Resilient Zillow JSON-LD Fallback**: Ignore malformed optional JSON-LD when primary listing data was extracted, and handle schema.org `@type` values supplied as strings or arrays.
 - **Source-Fact Accuracy**: Zillow estimates are not substituted for asking rent, and unavailable, lease-term, and smoking-policy fields are omitted from imports. Unknown feature facts stay unknown; generic cooling/window units do not imply central air, while explicit "No basement" wording is captured as false.
 - **Location Intelligence Integration**: Property pages can load cached, server-side Geoapify nearby places and approximate neighborhood context. Details are documented in [`docs/LOCATION_ENRICHMENT.md`](../docs/LOCATION_ENRICHMENT.md); no school ratings, attendance boundaries, or walk/travel times are inferred.
@@ -81,5 +82,12 @@ Whenever making modifications to the extension:
    - Executes the extractor regression suite.
    - Bumps version and updates `extension-meta.json` and `public/choice-properties-extension.zip`.
 4. Record all changes in `docs/EXTENSION_CHANGELOG.md`.
+
+### Save a Zillow gallery reference
+1. Apply migration `20261105000001_zillow_gallery_reference_reports.sql` and deploy the `zillow-gallery-reference` Edge Function.
+2. Load or update the extension in Chrome, then open a Zillow listing and click its toolbar icon.
+3. Connect with a Choice admin account. The extension stores only the Supabase refresh token in this browser; it does not retain the password.
+4. Click **Capture this Zillow gallery state**. To record the full-screen photo view, open a photo on Zillow and click capture again.
+5. Copy the generated report link and share it in the future conversation where you want the reference used. A click cannot deliver data directly into a separate assistant chat.
 
 Submitted reports can be reviewed at `/admin/extension-diagnostics.html` by an authenticated admin.
