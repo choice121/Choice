@@ -1012,6 +1012,8 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 8px !important;
+    min-height: 186px;
+    align-content: start;
     margin: 17px 0 16px !important;
   }
 
