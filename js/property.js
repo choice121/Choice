@@ -1399,7 +1399,13 @@ function renderGallery(photos) {
     if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
   }
 
-  mosaicMain.addEventListener('click', () => openLightbox(0));
+  mosaicMain.addEventListener('click', () => openLightbox(photoIndex));
+  mosaicMain.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLightbox(photoIndex);
+    }
+  });
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
@@ -1412,7 +1418,7 @@ function renderGallery(photos) {
       const remaining = photos.length - 5;
       const lqUrl = lqipUrl(url);
       return `
-        <div class="mosaic-cell" data-idx="${idx}">
+        <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open photo ${idx + 1} in the gallery">
           ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
           <img src="${CONFIG.img(url,'gallery')}"
                srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
@@ -1446,7 +1452,14 @@ function renderGallery(photos) {
     // Fade out each cell's LQIP placeholder once its image loads;
     // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
-      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
+      const openCellPhoto = () => openLightbox(parseInt(cell.dataset.idx, 10));
+      cell.addEventListener('click', openCellPhoto);
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openCellPhoto();
+        }
+      });
       cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('dragstart', e => e.preventDefault());
       const img = cell.querySelector('img');
@@ -1467,9 +1480,11 @@ function renderGallery(photos) {
 
   if (expandBtn) {
     expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
+    expandBtn.hidden = photos.length < 2;
+    expandBtn.setAttribute('aria-label', `See all ${photos.length} property photos`);
     expandBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      openLightbox(0, true);
+      openLightbox(photoIndex, true);
     });
   }
 
@@ -1555,6 +1570,7 @@ function syncStripActive(idx) {
 function showPhoto(idx) {
   photoIndex = idx;
   const mainImg = document.getElementById('mosaicMainImg');
+  const mosaicMain = document.getElementById('mosaicMain');
   mainImg.style.opacity = '0';
   mainImg.style.transition = 'opacity 150ms';
   setTimeout(() => {
@@ -1566,6 +1582,7 @@ function showPhoto(idx) {
       mainImg.srcset = '';
     }
     mainImg.alt    = `Property photo ${idx + 1}`;
+    if (mosaicMain) mosaicMain.setAttribute('aria-label', `Open photo ${idx + 1} in the gallery`);
     mainImg.style.opacity = '1';
   }, 150);
   const mobileCount = document.getElementById('mosaicMobileCount');

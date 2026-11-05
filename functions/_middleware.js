@@ -128,38 +128,42 @@ export async function onRequest(context) {
     if (propId) {
       try {
         const supabaseUrl = (context.env && context.env.SUPABASE_URL) || "https://tlfmwetmhthpyrytrcfo.supabase.co";
-        const supabaseKey = (context.env && (context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_ANON_KEY)) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE";
+        const supabaseKey = context.env && (
+          context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_ANON_KEY
+        );
         
-        const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        });
-        
-        if (fetchRes.ok) {
-          const props = await fetchRes.json();
-          if (props && props.length > 0) {
-            const p = props[0];
-            const title = p.title || 'Property for Rent';
-            const price = p.monthly_rent ? `$${p.monthly_rent}/mo` : '';
-            const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
-            
-            let photoUrl = '';
-            if (p.property_photos && p.property_photos.length > 0) {
-               p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-               photoUrl = p.property_photos[0].url;
+        if (supabaseKey) {
+          const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`
             }
-
-            html = html.replace('<title>Property — Choice Properties</title>', `<title>${pageTitle}</title>`);
+          });
+        
+          if (fetchRes.ok) {
+            const props = await fetchRes.json();
+            if (props && props.length > 0) {
+              const p = props[0];
+              const title = p.title || 'Property for Rent';
+              const price = p.monthly_rent ? `$${p.monthly_rent}/mo` : '';
+              const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
             
-            const ogTags = `
+              let photoUrl = '';
+              if (p.property_photos && p.property_photos.length > 0) {
+                 p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                 photoUrl = p.property_photos[0].url;
+              }
+
+              html = html.replace('<title>Property — Choice Properties</title>', `<title>${pageTitle}</title>`);
+            
+              const ogTags = `
               <meta property="og:title" content="${pageTitle}">
               <meta property="og:description" content="View property details and apply online.">
               ${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ''}
               <meta name="twitter:card" content="summary_large_image">
             `;
-            html = html.replace('</head>', ogTags + '</head>');
+              html = html.replace('</head>', ogTags + '</head>');
+            }
           }
         }
       } catch (e) {

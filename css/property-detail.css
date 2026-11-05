@@ -1,0 +1,319 @@
+/* Property detail page refresh.
+   Scoped to this route so listing cards and portal pages keep their styling. */
+body[data-portal="public"][data-page="property"] {
+  background: var(--m-bg, #f7f8fa);
+}
+
+@media (min-width: 901px) {
+  body[data-portal="public"][data-page="property"] #propSplit {
+    display: block !important;
+    width: min(100%, 1360px);
+    margin: 0 auto;
+    padding: 24px 28px 72px;
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitPhotos {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #gallery {
+    display: grid;
+    grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.84fr);
+    gap: 8px;
+    width: 100%;
+    height: clamp(360px, 41vw, 560px);
+    margin: 0;
+    overflow: hidden;
+    border-radius: 18px;
+    background: var(--m-surface-2, #e9edf3);
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.12);
+    contain: layout paint;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicMain {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicMain:focus-visible,
+  body[data-portal="public"][data-page="property"] .mosaic-cell:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -5px;
+    box-shadow: inset 0 0 0 5px var(--m-brand, #006aff);
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicMainImg {
+    border-radius: 0;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicSide {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  body[data-portal="public"][data-page="property"] .mosaic-cell {
+    min-width: 0;
+    min-height: 0;
+    border-radius: 12px;
+  }
+
+  body[data-portal="public"][data-page="property"] .mosaic-cell:nth-child(2),
+  body[data-portal="public"][data-page="property"] .mosaic-cell:nth-child(4) {
+    border-radius: 12px;
+  }
+
+  body[data-portal="public"][data-page="property"] .mosaic-cell img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body[data-portal="public"][data-page="property"] .mosaic-cell-overlay {
+    border-radius: inherit;
+    background: rgba(10, 22, 40, 0.42);
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicExpandBtn {
+    right: 16px;
+    bottom: 16px;
+    min-height: 42px;
+    padding: 10px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    background: rgba(10, 22, 40, 0.88);
+    color: #fff;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicExpandBtn:hover {
+    background: #0a1628;
+    transform: translateY(-1px);
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicExpandBtn[hidden] {
+    display: none !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #galleryStrip {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 12px 2px 0;
+    scrollbar-width: thin;
+  }
+
+  body[data-portal="public"][data-page="property"] .gallery-strip-thumb {
+    flex-basis: 96px;
+    height: 68px;
+    border: 2px solid transparent;
+    border-radius: 9px;
+    background: var(--m-surface-2, #e9edf3);
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  body[data-portal="public"][data-page="property"] .gallery-strip-thumb:hover {
+    transform: translateY(-2px);
+  }
+
+  body[data-portal="public"][data-page="property"] .gallery-strip-thumb:focus-visible {
+    outline: 3px solid var(--m-brand, #006aff);
+    outline-offset: 2px;
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 370px);
+    grid-auto-rows: min-content;
+    grid-auto-flow: row;
+    column-gap: 28px;
+    row-gap: 16px;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px 0 0 !important;
+    align-items: start;
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent > .detail-breadcrumb {
+    grid-column: 1 / -1;
+    margin: 0 0 2px;
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent .prop-avail-row {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0 0 2px;
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent .prop-header {
+    grid-column: 1;
+    grid-row: 3;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailPrice {
+    margin: 0 0 2px;
+    color: var(--m-ink, #0f172a);
+    font-size: clamp(30px, 3vw, 38px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailTitle {
+    margin: 0;
+    color: var(--m-ink, #0f172a);
+    font-size: clamp(21px, 2vw, 27px);
+    font-weight: 750;
+    line-height: 1.22;
+    letter-spacing: -0.025em;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailAddress {
+    margin: 0;
+    color: var(--m-muted, #64748b);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta {
+    grid-column: 1;
+    grid-row: 4;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 8px 0 0;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-item {
+    min-width: 0;
+    min-height: 76px;
+    padding: 12px 14px;
+    border: 1px solid var(--m-border, #e2e8f0);
+    border-radius: 12px;
+    background: var(--m-surface, #f8fafc);
+    box-shadow: none;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-value {
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-label {
+    color: var(--m-muted, #64748b);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  body[data-portal="public"][data-page="property"] #costsSection {
+    grid-column: 2;
+    grid-row: 3 / span 8;
+    align-self: start;
+    position: sticky;
+    top: 20px;
+    min-width: 0;
+    margin: 0;
+    padding: 22px;
+    border: 1px solid var(--m-border, #e2e8f0);
+    border-radius: 16px;
+    background: var(--m-white, #fff);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, 0.07);
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent > .prop-section:not(#costsSection),
+  body[data-portal="public"][data-page="property"] #propSplitContent > .detail-tabs-wrap,
+  body[data-portal="public"][data-page="property"] #propSplitContent > #communityInventorySection,
+  body[data-portal="public"][data-page="property"] #propSplitContent > #propFactsSection,
+  body[data-portal="public"][data-page="property"] #propSplitContent > #scoresSection,
+  body[data-portal="public"][data-page="property"] #propSplitContent > #similarSection {
+    grid-column: 1;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 22px;
+    border: 1px solid var(--m-border, #e2e8f0);
+    border-radius: 16px;
+    background: var(--m-white, #fff);
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.045);
+  }
+
+  body[data-portal="public"][data-page="property"] #propSplitContent > .prop-divider,
+  body[data-portal="public"][data-page="property"] #renterReqsSection {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body[data-portal="public"][data-page="property"] #propSplit {
+    padding: 0 !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #gallery {
+    aspect-ratio: 16 / 9 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: none;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicMainImg {
+    border-radius: 0 !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicExpandBtn {
+    right: 10px;
+    bottom: 10px;
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+
+  body[data-portal="public"][data-page="property"] #mosaicExpandBtn[hidden] {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body[data-portal="public"][data-page="property"] #propSplitPhotos {
+    padding: 12px 16px 0 !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-portal="public"][data-page="property"] *,
+  body[data-portal="public"][data-page="property"] *::before,
+  body[data-portal="public"][data-page="property"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
