@@ -27,7 +27,9 @@ body[data-portal="public"][data-page="property"] {
     grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.84fr);
     gap: 8px;
     width: 100%;
-    height: clamp(360px, 41vw, 560px);
+    height: clamp(360px, 41vw, 560px) !important;
+    max-height: none !important;
+    flex: none !important;
     margin: 0;
     overflow: hidden;
     border-radius: 18px;
@@ -114,7 +116,7 @@ body[data-portal="public"][data-page="property"] {
   }
 
   body[data-portal="public"][data-page="property"] #galleryStrip {
-    display: flex;
+    display: flex !important;
     gap: 10px;
     margin: 0;
     padding: 12px 2px 0;
@@ -241,6 +243,22 @@ body[data-portal="public"][data-page="property"] {
     box-shadow: 0 8px 26px rgba(15, 23, 42, 0.07);
   }
 
+  body[data-portal="public"][data-page="property"] #costsSection .prop-apply-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  body[data-portal="public"][data-page="property"] #costsSection .prop-apply-strip-text {
+    width: 100%;
+  }
+
+  body[data-portal="public"][data-page="property"] #costsSection .prop-apply-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   body[data-portal="public"][data-page="property"] #propSplitContent > .prop-section:not(#costsSection),
   body[data-portal="public"][data-page="property"] #propSplitContent > .detail-tabs-wrap,
   body[data-portal="public"][data-page="property"] #propSplitContent > #communityInventorySection,
@@ -274,6 +292,8 @@ body[data-portal="public"][data-page="property"] {
     aspect-ratio: 16 / 9 !important;
     height: auto !important;
     min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
     margin: 0 !important;
     border-radius: 14px !important;
     box-shadow: none;
