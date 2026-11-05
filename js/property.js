@@ -655,12 +655,13 @@ function renderProperty(p) {
   if (existingPpBadge) existingPpBadge.remove();
 
   document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
-  const cleanTitle = (p.address && p.city && p.state)
-    ? `${p.address}, ${p.city}, ${p.state} ${p.zip || ''}`.trim()
-    : (p.title || 'Property Details');
-  document.getElementById('detailTitle').textContent = cleanTitle;
-  const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
-  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
+  const streetAddress = p.address || p.title || 'Property Details';
+  const addressUnit = p.unit_number ? `, Unit ${p.unit_number}` : '';
+  const locality = [p.city, [p.state, p.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  document.getElementById('detailTitle').textContent = p.address
+    ? `${streetAddress}${p.unit_number ? `, Unit ${p.unit_number}` : ''}`
+    : streetAddress;
+  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(locality || streetAddress + addressUnit)}`;
 
   const existingChipRow = document.getElementById('detailHeaderChips');
   if (existingChipRow) existingChipRow.remove();
