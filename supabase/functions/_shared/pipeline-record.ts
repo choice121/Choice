@@ -275,9 +275,16 @@ export interface PipelineRecordInput {
   lng?: number | null;
   location_context?: string | null;
   property_type?: string | null;
+  building_name?: string | null;
+  is_multi_unit?: boolean | null;
+  price_range?: string | null;
+  rent_basis?: string | null;
+  unit_options?: unknown[] | null;
+  media?: unknown[] | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
+  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
@@ -301,7 +308,7 @@ export interface PipelineRecordInput {
   showing_instructions?: string | null;
   available_date?: string | null;
   minimum_lease_months?: number | null;
-  lease_terms?: string | null;
+  lease_terms?: string | string[] | null;
   pets_allowed?: boolean | null;
   pet_types_allowed?: string | null;
   pet_weight_limit?: number | null;
@@ -390,14 +397,46 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     harvested.amenities.forEach((a: string) => { if (!cleanedAmenities.includes(a)) cleanedAmenities.push(a); });
   }
 
-  const originalData = JSON.stringify({
+  const originalData = {
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
+    building_name: safeStr(body.building_name),
+    is_multi_unit: safeBool(body.is_multi_unit),
+    total_units: safeInt(body.total_units),
+    floors: safeInt(body.floors),
+    price_range: safeStr(body.price_range),
+    rent_basis: safeStr(body.rent_basis),
+    unit_options: Array.isArray(body.unit_options) ? body.unit_options.slice(0, 100) : [],
+    media: Array.isArray(body.media) ? body.media.slice(0, 100) : [],
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
-  });
+  };
+  const serializedOriginalData = JSON.stringify(originalData);
+  let preservedOriginalData = safeStr(body.original_data) ?? serializedOriginalData;
+  if (preservedOriginalData !== serializedOriginalData) {
+    try {
+      const supplied = JSON.parse(preservedOriginalData);
+      if (supplied && typeof supplied === 'object' && !Array.isArray(supplied)) {
+        const merged = { ...originalData, ...supplied };
+        [
+          'building_name', 'is_multi_unit', 'total_units', 'floors',
+          'price_range', 'rent_basis',
+        ].forEach((key) => {
+          if (merged[key] == null) merged[key] = originalData[key];
+        });
+        ['unit_options', 'media'].forEach((key) => {
+          if ((!Array.isArray(merged[key]) || merged[key].length === 0) && originalData[key].length) {
+            merged[key] = originalData[key];
+          }
+        });
+        preservedOriginalData = JSON.stringify(merged);
+      }
+    } catch {
+      // Preserve source-provided opaque metadata unchanged when it is not JSON.
+    }
+  }
 
   const record: Record<string, unknown> = {
     // Identity
@@ -489,7 +528,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     imported_at:          importedAt,
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
-    original_data:        safeStr(body.original_data) ?? originalData,
+    original_data:        preservedOriginalData,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,

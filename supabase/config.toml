@@ -7,6 +7,9 @@ verify_jwt = false
 [functions.receive-pipeline-import]
 verify_jwt = false
 
+[functions.extension-diagnostics]
+verify_jwt = false
+
 [functions.receive-application]
 verify_jwt = false
 

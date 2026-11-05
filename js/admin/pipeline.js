@@ -36,12 +36,75 @@
     try{ return JSON.parse(s); }catch(_){ return null; }
   }
 
+  function apartmentCommunityInfo(listing){
+    const sourceData = parseJSON(listing.original_data) || {};
+    const unitOptions = Array.isArray(sourceData.unit_options) ? sourceData.unit_options : [];
+    const media = Array.isArray(sourceData.media) ? sourceData.media : [];
+    const isApartment = String(listing.property_type || sourceData.homeType || '').toUpperCase() === 'APARTMENT';
+    const isCommunityOverview = !listing.unit_number &&
+      (sourceData.is_multi_unit === true || sourceData.is_multi_unit === 'true' ||
+        (unitOptions.length > 0 && listing.monthly_rent == null));
+    if(!isApartment && !isCommunityOverview && !unitOptions.length) return null;
+    return {
+      buildingName: sourceData.building_name || null,
+      totalUnits: sourceData.total_units ?? null,
+      floors: sourceData.floors ?? null,
+      priceRange: sourceData.price_range || null,
+      rentBasis: sourceData.rent_basis || null,
+      isCommunityOverview,
+      unitOptions,
+      floorPlans: media.filter(item => item && item.kind === 'floor_plan'),
+    };
+  }
+
+  function renderApartmentOverview(info){
+    if(!info) return '';
+    const facts = [
+      info.buildingName ? `Building: ${S.esc(info.buildingName)}` : '',
+      info.totalUnits != null ? `Reported units: ${S.esc(info.totalUnits)}` : '',
+      info.floors != null ? `Stories: ${S.esc(info.floors)}` : '',
+      info.priceRange ? `Source price range: ${S.esc(info.priceRange)}` : '',
+      info.rentBasis ? `Source price label: ${S.esc(info.rentBasis)}` : '',
+    ].filter(Boolean);
+    const rows = info.unitOptions.map((unit, index) => {
+      const beds = unit.bedrooms === 0 ? 'Studio' : unit.bedrooms != null ? `${unit.bedrooms} bd` : '— bd';
+      const baths = unit.bathrooms != null ? `${unit.bathrooms} ba` : '— ba';
+      const sqft = unit.square_footage != null ? `${Number(unit.square_footage).toLocaleString()} sqft` : '— sqft';
+      const rentValue = unit.monthly_rent ?? unit.starting_rent;
+      const rent = rentValue != null ? fmt$$(rentValue) : 'Price not listed';
+      const label = unit.unit_number || unit.floor_plan_name || `Option ${index + 1}`;
+      return `<tr><td>${S.esc(label)}</td><td>${S.esc(beds)} · ${S.esc(baths)}</td><td>${S.esc(sqft)}</td><td>${S.esc(rent)}</td><td>${S.esc(unit.rent_basis || info.rentBasis || 'Unspecified')}</td></tr>`;
+    }).join('');
+    const floorPlans = info.floorPlans.length
+      ? `<div class="pl-panel-alert pl-panel-alert-info">${info.floorPlans.length} floor-plan media item${info.floorPlans.length === 1 ? '' : 's'} captured: ${info.floorPlans.map(item => S.esc(item.title || 'Floor plan')).join(', ')}</div>`
+      : '';
+    const warning = info.isCommunityOverview
+      ? '<div class="pl-panel-alert pl-panel-alert-warning">This is a community overview, not an individual rental unit. Select and import a specific unit before publishing.</div>'
+      : '';
+    return `<div class="pl-section">
+      <div class="pl-section-title">Apartment &amp; community inventory</div>
+      ${warning}
+      ${facts.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;color:var(--muted-2);font-size:.8rem">${facts.map(fact => `<span>${fact}</span>`).join('')}</div>` : ''}
+      ${rows ? `<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Unit / plan</th><th>Beds · baths</th><th>Size</th><th>Source price</th><th>Price label</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+      ${floorPlans}
+      ${!rows && !floorPlans && !facts.length ? '<p class="pl-meta">No separate apartment inventory details were captured.</p>' : ''}
+    </div>`;
+  }
+
+  function isCommunityOverview(listing){
+    return apartmentCommunityInfo(listing)?.isCommunityOverview === true;
+  }
+
   // ── Pre-publish validation gate ──────────────────────────────────────────────
   // Must pass before any pipeline record is promoted to a live listing.
   // Returns { ok: boolean, failures: string[] }.
   async function validateForPublish(listing) {
     const failures = [];
     const desc = listing.description || '';
+
+    if (isCommunityOverview(listing)) {
+      failures.push('This is a community overview, not an individual apartment unit. Select and import a specific unit before publishing.');
+    }
 
     // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
     // Listings are pre-screened on import and published regardless of photo count.
@@ -145,6 +208,7 @@
     const od = parseJSON(l.original_data);
     if(od && od._import && String(od._import).startsWith('ios-scriptable')) return 'ios';
     if(od && od._import && String(od._import).startsWith('admin-url-import')) return 'admin-url';
+    if(od && od._import && String(od._import).startsWith('browser-extension-v')) return 'browser-extension';
     if(od && od._phase === 'detail') return 'enriched';
     return 'search';
   }
@@ -292,6 +356,7 @@
           ${qsBadge(score)}
           ${folderBadge}
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
+          ${srcImp === 'browser-extension' ? `<span class="qs-badge qs-high" title="Imported from a supported listing page by the browser extension">Browser extension</span>` : ''}
           ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
           ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
           ${l.source_status && l.source_status !== 'available' ? `<span class="qs-badge ${l.source_status === 'pending' ? 'qs-mid' : 'qs-low'}" title="Source site status: ${S.esc(l.source_status)}">${l.source_status === 'pending' ? '⏳ Pending' : l.source_status === 'rented' ? '🔒 Rented' : '⚠ ' + S.esc(l.source_status)}</span>` : ''}
@@ -462,6 +527,7 @@
     const enriched = isEnriched(l);
     const srcType  = importSource(l);
     const photoCount = imageUrls(l.original_image_urls).length;
+    const apartmentInfo = apartmentCommunityInfo(l);
 
     return `
     <div class="pl-panel-hd">
@@ -471,6 +537,7 @@
           ${score != null ? ` · <span class="qs-badge ${qsClass(score)}">Q: ${score}/100</span>` : ''}
           ${srcType === 'ios'       ? ` · <span class="qs-badge qs-high" title="Imported from Zillow detail page via iOS Scriptable">📱 iOS import</span>` :
             srcType === 'admin-url' ? ` · <span class="qs-badge qs-high" title="Imported via admin URL import on desktop">🖥 Desktop import</span>` :
+            srcType === 'browser-extension' ? ` · <span class="qs-badge qs-high" title="Imported from a supported listing page by the browser extension">Browser extension</span>` :
             srcType === 'enriched'  ? ` · <span class="qs-badge qs-high" title="Phase 2 detail scrape complete">✓ Full data</span>` :
                                       ` · <span class="qs-badge qs-low" title="Only basic search data — open the listing and re-import for full details">Search only</span>`}
           ${editedFields.length ? ` · <span style="font-size:.7rem;color:var(--brand)">${editedFields.length} fields edited</span>` : ''}
@@ -498,6 +565,8 @@
         <div class="pl-section-title">Data quality</div>
         ${missingTags(l)}
       </div>
+
+      ${renderApartmentOverview(apartmentInfo)}
 
       <!-- Core fields -->
       <div class="pl-section">
@@ -2086,6 +2155,20 @@ function wirePanelPhotoActions(){
     if(!_activeFolder) return;
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_properties', { p_folder_id: _activeFolder });
+      if(error) throw error;
+      const folderProperties = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!Array.isArray(folderProperties)) throw new Error('Folder contents could not be verified');
+      const communityCount = folderProperties.filter(isCommunityOverview).length;
+      if(communityCount){
+        S.toast(`${communityCount} apartment community overview${communityCount === 1 ? '' : 's'} cannot be published as individual rentals. Import specific available units or move the overviews out of this folder.`, 'error');
+        return;
+      }
+    } catch(e){
+      S.toast('Could not verify apartment units before publishing: ' + (e.message || 'unknown error'), 'error');
+      return;
+    }
     const ok = await S.confirm(
       `Publish all in "${folder.name}"?`,
       `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`

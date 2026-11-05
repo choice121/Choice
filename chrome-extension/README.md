@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v52.7.0)
+# Choice Properties — Universal Chrome Extension (v52.7.2)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -50,7 +50,9 @@ A browser extension that allows Choice Properties agents to save rental listings
   - **Strict Stripping**: Never outputs lease duration or smoking policies.
 - **Direct Edge Ingestion**: Sends data securely to the `receive-pipeline-import` Supabase Edge Function with auto deduplication.
 - **SPA Listing Safety**: Re-reads the active listing before saving so replacing a property in the same tab cannot submit the previous property's data.
-- **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts—including candidate floor-plan card counts—to the admin inbox. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
+- **Opt-in Extraction Diagnostics**: The "Run & Send Diagnostics" button uploads extracted property facts, unit options, extractor status, and bounded page-structure counts—including candidate floor-plan card counts—to the admin inbox at `/admin/extension-diagnostics.html`. Reports exclude cookies, session data, descriptions, contact details, exception text, raw stack traces, and raw page HTML; safe extension file/line locations are included for extractor failures. Reports expire after 30 days.
+- **Apartment Community Review**: Community-level apartment imports retain building facts, unit/floor-plan options, rent labels, and floor-plan media in the existing `original_data` field. The pipeline review panel shows that inventory and blocks publishing a community overview as if it were one rental unit.
+- **Reliable Background Requests**: Fix service-worker startup in Chrome and bound import/diagnostic requests so a failed background response produces a visible error instead of an indefinite spinner.
 - **Zillow Gallery Reference**: The popup can capture measured gallery image/container geometry, a small allowlist of computed layout styles, and visible photo-control labels from a Zillow page. It never uploads image URLs or bytes, full page text/HTML, cookies, or browser history. Saving requires a Choice admin sign-in and creates a durable report with a random read-only link; anyone with that link can read the minimized report.
 - **Resilient Zillow JSON-LD Fallback**: Ignore malformed optional JSON-LD when primary listing data was extracted, and handle schema.org `@type` values supplied as strings or arrays.
 - **Source-Fact Accuracy**: Zillow estimates are not substituted for asking rent, and unavailable, lease-term, and smoking-policy fields are omitted from imports. Unknown feature facts stay unknown; generic cooling/window units do not imply central air, while explicit "No basement" wording is captured as false.

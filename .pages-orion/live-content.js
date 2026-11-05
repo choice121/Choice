@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v52.7.0
+// Choice Properties — Live Content Script v52.7.2
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -64,7 +64,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
   var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
-  var VERSION  = '52.7.0-live';
+  var VERSION  = '52.7.2-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1631,7 +1631,15 @@
         }
         var report = window.CP_Extractors.diagnose(location.href, document);
         var response = await new Promise(function (resolve, reject) {
+          var settled = false;
+          var responseTimer = setTimeout(function () {
+            settled = true;
+            reject(new Error('Diagnostics request timed out'));
+          }, 20_000);
           EXTENSION_API.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(responseTimer);
             var runtimeError = EXTENSION_API.runtime.lastError;
             if (runtimeError) reject(new Error(runtimeError.message));
             else resolve(result);
@@ -1859,7 +1867,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v52.7.0-live',
+        _import: 'browser-extension-v52.7.2-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -2002,12 +2010,21 @@
     }
 
     try {
-      var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
-        body: JSON.stringify(payload),
-      });
-      var body = await saveRes.json().catch(function () { return null; });
+      var directController = new AbortController();
+      var directTimeout = setTimeout(function () { directController.abort(); }, 45_000);
+      var saveRes;
+      var body;
+      try {
+        saveRes = await fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+          body: JSON.stringify(payload),
+          signal: directController.signal,
+        });
+        body = await saveRes.json().catch(function () { return null; });
+      } finally {
+        clearTimeout(directTimeout);
+      }
       if (!saveRes.ok) {
         return {
           ok: false,

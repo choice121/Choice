@@ -118,13 +118,14 @@ body[data-portal="public"][data-page="property"] #savePropBtn[aria-pressed="true
 /* The ordered source cover stays in the large left-hand tile. */
 body[data-portal="public"][data-page="property"] #gallery {
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   width: 100%;
-  height: clamp(370px, 40vw, 550px) !important;
+  max-width: 1088px;
+  height: clamp(320px, 34.85vw, 446px) !important;
   max-height: none !important;
   flex: none !important;
-  margin: 0;
+  margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.74);
   border-radius: 10px;

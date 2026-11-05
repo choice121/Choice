@@ -21,14 +21,15 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
 
 // Inline config (Orion doesn't reliably support importScripts)
 function resolveRuntimeConfigValue(name, fallback) {
-  const config = (typeof window !== 'undefined' && window.CP_CONFIG) ? window.CP_CONFIG : {};
+  const runtimeWindow = typeof window !== 'undefined' ? window : null;
+  const config = runtimeWindow && runtimeWindow.CP_CONFIG ? runtimeWindow.CP_CONFIG : {};
   const candidates = [
     config[name],
     config[name.toLowerCase()],
     config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
     config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
     config[name.replace(/([A-Z])/g, '_$1')],
-    window && window.__CP_IMPORT_SECRET__
+    runtimeWindow && runtimeWindow.__CP_IMPORT_SECRET__
   ];
   for (const value of candidates) {
     if (value != null && String(value).trim() !== '') return String(value);
@@ -199,6 +200,7 @@ async function postPayload(payload) {
     mode:    'cors',
     headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
     body:    serialized,
+    signal:  AbortSignal.timeout(45_000),
   });
   let body;
   try {

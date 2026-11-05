@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v52.7.0
+// Choice Properties — Universal Content Script & UI Engine v52.7.2
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -52,7 +52,7 @@
 
   var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
   var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
-  var VERSION  = '52.7.0';
+  var VERSION  = '52.7.2';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
@@ -820,6 +820,34 @@
     var folderBtnCancel = container.querySelector('#cp-folder-btn-cancel');
     var folderBtnCreate = container.querySelector('#cp-folder-btn-create');
 
+    function sendExtensionMessage(message, timeoutMs) {
+      return new Promise(function (resolve, reject) {
+        var settled = false;
+        var timeout = setTimeout(function () {
+          settled = true;
+          reject(new Error('Extension background service timed out'));
+        }, timeoutMs);
+
+        try {
+          chrome.runtime.sendMessage(message, function (response) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
+        } catch (error) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          reject(error);
+        }
+      });
+    }
+
     function closeFolderPopover() {
       if (!folderPopover) return;
       folderPopover.classList.remove('cp-open');
@@ -1035,15 +1063,10 @@
         if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
           throw new Error('Extension background service is unavailable');
         }
-        var response = await new Promise(function (resolve, reject) {
-          chrome.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              resolve(result);
-            }
-          });
-        });
+        var response = await sendExtensionMessage({
+          type: 'SEND_DIAGNOSTIC',
+          diagnostic: report
+        }, 20_000);
         if (!response || !response.ok) {
           throw new Error(response && response.error || 'Report could not be sent');
         }
@@ -1386,27 +1409,30 @@
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-          lastResponse = await new Promise(function (resolve) {
-            chrome.runtime.sendMessage({
-              type: 'UPLOAD_PAYLOAD',
-              payload: payload,
-              settings: { offlineQueue: true }
-            }, function (response) {
-              resolve(chrome.runtime.lastError
-                ? { ok: false, error: chrome.runtime.lastError.message }
-                : response);
-            });
-          });
+          lastResponse = await sendExtensionMessage({
+            type: 'UPLOAD_PAYLOAD',
+            payload: payload,
+            settings: { offlineQueue: true }
+          }, 50_000);
         } else {
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-import-secret': SECRET
-            },
-            body: JSON.stringify(payload),
-          });
-          var saveBody = await saveRes.json().catch(function () { return null; });
+          var directController = new AbortController();
+          var directTimeout = setTimeout(function () { directController.abort(); }, 45_000);
+          var saveRes;
+          var saveBody;
+          try {
+            saveRes = await fetch(EDGE_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-import-secret': SECRET
+              },
+              body: JSON.stringify(payload),
+              signal: directController.signal,
+            });
+            saveBody = await saveRes.json().catch(function () { return null; });
+          } finally {
+            clearTimeout(directTimeout);
+          }
           if (!saveRes.ok) {
             lastResponse = { ok: false, error: (saveBody && saveBody.error) || 'Server rejected import (HTTP ' + saveRes.status + ')' };
           } else {

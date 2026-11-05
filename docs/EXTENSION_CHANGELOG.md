@@ -4,6 +4,24 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.2] - 2026-11-06
+### Keep Direct Import Timeouts Through Response Parsing
+- **Bound full responses**: Keep the 45-second timeout active through JSON body parsing in Chromium and Orion direct-import fallbacks, so a stalled response body cannot leave Save loading indefinitely.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.2.
+
+---
+
+## [v52.7.1] - 2026-11-05
+### Restore Background Actions and Apartment Review
+- **Fix Chrome service-worker startup**: Avoid accessing `window` in the MV3 background context, restoring extension messaging, saves, and diagnostics.
+- **Bound request waits**: Stop import and diagnostics controls from remaining in a loading state indefinitely when a worker or network request fails.
+- **Complete diagnostics delivery**: Add a secret-authenticated, privacy-minimized Supabase report endpoint, 30-day storage, and an admin review page.
+- **Keep apartment inventory compatible**: Preserve community facts, unit options, rent labels, and floor-plan media in existing pipeline metadata; surface them in review and block community overviews from individual publishing.
+- **Regression coverage**: Verify the service worker loads without `window` and completes a diagnostic request.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.1.
+
+---
+
 ## [v52.7.0] - 2026-11-05
 ### Keep Gallery References Focused on Photo UI
 - **Avoid unrelated navigation matches**: Match photo controls precisely so tour buttons with "Next" text are not captured as gallery controls.
