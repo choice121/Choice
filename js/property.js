@@ -1519,7 +1519,6 @@ function renderGallery(photos) {
       if (e.key === 'ArrowLeft')  { e.preventDefault(); lightboxNav(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); lightboxNav(1); }
       else if (e.key === ' ') { e.preventDefault(); lightboxNav(1); }
-      else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); toggleLightboxSlideshow(); }
       else if (e.key === 'f' || e.key === 'F') {
         if (!document.fullscreenElement) {
           lb.requestFullscreen?.().catch(() => {});
@@ -1603,10 +1602,7 @@ function showPhoto(idx) {
 /* ── Lightbox ── */
 let lightboxThumbsBuilt = false;
 let _lbOpener = null;  // element that opened the lightbox — restored on close
-let _lbSlideshowTimer = null;
-let _lbSlideshowPlaying = false;
 let _lbPreviousBodyOverflow = '';
-const LB_SLIDESHOW_INTERVAL = 4500;
 
 // Focus trap — keep keyboard navigation inside the lightbox while open
 function _lbFocusTrap(e) {
@@ -1631,7 +1627,6 @@ function openLightbox(idx, openInGridView = false) {
   if (!allPhotos.length) return;
   const lb = document.getElementById('lightbox');
   if (!lb) return;
-  stopLightboxSlideshow();
   _lbOpener = document.activeElement;
   if (!lb.classList.contains('open')) _lbPreviousBodyOverflow = document.body.style.overflow;
   lb.classList.add('open');
@@ -1640,7 +1635,6 @@ function openLightbox(idx, openInGridView = false) {
   const nextBtn = document.getElementById('lightboxNext');
   if (prevBtn) prevBtn.hidden = allPhotos.length < 2;
   if (nextBtn) nextBtn.hidden = allPhotos.length < 2;
-  updateLightboxSlideshowButton();
 
   // Set property title and address meta in header
   if (currentProperty) {
@@ -1670,7 +1664,6 @@ function openLightbox(idx, openInGridView = false) {
 function closeLightbox() {
   const lb = document.getElementById('lightbox');
   if (!lb) return;
-  stopLightboxSlideshow();
   lb.classList.remove('open');
   document.body.style.overflow = _lbPreviousBodyOverflow;
   _lbPreviousBodyOverflow = '';
@@ -1682,7 +1675,6 @@ function closeLightbox() {
 let _lbViewMode = 'stage'; // 'stage' | 'grid'
 
 function setLightboxViewMode(mode) {
-  if (mode === 'grid') stopLightboxSlideshow();
   _lbViewMode = mode;
   const stageEl   = document.getElementById('lightboxStage');
   const thumbsEl  = document.getElementById('lightboxThumbs');
@@ -1858,45 +1850,6 @@ function lightboxNav(dir) {
   _lbNavDir = 0;
 }
 
-function updateLightboxSlideshowButton() {
-  const button = document.getElementById('lightboxSlideshow');
-  if (!button) return;
-  const playing = _lbSlideshowPlaying;
-  button.hidden = allPhotos.length < 2;
-  button.setAttribute('aria-pressed', playing ? 'true' : 'false');
-  const label = playing ? 'Pause Slideshow' : 'Play Slideshow';
-  button.setAttribute('aria-label', label);
-  button.innerHTML = `<i class="fas fa-${playing ? 'pause' : 'play'}" aria-hidden="true"></i><span>${label}</span>`;
-}
-
-function stopLightboxSlideshow() {
-  if (_lbSlideshowTimer !== null) {
-    window.clearInterval(_lbSlideshowTimer);
-    _lbSlideshowTimer = null;
-  }
-  _lbSlideshowPlaying = false;
-  updateLightboxSlideshowButton();
-}
-
-function toggleLightboxSlideshow() {
-  const lightbox = document.getElementById('lightbox');
-  if (!lightbox?.classList.contains('open') || _lbViewMode !== 'stage' || allPhotos.length < 2) return;
-  if (_lbSlideshowPlaying) {
-    stopLightboxSlideshow();
-    return;
-  }
-
-  _lbSlideshowPlaying = true;
-  updateLightboxSlideshowButton();
-  _lbSlideshowTimer = window.setInterval(() => {
-    if (!lightbox.classList.contains('open') || _lbViewMode !== 'stage') {
-      stopLightboxSlideshow();
-      return;
-    }
-    lightboxNav(1);
-  }, LB_SLIDESHOW_INTERVAL);
-}
-
 /* Lightbox swipe support — velocity-aware */
 (function() {
   let lbTouchX = 0, lbTouchT = 0;
@@ -1917,12 +1870,8 @@ function toggleLightboxSlideshow() {
 })();
 
 document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
-document.getElementById('lightboxSlideshow')?.addEventListener('click', toggleLightboxSlideshow);
 document.getElementById('lightboxPrev')?.addEventListener('click', () => lightboxNav(-1));
 document.getElementById('lightboxNext')?.addEventListener('click', () => lightboxNav(1));
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) stopLightboxSlideshow();
-});
 document.getElementById('lbToggleGrid')?.addEventListener('click', () => {
   if (_lbViewMode === 'grid') {
     setLightboxViewMode('stage');
