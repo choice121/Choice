@@ -1226,7 +1226,7 @@
     }
   
   </style>
-<link rel="stylesheet" href="/css/property-detail.css?v=1793844627688">
+<link rel="stylesheet" href="/css/property-detail.css?v=1793851036000">
 <script defer src="/config.js?v=1793844627688"></script>
 <script defer src="/js/supabase.min.js?v=1793844627688"></script>
 <script defer src="/js/cp-ui.js?v=1793844627688"></script>
@@ -1323,6 +1323,24 @@
 
   <!-- LEFT: Sticky Photo Gallery -->
   <div class="prop-split-photos" id="propSplitPhotos">
+    <div class="property-gallery-toolbar">
+      <div class="detail-breadcrumb">
+        <a href="/listings.html" id="backToResults">Listings</a>
+        <i class="fas fa-chevron-right" style="font-size:9px" aria-hidden="true"></i>
+        <span id="breadcrumbCity">Loading…</span>
+      </div>
+      <div class="prop-avail-row">
+        <div class="prop-avail-chip" id="sidebarAvail" style="display:none"></div>
+        <div class="prop-share-btns">
+          <button class="prop-share-btn" id="savePropBtn" type="button">
+            <i class="far fa-heart" aria-hidden="true"></i><span> Save</span>
+          </button>
+          <button class="prop-share-btn" id="shareBtn" type="button">
+            <i class="fas fa-share-alt" aria-hidden="true"></i><span> Share</span>
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Mosaic / swipe gallery (populated by JS) -->
     <div class="gallery-mosaic skeleton-loading" id="gallery">
       <div class="mosaic-main" id="mosaicMain" role="button" tabindex="0" aria-label="Open property photo gallery">
@@ -1355,13 +1373,6 @@
   <!-- RIGHT: Scrollable Content -->
   <div class="prop-split-content property-detail" id="propSplitContent">
 
-    <!-- Breadcrumb -->
-    <div class="detail-breadcrumb">
-      <a href="/listings.html" id="backToResults">Listings</a>
-      <i class="fas fa-chevron-right" style="font-size:9px"></i>
-      <span id="breadcrumbCity">Loading…</span>
-    </div>
-
     <!-- ┌─ Price card wrapper ──────────────────────────────────────────────┐
          │ On desktop: display:contents → invisible wrapper, children flow   │
          │ On mobile:  becomes a white rounded card (CardStack design)        │
@@ -1369,19 +1380,6 @@
     <div class="cs-price-card">
 
       <!-- Availability + share row -->
-      <div class="prop-avail-row">
-        <!-- sidebarAvail: JS populates this with availability text + controls display -->
-        <div class="prop-avail-chip" id="sidebarAvail" style="display:none"></div>
-        <div class="prop-share-btns">
-          <button class="prop-share-btn" id="savePropBtn">
-            <i class="far fa-heart"></i><span> Save</span>
-          </button>
-          <button class="prop-share-btn" id="shareBtn">
-            <i class="fas fa-share-alt"></i><span> Share</span>
-          </button>
-        </div>
-      </div>
-
       <!-- Price + title -->
       <div class="prop-header">
         <div class="prop-price" id="detailPrice">
