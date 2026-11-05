@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.6.0] - 2026-11-05
+### Limit Gallery Capture to Interactive Controls
+- **Avoid page-container text**: Collect photo-related labels only from actual buttons and tabs, never large page wrappers that happen to contain gallery text.
+- **Clean saved reports**: Remove non-interactive wrapper labels from existing gallery reference records while retaining real buttons and tabs.
+- **Regression coverage**: Verify report controls do not include page sections or generic content containers.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.6.0.
+
+---
+
 ## [v52.5.0] - 2026-11-05
 ### Save Privacy-Minimized Zillow Gallery References
 - **One-click capture**: Add a popup action to measure visible gallery image boxes, ancestor layout styles, and photo-related control labels on the active Zillow tab.

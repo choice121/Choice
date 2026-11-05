@@ -157,7 +157,7 @@
     });
 
     const photoControlPattern = /photo|image|gallery|picture|next|previous|prev|close|see all|view all|carousel/i;
-    const controls = [...document.querySelectorAll('button, [role="button"], [aria-label]')]
+    const controls = [...document.querySelectorAll('button, [role="button"], [role="tab"]')]
       .filter(visible)
       .map((element) => ({
         element,
