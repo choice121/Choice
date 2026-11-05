@@ -177,12 +177,26 @@ async function loadProperty(id) {
       prop = (data?.properties || []).find((item) => String(item.id).toLowerCase() === cleanId) || null;
       if (!prop) throw new Error('Property is not included in this share');
     } else {
-      const { data, error } = await client
+      let { data, error } = await client
         .from('properties')
         .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
         .eq('id', cleanId)
-        .single();
-      if (error || !data) throw new Error(error ? error.message : 'Not found');
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) {
+        const session = await getSession();
+        if (session?.user) {
+          const privateLookup = await client
+            .from('properties')
+            .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
+            .eq('id', cleanId)
+            .maybeSingle();
+          if (privateLookup.error) throw new Error(privateLookup.error.message);
+          data = privateLookup.data;
+        }
+      }
+      if (!data) throw new Error('Not found');
       prop = data;
     }
   } catch (e) {
@@ -191,27 +205,9 @@ async function loadProperty(id) {
       renderUnavailable('not_found');
       return;
     }
-    // Fallback: If direct query fails (e.g. for private_placement listings under strict RLS), try secure RPC
-    let fallbackSuccess = false;
-    try {
-      const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
-      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-        prop = rpcData[0];
-        const [photosRes, landlordRes] = await Promise.all([
-          client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
-        ]);
-        prop.property_photos = photosRes.data || [];
-        if (landlordRes?.data) prop.landlords = landlordRes.data;
-        fallbackSuccess = true;
-      }
-    } catch (_) {}
-
-    if (!fallbackSuccess) {
-      console.error('[property] lookup failed for id=', cleanId, e);
-      renderUnavailable('not_found');
-      return;
-    }
+    console.error('[property] lookup failed for id=', cleanId, e);
+    renderUnavailable('not_found');
+    return;
   }
 
   // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join

@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -27,9 +29,9 @@ Deno.serve(async (req) => {
 
     if (action === "resolve") {
       const token = body.token;
-      if (!token) {
+      if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
         return new Response(
-          JSON.stringify({ error: "Missing token" }),
+          JSON.stringify({ error: "invalid_share_token" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -83,7 +85,8 @@ Deno.serve(async (req) => {
       const { data: properties, error: propError } = await supabase
         .from("properties")
         .select("id, title, description, address, city, state, zip, county, neighborhood, lat, lng, property_type, year_built, floors, unit_number, total_units, bedrooms, bathrooms, half_bathrooms, total_bathrooms, square_footage, lot_size_sqft, garage_spaces, monthly_rent, security_deposit, application_fee, available_date, lease_terms, minimum_lease_months, pets_allowed, smoking_allowed, parking, parking_fee, amenities, appliances, utilities_included, flooring, heating_type, cooling_type, laundry_type, location_context, virtual_tour_url, has_basement, has_central_air, status, created_at, updated_at, ai_features, is_multi_unit, building_name, price_range, unit_floor")
-        .in("id", propertyIds);
+        .in("id", propertyIds)
+        .in("status", ["active", "private_placement"]);
 
       if (propError) {
         return new Response(
@@ -91,6 +94,9 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      const shareableProperties = (properties || []).filter(
+        (property) => property.status === "active" || property.status === "private_placement",
+      );
 
       // Fetch photos for these properties
       const { data: photos, error: photoError } = await supabase
@@ -127,7 +133,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const enriched = (properties || []).map(prop => ({
+      const enriched = shareableProperties.map(prop => ({
         ...prop,
         property_photos: photoMap[prop.id] || [],
         property_media: mediaMap[prop.id] || []
@@ -176,9 +182,37 @@ Deno.serve(async (req) => {
       }
 
       const propertyIds = body.property_ids;
-      if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
+      if (!Array.isArray(propertyIds) || propertyIds.length === 0 || propertyIds.length > 100) {
         return new Response(
-          JSON.stringify({ error: "Missing property_ids" }),
+          JSON.stringify({ error: "property_ids_required_or_too_many" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const uniquePropertyIds = [...new Set(propertyIds.filter((id: unknown): id is string =>
+        typeof id === "string" && id.length > 0 && id.length <= 128
+      ))];
+      if (uniquePropertyIds.length !== propertyIds.length) {
+        return new Response(
+          JSON.stringify({ error: "invalid_property_ids" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: selectedProperties, error: selectedPropertiesError } = await supabase
+        .from("properties")
+        .select("id, status")
+        .in("id", uniquePropertyIds);
+      if (selectedPropertiesError) {
+        return new Response(
+          JSON.stringify({ error: "property_validation_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (
+        selectedProperties?.length !== uniquePropertyIds.length ||
+        selectedProperties.some((property) => !["active", "private_placement"].includes(property.status))
+      ) {
+        return new Response(
+          JSON.stringify({ error: "only_published_properties_can_be_shared" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -197,18 +231,31 @@ Deno.serve(async (req) => {
       const shareId = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-      await supabase.from("property_shares").insert({
+      const { error: shareInsertError } = await supabase.from("property_shares").insert({
         id: shareId,
         token_hash: tokenHash,
         expires_at: expiresAt
       });
+      if (shareInsertError) {
+        return new Response(
+          JSON.stringify({ error: "share_creation_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-      const shareLinks = propertyIds.map(pId => ({
+      const shareLinks = uniquePropertyIds.map(pId => ({
         share_id: shareId,
         property_id: pId
       }));
 
-      await supabase.from("property_share_properties").insert(shareLinks);
+      const { error: linksInsertError } = await supabase.from("property_share_properties").insert(shareLinks);
+      if (linksInsertError) {
+        await supabase.from("property_shares").delete().eq("id", shareId);
+        return new Response(
+          JSON.stringify({ error: "share_properties_creation_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       return new Response(
         JSON.stringify({ token: rawToken }),
@@ -217,10 +264,43 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revoke") {
-      const token = body.token;
-      if (!token) {
+      const bearer = req.headers.get("authorization") || "";
+      const tokenMatch = bearer.match(/^Bearer\s+(.+)$/i);
+      if (!tokenMatch) {
         return new Response(
-          JSON.stringify({ error: "Missing token" }),
+          JSON.stringify({ error: "admin_auth_required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: authData, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
+      if (authError || !authData.user) {
+        return new Response(
+          JSON.stringify({ error: "admin_auth_required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: adminRole, error: adminError } = await supabase
+        .from("admin_roles")
+        .select("user_id")
+        .eq("user_id", authData.user.id)
+        .maybeSingle();
+      if (adminError) {
+        return new Response(
+          JSON.stringify({ error: "admin_check_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: "admin_required" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const token = body.token;
+      if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+        return new Response(
+          JSON.stringify({ error: "invalid_share_token" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -236,8 +316,16 @@ Deno.serve(async (req) => {
         .single();
 
       if (shareData) {
-        await supabase.from("property_share_properties").delete().eq("share_id", shareData.id);
-        await supabase.from("property_shares").delete().eq("id", shareData.id);
+        const { error: revokeError } = await supabase
+          .from("property_shares")
+          .update({ revoked_at: new Date().toISOString() })
+          .eq("id", shareData.id);
+        if (revokeError) {
+          return new Response(
+            JSON.stringify({ error: "share_revoke_failed" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       return new Response(

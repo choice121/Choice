@@ -26,25 +26,31 @@ Future AI agents, engineers, and administrators must maintain these standards ac
 4. **Photo interaction deterrents are not access control**:
    - `referrerpolicy="no-referrer"`, gallery overlays, disabled context menus, and CSS filters only affect browser behavior. They do not make a public CDN image private or prevent direct URL access.
    - Treat a listing as private only when its data and assets are served through a validated share flow. Never rely on image overlays or fingerprint changes for confidentiality.
+5. **Status is the visibility source of truth**:
+   - `active` is the only public state. `private_placement` is available only to admins/owners and clients with a valid share that includes the property.
+   - Draft, inactive, rented, and archived properties are not client-shareable.
+   - Pipeline imports remain staged. Publishing defaults to `private_placement`; pass `p_status: 'active'` only when the user explicitly approves public release.
 
 ---
 
 ## 2. Technical Implementation
 
 ### A. Database Status and Share Authorization
-- Public marketplace queries and the `get_properties_by_ids` RPC return only `status = 'active'` rows.
+- Public marketplace, direct detail, legacy-ID, photo, and media queries return only `status = 'active'` rows. Public clients must not call a `SECURITY DEFINER` ID lookup that bypasses these filters.
+- Row-level security applies the same status rule to `properties`, `property_photos`, and `property_media`, even if a client tries an unfiltered REST query.
 - Client shares use `property_shares` and `property_share_properties`. The browser receives a 256-bit random token; only its SHA-256 hash is stored in the database.
 - Share creation must be restricted to authenticated admins. Resolution must check the token hash, expiry, revocation state, and property membership before returning an explicit client-safe field list. Do not use `select('*')` for shared property responses.
 - Share tokens expire after 90 days. Anyone who possesses the link can use it; the link is a bearer credential and is not bound to a verified client identity.
 - The token is placed in the URL fragment so it is not sent in HTTP requests or referrer headers. Property-to-application navigation preserves the fragment and submits the token in the POST body, not a query parameter.
 - The `receive-application` Edge Function validates expiry, revocation, and property membership for `private_placement` before accepting an application. It receives the token in the POST body; never put it in a query parameter.
 - Never embed listing data in static HTML. Property status can change after a build; public pages must fetch current active rows, while private rows must come only from a validated share response.
-- `property.html` allows private-placement viewing only through a valid share, with the existing authenticated admin/owner access path retained.
+- `property.html` filters anonymous detail lookups to `status = 'active'`. Authenticated owners/admins retain their non-public access through RLS-authorized queries; clients need a valid share token.
 
 ### B. Visibility and publishing
-- `active` means publicly discoverable; `private_placement` means hidden from public browse and available only through an authorized share or admin/owner access.
+- `active` means publicly discoverable; `private_placement` means hidden from public browse and available only through an authorized share or authenticated owner/admin access.
 - Never bulk-promote `private_placement` rows to fill public search results. Change status only for listings explicitly approved for public release.
 - Do not display a private-placement badge or banner to clients. The share link is the access mechanism; UI labels do not enforce privacy.
+- Do not rely on the current deployment's client-side filters alone. Keep database RLS policies on property rows and their photo/media children; use only narrow, status-aware RPCs for public clients.
 
 ### C. Application Confirmation Email Template
 - Application submissions for all properties strictly require the **$50.00 application fee**.
@@ -62,16 +68,18 @@ Future AI agents, engineers, and administrators must maintain these standards ac
    - Run `scripts/pipeline_standardizer.mjs` to validate bathroom precision (Rule 6A), architectural type (Rule 6B), policy enforcement ($50 fee, pet-friendly, zero security deposit in text, zero lease terms), and interior-first photo reordering.
 
 2. **Publish**:
-   - Publish properties with `status: 'private_placement'` (for unlisted exclusive client delivery) or `status: 'active'` (for open marketplace).
+   - Pipeline publication defaults to `status: 'private_placement'`. A plain publish command does not mean public release.
+   - Use `status: 'active'` only when the user explicitly requests a public listing. If visibility is ambiguous, ask before publishing.
 
 3. **Share Link**:
    - Format: `https://choice-properties-site.pages.dev/listings.html#share={token}`
    - When the client opens this link, the site shows their tailored collection in the standard marketplace layout without any awkward "curated" framing.
-   - Before release, verify that creating a share requires an admin, revoked/expired tokens fail resolution, and private applications are rejected unless the submitted token includes that property.
+   - Before release, verify that creating and revoking a share requires an admin, revoked/expired tokens fail resolution, and private applications are rejected unless the submitted token includes that property.
 
 ## 4. Release Checklist
 - Confirm `generate-config.js` does not serialize property rows into `listings.html`.
 - Confirm `/property.html` metadata lookup filters `status=active`.
+- Confirm an anonymous direct request for a known private property ID returns no property row, and anonymous photo/media queries for that ID return no rows.
 - Confirm private apply links preserve the fragment token and the deployed application server validates it against `property_shares` and `property_share_properties`.
 - Run the focused property/share and application tests before deploying the Edge Function and static site.
 - Deploy the Edge Functions after merge with `supabase functions deploy property-share --project-ref tlfmwetmhthpyrytrcfo` and `supabase functions deploy receive-application --project-ref tlfmwetmhthpyrytrcfo`; verify both deploys before relying on the new checks.

@@ -86,7 +86,7 @@ Physical structural reality takes precedence over MLS portal defaults:
 ## 4. Post-Publishing Mandatory AI Response Formats
 
 ### Standard Public Listings Response Format:
-After publishing properties to the live site, the AI assistant MUST output the published property link(s) in this exact sequential format:
+After publishing properties with `status: 'active'`, the AI assistant MUST output the public property link(s) in this exact sequential format. Do not use this format for private placements; provide the validated magic link instead.
 
 1. 608 Maple Ave, Yukon, OK 73099 ($1,595/mo | 3 Bed / 2.5 Bath) — https://choice-properties-site.pages.dev/property.html?id=f0470af2-573a-4b58-89d1-a1775ced83f1
 2. 7400 Melrose Ln, Oklahoma City, OK 73127 ($1,750/mo | 4 Bed / 2.5 Bath) — https://choice-properties-site.pages.dev/property.html?id=a443c7da-59c9-4d0c-919b-f5f56d502ede
@@ -102,12 +102,23 @@ When the user asks to create a **Client Multi-Property Magic Link** or publish l
    `https://choice-properties-site.pages.dev/listings.html#share={token}`
 4. **No Private Placement Badges**: Listings must look 100% standard to clients. Do NOT display "Private Placement" badges, banners, or labels anywhere on cards or detail pages.
 
+### Pipeline publication visibility (default-deny for public release)
+- Importing or enriching a record in `pipeline.pipeline_properties` is staging, not publication. It must not create a publicly discoverable `public.properties` listing.
+- `pipeline_publish` defaults to `p_status: 'private_placement'`. Keep that default for single, bulk, and folder publication. Creating a client share link does not make a listing public.
+- Only publish with `p_status: 'active'` when the user explicitly says the listing should be public. Never infer public release from “publish,” “live,” “approve,” or “create a magic link”; ask if visibility is unclear.
+- Private-placement properties, photos, and media are available to anonymous visitors only through `property-share` after validating the bearer token, expiry, revocation, and property membership. The public property page must query only `status = 'active'`; direct IDs, legacy ID lists, maps, and related-property queries must not bypass this rule.
+- Admins and the owning landlord may access their non-public properties through authenticated, RLS-authorized paths. Do not weaken row-level security or expose a general service-role/RPC bypass to public clients.
+- A property can be public or private, never both. `active` means publicly discoverable; `private_placement` means unlisted and share-authorized. Draft, inactive, rented, and archived states are not client-shareable.
+- Public CDN photo URLs remain public to anyone who already has the URL. Gallery shields, URL fragments, and hidden UI are not asset-level confidentiality; do not promise that private placements' image bytes are secret.
+
 ---
 
 ## 5. Private Placement Architecture & Privacy Protocols
-- **Anti-Google Lens Shield**: The gallery main image is covered by `.mosaic-touch-shield` with `-webkit-touch-callout: none !important;` to prevent mobile users from triggering "Search with Google Lens" or "Save Image". Subtle micro-filters disrupt automated image-hash match bots. Right-click context menus are disabled on galleries.
-- **Soft Spec Rounding**: Square footage may be rounded to the nearest 25 or 50 sqft (e.g. `1,438` → `~1,450 sqft`) to eliminate exact mathematical fingerprint searches.
-- **Unlisted Status Isolation**: Listings with `status: 'private_placement'` are only accessible via validated share tokens (`#share={token}`) or direct authorized admin sessions.
+- **Access-control source of truth**: Database status plus row-level security and the validated share resolver enforce privacy. Client-side rendering, unguessable-looking URLs, gallery shields, or map hiding are not substitutes.
+- **Public browse**: Every anonymous property, photo, and media query must be limited to `status = 'active'`. Never use a public `SECURITY DEFINER` lookup that can return non-active listings.
+- **Private access**: A `private_placement` record is returned to a client only when a valid, unexpired, unrevoked share token includes that property. Admin and owner access remains authenticated and row-authorized.
+- **Safe release**: Pipeline publication defaults to `private_placement`; passing `p_status: 'active'` is an explicit public-release decision and requires the user's direction.
+- **Asset caveat**: Source/CDN image URLs may remain directly accessible once known. Do not describe image overlays, context-menu suppression, subtle filters, or rounded specs as security controls.
 
 ---
 

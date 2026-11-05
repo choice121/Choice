@@ -537,8 +537,15 @@
     <span id="pl-bulk-count" style="font-size:.85rem;font-weight:600;white-space:nowrap">0 selected</span>
   </label>
   <div style="flex:1"></div>
+  <label for="pl-bulk-visibility" style="font-size:.76rem;display:flex;align-items:center;gap:6px;white-space:nowrap">
+    Visibility
+    <select id="pl-bulk-visibility" aria-label="Bulk publish visibility">
+      <option value="private_placement" selected>Private</option>
+      <option value="active">Public</option>
+    </select>
+  </label>
   <button class="btn-bulk-clear" id="pl-bulk-clear">Clear</button>
-  <button class="btn-bulk-pub" id="pl-bulk-pub">Publish all →</button>
+  <button class="btn-bulk-pub" id="pl-bulk-pub">Publish selected →</button>
   <button class="btn-bulk-pub" id="pl-bulk-delete" style="background:transparent;border:1px solid rgba(255,255,255,.18);color:#fff;margin-left:8px">Delete</button>
 </div>
 

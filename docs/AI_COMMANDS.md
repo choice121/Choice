@@ -33,6 +33,15 @@ Example: You create a folder called "Wisdom" and add 12 properties. The first pr
 
 ## Available Commands
 
+## Publishing visibility — required default
+
+- Adding/importing a listing to the pipeline only stages it; it does not publish it.
+- Publishing one or more pipeline listings defaults to `private_placement`, including bulk and folder workflows. The listing stays off public search and direct public property pages.
+- To make a listing public, the user must explicitly request public visibility. Then call `pipeline_publish` with `p_status: 'active'`. Never treat “publish,” “approve,” “live,” or “make a magic link” by itself as approval for public release.
+- To share private placements, publish them privately first, then create a magic link. A share link grants access only to the included properties; it does not change their public/private status.
+- Do not call legacy `pipeline_folder_publish` for new AI workflows. Resolve each unpublished property in the folder, validate it, and call `pipeline_publish` with `p_status: 'private_placement'` unless the user specifically requested public release.
+- If an AI tool or RPC cannot pass visibility explicitly, stop and ask for confirmation rather than relying on an unknown/default status.
+
 ### Create a Folder
 > "Create a folder called Wisdom"
 > "Make me a room called Columbus Q3"
@@ -73,7 +82,9 @@ The system auto-assigns the next serial number.
 > "Publish everything in folder Wisdom"
 > "Publish all properties in Columbus"
 
-**Maps to:** `pipeline_folder_publish(p_folder_id: '<resolved>', p_property_ids: NULL)`
+**Default behavior:** Publish each eligible property using `pipeline_publish(p_id: '<property id>', p_status: 'private_placement')`, then report the private-placement result. Do not use the legacy folder publish RPC.
+
+**Public release only when explicitly requested:** Use `p_status: 'active'` for each record.
 
 ### Publish a Specific Property in a Folder
 > "Publish property 3 in folder Wisdom"
@@ -81,7 +92,9 @@ The system auto-assigns the next serial number.
 
 **Maps to:**
 1. Look up property by serial: `SELECT id FROM pipeline_properties WHERE folder_id = '<folder>' AND folder_serial = 3`
-2. Call `pipeline_publish(p_id: '<property id>')`
+2. Call `pipeline_publish(p_id: '<property id>', p_status: 'private_placement')` by default
+
+By default this creates a private placement. Pass `p_status: 'active'` only when the user explicitly requested public release.
 
 ### Delete a Folder
 > "Delete folder Wisdom"
@@ -124,8 +137,10 @@ When given a command like "publish property 3 in folder Wisdom":
 
 3. **Execute the action:**
    ```sql
-   SELECT * FROM pipeline_publish('<property_id>', NULL)
+   SELECT * FROM public.pipeline_publish('<property_id>', NULL, 'private_placement')
    ```
+
+   For an explicitly requested public release, use `'active'` instead of `'private_placement'`.
 
 ---
 

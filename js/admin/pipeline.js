@@ -704,7 +704,14 @@
         <label style="display:flex;align-items:center;gap:8px;margin-right:auto">
           <input type="checkbox" id="pf-delete-on-publish" style="width:16px;height:16px"> <span style="font-size:.78rem;color:var(--muted-2)">Delete from pipeline after publish</span>
         </label>
-        <button class="btn btn-primary pl-pub-btn-panel" data-id="${S.esc(l.id)}">Publish as draft →</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.75rem">
+          Visibility
+          <select id="pf-publish-visibility" aria-label="Published listing visibility">
+            <option value="private_placement" selected>Private placement</option>
+            <option value="active">Public site</option>
+          </select>
+        </label>
+        <button class="btn btn-primary pl-pub-btn-panel" data-id="${S.esc(l.id)}">Publish listing →</button>
       ` : ''}
     </div>`;
   }
@@ -1325,10 +1332,11 @@ function wirePanelPhotoActions(){
 
   async function doPublish(id){
     const panel = document.getElementById('pl-panel');
+    const panelIsForListing = !!panel && _current?.id === id;
     const required = ['pf-title','pf-address','pf-city','pf-state','pf-zip'];
     const missing = [];
-    required.forEach(fid => {
-      const el = panel && panel.querySelector('#'+fid);
+    if(panelIsForListing) required.forEach(fid => {
+      const el = panel.querySelector('#'+fid);
       if(el && !el.value.trim()) missing.push(fid.replace('pf-',''));
     });
     if(missing.length){
@@ -1337,14 +1345,19 @@ function wirePanelPhotoActions(){
     }
 
     // Save any unsaved changes first
-    const patch = collectPatch();
+    const patch = panelIsForListing ? collectPatch() : {};
     if(Object.keys(patch).length){
       const { error: se } = await CP.sb().rpc('pipeline_save', { p_id: id, p_patch: patch });
       if(se){ S.toast('Could not save changes before publishing: ' + se.message, 'error'); return; }
     }
 
     // Merge unsaved patch into _current so validation sees the just-saved values.
-    const l = Object.assign({}, _current || {}, patch);
+    const listing = _pageData.find(item => item.id === id) || (panelIsForListing ? _current : null);
+    if(!listing){
+      S.toast('Could not find this pipeline listing. Refresh and try again.', 'error');
+      return;
+    }
+    const l = Object.assign({}, listing, patch);
 
     // ── Pre-publish validation gate ──────────────────────────────────────────
     // Must run before any RPC call. Mirrors validate_for_publish() in enrichment.py.
@@ -1358,30 +1371,57 @@ function wirePanelPhotoActions(){
     }
 
     const desc = [l.address, l.city, l.state].filter(Boolean).join(', ');
+    const visibility = panelIsForListing && panel.querySelector('#pf-publish-visibility')?.value === 'active' ? 'active' : 'private_placement';
+    const visibilityLabel = visibility === 'active' ? 'publicly' : 'as a private placement';
     const ok = await S.confirm(
-      'Publish "' + desc + '" as a draft?',
-      'A draft property will be created in your listings. Photos will be transferred to ImageKit automatically.'
+      'Publish "' + desc + '" ' + visibilityLabel + '?',
+      visibility === 'active'
+        ? 'This listing will appear on the public site immediately. Photos will be transferred to ImageKit automatically.'
+        : 'This listing will stay hidden from public browse and direct public pages. Create a client share link to grant access. Photos will be transferred to ImageKit automatically.'
     );
     if(!ok) return;
     _cClear();
 
-    const btn = document.querySelector('.pl-pub-btn-panel');
+    const btn = panelIsForListing
+      ? panel.querySelector('.pl-pub-btn-panel')
+      : document.querySelector(`.pl-pub-btn[data-id="${CSS.escape(id)}"]`);
     if(btn){ btn.disabled = true; btn.textContent = 'Publishing…'; }
 
-    // If the user chose to delete the pipeline record after publishing, call the new RPC
-    const deleteOnPublishEl = panel.querySelector('#pf-delete-on-publish');
+    const deleteOnPublishEl = panelIsForListing ? panel.querySelector('#pf-delete-on-publish') : null;
     const deleteOnPublish = deleteOnPublishEl && deleteOnPublishEl.checked;
-    const rpcName = deleteOnPublish ? 'pipeline_publish_and_delete' : 'pipeline_publish';
-    const { data, error } = await CP.sb().rpc(rpcName, { p_id: id, p_landlord_id: null });
-    if(btn){ btn.disabled = false; btn.textContent = 'Publish as draft →'; }
+    let data;
+    let error;
+    try {
+      ({ data, error } = await CP.sb().rpc('pipeline_publish', {
+        p_id: id,
+        p_landlord_id: null,
+        p_status: visibility,
+      }));
+    } catch (publishError) {
+      if(btn){ btn.disabled = false; btn.textContent = 'Publish listing →'; }
+      S.toast('Publish failed: ' + (publishError?.message || 'unknown error'), 'error');
+      return;
+    }
+    if(btn){ btn.disabled = false; btn.textContent = 'Publish listing →'; }
     if(error){ S.toast('Publish failed: ' + error.message, 'error'); return; }
     const res = typeof data === 'string' ? JSON.parse(data) : data;
     if(!res?.ok){ S.toast('Publish failed: ' + (res?.error||'unknown'), 'error'); return; }
 
     const propId = res.choice_property_id;
-    S.toast('Published! Opening edit page…', 'success');
+    let deleteWarning = '';
+    if (deleteOnPublish) {
+      const { data: deleteData, error: deleteError } = await CP.sb().rpc('pipeline_delete', { p_id: id });
+      const deleteResult = typeof deleteData === 'string' ? JSON.parse(deleteData) : deleteData;
+      if (deleteError || !deleteResult?.ok) {
+        deleteWarning = ' Pipeline record was not deleted: ' + (deleteError?.message || deleteResult?.error || 'unknown error');
+      }
+    }
+    S.toast(
+      (visibility === 'active' ? 'Published publicly.' : 'Published as a private placement.') + deleteWarning + ' Opening edit page…',
+      deleteWarning ? 'info' : 'success'
+    );
     removeCard(id);
-    closePanel();
+    if(panelIsForListing) closePanel();
     fetchCounts().catch(()=>{});
 
     // Transfer photos in background (non-blocking)
@@ -1408,9 +1448,13 @@ function wirePanelPhotoActions(){
       return;
     }
 
+    const visibility = document.getElementById('pl-bulk-visibility')?.value === 'active' ? 'active' : 'private_placement';
+    const visibilityLabel = visibility === 'active' ? 'publicly' : 'as private placements';
     const ok = await S.confirm(
-      `Publish ${publishable.length} listing${publishable.length !== 1 ? 's' : ''} as drafts?`,
-      'Each will become a draft property. Photos are not auto-transferred for bulk publish — add them individually from each property\'s edit page.'
+      `Publish ${publishable.length} listing${publishable.length !== 1 ? 's' : ''} ${visibilityLabel}?`,
+      visibility === 'active'
+        ? 'These listings will appear on the public site immediately. Photos are not auto-transferred for bulk publish.'
+        : 'These listings will stay hidden from public browse and direct public pages. Create client share links to grant access. Photos are not auto-transferred for bulk publish.'
     );
     if(!ok) return;
 
@@ -1434,7 +1478,11 @@ function wirePanelPhotoActions(){
           continue;
         }
 
-        const { data, error } = await CP.sb().rpc('pipeline_publish', { p_id: id, p_landlord_id: null });
+        const { data, error } = await CP.sb().rpc('pipeline_publish', {
+          p_id: id,
+          p_landlord_id: null,
+          p_status: visibility,
+        });
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;
         if(!res?.ok) throw new Error(res?.error || 'unknown');
@@ -1452,7 +1500,7 @@ function wirePanelPhotoActions(){
     fetchCounts().catch(()=>{});
 
     if(succeeded > 0 && failed === 0 && blocked === 0){
-      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} published as drafts ✓`, 'success');
+      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} published ${visibility === 'active' ? 'publicly' : 'as private placements'} ✓`, 'success');
     } else if(succeeded > 0 && blocked > 0){
       S.toast(`${succeeded} published, ${blocked} blocked (fix photos/descriptions first)`, 'info');
     } else if(succeeded > 0){
@@ -1812,8 +1860,15 @@ function wirePanelPhotoActions(){
         <div class="pl-folder-banner-meta">${total} listing${total !== 1 ? 's' : ''} · ${published} published · ${archived} archived · ${missing} needs review</div>
       </div>
       <div class="pl-folder-banner-actions">
+        <label for="pl-folder-visibility" style="font-size:.72rem;display:flex;align-items:center;gap:6px">
+          Visibility
+          <select id="pl-folder-visibility" aria-label="Folder publish visibility">
+            <option value="private_placement" selected>Private</option>
+            <option value="active">Public</option>
+          </select>
+        </label>
         <button class="btn btn-sm btn-outline" id="pl-banner-close-folder-btn">Close folder</button>
-        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">Publish folder</button>
+        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">Publish folder →</button>
       </div>
     `;
 
@@ -2155,36 +2210,68 @@ function wirePanelPhotoActions(){
     if(!_activeFolder) return;
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder) return;
+    let folderProperties;
     try {
       const { data, error } = await CP.sb().rpc('pipeline_folder_properties', { p_folder_id: _activeFolder });
       if(error) throw error;
-      const folderProperties = typeof data === 'string' ? JSON.parse(data) : data;
+      folderProperties = typeof data === 'string' ? JSON.parse(data) : data;
       if(!Array.isArray(folderProperties)) throw new Error('Folder contents could not be verified');
-      const communityCount = folderProperties.filter(isCommunityOverview).length;
-      if(communityCount){
-        S.toast(`${communityCount} apartment community overview${communityCount === 1 ? '' : 's'} cannot be published as individual rentals. Import specific available units or move the overviews out of this folder.`, 'error');
-        return;
-      }
     } catch(e){
       S.toast('Could not verify apartment units before publishing: ' + (e.message || 'unknown error'), 'error');
       return;
     }
+    const publishable = folderProperties.filter(listing =>
+      listing.status !== 'published' && listing.status !== 'archived' && !listing.choice_property_id
+    );
+    if(!publishable.length){
+      S.toast('This folder has no unpublished listings to publish.', 'info');
+      return;
+    }
+    const visibility = document.getElementById('pl-folder-visibility')?.value === 'active' ? 'active' : 'private_placement';
+    const communityCount = publishable.filter(isCommunityOverview).length;
+    if(communityCount){
+      S.toast(`${communityCount} apartment community overview${communityCount === 1 ? '' : 's'} cannot be published as individual rentals. Select and import specific available units first.`, 'error');
+      return;
+    }
     const ok = await S.confirm(
-      `Publish all in "${folder.name}"?`,
-      `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`
+      `Publish ${publishable.length} listing${publishable.length === 1 ? '' : 's'} in "${folder.name}" ${visibility === 'active' ? 'publicly' : 'as private placements'}?`,
+      visibility === 'active'
+        ? 'These listings will appear on the public site immediately.'
+        : 'These listings will remain hidden from public browse and direct public pages. Create client share links to grant access.'
     );
     if(!ok) return;
-    try {
-      const { data, error } = await CP.sb().rpc('pipeline_folder_publish', { p_folder_id: _activeFolder });
-      if(error) throw error;
-      const res = typeof data === 'string' ? JSON.parse(data) : data;
-      if(!res?.ok) throw new Error(res?.error || 'Failed to publish folder');
-      S.toast(`${res.published} published, ${res.failed} failed`, res.failed > 0 ? 'info' : 'success');
-      await loadFolders();
-      selectFolder(_activeFolder);
-    } catch(e){
-      S.toast('Publish failed: ' + e.message, 'error');
+    let succeeded = 0;
+    let failed = 0;
+    let blocked = 0;
+    for(const listing of publishable){
+      const validation = await validateForPublish(listing);
+      if(!validation.ok){
+        blocked++;
+        continue;
+      }
+      try{
+        const { data, error } = await CP.sb().rpc('pipeline_publish', {
+          p_id: listing.id,
+          p_landlord_id: null,
+          p_status: visibility,
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Publish failed');
+        succeeded++;
+        removeCard(listing.id);
+        doTransferPhotos(listing.id, res.choice_property_id).catch(error =>
+          console.warn('[pipeline] folder photo transfer failed', listing.id, error)
+        );
+      }catch(error){
+        console.error('[pipeline] folder publish failed', listing.id, error);
+        failed++;
+      }
     }
+    const visibilityText = visibility === 'active' ? 'publicly' : 'as private placements';
+    S.toast(`${succeeded} published ${visibilityText}, ${failed} failed, ${blocked} blocked`, failed || blocked ? 'info' : 'success');
+    await loadFolders();
+    selectFolder(_activeFolder);
   }
 
   async function renameActiveFolder(){

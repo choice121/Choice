@@ -12,6 +12,13 @@ Subject: Universal Pipeline Property Enrichment & Private Placement Publishing
 Target: The most recent properties staged in the pipeline (pipeline.pipeline_properties), across ALL folders (including the default inbox or unassigned items) unless a specific folder name is mentioned below.
 [Optional Folder Override: ALL / Inbox / (Insert Folder Name Here)]
 [Optional Price Policy Override: Publish with original prices / Target Price Range: $1200-$1300 (adjust properties above max down to target tier; keep properties within or below range at original prices)]
+[Optional Visibility Override: Private placement by default / Public only when explicitly requested]
+
+VISIBILITY CONTRACT:
+- Publish every pipeline property as `private_placement` by default.
+- Set status to `active` only when the operator explicitly requests public publication.
+- Never infer public approval from a request to publish, enrich, verify, or process listings.
+- Do not create a client magic link for public listings unless specifically requested. Private placements require a share link for client access.
 
 CRITICAL INGESTION & DATA CONTRACT:
 1. Query pipeline.pipeline_properties for the most recently staged, not-yet-published properties (prioritizing by newest import timestamp / batch).
@@ -37,7 +44,7 @@ Step 2: Database Schema Contract Compliance
   • title: Follow the standardized format "{Street Address}, {City}, {State} {Zip}".
   • appliances & amenities: Must be passed as native JSON arrays of strings (PostgreSQL text[]), NOT stringified JSON.
   • security_deposit: Exactly 1x monthly rent in the database (never in description).
-  • status: Set strictly to 'private_placement' so listings are shielded from the public marketplace.
+  • status: Set to 'private_placement' by default; set to 'active' only for an explicit public-visibility override.
   • pets_allowed: true, pet_types_allowed: ["dog", "cat"], application_fee: 50.
 
 Step 3: Surgical Description Enrichment
@@ -54,6 +61,8 @@ Step 4: Image Synchronization
 - Strict Original Order: Keep original source order intact. Set is_hero: true and display_order: 1 for the first photo.
 
 Step 5: Client Multi-Property Magic Link Generation
+- For `private_placement` properties, generate one client link for the selected batch.
+- Do not use a client link as a substitute for public publication when `active` was explicitly requested.
 - Generate a 32-byte random URL-safe base64 token.
 - Insert into public.property_shares (store SHA-256 hex hash in token_hash, expires_at = now() + 90 days).
 - Link all published property IDs in public.property_share_properties.
@@ -62,8 +71,9 @@ Step 6: Atomic Pipeline Cleanup (Fail-Safe Guard)
 - CRITICAL: Only clear pipeline.pipeline_properties AFTER all properties in the batch have been successfully inserted into public.properties, verified with status 'private_placement', and had their photos attached. If any property fails to publish, abort the cleanup and fix the record.
 
 Final Response Format:
-Provide ONE SINGLE master magic link for client sharing:
+- For private placements, provide ONE SINGLE master magic link for client sharing:
 https://choice-properties-site.pages.dev/listings.html#share={token}
+- For properties explicitly published as `active`, provide the public property link(s); do not label them as private placements.
 
 Follow with a concise bulleted summary of verified specs, itemized appliances, and enriched amenities for each published property.
 ```

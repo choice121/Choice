@@ -390,10 +390,14 @@ const Properties = {
         }
         rows = Array.isArray(data?.properties) ? data.properties.slice() : [];
       } else {
-        // Legacy ID-only links can resolve public listings, never private ones.
-        const { data, error } = await sb().rpc('get_properties_by_ids', { p_ids: filters.target_ids });
+        // Legacy ID-only links may resolve only explicitly public listings.
+        const { data, error } = await sb()
+          .from('properties')
+          .select(PROPERTIES_SELECT_FULL)
+          .in('id', filters.target_ids)
+          .eq('status', 'active');
         if (error) return { ok: false, data: null, error: error.message };
-        rows = (data || []).slice();
+        rows = (data || []).filter(row => row.status === 'active');
       }
 
       const propIds = rows.map(r => r.id).filter(Boolean);
@@ -687,6 +691,7 @@ const Properties = {
         .from('properties')
         .select('id, title, address, unit_number, unit_floor, bedrooms, bathrooms, half_bathrooms, square_footage, monthly_rent, status, price_range, property_photos(id, url, file_id, display_order, is_hero)')
         .eq('parent_property_id', cleanId)
+        .eq('status', 'active')
         .order('unit_floor', { ascending: true })
         .order('unit_number', { ascending: true });
       if (error) {
