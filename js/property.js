@@ -1663,15 +1663,19 @@ function setLightboxViewMode(mode) {
   const gridEl    = document.getElementById('lightboxGridView');
   const toggleBtn = document.getElementById('lbToggleGrid');
   const toggleTxt = document.getElementById('lbToggleGridText');
+  const counterEl = document.getElementById('lightboxCounter');
 
   if (mode === 'grid') {
     if (stageEl)  stageEl.style.display  = 'none';
     if (thumbsEl) thumbsEl.style.display = 'none';
     if (gridEl)   gridEl.style.display   = 'block';
+    if (counterEl) counterEl.textContent = `${allPhotos.length} photos`;
     if (toggleTxt) toggleTxt.textContent = 'Single Photo';
     if (toggleBtn) {
       toggleBtn.classList.add('active');
       toggleBtn.innerHTML = '<i class="fas fa-image"></i> <span id="lbToggleGridText">Single Photo</span>';
+      toggleBtn.setAttribute('aria-label', 'Show selected photo');
+      toggleBtn.setAttribute('aria-pressed', 'true');
     }
   } else {
     if (stageEl)  stageEl.style.display  = 'flex';
@@ -1681,6 +1685,8 @@ function setLightboxViewMode(mode) {
     if (toggleBtn) {
       toggleBtn.classList.remove('active');
       toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="lbToggleGridText">All Photos</span>';
+      toggleBtn.setAttribute('aria-label', 'Show all photos');
+      toggleBtn.setAttribute('aria-pressed', 'false');
     }
   }
 }
@@ -1705,10 +1711,10 @@ function buildLightboxGrid() {
   const container = document.getElementById('lightboxGridContainer');
   if (!container || !allPhotos.length) return;
   container.innerHTML = allPhotos.map((url, i) => `
-    <div class="lightbox-grid-item" data-idx="${i}">
-      <img src="${CONFIG.img(url, 'gallery')}" alt="Property photo ${i + 1}" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+    <button type="button" class="lightbox-grid-item" data-idx="${i}" aria-label="View photo ${i + 1} of ${allPhotos.length}">
+      <img src="${CONFIG.img(url, 'gallery')}" alt="" loading="lazy" referrerpolicy="no-referrer" decoding="async">
       <div class="lightbox-grid-badge">${i + 1} of ${allPhotos.length}</div>
-    </div>
+    </button>
   `).join('');
 
   container.querySelectorAll('.lightbox-grid-item').forEach(item => {
@@ -1842,7 +1848,12 @@ document.getElementById('lightboxClose')?.addEventListener('click', closeLightbo
 document.getElementById('lightboxPrev')?.addEventListener('click', () => lightboxNav(-1));
 document.getElementById('lightboxNext')?.addEventListener('click', () => lightboxNav(1));
 document.getElementById('lbToggleGrid')?.addEventListener('click', () => {
-  setLightboxViewMode(_lbViewMode === 'grid' ? 'stage' : 'grid');
+  if (_lbViewMode === 'grid') {
+    setLightboxViewMode('stage');
+    lightboxShow(photoIndex);
+  } else {
+    setLightboxViewMode('grid');
+  }
 });
 document.getElementById('lightbox')?.addEventListener('click', e => {
   if (e.target === document.getElementById('lightbox') ||
