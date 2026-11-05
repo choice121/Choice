@@ -90,6 +90,7 @@ function sanitizeControl(value: unknown) {
     label: safeText(control.label, 100),
     ariaLabel: safeText(control.ariaLabel, 100),
     title: safeText(control.title, 100),
+    groupLabel: safeText(control.groupLabel, 100),
     rect,
     disabled: control.disabled === true,
     expanded: safeText(control.expanded, 10),

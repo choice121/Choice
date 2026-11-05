@@ -156,7 +156,8 @@
       };
     });
 
-    const photoControlPattern = /photo|image|gallery|picture|next|previous|prev|close|see all|view all|carousel/i;
+    const photoControlPattern = /photo|image|gallery|picture|carousel/i;
+    const navigationControlPattern = /^(?:close|next|previous|prev)(?:\s+photo)?$/i;
     const controls = [...document.querySelectorAll('button, [role="button"], [role="tab"]')]
       .filter(visible)
       .map((element) => ({
@@ -164,15 +165,21 @@
         label: short(element.innerText || element.value || '', 100),
         ariaLabel: short(element.getAttribute('aria-label'), 100),
         title: short(element.getAttribute('title'), 100),
+        groupLabel: short(element.closest('[role="group"][aria-label]')?.getAttribute('aria-label'), 100),
       }))
-      .filter(({ label, ariaLabel, title }) => photoControlPattern.test(`${label} ${ariaLabel} ${title}`))
+      .filter(({ label, ariaLabel, title, groupLabel }) =>
+        photoControlPattern.test(`${label} ${ariaLabel} ${title}`) ||
+        navigationControlPattern.test(label) ||
+        /^photo scenes$/i.test(groupLabel)
+      )
       .slice(0, 30)
-      .map(({ element, label, ariaLabel, title }) => ({
+      .map(({ element, label, ariaLabel, title, groupLabel }) => ({
         tag: element.tagName.toLowerCase(),
         role: short(element.getAttribute('role'), 40),
         label,
         ariaLabel,
         title,
+        groupLabel,
         rect: roundedRect(element),
         disabled: Boolean(element.disabled),
         expanded: short(element.getAttribute('aria-expanded'), 10),

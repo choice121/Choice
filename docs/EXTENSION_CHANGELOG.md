@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.0] - 2026-11-05
+### Keep Gallery References Focused on Photo UI
+- **Avoid unrelated navigation matches**: Match photo controls precisely so tour buttons with "Next" text are not captured as gallery controls.
+- **Preserve scene filters**: Capture individual buttons from Zillow's photo-scene group, such as Living Room and Kitchen, without collecting their container text.
+- **Clean saved reports**: Remove unrelated calls to action from existing gallery reference records.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.0.
+
+---
+
 ## [v52.6.0] - 2026-11-05
 ### Limit Gallery Capture to Interactive Controls
 - **Avoid page-container text**: Collect photo-related labels only from actual buttons and tabs, never large page wrappers that happen to contain gallery text.
