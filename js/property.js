@@ -667,8 +667,6 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
-  if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
   if (headerChips.length) {
     const chipRow = document.createElement('div');

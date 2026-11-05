@@ -119,7 +119,7 @@ body[data-portal="public"][data-page="property"] #savePropBtn[aria-pressed="true
 body[data-portal="public"][data-page="property"] #gallery {
   display: grid;
   grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr);
-  gap: 7px;
+  gap: 4px;
   width: 100%;
   height: clamp(370px, 40vw, 550px) !important;
   max-height: none !important;
@@ -127,7 +127,7 @@ body[data-portal="public"][data-page="property"] #gallery {
   margin: 0;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.74);
-  border-radius: 19px;
+  border-radius: 10px;
   background: #dfe8ed;
   box-shadow: var(--pd-shadow);
   contain: layout paint;
@@ -139,7 +139,7 @@ body[data-portal="public"][data-page="property"] #mosaicMain {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  border-radius: 13px;
+  border-radius: 0;
   cursor: zoom-in;
   touch-action: pan-y;
 }
@@ -162,7 +162,7 @@ body[data-portal="public"][data-page="property"] #mosaicSide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 4px;
   height: 100%;
   min-width: 0;
   min-height: 0;
@@ -174,7 +174,7 @@ body[data-portal="public"][data-page="property"] .mosaic-cell {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 0;
   background: #dce6eb;
   cursor: zoom-in;
 }
@@ -274,13 +274,7 @@ body[data-portal="public"][data-page="property"] .mosaic-nav-btn:hover {
 }
 
 body[data-portal="public"][data-page="property"] #galleryStrip {
-  display: flex !important;
-  gap: 9px;
-  margin: 0;
-  padding: 12px 2px 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #b8c8d3 transparent;
+  display: none !important;
 }
 
 body[data-portal="public"][data-page="property"] .gallery-strip-thumb {
@@ -801,32 +795,36 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
   }
 
   body[data-portal="public"][data-page="property"] #propSplitPhotos {
-    position: static !important;
+    position: relative !important;
     width: 100% !important;
     height: auto !important;
-    padding: 16px 20px 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
     flex-shrink: 0 !important;
   }
 
   body[data-portal="public"][data-page="property"] .property-gallery-toolbar {
-    gap: 10px;
-    min-height: 40px;
-    margin-bottom: 11px;
+    position: absolute;
+    z-index: 20;
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    justify-content: flex-end;
+    min-height: 0;
+    margin: 0;
     padding: 0;
+    pointer-events: none;
   }
 
   body[data-portal="public"][data-page="property"] .property-gallery-toolbar .detail-breadcrumb {
-    flex: 1 1 auto;
-    gap: 7px;
-    font-size: 11px;
-    white-space: nowrap;
+    display: none !important;
   }
 
   body[data-portal="public"][data-page="property"] .property-gallery-toolbar .prop-avail-row {
     flex: 0 0 auto;
     gap: 7px;
     margin: 0 !important;
+    pointer-events: auto;
   }
 
   body[data-portal="public"][data-page="property"] .property-gallery-toolbar .prop-share-btns {
@@ -837,7 +835,11 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
     min-width: 42px;
     min-height: 40px;
     padding: 0 10px;
-    background: var(--pd-paper);
+    border-color: rgba(255,255,255,.8);
+    background: rgba(255,255,255,.94);
+    color: #17212b;
+    box-shadow: 0 2px 10px rgba(0,0,0,.16);
+    backdrop-filter: blur(8px);
   }
 
   body[data-portal="public"][data-page="property"] #gallery {
@@ -851,8 +853,8 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
     flex: none !important;
     margin: 0 !important;
     overflow: hidden !important;
-    border: 1px solid rgba(255,255,255,.9);
-    border-radius: 15px !important;
+    border: 0;
+    border-radius: 0 !important;
     background: #dfe8ed !important;
     box-shadow: 0 8px 22px rgba(30,57,76,.10) !important;
   }
@@ -911,7 +913,8 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
 
   body[data-portal="public"][data-page="property"] #mosaicMobileCount {
     top: 12px !important;
-    right: 12px !important;
+    right: auto !important;
+    left: 12px !important;
     min-height: 34px;
     padding: 6px 11px !important;
     border-radius: 999px !important;
@@ -934,12 +937,13 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
 
   body[data-portal="public"][data-page="property"] #propSplitContent .cs-price-card {
     display: block !important;
-    margin: 14px 20px 0 !important;
-    padding: 22px !important;
-    border: 1px solid var(--pd-line) !important;
-    border-radius: 16px !important;
+    margin: 0 !important;
+    padding: 18px 20px 14px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pd-line) !important;
+    border-radius: 0 !important;
     background: var(--pd-paper) !important;
-    box-shadow: var(--pd-shadow-soft) !important;
+    box-shadow: none !important;
   }
 
   body[data-portal="public"][data-page="property"] .prop-avail-row {
@@ -1190,13 +1194,21 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
 }
 
 @media (max-width: 540px) {
+  body[data-portal="public"][data-page="property"] #mobile-apply-bar.active {
+    display: none !important;
+  }
+
+  body[data-portal="public"][data-page="property"].mob-bar-active {
+    padding-bottom: 0 !important;
+  }
+
   body[data-portal="public"][data-page="property"] #propSplitPhotos {
-    padding: 12px 14px 0 !important;
+    padding: 0 !important;
   }
 
   body[data-portal="public"][data-page="property"] #gallery {
     aspect-ratio: 4 / 3 !important;
-    border-radius: 13px !important;
+    border-radius: 0 !important;
   }
 
   body[data-portal="public"][data-page="property"] #mosaicExpandBtn {
@@ -1207,16 +1219,61 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
   }
 
   body[data-portal="public"][data-page="property"] #propSplitContent .cs-price-card {
-    margin: 12px 14px 0 !important;
-    padding: 18px !important;
+    margin: 0 !important;
+    padding: 18px 16px 12px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pd-line) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   body[data-portal="public"][data-page="property"] #detailMeta {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    min-height: 186px;
   }
 
   body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-item {
-    min-height: 82px;
+    min-height: 56px;
+    padding: 5px 4px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pd-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-icon {
+    flex-basis: 18px;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 0 2px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-icon i {
+    font-size: 12px !important;
+  }
+
+  body[data-portal="public"][data-page="property"] .lightbox-grid-view {
+    padding: 0 0 calc(24px + env(safe-area-inset-bottom));
+  }
+
+  body[data-portal="public"][data-page="property"] .lightbox-grid-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    margin: 0;
+  }
+
+  body[data-portal="public"][data-page="property"] .lightbox-grid-item {
+    aspect-ratio: 4 / 3;
+    border: 0;
+    border-radius: 0;
+  }
+
+  body[data-portal="public"][data-page="property"] .lightbox-grid-item img {
+    object-fit: cover;
   }
 
   body[data-portal="public"][data-page="property"] #propSplitContent .prop-section,
@@ -1247,14 +1304,12 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
   }
 
   body[data-portal="public"][data-page="property"] #propSplitPhotos {
-    padding-right: 10px !important;
-    padding-left: 10px !important;
+    padding: 0 !important;
   }
 
   body[data-portal="public"][data-page="property"] #propSplitContent .cs-price-card {
-    margin-right: 10px !important;
-    margin-left: 10px !important;
-    padding: 15px !important;
+    margin: 0 !important;
+    padding: 15px 12px !important;
   }
 
   body[data-portal="public"][data-page="property"] #propSplitContent .prop-section,
