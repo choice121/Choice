@@ -642,8 +642,8 @@ async function _bulkCreateMatch() {
       body: { action: 'create', property_ids: ids },
     });
     if (error) throw error;
-    if (!data?.token) throw new Error(data?.error || 'Share link was not created');
-    shareToken = data.token;
+    if (!data?.token && !data?.share_alias) throw new Error(data?.error || 'Share link was not created');
+    shareToken = data.share_alias || data.token;
   } catch (error) {
     window.showToast?.('Could not create share link: ' + (error?.message || 'Unknown error'), 'error');
     if (button) { button.disabled = false; button.textContent = 'Create Client Link'; }

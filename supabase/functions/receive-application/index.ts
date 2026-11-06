@@ -62,6 +62,54 @@ function getClientIp(req: Request): string {
   return (fwd.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
 }
 const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+const SHARE_ALIAS_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/;
+
+function normalizeShareAlias(value: string): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24);
+}
+
+async function resolveShareRecord(tokenOrAlias: string) {
+  const value = String(tokenOrAlias || '').trim();
+  if (!value) return null;
+
+  if (SHARE_TOKEN_RE.test(value)) {
+    const tokenHash = await sha256Hex(value);
+    const { data, error } = await supabase
+      .from('property_shares')
+      .select('id')
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (error) {
+      console.warn('[receive-application] share token lookup failed:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  const alias = normalizeShareAlias(value);
+  if (!alias || alias.length < 6 || !SHARE_ALIAS_RE.test(alias)) return null;
+
+  const { data, error } = await supabase
+    .from('property_shares')
+    .select('id')
+    .eq('share_alias', alias)
+    .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[receive-application] share alias lookup failed:', error.message);
+    return null;
+  }
+  return data;
+}
 
 function ageInYears(dobStr: string): number | null {
   if (!dobStr) return null;
@@ -303,24 +351,8 @@ Deno.serve(async (req: Request) => {
 
   if (prop.status === 'private_placement') {
     const shareToken = fv(fields['_share_token']);
-    if (!SHARE_TOKEN_RE.test(shareToken)) {
-      return jsonErr(403, 'This private listing requires its valid client share link.');
-    }
-
-    const tokenHash = await sha256Hex(shareToken);
-    const { data: share, error: shareError } = await supabase
-      .from('property_shares')
-      .select('id')
-      .eq('token_hash', tokenHash)
-      .is('revoked_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    if (shareError) {
-      console.error('Private share lookup error:', JSON.stringify(shareError));
-      return jsonErr(500, 'Could not validate the private listing link. Please retry.');
-    }
-    if (!share) return jsonErr(403, 'This private listing link is invalid or expired.');
+    const share = await resolveShareRecord(shareToken);
+    if (!share) return jsonErr(403, 'This private listing requires its valid client share link.');
 
     const { data: membership, error: membershipError } = await supabase
       .from('property_share_properties')

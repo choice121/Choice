@@ -1314,8 +1314,9 @@ function buildApplyURL(property, shareToken = '', unitOptions = {}) {
           console.warn('[buildApplyURL] URL still ' + _finalUrl.length + ' chars after reduction — may truncate on some browsers');
         }
       }
-      if (/^[A-Za-z0-9_-]{43}$/.test(shareToken)) {
-        _finalUrl += `#share=${encodeURIComponent(shareToken)}`;
+      const cleanedShareToken = String(shareToken || '').trim();
+      if (cleanedShareToken && (/^[A-Za-z0-9_-]{43}$/.test(cleanedShareToken) || /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/i.test(cleanedShareToken))) {
+        _finalUrl += `#share=${encodeURIComponent(cleanedShareToken)}`;
       }
       return _finalUrl;
     }

@@ -46,9 +46,58 @@ function validCoordinate(value: unknown, min: number, max: number): value is num
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 }
 
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+const SHARE_ALIAS_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/;
+
+function normalizeShareAlias(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+}
+
 async function hashToken(token: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function resolveShareRecord(admin: ReturnType<typeof createClient>, token: string) {
+  const value = String(token || "").trim();
+  if (!value) return null;
+
+  if (SHARE_TOKEN_RE.test(value)) {
+    const { data, error } = await admin
+      .from("property_shares")
+      .select("id")
+      .eq("token_hash", await hashToken(value))
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (error) {
+      console.warn("[property-location] token lookup failed", error.message);
+      return null;
+    }
+    return data;
+  }
+
+  const alias = normalizeShareAlias(value);
+  if (!alias || alias.length < 6 || !SHARE_ALIAS_RE.test(alias)) return null;
+
+  const { data, error } = await admin
+    .from("property_shares")
+    .select("id")
+    .eq("share_alias", alias)
+    .is("revoked_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[property-location] alias lookup failed", error.message);
+    return null;
+  }
+  return data;
 }
 
 async function fetchGeoapify(url: URL) {
@@ -103,20 +152,10 @@ Deno.serve(async (req) => {
 
   if (property.status !== "active") {
     const token = typeof body.share_token === "string" ? body.share_token : "";
-    if (property.status !== "private_placement" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    if (property.status !== "private_placement") {
       return json({ error: "property_not_found" }, 404, origin);
     }
-    const { data: share, error: shareError } = await admin
-      .from("property_shares")
-      .select("id")
-      .eq("token_hash", await hashToken(token))
-      .is("revoked_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    if (shareError) {
-      console.error("[property-location] Share lookup failed", shareError.message);
-      return json({ error: "share_lookup_failed" }, 500, origin);
-    }
+    const share = await resolveShareRecord(admin, token);
     if (!share) return json({ error: "property_not_found" }, 404, origin);
     const { data: link, error: linkError } = await admin
       .from("property_share_properties")

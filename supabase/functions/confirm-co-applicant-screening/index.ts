@@ -19,6 +19,60 @@ function response(req: Request, status: number, body: Record<string, unknown>): 
   });
 }
 
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+const SHARE_ALIAS_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/;
+
+function normalizeShareAlias(value: string): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24);
+}
+
+async function resolveShareRecord(tokenOrAlias: string) {
+  const value = String(tokenOrAlias || '').trim();
+  if (!value) return null;
+
+  if (SHARE_TOKEN_RE.test(value)) {
+    const tokenHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+
+    const { data, error } = await supabase
+      .from('property_shares')
+      .select('id, token_hash')
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[confirm-co-applicant-screening] token lookup failed:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  const alias = normalizeShareAlias(value);
+  if (!alias || alias.length < 6 || !SHARE_ALIAS_RE.test(alias)) return null;
+
+  const { data, error } = await supabase
+    .from('property_shares')
+    .select('id, token_hash')
+    .eq('share_alias', alias)
+    .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[confirm-co-applicant-screening] alias lookup failed:', error.message);
+    return null;
+  }
+  return data;
+}
+
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
@@ -36,14 +90,16 @@ Deno.serve(async (req: Request) => {
   }
 
   const token = typeof body.token === 'string' ? body.token : '';
-  if (!/^[A-Za-z0-9_-]{43}$/.test(token) || body.consent !== true) {
+  const share = await resolveShareRecord(token);
+  if (!share || body.consent !== true) {
     return response(req, 400, { error: 'Review the authorization and check the consent box to continue.' });
   }
 
-  const tokenHashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  const tokenHash = Array.from(new Uint8Array(tokenHashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+  const tokenHash = SHARE_TOKEN_RE.test(token)
+    ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('')
+    : share?.token_hash || null;
   const ip = req.headers.get('cf-connecting-ip')
     || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || null;

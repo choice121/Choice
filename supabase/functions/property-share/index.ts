@@ -2,10 +2,94 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+const SHARE_ALIAS_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function normalizeShareAlias(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+}
+
+async function hashShareToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function findShareByTokenOrAlias(supabase: any, tokenOrAlias: string) {
+  const value = String(tokenOrAlias || "").trim();
+  if (!value) return null;
+
+  if (SHARE_TOKEN_RE.test(value)) {
+    const tokenHash = await hashShareToken(value);
+    const { data, error } = await supabase
+      .from("property_shares")
+      .select("id, expires_at, share_alias")
+      .eq("token_hash", tokenHash)
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (error) {
+      console.warn("[property-share] token lookup failed", error.message);
+      return null;
+    }
+    return data;
+  }
+
+  const alias = normalizeShareAlias(value);
+  if (!alias || alias.length < 6 || !SHARE_ALIAS_RE.test(alias)) return null;
+
+  const { data, error } = await supabase
+    .from("property_shares")
+    .select("id, expires_at, share_alias")
+    .eq("share_alias", alias)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[property-share] alias lookup failed", error.message);
+    return null;
+  }
+  return data;
+}
+
+async function createFriendlyShareAlias(supabase: any, properties: Array<{ city?: string | null }>, tokenHash: string): Promise<string> {
+  const cityBase = (properties || [])
+    .map((property) => String(property?.city || "").trim())
+    .filter(Boolean)
+    .sort()[0] || "share";
+
+  const base = normalizeShareAlias(`${cityBase}-${tokenHash.slice(0, 6)}`) || "share";
+  let alias = base.length >= 8 ? base : `share-${tokenHash.slice(0, 6)}`;
+  alias = normalizeShareAlias(alias);
+  if (!alias || alias.length < 6) {
+    alias = `share-${tokenHash.slice(0, 6)}`;
+  }
+
+  let candidate = alias;
+  let suffix = 1;
+  while (true) {
+    const { data, error } = await supabase
+      .from("property_shares")
+      .select("id")
+      .eq("share_alias", candidate)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      throw error;
+    }
+    if (!data) return candidate;
+    candidate = `${alias}-${suffix.toString(36)}`.slice(0, 24);
+    suffix += 1;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,30 +112,16 @@ Deno.serve(async (req) => {
     const action = body.action;
 
     if (action === "resolve") {
-      const token = body.token;
-      if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      const token = typeof body.token === "string" ? body.token.trim() : "";
+      if (!token) {
         return new Response(
           JSON.stringify({ error: "invalid_share_token" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Compute sha256 hash of token
-      const encoder = new TextEncoder();
-      const data = encoder.encode(token);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const tokenHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-
-      // Find share
-      const { data: shareData, error: shareError } = await supabase
-        .from("property_shares")
-        .select("id, expires_at")
-        .eq("token_hash", tokenHash)
-        .is("revoked_at", null)
-        .single();
-
-      if (shareError || !shareData) {
+      const shareData = await findShareByTokenOrAlias(supabase, token);
+      if (!shareData) {
         return new Response(
           JSON.stringify({ error: "share_not_found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -199,7 +269,7 @@ Deno.serve(async (req) => {
       }
       const { data: selectedProperties, error: selectedPropertiesError } = await supabase
         .from("properties")
-        .select("id, status")
+        .select("id, status, city")
         .in("id", uniquePropertyIds);
       if (selectedPropertiesError) {
         return new Response(
@@ -231,10 +301,13 @@ Deno.serve(async (req) => {
       const shareId = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
+      const shareAlias = await createFriendlyShareAlias(supabase, selectedProperties, tokenHash);
+
       const { error: shareInsertError } = await supabase.from("property_shares").insert({
         id: shareId,
         token_hash: tokenHash,
-        expires_at: expiresAt
+        expires_at: expiresAt,
+        share_alias: shareAlias,
       });
       if (shareInsertError) {
         return new Response(
@@ -258,7 +331,11 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ token: rawToken }),
+        JSON.stringify({
+          token: rawToken,
+          share_alias: shareAlias,
+          share_url: `https://choice-properties-site.pages.dev/listings.html#share=${encodeURIComponent(shareAlias)}`,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -297,23 +374,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      const token = body.token;
-      if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      const token = typeof body.token === "string" ? body.token.trim() : "";
+      if (!token) {
         return new Response(
           JSON.stringify({ error: "invalid_share_token" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const encoder = new TextEncoder();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(token));
-      const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-
-      const { data: shareData } = await supabase
-        .from("property_shares")
-        .select("id")
-        .eq("token_hash", tokenHash)
-        .single();
+      const shareData = await findShareByTokenOrAlias(supabase, token);
+      if (!shareData) {
+        return new Response(
+          JSON.stringify({ error: "share_not_found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (shareData) {
         const { error: revokeError } = await supabase
