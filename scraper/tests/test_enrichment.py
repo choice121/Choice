@@ -63,6 +63,19 @@ def test_price_consistency_rewrites_monthly_rent_mentions():
     assert "$1,200/month" not in updated
     assert "$1,500/month" in updated
 
+def test_key_deposit_and_special_requirement_language_is_stripped():
+    text = (
+        "Special Requirement: Must have good, verifiable rental history within the past year. "
+        "Bring a refundable $20 key deposit and a valid photo ID."
+    )
+    cleaned = module.clean_description(text)
+    assert "special requirement" not in cleaned.lower()
+    assert "verifiable rental history" not in cleaned.lower()
+    assert "key deposit" not in cleaned.lower()
+    ok, failures = module.validate_for_publish({"description": text, "monthly_rent": 1600})
+    assert not ok
+    assert any("key deposit" in failure.lower() or "requirements" in failure.lower() for failure in failures)
+
 def test_source_facts_are_preserved_when_provided():
     record = {
         "pets_allowed": False,

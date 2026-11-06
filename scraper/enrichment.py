@@ -152,6 +152,10 @@ _BOILERPLATE_PATTERNS = [
     r"Pictures are for marketing purposes only[^.!?\n]*[.!?]?",
     r"NO VOUCHERS ACCEPTED[^.!?\n]*[.!?]?",
     r"All information provided is deemed reliable however is not guaranteed[^.!?\n]*[.!?]?",
+    r"(?:special\s+requirement|special\s+requirements)\s*[:.]?[^.!?\n]*[.!?]?",
+    r"Must\s+have\s+good,?\s*verifiable\s+rental\s+history\s+within\s+the\s+past\s+year[^.!?\n]*[.!?]?",
+    r"(?:bring|please\s+bring|must\s+bring)\s+(?:a\s+)?(?:refundable\s+)?(?:key\s+)?deposit[^.!?\n]*[.!?]?",
+    r"refundable\s+\$?\d+(?:\.\d{2})?\s+key\s+deposit[^.!?\n]*[.!?]?",
     # ── Scam / fraud warnings and social media / classified ads disclaimers ──
     r"(?:beware|warning|alert|notice|protect yourself|caution)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?|fraudulent)[^.!?\n]*[.!?]?",
     r"[^.!?\n]*\b(?:scammers?|fraudsters?|scam\s+alert|scam\s+warning)\b[^.!?\n]*[.!?]?",
@@ -185,6 +189,8 @@ _DEPOSIT_STRIP_PATTERNS = [
     re.compile(r"(?i)\s+and\s+(?:a\s+)?security\s+deposit\b", re.IGNORECASE),
     # 3. Any remaining sentence explicitly mentioning security deposit
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:Bring|Please\s+bring|Must\s+bring|Remember\s+to\s+bring)[^\n.!?]*\b(?:refundable\s+)?(?:key\s+)?deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
+    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:refundable\s+\$?\d+(?:\.\d{2})?\s+)?(?:key\s+)?deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
 ]
 
 # Patterns to strip home-sale, buyer, financing, and investment jargon (for Opendoor & sale-to-rent conversions)
@@ -636,11 +642,13 @@ def validate_for_publish(record, transferred_photo_count=None):
 
     # 9. Description must not contain prohibited qualifications or screening clauses
     _QUAL_CHECK = re.compile(
-        r"requirements\s*&\s*qualifications"
+        r"special\s+requirement"
+        r"|requirements\s*&\s*qualifications"
         r"|no\s+corporate\s+leases"
         r"|airbnb"
         r"|credit\s+score\s+must\s+be\s+a\s+minimum"
         r"|income\s+must\s+exceed"
+        r"|must\s+have\s+good,?\s*verifiable\s+rental\s+history"
         r"|no\s+evictions\s+or\s+broken\s+leases"
         r"|no\s+criminal\s+history"
         r"|application\s+pending\s*-\s*waiting\s+list"
@@ -649,6 +657,10 @@ def validate_for_publish(record, transferred_photo_count=None):
         re.IGNORECASE)
     if _QUAL_CHECK.search(desc):
         failures.append("Description contains prohibited requirements & qualifications language")
+
+    # 9b. Description must not contain key deposit or refundable deposit language
+    if re.search(r"bring\s+(?:a\s+)?(?:refundable\s+)?(?:key\s+)?deposit|refundable\s+\$?\d+(?:\.\d{2})?\s+key\s+deposit|key\s+deposit", desc, re.IGNORECASE):
+        failures.append("Description contains prohibited key deposit language")
 
     # 10. Description must not contain scam/fraud warnings or social media disclaimers
     _SCAM_CHECK = re.compile(
