@@ -4,7 +4,12 @@
 
 Continue the production-grade, community-first apartment inventory work across the Choice website, Supabase, Property Pipeline, and browser extension. This handoff records the current checkout as it exists now; it is **not** a completion or production-readiness claim.
 
-The user explicitly requested that the current local changes be committed and pushed so another AI can continue. Both repositories were on `main`, and both local branches matched `origin/main` before these pending changes were committed. The current uncommitted implementation is incomplete and its latest edits have not been validated. Do not describe the feature as fully implemented, deployed, or verified.
+The user explicitly requested that the current local changes be committed and pushed so another AI can continue. Both repositories were on `main`, and both local branches matched `origin/main` before the work was committed. The changes are now pushed:
+
+- Choice: `e85d67bdfb8561e7a01d517a2fb81eb0e7d821fc`
+- Property Pipeline: `559b4a52e03a4a871b5f56f560bb63e580e283b6`
+
+The implementation remains incomplete and its latest edits have not passed the full checks. The push triggered production workflows; see the verified deployment results below. Do not describe the feature as fully implemented or end-to-end verified.
 
 The user's target workflow is:
 
@@ -54,8 +59,9 @@ These observations came from read-only inspection of the linked Supabase project
 - `property_units` uses UUID IDs and references `properties`. `property_floors` requires a building. The new publisher changes attempt to upsert building/floor rows and then link units; verify real constraints and returned IDs.
 - Production had RLS enabled on these inventory tables. Before the new migration, inspection found no client grants; the existing policies/grants must be reviewed together. Private-placement inventory must only be returned through the validated share resolver, not made public by broad grants or policies.
 - The pre-existing `pipeline_publish` RPC signature was `pipeline_publish(p_id text, p_landlord_id uuid, p_status text)`. The existing status and publisher behavior must remain private by default.
-- Remote migration history showed both `20261106000004` and `20261106000005` pending. Neither has been applied.
-- No Edge Functions have been deployed for this work, and no production smoke checks have been performed.
+- Before the push, remote migration history showed both `20261106000004` and `20261106000005` pending. The push-triggered workflow subsequently applied both (HTTP 201) and recorded them as applied.
+- The push-triggered workflow deployed all Edge Functions. Its Deno step was a syntax/parse check, not a type-check.
+- No production privacy or application smoke checks have been performed.
 
 The pipeline schema is owned by the separate Property Pipeline project. Do not alter, drop, move, or expose any object in the `pipeline` schema, and do not change the service-role access model.
 
@@ -82,11 +88,12 @@ node scripts/sync-and-bump-extension.mjs
 
 Confirm the script updates the version, Chromium/Orion variants, metadata, update feed, archives, changelog, and required extractor tests. Do not manually claim the packaged extension matches source until checked.
 
-### 3. No live or installed-browser verification
+### 3. Deployment and verification state after push
 
-- No migration has been applied.
-- No Edge Function has been deployed.
-- No current public/private or application flow has been verified against production.
+- The [Supabase deployment workflow](https://github.com/choice121/Choice/actions/runs/42179929240) completed successfully. It parsed all functions, deployed each function, and applied/recorded migrations `20261106000004_pipeline_publish_apartment_inventory.sql` and `20261106000005_apartment_inventory_model.sql`.
+- The [Cloudflare-Only Enforcement workflow](https://github.com/choice121/Choice/actions/runs/42179929308) failed. Its extension extractor test step reported **56 passed, 1 failed**. The failing case was “Zillow unit galleries stay scoped to their source unit and retain explicit building and floor facts”; the actual output omitted expected per-unit source/building/floor/photo facts (`undefined`).
+- The separate [pages build and deployment workflow](https://github.com/choice121/Choice/actions/runs/42179927824) succeeded and the repository Pages API reports `https://choice121.github.io/Choice/` in legacy mode. This is not evidence that the required Cloudflare Pages deployment succeeded. Verify the canonical Cloudflare site and its served revision; resolve the unexpected GitHub Pages configuration/deployment in accordance with the Cloudflare-only deployment rule.
+- No current public/private or application flow has been verified against production. A successful deployment workflow does not prove the schema, RLS, share, or application behavior is correct.
 - No Zillow test has been performed with the installed extension.
 - CDN photo URLs are directly accessible to anyone who already knows them; UI overlays or hidden links do not make photo bytes private.
 
@@ -106,24 +113,24 @@ Confirm the script updates the version, Chromium/Orion variants, metadata, updat
 
 ## Recommended continuation sequence
 
-1. **Inspect the pushed branches and working trees.** Confirm the Choice and Property Pipeline commits and pushes are present. Preserve the handoff document; do not overwrite unrelated work.
-2. **Finish source-level review of the publisher and migration.** Trace direct publish, bulk/folder publish, and sync paths. Confirm normalized building/floor rows, IDs, unit photos, floor plans, source ordering, visibility, rollback semantics, and RLS/grants.
-3. **Repair/add focused tests before deployment.** Update publisher fakes/expectations for `unit_photos` and hierarchy upserts. Cover idempotent publish/sync, missing/duplicate source IDs, multi-building/floor relationships, unit-vs-plan classification, photos, partial failure, and private-by-default behavior.
-4. **Run required validations.** At minimum:
+1. **Reconcile the deployed state first.** Confirm both pushed commits, query remote migration history/schema, and verify deployed function versions. Do not reapply migrations `20261106000004` or `20261106000005`; they were applied by the successful workflow.
+2. **Resolve the failing extractor regression before another release.** Reproduce the GitHub failure in `.pages-orion/test-extractors.js` and `chrome-extension/test-extractors.js`; verify why unit `A101` lost its source ID, building/floor fields, and photo collection. Run the required extension sync/version workflow after fixing any extension source.
+3. **Finish source-level review of the publisher and already-applied migration.** Trace direct publish, bulk/folder publish, and sync paths. Confirm normalized building/floor rows, IDs, unit photos, floor plans, source ordering, visibility, rollback semantics, and RLS/grants. Do not make a follow-up migration until remote state and data impact are understood.
+4. **Repair/add focused tests.** Update publisher fakes/expectations for `unit_photos` and hierarchy upserts. Cover idempotent publish/sync, missing/duplicate source IDs, multi-building/floor relationships, unit-vs-plan classification, photos, partial failure, and private-by-default behavior.
+5. **Run required validations.** At minimum:
    - Choice static-site build (`npm run build`).
    - Extension sync/version script above and its complete extractor suite.
    - Targeted `pipeline-record` tests and Deno type-check for modified Edge Functions.
    - Targeted Property Pipeline publisher tests.
    - `git diff --check` in both repositories.
-5. **Review `deno.lock`.** It was generated by local Deno use and included in this handoff commit. Confirm whether it belongs in the repository based on existing Deno lockfile policy and project configuration; remove it in a follow-up if it is not intended.
-6. **Only after the migration and code are validated,** verify migration history and carefully apply the two intended migrations to the linked Choice project. Do not apply unrelated pending migrations. Inspect the migration plan first and stop if remote history/schema differs from expectations.
-7. **Deploy only the relevant Edge Functions after migrations succeed.** Verify function status and logs; do not expose credentials in output.
-8. **Run live privacy and functionality checks:** active-only public inventory, private-share membership/expiry/revocation, unit media, application unit-parent validation, status defaults, and no direct-ID/privacy bypass.
+6. **Review `deno.lock`.** It was generated by local Deno use and included in the Choice commit. Confirm whether it belongs in the repository based on existing Deno lockfile policy and project configuration; remove it in a follow-up if it is not intended.
+7. **Verify live privacy and functionality immediately:** active-only inventory, private-share membership/expiry/revocation, unit media, application unit-parent validation, status defaults, and no direct-ID/privacy bypass.
+8. **Resolve canonical deployment routing.** Confirm the Cloudflare Pages deployment for the pushed commit and address the legacy GitHub Pages workflow/configuration; do not claim Cloudflare is live based on the `github.io` deployment.
 9. **Run the actual browser test** with the installed extension on a Zillow property detail page. Compare source gallery count/order and per-unit images against the extension capture and the Choice page. Record exact gaps rather than inferring success from a fixture.
-10. **Report only verified outcomes.** Clearly separate local tests, remote migration/function deployment, live smoke results, and the still-manual Zillow test.
+10. **Report only verified outcomes.** Separate local tests, remote migration/function deployment, Cloudflare vs GitHub Pages state, live smoke results, and the still-manual Zillow test.
 
 ## Available tools and authorization context
 
 At handoff, Deno 2.9.8, PostgreSQL client 16, Supabase CLI 3.0.0, GitHub CLI, and `gh` authentication were available. Supabase was linked to the Choice project and read-only production inspection worked. Do not print, copy, or commit credentials. The user previously said not to rotate/retire credentials; this handoff does not authorize exposing them.
 
-The user authorized committing/pushing the current local changes. That push can trigger the website's Cloudflare Pages deployment from `main`; it does not apply Supabase migrations or deploy Edge Functions. Verify the resulting GitHub/Cloudflare status before claiming a live site deployment.
+The user authorized committing/pushing the current local changes and had previously requested migration/function deployment. The push-triggered workflows did deploy all Edge Functions and apply the two pending migrations. The user also said not to rotate/retire credentials. Never expose credentials. The latest workflow state is documented above; verify the canonical Cloudflare deployment before claiming it is live.
