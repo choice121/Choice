@@ -76,6 +76,18 @@ def test_key_deposit_and_special_requirement_language_is_stripped():
     assert not ok
     assert any("key deposit" in failure.lower() or "requirements" in failure.lower() for failure in failures)
 
+
+def test_tour_and_hype_language_is_stripped():
+    text = (
+        "Viewing is easy! Visit our leasing office at 2750 Lafayette Avenue, Saint Louis, MO 63104 during the following hours: "
+        "Monday-Friday: 9:00 AM to 4:00 PM. This home won't last long!"
+    )
+    cleaned = module.clean_description(text)
+    assert "viewing is easy" not in cleaned.lower()
+    assert "leasing office" not in cleaned.lower()
+    assert "won't last long" not in cleaned.lower()
+
+
 def test_source_facts_are_preserved_when_provided():
     record = {
         "pets_allowed": False,
