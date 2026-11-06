@@ -276,6 +276,7 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
 
   // Title
   const beds = prop.bedrooms ?? prop.beds ?? null;
+  const city = safeStr(addr.city ?? prop.city) ?? '';
   const propType = normalizePropType(prop.homeType);
   function fmtType(t: string | null) {
     if (!t) return 'Rental';

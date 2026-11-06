@@ -196,6 +196,33 @@
     return photos.slice(0, 50);
   }
 
+  function collectZillowUnitPhotos(unit) {
+    const photos = [];
+    const seen = new Set();
+    const add = value => {
+      const rawUrl = typeof value === 'string'
+        ? value
+        : value && typeof value === 'object'
+          ? value.url || value.href || value.src || value.imageUrl || value.image_url ||
+            bestJpeg(value.mixedSources)
+          : null;
+      if (typeof rawUrl !== 'string' || rawUrl.length > 2048) return;
+      try {
+        const url = new URL(rawUrl);
+        if (url.protocol !== 'https:' || url.username || url.password || seen.has(url.href)) return;
+        seen.add(url.href);
+        photos.push(url.href);
+      } catch (_) {}
+    };
+    [
+      'unitPhotos', 'unit_photos', 'photoUrls', 'photo_urls',
+      'photos', 'images', 'galleryImages', 'gallery_images',
+    ].forEach(key => {
+      if (Array.isArray(unit && unit[key])) unit[key].forEach(add);
+    });
+    return dedupZillowPhotos(photos).slice(0, 40);
+  }
+
   function collectStructuredMedia(prop, virtualTourUrl) {
     const media = [];
     const seen = new Set();
@@ -326,6 +353,20 @@
         /^(?:unit|floor[\s_-]*plan|plan)$/i.test(String(parsedFloorPlanName).trim())
       ? null
       : String(parsedFloorPlanName).trim();
+    const rawBuilding = value.buildingName ?? value.building_name ?? value.building;
+    const buildingName = rawBuilding && typeof rawBuilding === 'object'
+      ? rawBuilding.name ?? rawBuilding.title ?? rawBuilding.label ?? null
+      : rawBuilding;
+    const buildingCode = value.buildingCode ?? value.building_code ??
+      (rawBuilding && typeof rawBuilding === 'object' ? rawBuilding.code : null);
+    const buildingSourceId = value.buildingId ?? value.building_id ??
+      (rawBuilding && typeof rawBuilding === 'object' ? rawBuilding.id : null);
+    const rawFloor = value.unitFloor ?? value.unit_floor ?? value.floorLabel ??
+      value.floor_label ?? value.floorNumber ?? value.floor_number ?? value.floor;
+    const floorLabel = rawFloor && typeof rawFloor === 'object'
+      ? rawFloor.label ?? rawFloor.name ?? rawFloor.number ?? rawFloor.value ?? null
+      : rawFloor;
+    const sourceId = value.sourceId ?? value.source_id ?? value.unitId ?? value.unit_id ?? value.id;
     const rawBeds = value.bedrooms ?? value.beds ?? value.bedroomCount ??
       value.bedroom_count ?? value.bedCount ?? value.bed_count;
     const bedValue = rawBeds && typeof rawBeds === 'object'
@@ -361,7 +402,7 @@
     if (unitLabel != null && !validUnitLabel && !floorPlanName) return null;
     if (!validUnitLabel && !floorPlanName && bedrooms == null && baths.bathrooms == null && squareFootage == null) return null;
 
-    return {
+    const option = {
       source_kind: validUnitLabel ? 'available_unit' : 'floor_plan',
       unit_number: validUnitLabel || null,
       floor_plan_name: floorPlanName == null ? null : String(floorPlanName).trim(),
@@ -374,6 +415,24 @@
       rent_display: rentDisplay,
       source_order: sourceOrder,
     };
+    if (sourceId != null && String(sourceId).trim()) option.source_id = String(sourceId).trim().slice(0, 120);
+    if (validUnitLabel && buildingName != null && String(buildingName).trim()) {
+      option.building_name = String(buildingName).trim().slice(0, 120);
+    }
+    if (validUnitLabel && buildingCode != null && String(buildingCode).trim()) {
+      option.building_code = String(buildingCode).trim().slice(0, 80);
+    }
+    if (validUnitLabel && buildingSourceId != null && String(buildingSourceId).trim()) {
+      option.building_source_id = String(buildingSourceId).trim().slice(0, 120);
+    }
+    if (validUnitLabel && floorLabel != null && String(floorLabel).trim()) {
+      option.unit_floor = String(floorLabel).trim().slice(0, 60);
+    }
+    if (validUnitLabel) {
+      const photoUrls = collectZillowUnitPhotos(value);
+      if (photoUrls.length) option.photo_urls = photoUrls;
+    }
+    return option;
   }
 
   function getZillowRentBasis(doc) {
@@ -459,6 +518,25 @@
     }
     const key = zillowUnitOptionKey(option);
     const existing = options.get(key);
+    if (existing && existing.source_kind === 'available_unit' && option.source_kind === 'available_unit') {
+      const preferred = zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)
+        ? option
+        : existing;
+      const secondary = preferred === existing ? option : existing;
+      const merged = Object.assign({}, preferred);
+      Object.keys(secondary).forEach(field => {
+        if (merged[field] == null || merged[field] === '') merged[field] = secondary[field];
+      });
+      if (Array.isArray(existing.photo_urls) || Array.isArray(option.photo_urls)) {
+        merged.photo_urls = dedupZillowPhotos([
+          ...(existing.photo_urls || []),
+          ...(option.photo_urls || []),
+        ]).slice(0, 40);
+      }
+      merged.source_order = Math.min(existing.source_order ?? Number.MAX_SAFE_INTEGER, option.source_order ?? Number.MAX_SAFE_INTEGER);
+      options.set(key, merged);
+      return;
+    }
     if (!existing || zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)) {
       options.set(key, option);
     }

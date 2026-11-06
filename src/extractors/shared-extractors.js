@@ -513,9 +513,13 @@
     const key = zillowUnitOptionKey(option);
     const existing = options.get(key);
     if (existing && existing.source_kind === 'available_unit' && option.source_kind === 'available_unit') {
-      const merged = Object.assign({}, existing);
-      Object.keys(option).forEach(field => {
-        if (merged[field] == null || merged[field] === '') merged[field] = option[field];
+      const preferred = zillowUnitOptionCompleteness(option) > zillowUnitOptionCompleteness(existing)
+        ? option
+        : existing;
+      const secondary = preferred === existing ? option : existing;
+      const merged = Object.assign({}, preferred);
+      Object.keys(secondary).forEach(field => {
+        if (merged[field] == null || merged[field] === '') merged[field] = secondary[field];
       });
       if (Array.isArray(existing.photo_urls) || Array.isArray(option.photo_urls)) {
         merged.photo_urls = dedupZillowPhotos([

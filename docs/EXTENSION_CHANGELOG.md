@@ -4,6 +4,20 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.13] - 2026-11-06
+### Preserve Zillow Unit Gallery Facts
+- **Keep unit galleries scoped**: Preserve Zillow source IDs, building and floor facts, and each unit's own photos in synchronized extractor packages.
+- **Merge duplicate units by completeness**: Prefer richer duplicate records while filling missing fields and retaining deduplicated photos.
+- **Keep generated Deno output type-safe**: Include the city fallback used by Zillow titles and normalized records.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.13.
+
+## [v52.7.12] - 2026-11-06
+### Preserve Zillow Unit Inventory Facts
+- **Keep unit galleries scoped**: Preserve Zillow source IDs, building and floor facts, and each unit's own photos in the synchronized extractor packages.
+- **Merge duplicate units by completeness**: Prefer the richer duplicate record while filling missing fields and retaining deduplicated photos.
+- **Keep Deno output type-safe**: Generate the city fallback used by Zillow titles and normalized records.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.12.
+
 ## [v52.7.9] - 2026-11-06
 ### Separate Unit Records From Floor-Plan Layouts
 - **Preserve explicit classification**: Keep records marked as floor plans in the layout group even when they contain a unit-like identifier.
