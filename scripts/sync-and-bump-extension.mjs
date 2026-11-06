@@ -146,9 +146,11 @@ function updateTextFile(filePath, replacements) {
 }
 
 updateTextFile(path.join(ROOT, 'chrome-extension', 'config.js'), [
+  [/^\s*IMPORT_SECRET:\s*['"][^'"]*['"],?\s*\n/m, ''],
   [/VERSION:\s*['"][^'"]+['"]/, `VERSION: '${newVersion}'`],
 ]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'config.js'), [
+  [/^\s*IMPORT_SECRET:\s*['"][^'"]*['"],?\s*\n/m, ''],
   [/VERSION:\s*['"][^'"]+['"]/, `VERSION: '${newVersion}'`],
 ]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
@@ -156,6 +158,10 @@ updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
 ]);
 updateTextFile(path.join(ROOT, 'chrome-extension', 'README.md'), [
   [/^# Choice Properties — Universal Chrome Extension \(v[^)]+\)/m, `# Choice Properties — Universal Chrome Extension (v${newVersion})`],
+]);
+updateTextFile(path.join(ROOT, '.pages-orion', 'README.md'), [
+  [/One-tap mobile save — v[^\n]+/, `One-tap mobile save — v${newVersion}`],
+  [/### v[\d.]+ verification/, `### v${newVersion} verification`],
 ]);
 updateTextFile(path.join(ROOT, 'README.md'), [
   [/\(v[0-9.]+\s*—\s*1-click stage\)/, `(v${newVersion} — 1-click stage)`],

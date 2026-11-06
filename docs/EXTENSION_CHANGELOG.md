@@ -4,6 +4,33 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.6] - 2026-11-06
+### Preserve Authenticated Saves and Source Photo Order
+- **Authenticated background saves**: Keep imports, folder operations, and diagnostics behind the signed-in Choice admin session; remove extension calls that bypass the background worker.
+- **Preserve source images**: Keep original source photo URLs and their feed order through publication instead of automatically transferring them to ImageKit.
+- **Regression coverage**: Update Orion Zillow tests to exercise the extension messaging bridge rather than the retired shared-secret endpoint.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.6.
+
+## [v52.7.5] - 2026-11-06
+### Require Choice Admin Sign-In
+- **Retire shared import secrets**: Authenticate import, folder, and diagnostics requests with the signed-in administrator's Supabase session.
+- **Add Orion account controls**: Provide sign-in and disconnect actions in the Orion popup without storing administrator passwords.
+- **Protect save paths**: Remove unauthenticated direct-save fallbacks and refresh session tokens in the extension background.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.5.
+
+## [v52.7.4] - 2026-11-06
+### Restore Reliable Saves and Community Rent
+- **Fix Chromium save bridge scope**: Make background messaging available to the save handler instead of leaving it scoped to widget injection.
+- **Use one Orion UI runtime**: Load only the current live runtime to prevent two widget engines from competing on the same page.
+- **Preserve apartment community facts**: Keep starting rent, building metadata, and unit options in Orion staging payloads without mislabeling community rent as a unit rent.
+- **Improve Zillow classification and rent detection**: Prefer explicit single-family facts and avoid treating the word "community" as evidence of a unit-specific price.
+- **Prefer gallery-scoped photos**: Use recognized Zillow listing-gallery containers before the page-wide fallback, and cover unrelated listing photos in regression tests.
+- **Enforce import policy fields**: Set the $50 application fee, one-month deposit, and null pet fields at pipeline record construction.
+- **Avoid community UI for individual apartments**: Render the multi-unit inventory section only when the property has community indicators.
+- **Synchronize type options**: Add mobile, multi-family, and missing multi-unit categories to relevant filters and editors.
+- **Regression coverage and CI**: Exercise the Chrome background message path, apartment-community rent staging, and package/runtime validation.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.4.
+
 ## [v52.7.2] - 2026-11-06
 ### Keep Direct Import Timeouts Through Response Parsing
 - **Bound full responses**: Keep the 45-second timeout active through JSON body parsing in Chromium and Orion direct-import fallbacks, so a stalled response body cannot leave Save loading indefinitely.

@@ -489,7 +489,6 @@
     const actionsHtml = `<div class="pd-actions">
       <button class="btn btn-primary btn-sm" id="pd-btn-edit">${ico('edit')} Edit &amp; Upload</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-photos">${ico('photos')} ${_photos.length ? 'All photos ('+_photos.length+')' : 'Manage photos'}</button>
-      <button class="btn btn-ghost btn-sm" id="pd-btn-import-photos" title="Pull photos from the original Zillow/Realtor listing into ImageKit">${ico('dnload')} Import source photos</button>
       <button class="btn btn-ghost btn-sm" id="pd-btn-verify" title="Confirm this listing is still active and available">${ico('check')} Mark as verified</button>
       <a class="btn btn-ghost btn-sm" href="/property.html?id=${esc(p.id)}" target="_blank" rel="noopener">${ico('ext')} Public listing</a>
       <button class="btn btn-ghost btn-sm" id="pd-btn-duplicate" title="Clone this listing as a new draft">${ico('copy')} Duplicate</button>
@@ -752,58 +751,6 @@
 
     // Manage photos button
     document.getElementById('pd-btn-photos')?.addEventListener('click', () => openPhotoManager());
-
-    // Import source photos — calls import-pipeline-photos edge fn (Zillow/Realtor → ImageKit)
-    document.getElementById('pd-btn-import-photos')?.addEventListener('click', async () => {
-      const btn = document.getElementById('pd-btn-import-photos');
-      if (!btn) return;
-
-      // Guard: confirm if photos already exist (re-import adds on top)
-      if (_photos.length > 0) {
-        const proceed = await S.confirm({
-          title:   'Photos already exist',
-          message: `This property already has ${_photos.length} photo${_photos.length !== 1 ? 's' : ''}. Re-importing will add the source photos on top of the existing ones. Continue?`,
-          ok:      'Import anyway',
-          cancel:  'Cancel',
-          danger:  false,
-        });
-        if (!proceed) return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = ico('spin') + ' Importing…';
-      try {
-        const { data, error } = await CP.sb().functions.invoke('import-pipeline-photos', {
-          body: { property_id: propId }
-        });
-        if (error) throw error;
-        const res = typeof data === 'string' ? JSON.parse(data) : data;
-        if (res?.no_source) {
-          S.toast('No scraper source found — this listing was not published from the pipeline.', 'info');
-        } else if (res?.already_imported) {
-          S.toast(`Photos already imported (${res.existing} exist). Delete them first to re-import.`, 'info');
-        } else if (res?.transferred > 0) {
-          S.toast(`${res.transferred} photo${res.transferred !== 1 ? 's' : ''} imported from source to ImageKit ✓`, 'success');
-          // Reload photos section
-          const fresh = await CP.sb().from('property_photos').select('id,url,display_order,watermark_status,file_id').eq('property_id', propId).order('display_order');
-          if (!fresh.error && fresh.data) {
-            _photos = fresh.data.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-            refreshGalleryInPlace();
-            const freshUrls = _photos.map(ph => ph.url).filter(Boolean);
-            bindGallery(freshUrls);
-            const photosBtn = document.getElementById('pd-btn-photos');
-            if (photosBtn) photosBtn.textContent = _photos.length ? 'All photos (' + _photos.length + ')' : 'Manage photos';
-          }
-        } else {
-          S.toast('No photos could be imported — source may no longer be available.', 'info');
-        }
-      } catch (e) {
-        S.toast('Import failed: ' + (e.message || 'unknown error'), 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = ico('dnload') + ' Import source photos';
-      }
-    });
 
     // Mark as Verified — stamps last_verified_at = NOW() via property_mark_verified RPC
     document.getElementById('pd-btn-verify')?.addEventListener('click', async () => {
@@ -1109,7 +1056,7 @@
     const existing = document.getElementById('pd-edit-panel');
     if (existing) existing.remove();
 
-    const PROPERTY_TYPE_OPTIONS = ['', 'apartment', 'house', 'condo', 'townhouse', 'studio', 'duplex', 'room', 'land'].map(v =>
+    const PROPERTY_TYPE_OPTIONS = ['', 'apartment', 'house', 'condo', 'townhouse', 'studio', 'room', 'duplex', 'triplex', 'multi_family', 'loft', 'mobile_home', 'land', 'farm', 'commercial', 'other'].map(v =>
       `<option value="${v}" ${p.property_type === v ? 'selected' : ''}>${v ? (v.charAt(0).toUpperCase() + v.slice(1)) : 'Select type…'}</option>`
     ).join('');
 

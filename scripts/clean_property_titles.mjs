@@ -43,8 +43,8 @@ const patchJSON = (endpoint, body, key) => new Promise((resolve, reject) => {
 });
 
 async function main() {
-  const configs = await fetchSB(CREDENTIALS_CONFIG.SUPABASE_URL + '/rest/v1/credentials_config?select=*');
-  const serviceKey = (configs.find(c => c.key === 'SUPABASE_SERVICE_ROLE_KEY') || {}).value;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
 
   const ids = [
     '72e560b8-3565-42e8-91b8-4a57a0357c84', '8c6a4ba6-b3bb-418d-827d-bcdc22e942ac',

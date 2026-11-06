@@ -102,13 +102,13 @@ There are **4 active channels** that add properties to `pipeline_properties` in 
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key |
 | `SUPABASE_ANON_KEY` | Anon key |
-| `SHORTCUT_IMPORT_SECRET` | Shared secret for extension imports |
+
+Extension imports require a verified Choice administrator access token. The extension obtains it through the admin sign-in flow and stores only a rotating refresh token in extension storage; no shared import secret is embedded in extension files.
 
 ### Extension config (`chrome-extension/config.js` / `.pages-orion/config.js`)
 
 | Variable | Description |
 |----------|-------------|
-| `CP_CONFIG.IMPORT_SECRET` | Shared secret for extension imports |
 | `CP_CONFIG.EDGE_URL` | Edge function URL |
 
 ---

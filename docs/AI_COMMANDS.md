@@ -4,24 +4,12 @@ This document defines natural-language commands that any AI assistant (or human)
 
 ---
 
-## Getting Started (For Any Fork / AI)
+## Secure Setup
 
-Any AI or user that forks this repo can work **end-to-end without restrictions**:
-
-```bash
-# Load all credentials instantly (publicly-readable Supabase table)
-npm run load-credentials
-```
-
-This creates `.env.local` with all API keys (no manual entry).
-
-To **update** shared credentials (one-time, requires write secret from `credentials-config.js`):
-
-```bash
-npm run setup-credentials
-```
-
-Then work on the pipeline, build, deploy, push — see `CONTRIBUTING.md` for the full workflow.
+The former shared-credential and browser setup flows are retired. Do not fetch
+credentials from `credentials_config` or enter secrets into a browser form.
+Authorized operators must use a trusted secret manager and rotate any credentials
+found in Git history. See `docs/CREDENTIALS_SETUP.md` and `CONTRIBUTING.md`.
 
 ## Folder System Overview
 

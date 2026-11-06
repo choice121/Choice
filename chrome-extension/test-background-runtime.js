@@ -14,7 +14,8 @@ async function sendMessage(listener, message) {
 async function testBackground(file) {
   const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   let messageListener;
-  const requestedUrls = [];
+  const requests = [];
+  const storageData = { cp_extension_admin_refresh_token: 'initial-refresh-token' };
   const chrome = {
     runtime: {
       onMessage: {
@@ -22,19 +23,50 @@ async function testBackground(file) {
       },
       getManifest() { return { version: 'test' }; },
     },
-    storage: {},
+    storage: {
+      local: {
+        async get(key) {
+          return typeof key === 'string' ? { [key]: storageData[key] } : {};
+        },
+        async set(values) {
+          Object.assign(storageData, values);
+        },
+        async remove(key) {
+          delete storageData[key];
+        },
+      },
+    },
     action: {},
   };
 
   vm.runInNewContext(source, {
     AbortController,
     AbortSignal,
+    URL,
     chrome,
-    fetch: async (url) => {
-      requestedUrls.push(url);
+    fetch: async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url).endsWith('/config.js')) {
+        return {
+          ok: true,
+          text: async () => "var CONFIG = { SUPABASE_URL: 'https://tlfmwetmhthpyrytrcfo.supabase.co', SUPABASE_ANON_KEY: 'test-anon-key' };",
+        };
+      }
+      if (String(url).includes('/auth/v1/token?grant_type=')) {
+        return {
+          ok: true,
+          json: async () => ({
+            access_token: 'test-access-token',
+            refresh_token: 'rotated-refresh-token',
+            expires_in: 3600,
+          }),
+        };
+      }
       return {
         ok: true,
-        json: async () => ({ ok: true, report_id: 'diagnostic-test-id' }),
+        json: async () => String(url).endsWith('/extension-diagnostics')
+          ? { ok: true, report_id: 'diagnostic-test-id' }
+          : { ok: true, folders: [] },
       };
     },
     navigator: { userAgent: 'Chrome', onLine: true },
@@ -44,13 +76,23 @@ async function testBackground(file) {
   });
 
   assert.equal(typeof messageListener, 'function', `${file} registers its listener without window`);
+  const login = await sendMessage(messageListener, {
+    type: 'ADMIN_SIGN_IN',
+    email: 'admin@example.com',
+    password: 'not-a-real-password',
+  });
+  assert.equal(login.ok, true);
+
   const diagnostic = await sendMessage(messageListener, {
     type: 'SEND_DIAGNOSTIC',
     diagnostic: { status: 'failed' },
   });
   assert.equal(diagnostic.ok, true);
   assert.equal(diagnostic.report_id, 'diagnostic-test-id');
-  assert.match(requestedUrls[0], /\/functions\/v1\/extension-diagnostics$/);
+  const diagnosticRequest = requests.find((request) => request.url.endsWith('/extension-diagnostics'));
+  assert.ok(diagnosticRequest);
+  assert.equal(diagnosticRequest.options.headers.Authorization, 'Bearer test-access-token');
+  assert.equal(diagnosticRequest.options.headers.apikey, 'test-anon-key');
 
   const imported = await sendMessage(messageListener, {
     type: 'UPLOAD_PAYLOAD',
@@ -58,7 +100,11 @@ async function testBackground(file) {
     settings: { offlineQueue: false },
   });
   assert.equal(imported.ok, true);
-  assert.match(requestedUrls[1], /\/functions\/v1\/receive-pipeline-import$/);
+  const importRequest = requests.find((request) => request.url.endsWith('/receive-pipeline-import'));
+  assert.ok(importRequest);
+  assert.equal(importRequest.options.headers.Authorization, 'Bearer test-access-token');
+  assert.equal(Object.keys(importRequest.options.headers).some((name) => /secret/i.test(name)), false);
+  assert.equal(new URL(importRequest.url).searchParams.has('secret'), false);
 }
 
 Promise.all([

@@ -4,13 +4,15 @@ One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
-## One-tap mobile save — v28.0.6 (2026-10-16)
+## One-tap mobile save — v52.7.6
 
 On phones, the importer opens as a compact property-and-rent bar with a touch-friendly **Save** action. You do not need to open the full panel or refresh Zillow before saving. Failed saves expand the panel and offer a retry action.
 
 The extension checks for single-page property navigation at a short interval and updates the compact summary when the same listing finishes loading more facts. Before saving, it checks that the listing ID and address are available and retries extraction briefly; it will not send the previous listing after a Zillow navigation.
 
 Listing data and photos are sent as source facts and source CDN URLs. The mobile content script does not download, base64-encode, optimize, or re-upload listing photos; their source order is preserved, with the first photo remaining first. This avoids making photo processing part of the save tap.
+
+Before the first save, open the extension popup and connect a Choice administrator account. The importer validates admin access before confirming sign-in.
 
 ### Mobile save and troubleshooting
 
@@ -20,11 +22,13 @@ Listing data and photos are sent as source facts and source CDN URLs. The mobile
 4. If the listing is still loading, wait for the page facts to appear and tap **Retry**. If the property changed, the extension refreshes its summary and requires a save for the current listing.
 5. Open the [admin pipeline](https://choice-properties-site.pages.dev/admin/pipeline.html) to confirm the staged record.
 
-The extension first asks its background worker to save. If that message bridge does not respond, it tries the import endpoint directly. A network outage can be queued for later synchronization; a server validation error is shown for correction rather than reported as a successful save.
+The extension requires a Choice administrator sign-in from the popup. Listing saves and folder actions go through the background worker with a verified bearer token; the content script does not use a shared secret or make an unauthenticated direct-save fallback. A network outage can be queued for later synchronization; a server validation error is shown for correction rather than reported as a successful save.
 
-### v28.0.6 verification
+The password is used only for sign-in and is not stored. A rotating Supabase refresh token is kept in extension storage and can be removed with **Disconnect account**.
 
-The automated browser test in `tests/visual/orion-mobile-widget.spec.js` simulates an iPhone viewport and Zillow single-page navigation, checks that the compact bar updates without a reload, and verifies that one tap submits the new listing's ID, address, and rent. This test uses a mocked import endpoint; it does not replace testing the installed extension on a physical iPhone in Orion.
+### v52.7.6 verification
+
+The automated browser test in `tests/visual/orion-mobile-widget.spec.js` simulates an iPhone viewport and Zillow single-page navigation, checks that the compact bar updates without a reload, and verifies that one tap submits the new listing's ID, address, and rent. Community listings retain starting rent separately from unit-level rent. This test uses a mocked import endpoint; it does not replace testing the installed extension on a physical iPhone in Orion.
 
 ## How it works
 
@@ -68,7 +72,7 @@ Install or enable the ZIP using Orion's extension manager, then reload the listi
 | Beds, baths, sqft, lot, year built | Direct fields |
 | Property type | `homeType` → normalized |
 | Description | `description` |
-| Pets | Choice policy: pet-friendly |
+| Pets | Intentionally omitted |
 | HVAC, laundry, parking | `resoFacts.heating/cooling/laundry/parking` |
 | Appliances, amenities, utilities | `resoFacts.appliances/communityFeatures/…` |
 | Walk / transit / bike scores | `walkScore`, `transitScore`, `bikeScore` |

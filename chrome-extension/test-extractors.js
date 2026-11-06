@@ -398,6 +398,40 @@ t('Zillow DOM extracts lazy-loaded gallery photos and ignores non-photo CDN asse
   assert.strictEqual(photos.length, 11);
   assert.ok(photos.every((url) => url.includes('/fp/')));
 });
+t('Zillow DOM prefers listing gallery photos over unrelated property-card photos', () => {
+  const galleryPhotos = [
+    'https://photos.zillowstatic.com/fp/gallery-first-photo.jpg',
+    'https://photos.zillowstatic.com/fp/gallery-second-photo.jpg',
+  ].map((url) => ({
+    currentSrc: url,
+    src: url,
+    attributes: [],
+    getAttribute: () => null,
+  }));
+  const relatedListingPhoto = {
+    currentSrc: 'https://photos.zillowstatic.com/fp/related-listing-photo.jpg',
+    src: 'https://photos.zillowstatic.com/fp/related-listing-photo.jpg',
+    attributes: [],
+    getAttribute: () => null,
+  };
+  const d = doc(cache({
+    zpid: 790,
+    address: { streetAddress: '501 Magnolia Ave', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: 1450,
+    responsivePhotos: [],
+  }));
+  d.querySelector = () => null;
+  d.querySelectorAll = (selector) => {
+    if (selector === 'script[type="application/ld+json"]') return [];
+    if (selector.includes('[data-testid="bdp-gallery"]')) return galleryPhotos;
+    if (selector.startsWith('img,')) return galleryPhotos.concat(relatedListingPhoto);
+    return [];
+  };
+  d.body = { innerText: '' };
+
+  const payload = api.extractZillow(d, Z);
+  assert.deepStrictEqual(JSON.parse(payload.original_image_urls), galleryPhotos.map((photo) => photo.src));
+});
 t('Zillow building page extracts nested cache data, visible address, rent, and gallery photos', () => {
   const galleryUrls = Array.from({ length: 11 }, (_, index) =>
     `https://photos.zillowstatic.com/fp/${String(index + 1).padStart(16, '0')}-gallery.jpg`);
@@ -978,6 +1012,24 @@ t('Zillow DOM media detection captures video walkthrough URLs', () => {
   const p = api.extractZillowFromDom(d, 'https://www.zillow.com/homedetails/123-Example-St-Dallas-TX-75201/12345678_zpid/');
   assert.ok(Array.isArray(p.media));
   assert.ok(p.media.some(item => item.kind === 'video' && /tour\.mp4/i.test(item.url)));
+});
+
+t('Zillow explicit single-family facts override weak apartment page text', () => {
+  const singleFamilyDoc = doc(cache({
+    zpid: 12345,
+    address: { streetAddress: '100 First St', city: 'Columbus', state: 'OH', zipcode: '43215' },
+    price: 1850,
+    bedrooms: 3,
+    bathrooms: 2,
+    homeType: 'SINGLE_FAMILY',
+    responsivePhotos: [],
+  }));
+  singleFamilyDoc.body = { innerText: 'Apartment building. See available units.' };
+
+  const payload = api.extractZillow(singleFamilyDoc, ZMULTI);
+  assert.strictEqual(payload.property_type, 'SINGLE_FAMILY');
+  assert.strictEqual(payload.monthly_rent, 1850);
+  assert.notStrictEqual(payload.is_multi_unit, true);
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

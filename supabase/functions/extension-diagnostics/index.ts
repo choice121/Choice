@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buildCorsHeaders, corsResponse, isAllowedOrigin } from "../_shared/cors.ts";
+import { buildCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -23,10 +23,12 @@ const FACT_KEYS = new Set([
 ]);
 
 function json(data: unknown, status: number, origin: string | null) {
+  const corsHeaders = buildCorsHeaders(origin);
+  if (origin === "null") corsHeaders["Access-Control-Allow-Origin"] = "null";
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...buildCorsHeaders(origin),
+      ...corsHeaders,
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
@@ -245,8 +247,14 @@ async function authorizeAdmin(req: Request) {
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-  if (req.method === "OPTIONS") return corsResponse(origin);
-  if (!isAllowedOrigin(origin)) return json({ error: "origin_not_allowed" }, 403, origin);
+  if (req.method === "OPTIONS") {
+    const headers = buildCorsHeaders(origin);
+    if (origin === "null") headers["Access-Control-Allow-Origin"] = "null";
+    return new Response(null, { status: 204, headers });
+  }
+  if (origin !== "null" && !isAllowedOrigin(origin)) {
+    return json({ error: "origin_not_allowed" }, 403, origin);
+  }
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, origin);
   if (!SUPABASE_URL || !SERVICE_ROLE) return json({ error: "service_unavailable" }, 503, origin);
 
@@ -263,19 +271,16 @@ Deno.serve(async (req) => {
     return json({ error: "invalid_json" }, 400, origin);
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const auth = await authorizeAdmin(req);
+  if ("error" in auth) {
+    const status = auth.error === "unauthorized" ? 401 :
+      auth.error === "forbidden" ? 403 :
+      auth.error === "service_unavailable" ? 503 : 500;
+    return json({ error: auth.error }, status, origin);
+  }
+  const admin = auth.admin;
 
   if (body.action === "submit") {
-    const expectedSecret = Deno.env.get("SHORTCUT_IMPORT_SECRET") || Deno.env.get("IMPORT_SECRET");
-    if (!expectedSecret) {
-      console.error("[extension-diagnostics] Import secret is not configured");
-      return json({ error: "diagnostics_service_not_configured" }, 503, origin);
-    }
-    if (req.headers.get("x-import-secret") !== expectedSecret) {
-      return json({ error: "invalid_import_secret" }, 401, origin);
-    }
     const diagnostic = sanitizeDiagnostic(body.diagnostic);
     if (!diagnostic) return json({ error: "invalid_diagnostic_report" }, 400, origin);
     const extensionVersion = cleanText(body.extension_version, 30);
@@ -303,13 +308,7 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === "list") {
-    const auth = await authorizeAdmin(req);
-    if ("error" in auth) {
-      const status = auth.error === "unauthorized" ? 401 :
-        auth.error === "forbidden" ? 403 : 500;
-      return json({ error: auth.error }, status, origin);
-    }
-    const { data, error } = await auth.admin.from("extension_diagnostic_reports")
+    const { data, error } = await admin.from("extension_diagnostic_reports")
       .select("id, extension_version, source, source_url, status, diagnostic, created_at, expires_at")
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })

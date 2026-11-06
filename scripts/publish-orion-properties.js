@@ -1,5 +1,4 @@
-// Publishes the 4 Zillow properties added via Orion, then transfers photos to ImageKit.
-// Uses the pipeline_publish RPC + import-pipeline-photos edge function.
+// One-off Orion publisher. Photos remain on their source CDN URLs.
 const PROJECT_REF = 'tlfmwetmhthpyrytrcfo';
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN || (process.argv.find(a => a.startsWith('--token=')) || '').split('=')[1];
 if (!TOKEN) {
@@ -55,12 +54,6 @@ async function main() {
     console.log(`--- ${p.address}, ${p.city} ---`);
     console.log(`  Images: ${imgCount} | Quality: ${p.data_quality_score}/100 | Rent: $${p.monthly_rent}`);
 
-    if (imgCount < 6) {
-      console.log(`  SKIP: only ${imgCount} image(s) — below 6-photo minimum. Cannot publish.`);
-      console.log('');
-      continue;
-    }
-
     // If already published, use the existing choice_property_id
     let propId = p.choice_property_id;
     if (propId) {
@@ -77,20 +70,7 @@ async function main() {
       console.log(`  Published! property_id = ${propId}`);
     }
 
-    // Transfer photos to ImageKit via edge function
-    const edgeRes = await fetch(`${SUPABASE_URL}/functions/v1/import-pipeline-photos`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SERVICE_KEY}`,
-        'x-import-secret': 'cp_import_7Kx3m9P2w5',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ pipeline_id: p.id, property_id: propId }),
-    });
-    const edgeText = await edgeRes.text();
-    let edgeData = {};
-    try { edgeData = JSON.parse(edgeText); } catch {}
-    console.log(`  Photo transfer: HTTP ${edgeRes.status} — ${edgeData.transferred || 0} transferred, ${edgeData.skipped || 0} skipped`);
+    console.log(`  Published with ${imgCount} source photo URL(s); original order is retained.`);
     console.log('');
   }
   console.log('Done.');

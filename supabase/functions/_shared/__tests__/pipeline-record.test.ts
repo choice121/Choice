@@ -54,6 +54,7 @@ testRunner('buildPipelineRecord keeps apartment community inventory in existing 
     floors: 5,
     price_range: '$1,200-$2,400',
     rent_basis: 'Base rent',
+    community_starting_rent: 1450,
     original_data: JSON.stringify({
       _import: 'browser-extension-v52.7.1',
       source_marker: 'keep-this',
@@ -79,9 +80,22 @@ testRunner('buildPipelineRecord keeps apartment community inventory in existing 
   assertEquals(originalData.floors, 5);
   assertEquals(originalData.price_range, '$1,200-$2,400');
   assertEquals(originalData.rent_basis, 'Base rent');
+  assertEquals(originalData.community_starting_rent, 1450);
   assertEquals(originalData.unit_options[0].unit_number, 'A101');
   assertEquals(originalData.unit_options[0].bathrooms, 1.5);
   assertEquals(originalData.media[0].kind, 'floor_plan');
+});
+
+testRunner('buildPipelineRecord preserves the apartment community starting rent from the import payload', () => {
+  const record = buildPipelineRecord({
+    source: 'zillow',
+    source_listing_id: 'ZPID-APT-RENT',
+    property_type: 'APARTMENT',
+    is_multi_unit: true,
+    community_starting_rent: 1450,
+  });
+
+  assertEquals(JSON.parse(String(record.original_data)).community_starting_rent, 1450);
 });
 
 testRunner('buildPipelineRecord omits prohibited listing facts and preserves unknown features', () => {
@@ -93,6 +107,24 @@ testRunner('buildPipelineRecord omits prohibited listing facts and preserves unk
     state: 'OH',
     zip: '43229',
     monthly_rent: 1700,
+    security_deposit: 2400,
+    application_fee: 0,
+    pets_allowed: true,
+    pet_types_allowed: '["dogs"]',
+    pet_deposit: 300,
+    description: [
+      'Bright home with a renovated kitchen.',
+      'Security deposit is $2,400 and available immediately.',
+      'Pets allowed; no smoking.',
+      'Beware of rental scams and do not pay by Zelle.',
+      'Call agent at 555-123-4567.',
+      'Application fee is waived.',
+      'Available November 1st.',
+      'Pets are considered.',
+      'No cats.',
+      'Take a tour today.',
+    ].join(' '),
+    original_description: 'Bright home with a renovated kitchen. Requirements & Qualifications: credit score must exceed 600.',
     available_date: '2026-11-01',
     minimum_lease_months: 12,
     lease_terms: ['12 months'],
@@ -102,6 +134,19 @@ testRunner('buildPipelineRecord omits prohibited listing facts and preserves unk
   });
 
   assertEquals(record.available_date, null);
+  assertEquals(record.security_deposit, 1700);
+  assertEquals(record.application_fee, 50);
+  assertEquals(record.pets_allowed, null);
+  assertEquals(record.pet_types_allowed, null);
+  assertEquals(record.pet_deposit, null);
+  assertEquals(
+    record.description,
+    'Bright home with a renovated kitchen. Application Fee: $50. Submit your rental application today at Choice Properties.',
+  );
+  assertEquals(
+    record.original_description,
+    'Bright home with a renovated kitchen. Application Fee: $50. Submit your rental application today at Choice Properties.',
+  );
   assertEquals(record.minimum_lease_months, null);
   assertEquals(record.lease_terms, '[]');
   assertEquals(record.smoking_allowed, null);
@@ -115,6 +160,7 @@ testRunner('buildPipelineRecord omits prohibited listing facts and preserves unk
     state: 'OH',
     zip: '43229',
     monthly_rent: 1700,
+    description: 'A clean description. Application Fee: $50. Submit your rental application today at Choice Properties.',
   });
   assertEquals(record.data_quality_score, withoutProhibitedFacts.data_quality_score);
   assertEquals(record.data_quality_score, qualityScore(record));

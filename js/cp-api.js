@@ -309,8 +309,9 @@ const _TYPE_FILTER_MAP = {
   condo:     ['condo', 'condos', 'CONDOS', 'CONDO'],
   townhouse: ['townhouse', 'townhomes', 'TOWNHOMES', 'TOWNHOUSE'],
   duplex:    ['duplex', 'DUPLEX'],
+  triplex:   ['triplex', 'TRIPLEX'],
   multi_family: ['multi_family', 'MULTI_FAMILY', 'multi-family'],
-  mobile_home:  ['mobile_home', 'MOBILE_HOME', 'mobile-home'],
+  mobile_home:  ['mobile_home', 'MOBILE_HOME', 'mobile-home', 'MOBILE', 'mobile', 'manufactured'],
   studio:    ['studio', 'STUDIO'],
 };
 
@@ -323,6 +324,7 @@ function _normalizePropertyType(t) {
     apartment: 'apartment', townhome: 'townhouse', townhomes: 'townhouse',
     townhouse: 'townhouse', condo: 'condo', condos: 'condo',
     duplex: 'duplex', studio: 'studio', mobile_home: 'mobile_home',
+    mobile: 'mobile_home', manufactured: 'mobile_home',
     multi_family: 'multi_family', land: 'land', commercial: 'commercial',
     other: 'other',
   };

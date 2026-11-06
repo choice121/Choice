@@ -87,6 +87,57 @@ export function safeBool(v: unknown): boolean | null {
   return null;
 }
 
+const APPLICATION_NOTE = 'Application Fee: $50. Submit your rental application today at Choice Properties.';
+const PROHIBITED_DESCRIPTION_BLOCKS = [
+  /\*\*\*\s*BEWARE[\s\S]*?\*\*\*/gi,
+  /\*\*\*\s*IF\s+YOU\s+READ\s+THIS[\s\S]*?\*\*\*/gi,
+  /(?:REQUIREMENTS\s*&\s*QUALIFICATIONS|QUALIFICATIONS\s*&\s*REQUIREMENTS|RENTAL\s+REQUIREMENTS):?[\s\S]*?(?=(?:Key Property Features|Property Highlights|•|\n\n[A-Z]|$))/gi,
+];
+const PROHIBITED_DESCRIPTION_SENTENCES = [
+  /\bsecurity\s+deposit\b/i,
+  /\b(?:minimum\s+)?lease\s+(?:term|duration|length)\b|\b\d+[- ]month\s+lease\b/i,
+  /\bavailab(?:le|ility)\b|\bmove[- ]in\b/i,
+  /\bsmok(?:e|ing)(?:-free|\s+policy|\s+allowed|\s+not\s+allowed)?\b/i,
+  /\b(?:pets?|animals?|cats?|dogs?)\b/i,
+  /\b(?:schedule|book|request|arrange)\s+(?:a\s+)?(?:tour|showing|viewing)\b|\b(?:tour|showing|viewing)\s+(?:this|the|the property|the home|today|now)\b|\bopen\s+house\b|\bcontact\s+(?:the\s+)?(?:agent|owner|landlord|manager)\b/i,
+  /\bapply\s+(?:through|via|on|at)\s+(?:zillow|realtor|turbotenant|apartments\.com|rentcafe|rentspree|appfolio)\b|https?:\/\/\S+/i,
+  /\bMLS\s*#?\s*\d+\b|\blisted\s+by\b|\bcourtesy\s+of\b/i,
+  /\bfor\s+sale\b|\bmortgage\b|\bdown\s+payment\b|\bclosing\s+costs?\b|\bmake\s+an\s+offer\b/i,
+  /\b(?:free|no|zero|waived|complimentary)\s+(?:application\s+)?fee\b|\b(?:application|app)\s+fee\s+(?:is\s+)?(?:free|waived|zero|complimentary)\b|\b(?:application|app)\s+fee\b[^.!?\n]*\$?\s*(?:0|[1-4]?\d|5[1-9]|[6-9]\d|\d{3,})\b|\$\s*(?:0|[1-4]?\d|5[1-9]|[6-9]\d|\d{3,})\s*(?:application|app)\s+fee\b/i,
+  /\bno\s+corporate\s+leases\b|\bairbnb\b|\bcredit\s+score\b|\bminimum\s+\d{3}\s+credit\b/i,
+  /\bincome\s+must\s+exceed\b|\b3\.0\s*x?\s*(?:the\s+)?(?:monthly\s+)?rent\b|\bthree\s+times\s+the\s+monthly\s+rent\b/i,
+  /\bno\s+evictions\s+or\s+broken\s+leases\b|\bno\s+criminal\s+history\b|\bapplication\s+pending\b|\bwaiting\s+list\s+options?\b/i,
+  /\bphotos\s+are\s+stock\s+images\b|\bpictures\s+are\s+for\s+marketing\s+purposes\b|\billustrative\s+purposes\s+only\b|\bvirtual\s+furniture\s+staging\b/i,
+  /\b(?:beware|warning|alert|notice|protect yourself)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?)\b|\bscam(?:s|mer|mers)?\b/i,
+  /\b(?:craigslist|facebook\s+marketplace|tiktok|offerup)\b|\b(?:do\s+not|don['']t|never)\s+(?:advertise|post|list)\s+on\b/i,
+  /\b(?:cash\s*apps?|cashapp|zelle|paypal|venmo|apple\s*pay|wire\s*transfers?|western\s*union|money\s+orders?)\b|\bnever\s+wire\s+money\b|\bwire\s+funds\b/i,
+  /\b(?:requirements\s*&\s*qualifications|qualifications?\s*&\s*requirements|rental\s+requirements|lease\s+requirements|meets\s+all\s+lease\s+requirements)\b/i,
+];
+const PROHIBITED_CONTACT = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/i;
+
+export function sanitizePipelineDescription(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  let cleaned = value;
+  for (const pattern of PROHIBITED_DESCRIPTION_BLOCKS) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  const sentences = cleaned
+    .replace(/We\s+do\s+not\s+advertise\s+on\s+Craigslist\s+or\s+TikTok\.\s*/gi, '')
+    .replace(/We\s+also\s+do\s+not\s+ask\s+for\s+payment\s+via[^.!?\n]*[.!?]?\s*/gi, '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((sentence) => !PROHIBITED_DESCRIPTION_SENTENCES.some((pattern) => pattern.test(sentence)))
+    .filter((sentence) => !PROHIBITED_CONTACT.test(sentence))
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+  const sourceText = sentences.join(' ').replace(/[ \t]{2,}/g, ' ').trim();
+  if (!sourceText) return null;
+  if (/application fee:\s*\$50\b/i.test(sourceText)) return sourceText;
+  return sourceText + ' ' + APPLICATION_NOTE;
+}
+
 export function extractFeaturesFromNarrative(desc: string | null | undefined): Record<string, any> {
   if (!desc || typeof desc !== 'string') return {};
   const text = desc.toLowerCase();
@@ -279,6 +330,7 @@ export interface PipelineRecordInput {
   is_multi_unit?: boolean | null;
   price_range?: string | null;
   rent_basis?: string | null;
+  community_starting_rent?: number | null;
   unit_options?: unknown[] | null;
   media?: unknown[] | null;
   bedrooms?: number | null;
@@ -407,6 +459,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     floors: safeInt(body.floors),
     price_range: safeStr(body.price_range),
     rent_basis: safeStr(body.rent_basis),
+    community_starting_rent: safeInt(body.community_starting_rent),
     unit_options: Array.isArray(body.unit_options) ? body.unit_options.slice(0, 100) : [],
     media: Array.isArray(body.media) ? body.media.slice(0, 100) : [],
     _source:     source,
@@ -421,7 +474,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
       if (supplied && typeof supplied === 'object' && !Array.isArray(supplied)) {
         const merged = { ...originalData, ...supplied };
         [
-          'building_name', 'is_multi_unit', 'total_units', 'floors',
+          'building_name', 'is_multi_unit', 'total_units', 'floors', 'community_starting_rent',
           'price_range', 'rent_basis',
         ].forEach((key) => {
           if (merged[key] == null) merged[key] = originalData[key];
@@ -477,10 +530,10 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
 
     // Financials
     monthly_rent:         safeInt(body.monthly_rent),
-    security_deposit:     safeInt(body.security_deposit),
+    security_deposit:     safeInt(body.monthly_rent),
     last_months_rent:     safeInt(body.last_months_rent),
-    application_fee:      safeInt(body.application_fee),
-    pet_deposit:          safeInt(body.pet_deposit),
+    application_fee:      50,
+    pet_deposit:          null,
     admin_fee:            safeInt(body.admin_fee),
     move_in_special:      safeStr(body.move_in_special),
     parking_fee:          safeInt(body.parking_fee),
@@ -488,18 +541,18 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     tax_value:            null,
 
     // Listing details
-    description:          safeStr(body.description),
-    original_description: safeStr(body.original_description) ?? safeStr(body.description),
+    description:          sanitizePipelineDescription(body.description),
+    original_description: sanitizePipelineDescription(body.original_description ?? body.description),
     showing_instructions: safeStr(body.showing_instructions),
     available_date:       null,
     minimum_lease_months: null,
     lease_terms:          '[]',
 
     // Pets & policies
-    pets_allowed:         safeBool(body.pets_allowed),
-    pet_types_allowed:    safeJsonStr(body.pet_types_allowed) ?? '[]',
-    pet_weight_limit:     safeInt(body.pet_weight_limit),
-    pet_details:          safeStr(body.pet_details),
+    pets_allowed:         null,
+    pet_types_allowed:    null,
+    pet_weight_limit:     null,
+    pet_details:          null,
     smoking_allowed:      null,
 
     // Amenities & features

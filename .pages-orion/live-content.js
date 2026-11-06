@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v52.7.2
+// Choice Properties — Live Content Script v52.7.6
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -21,50 +21,7 @@
   window.__CP_LIVE_CONTENT_LOADED__ = true;
   window.__CP_LIVE_CONTENT_VERSION__ = VERSION;
 
-  function resolveConfigValue(name, fallback) {
-    var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
-    var candidates = [
-      config[name],
-      config[name.toLowerCase()],
-      config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
-      config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
-      config[name.replace(/([A-Z])/g, '_$1')],
-      window && window.__CP_IMPORT_SECRET__
-    ];
-    for (var i = 0; i < candidates.length; i++) {
-      if (candidates[i] != null && String(candidates[i]).trim() !== '') return String(candidates[i]);
-    }
-    try {
-      if (typeof localStorage !== 'undefined') {
-        var localConfigRaw = localStorage.getItem('cp_config');
-        if (localConfigRaw) {
-          var localConfig = JSON.parse(localConfigRaw);
-          if (localConfig && typeof localConfig === 'object') {
-            for (var j = 0; j < candidates.length; j++) {
-              if (candidates[j] != null && String(candidates[j]).trim() !== '') return String(candidates[j]);
-            }
-            if (localConfig[name] != null && String(localConfig[name]).trim() !== '') return String(localConfig[name]);
-            if (localConfig[name.toLowerCase()] != null && String(localConfig[name.toLowerCase()]).trim() !== '') return String(localConfig[name.toLowerCase()]);
-            if (localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()] != null && String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]).trim() !== '') return String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]);
-          }
-        }
-        if (name === 'IMPORT_SECRET') {
-          var storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
-          if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
-        }
-        if (name === 'EDGE_URL') {
-          var storedEdge = localStorage.getItem('cp_pipeline_edge_url');
-          if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
-        }
-      }
-    } catch (e) {}
-    return fallback;
-  }
-
-  // ── Configuration ──────────────────────────────────────────
-  var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
-  var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
-  var VERSION  = '52.7.2-live';
+  var VERSION  = '52.7.6-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -159,13 +116,7 @@
         return bgRes.folders;
       }
     }
-    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
-    var res = await fetch(url);
-    if (res.ok) {
-      var data = await res.json();
-      if (data && Array.isArray(data.folders)) return data.folders;
-    }
-    return null;
+    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
   }
 
   async function apiCreateFolder(name, description) {
@@ -187,20 +138,7 @@
         return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
       }
     }
-    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
-      body: JSON.stringify({
-        action: 'create_folder',
-        name: rawName,
-        description: rawDesc
-      })
-    });
-    var data = await res.json();
-    if (res.ok && data && data.ok && data.id) {
-      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
-    }
-    throw new Error((data && data.error) || 'Failed to create folder');
+    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
   }
 
   // ── Inject Custom Styles ────────────────────────────────────
@@ -1059,9 +997,6 @@
     return urls;
   }
 
-  function dedupePhotoUrls(urls) {
-    var seen = new Set();
-
   function normalizeMediaArray(items) {
     if (!Array.isArray(items)) return [];
     var normalized = [];
@@ -1107,6 +1042,9 @@
 
     return normalized;
   }
+
+  function dedupePhotoUrls(urls) {
+    var seen = new Set();
     var unique = [];
     if (!Array.isArray(urls)) return unique;
     urls.forEach(function (raw) {
@@ -1159,6 +1097,8 @@
     if (extracted && (extracted.monthly_rent || extracted.rent)) {
       var rentNum = extracted.monthly_rent || extracted.rent;
       rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
+    } else if (extracted && extracted.community_starting_rent != null) {
+      rentStr = 'Starting at $' + Number(extracted.community_starting_rent).toLocaleString() + '/mo';
     }
 
     var bedsBaths = 'Listing details';
@@ -1792,7 +1732,9 @@
         });
       }
 
-      var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
+      var rentVal = extracted.monthly_rent != null
+        ? extracted.monthly_rent
+        : (extracted.rent != null ? extracted.rent : null);
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
       var mediaItems = normalizeMediaArray(extracted.media);
@@ -1835,11 +1777,17 @@
         floors: extracted.floors,
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
-        property_type: extracted.property_type || 'APARTMENT',
+        building_name: extracted.building_name,
+        is_multi_unit: extracted.is_multi_unit,
+        price_range: extracted.price_range,
+        rent_basis: extracted.rent_basis,
+        community_starting_rent: extracted.community_starting_rent,
+        unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],
+        property_type: extracted.property_type || null,
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
         available_date: null,
-        pets_allowed: true, // Choice Properties standard
+        pets_allowed: null,
         application_fee: 50, // Choice Properties standard
         security_deposit: rentVal,
         last_months_rent: extracted.last_months_rent,
@@ -1867,7 +1815,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v52.7.2-live',
+        _import: 'browser-extension-v52.7.6-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1946,8 +1894,8 @@
     var message = rawError && typeof rawError === 'string' ? rawError : (rawError && rawError.message ? rawError.message : 'Save failed');
     var text = String(message).trim();
     if (!text) return 'Save failed';
-    if (/invalid import secret|401|not configured|missing.*secret|secret.*invalid/i.test(text)) {
-      return 'Import secret missing or invalid. Update extension config and retry.';
+    if (/401|administrator sign-in|sign-in expired|connect your choice admin/i.test(text)) {
+      return 'Connect your Choice admin account in the extension popup, then retry.';
     }
     if (/timed out|timeout|background save timed out/i.test(text)) {
       return 'Save timed out. Please retry.';
@@ -2009,39 +1957,12 @@
       }
     }
 
-    try {
-      var directController = new AbortController();
-      var directTimeout = setTimeout(function () { directController.abort(); }, 45_000);
-      var saveRes;
-      var body;
-      try {
-        saveRes = await fetch(EDGE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
-          body: JSON.stringify(payload),
-          signal: directController.signal,
-        });
-        body = await saveRes.json().catch(function () { return null; });
-      } finally {
-        clearTimeout(directTimeout);
-      }
-      if (!saveRes.ok) {
-        return {
-          ok: false,
-          error: body && body.error ? body.error : 'Server rejected import (HTTP ' + saveRes.status + ')'
-        };
-      }
-      if (!body || typeof body !== 'object') {
-        return { ok: false, error: 'Import service returned an invalid response' };
-      }
-      return body;
-    } catch (err) {
-      var directError = err && err.message ? err.message : 'Network connection error';
-      return {
-        ok: false,
-        error: bridgeError ? bridgeError + '; direct retry failed: ' + directError : directError
-      };
-    }
+    return {
+      ok: false,
+      error: bridgeError
+        ? bridgeError + '; reload the extension background service before retrying'
+        : 'The extension background service is unavailable. Reload the extension and try again.',
+    };
   }
 
   function setError(msg) {

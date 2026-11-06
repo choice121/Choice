@@ -3,7 +3,7 @@
 
   const SITE_CONFIG_URL = 'https://choice-properties-site.pages.dev/config.js';
   const FUNCTION_NAME = 'zillow-gallery-reference';
-  const STORAGE_REFRESH_TOKEN = 'cp_gallery_reference_refresh_token';
+  const STORAGE_REFRESH_TOKEN = 'cp_extension_admin_refresh_token';
   const STORAGE_RECENT_REPORTS = 'cp_gallery_reference_recent_reports';
 
   const loginPanel = document.getElementById('gallery-reference-login');
@@ -48,45 +48,28 @@
     return projectConfigPromise;
   }
 
-  async function requestAuth(path, body) {
-    const config = await getProjectConfig();
-    const response = await fetch(`${config.url}/auth/v1/${path}`, {
-      method: 'POST',
-      headers: {
-        apikey: config.anonKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+  async function sendBackgroundMessage(message) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          resolve(response);
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(result.msg || result.message || result.error_description || 'Choice sign-in failed');
-    }
-    return result;
   }
 
   async function getAccessToken() {
-    const stored = await chrome.storage.local.get(STORAGE_REFRESH_TOKEN);
-    if (!stored[STORAGE_REFRESH_TOKEN]) {
-      throw new Error('Connect your Choice admin account first');
+    const response = await sendBackgroundMessage({ type: 'GET_ADMIN_ACCESS_TOKEN' });
+    if (!response?.ok || !response.accessToken) {
+      throw new Error(response?.error || 'Connect your Choice admin account first');
     }
-
-    let session;
-    try {
-      session = await requestAuth('token?grant_type=refresh_token', {
-        refresh_token: stored[STORAGE_REFRESH_TOKEN],
-      });
-    } catch (error) {
-      await chrome.storage.local.remove(STORAGE_REFRESH_TOKEN);
-      setConnected(false);
-      throw error;
-    }
-
-    if (!session.access_token || !session.refresh_token) {
-      throw new Error('Choice did not return a valid sign-in session');
-    }
-    await chrome.storage.local.set({ [STORAGE_REFRESH_TOKEN]: session.refresh_token });
-    return session.access_token;
+    return response.accessToken;
   }
 
   function collectGalleryState() {
@@ -237,7 +220,7 @@
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok || !result.report_url) {
       if (response.status === 401) {
-        await chrome.storage.local.remove(STORAGE_REFRESH_TOKEN);
+        await sendBackgroundMessage({ type: 'ADMIN_SIGN_OUT' });
         setConnected(false);
       }
       if (response.status === 403) {
@@ -286,15 +269,15 @@
     loginButton.disabled = true;
     setStatus('Connecting to Choice…');
     try {
-      const session = await requestAuth('token?grant_type=password', {
+      const session = await sendBackgroundMessage({
+        type: 'ADMIN_SIGN_IN',
         email: emailInput.value.trim(),
         password: passwordInput.value,
       });
-      if (!session.refresh_token) throw new Error('Choice did not return a refresh token');
-      await chrome.storage.local.set({ [STORAGE_REFRESH_TOKEN]: session.refresh_token });
+      if (!session?.ok) throw new Error(session?.error || 'Choice sign-in failed');
       passwordInput.value = '';
       setConnected(true);
-      setStatus('Connected. Capture is available on Zillow pages.', 'success');
+      setStatus('Connected. Pipeline imports and gallery reports are enabled.', 'success');
     } catch (error) {
       setStatus(String(error.message || error).slice(0, 180), 'error');
     } finally {
@@ -316,7 +299,7 @@
   });
 
   logoutButton.addEventListener('click', async () => {
-    await chrome.storage.local.remove(STORAGE_REFRESH_TOKEN);
+    await sendBackgroundMessage({ type: 'ADMIN_SIGN_OUT' });
     setConnected(false);
     setStatus('Disconnected from Choice.');
   });

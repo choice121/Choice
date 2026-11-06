@@ -27,6 +27,7 @@ import time
 import base64
 import random
 import sys
+import os
 
 try:
     import requests
@@ -37,8 +38,12 @@ except ImportError:
 # ─── CONFIGURATION (pre-filled) ──────────────────────────────────────────────
 
 SUPABASE_URL      = "https://tlfmwetmhthpyrytrcfo.supabase.co"
-SUPABASE_KEY      = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE"
-IK_PRIVATE_KEY    = "private_0EEkHXTzdRqJ++giVS30rF+qDAs="
+SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+if not SUPABASE_KEY:
+    raise RuntimeError('SUPABASE_SERVICE_ROLE_KEY is required')
+IK_PRIVATE_KEY    = os.environ.get("IMAGEKIT_PRIVATE_KEY")
+if not IK_PRIVATE_KEY:
+    raise RuntimeError("IMAGEKIT_PRIVATE_KEY is required")
 IK_UPLOAD_URL     = "https://upload.imagekit.io/api/v1/files/upload"
 
 PROPERTIES = [

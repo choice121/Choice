@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1793916069386"></script>
+  <script src="/js/cp-error-reporter.js?v=1793939274212"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Import to Choice Properties</title>
@@ -223,6 +223,47 @@
     color: rgba(255,255,255,0.7);
   }
 
+  .admin-auth {
+    margin-top: 12px;
+    padding: 11px;
+    border: 1px solid rgba(129,140,248,.28);
+    border-radius: 8px;
+    background: rgba(99,102,241,.08);
+  }
+  .admin-auth h2 { margin-bottom: 5px; color: #fff; font-size: 12px; }
+  .admin-auth p { margin: 0 0 8px; color: rgba(255,255,255,.55); font-size: 10px; line-height: 1.4; }
+  .admin-auth input {
+    display: block;
+    width: 100%;
+    margin: 6px 0;
+    padding: 8px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 6px;
+    background: #171a24;
+    color: #fff;
+    font: inherit;
+  }
+  .admin-auth button {
+    width: 100%;
+    min-height: 32px;
+    margin-top: 6px;
+    border: 0;
+    border-radius: 6px;
+    background: #6366f1;
+    color: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .admin-auth button.secondary {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.07);
+  }
+  #admin-auth-status { min-height: 15px; margin-top: 7px; color: #c7d2fe; overflow-wrap: anywhere; }
+  #admin-auth-status.error { color: #fca5a5; }
+  #admin-auth-status.success { color: #86efac; }
+
   .toggle {
     position: relative;
     width: 34px;
@@ -311,6 +352,21 @@
         <span class="slider"></span>
       </label>
     </div>
+
+    <section class="admin-auth" aria-labelledby="admin-auth-title">
+      <h2 id="admin-auth-title">Pipeline access</h2>
+      <div id="admin-auth-login">
+        <p>Sign in with a Choice administrator account to save listings.</p>
+        <input id="admin-auth-email" type="email" autocomplete="username" placeholder="Choice admin email" aria-label="Choice admin email">
+        <input id="admin-auth-password" type="password" autocomplete="current-password" placeholder="Choice admin password" aria-label="Choice admin password">
+        <button id="admin-auth-login-button" type="button">Connect admin account</button>
+      </div>
+      <div id="admin-auth-connected" hidden>
+        <p>Connected. Your password is not stored; only a rotating refresh token is kept in extension storage.</p>
+        <button id="admin-auth-logout-button" class="secondary" type="button">Disconnect account</button>
+      </div>
+      <p id="admin-auth-status" role="status" aria-live="polite"></p>
+    </section>
   </div>
 
   <div id="tip-default">
@@ -349,5 +405,6 @@
 </div>
 
 <script src="popup.js"></script>
+<script src="admin-auth.js"></script>
 </body>
 </html>

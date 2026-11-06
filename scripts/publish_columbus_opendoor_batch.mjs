@@ -1,7 +1,8 @@
 import https from 'https';
 
 const SUPABASE_URL = 'https://tlfmwetmhthpyrytrcfo.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
 const LANDLORD_ID = null;
 const SITE_URL = 'https://choice-properties-site.pages.dev';
 

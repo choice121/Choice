@@ -53,24 +53,21 @@ export function buildCorsHeaders(origin: string | null): Record<string, string> 
   return {
     'Access-Control-Allow-Origin': resolveAllowOrigin(origin),
     'Vary': 'Origin',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-import-secret',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Max-Age': '86400',
   };
 }
 
-// ── Permissive CORS for secrets-authenticated endpoints ─────────────────────
-// Used by receive-pipeline-import which authenticates via a shared secret
-// (x-import-secret header), NOT via user cookies. Since the secret is the real
-// auth (not the origin), we echo back any Origin including 'null'. This is
-// necessary because WebKit-based browsers (Orion on iOS) send `null` as the
-// Origin header for extension content-script fetch() calls.
+// ── Permissive CORS for authenticated extension endpoints ───────────────────
+// The endpoint validates a Supabase administrator bearer token independently
+// of Origin. Echoing `null` is needed for WebKit extension content scripts.
 export function permissiveCorsHeaders(origin: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin === null ? 'null' : (origin || '*'),
     'Access-Control-Allow-Credentials': 'false',
     'Vary': 'Origin',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-import-secret',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Max-Age': '86400',
   };
@@ -113,7 +110,7 @@ export function permissiveCorsResponse(req: Request): Response {
 export const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': PRODUCTION_ORIGIN,
   'Vary': 'Origin',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-import-secret',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 export const cors = corsHeaders;

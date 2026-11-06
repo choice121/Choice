@@ -13,50 +13,9 @@
   window.__CP_CONTENT_LOADED__ = true;
   window.__CP_CONTENT_VERSION__ = VERSION;
 
-  function resolveConfigValue(name, fallback) {
-    var config = (window && window.CP_CONFIG) ? window.CP_CONFIG : {};
-    var candidates = [
-      config[name],
-      config[name.toLowerCase()],
-      config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
-      config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
-      config[name.replace(/([A-Z])/g, '_$1')],
-      window && window.__CP_IMPORT_SECRET__
-    ];
-    for (var i = 0; i < candidates.length; i++) {
-      if (candidates[i] != null && String(candidates[i]).trim() !== '') return String(candidates[i]);
-    }
-    try {
-      if (typeof localStorage !== 'undefined') {
-        var localConfigRaw = localStorage.getItem('cp_config');
-        if (localConfigRaw) {
-          var localConfig = JSON.parse(localConfigRaw);
-          if (localConfig && typeof localConfig === 'object') {
-            if (localConfig[name] != null && String(localConfig[name]).trim() !== '') return String(localConfig[name]);
-            if (localConfig[name.toLowerCase()] != null && String(localConfig[name.toLowerCase()]).trim() !== '') return String(localConfig[name.toLowerCase()]);
-            if (localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()] != null && String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]).trim() !== '') return String(localConfig[name.replace(/([A-Z])/g, '_$1').toLowerCase()]);
-          }
-        }
-        if (name === 'IMPORT_SECRET') {
-          var storedSecret = localStorage.getItem('cp_import_secret') || localStorage.getItem('cp_pipeline_secret');
-          if (storedSecret && String(storedSecret).trim() !== '') return String(storedSecret);
-        }
-        if (name === 'EDGE_URL') {
-          var storedEdge = localStorage.getItem('cp_pipeline_edge_url');
-          if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
-        }
-      }
-    } catch (e) {}
-    return fallback;
-  }
-
-  var EDGE_URL = resolveConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
-  var SECRET   = resolveConfigValue('IMPORT_SECRET', 'cp_import_7Kx3m9P2w5');
   var VERSION  = '52.1.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
-  var MAX_PHOTOS = IS_MOBILE ? 25 : 50;
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
   var lastUrl = location.href;
@@ -236,13 +195,7 @@
         return bgRes.folders;
       }
     }
-    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
-    var res = await fetch(url);
-    if (res.ok) {
-      var data = await res.json();
-      if (data && Array.isArray(data.folders)) return data.folders;
-    }
-    return null;
+    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
   }
 
   async function apiCreateFolder(name, description) {
@@ -264,20 +217,7 @@
         return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
       }
     }
-    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
-      body: JSON.stringify({
-        action: 'create_folder',
-        name: rawName,
-        description: rawDesc
-      })
-    });
-    var data = await res.json();
-    if (res.ok && data && data.ok && data.id) {
-      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
-    }
-    throw new Error((data && data.error) || 'Failed to create folder');
+    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
   }
 
   // ── Smart Layout Collision Avoidance ────────────────────────
@@ -1367,12 +1307,10 @@
             });
           });
         } else {
-          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          lastResponse = await saveRes.json();
+          lastResponse = {
+            ok: false,
+            error: 'The extension background service is unavailable. Reload the extension and try again.',
+          };
         }
         if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) {
           return lastResponse;
@@ -1397,136 +1335,6 @@
         saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
       }
     }, 4000);
-  }
-
-  // ── Photo Upload Pipeline ───────────────────────────────────
-  async function uploadPhotosInBackground(photoUrls, progressCallback) {
-    var uploaded = [];
-    var failed = 0;
-    var urls = dedupePhotoUrls(photoUrls);
-    var limit = Math.min(urls.length, MAX_PHOTOS);
-    var total = limit;
-
-    for (var i = 0; i < limit; i += PHOTO_BATCH_SIZE) {
-      var batch = urls.slice(i, i + PHOTO_BATCH_SIZE);
-      if (progressCallback) progressCallback(Math.min(i, total), total);
-      var results = await Promise.all(batch.map(function (url, batchIndex) {
-        return uploadOnePhoto(url, i + batchIndex);
-      }));
-      for (var j = 0; j < results.length; j++) {
-        if (results[j]) uploaded.push(results[j]);
-        else failed++;
-        if (progressCallback) progressCallback(Math.min(i + j + 1, total), total);
-      }
-    }
-    return { uploaded: uploaded, failed: failed, total: total };
-  }
-
-  async function downloadViaBackground(url) {
-    return new Promise(function (resolve) {
-      try {
-        if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
-          resolve(null);
-          return;
-        }
-        chrome.runtime.sendMessage(
-          { type: 'DOWNLOAD_PHOTO', url: url },
-          function (response) {
-            if (chrome.runtime.lastError) {
-              resolve(null);
-              return;
-            }
-            resolve(response && response.ok && response.dataUri ? response : null);
-          }
-        );
-      } catch (e) {
-        resolve(null);
-      }
-    });
-  }
-
-  async function downloadViaDirectFetch(url) {
-    try {
-      var imgRes = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
-      });
-      if (!imgRes.ok) return null;
-      var blob = await imgRes.blob();
-      var base64 = await blobToBase64(blob);
-      var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
-      if (ext === 'jpeg') ext = 'jpg';
-      return {
-        dataUri: base64,
-        contentType: blob.type || 'image/jpeg',
-        ext: ext,
-        size: blob.size,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function uploadOnePhoto(url, index) {
-    try {
-      var photo = await downloadViaBackground(url);
-      if (!photo) photo = await downloadViaDirectFetch(url);
-      if (!photo) return null;
-
-      var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-import-secret': SECRET
-        },
-        body: JSON.stringify({
-          fileData: photo.dataUri,
-          fileName: 'photo_' + (index + 1) + '.' + photo.ext,
-          folder: '/pipeline/temp'
-        })
-      });
-      var ikData = await ikRes.json();
-      if (!ikData || !ikData.url) return null;
-
-      return {
-        url: ikData.url,
-        fileId: ikData.fileId || null,
-        width: ikData.width || null,
-        height: ikData.height || null,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function blobToBase64(blob) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () { resolve(reader.result); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function updatePipelinePhotos(originalPayload, uploadedPhotos) {
-    try {
-      if (!uploadedPhotos || !uploadedPhotos.length) return;
-      var updatePayload = Object.assign({}, originalPayload, {
-        _update_photos_only: true,
-        original_image_urls: JSON.stringify(uploadedPhotos),
-      });
-      var updated = false;
-      try {
-        var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatePayload),
-        });
-        if (res.ok) updated = true;
-      } catch (_) {}
-
-    } catch (e) {}
   }
 
   // ── Global Hotkeys Hook (Cmd/Ctrl+Shift+S) ───────────────────

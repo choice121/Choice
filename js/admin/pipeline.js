@@ -358,7 +358,6 @@
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
           ${srcImp === 'browser-extension' ? `<span class="qs-badge qs-high" title="Imported from a supported listing page by the browser extension">Browser extension</span>` : ''}
           ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
-          ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
           ${l.source_status && l.source_status !== 'available' ? `<span class="qs-badge ${l.source_status === 'pending' ? 'qs-mid' : 'qs-low'}" title="Source site status: ${S.esc(l.source_status)}">${l.source_status === 'pending' ? '⏳ Pending' : l.source_status === 'rented' ? '🔒 Rented' : '⚠ ' + S.esc(l.source_status)}</span>` : ''}
         </div>
       </div>
@@ -377,7 +376,6 @@
         ${!isArchived ? `<button class="btn btn-sm btn-ghost pl-arc-btn" data-id="${S.esc(l.id)}" title="Archive">Archive</button>` : '<span class="pill pill-muted" style="font-size:.68rem">Archived</span>'}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-primary pl-pub-btn" data-id="${S.esc(l.id)}" title="Publish to site">Publish →</button>` : ''}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-ghost pl-del-btn" data-id="${S.esc(l.id)}" title="Delete from pipeline" style="color:var(--danger)">Delete</button>` : ''}
-        ${l.photo_import_status === 'failed' && !isArchived ? `<button class="btn btn-sm btn-outline pl-retry-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id || '')}" title="Retry downloading photos to ImageKit">Retry photos</button>` : ''}
         ${isPublished && l.choice_property_id ? `<a class="btn btn-sm btn-ghost" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}" target="_blank" onclick="event.stopPropagation()">Edit ↗</a>` : ''}
       </div>
     </div>`;
@@ -415,8 +413,7 @@
   async function panelPhotos(l){
     const imgs = imageUrls(l.original_image_urls);
     
-    // If published and has a choice_property_id, fetch the actual ImageKit photos
-    // from property_photos (transferred by import-pipeline-photos).
+    // Published photo rows retain the source CDN URLs and their original order.
     if(l.choice_property_id){
       try {
         const photoQuery = CP.sb()
@@ -429,7 +426,7 @@
         
         if(!error && Array.isArray(photos) && photos.length){
           const urls = photos.map(p => p.url).filter(Boolean);
-          return renderPhotoStatus(l) + renderGallery(urls, 'on ImageKit');
+          return renderPhotoStatus(l) + renderGallery(urls, 'from source');
         }
       } catch(err){
         console.warn('[pipeline] property photo query failed; using source photos', err);
@@ -438,16 +435,14 @@
     
     if(!imgs.length) return renderPhotoStatus(l) + '<p class="pl-photo-count">No photos from source.</p>';
 
-    // FIX: Zillow/Realtor CDN images block hotlinking from the admin domain.
-    // Use the admin session token to proxy non-ImageKit URLs through the
+    // Zillow/Realtor CDN images block hotlinking from the admin domain.
+    // Use the admin session token to proxy source URLs through the
     // proxy-image edge function so they display correctly.
-    // ImageKit URLs (ik.imagekit.io) work directly.
     try {
       const session = await withTimeout(CP.sb().auth.getSession(), 3000);
       const token = session?.data?.session?.access_token || '';
       const supabaseUrl = (window.CONFIG?.SUPABASE_URL || '').replace(/\/+$/, '');
       const proxied = imgs.map(u => {
-        if (u.includes('ik.imagekit.io')) return u;
         if (!token || !supabaseUrl) return u;
         return supabaseUrl + '/functions/v1/proxy-image?url=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(token);
       });
@@ -482,19 +477,12 @@
     const photos = imageUrls(l.original_image_urls);
     const hasSource = photos.length > 0;
     const imported = Boolean(l.choice_property_id);
-    const status = l.photo_import_status;
     const labels = [];
 
     if (imported) {
-      if (status === 'failed') {
-        labels.push(`<div class="pl-panel-alert pl-panel-alert-warning">Photo transfer to ImageKit failed. <button class="btn btn-sm btn-outline" id="pl-transfer-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id)}">Retry transfer</button></div>`);
-      } else if (status === 'pending') {
-        labels.push('<div class="pl-panel-alert pl-panel-alert-info">Photo transfer is pending. It may take a few minutes to complete.</div>');
-      } else {
-        labels.push('<div class="pl-panel-alert pl-panel-alert-success">Photos are stored on ImageKit and ready for the live listing.</div>');
-      }
+      labels.push('<div class="pl-panel-alert pl-panel-alert-success">Published photo URLs are preserved in their original source order.</div>');
     } else if (hasSource) {
-      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. They will be transferred after publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
+      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. Their URLs will be copied on publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
     } else {
       labels.push('<div class="pl-panel-alert pl-panel-alert-warning">No source photos found. Add at least one photo before publishing.</div>');
     }
@@ -603,8 +591,10 @@
           ${fi('garage_spaces','Garage spaces', l.garage_spaces,'number',false)}
           ${fi('property_type','Property type', l.property_type,'text',false,false,[
             {v:'',l:'— select —'},{v:'SINGLE_FAMILY',l:'Single family'},{v:'CONDOS',l:'Condo'},
-            {v:'TOWNHOMES',l:'Townhouse'},{v:'APARTMENT',l:'Apartment'},{v:'MULTI_FAMILY',l:'Multi-family'},
-            {v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},{v:'FARM',l:'Farm'}
+            {v:'TOWNHOMES',l:'Townhouse'},{v:'DUPLEX',l:'Duplex'},{v:'TRIPLEX',l:'Triplex'},
+            {v:'APARTMENT',l:'Apartment'},{v:'MULTI_FAMILY',l:'Multi-family'},{v:'STUDIO',l:'Studio'},
+            {v:'ROOM',l:'Room'},{v:'LOFT',l:'Loft'},{v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},
+            {v:'FARM',l:'Farm'},{v:'COMMERCIAL',l:'Commercial'},{v:'OTHER',l:'Other'}
           ])}
           ${fi('available_date','Available date', l.available_date,'date',false)}
           ${fi('minimum_lease_months','Min lease (mo)', l.minimum_lease_months,'number',false)}
@@ -835,16 +825,12 @@
         }
       });
 
-      // Load photos asynchronously (may fetch from ImageKit for published listings)
-      // FIX: photoCount was referenced from renderPanel() scope (undefined here),
-      // so panelPhotos() never ran and "Loading…" stayed stuck on screen.
-      // Now it always runs — panelPhotos() handles the empty case itself.
+      // Load source and published photo rows asynchronously.
       const photoContainer = panel.querySelector('#panel-photos-container');
       if(photoContainer){
         panelPhotos(l).then(html => {
           if(photoContainer) photoContainer.innerHTML = html;
           wireGalleryEvents();
-          wirePanelPhotoActions();
           // Wire edit photos button (if present)
           const editBtn = panel.querySelector('#pl-edit-photos-btn');
           if(editBtn) editBtn.addEventListener('click', e => { e.stopPropagation(); openPhotoEditor(l); });
@@ -914,19 +900,6 @@
         if(Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
       }, { passive: true });
     }
-  }
-
-function wirePanelPhotoActions(){
-    const btn = document.getElementById('pl-transfer-photos-btn');
-    if(!btn) return;
-    btn.addEventListener('click', async e => {
-      e.stopPropagation();
-      btn.disabled = true;
-      btn.textContent = 'Retrying…';
-      await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
-      btn.disabled = false;
-      btn.textContent = 'Retry transfer';
-    });
   }
 
   function closePanel(){
@@ -1305,31 +1278,6 @@ function wirePanelPhotoActions(){
     fetchCounts().catch(()=>{});
   }
 
-  // Transfer source photos to ImageKit in the background after publish
-  async function doTransferPhotos(pipelineId, propertyId){
-    const listing = _pageData.find(l => l.id === pipelineId);
-    const urls = listing ? (parseJSON(listing.original_image_urls) || []) : [];
-    if(!urls.length) return;
-
-    S.toast(`Transferring ${Math.min(urls.length, 20)} photo${urls.length !== 1 ? 's' : ''} to ImageKit…`, 'info');
-
-    try {
-      const { data, error } = await CP.sb().functions.invoke('import-pipeline-photos', {
-        body: { pipeline_id: pipelineId, property_id: propertyId }
-      });
-      if(error) throw error;
-      const res = typeof data === 'string' ? JSON.parse(data) : data;
-      if(res?.transferred > 0){
-        S.toast(`${res.transferred} photo${res.transferred !== 1 ? 's' : ''} added to ImageKit ✓`, 'success');
-      } else if(res?.skipped > 0){
-        S.toast('Photos could not be transferred — add manually in property edit', 'info');
-      }
-    } catch(e){
-      console.warn('[pipeline] photo transfer failed', e);
-      // Non-fatal — property is published, photos can be added manually
-    }
-  }
-
   async function doPublish(id){
     const panel = document.getElementById('pl-panel');
     const panelIsForListing = !!panel && _current?.id === id;
@@ -1376,8 +1324,8 @@ function wirePanelPhotoActions(){
     const ok = await S.confirm(
       'Publish "' + desc + '" ' + visibilityLabel + '?',
       visibility === 'active'
-        ? 'This listing will appear on the public site immediately. Photos will be transferred to ImageKit automatically.'
-        : 'This listing will stay hidden from public browse and direct public pages. Create a client share link to grant access. Photos will be transferred to ImageKit automatically.'
+        ? 'This listing will appear on the public site immediately. Source photo URLs will be kept in their original order.'
+        : 'This listing will stay hidden from public browse and direct public pages. Create a client share link to grant access. Source photo URLs will be kept in their original order.'
     );
     if(!ok) return;
     _cClear();
@@ -1423,9 +1371,6 @@ function wirePanelPhotoActions(){
     removeCard(id);
     if(panelIsForListing) closePanel();
     fetchCounts().catch(()=>{});
-
-    // Transfer photos in background (non-blocking)
-    doTransferPhotos(id, propId);
 
     // Open edit page
     setTimeout(() => {
@@ -1590,19 +1535,6 @@ function wirePanelPhotoActions(){
     // Archive buttons on cards
     document.querySelectorAll('.pl-arc-btn').forEach(btn => {
       btn.onclick = e => { e.stopPropagation(); doArchive(btn.dataset.id); };
-    });
-
-    // Retry photos buttons on cards (photo_import_status === 'failed')
-    document.querySelectorAll('.pl-retry-photos-btn').forEach(btn => {
-      btn.onclick = async e => {
-        e.stopPropagation();
-        btn.disabled = true;
-        btn.textContent = 'Retrying…';
-        await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
-        btn.disabled = false;
-        btn.textContent = 'Retry photos';
-        load(false).catch(()=>{});
-      };
     });
 
     // Selection checkboxes
@@ -2090,7 +2022,7 @@ function wirePanelPhotoActions(){
       closePhotoEditor();
       // Refresh panel photos
       const photoContainer = document.getElementById('panel-photos-container');
-      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); wirePanelPhotoActions(); }); }
+      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); }); }
     }
 
     document.getElementById('pl-photo-edit-save').addEventListener('click', saveEdits);
@@ -2260,9 +2192,6 @@ function wirePanelPhotoActions(){
         if(!res?.ok) throw new Error(res?.error || 'Publish failed');
         succeeded++;
         removeCard(listing.id);
-        doTransferPhotos(listing.id, res.choice_property_id).catch(error =>
-          console.warn('[pipeline] folder photo transfer failed', listing.id, error)
-        );
       }catch(error){
         console.error('[pipeline] folder publish failed', listing.id, error);
         failed++;

@@ -4,7 +4,7 @@
 // ============================================================
 // Accepts parsed listing payloads and folder actions from Chrome /
 // Orion extensions on Zillow, Realtor, Apartments.com, etc.
-// Authenticates via a shared secret (x-import-secret header or ?secret= query).
+// Authenticates Choice administrator sessions via a Supabase access token.
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -37,18 +37,24 @@ function parseImageEntries(raw: unknown): ImageEntry[] {
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((entry) => {
-      if (typeof entry === 'string') return entry;
-      if (entry && typeof entry === 'object' && typeof (entry as any).url === 'string') {
-        return {
-          url: (entry as any).url,
-          fileId: (entry as any).fileId ?? null,
-          width: typeof (entry as any).width === 'number' ? (entry as any).width : null,
-          height: typeof (entry as any).height === 'number' ? (entry as any).height : null,
-        };
+    const images: ImageEntry[] = [];
+    for (const entry of parsed as unknown[]) {
+      if (typeof entry === 'string') {
+        images.push(entry);
+        continue;
       }
-      return null;
-    }).filter((entry): entry is ImageEntry => entry !== null);
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+
+      const image = entry as Record<string, unknown>;
+      if (typeof image.url !== 'string') continue;
+      images.push({
+        url: image.url,
+        fileId: typeof image.fileId === 'string' ? image.fileId : null,
+        width: typeof image.width === 'number' ? image.width : null,
+        height: typeof image.height === 'number' ? image.height : null,
+      });
+    }
+    return images;
   } catch {
     return [];
   }
@@ -67,17 +73,7 @@ const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return permissiveCorsResponse(req);
 
-  // ── Auth: shared secret ──────────────────────────────────────
-  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET') || Deno.env.get('IMPORT_SECRET') || 'cp_import_7Kx3m9P2w5';
-  if (!Deno.env.get('SHORTCUT_IMPORT_SECRET') && !Deno.env.get('IMPORT_SECRET')) {
-    console.warn('[receive-pipeline-import] No import secret env configured; using repo fallback secret for local/dev compatibility');
-  }
   const url = new URL(req.url);
-  const incoming = url.searchParams.get('secret') || req.headers.get('x-import-secret');
-  if (!incoming || incoming !== IMPORT_SECRET) {
-    return permissiveJsonErr(401, 'Invalid import secret', req);
-  }
-
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
   if (!SUPABASE_URL || !SERVICE_KEY) {
@@ -87,6 +83,21 @@ Deno.serve(async (req) => {
   const adminClient  = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const bearer = req.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!bearer) return permissiveJsonErr(401, 'Choice administrator sign-in is required', req);
+  const { data: { user }, error: authError } = await adminClient.auth.getUser(bearer);
+  if (authError || !user) return permissiveJsonErr(401, 'Choice administrator session is invalid', req);
+  const { data: adminRole, error: roleError } = await adminClient
+    .from('admin_roles')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (roleError) {
+    console.error('[receive-pipeline-import] Administrator role lookup failed', roleError.message);
+    return permissiveJsonErr(500, 'Could not verify Choice administrator access', req);
+  }
+  if (!adminRole) return permissiveJsonErr(403, 'Choice administrator access is required', req);
 
   // ── GET or Action Handling ──────────────────────────────────
   const actionFromQuery = url.searchParams.get('action');

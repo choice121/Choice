@@ -2618,7 +2618,7 @@ function initAdminPropertyPanel(prop) {
 function buildAdminEditDrawer(prop) {
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
-  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','loft','mobile_home','commercial','other'];
+  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','multi_family','loft','mobile_home','land','farm','commercial','other'];
   const STATUSES   = ['active','rented','inactive','maintenance','draft','paused','archived'];
   const LAUNDRY    = ['','In-unit','Washer/Dryer Hookups','Shared (On-site)','Laundromat Nearby','None'];
   const HEATING    = ['','Central','Forced Air','Baseboard','Radiant','Heat Pump','Wall Unit','None'];
@@ -3980,7 +3980,7 @@ async function initCommunityInventory(p) {
   const divider = document.getElementById('dividerAfterCommunityInventory');
   if (!container || !content) return;
 
-  const isCommunity = !!(p.is_multi_unit || p.total_units > 1 || p.price_range || (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT'));
+  const isCommunity = !!(p.is_multi_unit || p.total_units > 1 || p.price_range);
 
   let units = [];
   let floors = [];

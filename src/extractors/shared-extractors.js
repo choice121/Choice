@@ -697,11 +697,17 @@
     const hasUnitData = Boolean(prop && (
       Array.isArray(prop.units) || Array.isArray(prop.availableUnits) ||
       Array.isArray(prop.available_units) || Array.isArray(prop.floorPlans) ||
-      Array.isArray(prop.unitTypes) || Array.isArray(prop.unit_types)
+      Array.isArray(prop.unitTypes) || Array.isArray(prop.unit_types) ||
+      Array.isArray(prop.unit_options)
     ));
-    const apartmentType = /apartment|multi[\s_-]*family|building/i.test(String(prop && (prop.homeType || prop.propertyType) || ''));
-    return /zillow\.com\/(?:apartments|community)\//i.test(String(url || '')) ||
-      /apartment\s+building|available\s+units/i.test(String(text || '')) ||
+    const type = String(prop && (prop.homeType || prop.propertyType || prop.property_type) || '');
+    if (/\bsingle[\s_-]*family\b|detached/i.test(type)) return false;
+
+    const urlIsBuilding = /zillow\.com\/(?:apartments|community)\//i.test(String(url || ''));
+    if (urlIsBuilding) return true;
+
+    const apartmentType = /apartment|multi[\s_-]*family|building/i.test(type);
+    return /apartment\s+building|available\s+units/i.test(String(text || '')) ||
       (apartmentType && hasUnitData);
   }
 
@@ -1495,7 +1501,13 @@
         candidate.getAttribute('data-test') || ''
       );
       const unitContainer = candidate.closest
-        ? candidate.closest('[data-testid*="unit"], [data-test*="unit"], tr, [role="row"]')
+        ? candidate.closest([
+          '[data-testid^="unit"]', '[data-testid*="-unit"]', '[data-testid*="_unit"]',
+          '[data-testid*="unit-"]', '[data-testid*="unit_"]',
+          '[data-test^="unit"]', '[data-test*="-unit"]', '[data-test*="_unit"]',
+          '[data-test*="unit-"]', '[data-test*="unit_"]',
+          'tr', '[role="row"]'
+        ].join(', '))
         : null;
       const priceContext = [
         priceText,
@@ -1553,7 +1565,17 @@
 
     // 4. Photos from rendered DOM
     const photos = [];
-    const imgEls = doc.querySelectorAll('img, picture source, source, video[poster], [style*="background-image"], [data-photo-url], [data-image-url]');
+    const gallerySelector = [
+      '[data-testid="bdp-gallery"] img', '[data-testid="bdp-gallery"] picture source',
+      '[data-testid*="photo-gallery"] img', '[data-testid*="photo-gallery"] picture source',
+      '[data-testid*="media-gallery"] img', '[data-testid*="media-gallery"] picture source',
+      '[data-testid*="photo-carousel"] img', '[data-testid*="photo-carousel"] picture source',
+      '[class*="PhotoGallery"] img', '[class*="PhotoGallery"] picture source',
+    ].join(', ');
+    const galleryElements = doc.querySelectorAll(gallerySelector);
+    const imgEls = galleryElements && galleryElements.length
+      ? galleryElements
+      : doc.querySelectorAll('img, picture source, source, video[poster], [style*="background-image"], [data-photo-url], [data-image-url]');
     imgEls.forEach(el => {
       const attributes = ['src', 'data-src', 'data-lazy-src', 'data-original', 'srcset', 'data-srcset', 'data-photo-url', 'data-image-url'];
       const candidates = [el.currentSrc, el.src];
@@ -1696,7 +1718,11 @@
     const rentBasis = getZillowRentBasis(doc);
     merged.rent_basis = rentBasis;
     merged.unit_options = unitOptions.map(option => Object.assign({}, option, { rent_basis: rentBasis }));
-    if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
+    const mergedBuildingPage = isZillowBuildingPage(url, merged, doc && doc.body && doc.body.innerText);
+    if (/\bsingle[\s_-]*family\b|detached/i.test(String(merged.homeType || merged.property_type || ''))) {
+      merged.is_multi_unit = false;
+    }
+    if (mergedBuildingPage) {
       merged.is_multi_unit = true;
       merged.building_name = merged.building_name || (dom && dom.building_name) || (res && res.building_name) || null;
       if ((!merged.title || /^(?:property apartment unit|property apartment|apartment unit)$/i.test(merged.title)) &&
@@ -1709,7 +1735,7 @@
     }
     if (!merged.address && !merged.monthly_rent && !hasUsefulZillowCommunityData(merged)) return null;
 
-    if (isZillowBuildingPage(url, null, doc && doc.body && doc.body.innerText)) {
+    if (mergedBuildingPage) {
       merged.property_type = 'APARTMENT';
       merged.monthly_rent = null;
       merged.bedrooms = null;

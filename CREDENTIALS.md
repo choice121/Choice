@@ -63,38 +63,18 @@ Scripts that run automated tasks on Replit use the Supabase service role key for
 
 ## Credential Inventory
 
-### What's already committed (no setup needed)
-
-| Credential | File | Notes |
+| Credential | Approved location | Notes |
 |---|---|---|
-| Supabase URL | `scraper/.env` | Project endpoint |
-| Supabase service role key | `scraper/.env` | Full DB access. Used by scraper only. |
-| ImageKit private key | `scraper/.env` | Used by scraper for photo uploads |
-| ImageKit URL endpoint | `scraper/.env` | `https://ik.imagekit.io/21rg7lvzo` |
-| Supabase anon key | `chrome-extension/config.js` | Public/safe. Protected by RLS. |
-| Import secret | `chrome-extension/config.js` | Sent as `x-import-secret` header to the Edge Function |
-| ImageKit public key | `chrome-extension/config.js` | Client-side upload auth |
-| GAS email relay URL | Supabase Edge Function Secrets | `GAS_EMAIL_URL` |
-| GAS relay HMAC secret | Supabase Edge Function Secrets | `GAS_RELAY_SECRET` |
+| Supabase URL and anon/publishable key | Public site config | The anon key is public; database access must remain protected by RLS. |
+| Supabase service-role key and access token | Trusted operator environment / secret manager | Never put these in browser code, Replit project configuration, or Git. |
+| ImageKit public key and URL endpoint | Public site/extension config | Public identifiers only. |
+| ImageKit private key | Trusted backend/operator secret store | Never commit or expose to browsers. |
+| GAS email relay URL and HMAC secret | Supabase Edge Function secrets | Keep the HMAC secret private. |
+| Extension admin session | Extension local storage | Disconnect from the extension popup to remove the refresh token. |
 
-### What lives in Replit / Staging Secrets only (server-side)
-
-| Secret | Replit / Env key | Why not committed |
-|---|---|---|
-| Supabase service role key | `SUPABASE_SERVICE_ROLE_KEY` | Full backend DB access. (Also configured in `scraper/.env`.) |
-| GAS email relay URL | `GAS_EMAIL_URL` | Google Apps Script Web App URL. |
-| GAS relay HMAC secret | `GAS_RELAY_SECRET` | Signs Edge Function requests to the relay. |
-
----
-
-## How to Rotate a Credential
-
-1. Generate the new key in the relevant dashboard (Supabase, ImageKit)
-2. Update `scraper/.env` and/or `chrome-extension/config.js` as appropriate (see table above)
-3. **If rotating `IMPORT_SECRET`:** also update it in Supabase → Edge Functions → `receive-pipeline-import` → Secrets → `IMPORT_SECRET`
-4. **If rotating the service role key:** also update Replit Secrets → `SUPABASE_SERVICE_ROLE_KEY`
-5. Reload the Chrome extension: `chrome://extensions` → click ↺ on the extension card
-6. Reload any open listing tabs
+Repository history contained service-role, ImageKit, and other private credentials.
+Treat them as compromised and rotate/revoke them at their providers before
+relying on the current source cleanup. See [credential rotation guidance](docs/CREDENTIALS_SETUP.md).
 
 ---
 
