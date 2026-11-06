@@ -4,6 +4,12 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.7] - 2026-11-06
+### Keep Zillow Photo Counts Property-Scoped
+- **Prefer property photo data**: Keep structured Zillow listing photos ahead of broader DOM image collections so related listings cannot inflate counts after hydration.
+- **Regression coverage**: Verify unrelated DOM photos do not replace the property’s photo collection.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.7.
+
 ## [v52.7.6] - 2026-11-06
 ### Preserve Authenticated Saves and Source Photo Order
 - **Authenticated background saves**: Keep imports, folder operations, and diagnostics behind the signed-in Choice admin session; remove extension calls that bypass the background worker.

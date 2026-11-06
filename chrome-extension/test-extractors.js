@@ -432,6 +432,40 @@ t('Zillow DOM prefers listing gallery photos over unrelated property-card photos
   const payload = api.extractZillow(d, Z);
   assert.deepStrictEqual(JSON.parse(payload.original_image_urls), galleryPhotos.map((photo) => photo.src));
 });
+t('Zillow photo counts prefer property data over unrelated DOM images', () => {
+  const propertyPhotos = [
+    'https://photos.zillowstatic.com/fp/11111111111111111111111111111111-photo.jpg',
+    'https://photos.zillowstatic.com/fp/22222222222222222222222222222222-photo.jpg',
+  ];
+  const relatedPhotos = Array.from({ length: 7 }, (_, index) => ({
+    currentSrc: `https://photos.zillowstatic.com/fp/related${index}-photo.jpg`,
+    src: `https://photos.zillowstatic.com/fp/related${index}-photo.jpg`,
+    attributes: [],
+    getAttribute: () => null,
+  }));
+  const d = doc(cache({
+    zpid: 791,
+    address: { streetAddress: '502 Magnolia Ave', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: 1500,
+    homeType: 'SINGLE_FAMILY',
+    responsivePhotos: propertyPhotos.map((url) => ({
+      mixedSources: { jpeg: [{ width: 1024, url }] },
+    })),
+  }));
+  d.querySelector = () => null;
+  d.querySelectorAll = (selector) => selector.startsWith('img,')
+    ? relatedPhotos
+    : [];
+  d.body = { innerText: '' };
+
+  const payload = api.extractZillow(d, Z);
+  const photos = JSON.parse(payload.original_image_urls);
+  assert.strictEqual(photos.length, 2);
+  assert.deepStrictEqual(
+    photos.map((photo) => typeof photo === 'string' ? photo : photo.url),
+    propertyPhotos,
+  );
+});
 t('Zillow building page extracts nested cache data, visible address, rent, and gallery photos', () => {
   const galleryUrls = Array.from({ length: 11 }, (_, index) =>
     `https://photos.zillowstatic.com/fp/${String(index + 1).padStart(16, '0')}-gallery.jpg`);

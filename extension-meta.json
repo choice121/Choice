@@ -1,7 +1,7 @@
 {
-  "version": "52.7.6",
-  "updated_at": "2026-11-06T04:10:23.348Z",
-  "timestamp": 1793938223348,
+  "version": "52.7.7",
+  "updated_at": "2026-11-06T05:46:31.382Z",
+  "timestamp": 1793943991384,
   "channel": "stable",
   "name": "Import to Choice Properties",
   "download_url": "https://choice-properties-site.pages.dev/choice-properties-extension.zip",

@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v52.7.6
+// Choice Properties — Live Content Script v52.7.7
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -21,7 +21,7 @@
   window.__CP_LIVE_CONTENT_LOADED__ = true;
   window.__CP_LIVE_CONTENT_VERSION__ = VERSION;
 
-  var VERSION  = '52.7.6-live';
+  var VERSION  = '52.7.7-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1815,7 +1815,7 @@
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v52.7.6-live',
+        _import: 'browser-extension-v52.7.7-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {

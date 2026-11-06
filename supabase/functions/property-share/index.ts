@@ -60,37 +60,6 @@ async function findShareByTokenOrAlias(supabase: any, tokenOrAlias: string) {
   return data;
 }
 
-async function createFriendlyShareAlias(supabase: any, properties: Array<{ city?: string | null }>, tokenHash: string): Promise<string> {
-  const cityBase = (properties || [])
-    .map((property) => String(property?.city || "").trim())
-    .filter(Boolean)
-    .sort()[0] || "share";
-
-  const base = normalizeShareAlias(`${cityBase}-${tokenHash.slice(0, 6)}`) || "share";
-  let alias = base.length >= 8 ? base : `share-${tokenHash.slice(0, 6)}`;
-  alias = normalizeShareAlias(alias);
-  if (!alias || alias.length < 6) {
-    alias = `share-${tokenHash.slice(0, 6)}`;
-  }
-
-  let candidate = alias;
-  let suffix = 1;
-  while (true) {
-    const { data, error } = await supabase
-      .from("property_shares")
-      .select("id")
-      .eq("share_alias", candidate)
-      .maybeSingle();
-
-    if (error && error.code !== "PGRST116") {
-      throw error;
-    }
-    if (!data) return candidate;
-    candidate = `${alias}-${suffix.toString(36)}`.slice(0, 24);
-    suffix += 1;
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -301,13 +270,10 @@ Deno.serve(async (req) => {
       const shareId = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-      const shareAlias = await createFriendlyShareAlias(supabase, selectedProperties, tokenHash);
-
       const { error: shareInsertError } = await supabase.from("property_shares").insert({
         id: shareId,
         token_hash: tokenHash,
         expires_at: expiresAt,
-        share_alias: shareAlias,
       });
       if (shareInsertError) {
         return new Response(
@@ -333,8 +299,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           token: rawToken,
-          share_alias: shareAlias,
-          share_url: `https://choice-properties-site.pages.dev/listings.html#share=${encodeURIComponent(shareAlias)}`,
+          share_url: `https://choice-properties-site.pages.dev/listings.html#share=${encodeURIComponent(rawToken)}`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

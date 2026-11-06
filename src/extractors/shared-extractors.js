@@ -1697,8 +1697,8 @@
     }
     const ldPhotos = ld ? (JSON.parse(ld.original_image_urls || '[]')) : [];
 
-    // Prefer NextData > DOM > JSON-LD, but don't let empty NextData fields
-    // erase values that are present in the rendered building page.
+    // Prefer property-scoped NextData, then gallery DOM, then JSON-LD. A
+    // page-wide DOM fallback may also include photos from related listings.
     let merged = basePayload('zillow', null, url);
     [ld, dom, res].forEach(source => {
       if (!source) return;
@@ -1707,8 +1707,7 @@
         if (value !== null && value !== undefined && value !== '' && value !== '[]') merged[key] = value;
       });
     });
-    // Ensure best photo collection is kept
-    const bestPhotos = [resPhotos, domPhotos, ldPhotos].sort((a, b) => b.length - a.length)[0] || [];
+    const bestPhotos = [resPhotos, domPhotos, ldPhotos].find(photos => photos.length > 0) || [];
     if (bestPhotos.length > 0) {
       merged.original_image_urls = JSON.stringify(bestPhotos.slice(0, 50));
     }
