@@ -652,6 +652,41 @@ t('Zillow community extraction survives missing street address and shows distinc
     [['1201', 1, 1, 650, 1450], ['1202', 2, 2, 980, 1895]]
   );
 });
+t('Zillow unit galleries stay scoped to their source unit and retain explicit building and floor facts', () => {
+  const photoDoc = doc(cache({
+    zpid: 771234,
+    address: { streetAddress: '100 Example Ave', city: 'Dallas', state: 'TX', zipcode: '75201' },
+    price: 1800,
+    homeType: 'APARTMENT',
+    photos: [{ url: 'https://cdn.example.com/community.jpg' }],
+    units: [{
+      id: 'zillow-unit-a101',
+      unitNumber: 'A101',
+      monthlyRent: 1800,
+      bedrooms: 1,
+      bathrooms: 1,
+      building: { id: 'east-building', name: 'East Tower', code: 'E' },
+      floorNumber: 3,
+      photos: [
+        { url: 'https://cdn.example.com/a101-kitchen.jpg' },
+        { url: 'https://cdn.example.com/a101-bedroom.jpg' },
+      ],
+    }],
+  }));
+  const payload = api.extractZillow(photoDoc, ZMULTI);
+  assert.ok(payload);
+  assert.deepStrictEqual(
+    payload.unit_options.map(unit => [
+      unit.unit_number, unit.source_id, unit.building_name, unit.building_code,
+      unit.building_source_id, unit.unit_floor, unit.photo_urls,
+    ]),
+    [[
+      'A101', 'zillow-unit-a101', 'East Tower', 'E', 'east-building', '3',
+      ['https://cdn.example.com/a101-kitchen.jpg', 'https://cdn.example.com/a101-bedroom.jpg'],
+    ]]
+  );
+  assert.ok(!payload.unit_options[0].photo_urls.includes('https://cdn.example.com/community.jpg'));
+});
 t('Zillow community parser captures floor-plan cards without explicit unit numbers', () => {
   const card = {
     innerText: 'A2\n2 bd\n2 ba\n980 sqft\nStarting at $1,895 - $2,150',

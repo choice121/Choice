@@ -98,6 +98,55 @@ testRunner('buildPipelineRecord preserves the apartment community starting rent 
   assertEquals(JSON.parse(String(record.original_data)).community_starting_rent, 1450);
 });
 
+testRunner('buildPipelineRecord keeps floor plans distinct and never promotes starting rent to unit rent', () => {
+  const record = buildPipelineRecord({
+    source: 'zillow',
+    source_listing_id: 'ZPID-APT-OPTIONS',
+    original_data: JSON.stringify({
+      unit_options: [
+        {
+          source_kind: 'unit',
+          source_id: 'apt-unit-204',
+          unit_number: 'B204',
+          starting_rent: 1600,
+          unit_floor: '2',
+          building_name: 'North Tower',
+          building_code: 'N',
+          building_source_id: 'north-tower-id',
+          floor_source_id: 'north-floor-2-id',
+          photo_urls: ['https://cdn.example.com/unit-204.jpg', 'javascript:alert(1)', 'https://user:pass@cdn.example.com/private.jpg'],
+        },
+        { source_kind: 'floor_plan', unit_number: '999', floor_plan_name: 'Studio', starting_rent: 1200, building_name: 'North Tower', image_url: 'https://cdn.example.com/studio.jpg' },
+        { bedrooms: 2, bathrooms: 1, square_footage: 900 },
+      ],
+    }),
+  });
+
+  const options = JSON.parse(String(record.original_data)).unit_options;
+  assertEquals(options, [
+    {
+      source_kind: 'unit',
+      source_order: 0,
+      unit_number: 'B204',
+      building_name: 'North Tower',
+      source_id: 'apt-unit-204',
+      unit_floor: '2',
+      photo_urls: ['https://cdn.example.com/unit-204.jpg'],
+      building_code: 'N',
+      building_source_id: 'north-tower-id',
+      floor_source_id: 'north-floor-2-id',
+    },
+    {
+      source_kind: 'floor_plan',
+      source_order: 1,
+      floor_plan_name: 'Studio',
+      building_name: 'North Tower',
+      starting_rent: 1200,
+      image_url: 'https://cdn.example.com/studio.jpg',
+    },
+  ]);
+});
+
 testRunner('buildPipelineRecord omits prohibited listing facts and preserves unknown features', () => {
   const record = buildPipelineRecord({
     source: 'zillow',

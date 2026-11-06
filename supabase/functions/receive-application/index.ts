@@ -333,7 +333,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: prop, error: propErr } = await supabase
     .from('properties')
-    .select('id, address, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status')
+    .select('id, address, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status, is_multi_unit, total_units')
     .eq('id', submittedPropertyId)
     .maybeSingle();
 
@@ -368,12 +368,49 @@ Deno.serve(async (req: Request) => {
     if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
   }
 
+  const submittedUnitId = fv(fields['Property Unit ID']);
+  const submittedUnitNumber = fv(fields['Property Unit']);
+  let selectedUnit: {
+    id: string;
+    property_id: string;
+    unit_number: string;
+    unit_floor_label: string | null;
+    monthly_rent: number | null;
+  } | null = null;
+  if (submittedUnitId) {
+    if (!UUID_RE.test(submittedUnitId)) return jsonErr(400, 'Selected apartment unit is invalid.');
+    const { data, error } = await supabase
+      .from('property_units')
+      .select('id, property_id, unit_number, unit_floor_label, monthly_rent, status, review_status')
+      .eq('id', submittedUnitId)
+      .eq('property_id', submittedPropertyId)
+      .eq('status', 'active')
+      .eq('review_status', 'approved')
+      .maybeSingle();
+    if (error) {
+      console.error('Selected apartment unit lookup error:', JSON.stringify(error));
+      return jsonErr(500, 'Could not validate the selected apartment unit. Please retry.');
+    }
+    if (!data) return jsonErr(422, 'This apartment unit is no longer available.');
+    if (!Number.isFinite(Number(data.monthly_rent)) || Number(data.monthly_rent) <= 0) {
+      return jsonErr(422, 'This apartment unit does not have a verified monthly rent.');
+    }
+    if (submittedUnitNumber && submittedUnitNumber !== data.unit_number) {
+      return jsonErr(400, 'Selected apartment unit does not match the application details.');
+    }
+    selectedUnit = data;
+  } else if (prop.is_multi_unit || Number(prop.total_units || 0) > 1) {
+    return jsonErr(422, 'Select a verified apartment unit before applying.');
+  }
+
   const screenedAdultCount = 1 + (hasCoApplicant ? 1 : 0) + additionalApplicants.length;
   const applicationFeePerAdult = 50;
   const enforcedFee = screenedAdultCount * applicationFeePerAdult;
-  const enforcedRent    = typeof prop.monthly_rent      === 'number' ? prop.monthly_rent      : null;
-  const enforcedDeposit = typeof prop.security_deposit  === 'number' ? prop.security_deposit  : null;
+  const enforcedRent    = selectedUnit ? Number(selectedUnit.monthly_rent) : (typeof prop.monthly_rent === 'number' ? prop.monthly_rent : null);
+  const enforcedDeposit = selectedUnit ? Number(selectedUnit.monthly_rent) : (typeof prop.security_deposit === 'number' ? prop.security_deposit : null);
   const enforcedAddress = prop.address || fv(fields['Property Address']) || null;
+  const unitFloorLabel = selectedUnit?.unit_floor_label || fv(fields['Property Floor Label']) || fv(fields['Property Floor']) || null;
+  const numericUnitFloor = unitFloorLabel && /^\d+$/.test(unitFloorLabel) ? Number.parseInt(unitFloorLabel, 10) : null;
 
   // Pets / smoking policy enforcement intentionally removed —
   // applicants may submit any answer for pets and smoking regardless of
@@ -399,15 +436,18 @@ Deno.serve(async (req: Request) => {
   // ── Per-email 24h dedup: surface the existing app instead of double-billing ─
   {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: recent } = await supabase
+    let recentQuery = supabase
       .from('applications')
       .select('app_id, property_id, created_at')
       .ilike('email', email)
       .eq('property_id', submittedPropertyId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    recentQuery = selectedUnit
+      ? recentQuery.eq('property_unit_id', selectedUnit.id)
+      : recentQuery.is('property_unit_id', null);
+    const { data: recent } = await recentQuery.maybeSingle();
     if (recent?.app_id) {
       return jsonOk({ success: true, appId: recent.app_id, message: 'A recent application already exists for this email and property.', deduped: true });
     }
@@ -432,8 +472,10 @@ Deno.serve(async (req: Request) => {
     dob: dob || null,
     ssn: (() => { const raw = fv(fields['SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
     property_address: enforcedAddress,
-    property_unit: fv(fields['Property Unit']) || null,
-    property_floor: fv(fields['Property Floor']) ? parseInt(fv(fields['Property Floor']), 10) : null,
+    property_unit: selectedUnit?.unit_number || submittedUnitNumber || null,
+    property_floor: numericUnitFloor,
+    property_floor_label: unitFloorLabel,
+    property_unit_id: selectedUnit?.id || null,
     property_id: submittedPropertyId,
     requested_move_in_date: fv(fields['Requested Move-in Date']) || null,
     desired_lease_term: fv(fields['Desired Lease Term']) || null,
@@ -727,17 +769,18 @@ Deno.serve(async (req: Request) => {
   // ── Notification emails ───────────────────────────────────────────────────
   const propLabel = enforcedAddress || 'your chosen property';
 
-  const logEmail = async (
+  async function logEmail(
     type: string,
     recipient: string,
     status: string,
     provider: string,
-    errorMsg: string | null = null) => {
+    errorMsg: string | null = null,
+  ) {
     const { error } = await supabase.from('email_logs').insert({
       app_id: appId, type, recipient, status, provider, error_msg: errorMsg,
     });
     if (error) console.error('Email log insert failed:', error.message);
-  };
+  }
 
   let coApplicantConsentInviteSent = false;
   if (coApplicantConsentLink) {

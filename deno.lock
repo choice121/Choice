@@ -1,0 +1,25 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.119.0"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.119.0": "5b053344a262b305cfd47fdd75b3d244e47983d70fd7f7e68dc4dbbb98bc90bc"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@google/genai@^2.30.0",
+        "npm:@playwright/test@^1.64.1",
+        "npm:@vitejs/plugin-react@^6.1.2",
+        "npm:apify-client@^2.25.0",
+        "npm:clsx@^2.1.1",
+        "npm:lucide-react@^1.57.0",
+        "npm:react-dom@^19.3.0",
+        "npm:react@^19.3.0",
+        "npm:tailwind-merge@^3.7.0",
+        "npm:vite@^8.3.4"
+      ]
+    }
+  }
+}

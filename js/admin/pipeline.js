@@ -41,6 +41,12 @@
     const unitOptions = Array.isArray(sourceData.unit_options) ? sourceData.unit_options : [];
     const media = Array.isArray(sourceData.media) ? sourceData.media : [];
     const isApartment = String(listing.property_type || sourceData.homeType || '').toUpperCase() === 'APARTMENT';
+    const isUnitOption = item => item && typeof item === 'object' &&
+      item.source_kind !== 'floor_plan' &&
+      String(item.unit_number || item.unit || '').trim() !== '';
+    const isFloorPlanOption = item => item && typeof item === 'object' &&
+      (item.source_kind === 'floor_plan' ||
+        (!item.unit_number && !item.unit && String(item.floor_plan_name || '').trim() !== ''));
     const isCommunityOverview = !listing.unit_number &&
       (sourceData.is_multi_unit === true || sourceData.is_multi_unit === 'true' ||
         (unitOptions.length > 0 && listing.monthly_rent == null));
@@ -52,7 +58,9 @@
       priceRange: sourceData.price_range || null,
       rentBasis: sourceData.rent_basis || null,
       isCommunityOverview,
-      unitOptions,
+      units: unitOptions.filter(isUnitOption),
+      floorPlanOptions: unitOptions.filter(isFloorPlanOption),
+      unclassifiedOptions: unitOptions.filter(item => !isUnitOption(item) && !isFloorPlanOption(item)),
       floorPlans: media.filter(item => item && item.kind === 'floor_plan'),
     };
   }
@@ -66,33 +74,58 @@
       info.priceRange ? `Source price range: ${S.esc(info.priceRange)}` : '',
       info.rentBasis ? `Source price label: ${S.esc(info.rentBasis)}` : '',
     ].filter(Boolean);
-    const rows = info.unitOptions.map((unit, index) => {
+    const renderRows = (items, isFloorPlan) => items.map((unit, index) => {
       const beds = unit.bedrooms === 0 ? 'Studio' : unit.bedrooms != null ? `${unit.bedrooms} bd` : '— bd';
       const baths = unit.bathrooms != null ? `${unit.bathrooms} ba` : '— ba';
       const sqft = unit.square_footage != null ? `${Number(unit.square_footage).toLocaleString()} sqft` : '— sqft';
-      const rentValue = unit.monthly_rent ?? unit.starting_rent;
-      const rent = rentValue != null ? fmt$$(rentValue) : 'Price not listed';
-      const label = unit.unit_number || unit.floor_plan_name || `Option ${index + 1}`;
+      const rentValue = isFloorPlan ? unit.starting_rent : unit.monthly_rent;
+      const rent = rentValue != null
+        ? `${isFloorPlan ? 'From ' : ''}${fmt$$(rentValue)}`
+        : 'Price not listed';
+      const baseLabel = isFloorPlan
+        ? (unit.floor_plan_name || `Floor plan ${index + 1}`)
+        : (unit.unit_number || unit.unit);
+      const label = [
+        baseLabel,
+        unit.building_name ? `Building ${unit.building_name}` : '',
+        !isFloorPlan && unit.unit_floor ? `Floor ${unit.unit_floor}` : '',
+      ].filter(Boolean).join(' · ');
       return `<tr><td>${S.esc(label)}</td><td>${S.esc(beds)} · ${S.esc(baths)}</td><td>${S.esc(sqft)}</td><td>${S.esc(rent)}</td><td>${S.esc(unit.rent_basis || info.rentBasis || 'Unspecified')}</td></tr>`;
     }).join('');
+    const unitRows = renderRows(info.units, false);
+    const planRows = renderRows(info.floorPlanOptions, true);
     const floorPlans = info.floorPlans.length
       ? `<div class="pl-panel-alert pl-panel-alert-info">${info.floorPlans.length} floor-plan media item${info.floorPlans.length === 1 ? '' : 's'} captured: ${info.floorPlans.map(item => S.esc(item.title || 'Floor plan')).join(', ')}</div>`
       : '';
     const warning = info.isCommunityOverview
-      ? '<div class="pl-panel-alert pl-panel-alert-warning">This is a community overview, not an individual rental unit. Select and import a specific unit before publishing.</div>'
+      ? '<div class="pl-panel-alert pl-panel-alert-warning">This community is published as one listing. Review real rentable units separately from floor-plan layouts; the community price is only a starting price.</div>'
+      : '';
+    const unclassifiedWarning = info.unclassifiedOptions.length
+      ? `<div class="pl-panel-alert pl-panel-alert-warning">${info.unclassifiedOptions.length} captured option${info.unclassifiedOptions.length === 1 ? '' : 's'} could not be classified as a real unit or floor plan and must be reviewed.</div>`
+      : '';
+    const inventoryReview = info.units.length || info.floorPlanOptions.length
+      ? '<label class="pl-inventory-review" style="display:flex;align-items:flex-start;gap:8px;margin:14px 0;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:.82rem"><input type="checkbox" id="pl-inventory-reviewed" style="margin-top:3px"> <span>I reviewed the captured unit/plan records, prices, and source order. Unavailable or unverified entries must remain excluded.</span></label>'
       : '';
     return `<div class="pl-section">
       <div class="pl-section-title">Apartment &amp; community inventory</div>
       ${warning}
+      ${unclassifiedWarning}
       ${facts.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;color:var(--muted-2);font-size:.8rem">${facts.map(fact => `<span>${fact}</span>`).join('')}</div>` : ''}
-      ${rows ? `<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Unit / plan</th><th>Beds · baths</th><th>Size</th><th>Source price</th><th>Price label</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+      ${unitRows ? `<h4>Real unit records</h4><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Unit</th><th>Beds · baths</th><th>Size</th><th>Exact unit price</th><th>Price basis</th></tr></thead><tbody>${unitRows}</tbody></table></div>` : ''}
+      ${planRows ? `<h4>Floor-plan layouts (not rentable units)</h4><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Plan</th><th>Beds · baths</th><th>Size</th><th>Starting price</th><th>Price basis</th></tr></thead><tbody>${planRows}</tbody></table></div>` : ''}
       ${floorPlans}
-      ${!rows && !floorPlans && !facts.length ? '<p class="pl-meta">No separate apartment inventory details were captured.</p>' : ''}
+      ${inventoryReview}
+      ${!unitRows && !planRows && !floorPlans && !facts.length ? '<p class="pl-meta">No separate apartment inventory details were captured.</p>' : ''}
     </div>`;
   }
 
   function isCommunityOverview(listing){
     return apartmentCommunityInfo(listing)?.isCommunityOverview === true;
+  }
+
+  function hasApartmentInventory(listing){
+    const info = apartmentCommunityInfo(listing);
+    return !!(info && (info.units.length || info.floorPlanOptions.length));
   }
 
   // ── Pre-publish validation gate ──────────────────────────────────────────────
@@ -102,19 +135,26 @@
     const failures = [];
     const desc = listing.description || '';
 
-    if (isCommunityOverview(listing)) {
-      failures.push('This is a community overview, not an individual apartment unit. Select and import a specific unit before publishing.');
-    }
+    const apartmentInfo = apartmentCommunityInfo(listing);
+    const community = apartmentInfo?.isCommunityOverview === true;
 
     // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
     // Listings are pre-screened on import and published regardless of photo count.
 
     // 2. Rent must be set and reasonable
     const monthlyRent = Number(listing.monthly_rent);
-    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
+    const communityPrices = [
+      ...(apartmentInfo?.units || []).map(unit => Number(unit.monthly_rent)),
+      ...(apartmentInfo?.floorPlanOptions || []).map(plan => Number(plan.starting_rent)),
+    ].filter(price => Number.isFinite(price) && price > 0);
+    if ((!Number.isFinite(monthlyRent) || monthlyRent <= 0) && !(community && communityPrices.length)) {
       failures.push('Monthly rent is not set');
-    } else if (monthlyRent > 100000) {
+    } else if (Number.isFinite(monthlyRent) && monthlyRent > 100000 && !community) {
       failures.push('Monthly rent looks incorrect ($' + monthlyRent + ') — please verify');
+    }
+
+    if (apartmentInfo?.unclassifiedOptions.length) {
+      failures.push('Captured apartment options include unclassified records; review or remove them before publishing');
     }
 
     // 2b. Application fee structured field must be exactly 50
@@ -1318,6 +1358,13 @@
       return;
     }
 
+    const inventoryReviewed = panelIsForListing &&
+      panel.querySelector('#pl-inventory-reviewed')?.checked === true;
+    if (hasApartmentInventory(l) && !inventoryReviewed) {
+      S.toast('Review and confirm every captured apartment unit and floor plan before publishing.', 'error');
+      return;
+    }
+
     const desc = [l.address, l.city, l.state].filter(Boolean).join(', ');
     const visibility = panelIsForListing && panel.querySelector('#pf-publish-visibility')?.value === 'active' ? 'active' : 'private_placement';
     const visibilityLabel = visibility === 'active' ? 'publicly' : 'as a private placement';
@@ -1344,6 +1391,7 @@
         p_id: id,
         p_landlord_id: null,
         p_status: visibility,
+        p_inventory_reviewed: inventoryReviewed,
       }));
     } catch (publishError) {
       if(btn){ btn.disabled = false; btn.textContent = 'Publish listing →'; }
@@ -1415,6 +1463,11 @@
         const listing = _pageData.find(x => x.id === id);
         if (!listing) { failed++; continue; }
 
+        if (hasApartmentInventory(listing)) {
+          blocked++;
+          continue;
+        }
+
         // Pre-publish validation gate — skip invalid records in bulk mode
         const validation = await validateForPublish(listing);
         if (!validation.ok) {
@@ -1427,6 +1480,7 @@
           p_id: id,
           p_landlord_id: null,
           p_status: visibility,
+          p_inventory_reviewed: false,
         });
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;
@@ -2161,8 +2215,9 @@
     }
     const visibility = document.getElementById('pl-folder-visibility')?.value === 'active' ? 'active' : 'private_placement';
     const communityCount = publishable.filter(isCommunityOverview).length;
-    if(communityCount){
-      S.toast(`${communityCount} apartment community overview${communityCount === 1 ? '' : 's'} cannot be published as individual rentals. Select and import specific available units first.`, 'error');
+    const inventoryCount = publishable.filter(hasApartmentInventory).length;
+    if(communityCount || inventoryCount){
+      S.toast(`${communityCount || inventoryCount} apartment community listing${(communityCount || inventoryCount) === 1 ? '' : 's'} require individual inventory review and must be published one at a time.`, 'error');
       return;
     }
     const ok = await S.confirm(
@@ -2186,6 +2241,7 @@
           p_id: listing.id,
           p_landlord_id: null,
           p_status: visibility,
+          p_inventory_reviewed: false,
         });
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;

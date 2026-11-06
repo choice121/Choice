@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       // Fetch properties - safely project only client-safe public fields
       const { data: properties, error: propError } = await supabase
         .from("properties")
-        .select("id, title, description, address, city, state, zip, county, neighborhood, lat, lng, property_type, year_built, floors, unit_number, total_units, bedrooms, bathrooms, half_bathrooms, total_bathrooms, square_footage, lot_size_sqft, garage_spaces, monthly_rent, security_deposit, application_fee, available_date, lease_terms, minimum_lease_months, pets_allowed, smoking_allowed, parking, parking_fee, amenities, appliances, utilities_included, flooring, heating_type, cooling_type, laundry_type, location_context, virtual_tour_url, has_basement, has_central_air, status, created_at, updated_at, ai_features, is_multi_unit, building_name, price_range, unit_floor, unit_options")
+        .select("id, title, description, address, city, state, zip, county, neighborhood, lat, lng, property_type, year_built, floors, unit_number, total_units, bedrooms, bathrooms, half_bathrooms, total_bathrooms, square_footage, lot_size_sqft, garage_spaces, monthly_rent, security_deposit, application_fee, available_date, lease_terms, minimum_lease_months, pets_allowed, smoking_allowed, parking, parking_fee, amenities, appliances, utilities_included, flooring, heating_type, cooling_type, laundry_type, location_context, virtual_tour_url, has_basement, has_central_air, status, created_at, updated_at, ai_features, is_multi_unit, building_name, price_range, unit_floor, unit_options, community_starting_rent, community_max_rent, community_rent_basis")
         .in("id", propertyIds)
         .in("status", ["active", "private_placement"]);
 
@@ -136,6 +136,31 @@ Deno.serve(async (req) => {
       const shareableProperties = (properties || []).filter(
         (property) => property.status === "active" || property.status === "private_placement",
       );
+      const shareablePropertyIds = shareableProperties.map(property => property.id);
+
+      const [{ data: units, error: unitError }, { data: floorPlans, error: floorPlanError }] = await Promise.all([
+        supabase
+          .from("property_units")
+          .select("id, property_id, unit_number, unit_floor_label, building_name, floor_plan_name, bedrooms, bathrooms, square_footage, monthly_rent, unit_photos, status, rent_basis, source_order, review_status")
+          .in("property_id", shareablePropertyIds)
+          .eq("status", "active")
+          .eq("review_status", "approved")
+          .order("source_order", { ascending: true }),
+        supabase
+          .from("property_floor_plans")
+          .select("id, property_id, source_plan_id, name, bedrooms, bathrooms, square_footage, starting_rent, rent_basis, image_url, source_order, building_name, status, review_status")
+          .in("property_id", shareablePropertyIds)
+          .eq("status", "active")
+          .eq("review_status", "approved")
+          .order("source_order", { ascending: true }),
+      ]);
+      if (unitError || floorPlanError) {
+        console.error("Private share inventory lookup failed:", unitError?.message || floorPlanError?.message);
+        return new Response(
+          JSON.stringify({ error: "property_inventory_lookup_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       // Fetch photos for these properties
       const { data: photos, error: photoError } = await supabase
@@ -158,6 +183,16 @@ Deno.serve(async (req) => {
 
       const photoMap: Record<string, Array<Record<string, unknown>>> = {};
       const mediaMap: Record<string, Array<Record<string, unknown>>> = {};
+      const unitMap: Record<string, Array<Record<string, unknown>>> = {};
+      const floorPlanMap: Record<string, Array<Record<string, unknown>>> = {};
+      (units || []).forEach(unit => {
+        unitMap[unit.property_id] = unitMap[unit.property_id] || [];
+        unitMap[unit.property_id].push(unit);
+      });
+      (floorPlans || []).forEach(plan => {
+        floorPlanMap[plan.property_id] = floorPlanMap[plan.property_id] || [];
+        floorPlanMap[plan.property_id].push(plan);
+      });
       if (photos) {
         photos.forEach(ph => {
           photoMap[ph.property_id] = photoMap[ph.property_id] || [];
@@ -175,7 +210,9 @@ Deno.serve(async (req) => {
       const enriched = shareableProperties.map(prop => ({
         ...prop,
         property_photos: photoMap[prop.id] || [],
-        property_media: mediaMap[prop.id] || []
+        property_media: mediaMap[prop.id] || [],
+        property_units: unitMap[prop.id] || [],
+        property_floor_plans: floorPlanMap[prop.id] || [],
       }));
 
       return new Response(

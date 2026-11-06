@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v52.7.7
+// Choice Properties — Universal Content Script & UI Engine v52.7.9
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -13,7 +13,7 @@
   window.__CP_CONTENT_LOADED__ = true;
   window.__CP_CONTENT_VERSION__ = VERSION;
 
-  var VERSION  = '52.7.7';
+  var VERSION  = '52.7.9';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -83,9 +83,12 @@
       data.bathrooms != null ? data.bathrooms : data.baths,
       data.square_footage != null ? data.square_footage : data.sqft,
       JSON.stringify((Array.isArray(data.unit_options) ? data.unit_options : []).map(function (unit) {
+        var photos = Array.isArray(unit.photo_urls) ? unit.photo_urls : [];
         return [
           unit.unit_number, unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
-          unit.square_footage, unit.monthly_rent, unit.starting_rent, unit.rent_basis
+          unit.square_footage, unit.monthly_rent, unit.starting_rent, unit.rent_basis,
+          unit.building_name, unit.building_code, unit.building_source_id, unit.unit_floor,
+          photos.length, photos.join(',')
         ].join(':');
       })),
       JSON.stringify((Array.isArray(data.media) ? data.media : []).map(function (item) {
@@ -336,22 +339,24 @@
     var plans = new Map();
     (Array.isArray(options) ? options : []).forEach(function (option) {
       if (!option || typeof option !== 'object') return;
+      if (option.source_kind === 'floor_plan') {
+        var planKey = [
+          String(option.floor_plan_name || '').trim().toLowerCase(),
+          option.bedrooms,
+          option.bathrooms,
+          option.square_footage,
+          (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
+            ? ''
+            : option.starting_rent,
+        ].join('|');
+        if (!plans.has(planKey)) plans.set(planKey, option);
+        return;
+      }
       if (isValidUnitNumber(option.unit_number)) {
         var unitKey = String(option.unit_number).trim().toLowerCase();
         if (!units.has(unitKey)) units.set(unitKey, option);
         return;
       }
-      if (option.source_kind !== 'floor_plan') return;
-      var planKey = [
-        String(option.floor_plan_name || '').trim().toLowerCase(),
-        option.bedrooms,
-        option.bathrooms,
-        option.square_footage,
-        (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
-          ? ''
-          : option.starting_rent,
-      ].join('|');
-      if (!plans.has(planKey)) plans.set(planKey, option);
     });
     return { units: Array.from(units.values()), floorPlans: Array.from(plans.values()) };
   }
@@ -469,22 +474,20 @@
       inventoryFacts.push('Price basis: ' + rentBasisLabel);
     }
     if (inventoryLabels.length) bedsBaths = inventoryLabels.join(' • ');
-    var allInventoryOptions = inventory.units.concat(inventory.floorPlans);
-    var unitDetailsHtml = allInventoryOptions.length
-      ? '<div class="cp-unit-options-preview">' +
-          '<div class="cp-unit-options-heading">' + escapeHtml(inventoryLabels.join(' · ')) + '</div>' +
-          '<div class="cp-unit-options-list">' + allInventoryOptions.slice(0, 12).map(function (unit, index) {
-            var name = unit.unit_number
-              ? 'Unit ' + unit.unit_number
-              : (unit.floor_plan_name || 'Option ' + (index + 1));
+    function renderInventoryRows(options, isFloorPlan, limit) {
+      return options.slice(0, limit).map(function (unit, index) {
+            var name = isFloorPlan
+              ? (unit.floor_plan_name || 'Floor plan ' + (index + 1))
+              : (unit.unit_number ? 'Unit ' + unit.unit_number : unit.floor_plan_name || 'Unit ' + (index + 1));
             var facts = [];
             if (unit.bedrooms === 0) facts.push('Studio');
             else if (unit.bedrooms != null) facts.push(unit.bedrooms + ' bd');
             if (unit.bathrooms != null) facts.push(unit.bathrooms + ' ba');
             if (unit.square_footage != null) facts.push(Number(unit.square_footage).toLocaleString() + ' sqft');
-            var price = unit.monthly_rent != null
+            if (unit.unit_floor != null && !isFloorPlan) facts.push('Floor ' + unit.unit_floor);
+            var price = !isFloorPlan && unit.monthly_rent != null
               ? '$' + Number(unit.monthly_rent).toLocaleString() + '/mo'
-              : (unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
+              : (isFloorPlan && unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
             var unitRentBasis = unit.rent_basis || rentBasis;
             var unitRentBasisLabel = unitRentBasis === 'total_monthly_price'
               ? 'Total monthly price'
@@ -494,9 +497,23 @@
             return '<div class="cp-unit-option-row"><span><strong>' + escapeHtml(name) + '</strong>' +
               (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
               '</span>' + (price ? '<strong>' + escapeHtml(price) + '<small style="display:block;text-align:right;font-size:10px;font-weight:400">' + escapeHtml(unitRentBasisLabel) + '</small></strong>' : '') + '</div>';
-          }).join('') + '</div>' +
-          (allInventoryOptions.length > 12
-            ? '<div class="cp-unit-options-note">' + (allInventoryOptions.length - 12) + ' more options are included when saved.</div>'
+      }).join('');
+    }
+    var allInventoryCount = inventory.units.length + inventory.floorPlans.length;
+    var unitPreviewCount = Math.min(inventory.units.length, 12);
+    var planPreviewCount = Math.min(inventory.floorPlans.length, 12 - unitPreviewCount);
+    var unitRowsHtml = renderInventoryRows(inventory.units, false, unitPreviewCount);
+    var planRowsHtml = renderInventoryRows(inventory.floorPlans, true, planPreviewCount);
+    var unitDetailsHtml = allInventoryCount
+      ? '<div class="cp-unit-options-preview">' +
+          (inventory.units.length
+            ? '<div class="cp-unit-options-heading">Unit records (not availability-verified)</div><div class="cp-unit-options-list">' + unitRowsHtml + '</div>'
+            : '') +
+          (inventory.floorPlans.length
+            ? '<div class="cp-unit-options-heading">Floor-plan layouts (not rentable units)</div><div class="cp-unit-options-list">' + planRowsHtml + '</div>'
+            : '') +
+          (allInventoryCount > 12
+            ? '<div class="cp-unit-options-note">Preview limited to 12 records; all extracted records are included when saved.</div>'
             : '') +
           (inventoryFacts.length ? '<div class="cp-unit-options-note">' + escapeHtml(inventoryFacts.join(' · ')) + '</div>' : '') +
         '</div>'

@@ -129,7 +129,8 @@
     }).join('');
 
     // ── Multi-unit community detection ────────────────────────
-    var isCommunity = !!(p.is_multi_unit || (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (p.total_units > 1 || p.price_range)));
+    var isCommunity = !!(p.is_multi_unit || p.community_starting_rent != null ||
+      (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (p.total_units > 1 || p.price_range)));
 
     // ── Specs row — beds + baths + sqft (sqft is rounded to ~25 increments) ─
     var specParts = [];
@@ -188,7 +189,10 @@
     // ── Price ─────────────────────────────────────────────────
     var rentHtml;
     var rentUnit;
-    if (isCommunity && p.price_range) {
+    if (isCommunity && Number(p.community_starting_rent) > 0) {
+      rentHtml = '<span style="font-size:0.75rem;font-weight:600;margin-right:3px;color:var(--m-muted,#64748b)">From</span>' + fmtRent(p.community_starting_rent);
+      rentUnit = '<span class="property-card-price-unit">/mo</span>';
+    } else if (isCommunity && p.price_range) {
       rentHtml = esc(p.price_range);
       rentUnit = '<span class="property-card-price-unit">/mo</span>';
     } else if (isCommunity && Number(p.monthly_rent) > 0) {

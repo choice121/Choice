@@ -475,16 +475,35 @@ function amenityIconColor(text) {
   return '';
 }
 
+function isCommunityProperty(property) {
+  return !property.unit_number &&
+    (property.is_multi_unit || Number(property.total_units) > 1 ||
+      property.community_starting_rent != null || property.price_range);
+}
+
+function formatPropertyRent(property, suffix = '') {
+  const amount = property.community_starting_rent ?? property.monthly_rent;
+  if (amount == null) return 'TBD';
+  return (isCommunityProperty(property) ? 'From ' : '') +
+    '$' + Number(amount).toLocaleString() + suffix;
+}
+
 function renderProperty(p) {
   document.title = `${p.title} — Choice Properties`;
 
+  const isCommunityListing = isCommunityProperty(p);
+  const formatPrice = formatPropertyRent;
+
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
-  const applyURL = buildApplyURL(p, shareToken);
+  const applyURL = isCommunityListing ? null : buildApplyURL(p, shareToken);
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
-  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
+  const specsDescription = isCommunityListing
+    ? 'Apartment community'
+    : `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms != null ? p.bedrooms + ' bed' : 'Home')} · ${p.bathrooms != null ? p.bathrooms + ' bath' : ''}`;
+  const ogDesc = `${specsDescription} · ${formatPrice(p, '/mo')} · ${p.address}, ${p.city}, ${p.state}`;
   ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
@@ -562,7 +581,7 @@ function renderProperty(p) {
       "unitCode": "FTK"
     } : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
-    "potentialAction": {
+    ...(applyURL ? { "potentialAction": {
       "@type": "RentAction",
       "name": "Apply for Lease",
       "target": {
@@ -573,7 +592,7 @@ function renderProperty(p) {
           "https://schema.org/MobileWebPlatform"
         ]
       }
-    }
+    } } : {})
   });
   document.head.appendChild(sd);
 
@@ -648,7 +667,7 @@ function renderProperty(p) {
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
 
-  document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
+  document.getElementById('detailPrice').innerHTML = `${esc(formatPrice(p))}<span>/month</span>`;
   const streetAddress = p.address || p.title || 'Property Details';
   const addressUnit = p.unit_number ? `, Unit ${p.unit_number}` : '';
   const locality = [p.city, [p.state, p.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
@@ -955,7 +974,7 @@ function renderProperty(p) {
   }
 
   // Sidebar
-  const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
+  const rentStr = formatPrice(p);
   const priceHtml = `${rentStr}<span>/month</span>`;
   const sbPrice = document.getElementById('sidebarPrice');
   if (sbPrice) sbPrice.innerHTML = priceHtml;
@@ -969,7 +988,9 @@ function renderProperty(p) {
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
-    _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
+    _depEl.textContent = isCommunityListing
+      ? 'Based on selected unit rent'
+      : p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   }
   const _appFee = 50;
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
@@ -995,6 +1016,15 @@ function renderProperty(p) {
   const _wireApply = (id) => {
     const btn = document.getElementById(id);
     if (!btn) return;
+    if (!applyURL) {
+      btn.href = '#communityInventorySection';
+      btn.innerHTML = 'Choose a unit below <i class="fas fa-arrow-down" style="font-size:11px"></i>';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('communityInventorySection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      return;
+    }
     btn.href = applyURL;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1032,7 +1062,7 @@ function renderProperty(p) {
 
   // Mobile sticky Apply bar — for active and private_placement listings
   if (p.status === 'active' || p.status === 'private_placement') {
-    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
+    document.getElementById('mobBarRent').textContent = formatPrice(p, '/mo');
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -1206,7 +1236,7 @@ function _initLeafletMap(p) {
 
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:${markerBg};color:${markerColor};padding:6px 14px;border-radius:24px;font-weight:800;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:${markerBorder};box-shadow:${markerShadow};display:inline-flex;align-items:center;gap:6px;cursor:pointer"><i class="fas fa-home" style="font-size:10px;color:${isDark ? '#006aff' : '#38bdf8'}"></i> ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Available'}</div>`,
+    html: `<div style="background:${markerBg};color:${markerColor};padding:6px 14px;border-radius:24px;font-weight:800;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:${markerBorder};box-shadow:${markerShadow};display:inline-flex;align-items:center;gap:6px;cursor:pointer"><i class="fas fa-home" style="font-size:10px;color:${isDark ? '#006aff' : '#38bdf8'}"></i> ${p.monthly_rent != null ? esc(formatPropertyRent(p, '/mo')) : 'Available'}</div>`,
     iconAnchor: [50, 16], iconSize: [100, 32]
   });
 
@@ -1216,7 +1246,7 @@ function _initLeafletMap(p) {
       <div style="font-size:11.5px;color:var(--m-muted,#475569);margin-top:2px">${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--m-border,#e2e8f0)">
         <span style="font-size:10.5px;font-weight:700;color:#475569;background:rgba(148,163,184,0.16);padding:2px 7px;border-radius:4px">Map location</span>
-        ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
+        ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">${esc(formatPropertyRent(p, '/mo'))}</span>` : ''}
       </div>
     </div>
   `;
@@ -3859,7 +3889,7 @@ async function loadSimilarListings(p) {
     if (!similar.length && p.status !== 'private_placement') {
       const { data } = await supabase
         .from('properties')
-        .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
+        .select('id, title, address, city, state, monthly_rent, community_starting_rent, community_max_rent, is_multi_unit, total_units, price_range, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
         .eq('status', 'active')
         .eq('city', p.city)
         .neq('id', p.id)
@@ -3896,7 +3926,7 @@ async function loadSimilarListings(p) {
           <div class="similar-card-body">
             <div class="similar-card-price">
               ${s.monthly_rent != null
-                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
+                ? esc(formatPropertyRent(s)) + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
                 : 'TBD'}
             </div>
             <div class="similar-card-title">${esc(s.title || 'Rental')}</div>
@@ -3980,24 +4010,50 @@ async function initCommunityInventory(p) {
   const divider = document.getElementById('dividerAfterCommunityInventory');
   if (!container || !content) return;
 
-  const isCommunity = !!(p.is_multi_unit || p.total_units > 1 || p.price_range);
+  const isCommunity = !!(p.is_multi_unit || p.total_units > 1 || p.community_starting_rent != null || p.price_range);
 
   let units = [];
   let floors = [];
+  let embeddedFloorPlanOptions = [];
 
-  // 1. Fetch child units from DB
-  try {
-    const res = await (window.CP?.Properties?.getCommunityUnits ? window.CP.Properties.getCommunityUnits(p.id) : null);
-    if (res && res.ok && Array.isArray(res.data?.units) && res.data.units.length > 0) {
-      units = res.data.units;
-      floors = res.data.floors || [];
-    }
-  } catch (err) {
-    console.warn('[property] getCommunityUnits error:', err);
+  // Share resolution may provide private inventory only after token validation.
+  if (Array.isArray(p.property_units)) {
+    units = p.property_units.map(unit => ({
+      ...unit,
+      unit_floor: unit.unit_floor_label || null,
+    }));
+  }
+  if (Array.isArray(p.property_floor_plans)) {
+    embeddedFloorPlanOptions = p.property_floor_plans.map(plan => ({
+      ...plan,
+      floor_plan_name: plan.name || plan.floor_plan_name || null,
+    }));
   }
 
-  // 2. Fallback to embedded unit_options or building inventory if DB has no separate rows
+  // 1. Fetch public normalized inventory; the database policy excludes private parents.
   if (!units.length) {
+    try {
+      const res = await (window.CP?.Properties?.getCommunityUnits ? window.CP.Properties.getCommunityUnits(p.id) : null);
+      if (res && res.ok) {
+        units = Array.isArray(res.data?.units) ? res.data.units : [];
+        floors = res.data?.floors || [];
+        if (!embeddedFloorPlanOptions.length) {
+          embeddedFloorPlanOptions = (res.data?.floorPlans || []).map(plan => ({
+            ...plan,
+            floor_plan_name: plan.name || null,
+          }));
+        }
+      } else if (res && !res.ok) {
+        console.warn('[property] community inventory lookup failed:', res.error);
+      }
+    } catch (err) {
+      console.warn('[property] getCommunityUnits error:', err);
+    }
+  }
+
+  // Embedded source options are preview-only; live listings require approved normalized inventory.
+  if (!units.length && !embeddedFloorPlanOptions.length &&
+      p.status !== 'active' && p.status !== 'private_placement') {
     let embeddedOptions = null;
     if (Array.isArray(p.unit_options) && p.unit_options.length) {
       embeddedOptions = p.unit_options;
@@ -4010,41 +4066,56 @@ async function initCommunityInventory(p) {
       } catch (_) {}
     }
     if (embeddedOptions && embeddedOptions.length) {
-      units = embeddedOptions.map((opt, idx) => {
-        const uNum = opt.unit_number || opt.unit || (opt.source_kind === 'floor_plan' ? (opt.floor_plan_name || 'Plan ' + (idx + 1)) : ('Unit ' + (idx + 1)));
-        // Infer floor from unit number if not given (e.g., 204 -> Floor 2, 1205 -> Floor 12)
-        let fNum = opt.unit_floor != null ? Number(opt.unit_floor) : null;
-        if (fNum == null && typeof uNum === 'string') {
-          const match = uNum.replace(/^[^0-9]*/, '').match(/^(\d+)/);
-          if (match && match[1].length >= 3) {
-            fNum = parseInt(match[1].slice(0, match[1].length - 2), 10);
-          } else if (match && match[1].length === 2 && parseInt(match[1], 10) > 10) {
-            fNum = parseInt(match[1][0], 10);
-          } else if (match && match[1].length === 1) {
-            fNum = 1;
-          }
-        }
+      const isFloorPlanOption = opt =>
+        opt && typeof opt === 'object' &&
+        (opt.source_kind === 'floor_plan' || (!opt.unit_number && !opt.unit && opt.floor_plan_name));
+      if (!embeddedFloorPlanOptions.length) {
+        embeddedFloorPlanOptions = embeddedOptions.filter(isFloorPlanOption);
+      }
+      units = embeddedOptions
+        .filter(opt => opt && typeof opt === 'object' && !isFloorPlanOption(opt) &&
+          String(opt.unit_number || opt.unit || '').trim())
+        .map(opt => {
         return {
-          id: opt.id || (p.id + '-unit-' + idx),
-          unit_number: uNum,
-          unit_floor: fNum,
+          id: opt.id || null,
+          unit_number: String(opt.unit_number || opt.unit).trim(),
+          unit_floor: opt.unit_floor == null || String(opt.unit_floor).trim() === ''
+            ? null
+            : String(opt.unit_floor).trim(),
           floor_plan_name: opt.floor_plan_name || null,
           bedrooms: opt.bedrooms ?? (opt.beds ?? null),
           bathrooms: opt.bathrooms ?? (opt.baths ?? null),
           square_footage: opt.square_footage ?? (opt.sqft ?? null),
-          monthly_rent: opt.monthly_rent || opt.starting_rent || p.monthly_rent || null,
+          monthly_rent: opt.monthly_rent ?? null,
+          rent_basis: opt.rent_basis || null,
         };
       });
       const floorSet = new Set();
-      units.forEach(u => { if (u.unit_floor != null) floorSet.add(Number(u.unit_floor)); });
-      floors = Array.from(floorSet).sort((a, b) => a - b);
+      units.forEach(u => { if (u.unit_floor != null) floorSet.add(String(u.unit_floor)); });
+      floors = Array.from(floorSet).sort((a, b) => {
+        const aNumber = Number(a);
+        const bNumber = Number(b);
+        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      });
     }
+  }
+
+  if (!floors.length && units.length) {
+    floors = Array.from(new Set(
+      units.map(unit => unit.unit_floor == null ? '' : String(unit.unit_floor).trim()).filter(Boolean)
+    )).sort((a, b) => {
+      const aNumber = Number(a);
+      const bNumber = Number(b);
+      if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
   }
 
   // 3. Collect floor plan media
   const floorPlans = (Array.isArray(p.property_media) ? p.property_media : []).filter(m => m && m.kind === 'floor_plan' && m.url);
 
-  if (!units.length && !floorPlans.length && !isCommunity) {
+  if (!units.length && !floorPlans.length && !embeddedFloorPlanOptions.length && !isCommunity) {
     container.style.display = 'none';
     if (divider) divider.style.display = 'none';
     return;
@@ -4070,15 +4141,14 @@ async function initCommunityInventory(p) {
     }
     stackContainer.style.display = 'block';
 
-    const maxFloor = Math.max(...floors, 1);
     let tiersHtml = '';
-    for (let f = maxFloor; f >= 1; f--) {
-      const floorUnits = units.filter(u => Number(u.unit_floor) === f);
-      const isSelected = String(selectedStackFloor) === String(f);
+    floors.slice().reverse().forEach(floorLabel => {
+      const floorUnits = units.filter(u => String(u.unit_floor) === String(floorLabel));
+      const isSelected = String(selectedStackFloor) === String(floorLabel);
 
-      tiersHtml += '<div class="building-stack-tier ' + (isSelected ? 'active' : '') + '" data-stack-floor="' + f + '">' +
+      tiersHtml += '<div class="building-stack-tier ' + (isSelected ? 'active' : '') + '" data-stack-floor="' + esc(floorLabel) + '">' +
         '<div class="building-stack-tier-label">' +
-          '<i class="fas fa-building"></i> Floor ' + f +
+          '<i class="fas fa-building"></i> Floor ' + esc(floorLabel) +
           '<span class="building-stack-count">' + floorUnits.length + ' unit' + (floorUnits.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
         '<div class="building-stack-units-row">' +
@@ -4090,7 +4160,7 @@ async function initCommunityInventory(p) {
           ).join('') : '<span class="building-stack-empty">No active units listed on this level</span>') +
         '</div>' +
       '</div>';
-    }
+    });
 
     stackContainer.innerHTML = '<div class="building-stack-card">' +
       '<div class="building-stack-header">' +
@@ -4142,8 +4212,8 @@ async function initCommunityInventory(p) {
         '</button>' +
         floors.map(f => {
           const count = units.filter(u => String(u.unit_floor) === String(f)).length;
-          return '<button type="button" class="community-pill-btn ' + (String(selectedFloor) === String(f) ? 'active' : '') + '" data-floor="' + f + '">' +
-            'Floor ' + f + ' <span class="count-badge">' + count + '</span>' +
+          return '<button type="button" class="community-pill-btn ' + (String(selectedFloor) === String(f) ? 'active' : '') + '" data-floor="' + esc(f) + '">' +
+            'Floor ' + esc(f) + ' <span class="count-badge">' + count + '</span>' +
           '</button>';
         }).join('') +
       '</div>';
@@ -4178,28 +4248,63 @@ async function initCommunityInventory(p) {
     if (filtered.length > 0) {
       unitsListHtml = '<div class="community-units-list">' +
         filtered.map(u => {
-          const applyHref = (window.CP?.buildApplyURL)
+          const unitId = u.property_id === p.id &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(u.id || ''))
+            ? String(u.id)
+            : null;
+          const hasVerifiedUnitPrice = Number.isFinite(Number(u.monthly_rent)) && Number(u.monthly_rent) > 0;
+          const applyHref = unitId && hasVerifiedUnitPrice && (window.CP?.buildApplyURL)
             ? window.CP.buildApplyURL(p, shareToken, {
                 unit: u.unit_number,
                 rent: u.monthly_rent,
                 floor: u.unit_floor,
                 bedrooms: u.bedrooms,
                 bathrooms: u.bathrooms,
-                unit_id: u.id,
+                unit_id: unitId,
               })
-            : ('/apply/?id=' + encodeURIComponent(p.id) + '&unit=' + encodeURIComponent(u.unit_number));
+            : null;
 
           const bedText = u.bedrooms === 0 ? 'Studio' : (u.bedrooms != null ? u.bedrooms + ' Bed' + (u.bedrooms === 1 ? '' : 's') : '');
           const bathText = u.bathrooms != null ? u.bathrooms + ' Bath' + (u.bathrooms === 1 ? '' : 's') : '';
           const sqftText = u.square_footage ? ('~' + (Math.round(Number(u.square_footage) / 25) * 25) + ' sqft') : '';
           const floorText = u.unit_floor != null ? ('Floor ' + u.unit_floor) : '';
-          const rentText = u.monthly_rent ? ('$' + Number(u.monthly_rent).toLocaleString()) : (p.monthly_rent ? ('$' + Number(p.monthly_rent).toLocaleString()) : 'Contact for Rent');
+          const rentText = u.monthly_rent != null
+            ? ('$' + Number(u.monthly_rent).toLocaleString())
+            : 'Price not listed';
+          const rentBasisText = u.rent_basis === 'base_rent'
+            ? 'Base rent'
+            : u.rent_basis === 'total_monthly_price'
+              ? 'Total monthly price'
+              : '';
+          const unitPhotos = Array.isArray(u.unit_photos) ? u.unit_photos
+            : Array.isArray(u.photo_urls) ? u.photo_urls : [];
+          const unitPhotoUrls = unitPhotos
+            .map(photo => {
+              const rawUrl = typeof photo === 'string' ? photo : photo?.url;
+              try {
+                const url = new URL(rawUrl);
+                return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+              } catch (_) {
+                return null;
+              }
+            })
+            .filter(Boolean);
+          const unitPhotosHtml = unitPhotoUrls.length
+            ? '<div class="community-unit-photos" aria-label="Photos for unit ' + esc(u.unit_number) + '">' +
+                unitPhotoUrls.map((url, index) =>
+                  '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
+                    '<img src="' + esc(url) + '" alt="' + esc('Unit ' + u.unit_number + ' photo ' + (index + 1)) + '" loading="lazy">' +
+                  '</a>'
+                ).join('') +
+              '</div>'
+            : '';
 
           return '<div class="community-unit-card" id="unit-' + esc(u.id || u.unit_number) + '">' +
             '<div class="community-unit-left">' +
               '<div class="community-unit-title-row">' +
                 '<span class="community-unit-number">' + esc(u.unit_number) + '</span>' +
                 (floorText ? '<span class="community-floor-tag"><i class="fas fa-stairs"></i> ' + esc(floorText) + '</span>' : '') +
+                (u.building_name ? '<span class="community-floor-tag"><i class="fas fa-building"></i> ' + esc(u.building_name) + '</span>' : '') +
                 (u.floor_plan_name ? '<span style="font-size:0.8rem;font-weight:600;color:var(--m-muted)">' + esc(u.floor_plan_name) + '</span>' : '') +
               '</div>' +
               '<div class="community-unit-specs">' +
@@ -4207,12 +4312,14 @@ async function initCommunityInventory(p) {
                 (bathText ? '<span>·</span><span><i class="fas fa-bath"></i> ' + esc(bathText) + '</span>' : '') +
                 (sqftText ? '<span>·</span><span><i class="fas fa-ruler-combined"></i> ' + esc(sqftText) + '</span>' : '') +
               '</div>' +
+              unitPhotosHtml +
             '</div>' +
             '<div class="community-unit-right">' +
-              '<div class="community-unit-price">' + rentText + ' <small>/mo</small></div>' +
-              '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">' +
-                'Apply for Unit <i class="fas fa-arrow-right" style="font-size:11px"></i>' +
-              '</a>' +
+              '<div class="community-unit-price">' + esc(rentText) + (u.monthly_rent != null ? ' <small>/mo</small>' : '') +
+                (rentBasisText ? '<small class="community-unit-rent-basis">' + esc(rentBasisText) + '</small>' : '') + '</div>' +
+              (applyHref
+                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply for Unit <i class="fas fa-arrow-right" style="font-size:11px"></i></a>'
+                : '<span class="community-unit-apply-btn" aria-disabled="true" title="Unit inventory and exact rent must be verified before applying">Application unavailable</span>') +
             '</div>' +
           '</div>';
         }).join('') +
@@ -4226,12 +4333,29 @@ async function initCommunityInventory(p) {
 
     // Floor plans gallery (if floor plan diagrams/images exist)
     let floorPlansHtml = '';
-    if (floorPlans.length > 0) {
+    if (floorPlans.length > 0 || embeddedFloorPlanOptions.length > 0) {
       floorPlansHtml = '<div style="margin-top:24px">' +
         '<div style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--m-muted,#64748b);margin-bottom:12px">' +
-          '<i class="fas fa-drafting-compass"></i> Architectural Floor Plans' +
+          '<i class="fas fa-drafting-compass"></i> Floor Plans <span style="font-weight:500;text-transform:none">(layouts, not individual units)</span>' +
         '</div>' +
         '<div class="community-floorplan-gallery">' +
+          embeddedFloorPlanOptions.map((plan, i) =>
+            '<div class="community-fp-card community-fp-data-card">' +
+              (plan.image_url ? '<div class="community-fp-thumb"><img src="' + esc(plan.image_url) + '" alt="' + esc(plan.floor_plan_name || 'Floor Plan') + '" loading="lazy"></div>' : '') +
+              '<div class="community-fp-info">' +
+                '<div class="community-fp-title">' + esc(plan.floor_plan_name || 'Floor Plan ' + (i + 1)) + '</div>' +
+                '<div class="community-fp-meta">' +
+                  [
+                    plan.building_name ? plan.building_name : null,
+                    plan.bedrooms === 0 ? 'Studio' : plan.bedrooms != null ? plan.bedrooms + ' bd' : null,
+                    plan.bathrooms != null ? plan.bathrooms + ' ba' : null,
+                    plan.square_footage != null ? Number(plan.square_footage).toLocaleString() + ' sqft' : null,
+                    plan.starting_rent != null ? 'From $' + Number(plan.starting_rent).toLocaleString() + '/mo' : null,
+                  ].filter(Boolean).map(esc).join(' · ') +
+                '</div>' +
+              '</div>' +
+            '</div>'
+          ).join('') +
           floorPlans.map((fp, i) =>
             '<div class="community-fp-card" onclick="window.open(\'' + esc(fp.url) + '\', \'_blank\')">' +
               '<div class="community-fp-thumb">' +

@@ -1,11 +1,12 @@
+type NodeGlobal = typeof globalThis & {
+  process?: { env?: Record<string, string | undefined> };
+};
+
 function getEnv(key: string): string | undefined {
   if (typeof Deno !== 'undefined' && Deno.env) {
     return Deno.env.get(key);
   }
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env[key];
-  }
-  return undefined;
+  return (globalThis as NodeGlobal).process?.env?.[key];
 }
 
 export function getAdminEmails(): string[] {

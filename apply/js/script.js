@@ -627,6 +627,7 @@ class RentalApplication {
             const rent  = p.get('rent')  || '';
             const unit  = p.get('unit')  || p.get('unit_number') || '';
             const floor = p.get('floor') || '';
+            const unitId = p.get('unit_id') || '';
             const plan  = p.get('plan')  || '';
             const fee   = '50';
             const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
@@ -635,7 +636,7 @@ class RentalApplication {
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
 
             // Store context on instance for later use (success page, etc.)
-            this.state.propertyContext = { id, name, addr, city, state, rent, unit, floor, plan, shareToken };
+            this.state.propertyContext = { id, name, addr, city, state, rent, unit, floor, unitId, plan, shareToken };
 
             // Populate hidden inputs so FormData serialises them automatically
             const setHidden = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -646,6 +647,8 @@ class RentalApplication {
             setHidden('hiddenListedRent',    rent);
             setHidden('hiddenPropertyUnit',  unit);
             setHidden('hiddenPropertyFloor', floor);
+            setHidden('hiddenPropertyFloorLabel', floor);
+            setHidden('hiddenPropertyUnitId', unitId);
               // Additional property context params
               const zip        = p.get('zip')         || '';
               const deposit    = p.get('deposit')     || '';

@@ -87,6 +87,110 @@ export function safeBool(v: unknown): boolean | null {
   return null;
 }
 
+function sanitizeUnitOptions(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+
+  const options: Record<string, unknown>[] = [];
+  value.slice(0, 100).forEach((raw, sourceOrder) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const item = raw as Record<string, unknown>;
+    const sourceKind = safeStr(item.source_kind)?.toLowerCase();
+    const unitNumber = safeStr(item.unit_number) ?? safeStr(item.unit);
+    const floorPlanName = safeStr(item.floor_plan_name) ?? safeStr(item.name);
+    const isFloorPlan = sourceKind === 'floor_plan' || sourceKind === 'floorplan' ||
+      (!unitNumber && Boolean(floorPlanName));
+    if (!isFloorPlan && (!unitNumber ||
+      !/^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i
+        .test(unitNumber.replace(/^#/, '')))) return;
+
+    const option: Record<string, unknown> = {
+      source_kind: isFloorPlan ? 'floor_plan' : 'unit',
+      source_order: sourceOrder,
+    };
+    if (isFloorPlan) {
+      if (floorPlanName) option.floor_plan_name = floorPlanName.slice(0, 120);
+    } else {
+      option.unit_number = unitNumber!.slice(0, 80);
+      const floor = safeStr(item.unit_floor) ?? safeStr(item.floor);
+      if (floor) option.unit_floor = floor.slice(0, 60);
+    }
+    const buildingName = safeStr(item.building_name);
+    if (buildingName) option.building_name = buildingName.slice(0, 120);
+    if (!isFloorPlan) {
+      const buildingCode = safeStr(item.building_code);
+      const buildingSourceId = safeStr(item.building_source_id) ?? safeStr(item.building_id);
+      const floorSourceId = safeStr(item.floor_source_id) ?? safeStr(item.floor_id);
+      if (buildingCode) option.building_code = buildingCode.slice(0, 80);
+      if (buildingSourceId) option.building_source_id = buildingSourceId.slice(0, 120);
+      if (floorSourceId) option.floor_source_id = floorSourceId.slice(0, 120);
+    }
+
+    const sourceId = safeStr(item.source_id) ?? safeStr(item.id);
+    if (sourceId) option.source_id = sourceId.slice(0, 120);
+    const imageUrl = safeStr(item.image_url) ?? safeStr(item.floor_plan_image);
+    if (isFloorPlan && imageUrl) {
+      try {
+        const parsedUrl = new URL(imageUrl);
+        if (parsedUrl.protocol === 'https:' && !parsedUrl.username && !parsedUrl.password) {
+          option.image_url = parsedUrl.toString().slice(0, 2048);
+        }
+      } catch {
+        // Ignore invalid floor-plan image URLs; the source media list remains available.
+      }
+    }
+    const rawPhotoList = item.photo_urls ?? item.photos;
+    if (!isFloorPlan && Array.isArray(rawPhotoList)) {
+      const photoUrls = new Set<string>();
+      for (const rawPhoto of rawPhotoList.slice(0, 40)) {
+        const rawUrl = typeof rawPhoto === 'string'
+          ? rawPhoto
+          : rawPhoto && typeof rawPhoto === 'object' && !Array.isArray(rawPhoto)
+            ? safeStr((rawPhoto as Record<string, unknown>).url)
+            : null;
+        if (!rawUrl || rawUrl.length > 2048) continue;
+        try {
+          const parsedUrl = new URL(rawUrl);
+          if (parsedUrl.protocol === 'https:' && !parsedUrl.username && !parsedUrl.password) {
+            photoUrls.add(parsedUrl.toString());
+          }
+        } catch {
+          // Ignore invalid unit-photo URLs.
+        }
+      }
+      if (photoUrls.size) option.photo_urls = Array.from(photoUrls);
+    }
+
+    for (const [target, aliases] of [
+      ['bedrooms', ['bedrooms', 'beds']],
+      ['bathrooms', ['bathrooms', 'baths']],
+      ['square_footage', ['square_footage', 'sqft']],
+    ] as const) {
+      const rawNumber = aliases.map(key => item[key]).find(entry => entry != null);
+      const number = safeFloat(rawNumber);
+      if (number != null && number >= 0 &&
+        (target === 'bathrooms' || Number.isInteger(number))) {
+        option[target] = number;
+      }
+    }
+
+    const rent = safeFloat(item.monthly_rent ?? item.rent);
+    const startingRent = safeFloat(item.starting_rent);
+    if (!isFloorPlan && rent != null && rent > 0) option.monthly_rent = rent;
+    if (isFloorPlan && startingRent != null && startingRent > 0) option.starting_rent = startingRent;
+
+    const rentBasis = safeStr(item.rent_basis);
+    if (rentBasis) {
+      option.rent_basis = /\btotal\s+monthly\b/i.test(rentBasis)
+        ? 'total_monthly_price'
+        : /\bbase\s+rent\b/i.test(rentBasis)
+          ? 'base_rent'
+          : rentBasis.slice(0, 80);
+    }
+    options.push(option);
+  });
+  return options;
+}
+
 const APPLICATION_NOTE = 'Application Fee: $50. Submit your rental application today at Choice Properties.';
 const PROHIBITED_DESCRIPTION_BLOCKS = [
   /\*\*\*\s*BEWARE[\s\S]*?\*\*\*/gi,
@@ -460,7 +564,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     price_range: safeStr(body.price_range),
     rent_basis: safeStr(body.rent_basis),
     community_starting_rent: safeInt(body.community_starting_rent),
-    unit_options: Array.isArray(body.unit_options) ? body.unit_options.slice(0, 100) : [],
+    unit_options: sanitizeUnitOptions(body.unit_options),
     media: Array.isArray(body.media) ? body.media.slice(0, 100) : [],
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
@@ -479,11 +583,15 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
         ].forEach((key) => {
           if (merged[key] == null) merged[key] = originalData[key];
         });
-        ['unit_options', 'media'].forEach((key) => {
+        ['media'].forEach((key) => {
           if ((!Array.isArray(merged[key]) || merged[key].length === 0) && originalData[key].length) {
             merged[key] = originalData[key];
           }
         });
+        const suppliedOptions = Array.isArray(merged.unit_options) ? merged.unit_options : [];
+        merged.unit_options = sanitizeUnitOptions(
+          originalData.unit_options.length ? originalData.unit_options : suppliedOptions,
+        );
         preservedOriginalData = JSON.stringify(merged);
       }
     } catch {

@@ -4,6 +4,12 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v52.7.9] - 2026-11-06
+### Separate Unit Records From Floor-Plan Layouts
+- **Preserve explicit classification**: Keep records marked as floor plans in the layout group even when they contain a unit-like identifier.
+- **Clarify review preview**: Label unit records and floor-plan layouts separately, show that availability is not verified, display plan names rather than unit identifiers, and cap the combined preview at 12 records.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v52.7.9.
+
 ## [v52.7.7] - 2026-11-06
 ### Keep Zillow Photo Counts Property-Scoped
 - **Prefer property photo data**: Keep structured Zillow listing photos ahead of broader DOM image collections so related listings cannot inflate counts after hydration.

@@ -686,29 +686,76 @@ const Properties = {
   },
   // Multi-unit & multi-floor community unit resolver
   async getCommunityUnits(communityId) {
-    if (!communityId) return { ok: true, data: { units: [], floors: [] }, error: null };
+    if (!communityId) return { ok: true, data: { units: [], floors: [], floorPlans: [] }, error: null };
     const cleanId = String(communityId).trim();
     try {
-      const { data, error } = await sb()
-        .from('properties')
-        .select('id, title, address, unit_number, unit_floor, bedrooms, bathrooms, half_bathrooms, square_footage, monthly_rent, status, price_range, property_photos(id, url, file_id, display_order, is_hero)')
-        .eq('parent_property_id', cleanId)
+      const { data: inventory, error: inventoryError } = await sb()
+        .from('property_units')
+        .select('id, property_id, unit_number, unit_floor_label, building_name, floor_plan_name, bedrooms, bathrooms, square_footage, monthly_rent, unit_photos, status, rent_basis, source_order')
+        .eq('property_id', cleanId)
         .eq('status', 'active')
-        .order('unit_floor', { ascending: true })
-        .order('unit_number', { ascending: true });
-      if (error) {
-        console.warn('[cp-api] getCommunityUnits query issue:', error);
-        return { ok: false, data: null, error: error.message };
+        .eq('review_status', 'approved')
+        .order('source_order', { ascending: true });
+      if (inventoryError) {
+        console.warn('[cp-api] normalized community-unit query failed:', inventoryError);
+        return { ok: false, data: null, error: inventoryError.message };
       }
-      const units = (data || []).map(_attachPhotoArrays);
+
+      let units = (inventory || []).map(unit => ({
+        ...unit,
+        unit_floor: unit.unit_floor_label || null,
+      }));
+      if (!units.length) {
+        const { data: activeParent, error: parentError } = await sb()
+          .from('properties')
+          .select('id')
+          .eq('id', cleanId)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (parentError) {
+          console.warn('[cp-api] community parent visibility check failed:', parentError);
+          return { ok: false, data: null, error: parentError.message };
+        }
+        if (activeParent) {
+          const { data: legacyUnits, error: legacyError } = await sb()
+            .from('properties')
+            .select('id, title, address, unit_number, unit_floor, bedrooms, bathrooms, half_bathrooms, square_footage, monthly_rent, status, price_range, property_photos(id, url, file_id, display_order, is_hero)')
+            .eq('parent_property_id', cleanId)
+            .eq('status', 'active')
+            .order('unit_floor', { ascending: true })
+            .order('unit_number', { ascending: true });
+          if (legacyError) {
+            console.warn('[cp-api] legacy community-unit query failed:', legacyError);
+            return { ok: false, data: null, error: legacyError.message };
+          }
+          units = (legacyUnits || []).map(_attachPhotoArrays);
+        }
+      }
+
+      const { data: floorPlans, error: floorPlanError } = await sb()
+        .from('property_floor_plans')
+        .select('id, property_id, source_plan_id, name, bedrooms, bathrooms, square_footage, starting_rent, rent_basis, image_url, source_order, building_name, status')
+        .eq('property_id', cleanId)
+        .eq('status', 'active')
+        .eq('review_status', 'approved')
+        .order('source_order', { ascending: true });
+      if (floorPlanError) {
+        console.warn('[cp-api] normalized floor-plan query failed:', floorPlanError);
+        return { ok: false, data: null, error: floorPlanError.message };
+      }
+
       const floorSet = new Set();
       units.forEach(u => {
-        if (u.unit_floor != null && !isNaN(Number(u.unit_floor))) {
-          floorSet.add(Number(u.unit_floor));
-        }
+        const floor = u.unit_floor == null ? '' : String(u.unit_floor).trim();
+        if (floor) floorSet.add(floor);
       });
-      const floors = Array.from(floorSet).sort((a, b) => a - b);
-      return { ok: true, data: { units, floors }, error: null };
+      const floors = Array.from(floorSet).sort((a, b) => {
+        const aNumber = Number(a);
+        const bNumber = Number(b);
+        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      return { ok: true, data: { units, floors, floorPlans: floorPlans || [] }, error: null };
     } catch (err) {
       return { ok: false, data: null, error: err.message || String(err) };
     }
@@ -1150,7 +1197,10 @@ function esc(str) {
 // via both window.CP (inline scripts) and ES named exports below.
 
 function buildApplyURL(property, shareToken = '', unitOptions = {}) {
-  const targetRent = (unitOptions && unitOptions.rent != null) ? unitOptions.rent : (property.monthly_rent || null);
+  const isUnitTarget = Boolean(unitOptions && (unitOptions.unit_id || unitOptions.unit));
+  const targetRent = (unitOptions && unitOptions.rent != null)
+    ? unitOptions.rent
+    : (isUnitTarget ? null : (property.monthly_rent || null));
   const targetUnit = (unitOptions && unitOptions.unit) || property.unit_number || null;
   const targetFloor = (unitOptions && unitOptions.floor != null) ? unitOptions.floor : (property.unit_floor != null ? property.unit_floor : null);
   const targetBeds = (unitOptions && unitOptions.bedrooms != null) ? unitOptions.bedrooms : (property.bedrooms != null ? property.bedrooms : null);
