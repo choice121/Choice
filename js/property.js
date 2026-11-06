@@ -4114,6 +4114,14 @@ async function initCommunityInventory(p) {
 
   // 3. Collect floor plan media
   const floorPlans = (Array.isArray(p.property_media) ? p.property_media : []).filter(m => m && m.kind === 'floor_plan' && m.url);
+  const safeHttpsUrl = value => {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+    } catch (_) {
+      return null;
+    }
+  };
 
   if (!units.length && !floorPlans.length && !embeddedFloorPlanOptions.length && !isCommunity) {
     container.style.display = 'none';
@@ -4135,7 +4143,7 @@ async function initCommunityInventory(p) {
     const stackContainer = document.getElementById('buildingStackVisualizer');
     if (!stackContainer) return;
 
-    if (!floors.length) {
+    if (floors.length < 2) {
       stackContainer.style.display = 'none';
       return;
     }
@@ -4147,16 +4155,17 @@ async function initCommunityInventory(p) {
       const isSelected = String(selectedStackFloor) === String(floorLabel);
 
       tiersHtml += '<div class="building-stack-tier ' + (isSelected ? 'active' : '') + '" data-stack-floor="' + esc(floorLabel) + '">' +
-        '<div class="building-stack-tier-label">' +
-          '<i class="fas fa-building"></i> Floor ' + esc(floorLabel) +
-          '<span class="building-stack-count">' + floorUnits.length + ' unit' + (floorUnits.length === 1 ? '' : 's') + '</span>' +
-        '</div>' +
+        '<button type="button" class="building-stack-floor-button" data-stack-floor="' + esc(floorLabel) + '" aria-label="Show floor ' + esc(floorLabel) + ', ' + floorUnits.length + ' units" aria-pressed="' + isSelected + '">' +
+          '<span class="building-stack-tier-label"><i class="fas fa-layer-group" aria-hidden="true"></i> Floor ' + esc(floorLabel) + '</span>' +
+          '<span class="building-stack-count">' + floorUnits.length + '</span>' +
+        '</button>' +
         '<div class="building-stack-units-row">' +
-          (floorUnits.length ? floorUnits.map(u => 
-            '<div class="building-stack-unit-chip ' + (selectedFloor == f ? 'highlighted' : '') + '" onclick="document.getElementById(\'unit-' + esc(u.id || u.unit_number) + '\')?.scrollIntoView({behavior:\'smooth\', block:\'center\'});">' +
+          (floorUnits.length ? floorUnits.map(u =>
+            '<button type="button" class="building-stack-unit-chip ' + (isSelected && String(u.unit_floor) === String(selectedFloor) ? 'highlighted' : '') + '" data-unit-target="' + esc('unit-' + (u.id || u.unit_number)) + '" data-unit-floor="' + esc(floorLabel) + '" title="Show ' + esc([u.building_name, 'unit ' + u.unit_number].filter(Boolean).join(', ')) + '">' +
+              (u.building_name ? '<span class="unit-building">' + esc(u.building_name) + '</span>' : '') +
               '<span class="unit-num">' + esc(u.unit_number) + '</span>' +
-              '<span class="unit-rent">' + (u.monthly_rent ? ('$' + Number(u.monthly_rent).toLocaleString()) : 'TBD') + '</span>' +
-            '</div>'
+              '<span class="unit-rent">' + (Number.isFinite(Number(u.monthly_rent)) && Number(u.monthly_rent) > 0 ? ('$' + Number(u.monthly_rent).toLocaleString()) : 'Price pending') + '</span>' +
+            '</button>'
           ).join('') : '<span class="building-stack-empty">No active units listed on this level</span>') +
         '</div>' +
       '</div>';
@@ -4165,24 +4174,33 @@ async function initCommunityInventory(p) {
     stackContainer.innerHTML = '<div class="building-stack-card">' +
       '<div class="building-stack-header">' +
         '<div>' +
-          '<div style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--m-brand)">Interactive Building Stack</div>' +
-          '<div style="font-size:1.1rem;font-weight:800;color:var(--m-ink)">Floor-by-Floor Visualizer</div>' +
+          '<div class="building-stack-title">Building floors</div>' +
+          '<div class="building-stack-caption">Select a floor or unit to jump to its details.</div>' +
         '</div>' +
-        '<button type="button" class="community-pill-btn ' + (selectedStackFloor === 'all' ? 'active' : '') + '" data-stack-floor="all" style="font-size:0.78rem">' +
-          'Show All Floors' +
+        '<button type="button" class="community-pill-btn ' + (selectedStackFloor === 'all' ? 'active' : '') + '" data-stack-floor="all" aria-pressed="' + (selectedStackFloor === 'all') + '">' +
+          'All floors' +
         '</button>' +
       '</div>' +
-      '<div class="building-stack-tiers">' +
+      '<div class="building-stack-tiers" role="group" aria-label="Building floors">' +
         tiersHtml +
       '</div>' +
     '</div>';
 
-    stackContainer.querySelectorAll('[data-stack-floor]').forEach(el => {
-      el.addEventListener('click', () => {
-        const fl = el.getAttribute('data-stack-floor');
+    stackContainer.querySelectorAll('button[data-stack-floor]').forEach(button => {
+      button.addEventListener('click', () => {
+        const fl = button.getAttribute('data-stack-floor');
         selectedStackFloor = fl;
         selectedFloor = fl;
         renderInventoryUI();
+      });
+    });
+    stackContainer.querySelectorAll('[data-unit-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedFloor = button.getAttribute('data-unit-floor') || 'all';
+        selectedStackFloor = selectedFloor;
+        const targetId = button.getAttribute('data-unit-target');
+        renderInventoryUI();
+        requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
       });
     });
   }
@@ -4205,14 +4223,15 @@ async function initCommunityInventory(p) {
     // Floor filter pills
     let floorFiltersHtml = '';
     if (floors.length > 1) {
-      floorFiltersHtml = '<div class="community-filter-row">' +
+      floorFiltersHtml = '<div class="community-filter-row" role="group" aria-label="Filter by floor">' +
         '<span class="community-filter-label"><i class="fas fa-layer-group"></i> Floor</span>' +
-        '<button type="button" class="community-pill-btn ' + (selectedFloor === 'all' ? 'active' : '') + '" data-floor="all">' +
+        '<button type="button" class="community-pill-btn ' + (selectedFloor === 'all' ? 'active' : '') + '" data-floor="all" aria-pressed="' + (selectedFloor === 'all') + '">' +
           'All Floors <span class="count-badge">' + units.length + '</span>' +
         '</button>' +
         floors.map(f => {
           const count = units.filter(u => String(u.unit_floor) === String(f)).length;
-          return '<button type="button" class="community-pill-btn ' + (String(selectedFloor) === String(f) ? 'active' : '') + '" data-floor="' + esc(f) + '">' +
+          const isSelected = String(selectedFloor) === String(f);
+          return '<button type="button" class="community-pill-btn ' + (isSelected ? 'active' : '') + '" data-floor="' + esc(f) + '" aria-pressed="' + isSelected + '">' +
             'Floor ' + esc(f) + ' <span class="count-badge">' + count + '</span>' +
           '</button>';
         }).join('') +
@@ -4231,15 +4250,15 @@ async function initCommunityInventory(p) {
 
     let bedFiltersHtml = '';
     if (units.length > 2) {
-      bedFiltersHtml = '<div class="community-filter-row">' +
+      bedFiltersHtml = '<div class="community-filter-row" role="group" aria-label="Filter by bedrooms">' +
         '<span class="community-filter-label"><i class="fas fa-bed"></i> Beds</span>' +
-        '<button type="button" class="community-pill-btn ' + (selectedBeds === 'all' ? 'active' : '') + '" data-beds="all">' +
+        '<button type="button" class="community-pill-btn ' + (selectedBeds === 'all' ? 'active' : '') + '" data-beds="all" aria-pressed="' + (selectedBeds === 'all') + '">' +
           'All Layouts <span class="count-badge">' + units.length + '</span>' +
         '</button>' +
-        (bedCounts[0] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '0' ? 'active' : '') + '" data-beds="0">Studio <span class="count-badge">' + bedCounts[0] + '</span></button>' : '') +
-        (bedCounts[1] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '1' ? 'active' : '') + '" data-beds="1">1 Bed <span class="count-badge">' + bedCounts[1] + '</span></button>' : '') +
-        (bedCounts[2] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '2' ? 'active' : '') + '" data-beds="2">2 Beds <span class="count-badge">' + bedCounts[2] + '</span></button>' : '') +
-        (bedCounts['3+'] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '3+' ? 'active' : '') + '" data-beds="3+">3+ Beds <span class="count-badge">' + bedCounts['3+'] + '</span></button>' : '') +
+        (bedCounts[0] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '0' ? 'active' : '') + '" data-beds="0" aria-pressed="' + (selectedBeds === '0') + '">Studio <span class="count-badge">' + bedCounts[0] + '</span></button>' : '') +
+        (bedCounts[1] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '1' ? 'active' : '') + '" data-beds="1" aria-pressed="' + (selectedBeds === '1') + '">1 Bed <span class="count-badge">' + bedCounts[1] + '</span></button>' : '') +
+        (bedCounts[2] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '2' ? 'active' : '') + '" data-beds="2" aria-pressed="' + (selectedBeds === '2') + '">2 Beds <span class="count-badge">' + bedCounts[2] + '</span></button>' : '') +
+        (bedCounts['3+'] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '3+' ? 'active' : '') + '" data-beds="3+" aria-pressed="' + (selectedBeds === '3+') + '">3+ Beds <span class="count-badge">' + bedCounts['3+'] + '</span></button>' : '') +
       '</div>';
     }
 
@@ -4264,12 +4283,16 @@ async function initCommunityInventory(p) {
               })
             : null;
 
-          const bedText = u.bedrooms === 0 ? 'Studio' : (u.bedrooms != null ? u.bedrooms + ' Bed' + (u.bedrooms === 1 ? '' : 's') : '');
-          const bathText = u.bathrooms != null ? u.bathrooms + ' Bath' + (u.bathrooms === 1 ? '' : 's') : '';
-          const sqftText = u.square_footage ? ('~' + (Math.round(Number(u.square_footage) / 25) * 25) + ' sqft') : '';
+          const bedroomCount = u.bedrooms == null ? null : Number(u.bedrooms);
+          const bathroomCount = u.bathrooms == null ? null : Number(u.bathrooms);
+          const squareFeet = u.square_footage == null ? null : Number(u.square_footage);
+          const bedText = bedroomCount === 0 ? 'Studio' : (Number.isFinite(bedroomCount) ? bedroomCount + ' Bed' + (bedroomCount === 1 ? '' : 's') : '');
+          const bathText = Number.isFinite(bathroomCount) ? bathroomCount + ' Bath' + (bathroomCount === 1 ? '' : 's') : '';
+          const sqftText = Number.isFinite(squareFeet) && squareFeet > 0 ? ('~' + (Math.round(squareFeet / 25) * 25) + ' sqft') : '';
           const floorText = u.unit_floor != null ? ('Floor ' + u.unit_floor) : '';
-          const rentText = u.monthly_rent != null
-            ? ('$' + Number(u.monthly_rent).toLocaleString())
+          const monthlyRent = u.monthly_rent == null ? null : Number(u.monthly_rent);
+          const rentText = Number.isFinite(monthlyRent) && monthlyRent > 0
+            ? ('$' + monthlyRent.toLocaleString())
             : 'Price not listed';
           const rentBasisText = u.rent_basis === 'base_rent'
             ? 'Base rent'
@@ -4281,12 +4304,7 @@ async function initCommunityInventory(p) {
           const unitPhotoUrls = unitPhotos
             .map(photo => {
               const rawUrl = typeof photo === 'string' ? photo : photo?.url;
-              try {
-                const url = new URL(rawUrl);
-                return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
-              } catch (_) {
-                return null;
-              }
+              return safeHttpsUrl(rawUrl);
             })
             .filter(Boolean);
           const unitPhotosHtml = unitPhotoUrls.length
@@ -4299,83 +4317,101 @@ async function initCommunityInventory(p) {
               '</div>'
             : '';
 
-          return '<div class="community-unit-card" id="unit-' + esc(u.id || u.unit_number) + '">' +
+          const cardId = 'unit-' + (u.id || u.unit_number);
+          const specItems = [
+            bedText ? '<span><i class="fas fa-bed" aria-hidden="true"></i> ' + esc(bedText) + '</span>' : '',
+            bathText ? '<span><i class="fas fa-bath" aria-hidden="true"></i> ' + esc(bathText) + '</span>' : '',
+            sqftText ? '<span><i class="fas fa-ruler-combined" aria-hidden="true"></i> ' + esc(sqftText) + '</span>' : '',
+          ].filter(Boolean).join('');
+
+          return '<article class="community-unit-card" id="' + esc(cardId) + '" aria-label="Unit ' + esc(u.unit_number || '') + ' details">' +
             '<div class="community-unit-left">' +
               '<div class="community-unit-title-row">' +
-                '<span class="community-unit-number">' + esc(u.unit_number) + '</span>' +
-                (floorText ? '<span class="community-floor-tag"><i class="fas fa-stairs"></i> ' + esc(floorText) + '</span>' : '') +
-                (u.building_name ? '<span class="community-floor-tag"><i class="fas fa-building"></i> ' + esc(u.building_name) + '</span>' : '') +
-                (u.floor_plan_name ? '<span style="font-size:0.8rem;font-weight:600;color:var(--m-muted)">' + esc(u.floor_plan_name) + '</span>' : '') +
+                '<h3 class="community-unit-number">Unit ' + esc(u.unit_number || 'Details') + '</h3>' +
+                (floorText ? '<span class="community-floor-tag"><i class="fas fa-stairs" aria-hidden="true"></i> ' + esc(floorText) + '</span>' : '') +
+                (u.building_name ? '<span class="community-floor-tag"><i class="fas fa-building" aria-hidden="true"></i> ' + esc(u.building_name) + '</span>' : '') +
+                (u.floor_plan_name ? '<span class="community-floor-tag community-layout-tag">' + esc(u.floor_plan_name) + '</span>' : '') +
               '</div>' +
-              '<div class="community-unit-specs">' +
-                (bedText ? '<span><i class="fas fa-bed"></i> ' + esc(bedText) + '</span>' : '') +
-                (bathText ? '<span>·</span><span><i class="fas fa-bath"></i> ' + esc(bathText) + '</span>' : '') +
-                (sqftText ? '<span>·</span><span><i class="fas fa-ruler-combined"></i> ' + esc(sqftText) + '</span>' : '') +
-              '</div>' +
+              (specItems ? '<div class="community-unit-specs">' + specItems + '</div>' : '') +
               unitPhotosHtml +
             '</div>' +
             '<div class="community-unit-right">' +
-              '<div class="community-unit-price">' + esc(rentText) + (u.monthly_rent != null ? ' <small>/mo</small>' : '') +
+              '<div class="community-unit-price">' + esc(rentText) + (Number.isFinite(monthlyRent) && monthlyRent > 0 ? ' <small>/mo</small>' : '') +
                 (rentBasisText ? '<small class="community-unit-rent-basis">' + esc(rentBasisText) + '</small>' : '') + '</div>' +
               (applyHref
-                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply for Unit <i class="fas fa-arrow-right" style="font-size:11px"></i></a>'
+                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply <i class="fas fa-arrow-right" aria-hidden="true"></i></a>'
                 : '<span class="community-unit-apply-btn" aria-disabled="true" title="Unit inventory and exact rent must be verified before applying">Application unavailable</span>') +
             '</div>' +
-          '</div>';
+          '</article>';
         }).join('') +
       '</div>';
     } else {
-      unitsListHtml = '<div style="padding:24px;text-align:center;background:var(--m-surface,#f8fafc);border-radius:12px;color:var(--m-muted)">' +
-        '<i class="fas fa-filter" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.6"></i>' +
-        'No units currently match the selected floor or bedroom filter.' +
+      const emptyMessage = units.length
+        ? 'No units match these filters. Adjust the floor or bedroom selection.'
+        : 'Unit details are being verified for this community. Contact Choice for current options.';
+      unitsListHtml = '<div class="community-empty-state" role="status">' +
+        '<i class="fas ' + (units.length ? 'fa-filter' : 'fa-building') + '" aria-hidden="true"></i>' +
+        '<p>' + emptyMessage + '</p>' +
       '</div>';
     }
 
     // Floor plans gallery (if floor plan diagrams/images exist)
     let floorPlansHtml = '';
     if (floorPlans.length > 0 || embeddedFloorPlanOptions.length > 0) {
-      floorPlansHtml = '<div style="margin-top:24px">' +
-        '<div style="font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--m-muted,#64748b);margin-bottom:12px">' +
-          '<i class="fas fa-drafting-compass"></i> Floor Plans <span style="font-weight:500;text-transform:none">(layouts, not individual units)</span>' +
+      const renderFloorPlanCard = (plan, index, mediaItem = false) => {
+        const title = plan.floor_plan_name || plan.name || plan.title || 'Floor Plan ' + (index + 1);
+        const imageUrl = safeHttpsUrl(mediaItem ? plan.url : plan.image_url);
+        const metadata = [
+          plan.building_name || null,
+          plan.bedrooms === 0 ? 'Studio' : plan.bedrooms != null ? plan.bedrooms + ' bd' : null,
+          plan.bathrooms != null ? plan.bathrooms + ' ba' : null,
+          plan.square_footage != null ? Number(plan.square_footage).toLocaleString() + ' sqft' : null,
+          plan.starting_rent != null ? 'From $' + Number(plan.starting_rent).toLocaleString() + '/mo' : null,
+          mediaItem && plan.floor_label ? plan.floor_label : null,
+        ].filter(Boolean).map(esc).join(' · ');
+        const image = imageUrl
+          ? '<a class="community-fp-image-link" href="' + esc(imageUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + esc(title) + ' floor plan image">' +
+              '<div class="community-fp-thumb"><img src="' + esc(imageUrl) + '" alt="' + esc(title + ' floor plan') + '" loading="lazy"></div>' +
+            '</a>'
+          : '';
+        return '<article class="community-fp-card ' + (mediaItem ? 'community-fp-media-card' : 'community-fp-data-card') + '">' +
+          image +
+          '<div class="community-fp-info">' +
+            '<h4 class="community-fp-title">' + esc(title) + '</h4>' +
+            (metadata ? '<div class="community-fp-meta">' + metadata + '</div>' : '') +
+          '</div>' +
+        '</article>';
+      };
+
+      floorPlansHtml = '<section class="community-floorplans" aria-label="Floor plan layouts">' +
+        '<div class="community-floorplan-heading">' +
+          '<h3>Floor plans</h3>' +
+          '<p>Layouts show a home design, not an individual unit.</p>' +
         '</div>' +
         '<div class="community-floorplan-gallery">' +
-          embeddedFloorPlanOptions.map((plan, i) =>
-            '<div class="community-fp-card community-fp-data-card">' +
-              (plan.image_url ? '<div class="community-fp-thumb"><img src="' + esc(plan.image_url) + '" alt="' + esc(plan.floor_plan_name || 'Floor Plan') + '" loading="lazy"></div>' : '') +
-              '<div class="community-fp-info">' +
-                '<div class="community-fp-title">' + esc(plan.floor_plan_name || 'Floor Plan ' + (i + 1)) + '</div>' +
-                '<div class="community-fp-meta">' +
-                  [
-                    plan.building_name ? plan.building_name : null,
-                    plan.bedrooms === 0 ? 'Studio' : plan.bedrooms != null ? plan.bedrooms + ' bd' : null,
-                    plan.bathrooms != null ? plan.bathrooms + ' ba' : null,
-                    plan.square_footage != null ? Number(plan.square_footage).toLocaleString() + ' sqft' : null,
-                    plan.starting_rent != null ? 'From $' + Number(plan.starting_rent).toLocaleString() + '/mo' : null,
-                  ].filter(Boolean).map(esc).join(' · ') +
-                '</div>' +
-              '</div>' +
-            '</div>'
-          ).join('') +
-          floorPlans.map((fp, i) =>
-            '<div class="community-fp-card" onclick="window.open(\'' + esc(fp.url) + '\', \'_blank\')">' +
-              '<div class="community-fp-thumb">' +
-                '<img src="' + esc(fp.url) + '" alt="' + esc(fp.title || 'Floor Plan') + '" loading="lazy">' +
-              '</div>' +
-              '<div class="community-fp-info">' +
-                '<div class="community-fp-title">' + esc(fp.title || 'Floor Plan ' + (i + 1)) + '</div>' +
-                (fp.floor_label ? '<div class="community-fp-meta"><i class="fas fa-layer-group"></i> ' + esc(fp.floor_label) + '</div>' : '') +
-              '</div>' +
-            '</div>'
-          ).join('') +
+          embeddedFloorPlanOptions.map((plan, index) => renderFloorPlanCard(plan, index)).join('') +
+          floorPlans.map((plan, index) => renderFloorPlanCard(plan, index, true)).join('') +
         '</div>' +
-      '</div>';
+      '</section>';
     }
 
+    const layoutCount = embeddedFloorPlanOptions.length + floorPlans.length;
+    const summaryHtml = '<div class="community-inventory-summary" aria-label="Community inventory summary">' +
+      '<div class="community-summary-item"><strong>' + units.length + '</strong><span>listed units</span></div>' +
+      '<div class="community-summary-item"><strong>' + floors.length + '</strong><span>floors</span></div>' +
+      '<div class="community-summary-item"><strong>' + layoutCount + '</strong><span>layouts</span></div>' +
+    '</div>';
+
     content.innerHTML = '<div class="community-inv-wrap">' +
+      summaryHtml +
+      '<div id="buildingStackVisualizer"></div>' +
       ((floorFiltersHtml || bedFiltersHtml) ? ('<div class="community-filters-bar">' + floorFiltersHtml + bedFiltersHtml + '</div>') : '') +
+      '<div class="community-results-count" aria-live="polite">Showing ' + filtered.length + ' of ' + units.length + ' listed units</div>' +
       unitsListHtml +
       floorPlansHtml +
     '</div>';
+
+    renderBuildingStack();
 
     // Attach filter click handlers
     content.querySelectorAll('[data-floor]').forEach(btn => {
@@ -4383,7 +4419,6 @@ async function initCommunityInventory(p) {
         e.preventDefault();
         selectedFloor = btn.getAttribute('data-floor');
         selectedStackFloor = selectedFloor;
-        renderBuildingStack();
         renderInventoryUI();
       });
     });
