@@ -2,7 +2,22 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 3000;
+function resolvePort() {
+  const portArgIdx = process.argv.indexOf('--port');
+  if (portArgIdx !== -1 && process.argv[portArgIdx + 1]) {
+    return parseInt(process.argv[portArgIdx + 1], 10);
+  }
+  if (process.env.DEFAULT_APP_PORT) {
+    return parseInt(process.env.DEFAULT_APP_PORT, 10);
+  }
+  const envPort = parseInt(process.env.PORT || '3000', 10);
+  if (envPort === 8080 || isNaN(envPort)) {
+    return 3000;
+  }
+  return envPort;
+}
+const PORT = resolvePort();
+
 const PUBLIC_DIR = process.cwd();
 
 const MIME_TYPES = {
