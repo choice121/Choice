@@ -1322,7 +1322,7 @@ function initMap(props, isBoundsUpdate = false) {
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
             ${p.virtual_tour_url ? `<span style="background:#0284c7;color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700"><i class="fas fa-cube"></i> 3D</span>` : ''}
           </div>
-          <a href="${popupHref}" class="map-popup-apply">View Property →</a>
+          <span class="map-popup-apply">View Property →</span>
         </div>
       </a>`, { maxWidth: 260 });
     mapMarkers.push(marker);

@@ -27,3 +27,4 @@ CREATE INDEX IF NOT EXISTS idx_properties_active_rent_asc
 CREATE INDEX IF NOT EXISTS idx_properties_active_type
   ON public.properties (property_type)
   WHERE status = 'active';
+

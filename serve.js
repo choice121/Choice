@@ -52,6 +52,12 @@ const server = http.createServer((req, res) => {
     return handleAssistantApi(req, res);
   }
 
+  // Block decommissioned landlord routes (parity with Cloudflare Pages _middleware.js)
+  if (cleanUrl.startsWith('/landlord/') || cleanUrl === '/landlord' || cleanUrl === '/landlord-platform-agreement.html') {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Not Found');
+  }
+
 
 
   // Normalize path and prevent directory traversal
@@ -92,9 +98,11 @@ const server = http.createServer((req, res) => {
       res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end('<h1>404 Not Found</h1>', 'utf-8');
     } else {
+      const origin = req.headers.origin || '';
+      const isAllowedOrigin = !origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
       const headers = {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': isAllowedOrigin && origin ? origin : '*'
       };
       if (ext === '.zip') {
         headers['Content-Disposition'] = `attachment; filename="${path.basename(filePath)}"`;
