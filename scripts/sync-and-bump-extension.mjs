@@ -238,7 +238,7 @@ console.log('✓ Generated public/extension-updates.xml');
 
 // ── 5. Zip both extension packages ─────────────────────────────────────
 function packageExtension(sourceDir, outputPath, label) {
-  const python = [
+  const pythonScript = [
     'import zipfile, os',
     `output_path = ${JSON.stringify(outputPath)}`,
     `source_dir = ${JSON.stringify(sourceDir)}`,
@@ -250,7 +250,18 @@ function packageExtension(sourceDir, outputPath, label) {
     '            zipf.write(file_path, arcname)',
     `print("✅ Packaged ${label} v${newVersion} (" + str(os.path.getsize(output_path)) + " bytes)")`,
   ].join('\n');
-  execFileSync('python3', ['-c', python], { cwd: ROOT, stdio: 'inherit' });
+  const candidates = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+  let packaged = false;
+  for (const bin of candidates) {
+    try {
+      execFileSync(bin, ['-c', pythonScript], { cwd: ROOT, stdio: 'inherit' });
+      packaged = true;
+      break;
+    } catch (_) {}
+  }
+  if (!packaged) {
+    throw new Error('Could not find python to package zip archive');
+  }
 }
 
 console.log('📦 Packaging extension zips...');

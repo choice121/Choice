@@ -136,7 +136,12 @@ function checkArchive(relativePath, expectedVersion) {
     return;
   }
   try {
-    const manifestText = execFileSync('unzip', ['-p', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
+    let manifestText = '';
+    try {
+      manifestText = execFileSync('unzip', ['-p', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
+    } catch (_) {
+      manifestText = execFileSync('tar', ['-xOf', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
+    }
     const manifest = JSON.parse(manifestText);
     if (manifest.version !== expectedVersion) {
       failures.push(`${relativePath}: contains ${manifest.version}; expected ${expectedVersion}`);

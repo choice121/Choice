@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v54.0.0] - 2026-11-07
+### Cross-Platform Sync and Community Inventory Compatibility
+- **Cross-Platform Compatibility**: Enhanced `scripts/sync-and-bump-extension.mjs` and `scripts/validate-extension.mjs` to seamlessly execute across Windows and POSIX environments with Python and Tar fallbacks.
+- **Extractor Parity**: Verified parity across 57 extractor test cases (Chromium) and 16 test cases (Orion) for apartment communities, multi-unit facts, and photo scoping.
+- **Synchronized Packages**: Rebuild Chromium and Orion packages as v54.0.0.
+
+---
+
 ## [v52.7.13] - 2026-11-06
 ### Preserve Zillow Unit Gallery Facts
 - **Keep unit galleries scoped**: Preserve Zillow source IDs, building and floor facts, and each unit's own photos in synchronized extractor packages.
