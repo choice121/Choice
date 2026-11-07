@@ -59,6 +59,7 @@ const BLOCKED_EXACT = new Set([
   '/README.md',
 ]);
 const BLOCKED_PREFIXES = [
+  '/landlord/',
   '/scripts/',
   '/supabase/',
   '/.agents/',
