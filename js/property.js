@@ -476,9 +476,22 @@ function amenityIconColor(text) {
 }
 
 function isCommunityProperty(property) {
-  return !property.unit_number &&
-    (property.is_multi_unit || Number(property.total_units) > 1 ||
-      property.community_starting_rent != null || property.price_range);
+  if (!property) return false;
+  // If explicitly a single unit with a unit number and no other unit options, treat as single unit
+  if (property.unit_number && !property.is_multi_unit && (!property.total_units || Number(property.total_units) <= 1) && (!Array.isArray(property.unit_options) || !property.unit_options.length)) {
+    return false;
+  }
+  const pType = String(property.property_type || '').toLowerCase();
+  return Boolean(
+    property.is_multi_unit ||
+    Number(property.total_units) > 1 ||
+    property.community_starting_rent != null ||
+    property.price_range ||
+    (Array.isArray(property.unit_options) && property.unit_options.length > 0) ||
+    (Array.isArray(property.property_units) && property.property_units.length > 0) ||
+    pType === 'apartment' ||
+    pType === 'multi_family'
+  );
 }
 
 function formatPropertyRent(property, suffix = '') {
@@ -4010,22 +4023,25 @@ async function initCommunityInventory(p) {
   const divider = document.getElementById('dividerAfterCommunityInventory');
   if (!container || !content) return;
 
-  const isCommunity = !!(p.is_multi_unit || p.total_units > 1 || p.community_starting_rent != null || p.price_range);
+  const isCommunity = isCommunityProperty(p);
 
   let units = [];
   let floors = [];
   let embeddedFloorPlanOptions = [];
 
   // Share resolution may provide private inventory only after token validation.
-  if (Array.isArray(p.property_units)) {
+  if (Array.isArray(p.property_units) && p.property_units.length > 0) {
     units = p.property_units.map(unit => ({
       ...unit,
-      unit_floor: unit.unit_floor_label || null,
+      unit_floor: unit.unit_floor_label || unit.unit_floor || null,
+      unit_photos: Array.isArray(unit.unit_photos) ? unit.unit_photos : (Array.isArray(unit.photo_urls) ? unit.photo_urls : []),
+      photo_urls: Array.isArray(unit.photo_urls) ? unit.photo_urls : (Array.isArray(unit.unit_photos) ? unit.unit_photos : []),
     }));
   }
-  if (Array.isArray(p.property_floor_plans)) {
+  if (Array.isArray(p.property_floor_plans) && p.property_floor_plans.length > 0) {
     embeddedFloorPlanOptions = p.property_floor_plans.map(plan => ({
       ...plan,
+      name: plan.name || plan.floor_plan_name || 'Floor Plan',
       floor_plan_name: plan.name || plan.floor_plan_name || null,
     }));
   }
@@ -4035,12 +4051,22 @@ async function initCommunityInventory(p) {
     try {
       const res = await (window.CP?.Properties?.getCommunityUnits ? window.CP.Properties.getCommunityUnits(p.id) : null);
       if (res && res.ok) {
-        units = Array.isArray(res.data?.units) ? res.data.units : [];
-        floors = res.data?.floors || [];
-        if (!embeddedFloorPlanOptions.length) {
-          embeddedFloorPlanOptions = (res.data?.floorPlans || []).map(plan => ({
+        if (Array.isArray(res.data?.units) && res.data.units.length > 0) {
+          units = res.data.units.map(u => ({
+            ...u,
+            unit_floor: u.unit_floor_label || u.unit_floor || null,
+            unit_photos: Array.isArray(u.unit_photos) ? u.unit_photos : (Array.isArray(u.photo_urls) ? u.photo_urls : []),
+            photo_urls: Array.isArray(u.photo_urls) ? u.photo_urls : (Array.isArray(u.unit_photos) ? u.unit_photos : []),
+          }));
+        }
+        if (Array.isArray(res.data?.floors) && res.data.floors.length > 0) {
+          floors = res.data.floors;
+        }
+        if (!embeddedFloorPlanOptions.length && Array.isArray(res.data?.floorPlans) && res.data.floorPlans.length > 0) {
+          embeddedFloorPlanOptions = res.data.floorPlans.map(plan => ({
             ...plan,
-            floor_plan_name: plan.name || null,
+            name: plan.name || plan.floor_plan_name || 'Floor Plan',
+            floor_plan_name: plan.name || plan.floor_plan_name || null,
           }));
         }
       } else if (res && !res.ok) {
@@ -4051,57 +4077,82 @@ async function initCommunityInventory(p) {
     }
   }
 
-  // Embedded source options are preview-only; live listings require approved normalized inventory.
-  if (!units.length && !embeddedFloorPlanOptions.length &&
-      p.status !== 'active' && p.status !== 'private_placement') {
+  // 2. Fallback to embedded unit_options or original_data across all listing types
+  if (!units.length || !embeddedFloorPlanOptions.length) {
     let embeddedOptions = null;
-    if (Array.isArray(p.unit_options) && p.unit_options.length) {
+    if (Array.isArray(p.unit_options) && p.unit_options.length > 0) {
       embeddedOptions = p.unit_options;
     } else if (p.original_data) {
       try {
         const orig = typeof p.original_data === 'string' ? JSON.parse(p.original_data) : p.original_data;
-        if (Array.isArray(orig?.unit_options) && orig.unit_options.length) {
+        if (Array.isArray(orig?.unit_options) && orig.unit_options.length > 0) {
           embeddedOptions = orig.unit_options;
         }
       } catch (_) {}
     }
-    if (embeddedOptions && embeddedOptions.length) {
+
+    if (embeddedOptions && embeddedOptions.length > 0) {
       const isFloorPlanOption = opt =>
         opt && typeof opt === 'object' &&
         (opt.source_kind === 'floor_plan' || (!opt.unit_number && !opt.unit && opt.floor_plan_name));
+
       if (!embeddedFloorPlanOptions.length) {
-        embeddedFloorPlanOptions = embeddedOptions.filter(isFloorPlanOption);
+        embeddedFloorPlanOptions = embeddedOptions
+          .filter(isFloorPlanOption)
+          .map((fp, idx) => ({
+            id: fp.id || null,
+            property_id: p.id,
+            name: fp.name || fp.floor_plan_name || ('Floor Plan ' + (idx + 1)),
+            floor_plan_name: fp.floor_plan_name || fp.name || null,
+            building_name: fp.building_name || fp.building || null,
+            bedrooms: fp.bedrooms ?? (fp.beds ?? null),
+            bathrooms: fp.bathrooms ?? (fp.baths ?? null),
+            square_footage: fp.square_footage ?? (fp.sqft ?? null),
+            starting_rent: fp.starting_rent ?? fp.monthly_rent ?? null,
+            rent_basis: fp.rent_basis || null,
+            image_url: fp.image_url || (Array.isArray(fp.photo_urls) ? fp.photo_urls[0] : null) || null,
+          }));
       }
-      units = embeddedOptions
-        .filter(opt => opt && typeof opt === 'object' && !isFloorPlanOption(opt) &&
-          String(opt.unit_number || opt.unit || '').trim())
-        .map(opt => {
-        return {
-          id: opt.id || null,
-          unit_number: String(opt.unit_number || opt.unit).trim(),
-          unit_floor: opt.unit_floor == null || String(opt.unit_floor).trim() === ''
-            ? null
-            : String(opt.unit_floor).trim(),
-          floor_plan_name: opt.floor_plan_name || null,
-          bedrooms: opt.bedrooms ?? (opt.beds ?? null),
-          bathrooms: opt.bathrooms ?? (opt.baths ?? null),
-          square_footage: opt.square_footage ?? (opt.sqft ?? null),
-          monthly_rent: opt.monthly_rent ?? null,
-          rent_basis: opt.rent_basis || null,
-        };
-      });
-      const floorSet = new Set();
-      units.forEach(u => { if (u.unit_floor != null) floorSet.add(String(u.unit_floor)); });
-      floors = Array.from(floorSet).sort((a, b) => {
-        const aNumber = Number(a);
-        const bNumber = Number(b);
-        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
-        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-      });
+
+      if (!units.length) {
+        units = embeddedOptions
+          .filter(opt => opt && typeof opt === 'object' && !isFloorPlanOption(opt) &&
+            String(opt.unit_number || opt.unit || '').trim())
+          .map((opt, idx) => {
+            const unitPhotos = Array.isArray(opt.unit_photos) ? opt.unit_photos
+              : Array.isArray(opt.photo_urls) ? opt.photo_urls : [];
+            return {
+              id: opt.id || ('opt-' + (idx + 1)),
+              property_id: p.id,
+              unit_number: String(opt.unit_number || opt.unit).trim(),
+              unit_floor: opt.unit_floor == null || String(opt.unit_floor).trim() === ''
+                ? null
+                : String(opt.unit_floor).trim(),
+              building_name: opt.building_name || opt.building || null,
+              floor_plan_name: opt.floor_plan_name || null,
+              bedrooms: opt.bedrooms ?? (opt.beds ?? null),
+              bathrooms: opt.bathrooms ?? (opt.baths ?? null),
+              square_footage: opt.square_footage ?? (opt.sqft ?? null),
+              monthly_rent: opt.monthly_rent ?? null,
+              rent_basis: opt.rent_basis || null,
+              unit_photos: unitPhotos,
+              photo_urls: unitPhotos,
+            };
+          });
+
+        const floorSet = new Set();
+        units.forEach(u => { if (u.unit_floor != null) floorSet.add(String(u.unit_floor)); });
+        floors = Array.from(floorSet).sort((a, b) => {
+          const aNumber = Number(a);
+          const bNumber = Number(b);
+          if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+          return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+        });
+      }
     }
   }
 
-  if (!floors.length && units.length) {
+  if (!floors.length && units.length > 0) {
     floors = Array.from(new Set(
       units.map(unit => unit.unit_floor == null ? '' : String(unit.unit_floor).trim()).filter(Boolean)
     )).sort((a, b) => {
@@ -4272,14 +4323,15 @@ async function initCommunityInventory(p) {
             ? String(u.id)
             : null;
           const hasVerifiedUnitPrice = Number.isFinite(Number(u.monthly_rent)) && Number(u.monthly_rent) > 0;
-          const applyHref = unitId && hasVerifiedUnitPrice && (window.CP?.buildApplyURL)
-            ? window.CP.buildApplyURL(p, shareToken, {
+          const applyFn = window.CP?.buildApplyURL || buildApplyURL;
+          const applyHref = hasVerifiedUnitPrice && applyFn
+            ? applyFn(p, shareToken, {
                 unit: u.unit_number,
                 rent: u.monthly_rent,
                 floor: u.unit_floor,
                 bedrooms: u.bedrooms,
                 bathrooms: u.bathrooms,
-                unit_id: unitId,
+                unit_id: unitId || undefined,
               })
             : null;
 
@@ -4339,20 +4391,21 @@ async function initCommunityInventory(p) {
               '<div class="community-unit-price">' + esc(rentText) + (Number.isFinite(monthlyRent) && monthlyRent > 0 ? ' <small>/mo</small>' : '') +
                 (rentBasisText ? '<small class="community-unit-rent-basis">' + esc(rentBasisText) + '</small>' : '') + '</div>' +
               (applyHref
-                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply <i class="fas fa-arrow-right" aria-hidden="true"></i></a>'
-                : '<span class="community-unit-apply-btn" aria-disabled="true" title="Unit inventory and exact rent must be verified before applying">Application unavailable</span>') +
+                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply for Unit ' + esc(u.unit_number) + ' <i class="fas fa-arrow-right" aria-hidden="true"></i></a>'
+                : '<a href="#contactCard" class="community-unit-apply-btn community-unit-inquire-btn" title="Contact Choice Properties to inquire about this unit">Inquire <i class="fas fa-envelope" aria-hidden="true"></i></a>') +
             '</div>' +
           '</article>';
         }).join('') +
       '</div>';
     } else {
       const emptyMessage = units.length
-        ? 'No units match these filters. Adjust the floor or bedroom selection.'
-        : 'Unit details are being verified for this community. Contact Choice for current options.';
+        ? 'No units match these filters. Adjust the floor or bedroom selection above.'
+        : 'This community offers multiple floor plans and unit layouts. Contact Choice Properties or submit an inquiry below for today’s real-time unit availability, upcoming move-ins, and floor plans.';
       unitsListHtml = '<div class="community-empty-state" role="status">' +
         '<i class="fas ' + (units.length ? 'fa-filter' : 'fa-building') + '" aria-hidden="true"></i>' +
-        '<p>' + emptyMessage + '</p>' +
-      '</div>';
+        '<div><p>' + emptyMessage + '</p>' +
+        (!units.length ? '<a href="#contactCard" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:0.8rem;font-weight:700;color:var(--m-brand)">Inquire About Availability <i class="fas fa-arrow-down"></i></a>' : '') +
+        '</div></div>';
     }
 
     // Floor plans gallery (if floor plan diagrams/images exist)

@@ -130,7 +130,9 @@
 
     // ── Multi-unit community detection ────────────────────────
     var isCommunity = !!(p.is_multi_unit || p.community_starting_rent != null ||
-      (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (p.total_units > 1 || p.price_range)));
+      (Array.isArray(p.unit_options) && p.unit_options.length > 0) ||
+      (Array.isArray(p.property_units) && p.property_units.length > 0) ||
+      (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (!p.unit_number || p.total_units > 1 || p.price_range)));
 
     // ── Specs row — beds + baths + sqft (sqft is rounded to ~25 increments) ─
     var specParts = [];
@@ -143,11 +145,14 @@
       var roundedSqft = Math.round(Number(p.square_footage) / 25) * 25;
       specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>~' + roundedSqft.toLocaleString() + ' sqft</span>');
     }
-    if (isCommunity && p.total_units) {
-      specParts.push('<span class="property-card-spec-item"><i class="fas fa-layer-group"></i>' + p.total_units + ' Units</span>');
-    }
-    if (isCommunity && p.floors && p.floors > 1) {
-      specParts.push('<span class="property-card-spec-item"><i class="fas fa-stairs"></i>' + p.floors + ' Floors</span>');
+    if (isCommunity) {
+      var unitCount = p.total_units || (Array.isArray(p.unit_options) ? p.unit_options.length : 0) || (Array.isArray(p.property_units) ? p.property_units.length : 0);
+      if (unitCount > 1) {
+        specParts.push('<span class="property-card-spec-item"><i class="fas fa-layer-group"></i>' + unitCount + ' Units</span>');
+      }
+      if (p.floors && p.floors > 1) {
+        specParts.push('<span class="property-card-spec-item"><i class="fas fa-stairs"></i>' + p.floors + ' Floors</span>');
+      }
     }
     var specsHtml = specParts.map(function (s, i) {
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
