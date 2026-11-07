@@ -860,18 +860,39 @@ function renderProperty(p) {
   p.utilities_included = safeArr(p.utilities_included);
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
+  const COMMUNITY_AMENITY_RE = /pool|fitness|gym|clubhouse|business\s*center|courtyard|dog\s*park|pet\s*park|playground|bbq|grill|elevator|gated|concierge|package|lounge|spa|sauna|tennis|pickleball|basketball|car\s*wash|billiards|game\s*room/i;
+
   if (p.amenities?.length) {
     hasAmenities = true;
-    const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a))
-      .slice(0, 12)
-      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
-    if (amenityItems.length) {
-      const amGrid = document.getElementById('amenitiesGrid');
-      if (amGrid) amGrid.innerHTML = amenityItems.join('');
+    const validAmenities = p.amenities
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a));
+
+    const isApt = isCommunityProperty(p) || String(p.property_type || '').toLowerCase() === 'apartment';
+    const amGrid = document.getElementById('amenitiesGrid');
+
+    if (isApt && validAmenities.some(a => COMMUNITY_AMENITY_RE.test(a))) {
+      const inUnit = validAmenities.filter(a => !COMMUNITY_AMENITY_RE.test(a));
+      const community = validAmenities.filter(a => COMMUNITY_AMENITY_RE.test(a));
+
+      let splitHtml = '';
+      if (inUnit.length) {
+        splitHtml += `<div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px;width:100%;grid-column:1/-1"><i class="fas fa-home" style="margin-right:6px"></i>In-Unit Features</div>` +
+          inUnit.slice(0, 10).map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+      }
+      if (community.length) {
+        splitHtml += `<div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-top:${inUnit.length ? '16px' : '0'};margin-bottom:10px;width:100%;grid-column:1/-1"><i class="fas fa-building" style="margin-right:6px"></i>Community Amenities</div>` +
+          community.slice(0, 10).map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
+      }
+      if (amGrid) amGrid.innerHTML = splitHtml;
     } else {
-      const amGrid = document.getElementById('amenitiesGrid');
-      if (amGrid) amGrid.innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
+      const amenityItems = validAmenities
+        .slice(0, 12)
+        .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
+      if (amGrid) {
+        amGrid.innerHTML = amenityItems.length
+          ? amenityItems.join('')
+          : '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
+      }
     }
   }
   if (p.appliances?.length) {

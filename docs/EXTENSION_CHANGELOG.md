@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v57.0.0] - 2026-11-07
+### Apartment & Community Building Name Extraction Enhancement
+- **Expanded Building Name Ingestion**: Extended `building_name` extraction to trigger whenever `propType === 'APARTMENT'` or the listing is an apartment community, eliminating the previous restriction where `buildingName` was only preserved on explicit building pages.
+- **DOM Fallback Enhancement**: Enhanced DOM heading parsing to extract building names for all apartment types.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v57.0.0 with 57/57 tests passing.
+
+---
+
 ## [v56.0.0] - 2026-11-07
 ### Least-Privilege Host Permissions Hardening
 - **Chrome Web Store Compliance**: Removed overly broad wildcard CDN host permissions (`*.amazonaws.com/*`, `*.cloudinary.com/*`, `*.fastly.net/*`) from extension manifests across Chromium and Orion packages.

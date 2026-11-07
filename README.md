@@ -18,7 +18,7 @@ Choice Properties is a modern rental listing platform with integrated client por
                     ▼                                                  ▼
      ┌────────────────────────────┐                     ┌───────────────────────────┐
      │ Universal Chrome Extension │                     │ Automated Python Pipeline │
-     │  (v56.0.0 — 1-click stage) │                     │ (HomeHarvest + Orchestrator)│
+     │  (v57.0.0 — 1-click stage) │                     │ (HomeHarvest + Orchestrator)│
      └──────────────┬─────────────┘                     └─────────────┬─────────────┘
                     │                                                 │
                     └─────────────────────────┬───────────────────────┘

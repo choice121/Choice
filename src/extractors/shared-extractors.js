@@ -1153,7 +1153,8 @@
     const rawBuildingName = rawBuildingNameValue && typeof rawBuildingNameValue === 'object'
       ? rawBuildingNameValue.name || rawBuildingNameValue.title || rawBuildingNameValue.label || null
       : rawBuildingNameValue;
-    const buildingName = buildingPage && typeof rawBuildingName === 'string' &&
+    const isApartmentOrCommunity = buildingPage || propType === 'APARTMENT' || /apartment/i.test(String(prop.homeType || ''));
+    const buildingName = isApartmentOrCommunity && typeof rawBuildingName === 'string' &&
       !/^(?:property|property apartment unit|apartment unit)$/i.test(rawBuildingName.trim())
       ? rawBuildingName.trim()
       : null;
@@ -1708,7 +1709,8 @@
     const domTitle = buildingPage
       ? (headingText || (address ? [address, city, state, zip].filter(Boolean).join(', ') : null))
       : (headingText || buildTitle(beds, domPropType, city, address, null, state, zip));
-    const buildingName = buildingPage && headingText &&
+    const isApartmentOrCommunityDom = buildingPage || domPropType === 'APARTMENT';
+    const buildingName = isApartmentOrCommunityDom && headingText &&
       headingText !== address &&
       !/^(?:property|property apartment unit|apartment unit)$/i.test(headingText.trim())
       ? headingText.trim()
