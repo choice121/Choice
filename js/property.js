@@ -544,17 +544,27 @@ function renderProperty(p) {
   // Added: potentialAction (RentalAction), numberOfRooms, floorSize, leaseLength,
   // amenityFeature, and BreadcrumbList. These fields are required or strongly
   // recommended for Google's RentalListing rich result eligibility.
-  const sd = document.createElement('script');
-  sd.type = 'application/ld+json';
+  let sd = document.getElementById('property-jsonld');
+  if (!sd) {
+    sd = document.createElement('script');
+    sd.id = 'property-jsonld';
+    sd.type = 'application/ld+json';
+    document.head.appendChild(sd);
+  }
   const amenities = [];
   if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
   if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
   if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
   if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
                       amenities.push({ "@type": "LocationFeatureSpecification", "name": "Air Conditioning","value": p.cooling_type });
+  
+  const schemaType = isCommunityListing
+    ? ["ApartmentComplex", "RealEstateListing"]
+    : (p.property_type === 'single_family' ? ["SingleFamilyResidence", "RealEstateListing"] : "RealEstateListing");
+
   sd.textContent = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "RealEstateListing",
+    "@type": schemaType,
     "name": p.title,
     "description": p.description || undefined,
     "url": canonicalUrl,
@@ -586,6 +596,13 @@ function renderProperty(p) {
         "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
       }
     },
+    "additionalProperty": [
+      {
+        "@type": "PropertyValue",
+        "name": "Application Fee",
+        "value": "$50"
+      }
+    ],
     "numberOfRooms": p.bedrooms,
     "numberOfBathroomsTotal": p.bathrooms,
     "floorSize": p.square_footage ? {
@@ -1425,7 +1442,8 @@ function renderGallery(photos) {
     mainImg.srcset = '';
   }
   mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
-  mainImg.alt    = 'Property photo 1';
+  const propTitle = currentProperty?.title || 'Property photo';
+  mainImg.alt    = `${propTitle} — Photo 1 of ${safePhotos.length}`;
   mainImg.setAttribute('referrerpolicy', 'no-referrer');
   mainImg.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
 
@@ -1446,6 +1464,12 @@ function renderGallery(photos) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       openLightbox(photoIndex);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      showPhoto((photoIndex + 1) % safePhotos.length);
     }
   });
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
@@ -1626,7 +1650,8 @@ function showPhoto(idx) {
     } else {
       mainImg.srcset = '';
     }
-    mainImg.alt    = `Property photo ${safeIdx + 1}`;
+    const propTitle = currentProperty?.title || 'Property photo';
+    mainImg.alt    = `${propTitle} — Photo ${safeIdx + 1} of ${allPhotos.length}`;
     if (mosaicMain) mosaicMain.setAttribute('aria-label', `Open photo ${safeIdx + 1} in the gallery`);
     mainImg.style.opacity = '1';
   }, 150);
@@ -1831,7 +1856,8 @@ function lightboxShow(idx) {
     const isIk = CONFIG.IMAGEKIT_URL && allPhotos[idx] && allPhotos[idx].startsWith(CONFIG.IMAGEKIT_URL);
     img.srcset = isIk ? `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w` : '';
     img.sizes  = '100vw';
-    img.alt    = `Property photo ${idx + 1}`;
+    const propTitle = currentProperty?.title || 'Property photo';
+    img.alt    = `${propTitle} — Photo ${idx + 1} of ${allPhotos.length}`;
     img.setAttribute('referrerpolicy', 'no-referrer');
 
     const reveal = () => {

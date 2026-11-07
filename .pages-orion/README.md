@@ -4,7 +4,7 @@ One-click listing to Pipeline importer for **Zillow, Realtor.com, Apartments.com
 
 The Orion build uses bundled UI and extractor files from this directory, so the importer remains available when a remote script cannot load.
 
-## One-tap mobile save — v54.0.0
+## One-tap mobile save — v55.0.0
 
 On phones, the importer opens as a compact property-and-rent bar with a touch-friendly **Save** action. You do not need to open the full panel or refresh Zillow before saving. Failed saves expand the panel and offer a retry action.
 
@@ -26,7 +26,7 @@ The extension requires a Choice administrator sign-in from the popup. Listing sa
 
 The password is used only for sign-in and is not stored. A rotating Supabase refresh token is kept in extension storage and can be removed with **Disconnect account**.
 
-### v54.0.0 verification
+### v55.0.0 verification
 
 The automated browser test in `tests/visual/orion-mobile-widget.spec.js` simulates an iPhone viewport and Zillow single-page navigation, checks that the compact bar updates without a reload, and verifies that one tap submits the new listing's ID, address, and rent. Community listings retain starting rent separately from unit-level rent. This test uses a mocked import endpoint; it does not replace testing the installed extension on a physical iPhone in Orion.
 

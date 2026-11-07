@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v55.0.0] - 2026-11-07
+### Variable Hoisting Elimination & Safe SPA Deduplication
+- **Fix Variable Hoisting**: Moved `VERSION` declaration ahead of `window.__CP_CONTENT_LOADED__` guard checks in both `chrome-extension/content.js` and `.pages-orion/live-content.js`, ensuring `VERSION` evaluates to a concrete semantic string instead of `undefined` under strict mode.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v55.0.0 with 57/57 tests passing.
+
+---
+
 ## [v54.0.0] - 2026-11-07
 ### Cross-Platform Sync and Community Inventory Compatibility
 - **Cross-Platform Compatibility**: Enhanced `scripts/sync-and-bump-extension.mjs` and `scripts/validate-extension.mjs` to seamlessly execute across Windows and POSIX environments with Python and Tar fallbacks.

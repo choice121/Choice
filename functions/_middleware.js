@@ -77,6 +77,24 @@ function isBlocked(pathname) {
   return false;
 }
 
+function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escAttr(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   if (isBlocked(url.pathname)) {
@@ -121,20 +139,20 @@ export async function onRequest(context) {
   }
 
   // --- OPEN GRAPH INJECTION ---
-  if (url.pathname === '/property.html' || url.pathname.startsWith('/rent/')) {
+  if ((url.pathname === '/property.html' || url.pathname.startsWith('/rent/')) && !html.includes('property="og:title"')) {
     const idParam = url.searchParams.get('id');
     const slugMatch = url.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
     const propId = idParam || (slugMatch ? slugMatch[1] : null);
     
     if (propId) {
       try {
-        const supabaseUrl = (context.env && context.env.SUPABASE_URL) || "https://tlfmwetmhthpyrytrcfo.supabase.co";
+        const supabaseUrl = context.env && context.env.SUPABASE_URL;
         const supabaseKey = context.env && (
           context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_ANON_KEY
         );
         
-        if (supabaseKey) {
-          const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
+        if (supabaseUrl && supabaseKey) {
+          const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${encodeURIComponent(propId)}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
             headers: {
               'apikey': supabaseKey,
               'Authorization': `Bearer ${supabaseKey}`
@@ -146,21 +164,21 @@ export async function onRequest(context) {
             if (props && props.length > 0) {
               const p = props[0];
               const title = p.title || 'Property for Rent';
-              const price = p.monthly_rent ? `$${p.monthly_rent}/mo` : '';
+              const price = p.monthly_rent ? `$${Number(p.monthly_rent).toLocaleString()}/mo` : '';
               const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
             
               let photoUrl = '';
               if (p.property_photos && p.property_photos.length > 0) {
                  p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-                 photoUrl = p.property_photos[0].url;
+                 photoUrl = p.property_photos[0].url || '';
               }
 
-              html = html.replace('<title>Property — Choice Properties</title>', `<title>${pageTitle}</title>`);
+              html = html.replace('<title>Property — Choice Properties</title>', `<title>${escHtml(pageTitle)}</title>`);
             
               const ogTags = `
-              <meta property="og:title" content="${pageTitle}">
+              <meta property="og:title" content="${escAttr(pageTitle)}">
               <meta property="og:description" content="View property details and apply online.">
-              ${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ''}
+              ${photoUrl ? `<meta property="og:image" content="${escAttr(photoUrl)}">` : ''}
               <meta name="twitter:card" content="summary_large_image">
             `;
               html = html.replace('</head>', ogTags + '</head>');
