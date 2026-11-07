@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v56.0.0] - 2026-11-07
+### Least-Privilege Host Permissions Hardening
+- **Chrome Web Store Compliance**: Removed overly broad wildcard CDN host permissions (`*.amazonaws.com/*`, `*.cloudinary.com/*`, `*.fastly.net/*`) from extension manifests across Chromium and Orion packages.
+- **Direct Domain Scoping**: Scoped host permissions strictly to the 8 supported real estate portals, portal-specific CDN image services (`zillowstatic.com`, `rdcpix.com`, `cdn-redfin.com`), and Choice backend origins.
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v56.0.0 with 57/57 tests passing.
+
+---
+
 ## [v55.0.0] - 2026-11-07
 ### Variable Hoisting Elimination & Safe SPA Deduplication
 - **Fix Variable Hoisting**: Moved `VERSION` declaration ahead of `window.__CP_CONTENT_LOADED__` guard checks in both `chrome-extension/content.js` and `.pages-orion/live-content.js`, ensuring `VERSION` evaluates to a concrete semantic string instead of `undefined` under strict mode.
