@@ -13,7 +13,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794096634551"></script>
+  <script src="/js/cp-error-reporter.js?v=1794127120709"></script>
   <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
@@ -37,8 +37,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1794096634551">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1794096634551">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1794127120709">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1794127120709">
   <style>
     /* ── CRITICAL CSS — above-fold paint for listings.html ───────────────────
        Minimal subset of cp-marketing.css needed for: nav slot reservation,
@@ -62,12 +62,12 @@
       .property-card-img{width:100%;height:auto;aspect-ratio:3/2;border-radius:18px 18px 0 0}
     }
   </style>
-<script defer src="/config.js?v=1794096634551"></script>
-<script defer src="/js/supabase.min.js?v=1794096634551"></script>
-<script defer src="/js/cp-ui.js?v=1794096634551"></script>
-<script type="module" src="/js/cp-api.js?v=1794096634551"></script>
-<script defer src="/js/components.js?v=1794096634551"></script>
-<script defer src="/js/card-builder.js?v=1794096634551"></script>
+<script defer src="/config.js?v=1794127120709"></script>
+<script defer src="/js/supabase.min.js?v=1794127120709"></script>
+<script defer src="/js/cp-ui.js?v=1794127120709"></script>
+<script type="module" src="/js/cp-api.js?v=1794127120709"></script>
+<script defer src="/js/components.js?v=1794127120709"></script>
+<script defer src="/js/card-builder.js?v=1794127120709"></script>
 
   <!-- I-060: CollectionPage structured data for listings page -->
   <script type="application/ld+json">
@@ -327,6 +327,18 @@
 <!-- ── Listings (Phase 9.8 mv2 polish) ── -->
 <section class="listings-section mv2-listings-section" id="listings">
   <div class="container">
+        <!-- Featured Ribbon (Populated when featured listings are present) -->
+    <div id="featuredRibbonContainer" style="display:none;margin-bottom:28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(245,158,11,0.15);color:#d97706;font-size:12px"><i class="fas fa-star"></i></span>
+          <h3 style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;color:var(--color-text-primary);margin:0">Featured Collections</h3>
+        </div>
+        <span style="font-size:0.78rem;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em">Handpicked verified homes</span>
+      </div>
+      <div class="featured-ribbon-track" id="featuredRibbonTrack" style="display:grid;grid-auto-flow:column;grid-auto-columns:min(340px,85vw);gap:16px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch"></div>
+    </div>
+
     <div class="listings-header">
       <div class="listings-header-left">
         <h2 class="listings-heading mv2-listings-heading" id="listingsHeading">Results</h2>
@@ -492,6 +504,6 @@
 
 <!-- Leaflet loaded lazily when user switches to Map View -->
 
-<script type="module" src="/js/listings.js?v=1794096634551"></script>
+<script type="module" src="/js/listings.js?v=1794127120709"></script>
 </body>
 </html>

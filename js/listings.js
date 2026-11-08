@@ -1040,6 +1040,21 @@ function renderProperties(props) {
     return;
   }
 
+  // Render Top Featured Ribbon if on page 1 and without deep filters
+  const ribbon = document.getElementById('featuredRibbonContainer');
+  const ribbonTrack = document.getElementById('featuredRibbonTrack');
+  if (ribbon && ribbonTrack) {
+    const featuredList = (!hasFilters && currentPage === 1) ? props.filter(p => p.featured) : [];
+    if (featuredList.length > 0) {
+      ribbonTrack.innerHTML = featuredList.map(p => buildCard(p)).join('');
+      ribbon.style.display = 'block';
+      lazyInitCarousels(ribbonTrack);
+    } else {
+      ribbon.style.display = 'none';
+      ribbonTrack.innerHTML = '';
+    }
+  }
+
   grid.innerHTML = props.map(p => buildCard(p)).join('');
 
   // Mark saved state only — click events handled by delegated listeners (P1-A)

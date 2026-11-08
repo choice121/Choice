@@ -118,19 +118,19 @@ body[data-portal="public"][data-page="property"] #savePropBtn[aria-pressed="true
 /* The ordered source cover stays in the large left-hand tile. */
 body[data-portal="public"][data-page="property"] #gallery {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 6px;
   width: 100%;
-  max-width: 1088px;
-  height: clamp(320px, 34.85vw, 446px) !important;
+  max-width: 1140px;
+  height: clamp(340px, 36vw, 470px) !important;
   max-height: none !important;
   flex: none !important;
   margin: 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.74);
-  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 14px;
   background: #dfe8ed;
-  box-shadow: var(--pd-shadow);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
   contain: layout paint;
 }
 
@@ -163,7 +163,7 @@ body[data-portal="public"][data-page="property"] #mosaicSide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 6px;
   height: 100%;
   min-width: 0;
   min-height: 0;
