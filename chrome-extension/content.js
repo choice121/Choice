@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v57.0.0
+// Choice Properties — Universal Content Script & UI Engine v58.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  var VERSION  = '57.0.0';
+  var VERSION  = '58.0.0';
 
   if (window.__CP_CONTENT_LOADED__ && window.__CP_CONTENT_VERSION__ === VERSION) return;
   window.__CP_CONTENT_LOADED__ = true;

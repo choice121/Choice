@@ -142,8 +142,16 @@ async function getAdminAccessToken() {
 }
 
 async function authenticatedHeaders(contentType) {
-  const { accessToken, anonKey } = await getAdminAccessToken();
-  const headers = { apikey: anonKey, Authorization: `Bearer ${accessToken}` };
+  const config = await getSupabaseConfig().catch(() => ({ anonKey: '', url: '' }));
+  let token = config.anonKey || '';
+  try {
+    const session = await getAdminAccessToken().catch(() => null);
+    if (session && session.accessToken) {
+      token = session.accessToken;
+    }
+  } catch (_) {}
+  const headers = { apikey: config.anonKey || token };
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (contentType) headers['Content-Type'] = contentType;
   return headers;
 }

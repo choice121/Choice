@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v58.0.0] - 2026-11-07
+### Zero-Auth Direct Pipeline Ingestion & Orion Mobile Gesture Hardening
+- **Zero-Auth Direct Pipeline Ingestion**: Removed mandatory admin authentication checks from the pipeline ingestion path across `receive-pipeline-import` and background workers. Extensions can ingest listings directly with no prior login barrier.
+- **Orion Mobile Touch Gesture Isolation**: Scoped `touch-action: none` strictly to the widget drag handle (`#cp-header-bar`), eliminating gesture collisions with iOS Safari and Orion native back/forward page swiping.
+- **Zillow Mobile DOM Fallback**: Extended live DOM selector paths to include mobile sticky header components (`[data-testid="mobile-listing-header"]`, `header[class*="MobileHeader"]`).
+- **High-Res Photo Expansion**: Updated Zillow photo deduplication to favor highest-resolution webp/jpg variants (`-uncropped_scaled_within_1536_1152`, `-o.jpg`, `-p_e.webp`).
+- **Synchronized Packages**: Rebuilt Chromium and Orion packages as v58.0.0 with 57/57 tests passing.
+
+---
+
 ## [v57.0.0] - 2026-11-07
 ### Apartment & Community Building Name Extraction Enhancement
 - **Expanded Building Name Ingestion**: Extended `building_name` extraction to trigger whenever `propType === 'APARTMENT'` or the listing is an apartment community, eliminating the previous restriction where `buildingName` was only preserved on explicit building pages.

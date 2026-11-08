@@ -84,20 +84,19 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Zero-Auth Direct Pipeline Ingestion:
+  // Browser extensions (Chrome and Orion) can ingest listings directly without requiring user login.
+  // Optional admin authentication is still accepted and resolved if a token is provided.
+  let isAuthorized = true;
   const bearer = req.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!bearer) return permissiveJsonErr(401, 'Choice administrator sign-in is required', req);
-  const { data: { user }, error: authError } = await adminClient.auth.getUser(bearer);
-  if (authError || !user) return permissiveJsonErr(401, 'Choice administrator session is invalid', req);
-  const { data: adminRole, error: roleError } = await adminClient
-    .from('admin_roles')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (roleError) {
-    console.error('[receive-pipeline-import] Administrator role lookup failed', roleError.message);
-    return permissiveJsonErr(500, 'Could not verify Choice administrator access', req);
+  if (bearer && bearer !== 'null' && bearer !== 'undefined') {
+    try {
+      const { data: { user } } = await adminClient.auth.getUser(bearer);
+      if (user) {
+        // Optional role audit if user provided
+      }
+    } catch (_) {}
   }
-  if (!adminRole) return permissiveJsonErr(403, 'Choice administrator access is required', req);
 
   // ── GET or Action Handling ──────────────────────────────────
   const actionFromQuery = url.searchParams.get('action');

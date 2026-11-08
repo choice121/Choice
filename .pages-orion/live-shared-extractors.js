@@ -159,10 +159,12 @@
   function dedupZillowPhotos(urls) {
     const byHash = new Map();
     const scoreOf = (u) => {
-      if (/-uncropped_scaled_within_1536_1152\.jpg/.test(u)) return 3;
-      if (/-cc_ft_1536\.jpg/.test(u)) return 2;
-      if (/-p_h\.jpg/.test(u)) return 1;
-      return 0;
+      if (/-uncropped_scaled_within_1536_1152\.(?:jpg|webp)/.test(u)) return 4;
+      if (/-(?:o|p_e)\.(?:jpg|webp)/.test(u)) return 3.5;
+      if (/-cc_ft_1536\.(?:jpg|webp)/.test(u)) return 3;
+      if (/-p_h\.(?:jpg|webp)/.test(u)) return 2;
+      if (/-p_d\.(?:jpg|webp)/.test(u)) return 1.5;
+      return 1;
     };
     for (const u of urls) {
       if (!u || typeof u !== 'string') continue;
@@ -1494,6 +1496,10 @@
 
     const h1El = doc.querySelector([
       'h1[data-test-id="bdp-building-title"]',
+      '[data-testid="mobile-listing-header"] h1',
+      '[data-testid="mobile-listing-header"] [class*="address"]',
+      'header[class*="MobileHeader"] h1',
+      'header[class*="MobileHeader"] [class*="address"]',
       '[data-testid="home-details-chip-container"] h1',
       '[data-testid="bdp-property-header"] h1',
       '.summary-container h1',
