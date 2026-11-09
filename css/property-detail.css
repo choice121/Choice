@@ -1060,7 +1060,6 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 8px !important;
-    min-height: 186px;
     align-content: start;
     margin: 17px 0 16px !important;
   }
@@ -1273,7 +1272,6 @@ body[data-portal="public"][data-page="property"] .lightbox-grid-badge {
 
   body[data-portal="public"][data-page="property"] #detailMeta {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    min-height: 186px;
   }
 
   body[data-portal="public"][data-page="property"] #detailMeta .detail-meta-item {
@@ -1438,6 +1436,160 @@ html[data-theme="dark"] body[data-portal="public"][data-page="property"] #savePr
   border-color: #70444a !important;
   background: #35272b !important;
   color: #ffb7bb !important;
+}
+
+/* ── Community Inventory — Layout Tag Distinction ── */
+.community-floor-tag.community-layout-tag {
+  background: rgba(0, 106, 255, 0.07);
+  color: #005de0;
+  border-color: rgba(0, 106, 255, 0.22);
+}
+
+html[data-theme="dark"] .community-floor-tag.community-layout-tag {
+  background: rgba(120, 183, 255, 0.12) !important;
+  color: #78b7ff !important;
+  border-color: rgba(120, 183, 255, 0.28) !important;
+}
+
+/* ── Community Inventory — Dark Mode Overrides ── */
+/* Fixes: community section stayed bright white in dark mode */
+html[data-theme="dark"] .community-unit-card,
+html[data-theme="dark"] .community-fp-card {
+  background: linear-gradient(180deg, #192737 0%, #161f2a 100%) !important;
+  border-color: #31414d !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22) !important;
+}
+
+html[data-theme="dark"] .community-unit-card:hover,
+html[data-theme="dark"] .community-fp-card:hover {
+  border-color: rgba(120, 183, 255, 0.4) !important;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] .community-filters-bar {
+  background: linear-gradient(180deg, #192737 0%, #161f2a 100%) !important;
+  border-color: #31414d !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-theme="dark"] .building-stack-card {
+  background: linear-gradient(180deg, #192737 0%, #161f2a 100%) !important;
+  border-color: #31414d !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] .building-stack-tier {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: #2d3e4a !important;
+}
+
+html[data-theme="dark"] .building-stack-tier.active {
+  border-color: rgba(120, 183, 255, 0.45) !important;
+  background: linear-gradient(180deg, rgba(30, 49, 68, 0.75) 0%, rgba(21, 31, 40, 0.92) 100%) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-theme="dark"] .building-stack-tier.active .building-stack-floor-button {
+  background: rgba(120, 183, 255, 0.08) !important;
+  color: #a2ceff !important;
+}
+
+html[data-theme="dark"] .building-stack-title,
+html[data-theme="dark"] .building-stack-tier-label,
+html[data-theme="dark"] .community-unit-number,
+html[data-theme="dark"] .community-fp-title,
+html[data-theme="dark"] .community-floorplan-heading h3 {
+  color: #edf4f7 !important;
+}
+
+html[data-theme="dark"] .building-stack-caption,
+html[data-theme="dark"] .building-stack-count,
+html[data-theme="dark"] .community-unit-specs,
+html[data-theme="dark"] .community-fp-meta,
+html[data-theme="dark"] .community-results-count,
+html[data-theme="dark"] .community-filter-label,
+html[data-theme="dark"] .building-stack-empty {
+  color: #9aabb5 !important;
+}
+
+html[data-theme="dark"] .community-unit-price {
+  color: #edf4f7 !important;
+}
+
+html[data-theme="dark"] .community-unit-price small {
+  color: #9aabb5 !important;
+}
+
+html[data-theme="dark"] .community-floor-tag {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #9aabb5 !important;
+  border-color: #31414d !important;
+}
+
+html[data-theme="dark"] .community-pill-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #d0dbe2 !important;
+  border-color: #31414d !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .community-pill-btn:hover {
+  border-color: rgba(120, 183, 255, 0.5) !important;
+  color: #a2ceff !important;
+  box-shadow: 0 4px 14px rgba(120, 183, 255, 0.1) !important;
+}
+
+html[data-theme="dark"] .community-pill-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25) !important;
+}
+
+html[data-theme="dark"] .community-pill-btn .count-badge {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme="dark"] .building-stack-unit-chip {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #d0dbe2 !important;
+  border-color: #31414d !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .building-stack-unit-chip:hover,
+html[data-theme="dark"] .building-stack-unit-chip.highlighted {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25) !important;
+}
+
+html[data-theme="dark"] .community-summary-item {
+  background: linear-gradient(180deg, #192737 0%, #161f2a 100%) !important;
+  border-color: #31414d !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+  color: #9aabb5 !important;
+}
+
+html[data-theme="dark"] .community-summary-item strong {
+  color: #edf4f7 !important;
+}
+
+html[data-theme="dark"] .community-empty-state {
+  background: linear-gradient(180deg, rgba(30, 49, 68, 0.6) 0%, rgba(22, 31, 42, 0.9) 100%) !important;
+  border-color: #31414d !important;
+  border-left-color: #78b7ff !important;
+  color: #d0dbe2 !important;
+}
+
+html[data-theme="dark"] .community-fp-thumb {
+  background: linear-gradient(180deg, #1a2735 0%, #141e28 100%) !important;
+}
+
+html[data-theme="dark"] .community-unit-photos a {
+  background: #1a2735 !important;
+  border-color: #31414d !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

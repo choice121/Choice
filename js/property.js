@@ -4427,7 +4427,7 @@ async function initCommunityInventory(p) {
             '<div class="community-unit-left">' +
               '<div class="community-unit-title-row">' +
                 '<h3 class="community-unit-number">Unit ' + esc(u.unit_number || 'Details') + '</h3>' +
-                (floorText ? '<span class="community-floor-tag"><i class="fas fa-stairs" aria-hidden="true"></i> ' + esc(floorText) + '</span>' : '') +
+                (floorText ? '<span class="community-floor-tag"><i class="fas fa-layer-group" aria-hidden="true"></i> ' + esc(floorText) + '</span>' : '') +
                 (u.building_name ? '<span class="community-floor-tag"><i class="fas fa-building" aria-hidden="true"></i> ' + esc(u.building_name) + '</span>' : '') +
                 (u.floor_plan_name ? '<span class="community-floor-tag community-layout-tag">' + esc(u.floor_plan_name) + '</span>' : '') +
               '</div>' +
