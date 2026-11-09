@@ -1758,8 +1758,16 @@ function renderGallery(photos) {
   }
 
   if (mobileCount) mobileCount.textContent = `1 / ${safePhotos.length}`;
-  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length));
-  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % safePhotos.length));
+  prevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length);
+  });
+  nextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    showPhoto((photoIndex + 1) % safePhotos.length);
+  });
 
   // Touch swipe on mosaic (mobile carousel) — velocity-aware
   let touchX = 0, touchT = 0;
@@ -2135,10 +2143,20 @@ function lightboxNav(dir) {
   }, { passive: true });
 })();
 
-document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
-document.getElementById('lightboxPrev')?.addEventListener('click', () => lightboxNav(-1));
-document.getElementById('lightboxNext')?.addEventListener('click', () => lightboxNav(1));
-document.getElementById('lbToggleGrid')?.addEventListener('click', () => {
+document.getElementById('lightboxClose')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeLightbox();
+});
+document.getElementById('lightboxPrev')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightboxNav(-1);
+});
+document.getElementById('lightboxNext')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightboxNav(1);
+});
+document.getElementById('lbToggleGrid')?.addEventListener('click', (e) => {
+  e.stopPropagation();
   if (_lbViewMode === 'grid') {
     setLightboxViewMode('stage');
     lightboxShow(photoIndex);

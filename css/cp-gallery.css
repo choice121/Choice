@@ -228,10 +228,13 @@
   background: rgba(255, 255, 255, 0.96);
 }
 
-.mosaic-nav-btn svg {
+.mosaic-nav-btn svg,
+.mosaic-nav-btn i {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
 }
 
 /* Mobile counter pill — hidden on desktop
@@ -364,6 +367,9 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   transition: opacity var(--cp-dur) var(--cp-ease);
 }
 
+/* JS adds class "open" (not "is-open") */
+.lightbox.open,
+#lightbox.open,
 .lightbox.is-open,
 #lightbox.is-open {
   opacity: 1;
@@ -397,6 +403,14 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Header actions wrapper */
+.lightbox-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-sp-3);
+  flex: 1;
 }
 
 /* Photo counter — left side */
@@ -462,10 +476,13 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   color: #ffffff;
 }
 
-.lightbox-close svg {
+.lightbox-close svg,
+.lightbox-close i {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* Stage — image viewing area
@@ -494,10 +511,10 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   height: 52px;
   border: none;
   border-radius: var(--cp-radius-pill);
-  background: rgba(28, 28, 30, 0.70);
+  background: rgba(28, 28, 30, 0.75);
   color: #ffffff;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.90;
   transition: opacity var(--cp-dur) var(--cp-ease),
               background var(--cp-dur) var(--cp-ease),
               transform var(--cp-dur) var(--cp-ease-out);
@@ -508,9 +525,15 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
 .lightbox-nav.prev { left: var(--cp-sp-5); }
 .lightbox-nav.next { right: var(--cp-sp-5); }
 
-/* Show nav on stage hover */
+/* Always visible; brighten on hover */
+.lightbox-nav:hover {
+  opacity: 1;
+  background: rgba(28, 28, 30, 0.95);
+}
+
 .lightbox-stage:hover .lightbox-nav,
-.lightbox.is-open .lightbox-nav:focus-visible {
+.lightbox.open .lightbox-nav,
+.lightbox.is-open .lightbox-nav {
   opacity: 1;
 }
 
@@ -522,10 +545,13 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   transform: translateY(-50%) scale(0.94);
 }
 
-.lightbox-nav svg {
+.lightbox-nav svg,
+.lightbox-nav i {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
 }
 
 /* Image wrapper — fade transition on photo change
@@ -556,7 +582,10 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   -webkit-user-drag: none;
 }
 
+/* JS adds class "loading" on the img (not "is-loading") */
+.lightbox-img.loading,
 .lightbox-img.is-loading,
+#lightboxImg.loading,
 #lightboxImg.is-loading {
   opacity: 0;
 }
@@ -617,6 +646,8 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   transform: scaleY(1.03);
 }
 
+/* JS adds class "active" on thumbnails (not "is-active") */
+.lightbox-thumb.active,
 .lightbox-thumb.is-active {
   border-color: #ffffff;
   opacity: 1;
@@ -717,6 +748,7 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
    7. LOADING SPINNER
    ===================================================================== */
 
+/* Spinner: hidden by default, shown via .visible class (added by JS) */
 .lb-spinner {
   position: absolute;
   top: 50%;
@@ -730,13 +762,18 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   border-radius: var(--cp-radius-pill);
   animation: lb-spin 0.7s linear infinite;
   pointer-events: none;
+  display: none; /* hidden unless .visible is added by JS */
+}
+
+.lb-spinner.visible {
+  display: block;
 }
 
 @keyframes lb-spin {
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* Hide spinner once image is loaded */
+/* Legacy: Hide spinner once image wrapper is marked loaded */
 .lightbox-img-wrap.is-loaded .lb-spinner,
 #lightboxImgWrap.is-loaded .lb-spinner {
   display: none;
@@ -808,9 +845,12 @@ html[data-theme="dark"] #mosaicExpandBtn:hover {
   .lightbox-nav.prev { left: var(--cp-sp-3); }
   .lightbox-nav.next { right: var(--cp-sp-3); }
 
-  .lightbox-nav svg {
+  .lightbox-nav svg,
+  .lightbox-nav i {
     width: 18px;
     height: 18px;
+    font-size: 16px;
+    line-height: 1;
   }
 
   .lightbox-thumbs {
