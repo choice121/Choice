@@ -475,6 +475,85 @@ function amenityIconColor(text) {
   return '';
 }
 
+function parseUnitDetails(rawUnitNum, existingFloor, existingBuilding) {
+  let floor = existingFloor != null && String(existingFloor).trim() !== '' ? String(existingFloor).trim() : null;
+  let building = existingBuilding != null && String(existingBuilding).trim() !== '' ? String(existingBuilding).trim() : null;
+
+  if (floor && building) return { floor, building };
+
+  const raw = String(rawUnitNum || '').trim();
+  if (!raw) return { floor, building };
+
+  // Case 1: Prefixes like "PH", "G", "LL", "B"
+  if (!floor) {
+    if (/^ph[\s-]?\d*/i.test(raw)) floor = 'PH';
+    else if (/^(ll|sub)[\s-]?\d*/i.test(raw)) floor = 'LL';
+    else if (/^g[\s-]?\d*/i.test(raw)) floor = 'Ground';
+  }
+
+  // Case 2: "1-0102", "2-1506", "A-0402", "Tower1-1204"
+  // Format: [Building]-[Floor(1-2 digits)][Door(2 digits)]
+  const dashMatch = raw.match(/^([A-Za-z0-9\s]+)-(\d{1,2})(\d{2})$/);
+  if (dashMatch) {
+    if (!building) {
+      const bRaw = dashMatch[1].trim();
+      building = /^\d+$/.test(bRaw) ? `Building ${bRaw}` : bRaw;
+    }
+    if (!floor) {
+      floor = String(parseInt(dashMatch[2], 10));
+    }
+    return { floor, building };
+  }
+
+  // Case 3: "1-02", "A-3" (simple building - floor/unit)
+  const simpleDash = raw.match(/^([A-Za-z0-9\s]+)-(\d+)$/);
+  if (simpleDash) {
+    if (!building) {
+      const bRaw = simpleDash[1].trim();
+      building = /^\d+$/.test(bRaw) ? `Building ${bRaw}` : bRaw;
+    }
+    const num = parseInt(simpleDash[2], 10);
+    if (!floor && num >= 100) {
+      floor = String(Math.floor(num / 100));
+    }
+    return { floor, building };
+  }
+
+  // Case 4: Standard 3 or 4 digit unit: "304" -> floor 3, "1506" -> floor 15, "0102" -> floor 1
+  const cleanNum = raw.replace(/^(unit|apt|suite|#)\s*/i, '').trim();
+  const stdMatch = cleanNum.match(/^0*(\d{1,2})(\d{2})$/);
+  if (stdMatch && !floor) {
+    floor = String(parseInt(stdMatch[1], 10));
+  }
+
+  return { floor, building };
+}
+
+function deriveCommunityRentRange(property) {
+  if (!property) return null;
+  if (property.price_range) return property.price_range;
+  const rawUnits = Array.isArray(property.unit_options) && property.unit_options.length > 0
+    ? property.unit_options
+    : (Array.isArray(property.property_units) && property.property_units.length > 0 ? property.property_units : null);
+  if (rawUnits && rawUnits.length > 0) {
+    const rents = [];
+    rawUnits.forEach(u => {
+      const r = u?.monthly_rent ?? u?.starting_rent ?? u?.rent;
+      if (r != null && !isNaN(Number(r)) && Number(r) > 0) rents.push(Number(r));
+    });
+    if (rents.length > 0) {
+      const min = Math.min(...rents);
+      const max = Math.max(...rents);
+      if (min < max) {
+        return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+      } else {
+        return `$${min.toLocaleString()}`;
+      }
+    }
+  }
+  return null;
+}
+
 function isCommunityProperty(property) {
   if (!property) return false;
   // If explicitly a single unit with a unit number and no other unit options, treat as single unit
@@ -495,6 +574,10 @@ function isCommunityProperty(property) {
 }
 
 function formatPropertyRent(property, suffix = '') {
+  const range = deriveCommunityRentRange(property);
+  if (range && range.includes('-')) {
+    return range + suffix;
+  }
   const amount = property.community_starting_rent ?? property.monthly_rent;
   if (amount == null) return 'TBD';
   return (isCommunityProperty(property) ? 'From ' : '') +
@@ -502,10 +585,76 @@ function formatPropertyRent(property, suffix = '') {
 }
 
 function renderProperty(p) {
-  document.title = `${p.title} — Choice Properties`;
+  const pageHeadingTitle = p.building_name || p.title || p.address || 'Property Details';
+  document.title = `${pageHeadingTitle} — Choice Properties`;
 
   const isCommunityListing = isCommunityProperty(p);
   const formatPrice = formatPropertyRent;
+
+  // Derive community aggregates if available
+  let communityBeds = null;
+  let communityBaths = null;
+  let communitySqft = null;
+  let communityFloors = null;
+  let communityTotalUnits = null;
+
+  const rawUnits = Array.isArray(p.unit_options) && p.unit_options.length > 0
+    ? p.unit_options
+    : (Array.isArray(p.property_units) && p.property_units.length > 0 ? p.property_units : null);
+
+  if (rawUnits && rawUnits.length > 0) {
+    communityTotalUnits = rawUnits.length;
+    const beds = [];
+    const baths = [];
+    const sqfts = [];
+    const floorNums = new Set();
+
+    rawUnits.forEach(u => {
+      if (u) {
+        const b = u.bedrooms ?? u.beds;
+        if (b != null && !isNaN(Number(b))) beds.push(Number(b));
+
+        const ba = u.bathrooms ?? u.baths;
+        if (ba != null && !isNaN(Number(ba))) baths.push(Number(ba));
+
+        const sq = u.square_footage ?? u.sqft;
+        if (sq != null && !isNaN(Number(sq)) && Number(sq) > 0) sqfts.push(Number(sq));
+
+        const parsed = parseUnitDetails(u.unit_number || u.unit, u.unit_floor, u.building_name || u.building);
+        if (parsed.floor && !isNaN(Number(parsed.floor))) {
+          floorNums.add(Number(parsed.floor));
+        }
+      }
+    });
+
+    if (beds.length > 0) {
+      const minB = Math.min(...beds);
+      const maxB = Math.max(...beds);
+      communityBeds = minB === maxB
+        ? (minB === 0 ? 'Studio' : `${minB} Bed${minB === 1 ? '' : 's'}`)
+        : (minB === 0 ? `Studio - ${maxB} Beds` : `${minB} - ${maxB} Beds`);
+    }
+
+    if (baths.length > 0) {
+      const minBa = Math.min(...baths);
+      const maxBa = Math.max(...baths);
+      communityBaths = minBa === maxBa
+        ? `${minBa} Bath${minBa === 1 ? '' : 's'}`
+        : `${minBa} - ${maxBa} Baths`;
+    }
+
+    if (sqfts.length > 0) {
+      const minSq = Math.min(...sqfts);
+      const maxSq = Math.max(...sqfts);
+      communitySqft = minSq === maxSq
+        ? `${minSq.toLocaleString()} sqft`
+        : `${minSq.toLocaleString()} - ${maxSq.toLocaleString()} sqft`;
+    }
+
+    if (floorNums.size > 1) {
+      communityFloors = Math.max(...Array.from(floorNums));
+    }
+  }
 
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
@@ -514,10 +663,10 @@ function renderProperty(p) {
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
   const specsDescription = isCommunityListing
-    ? 'Apartment community'
+    ? (communityBeds ? `${communityBeds}${communityBaths ? ' · ' + communityBaths : ''}` : 'Apartment community')
     : `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms != null ? p.bedrooms + ' bed' : 'Home')} · ${p.bathrooms != null ? p.bathrooms + ' bath' : ''}`;
   const ogDesc = `${specsDescription} · ${formatPrice(p, '/mo')} · ${p.address}, ${p.city}, ${p.state}`;
-  ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
+  ['ogTitle','twTitle'].forEach(id => setMeta(id, `${pageHeadingTitle} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
   document.querySelector('meta[name="description"]')?.setAttribute('content', ogDesc);
@@ -701,10 +850,18 @@ function renderProperty(p) {
   const streetAddress = p.address || p.title || 'Property Details';
   const addressUnit = p.unit_number ? `, Unit ${p.unit_number}` : '';
   const locality = [p.city, [p.state, p.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-  document.getElementById('detailTitle').textContent = p.address
-    ? `${streetAddress}${p.unit_number ? `, Unit ${p.unit_number}` : ''}`
-    : streetAddress;
-  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(locality || streetAddress + addressUnit)}`;
+
+  if (p.building_name) {
+    document.getElementById('detailTitle').textContent = p.building_name;
+    const fullStreet = p.address ? `${streetAddress}${addressUnit}` : '';
+    const fullLocality = [fullStreet, locality].filter(Boolean).join(', ');
+    document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(fullLocality || streetAddress)}`;
+  } else {
+    document.getElementById('detailTitle').textContent = p.address
+      ? `${streetAddress}${p.unit_number ? `, Unit ${p.unit_number}` : ''}`
+      : streetAddress;
+    document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(locality || streetAddress + addressUnit)}`;
+  }
 
   const existingChipRow = document.getElementById('detailHeaderChips');
   if (existingChipRow) existingChipRow.remove();
@@ -733,20 +890,45 @@ function renderProperty(p) {
 
   // Meta row
   const metas = [];
-  if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
+  if (p.bedrooms != null) {
+    metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
+  } else if (communityBeds) {
+    metas.push({ label:'Bedrooms', value: communityBeds, icon:'fa-bed' });
+  }
+
   if (p.bathrooms) {
     const numBaths = Number(p.bathrooms);
     const bathVal = (p.half_bathrooms && Number.isInteger(numBaths))
       ? `${p.bathrooms} + ½`
       : p.bathrooms;
     metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
+  } else if (communityBaths) {
+    metas.push({ label:'Bathrooms', value: communityBaths, icon:'fa-bath' });
   }
-  if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
-  if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
+
+  if (p.square_footage) {
+    metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
+  } else if (communitySqft) {
+    metas.push({ label:'Sq. Ft.', value: communitySqft, icon:'fa-ruler-combined' });
+  }
+
+  if (p.property_type) {
+    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
+  }
+
+  const effectiveFloors = p.floors || communityFloors;
+  if (effectiveFloors > 1) {
+    metas.push({ label:'Floors', value: effectiveFloors, icon:'fa-layer-group' });
+  }
+
+  const effectiveUnits = p.total_units || communityTotalUnits;
+  if (effectiveUnits > 1 && isCommunityListing) {
+    metas.push({ label:'Total Units', value: effectiveUnits, icon:'fa-city' });
+  }
+
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
-  if (p.floors > 1)       metas.push({ label:'Floors', value: p.floors, icon:'fa-layer-group' });
   if (p.lot_size_sqft)    metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   if (p.has_basement === true)    metas.push({ label:'Basement',    value:'Yes', icon:'fa-dungeon' });
   if (p.has_central_air === true) metas.push({ label:'Central Air', value:'Yes', icon:'fa-snowflake' });
@@ -4168,14 +4350,14 @@ async function initCommunityInventory(p) {
           .map((opt, idx) => {
             const unitPhotos = Array.isArray(opt.unit_photos) ? opt.unit_photos
               : Array.isArray(opt.photo_urls) ? opt.photo_urls : [];
+            const rawUnit = String(opt.unit_number || opt.unit || '').trim();
+            const parsed = parseUnitDetails(rawUnit, opt.unit_floor, opt.building_name || opt.building);
             return {
               id: opt.id || ('opt-' + (idx + 1)),
               property_id: p.id,
-              unit_number: String(opt.unit_number || opt.unit).trim(),
-              unit_floor: opt.unit_floor == null || String(opt.unit_floor).trim() === ''
-                ? null
-                : String(opt.unit_floor).trim(),
-              building_name: opt.building_name || opt.building || null,
+              unit_number: rawUnit,
+              unit_floor: parsed.floor,
+              building_name: parsed.building,
               floor_plan_name: opt.floor_plan_name || null,
               bedrooms: opt.bedrooms ?? (opt.beds ?? null),
               bathrooms: opt.bathrooms ?? (opt.baths ?? null),
@@ -4186,23 +4368,26 @@ async function initCommunityInventory(p) {
               photo_urls: unitPhotos,
             };
           });
-
-        const floorSet = new Set();
-        units.forEach(u => { if (u.unit_floor != null) floorSet.add(String(u.unit_floor)); });
-        floors = Array.from(floorSet).sort((a, b) => {
-          const aNumber = Number(a);
-          const bNumber = Number(b);
-          if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
-          return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-        });
       }
     }
   }
 
-  if (!floors.length && units.length > 0) {
-    floors = Array.from(new Set(
-      units.map(unit => unit.unit_floor == null ? '' : String(unit.unit_floor).trim()).filter(Boolean)
-    )).sort((a, b) => {
+  if (units.length > 0) {
+    units.forEach(u => {
+      if (u.unit_number && (!u.unit_floor || !u.building_name)) {
+        const parsed = parseUnitDetails(u.unit_number, u.unit_floor, u.building_name);
+        if (!u.unit_floor && parsed.floor) u.unit_floor = parsed.floor;
+        if (!u.building_name && parsed.building) u.building_name = parsed.building;
+      }
+    });
+
+    const floorSet = new Set();
+    units.forEach(u => {
+      const fl = u.unit_floor == null ? '' : String(u.unit_floor).trim();
+      if (fl) floorSet.add(fl);
+    });
+
+    floors = Array.from(floorSet).sort((a, b) => {
       const aNumber = Number(a);
       const bNumber = Number(b);
       if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
