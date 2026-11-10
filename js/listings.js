@@ -112,11 +112,11 @@ function readURL() {
   const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
   const hashParams = new URLSearchParams(rawHash);
   const rawShare = p.get('share') || hashParams.get('share') || hashParams.get('token') || (rawHash.startsWith('share=') ? rawHash.slice(6) : '') || '';
-  activeShareToken = rawShare ? String(rawShare).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim() : '';
+  activeShareToken = rawShare ? String(rawShare).trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim() : '';
   if (activeShareToken) {
     try { sessionStorage.setItem('cp_active_share_token', activeShareToken); } catch (_) {}
   } else {
-    try { activeShareToken = sessionStorage.getItem('cp_active_share_token') || ''; } catch (_) {}
+    try { activeShareToken = (sessionStorage.getItem('cp_active_share_token') || '').trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim(); } catch (_) {}
   }
   window.__CP_ACTIVE_SHARE_TOKEN__ = activeShareToken;
   activeTargetIds = !activeShareToken && targetIdsRaw ? targetIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -936,11 +936,17 @@ async function fetchAndRender() {
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
+      if (result.isShareError) {
+        try { sessionStorage.removeItem('cp_active_share_token'); } catch (_) {}
+      }
       const subheadingEl = document.getElementById('listingsSubheading');
       if (subheadingEl) {
         subheadingEl.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Unable to load listings. Please try again.</span>';
       }
-      renderError(result.error);
+      const userMessage = result.isShareError
+        ? (result.error && !result.error.includes('non-2xx') ? result.error : 'This client share link could not be found or has expired.')
+        : result.error;
+      renderError(userMessage);
       return;
     }
 

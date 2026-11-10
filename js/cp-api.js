@@ -382,12 +382,12 @@ const Properties = {
     if (filters.share_token || (filters.target_ids && Array.isArray(filters.target_ids) && filters.target_ids.length > 0)) {
       let rows = [];
       if (filters.share_token) {
-        const cleanToken = String(filters.share_token).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim();
+        const cleanToken = String(filters.share_token).trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim();
         const { data, error } = await sb().functions.invoke('property-share', {
           body: { action: 'resolve', token: cleanToken },
         });
         if (error) {
-          const errMsg = (data && (data.error || data.message)) || error.message || 'share_not_found';
+          const errMsg = (data && (data.error || data.message)) || (error.message && !error.message.includes('non-2xx') ? error.message : 'This client share link could not be found or has expired.');
           return { ok: false, data: null, error: errMsg, isShareError: true };
         }
         rows = Array.isArray(data?.properties) ? data.properties.slice() : [];
