@@ -556,32 +556,54 @@ function deriveCommunityRentRange(property) {
 
 function isCommunityProperty(property) {
   if (!property) return false;
-  // If explicitly a single unit with a unit number and no other unit options, treat as single unit
-  if (property.unit_number && !property.is_multi_unit && (!property.total_units || Number(property.total_units) <= 1) && (!Array.isArray(property.unit_options) || !property.unit_options.length)) {
+
+  // Explicit single-unit guard: if the property has a known single-unit type, it is NEVER a community.
+  const pType = String(property.type || property.property_type || '').toLowerCase();
+  const singleUnitTypes = new Set([
+    'single_family', 'duplex', 'townhouse', 'condo', 'studio',
+    'mobile_home', 'land', 'commercial', 'other',
+  ]);
+  if (singleUnitTypes.has(pType)) return false;
+
+  // If explicitly flagged as not multi-unit by the DB, trust it.
+  if (property.is_multi_unit === false) return false;
+
+  // If only 1 unit total and no unit-option array, it's a single listing.
+  if (!property.is_multi_unit && (!property.total_units || Number(property.total_units) <= 1) &&
+      (!Array.isArray(property.unit_options) || !property.unit_options.length) &&
+      (!Array.isArray(property.property_units) || !property.property_units.length)) {
     return false;
   }
-  const pType = String(property.property_type || '').toLowerCase();
+
+  // True community: explicitly flagged, or has multiple units/options.
   return Boolean(
     property.is_multi_unit ||
     Number(property.total_units) > 1 ||
-    property.community_starting_rent != null ||
-    property.price_range ||
-    (Array.isArray(property.unit_options) && property.unit_options.length > 0) ||
-    (Array.isArray(property.property_units) && property.property_units.length > 0) ||
-    pType === 'apartment' ||
-    pType === 'multi_family'
+    (Array.isArray(property.unit_options) && property.unit_options.length > 1) ||
+    (Array.isArray(property.property_units) && property.property_units.length > 1) ||
+    // apartment/multi_family type only counts as community when they have actual multiple units
+    ((pType === 'apartment' || pType === 'multi_family' || pType === 'apartment_complex') &&
+      (property.is_multi_unit || Number(property.total_units) > 1 ||
+       (Array.isArray(property.unit_options) && property.unit_options.length > 1)))
   );
 }
 
 function formatPropertyRent(property, suffix = '') {
-  const range = deriveCommunityRentRange(property);
-  if (range && range.includes('-')) {
-    return range + suffix;
+  const isCommunity = isCommunityProperty(property);
+  // Only compute a range for true community listings
+  if (isCommunity) {
+    const range = deriveCommunityRentRange(property);
+    if (range && range.includes('-')) {
+      return range + suffix;
+    }
+    const amount = property.community_starting_rent ?? property.monthly_rent;
+    if (amount == null) return 'TBD';
+    return 'From $' + Number(amount).toLocaleString() + suffix;
   }
-  const amount = property.community_starting_rent ?? property.monthly_rent;
+  // Single-unit listing: always show a plain price, never "From"
+  const amount = property.monthly_rent ?? property.community_starting_rent;
   if (amount == null) return 'TBD';
-  return (isCommunityProperty(property) ? 'From ' : '') +
-    '$' + Number(amount).toLocaleString() + suffix;
+  return '$' + Number(amount).toLocaleString() + suffix;
 }
 
 function renderProperty(p) {
@@ -589,6 +611,21 @@ function renderProperty(p) {
   document.title = `${pageHeadingTitle} — Choice Properties`;
 
   const isCommunityListing = isCommunityProperty(p);
+
+  // Stamp the normalized property type on <body> so CSS can use attribute selectors
+  // and so other components can read it without re-running the check.
+  const normalizedType = (p.type || p.property_type || 'unknown').toLowerCase();
+  document.body.dataset.propertyType = normalizedType;
+  document.body.dataset.isCommunity = isCommunityListing ? 'true' : 'false';
+
+  // Hide community inventory section immediately for non-community listings (CSS safety net)
+  if (!isCommunityListing) {
+    const ciSection = document.getElementById('communityInventorySection');
+    if (ciSection) ciSection.style.display = 'none';
+    const ciDivider = document.getElementById('dividerAfterCommunityInventory');
+    if (ciDivider) ciDivider.style.display = 'none';
+  }
+
   const formatPrice = formatPropertyRent;
 
   // Derive community aggregates if available
@@ -4265,6 +4302,16 @@ function preloadLightboxAdjacentImages(idx) {
 
 // ── Multi-Floor & Multi-Unit Community Inventory Browser ─────────────────────
 async function initCommunityInventory(p) {
+  // Guard: only render community inventory for true community/multi-unit properties.
+  // isCommunityProperty() already encodes all the type + unit-count logic.
+  if (!isCommunityProperty(p)) {
+    const container = document.getElementById('communityInventorySection');
+    if (container) container.style.display = 'none';
+    const divider = document.getElementById('dividerAfterCommunityInventory');
+    if (divider) divider.style.display = 'none';
+    return;
+  }
+
   const container = document.getElementById('communityInventorySection');
   const content = document.getElementById('communityInventoryContent');
   const divider = document.getElementById('dividerAfterCommunityInventory');

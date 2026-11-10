@@ -1143,3 +1143,12 @@ html[data-theme="dark"] .community-unit-photos a {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* ── Community UI: Hide for non-community properties ─────────────────────────
+   When JS stamps data-is-community="false" on <body>, all community sections
+   are hidden via CSS as a belt-and-suspenders guard alongside the JS guard.    */
+body[data-is-community="false"] #communityInventorySection,
+body[data-is-community="false"] #dividerAfterCommunityInventory {
+  display: none !important;
+}
