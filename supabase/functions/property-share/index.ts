@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
     const action = body.action;
 
     if (action === "resolve") {
-      const token = typeof body.token === "string" ? body.token.trim() : "";
+      const token = typeof body.token === "string" ? body.token.trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, "").trim() : "";
       if (!token) {
         return makeJsonResponse({ error: "invalid_share_token" }, 400);
       }
