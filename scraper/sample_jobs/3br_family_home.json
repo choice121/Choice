@@ -1,0 +1,20 @@
+{
+  "locations": ["Dallas, TX"],
+  "fallback_locations": ["Fort Worth, TX"],
+  "beds_min": 3,
+  "beds_max": 4,
+  "baths_min": 2.0,
+  "rent_min": 1500,
+  "rent_max": 2200,
+  "rent_floor": 1500,
+  "rent_cap": 1800,
+  "allowed_types": ["SINGLE_FAMILY", "TOWNHOMES"],
+  "target": 10,
+  "past_days": 90,
+  "limit": 200,
+  "min_score": 75,
+  "batch_name": "Dallas 3-4BR Family",
+  "folder_name": "Dallas Family Homes",
+  "dry_run": false,
+  "strict_watermarks": false
+}

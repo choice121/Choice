@@ -1,0 +1,910 @@
+/* =====================================================================
+   cp-gallery.css — Choice Properties Photo Gallery & Lightbox
+   Zillow-style mosaic desktop layout + mobile swipe carousel +
+   full-screen lightbox with thumbnail strip and grid view.
+
+   Dependencies: cp-tokens.css (--cp-* custom properties)
+   Scope: gallery/lightbox components only. No page-level resets.
+
+   Class / ID mapping
+   ------------------
+   .gallery-mosaic / #gallery       — outer gallery container
+   .mosaic-main    / #mosaicMain    — large hero pane (left ~56%)
+   .mosaic-main-img/ #mosaicMainImg — hero <img>
+   .mosaic-side    / #mosaicSide    — 2×2 grid pane (right ~44%)
+   .mosaic-cell                     — each grid cell
+   .mosaic-cell-overlay             — "+N more" overlay on last cell
+   .mosaic-expand-btn / #mosaicExpandBtn — "See all photos" pill button
+   .mosaic-nav-btn                  — mobile prev / next arrows
+   .mosaic-mobile-count / #mosaicMobileCount — mobile "3 / 24" pill
+   .gallery-strip  / #galleryStrip  — always hidden (Zillow pattern)
+   .lightbox       / #lightbox      — full-screen overlay
+   .lightbox-header                 — top bar
+   .lightbox-counter                — "Photo 3 of 24" text
+   .lightbox-view-toggle            — grid ↔ slide toggle button
+   .lightbox-close                  — × close button
+   .lightbox-stage                  — image viewing area
+   .lightbox-nav                    — prev / next circle buttons
+   .lightbox-img-wrap / #lightboxImgWrap — image container
+   .lightbox-img   / #lightboxImg   — the <img>
+   .lightbox-thumbs                 — horizontal thumbnail strip
+   .lightbox-thumb                  — each thumbnail
+   .lightbox-grid-view              — grid-mode outer container
+   .lightbox-grid-container         — the CSS grid
+   .lightbox-grid-item              — each grid tile (4:3 ratio)
+   .lightbox-grid-badge             — photo-number badge on tile
+   .lb-spinner                      — loading spinner
+   .zoom-hint                       — transient zoom hint overlay
+   ===================================================================== */
+
+
+/* =====================================================================
+   1. MOSAIC GALLERY — DESKTOP
+   ===================================================================== */
+
+/* Outer container
+   ------------------------------------------------------------------- */
+.gallery-mosaic,
+#gallery {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56fr 44fr;
+  gap: 4px;
+  width: 100%;
+  max-width: min(100%, 1240px);
+  margin: 0 auto;
+  height: clamp(380px, 42vw, 520px);
+  border-radius: var(--cp-radius-lg);
+  overflow: hidden;
+  background: var(--cp-surface-2);
+  cursor: pointer;
+  /* isolate the stacking context so overlays stay inside */
+  isolation: isolate;
+}
+
+/* Hero / main pane
+   ------------------------------------------------------------------- */
+.mosaic-main,
+#mosaicMain {
+  position: relative;
+  overflow: hidden;
+  background: var(--cp-surface-2);
+}
+
+.mosaic-main-img,
+#mosaicMainImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: filter var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur-slow) var(--cp-ease-out);
+  will-change: transform, filter;
+}
+
+.mosaic-main:hover .mosaic-main-img,
+#mosaicMain:hover #mosaicMainImg {
+  filter: brightness(1.04);
+}
+
+/* 2×2 side grid
+   ------------------------------------------------------------------- */
+.mosaic-side,
+#mosaicSide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+}
+
+/* Individual grid cells
+   ------------------------------------------------------------------- */
+.mosaic-cell {
+  position: relative;
+  overflow: hidden;
+  background: var(--cp-surface-2);
+}
+
+.mosaic-cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: filter var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur-slow) var(--cp-ease-out);
+  will-change: transform, filter;
+}
+
+.mosaic-cell:hover img {
+  filter: brightness(1.04);
+}
+
+/* "+N more" overlay — covers last grid cell
+   ------------------------------------------------------------------- */
+.mosaic-cell-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 23, 41, 0.52);
+  color: #ffffff;
+  font-family: var(--cp-font);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  pointer-events: none;
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  transition: background var(--cp-dur) var(--cp-ease);
+}
+
+.mosaic-cell:hover .mosaic-cell-overlay {
+  background: rgba(10, 23, 41, 0.42);
+}
+
+/* "See all X photos" expand button
+   Positioned bottom-right, overlaid on the last mosaic cell
+   ------------------------------------------------------------------- */
+.mosaic-expand-btn,
+#mosaicExpandBtn {
+  position: absolute;
+  right: var(--cp-sp-4);
+  bottom: var(--cp-sp-4);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-sp-2);
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--cp-radius-pill);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--cp-ink);
+  font-family: var(--cp-font);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(10, 23, 41, 0.18);
+  transition: background var(--cp-dur) var(--cp-ease),
+              box-shadow var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur) var(--cp-ease-out);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mosaic-expand-btn:hover,
+#mosaicExpandBtn:hover {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(10, 23, 41, 0.22);
+  transform: translateY(-1px);
+}
+
+.mosaic-expand-btn:active,
+#mosaicExpandBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(10, 23, 41, 0.14);
+}
+
+/* Grid icon inside expand button */
+.mosaic-expand-btn .btn-icon,
+#mosaicExpandBtn .btn-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  opacity: 0.75;
+}
+
+/* Mobile nav arrows — hidden on desktop
+   ------------------------------------------------------------------- */
+.mosaic-nav-btn {
+  display: none; /* shown via mobile MQ below */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--cp-radius-pill);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--cp-ink);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  transition: background var(--cp-dur) var(--cp-ease),
+              opacity var(--cp-dur) var(--cp-ease);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mosaic-nav-btn.prev { left: var(--cp-sp-3); }
+.mosaic-nav-btn.next { right: var(--cp-sp-3); }
+
+.mosaic-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.mosaic-nav-btn svg,
+.mosaic-nav-btn i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Mobile counter pill — hidden on desktop
+   ------------------------------------------------------------------- */
+.mosaic-mobile-count,
+#mosaicMobileCount {
+  display: none; /* shown via mobile MQ */
+  position: absolute;
+  left: var(--cp-sp-4);
+  bottom: var(--cp-sp-4);
+  z-index: 10;
+  padding: 4px 10px;
+  border-radius: var(--cp-radius-pill);
+  background: rgba(10, 23, 41, 0.60);
+  color: #ffffff;
+  font-family: var(--cp-font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Thumbnail strip — always hidden (Zillow pattern)
+   ------------------------------------------------------------------- */
+.gallery-strip,
+#galleryStrip {
+  display: none !important;
+}
+
+
+/* =====================================================================
+   2. DARK-MODE — GALLERY CONTAINER
+   ===================================================================== */
+html[data-theme="dark"] .gallery-mosaic,
+html[data-theme="dark"] #gallery {
+  background: var(--cp-surface);
+}
+
+html[data-theme="dark"] .mosaic-main,
+html[data-theme="dark"] #mosaicMain,
+html[data-theme="dark"] .mosaic-cell {
+  background: var(--cp-surface);
+}
+
+html[data-theme="dark"] .mosaic-expand-btn,
+html[data-theme="dark"] #mosaicExpandBtn {
+  background: rgba(20, 30, 43, 0.92);
+  color: var(--cp-ink); /* --cp-ink is light in dark mode (#f1f5f9) */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .mosaic-expand-btn:hover,
+html[data-theme="dark"] #mosaicExpandBtn:hover {
+  background: rgba(26, 37, 53, 0.98);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+
+/* =====================================================================
+   3. MOBILE GALLERY (≤ 767px)
+   Single image, 16:9, full-width, no border-radius; swipe arrows +
+   counter pill + "See all" pill visible.
+   ===================================================================== */
+@media (max-width: 900px) {
+
+  .gallery-mosaic,
+  #gallery {
+    display: block;      /* collapse grid to single pane */
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;    /* edge-to-edge on mobile */
+    overflow: hidden;
+  }
+
+  /* Show only the main pane; hide the side grid */
+  .mosaic-main,
+  #mosaicMain {
+    width: 100%;
+    height: 100%;
+  }
+
+  .mosaic-side,
+  #mosaicSide {
+    display: none;
+  }
+
+  /* Show mobile navigation arrows */
+  .mosaic-nav-btn {
+    display: flex;
+  }
+
+  /* Show mobile counter */
+  .mosaic-mobile-count,
+  #mosaicMobileCount {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Reposition "See all" button to bottom-right on mobile */
+  .mosaic-expand-btn,
+  #mosaicExpandBtn {
+    right: var(--cp-sp-3);
+    bottom: var(--cp-sp-3);
+    font-size: 12px;
+    padding: 6px 11px;
+  }
+
+}
+
+
+/* =====================================================================
+   4. LIGHTBOX — FULL-SCREEN OVERLAY
+   ===================================================================== */
+
+/* Overlay backdrop
+   ------------------------------------------------------------------- */
+.lightbox,
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cp-z-modal);
+  display: flex;
+  flex-direction: column;
+  background: #1c1c1e;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--cp-dur) var(--cp-ease);
+}
+
+/* JS adds class "open" (not "is-open") */
+.lightbox.open,
+#lightbox.open,
+.lightbox.is-open,
+#lightbox.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slide-view vs grid-view toggle via class on .lightbox */
+.lightbox.grid-mode .lightbox-stage,
+.lightbox.grid-mode .lightbox-thumbs,
+.lightbox.grid-mode .lightbox-nav {
+  display: none;
+}
+
+.lightbox:not(.grid-mode) .lightbox-grid-view {
+  display: none;
+}
+
+/* Header bar
+   ------------------------------------------------------------------- */
+.lightbox-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-sp-4);
+  flex-shrink: 0;
+  min-height: 56px;
+  padding: 0 var(--cp-sp-5);
+  background: rgba(28, 28, 30, 0.90);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Header actions wrapper */
+.lightbox-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-sp-3);
+  flex: 1;
+}
+
+/* Photo counter — left side */
+.lightbox-counter {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.70);
+  font-family: var(--cp-font);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Grid / slide view toggle — center */
+.lightbox-view-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-sp-2);
+  padding: 7px var(--cp-sp-4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--cp-radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--cp-font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--cp-dur) var(--cp-ease),
+              border-color var(--cp-dur) var(--cp-ease);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.lightbox-view-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Close button — right side */
+.lightbox-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cp-tap);
+  height: var(--cp-tap);
+  margin-right: calc(0px - var(--cp-sp-2));
+  border: none;
+  border-radius: var(--cp-radius-pill);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.70);
+  cursor: pointer;
+  transition: background var(--cp-dur) var(--cp-ease),
+              color var(--cp-dur) var(--cp-ease);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+}
+
+.lightbox-close svg,
+.lightbox-close i {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Stage — image viewing area
+   ------------------------------------------------------------------- */
+.lightbox-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0; /* flex shrink override */
+}
+
+/* Prev / Next navigation buttons
+   ------------------------------------------------------------------- */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: var(--cp-radius-pill);
+  background: rgba(28, 28, 30, 0.75);
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 0.90;
+  transition: opacity var(--cp-dur) var(--cp-ease),
+              background var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur) var(--cp-ease-out);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.lightbox-nav.prev { left: var(--cp-sp-5); }
+.lightbox-nav.next { right: var(--cp-sp-5); }
+
+/* Always visible; brighten on hover */
+.lightbox-nav:hover {
+  opacity: 1;
+  background: rgba(28, 28, 30, 0.95);
+}
+
+.lightbox-stage:hover .lightbox-nav,
+.lightbox.open .lightbox-nav,
+.lightbox.is-open .lightbox-nav {
+  opacity: 1;
+}
+
+.lightbox-nav:hover {
+  background: rgba(28, 28, 30, 0.90);
+}
+
+.lightbox-nav:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.lightbox-nav svg,
+.lightbox-nav i {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Image wrapper — fade transition on photo change
+   ------------------------------------------------------------------- */
+.lightbox-img-wrap,
+#lightboxImgWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* The main lightbox image
+   ------------------------------------------------------------------- */
+.lightbox-img,
+#lightboxImg {
+  display: block;
+  max-width: 100%;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--cp-radius-sm);
+  transition: opacity 160ms var(--cp-ease);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* JS adds class "loading" on the img (not "is-loading") */
+.lightbox-img.loading,
+.lightbox-img.is-loading,
+#lightboxImg.loading,
+#lightboxImg.is-loading {
+  opacity: 0;
+}
+
+
+/* =====================================================================
+   5. THUMBNAIL STRIP — below the lightbox stage
+   ===================================================================== */
+
+.lightbox-thumbs {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--cp-sp-3) var(--cp-sp-5);
+  overflow-x: auto;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE 11 */
+  background: rgba(28, 28, 30, 0.80);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  scroll-behavior: smooth;
+}
+
+.lightbox-thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual thumbnail
+   ------------------------------------------------------------------- */
+.lightbox-thumb {
+  flex-shrink: 0;
+  display: block;
+  width: 100px;
+  height: 72px;
+  border: 2px solid transparent;
+  border-radius: var(--cp-radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.60;
+  transition: opacity var(--cp-dur) var(--cp-ease),
+              border-color var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur) var(--cp-ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.lightbox-thumb:hover {
+  opacity: 0.85;
+  transform: scaleY(1.03);
+}
+
+/* JS adds class "active" on thumbnails (not "is-active") */
+.lightbox-thumb.active,
+.lightbox-thumb.is-active {
+  border-color: #ffffff;
+  opacity: 1;
+  transform: none;
+}
+
+
+/* =====================================================================
+   6. LIGHTBOX GRID VIEW — "All photos" grid mode
+   ===================================================================== */
+
+.lightbox-grid-view {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.20) transparent;
+}
+
+.lightbox-grid-view::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lightbox-grid-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lightbox-grid-view::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: var(--cp-radius-pill);
+}
+
+.lightbox-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px;
+  padding: 4px;
+}
+
+/* Each grid tile — 4:3 aspect ratio
+   ------------------------------------------------------------------- */
+.lightbox-grid-item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  border-radius: 0; /* tight grid, no radius per tile */
+  transition: filter var(--cp-dur) var(--cp-ease);
+}
+
+.lightbox-grid-item:first-child {
+  border-top-left-radius: var(--cp-radius-sm);
+}
+
+.lightbox-grid-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: filter var(--cp-dur) var(--cp-ease),
+              transform var(--cp-dur-slow) var(--cp-ease-out);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox-grid-item:hover img {
+  filter: brightness(0.80);
+}
+
+.lightbox-grid-item:hover {
+  filter: none; /* override handled on child img */
+}
+
+/* Photo number badge on grid tiles
+   ------------------------------------------------------------------- */
+.lightbox-grid-badge {
+  position: absolute;
+  top: var(--cp-sp-2);
+  left: var(--cp-sp-2);
+  padding: 2px 7px;
+  border-radius: var(--cp-radius-pill);
+  background: rgba(28, 28, 30, 0.65);
+  color: rgba(255, 255, 255, 0.90);
+  font-family: var(--cp-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+
+/* =====================================================================
+   7. LOADING SPINNER
+   ===================================================================== */
+
+/* Spinner: hidden by default, shown via .visible class (added by JS) */
+.lb-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: rgba(255, 255, 255, 0.80);
+  border-radius: var(--cp-radius-pill);
+  animation: lb-spin 0.7s linear infinite;
+  pointer-events: none;
+  display: none; /* hidden unless .visible is added by JS */
+}
+
+.lb-spinner.visible {
+  display: block;
+}
+
+@keyframes lb-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Legacy: Hide spinner once image wrapper is marked loaded */
+.lightbox-img-wrap.is-loaded .lb-spinner,
+#lightboxImgWrap.is-loaded .lb-spinner {
+  display: none;
+}
+
+
+/* =====================================================================
+   8. ZOOM HINT OVERLAY
+   ===================================================================== */
+
+.zoom-hint {
+  position: absolute;
+  bottom: var(--cp-sp-5);
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-sp-2);
+  padding: 8px var(--cp-sp-4);
+  border-radius: var(--cp-radius-pill);
+  background: rgba(28, 28, 30, 0.72);
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--cp-font);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+  opacity: 1;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity var(--cp-dur-slow) var(--cp-ease);
+}
+
+.zoom-hint.is-hidden {
+  opacity: 0;
+}
+
+.zoom-hint svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.80;
+}
+
+
+/* =====================================================================
+   9. LIGHTBOX — MOBILE ADJUSTMENTS (≤ 767px)
+   ===================================================================== */
+@media (max-width: 900px) {
+
+  .lightbox-header {
+    min-height: 50px;
+    padding: 0 var(--cp-sp-4);
+  }
+
+  .lightbox-view-toggle {
+    padding: 5px var(--cp-sp-3);
+    font-size: 12px;
+  }
+
+  .lightbox-nav {
+    width: 40px;
+    height: 40px;
+    opacity: 1; /* always visible on touch */
+  }
+
+  .lightbox-nav.prev { left: var(--cp-sp-3); }
+  .lightbox-nav.next { right: var(--cp-sp-3); }
+
+  .lightbox-nav svg,
+  .lightbox-nav i {
+    width: 18px;
+    height: 18px;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .lightbox-thumbs {
+    gap: 4px;
+    padding: var(--cp-sp-2) var(--cp-sp-3);
+  }
+
+  .lightbox-thumb {
+    width: 76px;
+    height: 54px;
+  }
+
+  .lightbox-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .lightbox-img,
+  #lightboxImg {
+    max-height: 78vh;
+  }
+
+}
+
+
+/* =====================================================================
+   10. REDUCED-MOTION OVERRIDES
+   Honor user's system preference; disable all transitions & animations.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+
+  .mosaic-main-img,
+  #mosaicMainImg,
+  .mosaic-cell img,
+  .mosaic-expand-btn,
+  #mosaicExpandBtn,
+  .mosaic-nav-btn,
+  .lightbox,
+  #lightbox,
+  .lightbox-nav,
+  .lightbox-close,
+  .lightbox-view-toggle,
+  .lightbox-img,
+  #lightboxImg,
+  .lightbox-thumb,
+  .lightbox-grid-item img,
+  .zoom-hint {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .lb-spinner {
+    animation: none !important;
+    border-top-color: rgba(255, 255, 255, 0.80);
+    /* Static visual instead of spinning */
+  }
+
+}

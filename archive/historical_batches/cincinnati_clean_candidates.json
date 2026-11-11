@@ -1,0 +1,1422 @@
+[
+  {
+    "street": "1121 Winfield Ave",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45205",
+    "beds": 3,
+    "baths": 1.5,
+    "sqft": 1862,
+    "source_price": 1636,
+    "photos": [
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m2800310196s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m470864988s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m496345443s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m2612768549s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m886939918s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m3831065459s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m3205507872s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m2347314991s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m3617313721s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m1091187585s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m3072797901s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m636182180s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m3713645850s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m2633788532s.jpg",
+      "https://ap.rdcpix.com/36fe110d7fe57f700ba42e754b42bbd8l-m364596416s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/1121-Winfield-Ave_Cincinnati_OH_45205_M42683-64182",
+    "mls_id": "1237214",
+    "text": "Explore this beautifully updated 3-bedroom, 1.5-bath home on Winfield Ave. We are pet-friendly! Your dogs and cats are welcome at 1121 Winfield Avenue.Recently upgraded, this home has a contemporary, inviting atmosphere and comes fully-equipped with all modern amenities including whole-home Air Conditioning, an electric Stove and Oven, and a Refrigerator. The modernized kitchen features granite and quartz countertops, and Washer/Dryer hookups are provided. Luxury vinyl plank flooring and tiled bathrooms create a stately vibe that makes this house a home. This two-story home is nestled on a private lot. 1121 Winfield Avenue has an unfinished basement, perfect for extra storage. Applications are processed in the order they are completed and received. We gladly accept Section 8 / Housing Choice Vouchers. We consider a variety of factors, including household income, estimated living expenses, and credit history in our application review process. Application does not guarantee a lease. American Avenue is an Equal Housing Lessor under the FHA. Applicable local, state and federal laws may apply. Lease terms and conditions apply. This is not an offer to rent. You must submit additional information for review and approval. Listing features may not be accurate and should be confirmed by touring the home. Avoid rental scams! American Avenue does not list homes on Facebook Marketplace, TikTok, or Craigslist. We will never ask you to pay money via Zelle, CashApp, Bitcoin, or any method outside our website. Do not trust anyone offering you this home for a lower price than you see advertised here. Click \"Request a tour\" to schedule your free self-tour. In addition to monthly rent, tenants pay for all utilities, and if American Avenue or a third party processes any utility bills on the tenant's behalf, an additional Utility Bill Management fee of $14.99 per month applies. Tenants must pay for the Resident Protection Plus+ program ($53.68 per month). Animal Rent is $55 per pet per month (subject to applicable law).",
+    "latitude": 39.113381,
+    "longitude": -84.584442,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 1",
+          "1/2 Bathrooms: 1"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Refrigerator: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Refrigerator",
+          "Range Oven",
+          "Central",
+          "Forced Air",
+          "Hookups"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes",
+          "Large Dogs Allowed: Yes",
+          "Small Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-09-09",
+          "Source Property Type: HOUSE",
+          "Property Subtype: HOUSE"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Phone: 2029145621"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1862",
+          "SqFt Minimum: 1862"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "1274 Ross Ave",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45205",
+    "beds": 3,
+    "baths": 1.5,
+    "sqft": 1752,
+    "source_price": 1675,
+    "photos": [
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m2660310697s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m840257646s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m2013591011s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m3844645308s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m3115081053s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m205567183s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m3357231588s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m1365202579s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m2011899604s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m3093470568s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m2410243548s.jpg",
+      "https://ap.rdcpix.com/488f0ed95205c67ebe4f2cdbf85a3db1l-m3580491182s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/1274-Ross-Ave_Cincinnati_OH_45205_M39458-27450",
+    "mls_id": "1891125",
+    "text": "3 bedroom 1.5 bath home for rent. Hardwood floors throughout. Eat-in Kitchen and walk out to private backyard. On street parking.",
+    "latitude": 39.116488,
+    "longitude": -84.572363,
+    "year_built": 1914,
+    "lot_sqft": 3093,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3",
+          "Bedroom 2 Description: 10x12 Level: 2",
+          "Bedroom 3 Description: 10x11 Level: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Other Rooms",
+        "text": [
+          "Total Rooms: 5",
+          "Basement Features: Concrete Floor",
+          "Basement Description: Full"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Total Bathrooms: 2",
+          "Full Bathrooms: 1",
+          "1/2 Bathrooms: 1",
+          "Bathrooms On Level 1: Yes",
+          "Bathroom 1 Level: 2",
+          "Bathroom 2 Level: 1",
+          "Bathroom 1 Features: Tub w/Shower",
+          "Bathroom 1 Description: Full",
+          "Bathroom 2 Description: Partial"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Oven/Range",
+          "Refrigerator"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Heating and Cooling",
+        "text": [
+          "Cooling Features: Central Air",
+          "Heating Features: Gas"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Kitchen and Dining",
+        "text": [
+          "Kitchen Features: Walkout,Wood Cabinets,Wood Floor"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Interior Features",
+        "text": [
+          "Window Features: Wood"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Exterior and Lot Features",
+        "text": [
+          "Porch",
+          "Porch: Yes"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "Land Info",
+        "text": [
+          "Less than .5 Acre",
+          "Lot Size Acres: 0.071",
+          "Lot Size Square Feet: 3093"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "Garage and Parking",
+        "text": [
+          "Parking Features: On Street"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "School Information",
+        "text": [
+          "High School District: Cincinnati City SD"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Coming Soon Date: 8/20",
+          "Source Listing Status: Pending",
+          "County: Hamilton",
+          "Source Property Type: Residential Lease",
+          "Area: Hamilton-W04",
+          "Source Neighborhood: Hamilton-W04",
+          "Parcel Number: 174-0004-0083-00",
+          "Township: Cincinnati City",
+          "Property Subtype: Single Family Residence"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "On Market Date: 2026-08-20",
+          "Listing Date: 2026-08-20"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Agent Only Data",
+        "text": [
+          "Status Date: 2026-08-20"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1752",
+          "Year Built: 1914",
+          "Construction Materials: Vinyl Siding",
+          "Entry Level: 0",
+          "Foundation Details: Poured",
+          "Levels: Two",
+          "Property Age: 112",
+          "Roof: Shingle",
+          "Levels or Stories: Two",
+          "Architectural Style: Traditional"
+        ],
+        "parent_category": "Features"
+      },
+      {
+        "category": "Utilities",
+        "text": [
+          "Gas: Natural",
+          "Sewer: Public Sewer",
+          "Water Source: Public"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "5109 Montgomery Rd",
+    "city": "Norwood",
+    "state": "OH",
+    "zip": "45212",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1504,
+    "source_price": 1400,
+    "photos": [
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1389848036s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m4195976902s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1360507893s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3202707665s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3457121421s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3746362831s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1052336520s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m343483050s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1600370595s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m926489001s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m532623115s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1512397647s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m675066835s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3502764818s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m2824099840s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3277870263s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1259763904s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1730260412s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m4184989909s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1696766938s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m4079303491s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m686013338s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m32690596s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m891460535s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3079755524s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3770378092s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1373765567s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3769148707s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1676586205s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m1902476064s.jpg",
+      "https://ap.rdcpix.com/ee0ae90077804c3908c850709a3d7ea1l-m3298134702s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/5109-Montgomery-Rd_Norwood_OH_45212_M43458-72268",
+    "mls_id": "1891722",
+    "text": "Recently refreshed with new flooring and fresh paint, this move-in ready rental features a bright and flexible floor plan with high ceilings. The kitchen offers walks out to the backyard with ample parking. Three comfortable bedrooms are complemented by additional finished space on the third floor, perfect for a home office or bonus room. Enjoy the welcoming front porch, basement storage, and the convenience of a private driveway with extra off-street parking. Water and trash are included. Minimum 12-month lease. Pets considered at owner's discretion with additional fee. Welcome home!",
+    "latitude": 39.1679,
+    "longitude": -84.453243,
+    "year_built": 1900,
+    "lot_sqft": 4008,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3",
+          "Bedroom 2 Description: 15x13 Level: 2",
+          "Bedroom 3 Description: 14x11 Level: 1"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Other Rooms",
+        "text": [
+          "Total Rooms: 7",
+          "Basement Description: Full",
+          "Entry Foyer Description: Wood Floors,Laminate Floor",
+          "Game/Recreation Room Description: 21x22 Level: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Total Bathrooms: 2",
+          "Full Bathrooms: 2",
+          "Bathrooms On Level 1: Yes",
+          "Bathroom 1 Level: 1",
+          "Bathroom 2 Level: 2",
+          "Bathroom 1 Features: Ceramic Tile,Tub w/Shower",
+          "Bathroom 1 Description: Full",
+          "Bathroom 2 Description: Full"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Oven/Range",
+          "Dishwasher",
+          "Refrigerator"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Heating and Cooling",
+        "text": [
+          "Cooling Features: Central Air",
+          "Fireplace Features: Inoperable",
+          "Heating Features: Forced Air, Gas",
+          "Heating: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Kitchen and Dining",
+        "text": [
+          "Dining Room Description: 9x10 Level: 1",
+          "Kitchen Features: Ceramic Tile,Solid Surface Ctr,Walkout,Wood Cabinets"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Interior Features",
+        "text": [
+          "Window Features: Vinyl"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Exterior and Lot Features",
+        "text": [
+          "Porch",
+          "Porch: Yes"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "Land Info",
+        "text": [
+          "Less than .5 Acre",
+          "Lot Size Acres: 0.092",
+          "Lot Size Square Feet: 4008"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "School Information",
+        "text": [
+          "High School District: Norwood City SD"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Coming Soon Date: 8/26",
+          "Source Listing Status: Pending",
+          "County: Hamilton",
+          "Source Property Type: Residential Lease",
+          "Area: Hamilton-E02",
+          "Source Neighborhood: Hamilton-E02",
+          "Parcel Number: 651-0008-0165-00",
+          "Township: Norwood City",
+          "Property Subtype: Single Family Residence"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "On Market Date: 2026-08-26",
+          "Listing Date: 2026-08-26"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Agent Only Data",
+        "text": [
+          "Status Date: 2026-08-26"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Accessibility Features",
+        "text": [
+          "Access: City Street"
+        ],
+        "parent_category": "Features"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1504",
+          "Year Built: 1900",
+          "Construction Materials: Vinyl Siding",
+          "Entry Level: 0",
+          "Foundation Details: Stone",
+          "Levels: Three+",
+          "Property Age: 126",
+          "Roof: Shingle",
+          "Levels or Stories: Three+",
+          "Architectural Style: Traditional"
+        ],
+        "parent_category": "Features"
+      },
+      {
+        "category": "Utilities",
+        "text": [
+          "Gas: Natural",
+          "Sewer: Public Sewer",
+          "Water Source: Public"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "280 Genoma Dr",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45215",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1269,
+    "source_price": 1900,
+    "photos": [
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1617313218s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m2522336189s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m791255483s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m3170517805s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1282163962s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1997717958s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m3945580914s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1163879764s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m4273941876s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m3913601948s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m4080633526s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m2709871894s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m257927232s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1196585925s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m1591577735s.jpg",
+      "https://ap.rdcpix.com/523cd936e5d704bb66f9d57795eec9a5l-m455730931s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/280-Genoma-Dr_Cincinnati_OH_45215_M49747-35047",
+    "mls_id": "92809001",
+    "text": "EXCITING NEWS: WE RECENTLY RENOVATED THIS HOME! IMPROVEMENTS INCLUDE: NEW LVP FLOORING IN COMMON LIVING AREAS OF THE HOME. APPLY TODAY OR ASK YOUR LEASING SPECIALIST FOR MORE DETAILS! Apply now or schedule your self-tour today and take the first step toward getting more than just a place to live. Rent with FirstKey Homes for a home that's right for you, plus professional service and maintenance, innovative resident programs, and more; that's the power of purple! This 3-bedroom, 2-bathroom rental home in Cincinnati, OH, might be the perfect fit for your lifestyle. The basement gives you valuable extra space to use your way. Extra storage helps keep the home neat and organized. See the pictures to learn more. And apply soon - homes can go fast! Please note that the advertised price may exclude additional fees. These include a $55 application fee per applicant; a one-time $75 admin fee; an $11 monthly utility management fee; other mandatory fees, if applicable, for pool maintenance, pet fees/rent, smart home, internet service, and propane refilling; and optional fees for services like self-guided tours with third-party provider Rently ($1.99 to $11.99). HOAs may also charge mandatory application and amenity fees, where applicable, which must be paid directly to the HOA. For a comprehensive overview of all potential fees, please see the Rental Fees page on the FirstKey Homes website. FirstKey Homes, LLC is an Equal Housing Lessor under the FHA. Applicable local, state and federal laws may apply. Lease terms and conditions apply. This is not an offer to rent; you must submit additional information for review and approval. Listed features may not be accurate; confirm details with a leasing representative. Certain cities and municipalities (including St. Louis and Chicago) require a home inspection prior to a new resident taking possession of the home. Please note that your move-in date could be adjusted to accommodate inspection requirements. Ask your leasing agent for more details. BEWARE OF RENTAL SCAMS: FirstKey Homes exclusively manages our homes (no third-party management). We do not lease homes through Craigslist, Facebook Marketplace, or other classified advertising services. All applications and lease signing can only be completed through our online platform. We will never ask for wire transfers, cash apps like Venmo, Zelle, Cash App, PayPal, or any other transferring method to collect funds. Some photos may feature virtual furniture staging, which is intended to help visualize the space and potential designs. The rental home does not come with any furniture shown in the images and these virtual images do not represent actual furnishings. Listing photos are provided to help you select a home; all photos shown are for representative and illustrative purposes only but may not be exact. Colors and photo size may vary based on different resolutions, hue, brightness, contrast, or other photo variations. Photos on websites may be modified, changed, or amended at any time. For new construction homes, actual homes may vary; photos may be of similar home/floorplan; home may be under construction and photos may not be of actual home; individual homes, amenities, features, and views may differ.",
+    "latitude": 39.232966,
+    "longitude": -84.427667,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Rental Info",
+        "text": [
+          "Monthly Fees: Utility Management Fee: $11.00, Trash Fee: $, Pet Rent: $30.00",
+          "One Time Fees: Security Deposit: $1900.00, Admin Fee: $75.00, Application Fee: $55.00, Pet Fee: $300.00, Prelease Hold Fee: $500"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-08-26",
+          "Source Property Type: HOUSE"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Phone: 8442004436"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "SqFt Minimum: 1269"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "15 Bertus St",
+    "city": "Saint Bernard",
+    "state": "OH",
+    "zip": "45217",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1520,
+    "source_price": 1895,
+    "photos": [
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2915131468s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m990512484s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m3882508686s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m684221262s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m3376691320s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2025739877s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m4168822299s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m1627685870s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2936751617s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m25306221s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m1017186298s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2126640807s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2375865919s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m970572299s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2194087221s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m1339395558s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m4186336166s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m4235656390s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m1963150123s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m1479950785s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2005852900s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m2759997271s.jpg",
+      "https://ap.rdcpix.com/5f4327510c5ddca77d3c25538209e175l-m461685906s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/15-Bertus-St_Saint-Bernard_OH_45217_M32816-91492",
+    "mls_id": "1890600",
+    "text": "Whole house for rent in St.Bernard! $1895 a month. 3 beds, 2 baths. Updated kitchen with SS appliances and granite countertops. In unit washer/dryer. Walking distance to Roger Bacon HS and St.Clement school.",
+    "latitude": 39.164503,
+    "longitude": -84.501656,
+    "year_built": 1902,
+    "lot_sqft": 4138,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3",
+          "Bedroom 2 Description: 15x15 Level: 1",
+          "Bedroom 3 Description: 9x9 Level: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Other Rooms",
+        "text": [
+          "Total Rooms: 5",
+          "Basement Description: Partial"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Total Bathrooms: 2",
+          "Full Bathrooms: 2",
+          "Bathrooms On Level 1: Yes",
+          "Bathroom 1 Level: 2",
+          "Bathroom 2 Level: 1",
+          "Bathroom 1 Features: Tub w/Shower",
+          "Bathroom 1 Description: Full",
+          "Bathroom 2 Description: Partial"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Heating and Cooling",
+        "text": [
+          "Cooling Features: Central Air",
+          "Heating Features: Baseboard, Forced Air",
+          "Heating: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Kitchen and Dining",
+        "text": [
+          "Dining Room Description: 15x15 Level: 1",
+          "Kitchen Features: Pantry,Eat-In,Walkout"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Interior Features",
+        "text": [
+          "Window Features: Vinyl, Double Hung, Insulated"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Land Info",
+        "text": [
+          "Lot Size Acres: 0.095",
+          "Lot Size Square Feet: 4138"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "Garage and Parking",
+        "text": [
+          "Parking Features: Off Street"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "School Information",
+        "text": [
+          "High School District: St Bernard Elmwood P"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Coming Soon Date: 8/14",
+          "Source Listing Status: Active",
+          "County: Hamilton",
+          "Source Property Type: Residential Lease",
+          "Area: Hamilton-W01",
+          "Source Neighborhood: Hamilton-W01",
+          "Parcel Number: 582-0013-0078-00",
+          "Township: Saint Bernard City",
+          "Property Subtype: Single Family Residence"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "On Market Date: 2026-08-14",
+          "Listing Date: 2026-08-14"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Agent Only Data",
+        "text": [
+          "Status Date: 2026-08-14"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1520",
+          "Year Built: 1902",
+          "Construction Materials: Brick",
+          "Entry Level: 0",
+          "Foundation Details: Poured",
+          "Levels: Three+",
+          "Property Age: 124",
+          "Roof: Slate",
+          "Levels or Stories: Three+",
+          "Architectural Style: Traditional"
+        ],
+        "parent_category": "Features"
+      },
+      {
+        "category": "Utilities",
+        "text": [
+          "Gas: Natural",
+          "Sewer: Public Sewer",
+          "Water Source: Public"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "249 Earnshaw Ave",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45219",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1700,
+    "source_price": 1950,
+    "photos": [
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m951285408s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m94253455s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m59265413s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m4078346556s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3829482217s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1711508629s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3157561061s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3945659544s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1492268109s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1189408449s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m886993370s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1050544985s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3636884874s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1383327478s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1105522704s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m2477364101s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3672272133s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m2699740235s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m311933310s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m2157573283s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m1177227087s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3710737336s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3260925510s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m446552302s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m2274929818s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m3154911159s.jpg",
+      "https://ap.rdcpix.com/99e4683c3cbd7d1bec8d91b91d9d2bc6l-m847904127s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/249-Earnshaw-Ave_Cincinnati_OH_45219_M48253-89597",
+    "mls_id": "-P0EvFfUxstKX_znNk5M",
+    "text": "Mt. Auburn: Close to Everything! We're now accepting applications for this newly remodeled home in Mt. Auburn, just minutes from Taft Elementary, Mt. Auburn Preparatory Academy, Christ Hospital (4 min. walk), God's Bible School & College (10 min. walk), and the University of Cincinnati (18 min. walk). In less than five minutes, you can also walk to major bus line stops. PROPERTY HIGHLIGHTS Convenient Mt. Auburn Location Spacious Rooms: 1700 Sq Ft House Fresh Paint & New Flooring Energy Efficient Windows & Lighting Family Friendly, Dead-End Street Backs to Greenspace Central Air Conditioning & Heat FIRST FLOOR FEATURES When you enter the foyer, you may quickly enter the downstairs living area or proceed upstairs to the bedroom level, both of which have been freshly painted and floored. On the first floor, you'll come to a spacious living room, newly floored with engineered hardwood, with high ceilings and two large windows that allow plenty of light into the room. Next, you'll enter a large dining room. After that, you'll proceed into a spacious kitchen equipped with a stove and refrigerator. If you turn the corner, you'll access the downstairs bathroom, which has a new shower, sink, toilet, tile floor and paint. SECOND FLOOR FEATURES At the top of the stairs leading to the second floor, you'll face the newly tiled and painted bedroom-level laundry room with washer and dryer hookups. If you turn right at the top of the stairs, you'll enter the middle bedroom, a shared-access bedroom which could also be used as a study, nursery, or family room. From there, you can proceed to the rear bedroom, a spacious bedroom with three windows, one of which looks directly out over greenspace. You can access the large front bedroom with two street-facing windows from the middle bedroom or the hallway. Just around the corner from the front bedroom and from the hallway is the full bath on the bedroom level, which has been newly tiled and painted. The house offers central air conditioning, central heat, an electric water heater and energy-efficient light fixtures throughout the residence. EXTERIOR FEATURES If you exit the rear door from the kitchen, you'll encounter the brand-new deck and two steps down leading to a storage shed and small backyard, including fire pit, which back up to green space. The full unfinished (mostly dry) basement and backyard shed are available for storage, though any items in the basement should be stored off the floor. The entire yard is fenced. Applicants may prequalify for the rental at no charge. If the prequalification is accepted, applicants submit a full application and pay an non-refundable application fee for a credit check and background check. To view the house after prequalifying, please contact us through RentRedi. The lessee is responsible for electric and gas utilities, plus the lessee must maintain renter's insurance. The lessor pays for water and sewer. NO pets are allowed at the property. NO smoking, vaping, or e-cigarettes of any kind on the property. Application criteria include the following: Minimum Credit Score: 600 Income 3x the Rent NO Prior Evictions/Eviction Notices NO Prior Lease Violations NO Violent Criminal History This property is using RentRedi for rent payments. With RentRedi, you can easily submit rent payments, boost your credit by reporting rent payments, sign up for affordable renters insurance, and more from the app!",
+    "latitude": 39.120879,
+    "longitude": -84.505797,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-09-01",
+          "Source Property Type: SINGLE FAMILY HOME",
+          "Property Subtype: SINGLE FAMILY HOME"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Name: Lyle Witt"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "SqFt Minimum: 1700"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "3617 Norwich Ave",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45220",
+    "beds": 3,
+    "baths": 2.5,
+    "sqft": 1613,
+    "source_price": 1597,
+    "photos": [
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m4229029398s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m409311233s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m4014759946s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m1219235249s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m2449192188s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m2561529956s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m960224301s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m197772028s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m2351847617s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m3297603756s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m3577608087s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m2590265095s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m3087784781s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m3666804242s.jpg",
+      "https://ap.rdcpix.com/52d0fc9f90b27a9f31cdd8567e4c2a96l-m3043842448s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/3617-Norwich-Ave_Cincinnati_OH_45220_M36614-76936",
+    "mls_id": "195419",
+    "text": "Tour this charmingly refreshed 3-bedroom, 2.5-bath home on Norwich Ave in the Avondale subdivision of Cincinnati. We are pet-friendly! Your dogs and cats are welcome at 3617 Norwich Avenue.Recently upgraded, this home has a contemporary, inviting atmosphere and comes fully-equipped with all modern amenities including whole-home Air Conditioning, sits on a private lot Stove and Oven, and a Refrigerator. The modernized kitchen features granite and quartz countertops, and Washer/Dryer hookups are provided. Luxury vinyl plank flooring and tiled bathrooms create a stately vibe that makes this house a home. This two-story home sits on more than a tenth of an acre of land. Enjoy sunny afternoons and warm evenings overlooking your private yard from the porch. Applications are processed in the order they are completed and received. We gladly accept Section 8 / Housing Choice Vouchers. We consider a variety of factors, including household income, estimated living expenses, and credit history in our application review process. Application does not guarantee a lease. American Avenue is an Equal Housing Lessor under the FHA. Applicable local, state and federal laws may apply. Lease terms and conditions apply. This is not an offer to rent. You must submit additional information for review and approval. Listing features may not be accurate and should be confirmed by touring the home. Avoid rental scams! American Avenue does not list homes on Facebook Marketplace, TikTok, or Craigslist. We will never ask you to pay money via Zelle, CashApp, Bitcoin, or any method outside our website. Do not trust anyone offering you this home for a lower price than you see advertised here. Click \"Request a tour\" to schedule your free self-tour. In addition to monthly rent, tenants pay for all utilities, and if American Avenue or a third party processes any utility bills on the tenant's behalf, an additional Utility Bill Management fee of $14.99 per month applies. Tenants must pay for the Resident Protection Plus+ program ($53.68 per month). Animal Rent is $55 per pet per month (subject to applicable law).",
+    "latitude": 39.150313,
+    "longitude": -84.506156,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 2",
+          "1/2 Bathrooms: 1"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Refrigerator: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Dishwasher",
+          "Refrigerator",
+          "Range Oven",
+          "Central",
+          "Forced Air",
+          "Hookups"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes",
+          "Large Dogs Allowed: Yes",
+          "Small Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-10-19",
+          "Source Property Type: HOUSE",
+          "Property Subtype: HOUSE"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Phone: 2029145621"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1613",
+          "SqFt Minimum: 1613"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "1216 Regent Ave",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45237",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1800,
+    "source_price": 1895,
+    "photos": [
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3528431912s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m782426698s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3352283281s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2580380359s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3036446318s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3254115556s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m1679113325s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m1783961026s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2057850177s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m289969388s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2028476131s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2392385237s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m1251063699s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m4249034745s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2297061214s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2786801780s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3129375509s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m182157110s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2818345240s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m4033533629s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m655725161s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m2864853773s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m4180281027s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m1653052581s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m769018692s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m128657195s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m3099699847s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m139546567s.jpg",
+      "https://ap.rdcpix.com/11afa02db9c1c6a09f62b4cea4576ac4l-m970513116s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/1216-Regent-Ave_Cincinnati_OH_45237_M37390-38735",
+    "mls_id": "61698632",
+    "text": "Need Space?. this home has it! 1800sqft of updated and well maintained living space in this two story three bedroom two full bath home in the heart of Bond Hill. With expansive rooms and sky high ceilings this traditional layout offers spacious living room with decorative mantle, full traditional dining room with chandelier, fully equipped renovated kitchen with stainless steel appliances and pantry, and first floor full bath with gorgeous tile walk in shower. The second floor features three extremely spacious bedrooms all complete with ceiling fans and neutral carpet flooring throughout, common hall walk in closet, and common hall full bath with newer vanity, fixtures, and shower/tub. From the kitchen or the dining room you can walk out to the three season room leading to your own backyard. Additional amenities include full unfinished basement, washer and dryer hookups, central heating and air, and off-street parking. Convenient location for any commute! Call for a private showing today!",
+    "latitude": 39.177173,
+    "longitude": -84.476888,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Total Bathrooms: 2",
+          "Full Bathrooms: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Heating and Cooling",
+        "text": [
+          "Heating Features: electric"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Garage and Parking",
+        "text": [
+          "Assigned Spaces: yes"
+        ],
+        "parent_category": "Exterior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Washer and dryer hookup",
+          "Central Air",
+          "Dishwasher",
+          "Cats Allowed",
+          "Large Dogs Allowed",
+          "Small Dogs Allowed"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Rental Info",
+        "text": [
+          "Lease Term: 12",
+          "Security Deposit: 1895",
+          "Desposit Description: Paid via credit card, could be waived or discounted by landlord",
+          "Application Fee: 55",
+          "One Time Fees: Key replacement fee: $50, Security deposit: $1895"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes",
+          "Large Dogs Allowed: Yes",
+          "Small Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Tour Scheduling Available: No",
+          "Availability Date: 2026-09-15",
+          "Source Property Type: single-family home"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Listing Date: 2026-09-09",
+          "Showing Contact Name: CincyRents",
+          "Showing Contact Phone: 5138427368"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Listing Information",
+        "text": [
+          "Landlord Full Name: CincyRents",
+          "Landlord Verified: yes"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "SqFt Minimum: 1800"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "4795 Prosperity Pl",
+    "city": "Cincinnati",
+    "state": "OH",
+    "zip": "45238",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1315,
+    "source_price": 1647,
+    "photos": [
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1260337821s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3877614534s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3507122414s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3082869750s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m4190786955s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m683216919s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m936449556s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3671424335s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2219301277s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1092329381s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1830893257s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2959145616s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m850067270s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2892385909s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3557433891s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m623712266s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m487278761s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1005018184s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m800897158s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1027611990s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3856308164s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m156468441s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m4278435928s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2209167732s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m3543638699s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1145250888s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2510837965s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2661464096s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m2217558761s.jpg",
+      "https://ap.rdcpix.com/00c85f52f7335727e03341b57358ce52l-m1417543332s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/4795-Prosperity-Pl_Cincinnati_OH_45238_M45971-24326",
+    "mls_id": "1947338",
+    "text": "Now leasing: this professionally renovated 3-bedroom, 2-bath home on Prosperity Pl in the North Overlook subdivision of Cincinnati. We are pet-friendly! Your dogs and cats are welcome at 4795 Prosperity Place. Enjoy the contemporary atmosphere of this newly refreshed home. Modern conveniences abound, including whole-home Air Conditioning, sits on a private lot Stove and Oven, and a refrigerator. The updated kitchen shines with granite and quartz countertops, and washer/dryer hookups are ready for your appliances. Finishing touches include durable luxury vinyl plank floors and elegant tiled bathrooms. This one-story home is nestled on a private lot. Parking is hassle-free with your private Attached Garage. Applications are processed in the order they are completed and received. We gladly accept Section 8 / Housing Choice Vouchers. We consider a variety of factors, including household income, estimated living expenses, and credit history in our application review process. Application does not guarantee a lease. American Avenue is an Equal Housing Lessor under the FHA. Applicable local, state and federal laws may apply. Lease terms and conditions apply. This is not an offer to rent. You must submit additional information for review and approval. Listing features may not be accurate and should be confirmed by touring the home. Avoid rental scams! American Avenue does not list homes on Facebook Marketplace, TikTok, or Craigslist. We will never ask you to pay money via Zelle, CashApp, Bitcoin, or any method outside our website. Do not trust anyone offering you this home for a lower price than you see advertised here. Click \"Request a tour\" to schedule your free self-tour. In addition to monthly rent, tenants pay for all utilities, and if American Avenue or a third party processes any utility bills on the tenant's behalf, an additional Utility Bill Management fee of $14.99 per month applies. Tenants must pay for the Resident Protection Plus+ program ($53.68 per month). Animal Rent is $55 per pet per month (subject to applicable law).",
+    "latitude": 39.123161,
+    "longitude": -84.597549,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Refrigerator: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Dishwasher",
+          "Refrigerator",
+          "Range Oven",
+          "Central",
+          "Forced Air",
+          "Hookups",
+          "Garage Lot",
+          "1"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes",
+          "Large Dogs Allowed: Yes",
+          "Small Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-10-02",
+          "Source Property Type: HOUSE",
+          "Property Subtype: HOUSE"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Phone: 2029145621"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1315",
+          "SqFt Minimum: 1315"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "11540 Fitchburg Ln",
+    "city": "Forest Park",
+    "state": "OH",
+    "zip": "45240",
+    "beds": 3,
+    "baths": 1.5,
+    "sqft": 1608,
+    "source_price": 1795,
+    "photos": [
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m2497250085s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m2409438872s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m3843090678s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m3548930469s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m3621769132s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m1848958042s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m1347797667s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m3723574142s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m2133245801s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m1124096260s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m92770492s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m4264979403s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m4060342545s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m1065949763s.jpg",
+      "https://ap.rdcpix.com/82ef8960397c86437644dea775380ea9l-m2518504352s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/11540-Fitchburg-Ln_Forest-Park_OH_45240_M42932-00970",
+    "mls_id": "64928647",
+    "text": "Available Now! Currently Accepting Applications! Your estimated total monthly payment is: $1,819.94 The total estimated monthly payment is comprised of the following: Mandatory Fees: Base Rent: $1,795.00 Damage Waiver Fee - $14.95 (Covers up to $100,000 for resident-caused damage from fire, water, smoke, explosions, sewer backups, or falling objects.) Utility Management - $9.99 (services for managing utility accounts) Additionally, a one-time set-up fee of $30.00 is charged on your first month's bill. Optional Fees: Animal Fees - Approved animals incur a non-refundable pet fee of $250 - $350 per animal and a monthly pet rent of $30 - $35 per animal (subject to applicable law). Pet fees and pet rent do not apply to service or support animals. Please note that we have breed restrictions, including but not limited to Pit Bull Terriers, Doberman Pinschers, Rottweilers, Staffordshire Terriers, German Shepherds, Chows, Bull Mastiffs, Huskies, Alaskan Malamutes, Wolf Dog Hybrids, Great Danes, St. Bernards, Akitas, and Rhodesian Ridgebacks, as well as any mixed breeds containing these types. Other Fees: In addition to the total monthly payment, Tenant(s) are also responsible for additional costs including, but not limited to, utilities, optional services, conditional and other applicable charges. All fees are subject to change and will be outlined in the lease agreement. Tours: To ensure a secure process, please schedule tours and apply for our properties exclusively through the official Evergreen Live website. Property Description: 3 Bedroom, 1.5 Bathroom Listing Disclosures: All leasing information is believed to be accurate; however, photos are representative only and may not reflect current appliances and/or features of the home. Square footage is estimated, and prices, specials and dates may change without notice and are not guaranteed until a lease agreement is executed. You must have a source of income that is at least three times the monthly rent that we will verify through our income verification service during your application screening. Application: An application fee of $50 per applicant for 18 and over is required, and the minimum lease term is one year (12 months). Completed applications are reviewed on a first-come, first-served basis, and the security deposit varies based upon TransUnion Resident Score credit criteria. Security Deposit: A cash security deposit range from one to one and a half months' rent is due prior to moving-in. Cash security deposits are eligible for refund upon vacating the home, less deductions for damages, unpaid rent or other charges, in each case subject to applicable law. Please be aware that rental fraud and rental scams are on the rise. Evergreen Live will never ask you to pay any amounts in cash, transfer money via wire, prepaid or digital gift cards, send MoneyGram, or request funds through Zelle or any non-Evergreen Live payment app, such as Venmo, PayPal, Apple Pay, or others.",
+    "latitude": 39.287905,
+    "longitude": -84.499445,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 1",
+          "1/2 Bathrooms: 1"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Building: Onsite Management"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Listing Date: 2026-09-03"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Source Property Type: single-family home",
+          "Property Subtype: single-family home"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "SqFt Minimum: 1608"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  },
+  {
+    "street": "8921 Cherry St",
+    "city": "Blue Ash",
+    "state": "OH",
+    "zip": "45242",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1165,
+    "source_price": 1668,
+    "photos": [
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m119518077s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1437173189s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2075011677s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2203743049s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1771520930s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m3615093704s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1765441502s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2916891063s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2676973684s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m289031442s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m3716319821s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1801380385s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m676518422s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m4168016068s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m3363618826s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1677391952s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2428589457s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1611079896s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2933386591s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m794476927s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2638879982s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2216277719s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m447076193s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1806377607s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1143771336s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m1695161641s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m282288111s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m2936577751s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m3360075969s.jpg",
+      "https://ap.rdcpix.com/3ecdca20fbc496a16abd6b281a8c67e1l-m3875306596s.jpg"
+    ],
+    "style": "propertytype.single_family",
+    "source_url": "https://www.realtor.com/rentals/details/8921-Cherry-St_Blue-Ash_OH_45242_M32188-75634",
+    "mls_id": "185730",
+    "text": "Look inside this fully modernized 3-bedroom, 2-bath home on Cherry St in the Blue Ash subdivision of Blue Ash. We are pet-friendly! Your dogs and cats are welcome at 8921 Cherry Street. Enjoy the contemporary atmosphere of this newly refreshed home. Modern conveniences abound, including whole-home Air Conditioning, a gas Stove and Oven,a Dishwasher, and a refrigerator. The updated kitchen shines with granite and quartz countertops, and washer/dryer hookups are ready for your appliances. Finishing touches include durable luxury vinyl plank floors and elegant tiled bathrooms. This one-story home sits on a very large lot, more than a fifth of an acre of land and the backyard is fenced-in. Enjoy sunny afternoons and warm evenings overlooking your private yard from the porch. Parking is hassle-free with your private Detached Garage. Applications are processed in the order they are completed and received. We gladly accept Section 8 / Housing Choice Vouchers. We consider a variety of factors, including household income, estimated living expenses, and credit history in our application review process. Application does not guarantee a lease. American Avenue is an Equal Housing Lessor under the FHA. Applicable local, state and federal laws may apply. Lease terms and conditions apply. This is not an offer to rent. You must submit additional information for review and approval. Listing features may not be accurate and should be confirmed by touring the home. Avoid rental scams! American Avenue does not list homes on Facebook Marketplace, TikTok, or Craigslist. We will never ask you to pay money via Zelle, CashApp, Bitcoin, or any method outside our website. Do not trust anyone offering you this home for a lower price than you see advertised here. Click \"Request a tour\" to schedule your free self-tour. In addition to monthly rent, tenants pay for all utilities, and if American Avenue or a third party processes any utility bills on the tenant's behalf, an additional Utility Bill Management fee of $14.99 per month applies. Tenants must pay for the Resident Protection Plus+ program ($53.68 per month). Animal Rent is $55 per pet per month (subject to applicable law).",
+    "latitude": 39.221282,
+    "longitude": -84.382444,
+    "year_built": null,
+    "lot_sqft": null,
+    "details": [
+      {
+        "category": "Bedrooms",
+        "text": [
+          "Bedrooms: 3"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Bathrooms",
+        "text": [
+          "Full Bathrooms: 2"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Appliances",
+        "text": [
+          "Refrigerator: Yes"
+        ],
+        "parent_category": "Interior"
+      },
+      {
+        "category": "Amenities and Community Features",
+        "text": [
+          "Dishwasher",
+          "Refrigerator",
+          "Range Oven",
+          "Central",
+          "Forced Air",
+          "Hookups",
+          "Garage Lot",
+          "2"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Homeowners Association",
+        "text": [
+          "Cats Allowed: Yes",
+          "Dogs Allowed: Yes",
+          "Large Dogs Allowed: Yes",
+          "Small Dogs Allowed: Yes"
+        ],
+        "parent_category": "Community"
+      },
+      {
+        "category": "Other Property Info",
+        "text": [
+          "Availability Date: 2026-10-09",
+          "Source Property Type: HOUSE",
+          "Property Subtype: HOUSE"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Private Data",
+        "text": [
+          "Showing Contact Phone: 2029145621"
+        ],
+        "parent_category": "Listing"
+      },
+      {
+        "category": "Building and Construction",
+        "text": [
+          "Total Square Feet Living: 1165",
+          "SqFt Minimum: 1165"
+        ],
+        "parent_category": "Features"
+      }
+    ]
+  }
+]

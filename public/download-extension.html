@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1794379704019"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Download Choice Properties Extensions · v59.0.0</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-purple: #7c3aed;
+      --accent-purple-hover: #6d28d9;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --green: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .container {
+      max-width: 680px;
+      width: 100%;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: #93c5fd;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      color: #fff;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .btn-orion {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    }
+    .btn-orion:hover {
+      background: linear-gradient(135deg, #6d28d9, #4338ca);
+      transform: translateY(-1px);
+    }
+    .btn-chrome {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+    .btn-chrome:hover {
+      background: linear-gradient(135deg, #1d4ed8, #1e40af);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e5e7eb;
+      font-size: 13px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .actions-row {
+      display: flex;
+      gap: 10px;
+    }
+    .guide-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .guide-box ol {
+      margin-left: 20px;
+      margin-top: 8px;
+    }
+    .guide-box li {
+      margin-bottom: 4px;
+    }
+    .badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-alert {
+      display: none;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--green);
+      color: #34d399;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo-badge">Choice Properties Operator Suite</div>
+      <h1>Download Choice Properties Extensions</h1>
+      <p class="subtitle">Official production packages (v59.0.0) with authentic MLS extraction, decimal bath precision, and appliance/fencing distinction.</p>
+    </div>
+
+    <div id="statusAlert" class="status-alert"></div>
+
+    <div class="cards-grid">
+      <!-- Orion Mobile & Mac -->
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">
+              <span>Orion Extension (iPhone & Mac)</span>
+              <span class="badge">v59.0.0</span>
+            </div>
+            <div class="card-desc">Optimized for Orion Browser on iOS / iPadOS and macOS with native sheet modal and mobile viewport responsiveness.</div>
+          </div>
+        </div>
+        
+        <a id="downloadOrionBtn" href="/choice-properties-orion-extension.zip" download="choice-properties-orion-extension.zip" class="btn btn-orion">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Download Orion Extension (.zip)
+        </a>
+
+        <div class="actions-row">
+          <a href="https://github.com/choice121/Choice/raw/main/choice-properties-orion-extension.zip" class="btn btn-secondary" target="_blank" rel="noopener">
+            GitHub Raw Download
+          </a>
+          <button type="button" onclick="triggerDirectBlob('/choice-properties-orion-extension.zip', 'choice-properties-orion-extension.zip')" class="btn btn-secondary">
+            Direct Blob Download
+          </button>
+        </div>
+
+        <div class="guide-box">
+          <strong>How to Install on iPhone / Orion:</strong>
+          <ol>
+            <li>Tap the download button above and save the .zip to the <em>Files</em> app.</li>
+            <li>In Orion Settings &gt; <em>Extensions</em> &gt; Tap <em>Install from Disk / Folder</em>.</li>
+            <li>Select the downloaded zip or extracted folder to activate.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Desktop Chrome -->
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">
+              <span>Desktop Chrome Extension</span>
+              <span class="badge">v59.0.0</span>
+            </div>
+            <div class="card-desc">Standard Chrome MV3 extension for Google Chrome, Brave, Edge, and desktop Chromium browsers.</div>
+          </div>
+        </div>
+
+        <a id="downloadChromeBtn" href="/choice-properties-extension.zip" download="choice-properties-extension.zip" class="btn btn-chrome">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Download Chrome Extension (.zip)
+        </a>
+
+        <div class="actions-row">
+          <a href="https://github.com/choice121/Choice/raw/main/choice-properties-extension.zip" class="btn btn-secondary" target="_blank" rel="noopener">
+            GitHub Raw Download
+          </a>
+          <button type="button" onclick="triggerDirectBlob('/choice-properties-extension.zip', 'choice-properties-extension.zip')" class="btn btn-secondary">
+            Direct Blob Download
+          </button>
+        </div>
+
+        <div class="guide-box">
+          <strong>How to Install in Chrome / Brave:</strong>
+          <ol>
+            <li>Download and unzip the folder to your computer.</li>
+            <li>Navigate to <code>chrome://extensions</code> and turn on <em>Developer mode</em> (top right).</li>
+            <li>Click <em>Load unpacked</em> and select the unzipped directory.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="__CSP_NONCE__">
+    async function triggerDirectBlob(url, filename) {
+      const alertBox = document.getElementById('statusAlert');
+      alertBox.style.display = 'block';
+      alertBox.textContent = 'Fetching ' + filename + '...';
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+        alertBox.textContent = '✓ ' + filename + ' downloaded successfully!';
+      } catch (err) {
+        alertBox.textContent = 'Direct download failed (' + err.message + '). Trying direct link...';
+        window.location.href = url;
+      }
+    }
+
+    // Auto-trigger if query params present
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auto') === 'orion') {
+      setTimeout(() => triggerDirectBlob('/choice-properties-orion-extension.zip', 'choice-properties-orion-extension.zip'), 300);
+    } else if (params.get('auto') === 'chrome') {
+      setTimeout(() => triggerDirectBlob('/choice-properties-extension.zip', 'choice-properties-extension.zip'), 300);
+    }
+  </script>
+</body>
+</html>

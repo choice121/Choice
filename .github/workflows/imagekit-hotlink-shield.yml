@@ -1,0 +1,41 @@
+name: ImageKit Auto-Sync & Shield
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 4 AM UTC every day (runs right after daily & batch scraping)
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Number of properties to process in this run'
+        required: false
+        default: '100'
+
+jobs:
+  sync_imagekit:
+    name: Sync hotlinked photos to ImageKit
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      IMAGEKIT_PRIVATE_KEY: ${{ secrets.IMAGEKIT_PRIVATE_KEY }}
+      IMAGEKIT_PUBLIC_KEY: ${{ secrets.IMAGEKIT_PUBLIC_KEY }}
+      IMAGEKIT_URL_ENDPOINT: ${{ secrets.IMAGEKIT_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run hotlinks migration to ImageKit
+        run: |
+          BATCH="${{ github.event.inputs.batch_size || '100' }}"
+          node scripts/migrate_hotlinks_to_imagekit.mjs --batch $BATCH

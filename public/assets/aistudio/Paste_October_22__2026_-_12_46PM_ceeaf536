@@ -1,0 +1,848 @@
+PROJECT: CHOICE PROPERTIES — AI RENTAL INQUIRY ASSISTANT, CUSTOMER MEMORY, AND CONVERSATION MANAGEMENT SYSTEM
+
+I want you to inspect my existing Choice Properties project and build a dedicated AI Rental Inquiry Assistant inside the project.
+
+Do not treat this as a simple chatbot. I need a persistent customer relationship and conversation-management system that helps me respond to rental inquiries, remembers each customer’s information and previous conversations, and consistently follows the customer-service procedures, communication style, and business policies established in this project.
+
+Before making changes, inspect the existing repository, application architecture, database, authentication, AI integrations, and deployment configuration. Identify the best way to integrate this feature into the current project without breaking existing functionality.
+
+Do not immediately start coding without first understanding the existing project structure and data flow. Once the architecture is understood, implement the feature using the most suitable approach for the existing application.
+
+==================================================
+
+1. PRIMARY OBJECTIVE
+    ==================================================
+
+Build a dedicated section inside Choice Properties where I can manage customer inquiries and use AI to generate appropriate responses based on:
+
+* The customer’s current message.
+* Their previous messages and conversations.
+* Their saved rental preferences.
+* Their application and payment status, when available.
+* Their property interests.
+* Questions they have previously asked.
+* Information already provided.
+* Our established rental application process.
+* Our customer communication rules.
+* Our business policies and procedures.
+
+The AI should not behave as if every message comes from a new person.
+
+When I provide a customer identifier, the system must retrieve that customer’s existing profile and conversation history before generating a response.
+
+The objective is to eliminate repeated questions, prevent customer mix-ups, reduce manual work, and maintain consistent communication with every renter.
+
+==================================================
+2. CUSTOMER IDENTIFICATION SYSTEM
+
+I want to identify customers using the last four digits of their phone number or a name that I explicitly assign to their profile.
+
+Examples:
+
+* 8376
+* 1954
+* 6063
+* Riley
+* Suited
+
+These are examples of identifiers, not actual full phone numbers.
+
+When I enter a four-digit identifier, the system should locate the corresponding customer profile.
+
+When I provide a name as the identifier, the system should locate that customer’s profile using the saved name or assigned alias.
+
+The identifier must remain associated with that customer across future conversations.
+
+Required behavior:
+
+1. If the identifier already exists, retrieve the existing customer profile.
+2. If it does not exist, offer to create a new customer profile.
+3. Never automatically create a duplicate profile simply because a customer sends another message.
+4. Never combine two customers because they have similar names, preferences, or messages.
+5. If the same identifier appears to belong to different people, flag the conflict and request clarification.
+6. If a customer has an existing profile under a name and I later provide their four-digit identifier, allow the two records to be linked after I confirm they belong to the same person.
+7. Preserve the identifier even if the customer changes their property preferences.
+8. Allow me to correct a customer’s name, identifier, preferences, or other saved information.
+9. Keep identifiers strictly internal. Never insert a customer’s four-digit identifier into a message drafted for that customer.
+
+IMPORTANT PHONE-NUMBER RULE:
+
+The last four digits of a phone number are not globally unique. Therefore, treat them as a convenient internal identifier within my customer records, not as proof of identity.
+
+If a collision occurs, use an internal customer ID to distinguish the records and ask me to resolve the conflict.
+
+Do not require me to provide the full phone number merely to create a basic customer profile.
+
+==================================================
+3. PERSISTENT CUSTOMER MEMORY
+
+This is one of the most important requirements.
+
+I want customer profiles and conversation history to be stored persistently in the project’s database, not only in the AI’s temporary context, browser memory, or current chat session.
+
+The system must remember the information I provide about each customer and make it available in future sessions.
+
+For every customer, maintain a structured profile containing the following fields when known:
+
+IDENTITY
+
+* Internal customer ID.
+* Four-digit identifier.
+* Customer name or assigned alias.
+* Full name, if provided.
+* Contact information, only when necessary and authorized.
+* Date the profile was created.
+* Last activity date.
+
+RENTAL PREFERENCES
+
+* Preferred city and area.
+* Preferred neighborhoods or ZIP codes.
+* Number of bedrooms.
+* Number of bathrooms.
+* Maximum monthly rent.
+* Preferred property type: house, townhouse, apartment, condo, duplex, or other.
+* Preferred move-in date or timeframe.
+* Pet requirements.
+* Garage, basement, fenced yard, laundry, accessibility, school district, or other requested features.
+* Transportation or location restrictions.
+* Other property-specific requirements.
+
+APPLICATION AND RENTAL CONTEXT
+
+* Properties the customer has expressed interest in.
+* Property addresses and listing IDs, when available.
+* Property links already sent.
+* Whether a property is available, unavailable, or awaiting confirmation.
+* Whether the customer has applied.
+* Application status, if confirmed.
+* Application fee status, if confirmed.
+* Payment status, if confirmed.
+* Application review status.
+* Additional documents requested.
+* Viewing or tour status.
+* Holding or reservation status, when applicable.
+* Outstanding questions or concerns.
+* Next action required.
+
+RENTAL HISTORY AND QUALIFICATION CONTEXT
+
+* Credit concerns voluntarily disclosed by the customer.
+* Previous evictions, if disclosed.
+* Broken leases or rental balances, if disclosed.
+* Rental history.
+* Income or employment information, if disclosed and relevant.
+* Other circumstances the customer wants us to consider.
+
+Store sensitive information only when necessary for the rental workflow, with appropriate access controls. Do not store payment credentials, passwords, full bank details, or unnecessary sensitive documents in conversational memory.
+
+CONVERSATION HISTORY
+
+* Every customer message I enter.
+* Every AI-generated response that I approve or send.
+* Important decisions and corrections.
+* Property recommendations sent.
+* Customer feedback about recommendations.
+* Questions already answered.
+* Promises or follow-up dates.
+* Unresolved concerns.
+* The most recent state of the conversation.
+
+The system must distinguish between information supplied by the customer, information supplied by me, and information inferred by the AI.
+
+Do not treat assumptions as confirmed facts.
+
+For example, if the customer says they applied but I have not confirmed the application status, record that the customer reported applying. Do not automatically mark the application as submitted in the actual application system.
+
+==================================================
+4. MEMORY MUST SURVIVE GITHUB IMPORTS AND REDEPLOYMENTS
+
+The customer database must not be stored exclusively inside the Git repository.
+
+I may import the project into another GitHub account, change the deployment account, or redeploy the application.
+
+Customer profiles and conversation history must remain available when the application is moved or redeployed, provided the existing database is retained or migrated correctly.
+
+Recommended architecture:
+
+* Store customer profiles and conversations in a persistent database.
+* Keep AI instructions and response-generation logic in version-controlled project files.
+* Keep database schema and migrations in the repository.
+* Use documented environment variables for database connections and AI integrations.
+* Keep secrets out of source code.
+* Document the process for connecting a new deployment to the existing database.
+* Provide a secure backup and restore procedure.
+* Provide an export and import feature for customer profiles and conversation history.
+* Provide a migration procedure if the database provider or account changes.
+
+If the existing project already uses Supabase, inspect the current implementation and determine whether its database, authentication, and row-level security can support this feature.
+
+Do not introduce a second database unnecessarily.
+
+If Supabase is appropriate, use database tables, relationships, indexes, access policies, and migrations that fit the existing architecture.
+
+If the project uses another database, evaluate whether extending that database is preferable.
+
+The customer records must not disappear simply because local storage is cleared, the browser is changed, or a new AI session starts.
+
+IMPORTANT:
+
+Importing the GitHub repository into a new account does not automatically transfer the external database. Document that distinction clearly.
+
+The system should allow the new deployment to reconnect to the original database or restore a verified database backup. Do not claim that data will automatically transfer if it is stored in an external service.
+
+==================================================
+5. CUSTOMER INQUIRY WORKFLOW
+
+The interface should make it easy for me to process customer messages.
+
+A typical workflow should be:
+
+STEP 1: IDENTIFY THE CUSTOMER
+
+I enter an identifier, such as:
+
+8376
+
+The system retrieves the matching customer profile and recent conversation history.
+
+It should display a brief summary before generating a response.
+
+Example:
+
+CUSTOMER PROFILE: 8376
+
+Location: Charlotte, North Carolina
+Bedrooms: 3
+Budget: Up to 1,800 monthly
+Move-in: November 1–15
+Property type: House preferred, flexible
+Credit concerns: Customer disclosed rough credit
+Application status: Not confirmed
+
+Recent activity:
+
+* Customer found Choice Properties through TikTok.
+* Customer asked about available rentals.
+* Customer shared income information.
+* Customer asked about application qualifications.
+
+The information above is only an illustration. The system must display actual saved information and must not invent missing details.
+
+STEP 2: ENTER THE NEW MESSAGE
+
+I paste the customer’s latest message into a message input field.
+
+Example:
+
+“Will my credit score prevent me from getting approved?”
+
+STEP 3: RETRIEVE RELEVANT CONTEXT
+
+Before drafting the response, the AI must retrieve:
+
+* The customer’s existing preferences.
+* Relevant previous messages.
+* Any relevant application status.
+* The business policy that applies to the question.
+* Information already communicated to the customer.
+
+The AI should not ask for information the customer has already provided unless it needs confirmation because the information has changed or conflicts with newer information.
+
+STEP 4: GENERATE A CUSTOMER-READY RESPONSE
+
+The AI generates a concise, natural, professional response based on the current message and the customer’s saved context.
+
+The response must be ready to copy and send.
+
+STEP 5: REVIEW AND SEND
+
+I can review, edit, approve, copy, and send the generated message.
+
+Do not automatically send messages to customers unless I explicitly enable and authorize that capability.
+
+STEP 6: SAVE THE CONVERSATION
+
+After I approve or send a response, save the appropriate message and conversation state to the customer’s profile.
+
+Provide clear options such as:
+
+* Save as draft.
+* Mark as sent.
+* Edit customer information.
+* Add a note.
+* Mark a preference as confirmed.
+* Correct an inaccurate record.
+* Schedule a follow-up.
+* View full conversation history.
+
+Do not mark a message as sent merely because the AI generated it.
+
+==================================================
+6. UNDERSTAND THE DIFFERENCE BETWEEN A NEW INQUIRY AND AN ONGOING CONVERSATION
+
+The AI must understand that the same customer may contact us repeatedly over several days or weeks.
+
+For example:
+
+First conversation:
+Customer 2667 says they need a one-bedroom rental in Oklahoma City, with a budget of 600–800 monthly and a mid-November move-in.
+
+Later conversation:
+Customer 2667 says they have a previous eviction from 2022 in Missouri.
+
+Another day:
+Customer 2667 asks whether the previous eviction will affect their application.
+
+The AI must retrieve the saved profile and understand that the customer is already looking for a one-bedroom rental in Oklahoma City.
+
+It should answer the eviction question directly, acknowledge the relevant information, and avoid asking for the customer’s bedroom preference, location, budget, and move-in timeframe again.
+
+If the customer later changes their budget, update the profile without deleting the original conversation.
+
+Maintain an activity history so I can see when and why information changed.
+
+==================================================
+7. BUSINESS KNOWLEDGE BASE
+
+Create a dedicated, editable knowledge base containing Choice Properties’ current business policies, application procedures, customer-service rules, and approved explanations.
+
+Do not bury all business knowledge inside a large prompt that is difficult to update.
+
+Organize the knowledge base into separate sections.
+
+A. BUSINESS OVERVIEW
+
+Choice Properties is a nationwide rental marketplace that works with participating property owners, landlords, and property management companies to market rental properties and coordinate the application process.
+
+The business helps customers identify available properties, understand application requirements, submit applications, and follow the next steps.
+
+The AI must explain the actual business model accurately. It must not invent partnerships, guarantees, or services that have not been verified.
+
+B. APPLICATION PROCESS
+
+The general process is:
+
+1. Identify the customer’s rental preferences.
+2. Find currently available properties that match those preferences.
+3. Share the property listings or direct links.
+4. Let the customer review the available options and choose a property.
+5. Guide the customer through the application process.
+6. Collect the application fee through the approved payment process.
+7. Submit or move the application into review according to the actual system workflow.
+8. Monitor the application status.
+9. Request additional information or documents if required.
+10. Communicate the outcome and explain the next steps.
+11. If approved, guide the customer through the viewing, reservation, and leasing process according to the property’s actual requirements.
+
+The AI must distinguish between explaining a process and performing an action.
+
+It must never claim that an application was submitted, paid, approved, reserved, or reviewed unless the relevant action or status is confirmed.
+
+C. APPLICATION FEES
+
+The standard application fee is 50 dollars per property.
+
+The knowledge base must support policy updates if this amount changes.
+
+The AI must explain fees accurately and must not invent additional charges.
+
+D. APPLICATION REVIEW TIME
+
+The typical review window is 24–72 hours.
+
+Present this as an estimate, not a guaranteed decision time.
+
+E. ADDITIONAL APPLICATION OPPORTUNITIES
+
+Under the current policy, if an application is denied, the applicant can apply for two additional properties within seven days without paying another application fee.
+
+The AI must explain this policy accurately when relevant.
+
+It must not promise approval on a subsequent application.
+
+F. VIEWING PROCESS
+
+The normal process requires an application to be completed and reviewed before a viewing can be scheduled.
+
+After approval, the customer will be guided through the next steps, including scheduling a viewing.
+
+If a particular property’s process differs, follow the verified property-specific requirements.
+
+G. HOLDING FEES
+
+When a holding fee is required, explain the actual property’s holding policy.
+
+The general policy may provide that a holding fee is credited toward the first month’s rent rather than charged as an additional cost.
+
+However, the amount, reservation period, refund conditions, and exact application of the payment must be confirmed against the applicable policy.
+
+Never invent a holding fee, reservation period, refund guarantee, or payment condition.
+
+H. RENTAL QUALIFICATIONS
+
+Applications may be evaluated using factors such as:
+
+* Income and ability to meet rental obligations.
+* Credit history.
+* Rental history.
+* Previous evictions or broken leases.
+* Background screening.
+* Supporting documentation.
+* Property-specific requirements.
+* Overall application information.
+
+The AI must not automatically discourage someone from applying because of bad credit, a previous eviction, a broken lease, limited rental history, or another disclosed concern.
+
+It must not promise that someone will be approved.
+
+It should communicate that applications are evaluated based on the applicable requirements and the overall information provided.
+
+==================================================
+8. SPECIAL AI BEHAVIOR FOR CREDIT, EVICTION, AND OTHER QUALIFICATION QUESTIONS
+
+This section is particularly important.
+
+Customers frequently ask whether they can rent with:
+
+* A low credit score.
+* A previous eviction.
+* An unpaid rental balance.
+* A broken lease.
+* Limited rental history.
+* No rental history.
+* A bankruptcy.
+* Collections or late payments.
+* Income concerns.
+* Other financial or background issues.
+
+The AI must respond confidently, naturally, and respectfully.
+
+It should avoid language that unnecessarily frightens customers or makes them feel they should not apply.
+
+However, it must remain truthful and must not guarantee an approval.
+
+The standard communication approach should be:
+
+1. Acknowledge the question directly.
+2. Explain that one concern does not automatically determine the outcome unless a verified property-specific policy says otherwise.
+3. Explain that the application is reviewed using the applicable requirements and the overall information provided.
+4. Encourage the customer to submit complete, accurate, and truthful information.
+5. Explain that if additional information, supporting documentation, or clarification is needed during review, we will contact them.
+6. Reassure them that we will assist them throughout the process.
+7. Avoid unnecessary follow-up questions if the customer’s message does not require them.
+
+APPROVED COMMUNICATION EXAMPLE:
+
+“We work with applicants who have different credit and rental backgrounds, and we review applications based on the applicable property requirements and the overall information provided.
+
+Once you submit your application with complete, accurate, and truthful information, we’ll review how it fits the property’s requirements. If additional information, documentation, or clarification is needed during the review, we’ll contact you directly and guide you through what is needed.
+
+There is no additional fee for our assistance with the application process. Your main responsibility is to provide accurate and complete information. We’ll assist you throughout the review process and keep you updated.”
+
+The AI should adapt this explanation to the customer’s actual question instead of repeating it word for word in every conversation.
+
+==================================================
+9. GUARANTORS, CO-SIGNERS, AND THIRD-PARTY APPLICATION SUPPORT
+
+I want the system to support our legitimate application-assistance process, including situations in which a guarantor or co-signer may be appropriate.
+
+However, do not invent a guarantor arrangement or automatically promise that we can attach another person’s credit or information to an application.
+
+The AI must first determine what the company actually offers, what the property owner permits, and what the property’s application rules allow.
+
+If Choice Properties has an approved guarantor or co-signer program, the knowledge base should document:
+
+* Whether the program is available.
+* Who qualifies to participate.
+* Whether the guarantor or co-signer must submit a separate application.
+* What consent and documentation are required.
+* Whether the property owner accepts the arrangement.
+* Whether any additional fee applies.
+* Who is legally responsible for the lease.
+* How the arrangement is disclosed to the property owner and screening provider.
+
+A guarantor or co-signer must be a real, consenting person whose information is accurately represented.
+
+Never instruct the AI to misrepresent an applicant, attach another person’s credit information without authorization, conceal who will occupy the property, or bypass screening requirements.
+
+If the availability of a guarantor arrangement is not confirmed, the AI should explain that the application will be reviewed and that any permitted supporting options will be communicated during the process.
+
+Do not state that a guarantor will be added automatically unless that is a verified, authorized business procedure.
+
+==================================================
+10. CUSTOMER COMMUNICATION STYLE
+
+The AI must follow these communication rules consistently.
+
+VOICE
+
+* Professional.
+* Natural.
+* Warm.
+* Confident.
+* Respectful.
+* Concise.
+* Reassuring without being pushy.
+
+PERSPECTIVE
+Use “we” rather than “I” in business messages, except when apologizing for a personal mistake.
+
+FORMATTING
+
+* Generate copy-ready customer messages.
+* Avoid unnecessary bold formatting.
+* Do not include internal customer IDs in customer-facing responses.
+* Do not expose internal screening notes.
+* Do not reveal internal business strategy.
+* Do not mention Choice Properties in every message unless it is useful.
+* Avoid long, repetitive disclaimers.
+* Do not add a generic closing question when the customer’s question has already been answered.
+
+GREETING RULES
+
+* Use “Hello!” for a new conversation when appropriate.
+* Do not repeatedly greet customers who are already engaged in an ongoing text conversation.
+* Avoid time-specific greetings unless explicitly requested.
+
+DELAYED RESPONSES
+Do not apologize for a delayed response unless I specifically indicate that the message is delayed.
+
+INQUIRY QUESTIONS
+Ask only for information that is missing.
+
+For example, if a customer has already stated their preferred location, bedroom count, budget, and move-in timeframe, do not ask for those details again.
+
+If only the property type is missing, ask only about the property type.
+
+If the customer asks a direct question about an application, payment, property, or qualification, answer that question first.
+
+==================================================
+11. HANDLE UNAVAILABLE PROPERTIES CORRECTLY
+
+Customers often contact us about properties they saw on TikTok or other social media platforms.
+
+The AI must distinguish between:
+
+* A property confirmed available.
+* A property confirmed unavailable.
+* A property whose status is unknown.
+* A property that has already been reserved.
+* A property with an outdated listing or price.
+
+Never assume a property is available simply because it appears in a previous conversation.
+
+If a property is unavailable, explain this clearly and offer to help the customer find another available property.
+
+Avoid saying “similar property” unless I explicitly request that wording.
+
+If the customer sends a screenshot and the property is unavailable, thank them for the screenshot and explain that it is no longer available.
+
+If the customer wants continued assistance, collect only the missing rental preferences.
+
+==================================================
+12. PROPERTY RECOMMENDATION WORKFLOW
+
+When I ask the AI to help respond to a customer who is reviewing properties, it must understand which properties have already been sent.
+
+It should retain:
+
+* Property addresses.
+* Listing IDs.
+* Rent amounts.
+* Bedroom and bathroom counts.
+* Property types.
+* Listing URLs.
+* Availability status, when confirmed.
+* Whether the customer has expressed interest in a particular property.
+* Whether the customer has selected a property to apply for.
+
+If the customer identifies one or more properties they like, the AI should acknowledge their choices and explain the next step.
+
+If the customer has not selected a property, ask which one they would like to proceed with.
+
+Do not tell a customer to apply to every property they expressed interest in unless that is appropriate under the actual process.
+
+When sending property links, use the exact URLs stored in the system.
+
+Never invent listing URLs or property details.
+
+If a property link is broken, help troubleshoot the link rather than inventing a replacement.
+
+==================================================
+13. APPLICATION STATUS AND PAYMENT STATUS
+
+The AI must maintain a clear distinction between:
+
+* Application not started.
+* Application started but not submitted.
+* Application submitted.
+* Application fee pending.
+* Payment submitted but not verified.
+* Payment confirmed.
+* Application under review.
+* Additional information requested.
+* Approved.
+* Denied.
+* Viewing pending.
+* Property reserved.
+* Lease pending.
+* Lease signed.
+* Closed or inactive.
+
+Use actual status information from the existing application system when available.
+
+If no status is available, display “Not confirmed” rather than guessing.
+
+Never tell a customer their payment was received or their application is being reviewed unless the relevant status has been confirmed.
+
+Never instruct a customer to bypass payment-provider security warnings.
+
+If a payment is declined, canceled, or flagged, help investigate the issue or explain verified alternative payment methods.
+
+Payment links, account details, and transaction references must be handled securely.
+
+==================================================
+14. AI RESPONSE GENERATION RULES
+
+Before generating a response, the AI must internally follow this sequence:
+
+1. Identify the customer using the supplied four-digit ID or assigned name.
+2. Retrieve the correct customer profile.
+3. Retrieve relevant conversation history.
+4. Identify the customer’s latest question or request.
+5. Determine whether the message is a new inquiry, follow-up, objection, qualification question, application update, payment issue, property question, or property-selection message.
+6. Retrieve the relevant business policy.
+7. Check which information is already known.
+8. Determine what information is missing.
+9. Draft a response that answers the customer’s actual question.
+10. Verify that the response contains no invented property details, unconfirmed statuses, unsupported promises, or unnecessary questions.
+11. Present the draft for my review.
+12. Save the final approved or sent message according to the actual workflow.
+
+The AI must use the most recent confirmed information.
+
+If a customer corrects their budget from 5,000 to 1,500–1,800 monthly, the latest correction must become the active budget.
+
+The previous value should remain in the history but must not continue to be treated as the current preference.
+
+If a new message conflicts with a previous fact and the intended correction is unclear, ask me to clarify before updating the profile.
+
+==================================================
+15. INTERNAL CUSTOMER NOTES
+
+Allow me to add private notes to a customer profile.
+
+Examples:
+
+* Customer is interested in a particular property.
+* Customer has concerns about application fees.
+* Customer is waiting for payday before submitting payment.
+* Customer requested another list of properties.
+* Customer has not responded to the last message.
+* Customer prefers texting.
+* Customer needs a follow-up on a particular date.
+
+These notes must be visible to authorized staff but must never appear in customer-facing messages unless I explicitly choose to share them.
+
+Allow notes to be edited or deleted according to the project’s retention and access policies.
+
+==================================================
+16. CUSTOMER SEARCH AND CONVERSATION MANAGEMENT
+
+Build a searchable customer-management interface.
+
+I should be able to:
+
+* Search by four-digit identifier.
+* Search by customer name or assigned alias.
+* Open the full customer profile.
+* View the entire conversation history.
+* View the most recent conversation summary.
+* View current rental preferences.
+* View previously sent properties.
+* View confirmed application status.
+* Add notes.
+* Correct information.
+* Generate a response to a new message.
+* Copy the generated response.
+* Save a draft.
+* Mark a response as sent.
+* Export customer records.
+* Import a customer backup.
+* Identify duplicate or conflicting records.
+* View recent activity.
+
+Use a clean, responsive design consistent with the existing Choice Properties project.
+
+Do not create an unnecessarily complicated interface. The primary workflow should be quick enough for me to handle many inquiries each day.
+
+==================================================
+17. CUSTOMER DATA SECURITY
+
+Customer conversations and rental information are private.
+
+Implement appropriate security controls.
+
+Requirements:
+
+* Use the project’s existing authentication system where appropriate.
+* Restrict access to authorized staff.
+* Enforce database-level access controls.
+* Never expose customer records through public API endpoints.
+* Never place secrets or private customer data in public source code.
+* Do not use GitHub commits as a customer database.
+* Avoid unnecessary collection of sensitive information.
+* Provide a documented backup and recovery process.
+* Make customer deletion and data export possible according to the applicable retention policy.
+* Keep an audit trail for important changes to customer profiles and application statuses.
+
+Do not assume that hiding a page or adding a frontend password provides adequate security.
+
+==================================================
+18. AI INSTRUCTION FILES AND PROJECT PORTABILITY
+
+Create a dedicated, version-controlled set of instructions for the rental inquiry assistant.
+
+Use a suitable structure such as:
+
+/docs/customer-support-ai/
+/docs/customer-support-ai/business-policies.md
+/docs/customer-support-ai/response-style.md
+/docs/customer-support-ai/application-process.md
+/docs/customer-support-ai/qualification-guidelines.md
+/docs/customer-support-ai/customer-memory.md
+
+Adapt the exact paths to the existing repository conventions.
+
+The instructions should describe:
+
+* The business and its actual services.
+* The application process.
+* Current fees and policies.
+* Customer identification.
+* Persistent memory rules.
+* Communication style.
+* Qualification-question handling.
+* Property recommendation behavior.
+* Application and payment status handling.
+* Security and privacy requirements.
+* Examples of approved and disallowed responses.
+
+Do not hardcode changeable business policies in multiple unrelated files.
+
+Use a single source of truth for policy values wherever possible.
+
+The AI should be able to load the relevant instructions whenever the feature is used.
+
+Document how another developer or AI coding assistant can locate these files and continue developing the feature after the repository is imported into a different GitHub account.
+
+Do not assume that every AI model automatically reads every Markdown file. Implement the appropriate runtime retrieval or prompt-loading mechanism.
+
+==================================================
+19. IMPLEMENTATION AND TESTING
+
+Before implementing the feature:
+
+* Inspect the existing project.
+* Identify the current frontend framework.
+* Identify the database and authentication setup.
+* Identify existing AI integrations.
+* Identify existing property and application data structures.
+* Identify existing customer-related functionality.
+* Identify any security or deployment limitations.
+
+Then provide a short implementation plan and proceed with the implementation.
+
+Do not replace working systems unnecessarily.
+
+Do not create duplicate customer, application, property, or payment databases if the required data already exists.
+
+Create database migrations and tests appropriate to the project’s architecture.
+
+Test the following scenarios:
+
+TEST 1: EXISTING CUSTOMER
+
+I enter 8376. The system retrieves the correct saved customer profile and conversation history.
+
+TEST 2: NEW CUSTOMER
+
+I enter a new identifier. The system creates a profile without overwriting another customer.
+
+TEST 3: RETURNING CUSTOMER
+
+I enter a new message for an existing customer. The AI uses previous information and does not unnecessarily repeat questions.
+
+TEST 4: UPDATED PREFERENCE
+
+A customer changes their budget. The system updates the active preference while preserving the earlier conversation.
+
+TEST 5: CUSTOMER CONFLICT
+
+Two records have the same four-digit identifier. The system detects the conflict rather than combining them automatically.
+
+TEST 6: UNAVAILABLE PROPERTY
+
+The AI does not claim that a property is available unless its status is confirmed.
+
+TEST 7: APPLICATION STATUS
+
+The AI does not claim an application has been submitted, reviewed, approved, or paid unless the status is confirmed.
+
+TEST 8: QUALIFICATION QUESTION
+
+A customer with bad credit or an eviction receives a professional, reassuring response without a guarantee of approval.
+
+TEST 9: GITHUB IMPORT
+
+The repository is imported into a new GitHub account. The documentation explains how to reconnect to or migrate the persistent database and AI configuration without losing customer records.
+
+TEST 10: SECURITY
+
+An unauthorized user cannot retrieve private customer profiles or conversation history.
+
+TEST 11: MESSAGE APPROVAL
+
+Generating a response does not automatically mark it as sent or send it to the customer.
+
+TEST 12: POLICY UPDATE
+
+A business policy can be updated centrally without having to search through every prompt and component.
+
+==================================================
+20. FINAL ACCEPTANCE CRITERIA
+
+The feature is not complete merely because a chat interface appears on the screen.
+
+It must have:
+
+* Persistent customer profiles.
+* Persistent conversation history.
+* Reliable identification by four-digit ID or assigned name.
+* Protection against customer mix-ups.
+* Context-aware response generation.
+* Editable business policies.
+* Consistent customer communication rules.
+* Correct handling of application and payment status.
+* Secure database access.
+* Backup and recovery documentation.
+* GitHub migration documentation.
+* Tests covering the primary workflows.
+
+After implementation, provide a concise report containing:
+
+1. What was added.
+2. Which existing files and components were modified.
+3. Which database tables and migrations were created or changed.
+4. How customer records are stored and retrieved.
+5. How AI instructions are loaded.
+6. How authentication and access controls work.
+7. How to configure the feature in a new deployment.
+8. How to back up and restore customer history.
+9. What still requires manual configuration or business-policy confirmation.
+10. The results of the tests.
+
+Do not claim that a feature is working unless you have actually implemented and tested it.
+
+The most important outcome is that I can enter a customer’s four-digit identifier, paste their latest message, and immediately receive an accurate, professional, context-aware response based on their saved profile and the established Choice Properties process—without having to explain the customer or our policies again.

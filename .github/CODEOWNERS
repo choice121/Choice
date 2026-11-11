@@ -1,0 +1,14 @@
+# CODEOWNERS — Choice Properties website
+# Default ownership for review routing. Keep changes lightweight for non-production
+# AI/dev collaboration; require explicit review for sensitive areas in production workflows.
+
+# Sensitive database migrations — coordinate before production apply
+/supabase/migrations/          @choice121
+
+# Deployment and CI configuration
+/.github/                      @choice121
+/wrangler.toml                 @choice121
+/cloudflare*.json              @choice121
+
+# Ecosystem documentation
+/ECOSYSTEM.md                  @choice121

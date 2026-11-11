@@ -1,0 +1,1382 @@
+MISSION: COMPLETE END-TO-END VERIFICATION, REPAIR, AND PRODUCTION READINESS
+
+You are the senior full-stack engineer, frontend architect, QA engineer, integration engineer, and deployment verification specialist responsible for the Choice real-estate platform.
+
+Your task is to thoroughly audit, test, repair, integrate, and verify the entire existing application so that every page, route, redirect, button, form, modal, component, API request, database operation, property workflow, and user-facing feature works correctly from beginning to end.
+
+This is an existing-project completion and verification task, not a request to create a superficial demo, redesign only the homepage, or produce a report without fixing problems.
+
+Repository:
+https://github.com/choice121/Choice
+
+Work with the actual repository, current branch, existing architecture, configured integrations, and current implementation. Do not assume the project uses a particular framework or that previous changes are correct merely because they were merged or deployed.
+
+1. PRIMARY OBJECTIVE
+
+Establish that the complete application works as one connected product.
+
+The final result must satisfy all of the following:
+
+* Every intended frontend page renders correctly.
+* Every intended route resolves to the correct page.
+* Every redirect works and preserves the correct destination and required state.
+* No internal navigation leads to a blank screen, broken page, incorrect route, or unintended external destination.
+* Every visible interactive control performs its intended action.
+* Every form validates input, submits correctly, handles errors, and displays its resulting state.
+* Every frontend-to-backend connection calls the correct endpoint with the correct data.
+* Every database-dependent page retrieves and displays the correct data.
+* Every supported create, read, update, and delete operation behaves correctly, with appropriate authorization and safeguards.
+* Authentication, sessions, permissions, and protected routes work consistently.
+* Property imports, source capture, validation, enrichment, AI description rewriting, review, approval, and publishing work through their intended end-to-end workflows.
+* Loading, success, empty, error, and retry states are implemented and understandable.
+* The interface displays actual application data rather than placeholder content when real data is expected.
+* The production build runs the same intended implementation that was verified locally.
+* Deployment, caching, environment configuration, and routing do not cause the live website to display stale or incomplete changes.
+* All fixes are tested and supported by concrete evidence.
+
+A successful build is not proof that the application works. A page rendering is not proof that its controls work. An API returning a response is not proof that the result reaches the frontend correctly. A successful deployment is not proof that the deployed application contains the latest changes. Verify each layer independently and then verify the complete user journey.
+
+⸻
+
+2. EXECUTION RULES
+
+2.1 Inspect before changing
+
+Begin by inspecting the current repository and identifying:
+
+* Current Git branch and working-tree state.
+* Recent commits and relevant changes.
+* Framework, language, build system, and package manager.
+* Application entry points.
+* Frontend routing implementation.
+* Backend/API architecture.
+* Database and authentication integrations.
+* Environment-variable requirements.
+* Existing test suites and scripts.
+* Deployment configuration.
+* Existing property-import, enrichment, and publishing implementations.
+* Known incomplete, duplicated, disconnected, or obsolete implementations.
+
+Do not assume the repository uses React, Vite, Next.js, or another framework until you confirm it from the actual files and configuration.
+
+Inspect the relevant source code before proposing changes. Follow each important route and feature from its entry point through its dependencies.
+
+Preserve existing work that is correct.
+
+Do not replace the existing application with a generic template, rebuild working systems unnecessarily, or introduce a second architecture when the current architecture can be repaired.
+
+2.2 Work systematically
+
+Organize the work into these phases:
+
+1. Repository and architecture discovery.
+2. Route and page inventory.
+3. Frontend rendering and interaction audit.
+4. Backend, database, authentication, and API integration audit.
+5. Property-system workflow audit.
+6. Automated and manual testing.
+7. Defect prioritization and repair.
+8. Regression testing.
+9. Production build and deployment verification.
+10. Final evidence-based report.
+
+Produce an initial audit and repair plan before making significant changes. Then proceed with implementation and testing within the authorized project scope.
+
+Do not stop after identifying problems. Fix confirmed defects and continue verification.
+
+Do not pause for routine approval between individual fixes. Request approval before destructive operations, irreversible data changes, security-sensitive actions outside the authorized scope, or actions requiring external publication or deployment permission.
+
+Do not claim a feature works merely because its code appears to exist.
+
+⸻
+
+3. BUILD A COMPLETE ROUTE AND PAGE INVENTORY
+
+Discover every route defined or generated by the application.
+
+Inspect:
+
+* Router configuration.
+* Route constants.
+* Page components.
+* Layouts and nested routes.
+* Protected routes.
+* Authentication callbacks.
+* Redirect handlers.
+* Dynamic route parameters.
+* Query-string handling.
+* URL fragments where applicable.
+* Legacy paths.
+* Navigation menus.
+* Dashboard links.
+* Sidebar items.
+* Footer links.
+* Cards and call-to-action links.
+* Buttons that navigate programmatically.
+* Links generated from property records.
+* External links and integration callbacks.
+* Not-found and error routes.
+* Routes that are accessible only after authentication.
+* Routes used by the browser extension or Orion workflow, where applicable.
+
+Search for hardcoded paths, duplicated route definitions, incorrect destinations, stale route names, and navigation that bypasses the central routing system.
+
+Create a route inventory containing:
+
+Field	Required information
+Route	Actual path or route pattern
+Page/component	Component responsible for rendering
+Access	Public, authenticated, or role-restricted
+Entry points	Where users can navigate to it
+Data dependencies	API calls, queries, or required state
+Redirect behavior	Expected destination and conditions
+UI states	Loading, empty, success, and error states
+Test coverage	Tests performed and results
+Status	Pass, fail, blocked, or not applicable
+
+Include dynamic routes such as property detail pages, edit pages, user-specific pages, and any other route patterns discovered in the repository.
+
+Do not limit this audit to the pages visible in the main navigation. Discover pages defined in code but missing from menus, as well as menu items that point to nonexistent pages.
+
+3.1 Test every route directly
+
+For each route, verify:
+
+* Opening the URL directly renders the correct page.
+* Refreshing the browser does not break the route.
+* Opening the route in a new tab works when expected.
+* Navigating to it internally works.
+* Required parameters are read correctly.
+* Missing or invalid parameters are handled safely.
+* Query parameters are preserved when needed.
+* The correct layout and navigation state are displayed.
+* Required data loads.
+* Unauthorized access is handled correctly.
+* A missing record produces a useful not-found state rather than a blank screen.
+* Runtime errors do not leave the application unusable.
+
+For dynamic routes, test valid identifiers, missing identifiers, invalid identifiers, and records that do not exist.
+
+Test production-style direct navigation and refresh behavior. Confirm that the hosting configuration correctly serves the application entry point for valid client-side routes without incorrectly converting API requests or asset requests into HTML pages.
+
+Do not make every unknown URL redirect to the dashboard. Unknown routes should produce the intended not-found experience unless the application explicitly specifies another behavior.
+
+⸻
+
+4. VERIFY EVERY REDIRECT
+
+Build a redirect matrix covering all redirect mechanisms discovered in the project.
+
+Include:
+
+* Authentication redirects.
+* Login and logout redirects.
+* Signup and onboarding redirects.
+* Password-reset redirects, if implemented.
+* OAuth or authentication-provider callbacks, if implemented.
+* Protected-route redirects.
+* Role-based redirects.
+* Post-submission redirects.
+* Post-save and post-delete navigation.
+* Property-detail redirects.
+* Legacy URL redirects.
+* Trailing-slash and canonical-path behavior.
+* Query-string preservation.
+* Redirects from expired or invalid sessions.
+* Redirects from unavailable records.
+* Redirects initiated by API responses.
+* Redirects initiated by frontend code.
+* External integration callbacks.
+
+For each redirect, verify the source, expected destination, trigger condition, authentication requirements, and resulting application state.
+
+Mandatory redirect checks
+
+1. A logged-out user visiting a protected page is redirected according to the intended authentication flow.
+2. After successful authentication, the user reaches the intended destination without losing necessary context.
+3. A logged-in user visiting a public authentication page is handled according to the application’s intended behavior.
+4. Invalid or expired sessions do not cause infinite redirect loops.
+5. Permission-denied users are not incorrectly redirected to privileged pages.
+6. Successful form submissions navigate to the correct destination.
+7. Failed submissions do not redirect as if they succeeded.
+8. Property links resolve to the correct property record.
+9. Query parameters and necessary return destinations survive redirects.
+10. Logout clears the relevant session and prevents unauthorized access through stale client state.
+11. Refreshing a redirected destination does not break it.
+12. Unknown destinations and malformed redirect parameters are handled safely.
+
+Prevent open redirects. A user-controlled return URL must not permit an attacker to redirect users to arbitrary untrusted destinations.
+
+Check redirect status codes and canonicalization at the server or hosting layer where applicable.
+
+Acceptance criterion: Every intended redirect has a defined and tested outcome. No unexplained redirect loops, wrong destinations, lost required state, or unauthorized access paths remain.
+
+⸻
+
+5. VERIFY FRONTEND RENDERING AND VISUAL QUALITY
+
+Inspect every page and major UI state at realistic viewport sizes.
+
+Verify:
+
+* Correct page content.
+* Correct layout and component hierarchy.
+* Consistent navigation and active states.
+* Correct typography and spacing.
+* Consistent design tokens and component styles.
+* Correct responsive behavior.
+* Properly sized cards, forms, tables, and dialogs.
+* Correct display of property images and media.
+* Correct currency, dates, addresses, and property details.
+* Useful empty states when no records exist.
+* Useful loading states while data is retrieved.
+* Useful error states when requests fail.
+* No unintended content overflow.
+* No overlapping components.
+* No clipped text or inaccessible controls.
+* No missing icons or broken images.
+* No unexplained blank sections.
+* No placeholder content presented as actual data.
+* No stale data after a successful mutation.
+* No duplicate navigation elements caused by nested layouts.
+* No conflicting CSS or obsolete component implementations.
+
+Test at minimum:
+
+* A narrow mobile viewport.
+* A typical mobile viewport.
+* A tablet-sized viewport.
+* A desktop viewport.
+* A wide desktop viewport.
+
+Use the browser or available UI automation to inspect the rendered application. Do not rely exclusively on reading JSX, templates, stylesheets, or screenshots from an unrelated environment.
+
+Compare the actual rendered interface against the intended existing product design. Preserve established visual direction and improve genuine defects without introducing arbitrary redesigns.
+
+Where the application has a real-estate search or listing experience, ensure that property cards, search filters, location information, pricing, images, pagination or infinite scrolling, and detail pages behave consistently with the underlying data.
+
+Check browser console errors, failed resource loads, uncaught exceptions, hydration problems where applicable, and accessibility-related errors.
+
+⸻
+
+6. TEST EVERY INTERACTIVE ELEMENT
+
+Systematically inspect all user-facing controls, including:
+
+* Navigation links.
+* Sidebar links.
+* Buttons.
+* Icon buttons.
+* Search inputs.
+* Filters.
+* Sort controls.
+* Pagination.
+* Tabs.
+* Dropdowns.
+* Menus.
+* Modals and dialogs.
+* Tooltips.
+* Accordions.
+* Checkboxes.
+* Radio buttons.
+* Toggles.
+* Date and time inputs.
+* File uploads.
+* Image upload and preview.
+* Rich-text editors.
+* Form submission controls.
+* Save, cancel, edit, and delete actions.
+* Refresh and retry controls.
+* Notification controls.
+* Import, validation, enrichment, rewriting, approval, and publishing actions.
+
+For each control, establish:
+
+1. What the control is intended to do.
+2. Whether it responds to user interaction.
+3. Whether the correct event handler runs.
+4. Whether the expected API or state operation occurs.
+5. Whether the result is reflected in the UI.
+6. Whether success and failure are handled correctly.
+7. Whether repeated clicks can trigger duplicate operations.
+8. Whether loading and disabled states are appropriate.
+9. Whether keyboard interaction works where expected.
+10. Whether the control is accessible and has a meaningful label.
+
+Find controls with empty handlers, placeholder handlers, TODO behavior, fake success messages, hardcoded actions, missing await, swallowed exceptions, incorrect event propagation, or state updates that never reach the rendered UI.
+
+Do not implement meaningless actions just to make a button appear functional. Either implement the intended behavior or clearly indicate that the feature is unavailable until it can be completed properly.
+
+For destructive actions, verify confirmation behavior and ensure the correct record is affected.
+
+⸻
+
+7. VERIFY FORMS AND USER INPUT
+
+Test every form, including authentication, profile settings, property creation, property editing, imports, search, filters, and publishing forms that exist in the application.
+
+Verify:
+
+* Required-field validation.
+* Field type validation.
+* Input normalization.
+* Correct default values.
+* Correct controlled or uncontrolled state behavior.
+* Error messages linked to the relevant fields.
+* Duplicate-submission prevention.
+* Loading and submission states.
+* Server-side validation.
+* Correct error mapping.
+* Successful submission.
+* Correct persistence.
+* Correct navigation after success.
+* Form reset behavior.
+* Cancellation behavior.
+* Handling of expired sessions.
+* Handling of network failures.
+* Recovery after a failed request.
+* Preservation of entered data where appropriate.
+
+Test empty values, invalid formats, boundary values, long text, special characters, duplicate requests, malformed identifiers, and realistic valid data.
+
+Ensure that client-side validation does not replace required server-side validation.
+
+Ensure that errors do not silently disappear and that a form does not report success when the backend operation failed.
+
+⸻
+
+8. VERIFY FRONTEND, API, DATABASE, AND STATE INTEGRATION
+
+Trace important operations across the full stack:
+
+User interaction → frontend component → state management → API client → backend endpoint → authentication and authorization → database or external service → response handling → frontend state update → rendered result.
+
+For each important feature, identify the exact files, functions, endpoints, and data structures involved.
+
+Verify:
+
+* Correct API base URL.
+* Correct HTTP method.
+* Correct endpoint and parameters.
+* Correct request body and headers.
+* Correct authentication token or session handling.
+* Correct response parsing.
+* Correct response type assumptions.
+* Correct handling of HTTP errors.
+* Correct handling of timeouts and network failures.
+* Correct cancellation behavior where supported.
+* Correct cache invalidation.
+* Correct state synchronization.
+* Correct handling of concurrent requests.
+* Correct pagination and filtering parameters.
+* Correct authorization checks.
+* Correct persistence and retrieval of changed records.
+
+Investigate CORS, cookie, credential, CSRF, environment-variable, proxy, and hosting issues where relevant.
+
+Do not expose service-role credentials, private API keys, database passwords, or other secrets in frontend code or browser bundles.
+
+Do not bypass authentication or database security to make the interface work.
+
+8.1 Database integrity
+
+For each database-backed workflow, verify:
+
+* The expected table or view exists.
+* The frontend and backend agree on field names and data types.
+* Required columns are populated correctly.
+* Nullable fields are handled correctly.
+* Relationships and foreign keys are respected.
+* Insert, update, and delete operations affect the intended records.
+* Data retrieval reflects successful mutations.
+* Authorization and row-level security policies are compatible with the intended workflow.
+* Duplicate submissions do not create duplicate records where idempotency is required.
+* Failed transactions do not leave inconsistent application state.
+
+If the project uses Supabase, inspect the actual Supabase integration, database schema, authentication configuration, relevant migrations, and row-level security policies. Use the existing Supabase integration and repository conventions rather than inventing an alternative data layer.
+
+Do not weaken database policies simply to eliminate an authorization error. Identify the actual permission requirement and implement the narrowest correct solution.
+
+8.2 State consistency
+
+Verify that:
+
+* A successful save updates the displayed record.
+* Editing one record does not update an unrelated record.
+* Deleted records disappear from the correct views.
+* Search and filter changes refresh the correct data.
+* Switching pages does not display stale records.
+* Cached data is invalidated appropriately.
+* Loading one record does not overwrite another record’s state.
+* Multiple rapid requests do not cause incorrect results.
+* A refresh reconstructs the correct persisted state.
+* UI state is not treated as proof of database persistence.
+
+⸻
+
+9. AUTHENTICATION, AUTHORIZATION, AND SESSION VERIFICATION
+
+If authentication exists, test the full intended authentication lifecycle.
+
+Verify:
+
+* Login.
+* Logout.
+* Signup or invitation flow, if applicable.
+* Session restoration.
+* Session expiration.
+* Token refresh.
+* Protected routes.
+* Role-restricted pages.
+* Permission-denied behavior.
+* Redirects after authentication.
+* Access to records belonging to the current user or organization.
+* Handling of revoked or invalid credentials.
+* UI behavior after authentication state changes.
+
+Confirm that protected data is not merely hidden in the frontend but is also protected at the backend and database layers.
+
+Test unauthorized API access independently of the frontend.
+
+Use test accounts and test data. Never expose real user credentials, weaken production authorization, or modify real customer records as part of verification.
+
+⸻
+
+10. PROPERTY IMPORT, SOURCE CAPTURE, AND VALIDATION
+
+The property system is a core part of this application. Audit it as a complete workflow rather than as isolated screens.
+
+Inspect all supported import entry points, including:
+
+* Manual property import.
+* Browser extension integration.
+* Orion integration.
+* Bulk import.
+* Administrative import.
+* Reimport and refresh operations.
+* Any additional import mechanism found in the repository.
+
+Do not assume all entry points currently share the same backend pipeline. Prove whether they do.
+
+10.1 Unified import contract
+
+Verify that every supported entry point submits a compatible, versioned import payload to the authoritative backend pipeline.
+
+Where applicable, the payload should preserve:
+
+* Source URL.
+* Source platform or provider.
+* Capture timestamp.
+* Original listing description.
+* Extracted structured fields.
+* Supplemental unstructured text.
+* Original source data or snapshot.
+* Source images or image references, where permitted.
+* Provenance for extracted fields.
+* Warnings and extraction limitations.
+* Import identifiers and deduplication information.
+* Contract version.
+* Extraction status.
+
+The browser extension and Orion may use different capture techniques, but they must produce compatible records and must not create competing sources of truth.
+
+10.2 Source-first import lifecycle
+
+Verify that importing a property does not automatically trigger AI enrichment, AI description rewriting, approval, or publishing unless an explicitly configured and authorized workflow says otherwise.
+
+The intended default sequence is:
+
+1. Capture source information.
+2. Submit the import contract.
+3. Fetch additional source information through permitted methods where appropriate.
+4. Extract structured and unstructured facts.
+5. Normalize fields without inventing information.
+6. Validate and compare extracted information.
+7. Preserve source evidence and provenance.
+8. Store the imported record.
+9. Display import status and validation findings.
+10. Allow the user to review and initiate subsequent actions explicitly.
+
+Do not silently discard source text simply because a value cannot be mapped to a structured field.
+
+Respect source access restrictions. Do not bypass authentication, CAPTCHA, paywalls, or technical access controls. If a source cannot be accessed, report the limitation and preserve whatever authorized information was captured.
+
+10.3 Field-by-field validation
+
+Test automatic and manual validation against source evidence.
+
+Verify relevant fields, including:
+
+* Listing address.
+* City, state, and ZIP code.
+* Property type.
+* Bedrooms.
+* Bathrooms.
+* Rent or price.
+* Deposit, if provided.
+* Availability information, if provided.
+* Lease details, if provided.
+* Square footage, if provided.
+* Parking.
+* Garage versus carport.
+* Appliances versus hookups.
+* Utilities.
+* Laundry.
+* Heating and cooling.
+* Pet policy.
+* Accessibility information.
+* Amenities.
+* Property condition and renovations, when explicitly supported.
+* Additional details embedded in the original description.
+
+Treat these as examples; verify every relevant field actually supported by the source and application schema.
+
+The validator must identify missing, malformed, contradictory, or unsupported values and recover omitted information from accessible evidence where possible.
+
+It must not guess to fill gaps.
+
+A manual validation action must perform a real comparison against available source evidence, not merely check whether required database columns are nonempty.
+
+Preserve conflicting source evidence and mark it for review rather than arbitrarily selecting an unsupported value.
+
+10.4 Reimports and manual changes
+
+Verify that reimporting a property does not silently overwrite:
+
+* User corrections.
+* Manually entered facts.
+* Approved descriptions.
+* Approved enrichment.
+* Publishing decisions.
+* Audit history.
+
+Define and test how new source evidence is compared against existing data.
+
+The system should preserve the original source snapshot separately from structured extraction, user edits, validation findings, enrichment, generated descriptions, approved versions, and published versions.
+
+⸻
+
+11. ENRICHMENT AND AI DESCRIPTION REWRITING
+
+Audit the entire enrichment and description-generation workflow, including UI controls, backend jobs, AI calls, database persistence, validation, and final display.
+
+11.1 Explicit user control
+
+Verify that:
+
+* Source import does not automatically rewrite descriptions.
+* AI enrichment is triggered only through the intended explicit user action.
+* Description rewriting is triggered only through the intended explicit user action.
+* The frontend displays the correct job status.
+* Failed AI requests do not create misleading success states.
+* Repeated clicks do not unintentionally launch duplicate jobs.
+* Generated content is saved to the correct record and version.
+* Users can review the result before approval or publishing.
+* The original source description remains available.
+
+11.2 Factual integrity
+
+Generated descriptions must be based on verified source facts and the authoritative source description, not on previously generated copy.
+
+Verify that the system:
+
+* Preserves material property facts.
+* Does not invent appliances, renovations, amenities, parking, accessibility features, or utility arrangements.
+* Does not invent nearby amenities, travel times, school assignments, or distances.
+* Does not turn hookups into included appliances.
+* Does not turn a carport into a garage.
+* Does not change pet restrictions.
+* Does not invent lease terms or availability.
+* Does not convert uncertain facts into confident assertions.
+* Does not silently change prices, addresses, bedroom counts, or bathroom counts.
+* Produces a description whose length is proportionate to the substantive source information.
+* Avoids generic filler and repetitive wording.
+* Preserves legitimate facts when prohibited material must be removed.
+
+Use a structured fact ledger and provenance tracking where the existing architecture supports them or where implementation is necessary to meet these requirements.
+
+11.3 Independent description validation
+
+Verify that generated descriptions undergo validation independently of generation.
+
+Check for:
+
+* Missing material claims.
+* Contradictions with structured fields.
+* Unsupported claims.
+* Prohibited content.
+* Incorrect location details.
+* Incorrect amenities or utility details.
+* Semantic drift.
+* Inappropriate or misleading wording.
+* Excessive generic text.
+* Inadequate coverage of the source facts.
+
+Critical factual failures must block approval or publishing, regardless of any aggregate quality score.
+
+Use clear PASS, REVIEW, or FAIL outcomes where compatible with the application’s workflow.
+
+Ensure that any content sanitizer preserves legitimate facts in mixed sentences rather than deleting an entire useful clause because one part is prohibited.
+
+If the project implements content rules in multiple services or languages, verify that they remain consistent and versioned.
+
+⸻
+
+12. APPROVAL AND PUBLISHING WORKFLOWS
+
+Verify the complete path from imported property to approved and published property.
+
+The expected lifecycle should distinguish, where applicable:
+
+* Imported.
+* Processing.
+* Validation required.
+* Validation passed.
+* Review required.
+* Enrichment requested.
+* Description generated.
+* Description rejected or requires revision.
+* Ready for approval.
+* Approved.
+* Publishing in progress.
+* Published.
+* Publishing failed.
+* Archived or withdrawn.
+
+Use the application’s existing state model where appropriate; do not introduce redundant states without a demonstrated need.
+
+Test:
+
+1. A valid property progresses through the intended steps.
+2. A property with missing facts is flagged.
+3. A property with contradictory facts is flagged.
+4. A failed enrichment job can be recovered safely.
+5. A generated description can be reviewed.
+6. A rejected description does not become approved.
+7. A property cannot be published before required validation and approval.
+8. A publishing failure is visible and recoverable.
+9. Retrying publishing does not create unintended duplicate listings.
+10. A published version corresponds to the approved version.
+11. Reimporting does not silently replace an approved or published description.
+12. Publishing status shown in the frontend matches the authoritative backend state.
+
+Never publish real listings, send external notifications, charge fees, or perform irreversible external actions merely to test a workflow. Use a test environment, sandbox, mocks, or an explicitly authorized test destination.
+
+⸻
+
+13. BACKGROUND JOBS, RETRIES, AND ERROR RECOVERY
+
+Inspect all asynchronous operations, including source fetching, extraction, validation, enrichment, AI generation, image processing, and publishing.
+
+Verify:
+
+* Job creation.
+* Job identifiers.
+* Queuing and processing.
+* Status transitions.
+* Progress reporting, where supported.
+* Timeout handling.
+* Retry rules.
+* Idempotency.
+* Duplicate-job prevention.
+* Partial-result handling.
+* Error persistence.
+* Recovery after interruption.
+* Cancellation, where supported.
+* Frontend polling, subscriptions, or other status updates.
+* Final state reconciliation.
+
+Do not allow a job to remain indefinitely in a misleading state without an observable error or recovery path.
+
+Do not treat a queued job as a completed job.
+
+If a workflow uses webhooks or realtime updates, verify authentication, event handling, reconnection behavior, and state synchronization.
+
+⸻
+
+14. SEARCH, FILTERS, PAGINATION, AND PROPERTY DETAILS
+
+If these features exist, test them with realistic records.
+
+Verify:
+
+* Search returns relevant results.
+* Filters are applied correctly.
+* Combined filters behave as expected.
+* Sorting produces the correct order.
+* Pagination does not duplicate or omit records unexpectedly.
+* Changing filters resets pagination when necessary.
+* Empty results display a useful message.
+* Search failures are handled gracefully.
+* Loading indicators reflect actual requests.
+* Property cards display the correct record.
+* Clicking a card opens the correct detail page.
+* Detail pages use the correct property identifier.
+* Images correspond to the correct property.
+* Price and address formatting are consistent.
+* Data updates are reflected in search results.
+* User permissions are respected.
+
+Do not fabricate listings to make empty screens appear populated.
+
+If seed data is needed for testing, isolate it from real data and identify it as test data.
+
+⸻
+
+15. DESIGN CONSISTENCY AND COMPONENT INTEGRITY
+
+Audit the shared UI architecture.
+
+Identify:
+
+* Duplicate components.
+* Competing layouts.
+* Unused or obsolete pages.
+* Conflicting design systems.
+* Duplicate styles.
+* Inconsistent button behavior.
+* Inconsistent loading indicators.
+* Inconsistent error handling.
+* Different implementations of the same operation.
+* Components that bypass shared API clients or validation logic.
+* Components that display stale data.
+* Dead code and unreachable UI states.
+
+Where appropriate, centralize common behavior such as:
+
+* API access.
+* Route definitions.
+* Authentication handling.
+* Form validation.
+* Loading and error presentation.
+* Property status labels.
+* Data formatting.
+* Shared dialogs.
+* Notifications.
+* Validation results.
+
+Do not over-refactor stable, working code merely for stylistic uniformity.
+
+Any shared component change must be regression-tested across every page that uses it.
+
+⸻
+
+16. ACCESSIBILITY AND BROWSER COMPATIBILITY
+
+Verify:
+
+* Semantic HTML.
+* Keyboard navigation.
+* Visible focus indicators.
+* Accessible labels for controls.
+* Meaningful button and link names.
+* Dialog focus management.
+* Appropriate contrast.
+* Error messages that users can identify.
+* Correct input labels and descriptions.
+* Sensible screen-reader behavior.
+* Appropriate alternative text for meaningful images.
+* No interaction that requires a mouse when keyboard operation is expected.
+
+Test the browsers and environments supported by the project.
+
+At minimum, verify the intended current desktop browser and mobile experience. Include additional browsers when supported by the application’s requirements.
+
+Do not claim universal compatibility based on testing only one browser.
+
+⸻
+
+17. PERFORMANCE AND RUNTIME RELIABILITY
+
+Investigate:
+
+* Slow initial rendering.
+* Excessive API requests.
+* Duplicate requests.
+* Unnecessary rerenders.
+* Large frontend bundles.
+* Unoptimized images.
+* Memory leaks.
+* Unhandled promise rejections.
+* Uncaught exceptions.
+* Long-running operations on the main thread.
+* Infinite loading indicators.
+* Excessive polling.
+* Slow or repeated database queries.
+* Unnecessary data fetching.
+* Poor pagination behavior.
+
+Use the project’s existing performance tooling where available.
+
+Establish a baseline before making performance changes, and compare results afterward.
+
+Fix demonstrable issues without sacrificing correctness, accessibility, or maintainability.
+
+⸻
+
+18. SECURITY AND DATA PROTECTION
+
+Verify:
+
+* Secrets are not embedded in client-side bundles.
+* Private endpoints enforce authentication and authorization.
+* Database access policies are correct.
+* User input is validated and safely handled.
+* User-provided URLs cannot trigger unsafe redirects or unauthorized server-side requests.
+* External content is rendered safely.
+* Errors do not expose credentials or sensitive internal information.
+* File uploads enforce applicable restrictions.
+* AI and external-service requests do not expose unnecessary personal or confidential data.
+* Destructive operations have the correct safeguards.
+* Test activity does not modify real customer data.
+
+For source fetching, verify appropriate URL and network restrictions to reduce server-side request forgery risks. Do not allow an arbitrary imported URL to grant unrestricted access to internal services.
+
+Do not disable security controls to make a test pass.
+
+⸻
+
+19. ENVIRONMENT CONFIGURATION AND DEPLOYMENT VERIFICATION
+
+This section is mandatory because a correct repository does not guarantee a correct production deployment.
+
+Determine how the application is built, hosted, and deployed from the actual repository configuration.
+
+Inspect:
+
+* Build scripts.
+* Start scripts.
+* Environment-variable declarations.
+* Hosting configuration.
+* Rewrite and redirect rules.
+* API base URLs.
+* Asset paths.
+* Client-side routing configuration.
+* Production build settings.
+* Cache behavior.
+* Service workers, if present.
+* CDN configuration, where accessible.
+* Deployment workflow files.
+* Build artifacts.
+* Commit and branch associated with the deployed version, where verifiable.
+
+19.1 Verify the actual production implementation
+
+Establish whether the live application corresponds to the intended source revision.
+
+Check:
+
+1. Which commit contains the intended changes.
+2. Whether those changes are present in the branch used for deployment.
+3. Whether the production build includes those changes.
+4. Whether the deployment platform built the expected branch and commit.
+5. Whether the deployed application is serving the expected assets.
+6. Whether stale browser caches, service workers, CDN caches, or deployment aliases could be serving an older version.
+7. Whether the production frontend is connecting to the intended backend.
+8. Whether required environment variables are configured.
+9. Whether direct route navigation works on the hosting platform.
+10. Whether production-only errors occur that were not present locally.
+
+Use available deployment metadata, build identifiers, source maps where appropriate, network requests, and rendered behavior as evidence.
+
+Do not claim that the live site is updated unless the deployed version can be verified.
+
+19.2 Resolve stale-UI problems correctly
+
+If the deployed site displays an older UI despite merged changes:
+
+* Identify the precise cause.
+* Verify the deployed commit.
+* Check the actual build output.
+* Check the application entry point and component imports.
+* Check whether the new components are reachable from the active router.
+* Check for old duplicate pages or obsolete layouts.
+* Check build and hosting output directories.
+* Check environment-dependent feature flags.
+* Check asset and service-worker caching.
+* Check whether the deployment points to the wrong branch, project, or domain.
+* Check whether the browser is loading the expected API and frontend bundles.
+
+Do not assume a hard refresh will solve the problem without investigating the cause.
+
+Do not delete caches, rewrite deployment configuration, or modify production settings blindly.
+
+19.3 Verify the production build
+
+Run the actual production build using the project’s package manager and documented scripts.
+
+Verify:
+
+* Build completes.
+* Expected assets are generated.
+* No critical compilation errors occur.
+* No required page or component is omitted.
+* Runtime configuration is correct.
+* Route handling works in the production environment.
+* API calls reach the correct service.
+* Important workflows function with the deployed configuration.
+
+If you do not have access to the live deployment or deployment controls, clearly state what you verified locally and what remains unverified in production.
+
+Do not claim a deployment succeeded unless you actually executed and confirmed it.
+
+⸻
+
+20. AUTOMATED TESTING STRATEGY
+
+Use the testing tools already configured in the project whenever practical.
+
+Inspect existing tests before adding duplicates.
+
+20.1 Unit tests
+
+Test critical functions, including:
+
+* Input validation.
+* Data normalization.
+* Route utilities.
+* Redirect logic.
+* API response handling.
+* Property field mapping.
+* Source comparison.
+* Validation decisions.
+* Description quality gates.
+* State transitions.
+* Permission decisions.
+
+20.2 Component tests
+
+Test:
+
+* Rendering.
+* User interaction.
+* Form validation.
+* Loading states.
+* Error states.
+* Successful submissions.
+* Empty results.
+* Permission-dependent rendering.
+* Modal and dialog behavior.
+* State updates after API responses.
+
+20.3 Integration tests
+
+Test important frontend-to-backend workflows, including:
+
+* Authentication and protected navigation.
+* Data retrieval and rendering.
+* Creating and editing records.
+* Property import.
+* Validation and recovery.
+* Enrichment and description rewriting.
+* Approval and publishing.
+* Search and filtering.
+* Error handling.
+* Authorization failures.
+
+20.4 End-to-end tests
+
+Where browser automation is available, test complete user journeys using realistic test data.
+
+At minimum, cover:
+
+Journey A — Navigation
+
+1. Open the application.
+2. Navigate through every major section.
+3. Open important pages directly.
+4. Refresh nested routes.
+5. Test browser back and forward.
+6. Verify expected redirects.
+7. Verify the not-found experience.
+
+Journey B — Authentication
+
+1. Open a protected route while logged out.
+2. Complete the supported authentication flow using test credentials.
+3. Confirm the intended destination.
+4. Navigate to another protected page.
+5. Log out.
+6. Confirm protected data is no longer accessible.
+
+Journey C — Property import
+
+1. Import a permitted test listing.
+2. Confirm the import contract is accepted.
+3. Confirm source information is preserved.
+4. Confirm structured and unstructured facts are handled.
+5. Confirm validation runs at the appropriate stage.
+6. Confirm missing or conflicting facts are reported.
+7. Confirm no unauthorized automatic enrichment or publishing occurs.
+
+Journey D — Enrichment and description
+
+1. Open a valid imported test property.
+2. Initiate enrichment explicitly.
+3. Verify job status and persisted results.
+4. Initiate description rewriting explicitly.
+5. Verify the generated description against source evidence.
+6. Confirm the original description remains intact.
+7. Confirm invalid or unsupported claims block approval as intended.
+
+Journey E — Approval and publishing
+
+1. Review a valid test property.
+2. Attempt approval when required validation is incomplete.
+3. Confirm the operation is blocked appropriately.
+4. Complete required checks.
+5. Approve the property.
+6. Publish to a sandbox or mock destination.
+7. Verify the published version and status.
+8. Simulate a failure and test recovery.
+
+Journey F — CRUD and persistence
+
+1. Create a test record.
+2. Verify it appears in the correct view.
+3. Open its detail page.
+4. Edit it.
+5. Verify the update persists after refresh.
+6. Delete or archive it according to the supported workflow.
+7. Verify that unrelated records remain unchanged.
+
+Journey G — Failure recovery
+
+1. Simulate a failed API request.
+2. Confirm the correct error state.
+3. Retry the operation.
+4. Verify duplicate operations are prevented.
+5. Confirm the final UI state matches the persisted backend state.
+
+Adapt these journeys to the actual features in the repository. Do not invent nonexistent functionality simply to satisfy a checklist.
+
+Use mocked or sandboxed services when live external services would create side effects.
+
+⸻
+
+21. TEST DATA, FIXTURES, AND REGRESSION COVERAGE
+
+Create or improve a reusable test dataset covering:
+
+* Valid records.
+* Missing fields.
+* Invalid field formats.
+* Conflicting source values.
+* Unstructured facts.
+* Empty results.
+* Duplicate imports.
+* Failed network requests.
+* Permission failures.
+* Expired sessions.
+* Malformed route parameters.
+* Unsupported description claims.
+* Description omissions.
+* Prohibited content mixed with legitimate facts.
+* Reimported properties with manual edits.
+* Publishing failures.
+* Long text and unusual characters.
+
+Keep test data isolated from real property records.
+
+For every defect fixed, add a regression test where feasible.
+
+Do not remove or weaken existing tests merely to obtain a passing test suite.
+
+⸻
+
+22. TEST RESULTS MUST BE REAL AND REPRODUCIBLE
+
+Run the appropriate checks supported by the project, including:
+
+* Dependency and configuration checks.
+* Type checking, if configured.
+* Linting, if configured.
+* Unit tests.
+* Component tests.
+* Integration tests.
+* End-to-end tests.
+* Production build.
+* Route and redirect verification.
+* API and database integration checks.
+* Browser-console inspection.
+* Production smoke tests, if authorized and accessible.
+
+Record the actual command or test procedure, its result, and any limitation.
+
+Distinguish clearly between:
+
+* PASS — executed and passed.
+* FAIL — executed and failed.
+* BLOCKED — could not execute because of an identified dependency or access restriction.
+* NOT TESTED — not executed.
+* NOT APPLICABLE — the feature does not exist or the test does not apply.
+
+Do not report a test as passed because you reviewed the source code.
+
+Do not claim 100% coverage unless measured and supported by the testing tools.
+
+Do not fabricate screenshots, logs, test results, database responses, deployment identifiers, or browser observations.
+
+⸻
+
+23. DEFECT PRIORITIZATION
+
+Classify every confirmed defect.
+
+P0 — Critical
+
+Examples:
+
+* Unauthorized access to protected data.
+* Incorrect publication of unapproved listings.
+* Severe data corruption.
+* Secret exposure.
+* Major production outage.
+* Authentication bypass.
+* Destructive actions affecting the wrong records.
+
+P1 — High
+
+Examples:
+
+* Core routes broken.
+* Major redirects incorrect.
+* Property import fails.
+* Database writes fail.
+* Critical pages are blank.
+* Core workflows cannot be completed.
+* Production frontend cannot communicate with its backend.
+
+P2 — Medium
+
+Examples:
+
+* Significant interaction defects.
+* Search or filters behave incorrectly.
+* Important error states are missing.
+* A secondary workflow fails.
+* UI state becomes inconsistent after updates.
+
+P3 — Low
+
+Examples:
+
+* Minor visual inconsistencies.
+* Noncritical responsive defects.
+* Cosmetic issues.
+* Small accessibility or usability improvements.
+
+Prioritize security, data integrity, routing, core workflows, and production failures before cosmetic polish.
+
+Do not label a problem fixed until the relevant regression test or verification procedure passes.
+
+⸻
+
+24. IMPLEMENTATION AND CHANGE CONTROL
+
+When fixing problems:
+
+* Follow existing architectural conventions.
+* Make the smallest complete correction that addresses the root cause.
+* Keep frontend and backend contracts aligned.
+* Preserve compatibility with existing records where practical.
+* Add migrations only when necessary.
+* Keep migrations safe and reviewable.
+* Avoid duplicate implementations.
+* Avoid introducing unnecessary dependencies.
+* Avoid unrelated redesigns.
+* Avoid deleting existing features without justification.
+* Add tests for critical fixes.
+* Keep changes grouped by logical concern.
+* Review the final diff.
+* Check for unintended regressions.
+
+Never place credentials or secrets in source files, test fixtures, logs, or frontend code.
+
+Do not overwrite the user’s uncommitted changes. Inspect the working tree before editing and preserve unrelated work.
+
+Do not force-push, reset user changes, delete production data, or deploy irreversible changes without explicit authorization.
+
+If a problem depends on an unavailable third-party credential or service, implement what can safely be completed and report the exact remaining dependency.
+
+⸻
+
+25. FINAL ACCEPTANCE CRITERIA
+
+The project is ready to be reported as verified only when the applicable requirements below have been tested.
+
+Routing and navigation
+
+* Every discovered intended route has a documented status.
+* All major pages render correctly.
+* Internal links lead to the correct destinations.
+* Redirects behave as specified.
+* Direct navigation and refresh work.
+* Unknown routes show the intended not-found experience.
+* No unexplained redirect loops remain.
+
+Frontend
+
+* Major pages render at supported viewport sizes.
+* Interactive controls perform their intended actions.
+* Forms validate and submit correctly.
+* Loading, empty, success, and error states behave correctly.
+* No critical runtime errors remain in the tested journeys.
+* No major page relies on fake success or placeholder data where real functionality is required.
+
+Integration
+
+* Critical API requests use the correct endpoints and payloads.
+* Authentication and authorization are enforced.
+* Database reads and writes are verified.
+* UI state reflects persisted changes.
+* Important failure and recovery paths work.
+
+Property workflows
+
+* Supported import methods use compatible contracts.
+* Source information and provenance are preserved appropriately.
+* Validation compares facts against available source evidence.
+* Missing and conflicting facts are reported rather than fabricated.
+* Reimports respect manual edits and approved versions.
+* Enrichment and rewriting require explicit user action.
+* Generated descriptions are independently validated.
+* Approval and publishing gates are enforced.
+* Background job failures are visible and recoverable.
+
+Build and deployment
+
+* The production build completes.
+* Production configuration is correct.
+* Direct route handling is verified.
+* The running frontend and intended source revision are connected by evidence where deployment access permits.
+* Stale UI and caching issues are investigated rather than assumed away.
+* Any unverified production claim is explicitly identified.
+
+Regression and reporting
+
+* Critical defects have regression tests where feasible.
+* Tests have actual results.
+* Remaining blockers are documented.
+* No test results are fabricated.
+* No unapproved destructive changes have occurred.
+
+Do not declare the application completely verified while any P0 or P1 defect remains unresolved. If an external dependency prevents completion, explain exactly what remains blocked and what evidence would be needed to finish verification.
+
+⸻
+
+26. REQUIRED FINAL REPORT
+
+When the work is complete, produce a concise but technically specific report with these sections.
+
+A. Executive summary
+
+* Overall application status.
+* Whether the frontend is functioning end to end.
+* Whether core workflows have been verified.
+* Whether production deployment was verified.
+* Most important remaining risks.
+
+B. Architecture discovered
+
+* Actual frontend framework.
+* Actual build system.
+* Routing implementation.
+* Backend/API architecture.
+* Database and authentication services.
+* Deployment platform, if established.
+* Major application entry points.
+
+Do not guess any of these.
+
+C. Route and redirect audit
+
+* Total routes discovered.
+* Number tested.
+* Number passed.
+* Number failed.
+* Number blocked or not tested.
+* Critical route defects and their resolution.
+
+D. Frontend verification
+
+* Pages inspected.
+* Interactions tested.
+* Responsive behavior checked.
+* Browser errors found and resolved.
+* Remaining UI defects.
+
+E. Integration verification
+
+* API connections tested.
+* Database operations tested.
+* Authentication and authorization tested.
+* Background jobs tested.
+* Failure recovery tested.
+
+F. Property workflow verification
+
+* Import entry points tested.
+* Source preservation results.
+* Validation results.
+* Enrichment and rewriting results.
+* Approval and publishing results.
+* Any unresolved workflow gaps.
+
+G. Defects repaired
+
+For each significant fix, report:
+
+* Root cause.
+* Files or components changed.
+* Behavior corrected.
+* Test used to verify the fix.
+
+H. Test evidence
+
+List the actual commands, test suites, browser procedures, and outcomes.
+
+Provide real screenshots, logs, or other artifacts where available and useful.
+
+I. Production verification
+
+Report:
+
+* Production build status.
+* Deployment status, if accessible.
+* Verified commit or build identifier, if available.
+* Whether the live UI matches the intended implementation.
+* Whether direct routes and API connections work in production.
+* Any production checks that could not be performed.
+
+J. Remaining work
+
+List unresolved issues with priority, impact, root cause where known, and next action.
+
+K. Final verdict
+
+Choose exactly one:
+
+* VERIFIED — all applicable critical acceptance criteria have been tested and passed.
+* VERIFIED WITH LIMITATIONS — the verified scope works, but clearly identified noncritical issues or inaccessible environments remain.
+* NOT VERIFIED — critical defects remain, or insufficient evidence exists to establish that the application works end to end.
+
+Explain the verdict using actual test evidence.
+
+⸻
+
+FINAL OPERATING INSTRUCTION
+
+Start by inspecting the real repository and discovering the actual application architecture.
+
+Then build the complete route inventory and test matrix. Audit the frontend, routing, redirects, APIs, database, authentication, property pipeline, enrichment, AI description rewriting, approval, publishing, and deployment.
+
+Fix confirmed defects, add regression coverage, run the appropriate tests, and verify the production build.
+
+Do not stop after the homepage. Do not stop after the build. Do not stop after listing problems. Do not assume merged code is live. Do not assume a visible button works. Do not assume a successful request means the entire workflow works.
+
+Follow every important operation through the entire system until its actual result is visible and correctly persisted.
+
+Use the current codebase as the source of truth. Preserve working functionality, protect existing data, and avoid unapproved destructive operations.
+
+The goal is a functioning, consistent, secure, maintainable, and verifiably integrated Choice real-estate platform—not merely code that compiles.
