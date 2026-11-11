@@ -1,11 +1,10 @@
-import os
 import http.client
 import json
 
 conn = http.client.HTTPSConnection('tlfmwetmhthpyrytrcfo.supabase.co', timeout=30)
 headers = {
-    'apikey': os.environ['SUPABASE_SERVICE_ROLE_KEY'],
-    'Authorization': f"Bearer {os.environ['SUPABASE_SERVICE_ROLE_KEY']}",
+    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
     'Accept': 'application/json'
 }
 
@@ -48,4 +47,5 @@ if isinstance(pipe_props, list):
         print(f"{i}. ID: {p.get('id')} | {p.get('address')}, {p.get('city')}, {p.get('state')} {p.get('zip')} | Rent: ${p.get('monthly_rent')} | {p.get('bedrooms')}bd/{p.get('bathrooms')}ba | {photos_cnt} photos | Status: {p.get('status')} | Source: {p.get('source')}")
 else:
     print("Pipeline response was not a list:", pipe_props)
+
 

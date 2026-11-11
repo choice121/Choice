@@ -13,6 +13,7 @@ module = importlib.util.module_from_spec(spec)
 sys.modules["opendoor_scraper"] = module  # register so patch() can find it by name
 spec.loader.exec_module(module)
 
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_html(jsonld=None, nextdata=None, og_image=None):
@@ -26,6 +27,7 @@ def _make_html(jsonld=None, nextdata=None, og_image=None):
         parts.append('<meta property="og:image" content="{}"/>'.format(og_image))
     parts.append("</head><body></body></html>")
     return "".join(parts)
+
 
 _SAMPLE_JSONLD = {
     "@context": "https://schema.org",
@@ -74,6 +76,7 @@ _SAMPLE_NEXTDATA = {
     }
 }
 
+
 # ── URL detection ─────────────────────────────────────────────────────────────
 
 def test_is_opendoor_url():
@@ -82,6 +85,7 @@ def test_is_opendoor_url():
     assert not module.is_opendoor_url("https://www.zillow.com/homedetails/123")
     assert not module.is_opendoor_url(None)
     assert not module.is_opendoor_url("")
+
 
 # ── Rent estimation ───────────────────────────────────────────────────────────
 
@@ -92,6 +96,7 @@ def test_estimate_rent_from_sale_price():
     assert module.estimate_rent_from_sale_price(50000) == 700      # enforces minimum
     assert module.estimate_rent_from_sale_price(None) is None
     assert module.estimate_rent_from_sale_price(0) is None
+
 
 def test_estimate_rent_state_aware():
     """State-level multipliers should produce market-appropriate rents."""
@@ -109,6 +114,7 @@ def test_estimate_rent_state_aware():
     assert module.estimate_rent_from_sale_price(300000, state="oh") == \
            module.estimate_rent_from_sale_price(300000, state="OH")
 
+
 def test_estimate_rent_rounding():
     """Rent should be rounded to the nearest $25 (human-looking price)."""
     # 187500 * 0.0085 = 1593.75 → rounds to $1600 (nearest $25 = 1593.75/25=63.75 → 64 × 25 = 1600)
@@ -119,6 +125,7 @@ def test_estimate_rent_rounding():
     rent = module.estimate_rent_from_sale_price(270000)
     assert rent == 2300
     assert rent % 25 == 0
+
 
 # ── Basic JSON-LD extraction ───────────────────────────────────────────────────
 
@@ -142,6 +149,7 @@ def test_parse_opendoor_html_jsonld():
     photos = json.loads(rec["original_image_urls"])
     assert len(photos) >= 2
 
+
 # ── __NEXT_DATA__ photo extraction ────────────────────────────────────────────
 
 def test_nextdata_photos_used():
@@ -151,6 +159,7 @@ def test_nextdata_photos_used():
     assert rec is not None
     photos = json.loads(rec["original_image_urls"])
     assert len(photos) == 5, "Expected all 5 __NEXT_DATA__ photos, got {}".format(len(photos))
+
 
 def test_nextdata_photos_dedup():
     """Duplicate photo URLs should be deduplicated."""
@@ -169,6 +178,7 @@ def test_nextdata_photos_dedup():
     photos = json.loads(rec["original_image_urls"])
     assert len(photos) == 2
 
+
 def test_og_image_fallback():
     """When no JSON-LD images or __NEXT_DATA__ photos, OG image should be used."""
     minimal_jsonld = {
@@ -183,6 +193,7 @@ def test_og_image_fallback():
     photos = json.loads(rec["original_image_urls"])
     assert photos == ["https://cdn.opendoor.com/og.jpg"]
 
+
 # ── New fields extracted from __NEXT_DATA__ ───────────────────────────────────
 
 def test_neighborhood_from_nextdata():
@@ -190,15 +201,18 @@ def test_neighborhood_from_nextdata():
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["neighborhood"] == "Hyde Park"
 
+
 def test_virtual_tour_from_nextdata():
     html = _make_html(jsonld=_SAMPLE_JSONLD, nextdata=_SAMPLE_NEXTDATA)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["virtual_tour_url"] == "https://my.matterport.com/show/?m=xyz"
 
+
 def test_year_built_from_jsonld():
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["year_built"] == 2005
+
 
 def test_year_built_from_nextdata_only():
     nd = {
@@ -217,12 +231,14 @@ def test_year_built_from_nextdata_only():
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/homes/5-elm-st")
     assert rec["year_built"] == 1998
 
+
 def test_lot_size_sqft_extracted():
     jsonld_with_lot = dict(_SAMPLE_JSONLD)
     jsonld_with_lot["lotSize"] = {"value": 6000, "unitCode": "sqft"}
     html = _make_html(jsonld=jsonld_with_lot)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["lot_size_sqft"] == 6000
+
 
 def test_lot_size_acres_converted():
     jsonld_with_lot = dict(_SAMPLE_JSONLD)
@@ -231,6 +247,7 @@ def test_lot_size_acres_converted():
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["lot_size_sqft"] == 10890  # 0.25 * 43560
 
+
 def test_has_central_air_detected():
     jsonld_ac = dict(_SAMPLE_JSONLD)
     jsonld_ac["description"] = "Beautiful home with central air conditioning and garage."
@@ -238,12 +255,14 @@ def test_has_central_air_detected():
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["has_central_air"] is True
 
+
 def test_has_basement_detected():
     jsonld_b = dict(_SAMPLE_JSONLD)
     jsonld_b["description"] = "Large basement perfect for storage."
     html = _make_html(jsonld=jsonld_b)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["has_basement"] is True
+
 
 # ── Bedrooms int parsing ───────────────────────────────────────────────────────
 
@@ -254,6 +273,7 @@ def test_bedrooms_parsed_from_float_string():
     html = _make_html(jsonld=jsonld)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec["bedrooms"] == 3
+
 
 # ── No JSON-LD fallback to __NEXT_DATA__ ─────────────────────────────────────
 
@@ -285,6 +305,7 @@ def test_no_jsonld_falls_back_to_nextdata():
     photos = json.loads(rec["original_image_urls"])
     assert len(photos) == 2
 
+
 # ── Image URL upgrade ─────────────────────────────────────────────────────────
 
 def test_upgrade_image_url_strips_width_params():
@@ -293,10 +314,12 @@ def test_upgrade_image_url_strips_width_params():
     assert "w=400" not in result
     assert "h=300" not in result
 
+
 def test_upgrade_image_url_removes_size_suffix():
     url = "https://cdn.opendoor.com/photo_small.jpg"
     result = module._upgrade_image_url(url)
     assert "_small" not in result
+
 
 # ── Fetch retry ───────────────────────────────────────────────────────────────
 
@@ -306,6 +329,7 @@ def test_scrape_opendoor_url_fetch_error():
         result = module.scrape_opendoor_url("https://www.opendoor.com/listing/123", verbose=True)
         assert result is None
         assert mock_get.call_count == module._FETCH_RETRIES
+
 
 def test_scrape_opendoor_url_retries_then_succeeds():
     """Should succeed on the second attempt after one network failure."""
@@ -327,6 +351,7 @@ def test_scrape_opendoor_url_retries_then_succeeds():
     assert result is not None
     assert result["city"] == "Austin"
 
+
 # ── Data quality score ────────────────────────────────────────────────────────
 
 def test_data_quality_score_increases_with_photos():
@@ -345,6 +370,7 @@ def test_data_quality_score_increases_with_photos():
     rec_no = module._parse_opendoor_html(html_no_photos, "https://www.opendoor.com/homes/1a")
     rec_ph = module._parse_opendoor_html(html_with_photos, "https://www.opendoor.com/listing/123")
     assert rec_ph["data_quality_score"] > rec_no["data_quality_score"]
+
 
 # ── Walk / transit / bike score extraction ────────────────────────────────────
 
@@ -378,6 +404,7 @@ def test_walk_scores_from_nextdata():
     # Must NOT be raw JSON
     assert not ctx.startswith("{"), "location_context must be human-readable, not JSON"
 
+
 def test_walk_scores_nested_scores_object():
     """Walk scores nested under a 'scores' sub-object should also be extracted."""
     nd = {
@@ -401,12 +428,14 @@ def test_walk_scores_nested_scores_object():
     assert "Transit score: 80" in ctx
     assert not ctx.startswith("{"), "location_context must be human-readable, not JSON"
 
+
 def test_no_walk_scores_leaves_location_context_none():
     """When no scores are present, location_context should be None."""
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec is not None
     assert rec.get("location_context") is None
+
 
 def test_env_multiplier_overrides_state_table():
     """OPENDOOR_RENT_MULTIPLIER env var must win over the state table when set."""
@@ -436,6 +465,7 @@ def test_env_multiplier_overrides_state_table():
         module._OPENDOOR_RENT_MULTIPLIER_EXPLICIT = original
         module._OPENDOOR_RENT_MULTIPLIER = original_mult
 
+
 # ── Smart rental defaults ─────────────────────────────────────────────────────
 
 def test_available_date_defaults_to_today():
@@ -449,17 +479,20 @@ def test_available_date_defaults_to_today():
     parsed = datetime.date.fromisoformat(rec["available_date"])
     assert parsed >= datetime.date.today()
 
+
 def test_minimum_lease_months_defaults_to_12():
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec is not None
     assert rec["minimum_lease_months"] is None
 
+
 def test_smoking_allowed_defaults_to_false():
     html = _make_html(jsonld=_SAMPLE_JSONLD)
     rec = module._parse_opendoor_html(html, "https://www.opendoor.com/listing/123")
     assert rec is not None
     assert rec["smoking_allowed"] is None
+
 
 # ── non-Opendoor URL guard ────────────────────────────────────────────────────
 

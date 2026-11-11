@@ -1,11 +1,11 @@
 # Choice Properties — AI Agent Rules & Directives
 
-> ### 🚀 DIRECTIVE 1 — ADDRESS CHANGING, 
+> ### 🚀 DIRECTIVE 1 — ADDRESS CHANGING, RELOCATION & VERIFIED MUNICIPAL STREET PROTOCOL
 > **STATUS: FULLY ENABLED ACROSS ENTIRE PROJECT & PIPELINE (OWNER AUTHORIZED)**
 > 
 > 1. **Universal Multi-City Verified Municipal Protocol (ANY US City / ANY State)**:
->    - g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
->    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official ** Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
+>    - Relocation is universal across all 50 states and any municipality (e.g. Dallas TX, Denver CO, Tampa FL, Phoenix AZ, Atlanta GA, Charlotte/Matthews/Monroe NC, Oklahoma City OK, etc.). Yukon was merely an initial test job.
+>    - Addresses must strictly use real, postal-recognized residential streets and valid parcel ranges discovered and verified against the official **US Census Bureau TIGER-line geocoder**, paired with exact live rooftop coordinates. Synthetic, fake, or unverified street names are strictly prohibited. Original source identifiers remain preserved in pipeline metadata (`original_description`, `source_url`, `source_listing_id`).
 > 2. **Flexible In-State & Out-of-State Sourcing with In-State Area Separation Protocol**:
 >    - Sourcing may be out-of-state OR within the same destination state depending on the operator target.
 >    - **In-State Area Separation Enforcement**: When sourcing properties within the same destination state, the system strictly enforces publishing to a distinct geographic area/corridor.
@@ -14,13 +14,13 @@
 >    - When publishing or relocating to any destination municipality, you must **NOT** dump all properties into a single ZIP code.
 >    - Distribute properties across the valid residential ZIP codes covering that municipality and its adjacent residential corridors, unless the user explicitly mandates a single specified ZIP code (e.g. "all in 75217").
 > 4. **The Mandatory Universal CLI Runner for Future AIs**:
->    - Future AI assistants MUST NOT write custom or un
+>    - Future AI assistants MUST NOT write custom or unverified scraping code. Always execute the unified, Census-validated runner:
 >      ```bash
->      node scripts/
+>      node scripts/publish-relocated.mjs --source opendoor --count 5 --target "<City, State>"
 >      # Advanced filters: beds, baths, sqft, price targeting, and status
->      node scripts/
+>      node scripts/publish-relocated.mjs --source opendoor --target "Matthews, NC" --beds 4 --baths-min 2 --baths-max 3 --sqft-min 2000 --sqft-max 2500 --status private_placement --count 5
 >      ```
->    - The runner automatically enforces flexible sourcing with in-state area separation, 
+>    - The runner automatically enforces flexible sourcing with in-state area separation, Census TIGER geocoding, multi-ZIP distribution, original image sequence preservation, zero photo count gate, realistic regional market rent calculation, and Choice platform rule enforcement.
 
 > ### 🚀 DIRECTIVE 2 — STRICT ORIGINAL IMAGE ORDER & DIRECT SOURCE CDN INGESTION
 > 1. **Zero Photo Count Gate (Complete Removal of Photo Count Restrictions Across Entire Project)**:
@@ -45,9 +45,6 @@ Every property across the database, pipeline, and public site must adhere to the
 - **No Lease Term / Lease Duration Display**: Lease terms, lease lengths, and minimum lease duration are completely removed from all property details pages, overview cards, and descriptions (`lease_terms: null`, `minimum_lease_months: null`). Never display lease terms anywhere.
 - **No Available Date / Move-In Display or Tables**: Available dates, availability tables ("Available From"), move-in dates, and move-in status are completely removed from all property pages, overview cards, sidebar tables, and descriptions (`strip_availability_from_description`). Never display available dates or move-in timelines.
 - **No Smoking Policy**: Smoking policies and smoking tabs are removed from property details pages. Never display smoking policies on property pages.
-- **Strictly Prohibited Requirements & Qualifications**: "REQUIREMENTS & QUALIFICATIONS" and all related qualification disclaimers (e.g., "No corporate leases allowed or AIRBNB", "Credit score must be a minimum of 575", "Income must exceed 3.0 times", "No evictions or broken leases", "No criminal history ever", "Application pending - Waiting list options", "Photos are stock images", "Pictures are for marketing purposes only") are **STRICTLY PROHIBITED** and must be stripped from all descriptions. Never append or include them.
-- **Strictly Prohibited Scam/Fraud & Social Platform Warnings**: Any warnings regarding scams, fraud alerts ("beware of scams", "protect yourself from fraud"), and social/classified platform disclaimers ("we do not post on Facebook, Marketplace, TikTok, Craigslist, OfferUp") are **STRICTLY PROHIBITED** and must be stripped during enrichment.
-- **Strictly Prohibited Third-Party Payment Methods**: Any mention of peer-to-peer or third-party payment methods (Cash App, Zelle, PayPal, Venmo, Apple Pay, wire transfers, Western Union, money orders) is **STRICTLY PROHIBITED** in descriptions and must be completely removed.
 - **Third-Party Sanitization**: Strip all broker contacts, agent phone numbers, MLS cross-links, portal URLs, external showing links, and tour/showing language. Replace management references with Choice Properties.
 
 ---
@@ -86,7 +83,7 @@ Physical structural reality takes precedence over MLS portal defaults:
 ## 4. Post-Publishing Mandatory AI Response Formats
 
 ### Standard Public Listings Response Format:
-After publishing properties with `status: 'active'`, the AI assistant MUST output the public property link(s) in this exact sequential format. Do not use this format for private placements; provide the validated magic link instead.
+After publishing properties to the live site, the AI assistant MUST output the published property link(s) in this exact sequential format:
 
 1. 608 Maple Ave, Yukon, OK 73099 ($1,595/mo | 3 Bed / 2.5 Bath) — https://choice-properties-site.pages.dev/property.html?id=f0470af2-573a-4b58-89d1-a1775ced83f1
 2. 7400 Melrose Ln, Oklahoma City, OK 73127 ($1,750/mo | 4 Bed / 2.5 Bath) — https://choice-properties-site.pages.dev/property.html?id=a443c7da-59c9-4d0c-919b-f5f56d502ede
@@ -102,23 +99,12 @@ When the user asks to create a **Client Multi-Property Magic Link** or publish l
    `https://choice-properties-site.pages.dev/listings.html#share={token}`
 4. **No Private Placement Badges**: Listings must look 100% standard to clients. Do NOT display "Private Placement" badges, banners, or labels anywhere on cards or detail pages.
 
-### Pipeline publication visibility (default-deny for public release)
-- Importing or enriching a record in `pipeline.pipeline_properties` is staging, not publication. It must not create a publicly discoverable `public.properties` listing.
-- `pipeline_publish` defaults to `p_status: 'private_placement'`. Keep that default for single, bulk, and folder publication. Creating a client share link does not make a listing public.
-- Only publish with `p_status: 'active'` when the user explicitly says the listing should be public. Never infer public release from “publish,” “live,” “approve,” or “create a magic link”; ask if visibility is unclear.
-- Private-placement properties, photos, and media are available to anonymous visitors only through `property-share` after validating the bearer token, expiry, revocation, and property membership. The public property page must query only `status = 'active'`; direct IDs, legacy ID lists, maps, and related-property queries must not bypass this rule.
-- Admins and the owning landlord may access their non-public properties through authenticated, RLS-authorized paths. Do not weaken row-level security or expose a general service-role/RPC bypass to public clients.
-- A property can be public or private, never both. `active` means publicly discoverable; `private_placement` means unlisted and share-authorized. Draft, inactive, rented, and archived states are not client-shareable.
-- Public CDN photo URLs remain public to anyone who already has the URL. Gallery shields, URL fragments, and hidden UI are not asset-level confidentiality; do not promise that private placements' image bytes are secret.
-
 ---
 
 ## 5. Private Placement Architecture & Privacy Protocols
-- **Access-control source of truth**: Database status plus row-level security and the validated share resolver enforce privacy. Client-side rendering, unguessable-looking URLs, gallery shields, or map hiding are not substitutes.
-- **Public browse**: Every anonymous property, photo, and media query must be limited to `status = 'active'`. Never use a public `SECURITY DEFINER` lookup that can return non-active listings.
-- **Private access**: A `private_placement` record is returned to a client only when a valid, unexpired, unrevoked share token includes that property. Admin and owner access remains authenticated and row-authorized.
-- **Safe release**: Pipeline publication defaults to `private_placement`; passing `p_status: 'active'` is an explicit public-release decision and requires the user's direction.
-- **Asset caveat**: Source/CDN image URLs may remain directly accessible once known. Do not describe image overlays, context-menu suppression, subtle filters, or rounded specs as security controls.
+- **Anti-Google Lens Shield**: The gallery main image is covered by `.mosaic-touch-shield` with `-webkit-touch-callout: none !important;` to prevent mobile users from triggering "Search with Google Lens" or "Save Image". Subtle micro-filters disrupt automated image-hash match bots. Right-click context menus are disabled on galleries.
+- **Soft Spec Rounding**: Square footage may be rounded to the nearest 25 or 50 sqft (e.g. `1,438` → `~1,450 sqft`) to eliminate exact mathematical fingerprint searches.
+- **Unlisted Status Isolation**: Listings with `status: 'private_placement'` are only accessible via validated share tokens (`#share={token}`) or direct authorized admin sessions.
 
 ---
 
@@ -146,17 +132,4 @@ Every property follows this complete lifecycle:
 **Scrape → Census Verify → Deduplicate → Basic Privacy Clean → Process Images → Synchronize Data → Validate → Publish**
 
 - **Source of Truth**: Preserve authentic source descriptions and facts; never synthesize room sizes or rewrite listing text.
-- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and 
-
-## Mandatory Pre-Publishing Verification Checklist
-Before publishing ANY property to the live site or creating a magic link:
-
-1. **Strictly Prohibited Content Verification**: Every description MUST NOT contain "REQUIREMENTS & QUALIFICATIONS" or any sub-clauses (no corporate leases, credit score requirements, income multiples, evictions/broken leases clauses, criminal history clauses, stock photo disclaimers), NO scam/fraud warnings ("beware of scams", "we don't post on Craigslist/Facebook/TikTok"), and NO third-party payment methods (Cash App, Zelle, PayPal, Venmo, wire transfers).
-2. **Application Fee**: Must be exactly $50 in description (and structured field `application_fee: 50`).
-3. **Prohibited Content**: No security deposits, lease terms/durations, available dates/move-in dates, smoking policies, pet policies, broker/agent contacts, external portal links.
-4. **Photos**: Must have photos present (preferably from source). For private placement, photos must be included.
-5. **Required Fields**: Address, city, state, zip, beds, baths, monthly_rent must all be present and non-null.
-6. **Source Authenticity**: Use original description as base; only strip prohibited content, never invent amenities/features.
-7. **Manual Verification**: AI must read the final description and confirm all checklist items before calling `pipeline_publish`. If any item fails, fix it before publishing.
-
-The enrichment pipeline automatically strips all prohibited content, and manual verification is REQUIRED as a final safety check.
+- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and verified Census GPS coordinates.

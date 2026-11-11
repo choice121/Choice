@@ -1,16 +1,16 @@
-/// <reference lib="deno.ns" />
-
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleCors, jsonOk, jsonErr } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/send-email.ts';
-import { applicationConfirmationHtml, adminNotificationHtml, coApplicantScreeningConsentHtml } from '../_shared/email.ts';
-import { getAdminEmails, getSiteUrl, getTenantLoginUrl } from '../_shared/config.ts';
+import { applicationConfirmationHtml, adminNotificationHtml, landlordNewApplicationHtml } from '../_shared/email.ts';
+import { getAdminEmails, getAdminUrl, getTenantLoginUrl } from '../_shared/config.ts';
 import { generateMagicLoginUrl } from '../_shared/magic-login.ts';
 import { isDbRateLimited } from '../_shared/rate-limit.ts';
+import { sendLandlordEmail, getLandlordForProperty } from '../_shared/landlord-notify.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
 
 const ADMIN_EMAILS = getAdminEmails();
 
@@ -62,54 +62,6 @@ function getClientIp(req: Request): string {
   return (fwd.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
 }
 const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
-const SHARE_ALIAS_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/;
-
-function normalizeShareAlias(value: string): string {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 24);
-}
-
-async function resolveShareRecord(tokenOrAlias: string) {
-  const value = String(tokenOrAlias || '').trim();
-  if (!value) return null;
-
-  if (SHARE_TOKEN_RE.test(value)) {
-    const tokenHash = await sha256Hex(value);
-    const { data, error } = await supabase
-      .from('property_shares')
-      .select('id')
-      .eq('token_hash', tokenHash)
-      .is('revoked_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-    if (error) {
-      console.warn('[receive-application] share token lookup failed:', error.message);
-      return null;
-    }
-    return data;
-  }
-
-  const alias = normalizeShareAlias(value);
-  if (!alias || alias.length < 6 || !SHARE_ALIAS_RE.test(alias)) return null;
-
-  const { data, error } = await supabase
-    .from('property_shares')
-    .select('id')
-    .eq('share_alias', alias)
-    .is('revoked_at', null)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle();
-
-  if (error) {
-    console.warn('[receive-application] share alias lookup failed:', error.message);
-    return null;
-  }
-  return data;
-}
 
 function ageInYears(dobStr: string): number | null {
   if (!dobStr) return null;
@@ -175,7 +127,6 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonErr(405, 'Method not allowed');
 
   const ip = getClientIp(req);
-  const consentIp = req.headers.get('cf-connecting-ip') || (ip === 'unknown' ? null : ip);
   const ua = req.headers.get('user-agent') || '';
 
   // ── Per-IP rate limit (5 submissions / 60s) ───────────────────────────────
@@ -225,13 +176,6 @@ Deno.serve(async (req: Request) => {
   if (!termsConsent) {
     return jsonErr(400, 'You must accept the Terms & Privacy Policy to submit.');
   }
-  if (fBool(fields['feeAcknowledge']) !== true) {
-    return jsonErr(400, 'You must acknowledge the application fee before submitting.');
-  }
-  const screeningConsent = fBool(fields['authorizeVerify']) === true;
-  if (!screeningConsent) {
-    return jsonErr(400, 'You must authorize screening before submitting.');
-  }
 
   // ── Server-side age 18+ check — primary applicant ────────────────────────
   const age = ageInYears(dob);
@@ -242,85 +186,13 @@ Deno.serve(async (req: Request) => {
   // ── Server-side age 18+ check — co-applicant (if present) ────────────────
   const hasCoApplicant = fBool(fields['Has Co-Applicant']) === true;
   const coDob = fv(fields['Co-Applicant DOB']);
-  const coFirstName = fv(fields['Co-Applicant First Name']);
-  const coLastName = fv(fields['Co-Applicant Last Name']);
-  const coEmail = fv(fields['Co-Applicant Email']).toLowerCase();
-  const coRole = fv(fields['Additional Person Role']);
-  if (hasCoApplicant) {
-    if (!coFirstName || !coLastName || !coEmail || !coEmail.includes('@') || coEmail.length > 254) {
-      return jsonErr(400, 'A complete name and valid email are required for the additional adult applicant.');
-    }
-    if (!['Co-applicant', 'Guarantor'].includes(coRole)) {
-      return jsonErr(400, 'Select whether the additional adult is a co-applicant or guarantor.');
-    }
-    if (!fv(fields['Co-Applicant SSN']).replace(/\D/g, '').match(/^\d{4}$/)) {
-      return jsonErr(400, 'Enter the last four digits of the additional adult applicant’s SSN.');
-    }
-    if (!coDob) {
-      return jsonErr(400, 'A valid date of birth is required for the additional adult applicant.');
-    }
+  if (hasCoApplicant && coDob) {
     const coAge = ageInYears(coDob);
-    if (coAge === null) {
-      return jsonErr(400, 'Enter a valid date of birth for the additional adult applicant.');
-    }
-    if (coAge < 18) {
+    if (coAge !== null && coAge < 18) {
       return jsonErr(400, 'Co-applicant must be 18 years of age or older.');
     }
-    if (coAge > 120) {
+    if (coAge !== null && coAge > 120) {
       return jsonErr(400, 'Please enter a valid date of birth for the co-applicant.');
-    }
-  }
-
-  // ── Server-side parsing and validation — additional household applicants ──
-  interface AdditionalApplicant {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone?: string;
-    dob: string;
-    ssn?: string;
-    role?: string;
-    employer?: string;
-    job_title?: string;
-    monthly_income?: number | string;
-    employment_duration?: string;
-  }
-  let additionalApplicants: AdditionalApplicant[] = [];
-  const rawExtra = fv(fields['additional_applicants_json']);
-  if (rawExtra) {
-    try {
-      const parsed = JSON.parse(rawExtra);
-      if (Array.isArray(parsed)) {
-        additionalApplicants = parsed.filter(a => a && (a.first_name || a.email));
-      }
-    } catch (e) {
-      console.warn('Failed to parse additional_applicants_json:', e);
-    }
-  }
-
-  for (let i = 0; i < additionalApplicants.length; i++) {
-    const extra = additionalApplicants[i];
-    const eFirst = (extra.first_name || '').trim();
-    const eLast = (extra.last_name || '').trim();
-    const eEmail = (extra.email || '').trim().toLowerCase();
-    const eDob = (extra.dob || '').trim();
-    const eRole = (extra.role || 'Co-applicant').trim();
-
-    if (!eFirst || !eLast || !eEmail || !eEmail.includes('@') || eEmail.length > 254) {
-      return jsonErr(400, `A complete name and valid email are required for additional adult applicant #${i + 2}.`);
-    }
-    if (!['Co-applicant', 'Guarantor'].includes(eRole)) {
-      return jsonErr(400, `Select whether additional adult applicant #${i + 2} is a co-applicant or guarantor.`);
-    }
-    if (!eDob) {
-      return jsonErr(400, `A valid date of birth is required for additional adult applicant #${i + 2}.`);
-    }
-    const extraAge = ageInYears(eDob);
-    if (extraAge === null || extraAge < 18) {
-      return jsonErr(400, `Additional adult applicant #${i + 2} must be 18 years of age or older.`);
-    }
-    if (extraAge > 120) {
-      return jsonErr(400, `Please enter a valid date of birth for additional adult applicant #${i + 2}.`);
     }
   }
 
@@ -333,7 +205,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: prop, error: propErr } = await supabase
     .from('properties')
-    .select('id, address, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status, is_multi_unit, total_units')
+    .select('id, address, application_fee, monthly_rent, security_deposit, pets_allowed, smoking_allowed, status')
     .eq('id', submittedPropertyId)
     .maybeSingle();
 
@@ -351,8 +223,24 @@ Deno.serve(async (req: Request) => {
 
   if (prop.status === 'private_placement') {
     const shareToken = fv(fields['_share_token']);
-    const share = await resolveShareRecord(shareToken);
-    if (!share) return jsonErr(403, 'This private listing requires its valid client share link.');
+    if (!SHARE_TOKEN_RE.test(shareToken)) {
+      return jsonErr(403, 'This private listing requires its valid client share link.');
+    }
+
+    const tokenHash = await sha256Hex(shareToken);
+    const { data: share, error: shareError } = await supabase
+      .from('property_shares')
+      .select('id')
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (shareError) {
+      console.error('Private share lookup error:', JSON.stringify(shareError));
+      return jsonErr(500, 'Could not validate the private listing link. Please retry.');
+    }
+    if (!share) return jsonErr(403, 'This private listing link is invalid or expired.');
 
     const { data: membership, error: membershipError } = await supabase
       .from('property_share_properties')
@@ -368,54 +256,15 @@ Deno.serve(async (req: Request) => {
     if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
   }
 
-  const submittedUnitId = fv(fields['Property Unit ID']);
-  const submittedUnitNumber = fv(fields['Property Unit']);
-  let selectedUnit: {
-    id: string;
-    property_id: string;
-    unit_number: string;
-    unit_floor_label: string | null;
-    monthly_rent: number | null;
-  } | null = null;
-  if (submittedUnitId) {
-    if (!UUID_RE.test(submittedUnitId)) return jsonErr(400, 'Selected apartment unit is invalid.');
-    const { data, error } = await supabase
-      .from('property_units')
-      .select('id, property_id, unit_number, unit_floor_label, monthly_rent, status, review_status')
-      .eq('id', submittedUnitId)
-      .eq('property_id', submittedPropertyId)
-      .eq('status', 'active')
-      .eq('review_status', 'approved')
-      .maybeSingle();
-    if (error) {
-      console.error('Selected apartment unit lookup error:', JSON.stringify(error));
-      return jsonErr(500, 'Could not validate the selected apartment unit. Please retry.');
-    }
-    if (!data) return jsonErr(422, 'This apartment unit is no longer available.');
-    if (!Number.isFinite(Number(data.monthly_rent)) || Number(data.monthly_rent) <= 0) {
-      return jsonErr(422, 'This apartment unit does not have a verified monthly rent.');
-    }
-    if (submittedUnitNumber && submittedUnitNumber !== data.unit_number) {
-      return jsonErr(400, 'Selected apartment unit does not match the application details.');
-    }
-    selectedUnit = data;
-  } else if (prop.is_multi_unit || Number(prop.total_units || 0) > 1) {
-    return jsonErr(422, 'Select a verified apartment unit before applying.');
-  }
-
-  const screenedAdultCount = 1 + (hasCoApplicant ? 1 : 0) + additionalApplicants.length;
-  const applicationFeePerAdult = 50;
-  const enforcedFee = screenedAdultCount * applicationFeePerAdult;
-  const enforcedRent    = selectedUnit ? Number(selectedUnit.monthly_rent) : (typeof prop.monthly_rent === 'number' ? prop.monthly_rent : null);
-  const enforcedDeposit = selectedUnit ? Number(selectedUnit.monthly_rent) : (typeof prop.security_deposit === 'number' ? prop.security_deposit : null);
+  const enforcedFee     = typeof prop.application_fee   === 'number' ? prop.application_fee   : null;
+  const enforcedRent    = typeof prop.monthly_rent      === 'number' ? prop.monthly_rent      : null;
+  const enforcedDeposit = typeof prop.security_deposit  === 'number' ? prop.security_deposit  : null;
   const enforcedAddress = prop.address || fv(fields['Property Address']) || null;
-  const unitFloorLabel = selectedUnit?.unit_floor_label || fv(fields['Property Floor Label']) || fv(fields['Property Floor']) || null;
-  const numericUnitFloor = unitFloorLabel && /^\d+$/.test(unitFloorLabel) ? Number.parseInt(unitFloorLabel, 10) : null;
 
   // Pets / smoking policy enforcement intentionally removed —
   // applicants may submit any answer for pets and smoking regardless of
-  // the property's listed policy. Choice Properties management reviews
-  // every application individually.
+  // the property's listed policy. Landlords review and decide on a
+  // per-application basis instead of having submissions auto-rejected.
 
   // ── Idempotency: use client-supplied submission_uuid if present ───────────
   const clientUuid = fv(fields['submission_uuid']);
@@ -436,18 +285,15 @@ Deno.serve(async (req: Request) => {
   // ── Per-email 24h dedup: surface the existing app instead of double-billing ─
   {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    let recentQuery = supabase
+    const { data: recent } = await supabase
       .from('applications')
       .select('app_id, property_id, created_at')
       .ilike('email', email)
       .eq('property_id', submittedPropertyId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(1);
-    recentQuery = selectedUnit
-      ? recentQuery.eq('property_unit_id', selectedUnit.id)
-      : recentQuery.is('property_unit_id', null);
-    const { data: recent } = await recentQuery.maybeSingle();
+      .limit(1)
+      .maybeSingle();
     if (recent?.app_id) {
       return jsonOk({ success: true, appId: recent.app_id, message: 'A recent application already exists for this email and property.', deduped: true });
     }
@@ -472,10 +318,6 @@ Deno.serve(async (req: Request) => {
     dob: dob || null,
     ssn: (() => { const raw = fv(fields['SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
     property_address: enforcedAddress,
-    property_unit: selectedUnit?.unit_number || submittedUnitNumber || null,
-    property_floor: numericUnitFloor,
-    property_floor_label: unitFloorLabel,
-    property_unit_id: selectedUnit?.id || null,
     property_id: submittedPropertyId,
     requested_move_in_date: fv(fields['Requested Move-in Date']) || null,
     desired_lease_term: fv(fields['Desired Lease Term']) || null,
@@ -527,23 +369,13 @@ Deno.serve(async (req: Request) => {
     vehicle_model: fv(fields['Vehicle Model']) || null,
     vehicle_year: fv(fields['Vehicle Year']) || null,
     vehicle_license_plate: fv(fields['Vehicle License Plate']) || null,
-    has_co_applicant: hasCoApplicant,
-    co_applicant_first_name: hasCoApplicant ? coFirstName : null,
-    co_applicant_last_name: hasCoApplicant ? coLastName : null,
-    co_applicant_email: hasCoApplicant ? coEmail : null,
-    co_applicant_phone: hasCoApplicant ? (fv(fields['Co-Applicant Phone']) || null) : null,
-    co_applicant_dob: hasCoApplicant ? coDob : null,
-    co_applicant_ssn: hasCoApplicant ? (() => { const d = fv(fields['Co-Applicant SSN']).replace(/\D/g, ''); return 'XXX-XX-' + d.slice(-4); })() : null,
-    co_applicant_role: hasCoApplicant ? coRole : null,
-    co_applicant_consent: hasCoApplicant ? false : null,
-    co_applicant_consent_timestamp: null,
-    co_applicant_consent_version: null,
-    co_applicant_employer: hasCoApplicant ? (fv(fields['Co-Applicant Employer']) || null) : null,
-    co_applicant_job_title: hasCoApplicant ? (fv(fields['Co-Applicant Job Title']) || null) : null,
-    co_applicant_monthly_income: hasCoApplicant ? fNum(fields['Co-Applicant Monthly Income']) : null,
-    co_applicant_employment_duration: hasCoApplicant ? (fv(fields['Co-Applicant Employment Duration']) || null) : null,
-    screened_adult_count: screenedAdultCount,
-    application_fee_per_adult: applicationFeePerAdult,
+    has_co_applicant: fBool(fields['Has Co-Applicant']),
+    co_applicant_first_name: fv(fields['Co-Applicant First Name']) || null,
+    co_applicant_last_name: fv(fields['Co-Applicant Last Name']) || null,
+    co_applicant_email: fv(fields['Co-Applicant Email']) || null,
+    co_applicant_phone: fv(fields['Co-Applicant Phone']) || null,
+    co_applicant_dob:   coDob || null,
+    co_applicant_ssn: (() => { const raw = fv(fields['Co-Applicant SSN']); if (!raw) return null; const d = raw.replace(/\D/g, ''); return d.length >= 4 ? 'XXX-XX-' + d.slice(-4) : '****'; })() || null,
     // Server-authoritative fee/rent/deposit (overrides anything from client)
     application_fee: enforcedFee,
     monthly_rent: enforcedRent,
@@ -552,12 +384,9 @@ Deno.serve(async (req: Request) => {
     move_in_status: 'pending',
     payment_status: fPaymentStatus(null),
     terms_consent: termsConsent,
-    screening_consent: screeningConsent,
-    screening_consent_timestamp: new Date().toISOString(),
-    screening_consent_version: '3.0',
     sms_consent: fv(fields['SMS Consent']) === 'yes' || fBool(fields['SMS Consent']) === true || fBool(fields['smsConsent']) === true,
     consent_timestamp: new Date().toISOString(),    // server clock — never trust client
-    consent_version: fv(fields['Consent Version']) || '2.1',
+    consent_version: fv(fields['Consent Version']) || '2.0',
   };
 
   // Strip undefined and empty strings, BUT keep boolean false (terms_consent etc.)
@@ -570,11 +399,7 @@ Deno.serve(async (req: Request) => {
   );
 
   // ── Insert; unique index on submission_uuid handles concurrent retries ────
-  const { data: insertedApp, error: insertErr } = await supabase
-    .from('applications')
-    .insert(cleanApp)
-    .select('id')
-    .single();
+  const { error: insertErr } = await supabase.from('applications').insert(cleanApp);
   if (insertErr) {
     // 23505 = unique violation → another concurrent request beat us; fetch and return.
     if ((insertErr as { code?: string }).code === '23505') {
@@ -587,105 +412,6 @@ Deno.serve(async (req: Request) => {
     }
     console.error('Insert error:', JSON.stringify(insertErr));
     return jsonErr(500, 'Failed to save application');
-  }
-
-  if (!insertedApp?.id) {
-    console.error('Application insert returned no database ID.');
-    return jsonErr(500, 'Application was saved but follow-up consent setup could not be completed.');
-  }
-  const databaseAppId = insertedApp.id;
-  let coApplicantConsentLink: string | null = null;
-  if (hasCoApplicant) {
-    const { error: coAppErr } = await supabase.from('co_applicants').insert({
-      app_id: appId,
-      first_name: coFirstName,
-      last_name: coLastName,
-      email: coEmail,
-      phone: fv(fields['Co-Applicant Phone']) || null,
-      dob: coDob,
-      ssn: fv(fields['Co-Applicant SSN']) ? ('XXX-XX-' + fv(fields['Co-Applicant SSN']).replace(/\D/g, '').slice(-4)) : null,
-      role: coRole,
-      employer: fv(fields['Co-Applicant Employer']) || null,
-      job_title: fv(fields['Co-Applicant Job Title']) || null,
-      monthly_income: fNum(fields['Co-Applicant Monthly Income']),
-      employment_duration: fv(fields['Co-Applicant Employment Duration']) || null,
-      consent: false
-    });
-    if (coAppErr) console.warn('Primary co-applicant row insert error:', coAppErr.message);
-
-    const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
-    const token = btoa(String.fromCharCode(...tokenBytes))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-    const tokenHash = await sha256Hex(token);
-    const { error: tokenError } = await supabase.from('co_applicant_consent_tokens').insert({
-      application_id: databaseAppId,
-      token_hash: tokenHash,
-      recipient_email: coEmail,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-    if (tokenError) {
-      console.error('Co-applicant consent token insert failed:', tokenError.message);
-    } else {
-      coApplicantConsentLink = `${getSiteUrl()}/co-applicant-consent.html#token=${token}`;
-    }
-  }
-
-  // Persist additional adult household applicants
-  for (let i = 0; i < additionalApplicants.length; i++) {
-    const extra = additionalApplicants[i];
-    const extraFirst = (extra.first_name || '').trim();
-    const extraLast = (extra.last_name || '').trim();
-    const extraEmail = (extra.email || '').trim().toLowerCase();
-    const extraPhone = extra.phone ? extra.phone.trim() : null;
-    const extraDob = (extra.dob || '').trim();
-    const extraRole = (extra.role || 'Co-applicant').trim();
-    const extraEmployer = extra.employer ? extra.employer.trim() : null;
-    const extraJobTitle = extra.job_title ? extra.job_title.trim() : null;
-    const extraIncome = extra.monthly_income ? Number(extra.monthly_income) : null;
-    const extraDuration = extra.employment_duration ? extra.employment_duration.trim() : null;
-    const extraSsn = extra.ssn ? ('XXX-XX-' + String(extra.ssn).replace(/\D/g, '').slice(-4)) : null;
-
-    const { error: extraInsertErr } = await supabase.from('co_applicants').insert({
-      app_id: appId,
-      first_name: extraFirst,
-      last_name: extraLast,
-      email: extraEmail,
-      phone: extraPhone,
-      dob: extraDob,
-      ssn: extraSsn,
-      role: extraRole,
-      employer: extraEmployer,
-      job_title: extraJobTitle,
-      monthly_income: extraIncome,
-      employment_duration: extraDuration,
-      consent: false
-    });
-    if (extraInsertErr) console.warn(`Additional applicant #${i + 2} insert error:`, extraInsertErr.message);
-
-    // Mint token for additional applicant
-    const extraBytes = crypto.getRandomValues(new Uint8Array(32));
-    const extraToken = btoa(String.fromCharCode(...extraBytes))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-    const extraTokenHash = await sha256Hex(extraToken);
-    const { error: extraTokenErr } = await supabase.from('co_applicant_consent_tokens').insert({
-      application_id: databaseAppId,
-      token_hash: extraTokenHash,
-      recipient_email: extraEmail,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-    if (!extraTokenErr) {
-      const extraConsentLink = `${getSiteUrl()}/co-applicant-consent.html#token=${extraToken}`;
-      try {
-        await sendEmail({
-          to: extraEmail,
-          subject: `Action required: authorize screening for Choice Properties application ${appId}`,
-          html: coApplicantScreeningConsentHtml(extraFirst, appId, extraConsentLink),
-        });
-        await logEmail('co_applicant_consent_invitation', extraEmail, 'sent', 'resend');
-      } catch (extraMailErr) {
-        console.warn(`Additional applicant #${i + 2} email failed:`, extraMailErr);
-      }
-    }
   }
 
   // ── Persist attached documents to storage ────────────────────────────────
@@ -742,71 +468,42 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Append-only consent record ────────────────────────────────────────────
-  const { error: consentLogError } = await supabase.from('application_screening_consent_events').insert({
-      application_id: databaseAppId,
-      applicant_type: 'primary',
-      consent_version: String(application.screening_consent_version),
-      consented_at: application.screening_consent_timestamp,
-      ip: consentIp,
-      user_agent: ua || null,
-    });
-  if (consentLogError) {
-    console.error('Primary screening consent event insert failed:', consentLogError.message);
-  }
-  const { error: consentLogInsertError } = await supabase.from('consent_log').insert({
+  try {
+    await supabase.from('consent_log').insert({
       app_id: appId,
       submission_uuid: submissionUuid,
       email,
       consent_version: String(application.consent_version),
       terms_consent: termsConsent,
-      screening_consent: screeningConsent,
       sms_consent: !!application.sms_consent,
-      ip: consentIp,
+      ip: ip === 'unknown' ? null : ip,
       user_agent: ua || null,
     });
-  if (consentLogInsertError) console.error('consent_log insert failed:', consentLogInsertError.message);
+  } catch (e) {
+    console.error('consent_log insert failed (non-fatal):', e);
+  }
 
   // ── Notification emails ───────────────────────────────────────────────────
   const propLabel = enforcedAddress || 'your chosen property';
 
-  async function logEmail(
+  const logEmail = async (
     type: string,
     recipient: string,
     status: string,
     provider: string,
     errorMsg: string | null = null,
-  ) {
+  ) => {
     const { error } = await supabase.from('email_logs').insert({
       app_id: appId, type, recipient, status, provider, error_msg: errorMsg,
     });
     if (error) console.error('Email log insert failed:', error.message);
-  }
-
-  let coApplicantConsentInviteSent = false;
-  if (coApplicantConsentLink) {
-    try {
-      const inviteResult = await sendEmail({
-        to: coEmail,
-        subject: `Action required: authorize screening for Choice Properties application ${appId}`,
-        html: coApplicantScreeningConsentHtml(coFirstName, appId, coApplicantConsentLink),
-      });
-      coApplicantConsentInviteSent = inviteResult.ok;
-      fields['Co-Applicant Consent Invite'] = inviteResult.ok ? 'sent' : 'failed';
-      await logEmail('co_applicant_consent_invitation', coEmail, inviteResult.ok ? 'sent' : 'failed', inviteResult.provider, inviteResult.ok ? null : (inviteResult.error || 'send failed'));
-    } catch (err) {
-      console.error('Co-applicant consent invitation error:', err);
-      fields['Co-Applicant Consent Invite'] = 'failed';
-      await logEmail('co_applicant_consent_invitation', coEmail, 'failed', 'none', err instanceof Error ? err.message : 'unknown error');
-    }
-  } else if (hasCoApplicant) {
-    fields['Co-Applicant Consent Invite'] = 'not sent';
-  }
+  };
 
   const emailJobs = [
     sendEmail({
       to: email,
       subject: `Application Received — ${propLabel.split(',')[0]} | Choice Properties (Ref: ${appId})`,
-      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee ?? null, coApplicantConsentInviteSent),
+      html: applicationConfirmationHtml(firstName, propLabel, appId, fields, portalUrl, enforcedFee ?? null),
     }).then(result => logEmail('application_confirmation', email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
       .catch(async err => {
         console.error('Confirmation email error:', err);
@@ -823,17 +520,30 @@ Deno.serve(async (req: Request) => {
           await logEmail('admin_notification', adminEmail, 'failed', 'none', err?.message || 'unknown error');
         })
     ),
+    // Landlord notification — new application on their property
+    (async () => {
+      try {
+        const landlordInfo = await getLandlordForProperty(supabase, submittedPropertyId);
+        if (landlordInfo?.email) {
+          await sendEmail({
+            to: landlordInfo.email,
+            subject: `New Application — ${propLabel.split(',')[0]} (Ref: ${appId})`,
+            html: landlordNewApplicationHtml(
+              landlordInfo.contact_name || '',
+              firstName, lastName, email, propLabel, appId,
+              getAdminUrl('/admin/applications.html'),
+            ),
+          }).then(result => logEmail('landlord_new_application', landlordInfo.email, result.ok ? 'sent' : 'failed', result.provider, result.ok ? null : (result.error || 'send failed')))
+            .catch(() => {});
+        }
+      } catch (_) {}
+    })(),
   ];
 
   await Promise.all(emailJobs);
 
-  return jsonOk({
-    success: true,
-    appId,
-    portal_login_url: portalUrl,
-    message: 'Application received.',
-    ...(hasCoApplicant && !coApplicantConsentInviteSent
-      ? { coApplicantConsentInviteError: 'The application was saved, but the additional adult authorization email could not be sent. Staff must issue a new link before screening.' }
-      : {}),
-  });
+  // Suppress unused-import warning in environments without the helper
+  void sha256Hex;
+
+  return jsonOk({ success: true, appId, portal_login_url: portalUrl, message: 'Application received.' });
 });

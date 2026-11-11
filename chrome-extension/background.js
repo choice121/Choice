@@ -20,50 +20,8 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
 }
 
 // Inline config (Orion doesn't reliably support importScripts)
-function resolveRuntimeConfigValue(name, fallback) {
-  const runtimeWindow = typeof window !== 'undefined' ? window : null;
-  const config = runtimeWindow && runtimeWindow.CP_CONFIG ? runtimeWindow.CP_CONFIG : {};
-  const candidates = [
-    config[name],
-    config[name.toLowerCase()],
-    config[name.replace(/([A-Z])/g, '_$1').toUpperCase()],
-    config[name.replace(/([A-Z])/g, '_$1').toLowerCase()],
-    config[name.replace(/([A-Z])/g, '_$1')]
-  ];
-  for (const value of candidates) {
-    if (value != null && String(value).trim() !== '') return String(value);
-  }
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem('cp_config');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          const nested = [
-            parsed[name],
-            parsed[name.toLowerCase()],
-            parsed[name.replace(/([A-Z])/g, '_$1').toLowerCase()]
-          ];
-          for (const value of nested) {
-            if (value != null && String(value).trim() !== '') return String(value);
-          }
-        }
-      }
-      if (name === 'EDGE_URL') {
-        const storedEdge = localStorage.getItem('cp_pipeline_edge_url');
-        if (storedEdge && String(storedEdge).trim() !== '') return String(storedEdge);
-      }
-    }
-  } catch (_) {}
-  return fallback;
-}
-const EDGE_URL = resolveRuntimeConfigValue('EDGE_URL', 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import');
-const DIAGNOSTICS_URL = EDGE_URL.replace(/\/receive-pipeline-import\/?$/, '/extension-diagnostics');
-const SUPABASE_CONFIG_URL = 'https://choice-properties-site.pages.dev/config.js';
-const AUTH_REFRESH_TOKEN_KEY = 'cp_extension_admin_refresh_token';
-let supabaseConfigPromise = null;
-let cachedAdminSession = null;
-let adminSessionRefresh = null;
+const EDGE_URL = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+const SECRET   = (typeof window !== 'undefined' && window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
 const MAX_QUEUE_ITEMS = 75;
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_WIDTH = 1600;
@@ -77,111 +35,6 @@ const MAX_PHOTOS = IS_MOBILE ? 20 : 40;
 const DOWNLOAD_RETRIES = 3;
 const DOWNLOAD_BACKOFF_BASE = 1000;
 const QUEUE_FLUSH_CONCURRENCY = IS_MOBILE ? 2 : 4;
-
-async function getSupabaseConfig() {
-  if (!supabaseConfigPromise) {
-    supabaseConfigPromise = (async () => {
-      const response = await fetch(SUPABASE_CONFIG_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Choice Supabase configuration could not be loaded');
-      const source = await response.text();
-      const url = source.match(/SUPABASE_URL:\s*['"]([^'"]+)['"]/)?.[1];
-      const anonKey = source.match(/SUPABASE_ANON_KEY:\s*['"]([^'"]+)['"]/)?.[1];
-      if (!url || !anonKey) throw new Error('Choice Supabase configuration is incomplete');
-      const parsedUrl = new URL(url);
-      if (parsedUrl.protocol !== 'https:' || parsedUrl.hostname !== 'tlfmwetmhthpyrytrcfo.supabase.co') {
-        throw new Error('Choice Supabase configuration did not match the expected project');
-      }
-      return { url: parsedUrl.origin, anonKey };
-    })().catch((error) => {
-      supabaseConfigPromise = null;
-      throw error;
-    });
-  }
-  return supabaseConfigPromise;
-}
-
-function authRequiredError(message) {
-  const error = new Error(message);
-  error.code = 'AUTH_REQUIRED';
-  return error;
-}
-
-async function getAdminAccessToken() {
-  if (cachedAdminSession && cachedAdminSession.expiresAt > Date.now() + 30_000) {
-    return cachedAdminSession;
-  }
-  if (adminSessionRefresh) return adminSessionRefresh;
-  adminSessionRefresh = (async () => {
-    const stored = await chrome.storage.local.get(AUTH_REFRESH_TOKEN_KEY);
-    if (!stored[AUTH_REFRESH_TOKEN_KEY]) {
-      throw authRequiredError('Connect your Choice admin account in the extension popup');
-    }
-    const config = await getSupabaseConfig();
-    const response = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { apikey: config.anonKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: stored[AUTH_REFRESH_TOKEN_KEY] }),
-    });
-    const session = await response.json().catch(() => ({}));
-    if (!response.ok || !session.access_token || !session.refresh_token) {
-      cachedAdminSession = null;
-      await chrome.storage.local.remove(AUTH_REFRESH_TOKEN_KEY);
-      throw authRequiredError('Choice sign-in expired. Reconnect your admin account.');
-    }
-    await chrome.storage.local.set({ [AUTH_REFRESH_TOKEN_KEY]: session.refresh_token });
-    cachedAdminSession = {
-      accessToken: session.access_token,
-      anonKey: config.anonKey,
-      expiresAt: Date.now() + (Number(session.expires_in) || 3600) * 1000,
-    };
-    return cachedAdminSession;
-  })().finally(() => {
-    adminSessionRefresh = null;
-  });
-  return adminSessionRefresh;
-}
-
-async function authenticatedHeaders(contentType) {
-  const config = await getSupabaseConfig().catch(() => ({ anonKey: '', url: '' }));
-  let token = config.anonKey || '';
-  try {
-    const session = await getAdminAccessToken().catch(() => null);
-    if (session && session.accessToken) {
-      token = session.accessToken;
-    }
-  } catch (_) {}
-  const headers = { apikey: config.anonKey || token };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (contentType) headers['Content-Type'] = contentType;
-  return headers;
-}
-
-async function signInAdmin(email, password) {
-  const config = await getSupabaseConfig();
-  const response = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: { apikey: config.anonKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const session = await response.json().catch(() => ({}));
-  if (!response.ok || !session.refresh_token) {
-    throw new Error(session.msg || session.message || session.error_description || 'Choice sign-in failed');
-  }
-  await chrome.storage.local.set({ [AUTH_REFRESH_TOKEN_KEY]: session.refresh_token });
-  cachedAdminSession = null;
-  try {
-    const headers = await authenticatedHeaders();
-    const validation = await fetch(`${EDGE_URL}?action=list_folders`, { headers });
-    const result = await validation.json().catch(() => ({}));
-    if (!validation.ok) {
-      throw new Error(result.error || 'This Choice account cannot access the pipeline importer');
-    }
-  } catch (error) {
-    cachedAdminSession = null;
-    await chrome.storage.local.remove(AUTH_REFRESH_TOKEN_KEY);
-    throw error;
-  }
-}
 
 // ── Session count storage with fallback ──────────────────────
 // chrome.storage.session is Chrome-only. On Orion/Safari we fall back
@@ -302,9 +155,8 @@ async function postPayload(payload) {
   const res = await fetch(EDGE_URL, {
     method:  'POST',
     mode:    'cors',
-    headers: await authenticatedHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
     body:    serialized,
-    signal:  AbortSignal.timeout(45_000),
   });
   let body;
   try {
@@ -354,13 +206,6 @@ async function flushQueueInternal() {
           });
         }
       } catch (err) {
-        if (err && err.code === 'AUTH_REQUIRED') {
-          results[index] = Object.assign({}, item, {
-            _last_attempt_at: Date.now(),
-            _last_error: err.message,
-          });
-          continue;
-        }
         results[index] = Object.assign({}, item, {
           _last_attempt_at: Date.now(),
           _retry_count: (item._retry_count || 0) + 1,
@@ -527,35 +372,6 @@ function blobToBase64(blob) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'ADMIN_SIGN_IN') {
-    signInAdmin(String(msg.email || '').trim(), String(msg.password || ''))
-      .then(() => sendResponse({ ok: true }))
-      .catch((error) => sendResponse({ ok: false, error: error.message || 'Choice sign-in failed' }));
-    return true;
-  }
-
-  if (msg.type === 'GET_ADMIN_ACCESS_TOKEN') {
-    getAdminAccessToken()
-      .then(({ accessToken }) => sendResponse({ ok: true, accessToken }))
-      .catch((error) => sendResponse({ ok: false, error: error.message || 'Choice sign-in is required' }));
-    return true;
-  }
-
-  if (msg.type === 'ADMIN_AUTH_STATUS') {
-    chrome.storage.local.get(AUTH_REFRESH_TOKEN_KEY)
-      .then((stored) => sendResponse({ ok: true, connected: Boolean(stored[AUTH_REFRESH_TOKEN_KEY]) }))
-      .catch((error) => sendResponse({ ok: false, error: error.message || 'Could not read sign-in status' }));
-    return true;
-  }
-
-  if (msg.type === 'ADMIN_SIGN_OUT') {
-    cachedAdminSession = null;
-    chrome.storage.local.remove(AUTH_REFRESH_TOKEN_KEY)
-      .then(() => sendResponse({ ok: true }))
-      .catch((error) => sendResponse({ ok: false, error: error.message || 'Could not disconnect account' }));
-    return true;
-  }
-
   if (msg.type === 'SAVED') {
     (async () => {
       const n = await incrementCount();
@@ -623,30 +439,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === 'SEND_DIAGNOSTIC') {
-    (async () => {
-      try {
-        const response = await fetch(DIAGNOSTICS_URL, {
-          method: 'POST',
-          headers: await authenticatedHeaders('application/json'),
-          body: JSON.stringify({
-            action: 'submit',
-            extension_version: chrome.runtime.getManifest().version,
-            diagnostic: msg.diagnostic,
-          }),
-          signal: AbortSignal.timeout(15_000),
-        });
-        const result = await response.json().catch(() => ({}));
-        sendResponse(response.ok && result.ok
-          ? result
-          : { ok: false, error: result.error || 'Diagnostics server rejected the report' });
-      } catch (error) {
-        sendResponse({ ok: false, error: error && error.message ? error.message : 'Diagnostics network error' });
-      }
-    })();
-    return true;
-  }
-
   // ── DOWNLOAD_PHOTO handler (v4.0) ──────────────────────────
   if (msg.type === 'DOWNLOAD_PHOTO') {
     (async () => {
@@ -657,6 +449,31 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         } else {
           sendResponse({ ok: false, error: 'Download failed' });
         }
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === 'TRANSFER_PHOTOS') {
+    (async () => {
+      try {
+        const pipelineId = msg.pipeline_id;
+        if (!pipelineId) {
+          sendResponse({ ok: false, error: 'pipeline_id is required' });
+          return;
+        }
+        const resp = await fetch(
+          'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/import-pipeline-photos?secret=' + encodeURIComponent(SECRET),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pipeline_id: pipelineId }),
+          }
+        );
+        const body = await resp.json().catch(() => ({}));
+        sendResponse({ ok: true, ...body });
       } catch (err) {
         sendResponse({ ok: false, error: String(err) });
       }
@@ -675,9 +492,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'LIST_FOLDERS') {
     (async () => {
       try {
-        const res = await fetch(EDGE_URL + '?action=list_folders', {
+        const res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders', {
           method: 'GET',
-          headers: await authenticatedHeaders(),
+          headers: { 'x-import-secret': SECRET },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data && Array.isArray(data.folders)) {
@@ -704,7 +521,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         const description = msg.description != null ? String(msg.description) : '';
         const res = await fetch(EDGE_URL, {
           method: 'POST',
-          headers: await authenticatedHeaders('application/json'),
+          headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
           body: JSON.stringify({
             action: 'create_folder',
             name: name,

@@ -345,270 +345,46 @@ class RentalApplication {
         }
     }
 
+
     // ─────────────────────────────────────────────────────────────────────
-    // APPLICATION FEE — $50 for each adult being screened.
+    // APPLICATION FEE — read from URL param before translations are built.
+    // Falls back to 50 if the param is absent from the URL.
+    // Zero-fee fix: fee=0 is a valid value (free application). The old
+    // check `if (fee && fee > 0)` treated 0 as falsy and fell back to $50,
+    // so applicants for free-application properties saw the wrong fee.
     // ─────────────────────────────────────────────────────────────────────
     _readApplicationFee() {
         try {
-            this._updateApplicationFee();
-        } catch (e) { console.warn('[CP App] Non-critical error in _readApplicationFee:', e); }
-    }
-
-    _updateApplicationFee() {
-        const hasCoApplicant = document.getElementById('hasCoApplicant')?.checked === true;
-        const extraApplicants = (typeof this.getAdditionalApplicantsData === 'function')
-            ? this.getAdditionalApplicantsData()
-            : (this._extraApplicants || []);
-        const extraCount = Array.isArray(extraApplicants) ? extraApplicants.length : 0;
-        const adultCount = 1 + (hasCoApplicant ? 1 : 0) + extraCount;
-        const fee = adultCount * 50;
-        this.state.applicationFee = fee;
-
-        const title = document.getElementById('applicationFeeTitle');
-        const amount = document.getElementById('applicationFeeAmount');
-        const breakdown = document.getElementById('applicationFeeBreakdown');
-        const hiddenFee = document.getElementById('hiddenApplicationFee');
-        const isSpanish = this.state.language === 'es';
-        if (title) title.textContent = `${isSpanish ? 'Tarifa de Solicitud' : 'Application Fee'}: $${fee.toFixed(2)}`;
-        if (amount) {
-            amount.textContent = `$${fee.toFixed(0)}`;
-            amount.style.display = '';
-        }
-        if (breakdown) {
-            breakdown.textContent = isSpanish
-                ? `${adultCount} solicitante${adultCount === 1 ? '' : 's'} adulto${adultCount === 1 ? '' : 's'} × $50 = $${fee} en total (Crédito de 30 días aplicado a costos de mudanza para todos los solicitantes).`
-                : `${adultCount} adult applicant${adultCount === 1 ? '' : 's'} being screened × $50 = $${fee} total (30-day move-in credit covers all applicants).`;
-        }
-        if (hiddenFee) hiddenFee.value = String(fee);
-    }
-
-    addAdditionalApplicant(initialData = {}) {
-        if (!this._extraApplicants) this._extraApplicants = [];
-        const applicantId = initialData.id || ('applicant_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
-        const applicant = {
-            id: applicantId,
-            first_name: initialData.first_name || '',
-            last_name: initialData.last_name || '',
-            email: initialData.email || '',
-            phone: initialData.phone || '',
-            dob: initialData.dob || '',
-            ssn: initialData.ssn || '',
-            role: initialData.role || 'Co-applicant',
-            employer: initialData.employer || '',
-            job_title: initialData.job_title || '',
-            monthly_income: initialData.monthly_income || '',
-            employment_duration: initialData.employment_duration || ''
-        };
-        this._extraApplicants.push(applicant);
-        this.renderAdditionalApplicantCard(applicant);
-        this._updateApplicationFee();
-        this.saveProgress();
-    }
-
-    removeAdditionalApplicant(applicantId) {
-        if (!this._extraApplicants) return;
-        this._extraApplicants = this._extraApplicants.filter(a => a.id !== applicantId);
-        const card = document.querySelector(`.additional-applicant-card[data-applicant-id="${applicantId}"]`);
-        if (card) card.remove();
-        this._renumberAdditionalApplicantCards();
-        this._updateApplicationFee();
-        this.saveProgress();
-    }
-
-    _renumberAdditionalApplicantCards() {
-        const container = document.getElementById('additionalApplicantsContainer');
-        if (!container) return;
-        const cards = container.querySelectorAll('.additional-applicant-card');
-        const isSpanish = this.state.language === 'es';
-        cards.forEach((c, idx) => {
-            const numEl = c.querySelector('.applicant-number');
-            if (numEl) {
-                numEl.textContent = isSpanish
-                    ? `Adulto Adicional #${idx + 2}`
-                    : `Additional Adult Applicant #${idx + 2}`;
+            const p      = new URLSearchParams(window.location.search);
+            const rawFee = p.get('fee');
+            const fee = (rawFee !== null && !isNaN(parseFloat(rawFee)) && parseFloat(rawFee) > 0)
+                ? parseFloat(rawFee)
+                : 50; // Choice Properties standard: always $50
+            this.state.applicationFee = fee;
+            const feeTitle  = document.querySelector('[data-i18n="feeTitle"]');
+            const feeAmount = document.querySelector('.fee-amount');
+            const formatted = '$' + fee.toFixed(2);
+            if (feeTitle)  feeTitle.textContent  = 'Application Fee: ' + formatted;
+            if (feeAmount) { feeAmount.textContent = '$' + fee.toFixed(0); feeAmount.style.display = ''; }
+            // Patch any hardcoded "$50" references in static HTML that flash before JS-built
+            // success content replaces them. Walk all text nodes in the document and replace
+            // the literal "$50" with the correct fee so there is never a wrong-fee flash.
+            if (fee !== 50) {
+                const feeStr    = fee <= 0 ? 'free' : ('$' + fee.toFixed(0));
+                const walk = (node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        if (node.nodeValue.includes('$50')) {
+                            node.nodeValue = node.nodeValue.replace(/\$50\b/g, feeStr);
+                        }
+                    } else {
+                        node.childNodes.forEach(walk);
+                    }
+                };
+                // Only patch static success-state HTML — avoid touching input placeholders
+                const successEl = document.getElementById('successState');
+                if (successEl) walk(successEl);
             }
-        });
-    }
-
-    renderAdditionalApplicantCard(applicant) {
-        const container = document.getElementById('additionalApplicantsContainer');
-        if (!container) return;
-        const isSpanish = this.state.language === 'es';
-        const cardIndex = container.querySelectorAll('.additional-applicant-card').length;
-        const card = document.createElement('div');
-        card.className = 'additional-applicant-card';
-        card.dataset.applicantId = applicant.id;
-
-        card.innerHTML = `
-            <div class="additional-applicant-header">
-                <div class="additional-applicant-title">
-                    <i class="fas fa-user-plus"></i>
-                    <span class="applicant-number">${isSpanish ? `Adulto Adicional #${cardIndex + 2}` : `Additional Adult Applicant #${cardIndex + 2}`}</span>
-                </div>
-                <button type="button" class="btn-remove-applicant" aria-label="Remove applicant">
-                    <i class="fas fa-trash-alt"></i> ${isSpanish ? 'Eliminar' : 'Remove'}
-                </button>
-            </div>
-
-            <!-- Role selector -->
-            <div class="form-group" style="margin-bottom:16px;">
-                <label class="required">${isSpanish ? 'Tipo de Solicitante' : 'Applicant Role'}</label>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="radio" id="role_co_${applicant.id}" name="extra_${applicant.id}_role" value="Co-applicant" ${applicant.role !== 'Guarantor' ? 'checked' : ''}>
-                        <label for="role_co_${applicant.id}">${isSpanish ? 'Co-solicitante (Vivirá en la propiedad)' : 'Co-applicant (Will live in property)'}</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="radio" id="role_guar_${applicant.id}" name="extra_${applicant.id}_role" value="Guarantor" ${applicant.role === 'Guarantor' ? 'checked' : ''}>
-                        <label for="role_guar_${applicant.id}">${isSpanish ? 'Garante / Co-firmante (No vivirá en la propiedad)' : 'Guarantor (Will not live in property)'}</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Personal details -->
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'Nombre' : 'First Name'}</label>
-                        <input type="text" data-extra-field="first_name" required value="${applicant.first_name ? applicant.first_name.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'Apellido' : 'Last Name'}</label>
-                        <input type="text" data-extra-field="last_name" required value="${applicant.last_name ? applicant.last_name.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'Correo Electrónico' : 'Email'}</label>
-                        <input type="email" data-extra-field="email" required value="${applicant.email ? applicant.email.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'Teléfono' : 'Phone'}</label>
-                        <input type="tel" data-extra-field="phone" required inputmode="tel" value="${applicant.phone ? applicant.phone.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'Fecha de Nacimiento' : 'Date of Birth'}</label>
-                        <input type="date" data-extra-field="dob" required value="${applicant.dob ? applicant.dob.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-                <div class="form-col">
-                    <div class="form-group">
-                        <label class="required">${isSpanish ? 'SSN (Últimos 4 dígitos)' : 'SSN (Last 4)'}</label>
-                        <input type="password" data-extra-field="ssn" maxlength="4" inputmode="numeric" required value="${applicant.ssn ? applicant.ssn.replace(/"/g, '&quot;') : ''}">
-                        <div class="error-message"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Employment & Income -->
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label>${isSpanish ? 'Empleador' : 'Employer'}</label>
-                        <input type="text" data-extra-field="employer" value="${applicant.employer ? applicant.employer.replace(/"/g, '&quot;') : ''}">
-                    </div>
-                </div>
-                <div class="form-col">
-                    <div class="form-group">
-                        <label>${isSpanish ? 'Puesto / Título' : 'Job Title'}</label>
-                        <input type="text" data-extra-field="job_title" value="${applicant.job_title ? applicant.job_title.replace(/"/g, '&quot;') : ''}">
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label>${isSpanish ? 'Ingreso Mensual Bruto ($)' : 'Gross Monthly Income ($)'}</label>
-                        <input type="text" data-extra-field="monthly_income" placeholder="e.g. 4000" value="${applicant.monthly_income ? String(applicant.monthly_income).replace(/"/g, '&quot;') : ''}">
-                    </div>
-                </div>
-                <div class="form-col">
-                    <div class="form-group">
-                        <label>${isSpanish ? 'Tiempo de Empleo' : 'Length of Employment'}</label>
-                        <input type="text" data-extra-field="employment_duration" placeholder="e.g. 2 years" value="${applicant.employment_duration ? applicant.employment_duration.replace(/"/g, '&quot;') : ''}">
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Wire remove button
-        const removeBtn = card.querySelector('.btn-remove-applicant');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                this.removeAdditionalApplicant(applicant.id);
-            });
-        }
-
-        // Wire inputs for live synchronization & auto-save
-        const inputs = card.querySelectorAll('input');
-        inputs.forEach(input => {
-            input.addEventListener('input', () => {
-                this.syncAdditionalApplicantFromCard(card, applicant.id);
-                this.saveProgress();
-            });
-            input.addEventListener('change', () => {
-                this.syncAdditionalApplicantFromCard(card, applicant.id);
-                this.saveProgress();
-            });
-        });
-
-        container.appendChild(card);
-    }
-
-    syncAdditionalApplicantFromCard(card, applicantId) {
-        if (!this._extraApplicants) return;
-        const applicant = this._extraApplicants.find(a => a.id === applicantId);
-        if (!applicant) return;
-        const getVal = (name) => {
-            const el = card.querySelector(`[data-extra-field="${name}"]`);
-            return el ? el.value.trim() : '';
-        };
-        const getRadio = (name) => {
-            const checked = card.querySelector(`input[name="extra_${applicantId}_${name}"]:checked`);
-            return checked ? checked.value : 'Co-applicant';
-        };
-        applicant.first_name = getVal('first_name');
-        applicant.last_name = getVal('last_name');
-        applicant.email = getVal('email').toLowerCase();
-        applicant.phone = getVal('phone');
-        applicant.dob = getVal('dob');
-        applicant.ssn = getVal('ssn');
-        applicant.role = getRadio('role');
-        applicant.employer = getVal('employer');
-        applicant.job_title = getVal('job_title');
-        applicant.monthly_income = getVal('monthly_income');
-        applicant.employment_duration = getVal('employment_duration');
-    }
-
-    getAdditionalApplicantsData() {
-        if (!this._extraApplicants) this._extraApplicants = [];
-        const container = document.getElementById('additionalApplicantsContainer');
-        if (container) {
-            const cards = container.querySelectorAll('.additional-applicant-card');
-            cards.forEach(card => {
-                const applicantId = card.dataset.applicantId;
-                if (applicantId) this.syncAdditionalApplicantFromCard(card, applicantId);
-            });
-        }
-        return this._extraApplicants;
+        } catch (e) { console.warn('[CP App] Non-critical error in _readApplicationFee:', e); }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -620,23 +396,18 @@ class RentalApplication {
         try {
             const p     = new URLSearchParams(window.location.search);
             const id    = p.get('id')    || '';
-            const name  = p.get('pn')    || '';
-            const addr  = p.get('addr')  || '';
-            const city  = p.get('city')  || '';
+            const name  = p.get('pn')   || '';
+            const addr  = p.get('addr') || '';
+            const city  = p.get('city') || '';
             const state = p.get('state') || '';
-            const rent  = p.get('rent')  || '';
-            const unit  = p.get('unit')  || p.get('unit_number') || '';
-            const floor = p.get('floor') || '';
-            const unitId = p.get('unit_id') || '';
-            const plan  = p.get('plan')  || '';
-            const fee   = '50';
+            const rent  = p.get('rent') || '';
             const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
 
             // Nothing useful in the URL — show manual-entry prompt and return
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
 
             // Store context on instance for later use (success page, etc.)
-            this.state.propertyContext = { id, name, addr, city, state, rent, unit, floor, unitId, plan, shareToken };
+            this.state.propertyContext = { id, name, addr, city, state, rent, shareToken };
 
             // Populate hidden inputs so FormData serialises them automatically
             const setHidden = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -645,13 +416,10 @@ class RentalApplication {
             setHidden('hiddenPropertyCity',  city);
             setHidden('hiddenPropertyState', state);
             setHidden('hiddenListedRent',    rent);
-            setHidden('hiddenPropertyUnit',  unit);
-            setHidden('hiddenPropertyFloor', floor);
-            setHidden('hiddenPropertyFloorLabel', floor);
-            setHidden('hiddenPropertyUnitId', unitId);
               // Additional property context params
               const zip        = p.get('zip')         || '';
               const deposit    = p.get('deposit')     || '';
+              const fee        = p.get('fee')         || '';
               const beds       = p.get('beds')        || '';
               const baths      = p.get('baths')       || '';
               const avail      = p.get('avail')       || '';
@@ -790,6 +558,7 @@ class RentalApplication {
               setHidden('hiddenSmokingAllowed',  smoking);
               // Pet and smoking questions are left flexible — applicants may answer Yes or No regardless of property policy.
 
+
               setHidden('hiddenUtilities',       utilities);
               setHidden('hiddenParking',         parking);
               setHidden('hiddenParkingFee',      parkingFee);
@@ -816,7 +585,7 @@ class RentalApplication {
             }
 
             // Show the property context banner (with extended listing details)
-            this._showPropertyBanner({ id, name, addr, city, state, rent, unit, floor, plan, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee });
+            this._showPropertyBanner({ id, name, addr, city, state, rent, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee });
 
             // Pre-populate the pet policy hint so it is ready when the user selects "Yes" for pets
             this._applyPetPolicyHint();
@@ -831,13 +600,10 @@ class RentalApplication {
     // PROPERTY CONTEXT BANNER — shown between header and progress bar.
     // Lets applicants confirm they're applying for the right property.
     // ─────────────────────────────────────────────────────────────────────
-    _showPropertyBanner({ id, name, addr, city, state, rent, unit, floor, plan, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee }) {
+    _showPropertyBanner({ id, name, addr, city, state, rent, beds, baths, deposit, avail, terms, lastMonthsRent, adminFee, moveInSpecial, laundryType, heatingType, coolingType, garageSpaces, evCharging, parkingFee }) {
         if (!name && !addr && !city) return;
 
-        let displayName = name || 'Selected Property';
-        if (unit) {
-            displayName = name ? `${name} — Unit ${unit}` : `Unit ${unit}`;
-        }
+        const displayName = name || 'Selected Property';
         const locationParts = [city, state].filter(Boolean).map(s => this._escHtml(s));
         const locationLine = locationParts.length ? locationParts.join(', ') : '';
         const rentLine = rent
@@ -847,10 +613,8 @@ class RentalApplication {
         const metaParts = [locationLine, rentLine].filter(Boolean);
         const metaLine = metaParts.join(' &nbsp;·&nbsp; ');
 
-        // Build listing detail chips (unit / floor / beds / baths / deposit / available / lease terms)
+        // Build listing detail chips (beds / baths / deposit / available / lease terms)
         const chips = [];
-        if (unit)    chips.push('<span class="pcb-chip" style="background:#006aff;color:#fff;font-weight:700"><i class="fas fa-door-open"></i> Unit ' + this._escHtml(unit) + '</span>');
-        if (floor)   chips.push('<span class="pcb-chip"><i class="fas fa-stairs"></i> Floor ' + this._escHtml(floor) + '</span>');
         if (beds)    chips.push('<span class="pcb-chip"><i class="fas fa-bed"></i> ' + this._escHtml(beds) + ' Bed</span>');
         if (baths)   chips.push('<span class="pcb-chip"><i class="fas fa-bath"></i> ' + this._escHtml(baths) + ' Bath</span>');
         if (deposit) chips.push('<span class="pcb-chip"><i class="fas fa-dollar-sign"></i> $' + parseFloat(deposit).toLocaleString('en-US') + ' Deposit</span>');
@@ -1056,6 +820,8 @@ class RentalApplication {
         return true;
     }
 
+
+
     setupOfflineDetection() {
         window.addEventListener('online', () => {
             this.setState({ isOnline: true });
@@ -1227,14 +993,29 @@ class RentalApplication {
 
             if (!income) { widget.style.display = 'none'; return; }
 
+            const ratio  = total / rent; // typically landlords require 2.5x–3x
             const pct    = Math.round((rent / total) * 100);
             widget.style.display = 'block';
 
-            const color = '#1d4ed8';
-            const msg = 'Estimated rent share: ' + pct + '% of the income entered. Choice Properties management reviews each application individually.';
-            widget.style.background  = '#eff6ff';
+            let color, bg, label, msg;
+            if (ratio >= 3) {
+                color = '#1b5e20'; bg = '#e8f5e9'; label = '✓ Qualifies';
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
+                      rent.toLocaleString('en-US') + '), which meets the standard 3× requirement.';
+            } else if (ratio >= 2.5) {
+                color = '#e65100'; bg = '#fff8e1'; label = '⚠ Borderline';
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
+                      rent.toLocaleString('en-US') + '). Most landlords require 2.5–3×. This may be reviewed closely.';
+            } else {
+                color = '#b71c1c'; bg = '#ffebee'; label = '✗ May Not Qualify';
+                msg = 'Your income is ' + ratio.toFixed(1) + '× the monthly rent ($' +
+                      rent.toLocaleString('en-US') + '). Most landlords require at least 2.5–3×. ' +
+                      (other ? '' : 'Adding any additional income above may help.');
+            }
+
+            widget.style.background  = bg;
             widget.style.borderColor = color + '55';
-            badge.textContent  = 'For review';
+            badge.textContent  = label;
             badge.style.cssText = 'margin-left:auto;font-size:12px;padding:2px 10px;border-radius:50px;font-weight:700;background:' + color + ';color:#fff;';
             const muted = document.createElement('span');
             muted.style.color = '#94a3b8';
@@ -1611,7 +1392,14 @@ class RentalApplication {
                             radios.forEach(r => this.clearError(r));
                         }
                     } else if (input.type === 'checkbox') {
-                        this.clearError(input);
+                        if (input.id === 'coConsent' && !input.checked) {
+                            this.showError(input, this.state.language === 'en' ? 'You must authorize verification' : 'Debe autorizar la verificación');
+                            input.classList.add('is-invalid');
+                            isStepValid = false;
+                            if (!firstInvalidField) firstInvalidField = input;
+                        } else {
+                            this.clearError(input);
+                        }
                     } else {
                         if (input.hasAttribute('required') && !input.value.trim()) {
                             this.showError(input, this.state.language === 'en' ? 'Required' : 'Campo obligatorio');
@@ -1629,52 +1417,6 @@ class RentalApplication {
                     }
                 });
             }
-
-            // Validate any additional applicant cards
-            const extraCards = document.querySelectorAll('#additionalApplicantsContainer .additional-applicant-card');
-            extraCards.forEach(card => {
-                const reqInputs = card.querySelectorAll('input[required]');
-                reqInputs.forEach(input => {
-                    const val = input.value.trim();
-                    if (!val) {
-                        this.showError(input, this.state.language === 'en' ? 'Required' : 'Campo obligatorio');
-                        input.classList.add('is-invalid');
-                        isStepValid = false;
-                        if (!firstInvalidField) firstInvalidField = input;
-                    } else if (input.type === 'email' && !val.includes('@')) {
-                        this.showError(input, this.state.language === 'en' ? 'Valid email required' : 'Correo válido requerido');
-                        input.classList.add('is-invalid');
-                        isStepValid = false;
-                        if (!firstInvalidField) firstInvalidField = input;
-                    } else if (input.dataset.extraField === 'ssn' && val.replace(/\D/g, '').length !== 4) {
-                        this.showError(input, this.state.language === 'en' ? 'Enter 4 digits' : 'Ingrese 4 dígitos');
-                        input.classList.add('is-invalid');
-                        isStepValid = false;
-                        if (!firstInvalidField) firstInvalidField = input;
-                    } else if (input.dataset.extraField === 'dob') {
-                        const parsed = this._parseLocalDate(val);
-                        if (!parsed) {
-                            this.showError(input, this.state.language === 'en' ? 'Valid DOB required' : 'Fecha de nacimiento requerida');
-                            input.classList.add('is-invalid');
-                            isStepValid = false;
-                            if (!firstInvalidField) firstInvalidField = input;
-                        } else {
-                            const now = new Date();
-                            const age = now.getFullYear() - parsed.getFullYear() - ((now.getMonth() < parsed.getMonth() || (now.getMonth() === parsed.getMonth() && now.getDate() < parsed.getDate())) ? 1 : 0);
-                            if (age < 18) {
-                                this.showError(input, this.state.language === 'en' ? 'Must be 18+' : 'Debe tener 18+');
-                                input.classList.add('is-invalid');
-                                isStepValid = false;
-                                if (!firstInvalidField) firstInvalidField = input;
-                            } else {
-                                this.clearError(input);
-                            }
-                        }
-                    } else {
-                        this.clearError(input);
-                    }
-                });
-            });
         }
         if (stepNumber === 5) {
               // Validate "Preferred Contact Method" — at least one checkbox required
@@ -1787,26 +1529,25 @@ class RentalApplication {
         if (hasCoApplicantCheck && coApplicantSection) {
             hasCoApplicantCheck.addEventListener('change', (e) => {
                 coApplicantSection.style.display = e.target.checked ? 'block' : 'none';
-                this._updateApplicationFee();
                 if (e.target.checked) {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.setAttribute('required', 'required');
                     });
+                    // coConsent must be checked when section is visible
+                    const coConsentEl = document.getElementById('coConsent');
+                    if (coConsentEl) coConsentEl.setAttribute('required', 'required');
                 } else {
                     coRequiredIds.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) { el.removeAttribute('required'); }
+                        if (el) { el.removeAttribute('required'); el.value = ''; }
                     });
+                    // Remove required from coConsent and uncheck it when section hides
+                    const coConsentEl = document.getElementById('coConsent');
+                    if (coConsentEl) { coConsentEl.removeAttribute('required'); coConsentEl.checked = false; }
                     const inputs = coApplicantSection.querySelectorAll('input, select, textarea');
                     inputs.forEach(input => this.clearError(input));
                 }
-            });
-        }
-        const btnAddApplicant = document.getElementById('btnAddApplicant');
-        if (btnAddApplicant) {
-            btnAddApplicant.addEventListener('click', () => {
-                this.addAdditionalApplicant();
             });
         }
         const vehicleYes = document.getElementById('vehicleYes');
@@ -2347,8 +2088,6 @@ class RentalApplication {
             // No server draft — fall back to localStorage
             this.restoreSavedProgress();
         }
-        document.getElementById('hasCoApplicant')?.dispatchEvent(new Event('change', { bubbles: true }));
-        this._updateApplicationFee();
     }
 
       restoreSavedProgress() {
@@ -2357,16 +2096,20 @@ class RentalApplication {
             try {
                 const data = JSON.parse(saved);
 
-                // User directive: Never wipe or discard applicant data on property switch or resume.
-                // All applicant personal, household, employment, and additional applicants persist across sessions.
+                // Property-context guard: if the current URL is for a different property
+                // than what was saved, wipe the stale data and start fresh.
+                // This prevents a half-filled application for Property A from loading
+                // when the user clicks "Apply" on Property B.
                 const _curP = new URLSearchParams(window.location.search);
                 const _curFingerprint = _curP.get('id') || _curP.get('addr') || '';
-                if (_curFingerprint) {
-                    data._propertyFingerprint = _curFingerprint;
+                const _savedFingerprint = data._propertyFingerprint || '';
+                if (_curFingerprint && _savedFingerprint && _curFingerprint !== _savedFingerprint) {
+                    try { localStorage.removeItem(this.config.LOCAL_STORAGE_KEY); } catch(e) {}
+                    return; // Different property — start completely fresh
                 }
 
-                // Restore form fields — keep 100% of entered fields including SSN and DOB
-                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents', '_extraApplicants', 'additional_applicants_json']);
+                // SSN and DOB are kept in the saved draft so applicants don't have to re-enter them on resume.
+                const SKIP = new Set(['Application ID', '_last_updated', '_language', '_currentStep', '_propertyFingerprint', '_documents']);
                 const form = document.getElementById('rentalApplication');
                 if (!form) return;
 
@@ -2381,6 +2124,7 @@ class RentalApplication {
                     if (firstEl.type === 'radio') {
                         els.forEach(el => { if (el.value === value) el.checked = true; });
                     } else if (firstEl.type === 'checkbox') {
+                          // [L1 fix] Handle array (multi-checkbox group) and single values
                           if (Array.isArray(value)) {
                               els.forEach(el => { el.checked = value.includes(el.value); });
                           } else {
@@ -2390,17 +2134,6 @@ class RentalApplication {
                           firstEl.value = value;
                     }
                 });
-
-                // Restore dynamic additional applicants
-                if (Array.isArray(data._extraApplicants) && data._extraApplicants.length > 0) {
-                    const container = document.getElementById('additionalApplicantsContainer');
-                    if (container) container.innerHTML = '';
-                    this._extraApplicants = [];
-                    data._extraApplicants.forEach(item => {
-                        this.addAdditionalApplicant(item);
-                    });
-                }
-
                 if (data._language) this.state.language = data._language;
                 if (data._currentStep && data._currentStep > 1) {
                     const stepNum = parseInt(data._currentStep, 10);
@@ -2416,12 +2149,10 @@ class RentalApplication {
                         }, 10);
                     }
                 }
-                // Re-attach documents that were saved with the draft.
+                // Issue #14: re-attach documents that were saved with the draft.
                 this._restoreDocumentsFromDraft(data._documents);
             } catch (e) { console.warn('[CP App] Non-critical error in restoreSavedProgress:', e); }
         }
-        document.getElementById('hasCoApplicant')?.dispatchEvent(new Event('change', { bubbles: true }));
-        this._updateApplicationFee();
     }
 
     // Issue #14: drafts now persist attached supporting documents alongside
@@ -2497,13 +2228,23 @@ class RentalApplication {
 
     async saveProgress() {
         const data = this.getAllFormData();
-        // Save 100% of entered fields including SSN and DOB to localStorage without security stripping
-        data._extraApplicants = this.getAdditionalApplicantsData();
+        // Application ID is a server-issued identifier and must not be cached client-side.
+        // SSN (last-4) and DOB are intentionally retained so applicants don't have to re-enter
+        // them on resume; the draft is stored in the same browser/device localStorage and the
+        // same encrypted server draft slot used for every other applicant field.
+        const sensitiveKeys = ['Application ID'];
+        sensitiveKeys.forEach(key => delete data[key]);
         data._last_updated = new Date().toISOString();
         data._language = this.state.language || 'en';
         data._currentStep = this.getCurrentSection();
+        // Save property fingerprint so restore can detect a different-property session.
+        // Uses the property ID URL param (most specific), falling back to the address param.
         const _urlP = new URLSearchParams(window.location.search);
-        data._propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || data._propertyFingerprint || '';
+        data._propertyFingerprint = _urlP.get('id') || _urlP.get('addr') || '';
+        // Issue #14: include attached documents so draft restore brings them back.
+        // Encoding is async — do it before the localStorage write so the saved
+        // payload is internally consistent (auto-save callers don't await us;
+        // that's fine, the flash indicator just fires after the encode finishes).
         try {
             data._documents = await this._collectDocumentsForDraft();
         } catch (_) {
@@ -2527,6 +2268,7 @@ class RentalApplication {
           const form = document.getElementById('rentalApplication');
           const formData = new FormData(form);
           const data = {};
+          // [L1 fix] Collect duplicate keys (multi-checkboxes like Preferred Contact Method / Preferred Time) into arrays
           formData.forEach((value, key) => {
               if (Object.prototype.hasOwnProperty.call(data, key)) {
                   if (!Array.isArray(data[key])) data[key] = [data[key]];
@@ -2535,14 +2277,6 @@ class RentalApplication {
                   data[key] = value;
               }
           });
-          const extra = this.getAdditionalApplicantsData();
-          if (extra && extra.length > 0) {
-              data.additional_applicants_json = JSON.stringify(extra);
-          }
-          const hasCo = document.getElementById('hasCoApplicant')?.checked === true;
-          const totalAdults = 1 + (hasCo ? 1 : 0) + (extra ? extra.length : 0);
-          data.screened_adult_count = totalAdults;
-          data['Application Fee'] = totalAdults * 50;
           return data;
       }
 
@@ -2593,18 +2327,18 @@ class RentalApplication {
                 appId: 'Application ID',
                 clickToCopy: 'Copy ID',
                 immediateNextSteps: 'Next Steps',
-                paymentRequiredTitle: 'Application Fee',
+                paymentRequiredTitle: freeApp ? 'No Application Fee' : 'Application Fee Required',
                 paymentRequiredDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to screening.'
-                    : 'The application fee total shown above is due after submission. Choice Properties management will contact you with the next steps before review begins.',
-                completePaymentTitle: 'Management Review',
+                    : `An application fee of $${fee} is required to initiate the screening process. A representative will contact you to coordinate payment.`,
+                completePaymentTitle: freeApp ? 'Application Submitted' : 'Fee Coordination',
                 completePaymentDesc: freeApp
                     ? 'No payment is required. Your application has been submitted and will be reviewed as received.'
-                    : 'Choice Properties management reviews completed applications. Timing varies based on the information and follow-up needed.',
-                reviewBeginsTitle: 'Application Review',
+                    : `A representative will contact you using your indicated payment method to coordinate the $${fee} application fee.`,
+                reviewBeginsTitle: 'Screening in Progress',
                 reviewBeginsDesc: freeApp
                     ? 'Screening typically concludes within 24 to 72 hours. Application status is available online using your Application ID.'
-                    : 'You can track your application status using your Application ID. Review timing varies.',
+                    : 'Screening typically concludes within 24 to 72 hours of fee confirmation. Application status is available online using your Application ID.',
                 importantNote: 'Notice:',
                 paymentUrgentText: freeApp
                     ? 'No application fee is required for this property. Your application has been submitted for review.'
@@ -2619,14 +2353,14 @@ class RentalApplication {
                 spamWarning: '📧 A confirmation has been sent to the email address provided. If not received within a few minutes, check your <strong>spam or junk folder</strong>.',
                 trackStatus: 'Track Application Status',
                 newApplication: 'Submit New Application',
-                reapplicationPolicyTitle: 'What Happens Next',
-                reapplicationPolicyText: 'Choice Properties management reviews completed applications and contacts applicants about next steps.',
+                reapplicationPolicyTitle: 'Reapplication Policy',
+                reapplicationPolicyText: 'In the event of denial, applicants may reapply for any available property within 30 days without a new application fee. Screening results remain valid for 60 days.',
                 step1YouSubmit: '1. Application Submitted',
                 step1Desc: 'Complete and submit this application in full.',
-                step2PaymentArranged: '2. Application Fee',
-                step2Desc: 'Choice Properties management will contact you with the next steps for the application fee total shown above.',
+                step2PaymentArranged: freeApp ? '2. Application Received' : '2. Fee Coordination',
+                step2Desc: freeApp ? 'No fee required. Application enters review immediately.' : `A representative contacts you to process the $${fee} fee.`,
                 step3ReviewBegins: '3. Screening & Review',
-                step3Desc: 'Management review begins after the required application steps are complete. Timing varies.',
+                step3Desc: freeApp ? 'Typically completed within 24–72 hours.' : 'Typically completed within 24–72 hours of fee confirmation.',
                 propertyHeader: 'Applicant Identification & Property',
                 propertyInfo: 'Property Information',
                 propertyAddressLabel: 'Property Address',
@@ -2674,7 +2408,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'e.g., 4000',
                 coEmploymentDurationLabel: 'Duration of Employment',
                 coEmploymentDurationPlaceholder: 'e.g., 2 years',
-                coApplicantConsentNotice: 'We will email the additional adult a separate link to review and authorize screening. Their screening cannot begin until they complete that step.',
+                coConsentLabel: 'I authorize verification of all information provided for this co-applicant or guarantor, including credit and background screening.',
                 contactPrefsHeader: 'Contact Preferences',
                 prefContactMethod: 'Preferred Contact Method',
                 contactMethodText: 'SMS / Text',
@@ -2764,10 +2498,10 @@ class RentalApplication {
                 smokerLabel: 'Tobacco / Smoking Use',
                 paymentHeader: 'Resident Billing Allocation',
                 paymentNoCollection: 'No payment is collected via this form.',
-                paymentCoordinationNotice: 'Following submission, a coordinator will contact you about the fee total shown on your application. The fee is $50 per adult being screened.',
+                paymentCoordinationNotice: 'Following submission, a coordinator will text you to provide the active payment-routing details. Direct coordination waives convenience surcharges; the $50 application fee still applies.',
                 paymentIntro: freeApp
                     ? 'No application fee is required for this property. Please indicate your preferred contact method for review communications.'
-                    : 'Indicate your preferred payment method. A representative will use this information to coordinate the application fee total shown above after submission.',
+                    : `Indicate your preferred payment method. A representative will use this information to coordinate the $${fee} application fee after submission.`,
                 paymentImportant: freeApp
                     ? 'No application fee is required. Your application will be reviewed upon submission.'
                     : 'The application fee must be processed before screening can begin. You will be contacted after submission to arrange payment.',
@@ -2789,19 +2523,19 @@ class RentalApplication {
                 feeTitle: freeApp ? 'Application Fee: Waived' : `Application Fee: $${fee}.00`,
                 feeDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to review.'
-                    : 'The fee is $50 for each adult being screened. Adult occupants who are not applying or being screened are not charged. The total is shown below before you submit.',
+                    : 'The application fee is required before screening can begin. A representative will contact you after submission to coordinate payment.',
                 paymentReminderTitle: freeApp ? 'No Application Fee' : 'Application Fee Required',
                 paymentReminderDesc: freeApp
                     ? 'No application fee is required for this property. Your application will proceed directly to review upon submission.'
-                    : 'Your application will not be activated until the fee total shown on your application has been processed. A representative will contact you after submission.',
+                    : `Your application will not be activated until the $${fee} fee has been processed. A representative will contact you after submission.`,
                 verificationTitle: 'Verify Contact Information',
                 verificationDesc: freeApp
                     ? 'Confirm that the email address and phone number provided are accurate. These will be used for all application communications.'
-                    : 'Confirm that the email address and phone number provided are accurate. These will be used to coordinate the fee total shown on your application and communicate application status.',
-                reapplicationPolicyTextShort: 'Choice Properties management reviews completed applications and contacts applicants about next steps.',
+                    : `Confirm that the email address and phone number provided are accurate. These will be used to coordinate the $${fee} fee and communicate application status.`,
+                reapplicationPolicyTextShort: 'In the event of denial, applicants may reapply within 30 days without a new fee. Screening results valid for 60 days.',
                 legalDeclaration: 'Applicant Declaration',
                 legalCertify: 'I certify that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that any material misrepresentation is grounds for denial or termination of tenancy.',
-                legalAuthorize: 'I authorize Choice Properties management and its designated verification providers to verify information provided in this application, including employment, income, rental history, and personal references, and to request consumer reports where applicable. If a decision is based on a consumer report, I will receive the notices and information required by law.',
+                legalAuthorize: 'I authorize Choice Properties and its designated agents to verify all information provided in this application, including employment, income, rental history, personal references, and to conduct a consumer credit and background screening.',
                 termsAgreeLabel: 'I certify that all information provided in this application is accurate and complete, and I authorize Choice Properties to verify it.',
                 submitBtn: 'Submit Application',
                 submitDisclaimer: 'By submitting, you authorize Choice Properties to process this application in accordance with its Privacy Policy and Terms of Service.',
@@ -2860,8 +2594,10 @@ class RentalApplication {
                 uploadDesc: 'Documents may be attached to expedite the review process. Image files (JPG, PNG) will display a preview after upload. PDF files will be confirmed with a verification badge. <strong>Accepted:</strong> PDF, JPG, PNG · Max 1 MB per file · Up to 4 files · 3 MB total.',
                 uploadCta: 'Click to browse or drag files here',
                 uploadHint: 'Government-issued ID &nbsp;·&nbsp; Pay stubs &nbsp;·&nbsp; Bank statements',
+                creditApplied: 'Application Credit Applied',
+                creditAppliedText: 'An application credit has been applied. The application fee is waived.',
                 trustLine: 'Application data is transmitted securely and used solely for rental screening purposes.',
-                feeAcknowledge: 'I understand that the application fee is $50 for each adult applicant or guarantor being screened, and that the total shown above is due after submission. Adult occupants who are not applying or being screened are not charged. Nothing is charged when I submit. If reapplying after a non-approval, I should contact management before payment to verify eligibility for the 30-day courtesy. The fee is non-refundable after payment except where required by applicable law or where management confirms an exception in writing.',
+                feeAcknowledge: 'I acknowledge the application fee policy and consent to my personal information being reviewed by Choice Properties staff and the property owner solely for rental application screening. The application fee is <strong>non-refundable</strong> upon submission and payment processing, except as provided in the <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Application Credit Policy</a>.',
                 agreeTermsPrivacy: 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Terms of Service</a> (including the <strong>binding arbitration clause</strong> and <strong>class action waiver</strong> in Sections 18–19), the <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Privacy Policy</a>, and the <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Complete Policy &amp; Legal Framework</a>. I confirm I am at least 18 years of age and have legal capacity to enter into this agreement.',
                 smsConsent: 'I expressly consent to receive transactional SMS messages from Choice Properties at the mobile number provided, regarding application status, fee coordination, lease execution, and move-in scheduling. Message frequency varies. <strong>Message and data rates may apply.</strong> Reply HELP for assistance, STOP to opt out at any time. SMS consent is not a condition of application — leave unchecked to receive communications by email only.',
                 footerCopyright: '&copy; 2026 Choice Properties. All rights reserved.',
@@ -2899,18 +2635,18 @@ class RentalApplication {
                 appId: 'ID de Solicitud',
                 clickToCopy: 'Copiar ID',
                 immediateNextSteps: 'Próximos Pasos',
-                paymentRequiredTitle: 'Tarifa de Solicitud',
+                paymentRequiredTitle: freeApp ? 'Sin Tarifa de Solicitud' : 'Tarifa de Solicitud Requerida',
                 paymentRequiredDesc: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud pasará directamente al proceso de verificación.'
-                    : 'El total de la tarifa mostrado arriba se paga después del envío. El equipo de administración de Choice Properties le contactará con los siguientes pasos antes de iniciar la revisión.',
-                completePaymentTitle: 'Revisión de Administración',
+                    : `Se requiere una tarifa de solicitud de $${fee} para iniciar el proceso de verificación. Un representante lo contactará para coordinar el pago.`,
+                completePaymentTitle: freeApp ? 'Solicitud Enviada' : 'Coordinación de Tarifa',
                 completePaymentDesc: freeApp
                     ? 'No se requiere pago. Su solicitud ha sido enviada y será revisada tal como fue recibida.'
-                    : 'El equipo de administración de Choice Properties revisa las solicitudes completas. El tiempo varía según la información y el seguimiento necesario.',
-                reviewBeginsTitle: 'Revisión de Solicitud',
+                    : `Un representante lo contactará usando su método de pago indicado para coordinar la tarifa de solicitud de $${fee}.`,
+                reviewBeginsTitle: 'Verificación en Proceso',
                 reviewBeginsDesc: freeApp
                     ? 'La verificación generalmente concluye en 24 a 72 horas. El estado de la solicitud está disponible en línea usando su ID de Solicitud.'
-                    : 'Puede consultar el estado de su solicitud con su ID. El tiempo de revisión varía.',
+                    : 'La verificación generalmente concluye en 24 a 72 horas tras la confirmación del pago. El estado de la solicitud está disponible en línea usando su ID de Solicitud.',
                 importantNote: 'Aviso:',
                 paymentUrgentText: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Su solicitud ha sido enviada para revisión.'
@@ -2925,14 +2661,14 @@ class RentalApplication {
                 spamWarning: '📧 Se ha enviado una confirmación al correo electrónico proporcionado. Si no lo recibe en unos minutos, revise su carpeta de <strong>spam o correo no deseado</strong>.',
                 trackStatus: 'Ver Estado de Solicitud',
                 newApplication: 'Enviar Nueva Solicitud',
-                reapplicationPolicyTitle: 'Qué Sucede Después',
-                reapplicationPolicyText: 'El equipo de administración de Choice Properties revisa las solicitudes completas y contacta a los solicitantes sobre los siguientes pasos.',
+                reapplicationPolicyTitle: 'Política de Reaplicación',
+                reapplicationPolicyText: 'En caso de denegación, los solicitantes pueden volver a solicitar cualquier propiedad disponible dentro de 30 días sin nueva tarifa. Los resultados de verificación permanecen válidos por 60 días.',
                 step1YouSubmit: '1. Solicitud Enviada',
                 step1Desc: 'Complete y envíe esta solicitud en su totalidad.',
-                step2PaymentArranged: '2. Tarifa de Solicitud',
-                step2Desc: 'El equipo de administración de Choice Properties le contactará sobre el total de la tarifa mostrado en su solicitud.',
+                step2PaymentArranged: freeApp ? '2. Solicitud Recibida' : '2. Coordinación de Tarifa',
+                step2Desc: freeApp ? 'Sin tarifa. La solicitud entra en revisión de inmediato.' : `Un representante lo contacta para procesar la tarifa de $${fee}.`,
                 step3ReviewBegins: '3. Verificación y Revisión',
-                step3Desc: 'La revisión de administración comienza cuando se completan los pasos requeridos. El tiempo varía.',
+                step3Desc: freeApp ? 'Generalmente concluye en 24–72 horas.' : 'Generalmente concluye en 24–72 horas tras la confirmación del pago.',
                 propertyHeader: 'Identificación del Solicitante y Propiedad',
                 propertyInfo: 'Información de la Propiedad',
                 propertyAddressLabel: 'Dirección de la Propiedad',
@@ -2980,7 +2716,7 @@ class RentalApplication {
                 coMonthlyIncomePlaceholder: 'ej., 4000',
                 coEmploymentDurationLabel: 'Tiempo en el empleo',
                 coEmploymentDurationPlaceholder: 'ej., 2 años',
-                coApplicantConsentNotice: 'Enviaremos al adulto adicional un enlace separado para revisar y autorizar la verificación. Su evaluación no comenzará hasta que complete ese paso.',
+                coConsentLabel: 'Autorizo la verificación de toda la información proporcionada para este co-solicitante o garante, incluyendo verificación de crédito y antecedentes.',
                 contactPrefsHeader: 'Preferencias de Contacto',
                 prefContactMethod: 'Método de Contacto Preferido',
                 contactMethodText: 'SMS / Texto',
@@ -3070,10 +2806,10 @@ class RentalApplication {
                 smokerLabel: 'Uso de Tabaco / Cigarrillos',
                 paymentHeader: 'Asignación de Pagos del Residente',
                 paymentNoCollection: 'No se cobra ningún pago mediante este formulario.',
-                paymentCoordinationNotice: 'Después del envío, un coordinador se comunicará con usted para coordinar el total de la tarifa mostrado en su solicitud. Se cobran $50 por cada adulto evaluado.',
+                paymentCoordinationNotice: 'Después del envío, un coordinador le enviará un mensaje de texto con los datos de pago vigentes. La coordinación directa elimina los cargos por conveniencia; la tarifa de solicitud de $50 sigue vigente.',
                 paymentIntro: freeApp
                     ? 'No se requiere tarifa de solicitud para esta propiedad. Indique su método de contacto preferido para las comunicaciones de revisión.'
-                    : 'Indique su método de pago preferido. Un representante usará esta información para coordinar el total de la tarifa mostrado arriba después del envío.',
+                    : `Indique su método de pago preferido. Un representante usará esta información para coordinar la tarifa de solicitud de $${fee} tras el envío.`,
                 paymentImportant: freeApp
                     ? 'No se requiere tarifa de solicitud. Su solicitud será revisada al momento del envío.'
                     : 'La tarifa de solicitud debe procesarse antes de que pueda iniciarse la verificación. Será contactado después del envío para coordinar el pago.',
@@ -3099,15 +2835,15 @@ class RentalApplication {
                 paymentReminderTitle: freeApp ? 'Sin Tarifa de Solicitud' : 'Pago Requerido Antes de la Revisión',
                 paymentReminderDesc: freeApp
                     ? 'Esta propiedad no tiene tarifa de solicitud. Su envío está completo y pasará directamente a revisión.'
-                    : 'Su solicitud no estará activa hasta que se haya pagado el total de la tarifa mostrado en su solicitud. Nuestro equipo se comunicará con usted después del envío.',
+                    : `Su solicitud no está completa hasta que se haya pagado la tarifa de $${fee}. Nuestro equipo lo contactará poco después del envío para organizar esto.`,
                 verificationTitle: 'Verifique Su Información de Contacto',
                 verificationDesc: freeApp
                     ? 'Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará durante el proceso de revisión.'
-                    : 'Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo coordinará el total de la tarifa mostrado en su solicitud y le comunicará el estado.',
-                reapplicationPolicyTextShort: 'El equipo de administración de Choice Properties revisa las solicitudes completas y contacta a los solicitantes sobre los siguientes pasos.',
+                    : `Por favor confirme que su correo electrónico y número de teléfono sean correctos. Así es como nuestro equipo lo contactará acerca de la tarifa de $${fee}.`,
+                reapplicationPolicyTextShort: 'Si es denegado, puede aplicar nuevamente dentro de 30 días sin nueva tarifa. Resultados de evaluación válidos por 60 días.',
                 legalDeclaration: 'Declaración del Solicitante',
                 legalCertify: 'Certifico que toda la información proporcionada en esta solicitud es verdadera, exacta y completa a mi leal saber y entender. Entiendo que cualquier tergiversación material es causa de denegación o terminación del arrendamiento.',
-                legalAuthorize: 'Autorizo al equipo de administración de Choice Properties y a sus proveedores de verificación designados a verificar la información proporcionada en esta solicitud, incluyendo empleo, ingresos, historial de alquiler y referencias personales, y a solicitar informes del consumidor cuando corresponda. Si una decisión se basa en un informe del consumidor, recibiré los avisos e información exigidos por ley.',
+                legalAuthorize: 'Autorizo a Choice Properties y sus agentes designados a verificar toda la información proporcionada en esta solicitud, incluyendo empleo, ingresos, historial de arrendamiento, referencias personales, y a realizar una verificación de crédito y antecedentes del consumidor.',
                 termsAgreeLabel: 'Certifico que toda la información proporcionada en esta solicitud es exacta y completa, y autorizo a Choice Properties a verificarla.',
                 submitBtn: 'Enviar Solicitud',
                 submitDisclaimer: 'Al enviar, autoriza a Choice Properties a procesar esta solicitud conforme a su Política de Privacidad y Términos de Servicio.',
@@ -3166,8 +2902,10 @@ class RentalApplication {
                 uploadDesc: 'Los documentos pueden adjuntarse para agilizar el proceso de revisión. Los archivos de imagen (JPG, PNG) mostrarán una vista previa al cargar. Los archivos PDF se confirmarán con un distintivo de verificación. <strong>Aceptados:</strong> PDF, JPG, PNG · Máx. 1 MB por archivo · Hasta 4 archivos · 3 MB total.',
                 uploadCta: 'Haga clic para buscar o arrastre archivos aquí',
                 uploadHint: 'Identificación oficial &nbsp;·&nbsp; Talones de pago &nbsp;·&nbsp; Estados de cuenta',
+                creditApplied: 'Crédito de Solicitud Aplicado',
+                creditAppliedText: 'Se ha aplicado un crédito de solicitud. La tarifa de solicitud está exonerada.',
                 trustLine: 'Los datos de la solicitud se transmiten de forma segura y se utilizan exclusivamente para fines de verificación de arrendamiento.',
-                feeAcknowledge: 'Entiendo que la tarifa de solicitud es de $50 por cada adulto solicitante o garante que será evaluado, y que debo pagar el total mostrado arriba después de enviar la solicitud. No se cobra a los adultos que no solicitan ni serán evaluados. No se cobra nada al enviar. Si vuelvo a solicitar después de una decisión de no aprobación, debo comunicarme con administración antes del pago para verificar si califico para la cortesía de 30 días. La tarifa no es reembolsable después del pago, excepto cuando lo exija la ley aplicable o cuando el equipo de administración confirme una excepción por escrito.',
+                feeAcknowledge: 'Reconozco la política de tarifas de solicitud y autorizo que mi información personal sea revisada por el personal de Choice Properties y el propietario de la propiedad únicamente para la verificación de arrendamiento. La tarifa de solicitud es <strong>no reembolsable</strong> al momento del envío y procesamiento del pago, excepto según lo previsto en la <a href="/application-credit-policy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Crédito de Solicitud</a>.',
                 agreeTermsPrivacy: 'He leído y acepto los <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--primary);">Términos del Servicio</a> (incluyendo la <strong>cláusula de arbitraje vinculante</strong> y la <strong>renuncia a demanda colectiva</strong> en las Secciones 18–19), la <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">Política de Privacidad</a> y el <a href="/policies.html" target="_blank" rel="noopener" style="color:var(--primary);">Marco Completo de Políticas y Legal</a>. Confirmo que tengo al menos 18 años de edad y la capacidad legal para celebrar este acuerdo.',
                 smsConsent: 'Doy mi consentimiento expreso para recibir mensajes SMS transaccionales de Choice Properties al número móvil proporcionado, relacionados con el estado de la solicitud, coordinación de tarifa, ejecución del contrato y programación de mudanza. La frecuencia de los mensajes varía. <strong>Pueden aplicar tarifas de mensajes y datos.</strong> Responda HELP para asistencia, STOP para cancelar en cualquier momento. El consentimiento de SMS no es condición de la solicitud — deje sin marcar para recibir comunicaciones únicamente por correo electrónico.',
                 footerCopyright: '&copy; 2026 Choice Properties. Todos los derechos reservados.',
@@ -3226,7 +2964,6 @@ class RentalApplication {
                 });
 
                 this.updateProgressBar();
-                this._updateApplicationFee();
 
                 if (this.getCurrentSection() === 6) {
                     this.generateApplicationSummary();
@@ -3263,7 +3000,6 @@ class RentalApplication {
             });
             document.documentElement.setAttribute('lang', 'es');
             document.title = t.pageTitle;
-            this._updateApplicationFee();
         }
     }
 
@@ -3475,6 +3211,7 @@ class RentalApplication {
         }
     }
 
+
     // Generates a 64-character hex nonce used as a bot-friction CSRF token.
     // The backend validates format only (32-128 alphanumeric chars); this satisfies that requirement.
     generateCsrfNonce() {
@@ -3612,15 +3349,6 @@ class RentalApplication {
                 formData.set('_share_token', shareToken);
             }
 
-            const extra = this.getAdditionalApplicantsData();
-            if (extra && extra.length > 0) {
-                formData.set('additional_applicants_json', JSON.stringify(extra));
-            }
-            const hasCo = document.getElementById('hasCoApplicant')?.checked === true;
-            const totalAdults = 1 + (hasCo ? 1 : 0) + (extra ? extra.length : 0);
-            formData.set('screened_adult_count', String(totalAdults));
-            formData.set('Application Fee', String(totalAdults * 50));
-
             // Idempotency key — server uses this to dedupe accidental double-submits
             // (network retries, double-clicks, etc.). Generate once per attempt; if the
             // user clicks Submit a second time after a flaky network, we'll regenerate
@@ -3722,7 +3450,7 @@ class RentalApplication {
                 await this.delay(500);
                 this.updateSubmissionProgress(4, t.complete);
                 await this.delay(500);
-                this.handleSubmissionSuccess(result.appId, result.portal_login_url, result.coApplicantConsentInviteError);
+                this.handleSubmissionSuccess(result.appId, result.portal_login_url);
             } else {
                 // GAS returns this error when the form was already submitted successfully
                 // but the original response was lost and the frontend retried. The App ID
@@ -3898,7 +3626,7 @@ class RentalApplication {
     }
 
     // ---------- handleSubmissionSuccess ----------
-    handleSubmissionSuccess(appId, portalLoginUrl, consentInviteError) {
+    handleSubmissionSuccess(appId, portalLoginUrl) {
         // Guard against being called twice (POST response + verify both succeed)
         if (this._successHandled) return;
         this._successHandled = true;
@@ -3919,7 +3647,7 @@ class RentalApplication {
             }
         } catch (_) { /* storage disabled — fall back to legacy login URL */ }
 
-        this.showSuccessState(appId, portalLoginUrl, consentInviteError);
+        this.showSuccessState(appId, portalLoginUrl);
         this.clearSavedProgress();
         sessionStorage.setItem('lastSuccessAppId', appId);
     }
@@ -3929,7 +3657,7 @@ class RentalApplication {
     }
 
     // ---------- showSuccessState ----------
-    showSuccessState(appId, portalLoginUrl, consentInviteError) {
+    showSuccessState(appId, portalLoginUrl) {
         const successState = document.getElementById('successState');
         if (!successState) return;
 
@@ -3960,11 +3688,6 @@ class RentalApplication {
             : (/^https?:\/\//i.test(savedPortalUrl) ? savedPortalUrl : '');
         const trackUrl = oneClickUrl
             || ('/tenant/login.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : ''));
-        const consentInviteWarning = consentInviteError
-            ? `<div role="alert" style="border-left:4px solid #b45309;background:#fff7ed;padding:12px 14px;margin:16px 0;color:#7c2d12;">${this._escHtml(this.state.language === 'es'
-                ? 'La solicitud se recibió, pero no se pudo enviar el enlace de autorización al adulto adicional. El equipo de Choice Properties debe enviar un nuevo enlace antes de comenzar la evaluación.'
-                : 'Your application was received, but the additional adult authorization email could not be sent. Choice Properties must send a new link before screening can begin.')}</div>`
-            : '';
 
         let paymentPrefs = primaryPayment ? primaryPayment : t.notSelected;
         if (secondaryPayment && secondaryPayment.trim()) {
@@ -4022,7 +3745,6 @@ class RentalApplication {
                 </div>
 
                 <div class="divider"></div>
-                ${this._safeHtml(consentInviteWarning)}
 
                 <div class="next-steps-box">
                     <h3><i class="fas fa-clock"></i> ${t.immediateNextSteps}</h3>
@@ -4161,7 +3883,8 @@ class RentalApplication {
                 'Co-Applicant DOB',
                 'Co-Applicant SSN',
                 'Co-Applicant Employer', 'Co-Applicant Job Title',
-                'Co-Applicant Monthly Income', 'Co-Applicant Employment Duration'
+                'Co-Applicant Monthly Income', 'Co-Applicant Employment Duration',
+                'Co-Applicant Consent'
             ]},
             { id: 2, name: t.summaryResidency, fields: [
                 'Current Address', 'Residency Duration', 'Current Rent Amount',

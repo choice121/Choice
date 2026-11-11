@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Universal Content Script & UI Engine v59.0.0
+// Choice Properties — Universal Content Script & UI Engine v31.0.0
 // Runs securely inside Chrome Extension isolated world on
 // Zillow, Realtor.com, Apartments.com, Redfin, Opendoor,
 // Progress Residential, CJ Real Estate, and Invitation Homes.
@@ -9,13 +9,16 @@
 (function () {
   'use strict';
 
-  var VERSION  = '59.0.0';
-
-  if (window.__CP_CONTENT_LOADED__ && window.__CP_CONTENT_VERSION__ === VERSION) return;
+  if (window.__CP_CONTENT_LOADED__) return;
   window.__CP_CONTENT_LOADED__ = true;
-  window.__CP_CONTENT_VERSION__ = VERSION;
+
+  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
+  var VERSION  = '31.0.0';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
+  var MAX_PHOTOS = IS_MOBILE ? 25 : 50;
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
   var lastUrl = location.href;
@@ -77,23 +80,9 @@
       data.state,
       data.zip,
       data.monthly_rent != null ? data.monthly_rent : data.rent,
-      data.community_starting_rent,
-      data.rent_basis,
       data.bedrooms != null ? data.bedrooms : data.beds,
       data.bathrooms != null ? data.bathrooms : data.baths,
       data.square_footage != null ? data.square_footage : data.sqft,
-      JSON.stringify((Array.isArray(data.unit_options) ? data.unit_options : []).map(function (unit) {
-        var photos = Array.isArray(unit.photo_urls) ? unit.photo_urls : [];
-        return [
-          unit.unit_number, unit.floor_plan_name, unit.bedrooms, unit.bathrooms,
-          unit.square_footage, unit.monthly_rent, unit.starting_rent, unit.rent_basis,
-          unit.building_name, unit.building_code, unit.building_source_id, unit.unit_floor,
-          photos.length, photos.join(',')
-        ].join(':');
-      })),
-      JSON.stringify((Array.isArray(data.media) ? data.media : []).map(function (item) {
-        return item ? [item.kind, item.url].join(':') : '';
-      })),
       photos.length,
       data.description ? String(data.description).length : 0
     ].join('|');
@@ -198,7 +187,13 @@
         return bgRes.folders;
       }
     }
-    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
+    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+    var res = await fetch(url);
+    if (res.ok) {
+      var data = await res.json();
+      if (data && Array.isArray(data.folders)) return data.folders;
+    }
+    return null;
   }
 
   async function apiCreateFolder(name, description) {
@@ -220,21 +215,25 @@
         return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
       }
     }
-    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
+    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+      body: JSON.stringify({
+        action: 'create_folder',
+        name: rawName,
+        description: rawDesc
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data && data.ok && data.id) {
+      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
+    }
+    throw new Error((data && data.error) || 'Failed to create folder');
   }
 
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
     if (!activeWidget || activeWidget._userPositioned) return;
-
-    if (window.innerWidth <= 480) {
-      activeWidget.style.right = '6px';
-      activeWidget.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
-      activeWidget.style.width = 'min(276px, calc(100vw - 12px))';
-      activeWidget.style.maxWidth = 'calc(100vw - 12px)';
-      return;
-    }
-
     var bottomOffset = 24;
 
     var stickySelectors = [
@@ -260,10 +259,7 @@
       }
     }
 
-    activeWidget.style.right = '24px';
     activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
-    activeWidget.style.width = 'min(320px, calc(100vw - 18px))';
-    activeWidget.style.maxWidth = 'calc(100vw - 18px)';
   }
 
   // ── Extract Photo URLs Helper ───────────────────────────────
@@ -281,84 +277,6 @@
       }
     } catch (e) {}
     return urls;
-  }
-
-  function normalizeMediaArray(items) {
-    if (!Array.isArray(items)) return [];
-    var normalized = [];
-    var seen = new Set();
-
-    items.forEach(function (item) {
-      if (!item || typeof item !== 'object') return;
-      var rawUrl = typeof item.url === 'string' ? item.url.trim() : (typeof item.href === 'string' ? item.href.trim() : (typeof item.src === 'string' ? item.src.trim() : ''));
-      if (!rawUrl) return;
-
-      var kind = String(item.kind || item.type || '').trim().toLowerCase();
-      if (!kind) {
-        if (/matterport|virtual|tour|3d|view-3d|imx/i.test(rawUrl)) kind = 'virtual_tour';
-        else if (/youtube|vimeo|mp4|webm|mov|video/i.test(rawUrl)) kind = 'video';
-        else if (/floor|plan/i.test((item.title || item.label || ''))) kind = 'floor_plan';
-        else kind = 'photo';
-      }
-
-      if (kind === '3d_tour' || kind === 'tour_3d' || kind === 'tour3d') kind = 'tour_3d';
-      if (kind === 'virtual-tour' || kind === 'virtual_tour') kind = 'virtual_tour';
-      if (kind === 'floorplan' || kind === 'floor_plan') kind = 'floor_plan';
-      if (kind === 'video_walkthrough' || kind === 'walkthrough_video') kind = 'video';
-
-      var key = kind + '::' + rawUrl.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      normalized.push({
-        kind: kind,
-        title: item.title || item.name || (kind === 'video' ? 'Video walkthrough' : kind === 'floor_plan' ? 'Floor plan' : kind === 'tour_3d' ? '3D Virtual Tour' : 'Media'),
-        floor_label: item.floor_label || item.floorLabel || null,
-        provider: item.provider || item.source_provider || null,
-        url: rawUrl,
-        file_id: item.file_id || item.fileId || null,
-        poster_url: item.poster_url || item.posterUrl || null,
-        display_order: Number.isFinite(Number(item.display_order)) ? Number(item.display_order) : normalized.length,
-        is_hero: !!(item.is_hero || item.isHero),
-        width: item.width != null ? Number(item.width) : null,
-        height: item.height != null ? Number(item.height) : null,
-        metadata: item.metadata || {}
-      });
-    });
-
-    return normalized;
-  }
-
-  function isValidUnitNumber(value) {
-    var label = String(value == null ? '' : value).trim().replace(/^#/, '');
-    return /^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i.test(label);
-  }
-
-  function summarizeUnitOptions(options) {
-    var units = new Map();
-    var plans = new Map();
-    (Array.isArray(options) ? options : []).forEach(function (option) {
-      if (!option || typeof option !== 'object') return;
-      if (option.source_kind === 'floor_plan') {
-        var planKey = [
-          String(option.floor_plan_name || '').trim().toLowerCase(),
-          option.bedrooms,
-          option.bathrooms,
-          option.square_footage,
-          (option.floor_plan_name || option.bedrooms != null || option.bathrooms != null || option.square_footage != null)
-            ? ''
-            : option.starting_rent,
-        ].join('|');
-        if (!plans.has(planKey)) plans.set(planKey, option);
-        return;
-      }
-      if (isValidUnitNumber(option.unit_number)) {
-        var unitKey = String(option.unit_number).trim().toLowerCase();
-        if (!units.has(unitKey)) units.set(unitKey, option);
-        return;
-      }
-    });
-    return { units: Array.from(units.values()), floorPlans: Array.from(plans.values()) };
   }
 
   function dedupePhotoUrls(urls) {
@@ -384,34 +302,6 @@
         '"': '&quot;',
         "'": '&#39;'
       }[char];
-    });
-  }
-
-  function sendExtensionMessage(message, timeoutMs) {
-    return new Promise(function (resolve, reject) {
-      var settled = false;
-      var timeout = setTimeout(function () {
-        settled = true;
-        reject(new Error('Extension background service timed out'));
-      }, timeoutMs);
-
-      try {
-        chrome.runtime.sendMessage(message, function (response) {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeout);
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
-        });
-      } catch (error) {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        reject(error);
-      }
     });
   }
 
@@ -441,8 +331,6 @@
     if (extracted && (extracted.monthly_rent || extracted.rent)) {
       var rentNum = extracted.monthly_rent || extracted.rent;
       rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
-    } else if (extracted && extracted.community_starting_rent) {
-      rentStr = 'Starting at $' + Number(extracted.community_starting_rent).toLocaleString() + '/mo';
     }
 
     var bedsBaths = 'Listing details';
@@ -454,70 +342,6 @@
         bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
       }
     }
-    var unitOptions = extracted && Array.isArray(extracted.unit_options) ? extracted.unit_options : [];
-    var inventory = summarizeUnitOptions(unitOptions);
-    var inventoryLabels = [];
-    if (inventory.units.length) inventoryLabels.push(inventory.units.length + ' available unit' + (inventory.units.length === 1 ? '' : 's') + ' found');
-    if (inventory.floorPlans.length) inventoryLabels.push(inventory.floorPlans.length + ' floor plan' + (inventory.floorPlans.length === 1 ? '' : 's'));
-    var inventoryFacts = [];
-    if (extracted && extracted.total_units != null) inventoryFacts.push(Number(extracted.total_units).toLocaleString() + ' total units');
-    if (extracted && extracted.floors != null) inventoryFacts.push(Number(extracted.floors).toLocaleString() + ' building stor' + (Number(extracted.floors) === 1 ? 'y' : 'ies'));
-    var rentBasis = extracted && extracted.rent_basis;
-    var rentBasisLabel = rentBasis === 'total_monthly_price'
-      ? 'Total monthly price'
-      : rentBasis === 'base_rent'
-        ? 'Base rent'
-        : 'Price basis not reported; verify before use';
-    var hasInventoryPrices = inventory.units.concat(inventory.floorPlans)
-      .some(function (unit) { return unit.monthly_rent != null || unit.starting_rent != null; });
-    if (hasInventoryPrices) {
-      inventoryFacts.push('Price basis: ' + rentBasisLabel);
-    }
-    if (inventoryLabels.length) bedsBaths = inventoryLabels.join(' • ');
-    function renderInventoryRows(options, isFloorPlan, limit) {
-      return options.slice(0, limit).map(function (unit, index) {
-            var name = isFloorPlan
-              ? (unit.floor_plan_name || 'Floor plan ' + (index + 1))
-              : (unit.unit_number ? 'Unit ' + unit.unit_number : unit.floor_plan_name || 'Unit ' + (index + 1));
-            var facts = [];
-            if (unit.bedrooms === 0) facts.push('Studio');
-            else if (unit.bedrooms != null) facts.push(unit.bedrooms + ' bd');
-            if (unit.bathrooms != null) facts.push(unit.bathrooms + ' ba');
-            if (unit.square_footage != null) facts.push(Number(unit.square_footage).toLocaleString() + ' sqft');
-            if (unit.unit_floor != null && !isFloorPlan) facts.push('Floor ' + unit.unit_floor);
-            var price = !isFloorPlan && unit.monthly_rent != null
-              ? '$' + Number(unit.monthly_rent).toLocaleString() + '/mo'
-              : (isFloorPlan && unit.starting_rent != null ? 'From $' + Number(unit.starting_rent).toLocaleString() + '/mo' : '');
-            var unitRentBasis = unit.rent_basis || rentBasis;
-            var unitRentBasisLabel = unitRentBasis === 'total_monthly_price'
-              ? 'Total monthly price'
-              : unitRentBasis === 'base_rent'
-                ? 'Base rent'
-                : 'Price basis not reported';
-            return '<div class="cp-unit-option-row"><span><strong>' + escapeHtml(name) + '</strong>' +
-              (facts.length ? ' · ' + escapeHtml(facts.join(' · ')) : '') +
-              '</span>' + (price ? '<strong>' + escapeHtml(price) + '<small style="display:block;text-align:right;font-size:10px;font-weight:400">' + escapeHtml(unitRentBasisLabel) + '</small></strong>' : '') + '</div>';
-      }).join('');
-    }
-    var allInventoryCount = inventory.units.length + inventory.floorPlans.length;
-    var unitPreviewCount = Math.min(inventory.units.length, 12);
-    var planPreviewCount = Math.min(inventory.floorPlans.length, 12 - unitPreviewCount);
-    var unitRowsHtml = renderInventoryRows(inventory.units, false, unitPreviewCount);
-    var planRowsHtml = renderInventoryRows(inventory.floorPlans, true, planPreviewCount);
-    var unitDetailsHtml = allInventoryCount
-      ? '<div class="cp-unit-options-preview">' +
-          (inventory.units.length
-            ? '<div class="cp-unit-options-heading">Unit records (not availability-verified)</div><div class="cp-unit-options-list">' + unitRowsHtml + '</div>'
-            : '') +
-          (inventory.floorPlans.length
-            ? '<div class="cp-unit-options-heading">Floor-plan layouts (not rentable units)</div><div class="cp-unit-options-list">' + planRowsHtml + '</div>'
-            : '') +
-          (allInventoryCount > 12
-            ? '<div class="cp-unit-options-note">Preview limited to 12 records; all extracted records are included when saved.</div>'
-            : '') +
-          (inventoryFacts.length ? '<div class="cp-unit-options-note">' + escapeHtml(inventoryFacts.join(' · ')) + '</div>' : '') +
-        '</div>'
-      : '';
 
     var photoUrls = [];
     if (extracted) {
@@ -528,22 +352,12 @@
     }
     photoUrls = dedupePhotoUrls(photoUrls);
     var photoCount = photoUrls.length;
-    var photoBadgeClass = 'cp-chip-photos';
+    var photoBadgeClass = photoCount >= 6 ? 'cp-chip-photos' : 'cp-chip-warn';
     var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
-    var extractedMedia = extracted && Array.isArray(extracted.media) ? extracted.media : [];
-    var mediaCounts = {
-      video: extractedMedia.filter(function (item) { return item && item.kind === 'video'; }).length,
-      virtual_tour: extractedMedia.filter(function (item) { return item && (item.kind === 'virtual_tour' || item.kind === 'tour_3d'); }).length,
-      floor_plan: extractedMedia.filter(function (item) { return item && item.kind === 'floor_plan'; }).length
-    };
-    var mediaSummary = [];
-    if (mediaCounts.video) mediaSummary.push(mediaCounts.video + (mediaCounts.video === 1 ? ' video' : ' videos'));
-    if (mediaCounts.virtual_tour) mediaSummary.push(mediaCounts.virtual_tour + (mediaCounts.virtual_tour === 1 ? ' 3D tour' : ' 3D tours'));
-    if (mediaCounts.floor_plan) mediaSummary.push(mediaCounts.floor_plan + (mediaCounts.floor_plan === 1 ? ' floor plan' : ' floor plans'));
 
     var propType = (extracted && extracted.property_type) ? extracted.property_type.replace(/_/g, ' ') : 'Property';
-    var addressStr = extracted && (extracted.address || extracted.title) ? (extracted.address || extracted.title) : 'Detected Listing';
-    if (extracted && extracted.city && extracted.state && !String(addressStr).toLowerCase().includes(String(extracted.city).toLowerCase())) {
+    var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
+    if (extracted && extracted.city && extracted.state) {
       addressStr += ', ' + extracted.city + ', ' + extracted.state;
     }
 
@@ -594,10 +408,6 @@
               <span class="cp-chip cp-chip-price">${escapeHtml(rentStr)}</span>
               <span class="cp-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip ${photoBadgeClass}">${escapeHtml(photoBadgeText)}</span>
-              ${extracted && extracted.building_name ? '<span class="cp-chip">' + escapeHtml(extracted.building_name) + '</span>' : ''}
-              ${extracted && extracted.price_range ? '<span class="cp-chip">Source price range: ' + escapeHtml(extracted.price_range) + '</span>' : ''}
-              ${inventoryFacts.length ? '<span class="cp-chip">' + escapeHtml(inventoryFacts.join(' • ')) + '</span>' : ''}
-              ${mediaSummary.length ? '<span class="cp-chip">' + escapeHtml(mediaSummary.join(' • ')) + '</span>' : ''}
               <span class="cp-chip cp-chip-type">${escapeHtml(propType)}</span>
             </div>
 
@@ -611,13 +421,6 @@
               </div>
             ` : ''}
 
-            <div class="cp-diagnostics-control">
-              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
-              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
-                Sends listing facts and page structure only. No cookies, session data, or full page text.
-              </span>
-            </div>
-
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -625,8 +428,9 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
+                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
-              ${unitDetailsHtml}
             </div>
           </div>
 
@@ -786,8 +590,6 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
-    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
-    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -1008,35 +810,6 @@
       }
     });
 
-    diagnosticsBtn.addEventListener('click', async function () {
-      diagnosticsBtn.disabled = true;
-      diagnosticsStatus.textContent = 'Analyzing this listing…';
-      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
-      try {
-        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
-          throw new Error('Diagnostics are unavailable in this extension build');
-        }
-        var report = window.CP_Extractors.diagnose(location.href, document);
-        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-          throw new Error('Extension background service is unavailable');
-        }
-        var response = await sendExtensionMessage({
-          type: 'SEND_DIAGNOSTIC',
-          diagnostic: report
-        }, 20_000);
-        if (!response || !response.ok) {
-          throw new Error(response && response.error || 'Report could not be sent');
-        }
-        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
-        diagnosticsStatus.classList.add('cp-diagnostic-success');
-      } catch (error) {
-        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
-        diagnosticsStatus.classList.add('cp-diagnostic-error');
-      } finally {
-        diagnosticsBtn.disabled = false;
-      }
-    });
-
     saveBtn.addEventListener('click', handleSave);
 
     copyLinkBtn.addEventListener('click', function () {
@@ -1178,28 +951,9 @@
         });
       }
 
-      var rentVal = extracted.monthly_rent != null
-        ? extracted.monthly_rent
-        : (extracted.rent != null ? extracted.rent : null);
+      var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
-      var mediaItems = normalizeMediaArray(extracted.media);
-      if (!mediaItems.length && extracted.virtual_tour_url) {
-        mediaItems = [{
-          kind: 'virtual_tour',
-          title: '3D Virtual Tour',
-          floor_label: null,
-          provider: null,
-          url: extracted.virtual_tour_url,
-          file_id: null,
-          poster_url: null,
-          display_order: 0,
-          is_hero: false,
-          width: null,
-          height: null,
-          metadata: {}
-        }];
-      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1223,31 +977,11 @@
         floors: extracted.floors,
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
-        building_name: extracted.building_name,
-        is_multi_unit: extracted.is_multi_unit,
-        price_range: extracted.price_range,
-        rent_basis: extracted.rent_basis,
-        property_type: extracted.property_type || null,
+        property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
-        original_data: JSON.stringify({
-          zpid: extracted.source_listing_id,
-          detailUrl: extracted.source_url || location.href,
-          homeType: extracted.property_type || null,
-          building_name: extracted.building_name,
-          is_multi_unit: extracted.is_multi_unit,
-          price_range: extracted.price_range,
-          floors: extracted.floors,
-          total_units: extracted.total_units,
-          community_starting_rent: extracted.community_starting_rent,
-          media: mediaItems,
-          unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],
-          _source: extracted.source || 'zillow',
-          _import: 'browser-extension-v' + VERSION
-        }),
         available_date: null,
-        pets_allowed: null,
-        pet_types_allowed: null,
+        pets_allowed: true,
         application_fee: 50,
         security_deposit: rentVal,
         last_months_rent: extracted.last_months_rent,
@@ -1268,7 +1002,6 @@
         county: extracted.county,
         location_context: extracted.location_context,
         virtual_tour_url: extracted.virtual_tour_url,
-        media: mediaItems,
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
@@ -1344,40 +1077,29 @@
     }
   }
 
-  function describeSaveError(rawError) {
-    var message = rawError && typeof rawError === 'string' ? rawError : (rawError && rawError.message ? rawError.message : 'Save failed');
-    var text = String(message).trim();
-    if (!text) return 'Save failed';
-    if (/401|administrator sign-in|sign-in expired|connect your choice admin/i.test(text)) {
-      return 'Connect your Choice admin account in the extension popup, then retry.';
-    }
-    if (/timed out|timeout|background save timed out/i.test(text)) {
-      return 'Save timed out. Please retry.';
-    }
-    if (/network|fetch|connection|failed to fetch|load failed|receiving end|message port/i.test(text)) {
-      return 'Network connection error. Please retry.';
-    }
-    if (/too large|payload is too large/i.test(text)) {
-      return 'Listing payload too large. Try fewer photos.';
-    }
-    return text.length > 60 ? text.slice(0, 60) + '…' : text;
-  }
-
   async function submitPayload(payload) {
     var lastResponse = null;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-          lastResponse = await sendExtensionMessage({
-            type: 'UPLOAD_PAYLOAD',
-            payload: payload,
-            settings: { offlineQueue: true }
-          }, 50_000);
+          lastResponse = await new Promise(function (resolve) {
+            chrome.runtime.sendMessage({
+              type: 'UPLOAD_PAYLOAD',
+              payload: payload,
+              settings: { offlineQueue: true }
+            }, function (response) {
+              resolve(chrome.runtime.lastError
+                ? { ok: false, error: chrome.runtime.lastError.message }
+                : response);
+            });
+          });
         } else {
-          lastResponse = {
-            ok: false,
-            error: 'The extension background service is unavailable. Reload the extension and try again.',
-          };
+          var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          lastResponse = await saveRes.json();
         }
         if (lastResponse && (lastResponse.ok || lastResponse.duplicate || lastResponse.queued)) {
           return lastResponse;
@@ -1393,8 +1115,7 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
-    var friendly = describeSaveError(msg);
-    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(friendly) + '</span>';
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     setTimeout(function () {
@@ -1403,6 +1124,136 @@
         saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
       }
     }, 4000);
+  }
+
+  // ── Photo Upload Pipeline ───────────────────────────────────
+  async function uploadPhotosInBackground(photoUrls, progressCallback) {
+    var uploaded = [];
+    var failed = 0;
+    var urls = dedupePhotoUrls(photoUrls);
+    var limit = Math.min(urls.length, MAX_PHOTOS);
+    var total = limit;
+
+    for (var i = 0; i < limit; i += PHOTO_BATCH_SIZE) {
+      var batch = urls.slice(i, i + PHOTO_BATCH_SIZE);
+      if (progressCallback) progressCallback(Math.min(i, total), total);
+      var results = await Promise.all(batch.map(function (url, batchIndex) {
+        return uploadOnePhoto(url, i + batchIndex);
+      }));
+      for (var j = 0; j < results.length; j++) {
+        if (results[j]) uploaded.push(results[j]);
+        else failed++;
+        if (progressCallback) progressCallback(Math.min(i + j + 1, total), total);
+      }
+    }
+    return { uploaded: uploaded, failed: failed, total: total };
+  }
+
+  async function downloadViaBackground(url) {
+    return new Promise(function (resolve) {
+      try {
+        if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+          resolve(null);
+          return;
+        }
+        chrome.runtime.sendMessage(
+          { type: 'DOWNLOAD_PHOTO', url: url },
+          function (response) {
+            if (chrome.runtime.lastError) {
+              resolve(null);
+              return;
+            }
+            resolve(response && response.ok && response.dataUri ? response : null);
+          }
+        );
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function downloadViaDirectFetch(url) {
+    try {
+      var imgRes = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8' }
+      });
+      if (!imgRes.ok) return null;
+      var blob = await imgRes.blob();
+      var base64 = await blobToBase64(blob);
+      var ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
+      if (ext === 'jpeg') ext = 'jpg';
+      return {
+        dataUri: base64,
+        contentType: blob.type || 'image/jpeg',
+        ext: ext,
+        size: blob.size,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function uploadOnePhoto(url, index) {
+    try {
+      var photo = await downloadViaBackground(url);
+      if (!photo) photo = await downloadViaDirectFetch(url);
+      if (!photo) return null;
+
+      var ikRes = await fetch('https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/pipeline-photo-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-import-secret': SECRET
+        },
+        body: JSON.stringify({
+          fileData: photo.dataUri,
+          fileName: 'photo_' + (index + 1) + '.' + photo.ext,
+          folder: '/pipeline/temp'
+        })
+      });
+      var ikData = await ikRes.json();
+      if (!ikData || !ikData.url) return null;
+
+      return {
+        url: ikData.url,
+        fileId: ikData.fileId || null,
+        width: ikData.width || null,
+        height: ikData.height || null,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function updatePipelinePhotos(originalPayload, uploadedPhotos) {
+    try {
+      if (!uploadedPhotos || !uploadedPhotos.length) return;
+      var updatePayload = Object.assign({}, originalPayload, {
+        _update_photos_only: true,
+        original_image_urls: JSON.stringify(uploadedPhotos),
+      });
+      var updated = false;
+      try {
+        var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatePayload),
+        });
+        if (res.ok) updated = true;
+      } catch (_) {}
+
+    } catch (e) {}
   }
 
   // ── Global Hotkeys Hook (Cmd/Ctrl+Shift+S) ───────────────────

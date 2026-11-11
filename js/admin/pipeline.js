@@ -36,98 +36,6 @@
     try{ return JSON.parse(s); }catch(_){ return null; }
   }
 
-  function apartmentCommunityInfo(listing){
-    const sourceData = parseJSON(listing.original_data) || {};
-    const unitOptions = Array.isArray(sourceData.unit_options) ? sourceData.unit_options : [];
-    const media = Array.isArray(sourceData.media) ? sourceData.media : [];
-    const isApartment = String(listing.property_type || sourceData.homeType || '').toUpperCase() === 'APARTMENT';
-    const isUnitOption = item => item && typeof item === 'object' &&
-      item.source_kind !== 'floor_plan' &&
-      String(item.unit_number || item.unit || '').trim() !== '';
-    const isFloorPlanOption = item => item && typeof item === 'object' &&
-      (item.source_kind === 'floor_plan' ||
-        (!item.unit_number && !item.unit && String(item.floor_plan_name || '').trim() !== ''));
-    const isCommunityOverview = !listing.unit_number &&
-      (sourceData.is_multi_unit === true || sourceData.is_multi_unit === 'true' ||
-        (unitOptions.length > 0 && listing.monthly_rent == null));
-    if(!isApartment && !isCommunityOverview && !unitOptions.length) return null;
-    return {
-      buildingName: sourceData.building_name || null,
-      totalUnits: sourceData.total_units ?? null,
-      floors: sourceData.floors ?? null,
-      priceRange: sourceData.price_range || null,
-      rentBasis: sourceData.rent_basis || null,
-      isCommunityOverview,
-      units: unitOptions.filter(isUnitOption),
-      floorPlanOptions: unitOptions.filter(isFloorPlanOption),
-      unclassifiedOptions: unitOptions.filter(item => !isUnitOption(item) && !isFloorPlanOption(item)),
-      floorPlans: media.filter(item => item && item.kind === 'floor_plan'),
-    };
-  }
-
-  function renderApartmentOverview(info){
-    if(!info) return '';
-    const facts = [
-      info.buildingName ? `Building: ${S.esc(info.buildingName)}` : '',
-      info.totalUnits != null ? `Reported units: ${S.esc(info.totalUnits)}` : '',
-      info.floors != null ? `Stories: ${S.esc(info.floors)}` : '',
-      info.priceRange ? `Source price range: ${S.esc(info.priceRange)}` : '',
-      info.rentBasis ? `Source price label: ${S.esc(info.rentBasis)}` : '',
-    ].filter(Boolean);
-    const renderRows = (items, isFloorPlan) => items.map((unit, index) => {
-      const beds = unit.bedrooms === 0 ? 'Studio' : unit.bedrooms != null ? `${unit.bedrooms} bd` : '— bd';
-      const baths = unit.bathrooms != null ? `${unit.bathrooms} ba` : '— ba';
-      const sqft = unit.square_footage != null ? `${Number(unit.square_footage).toLocaleString()} sqft` : '— sqft';
-      const rentValue = isFloorPlan ? unit.starting_rent : unit.monthly_rent;
-      const rent = rentValue != null
-        ? `${isFloorPlan ? 'From ' : ''}${fmt$$(rentValue)}`
-        : 'Price not listed';
-      const baseLabel = isFloorPlan
-        ? (unit.floor_plan_name || `Floor plan ${index + 1}`)
-        : (unit.unit_number || unit.unit);
-      const label = [
-        baseLabel,
-        unit.building_name ? `Building ${unit.building_name}` : '',
-        !isFloorPlan && unit.unit_floor ? `Floor ${unit.unit_floor}` : '',
-      ].filter(Boolean).join(' · ');
-      return `<tr><td>${S.esc(label)}</td><td>${S.esc(beds)} · ${S.esc(baths)}</td><td>${S.esc(sqft)}</td><td>${S.esc(rent)}</td><td>${S.esc(unit.rent_basis || info.rentBasis || 'Unspecified')}</td></tr>`;
-    }).join('');
-    const unitRows = renderRows(info.units, false);
-    const planRows = renderRows(info.floorPlanOptions, true);
-    const floorPlans = info.floorPlans.length
-      ? `<div class="pl-panel-alert pl-panel-alert-info">${info.floorPlans.length} floor-plan media item${info.floorPlans.length === 1 ? '' : 's'} captured: ${info.floorPlans.map(item => S.esc(item.title || 'Floor plan')).join(', ')}</div>`
-      : '';
-    const warning = info.isCommunityOverview
-      ? '<div class="pl-panel-alert pl-panel-alert-warning">This community is published as one listing. Review real rentable units separately from floor-plan layouts; the community price is only a starting price.</div>'
-      : '';
-    const unclassifiedWarning = info.unclassifiedOptions.length
-      ? `<div class="pl-panel-alert pl-panel-alert-warning">${info.unclassifiedOptions.length} captured option${info.unclassifiedOptions.length === 1 ? '' : 's'} could not be classified as a real unit or floor plan and must be reviewed.</div>`
-      : '';
-    const inventoryReview = info.units.length || info.floorPlanOptions.length
-      ? '<label class="pl-inventory-review" style="display:flex;align-items:flex-start;gap:8px;margin:14px 0;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:.82rem"><input type="checkbox" id="pl-inventory-reviewed" style="margin-top:3px"> <span>I reviewed the captured unit/plan records, prices, and source order. Unavailable or unverified entries must remain excluded.</span></label>'
-      : '';
-    return `<div class="pl-section">
-      <div class="pl-section-title">Apartment &amp; community inventory</div>
-      ${warning}
-      ${unclassifiedWarning}
-      ${facts.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;color:var(--muted-2);font-size:.8rem">${facts.map(fact => `<span>${fact}</span>`).join('')}</div>` : ''}
-      ${unitRows ? `<h4>Real unit records</h4><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Unit</th><th>Beds · baths</th><th>Size</th><th>Exact unit price</th><th>Price basis</th></tr></thead><tbody>${unitRows}</tbody></table></div>` : ''}
-      ${planRows ? `<h4>Floor-plan layouts (not rentable units)</h4><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th>Plan</th><th>Beds · baths</th><th>Size</th><th>Starting price</th><th>Price basis</th></tr></thead><tbody>${planRows}</tbody></table></div>` : ''}
-      ${floorPlans}
-      ${inventoryReview}
-      ${!unitRows && !planRows && !floorPlans && !facts.length ? '<p class="pl-meta">No separate apartment inventory details were captured.</p>' : ''}
-    </div>`;
-  }
-
-  function isCommunityOverview(listing){
-    return apartmentCommunityInfo(listing)?.isCommunityOverview === true;
-  }
-
-  function hasApartmentInventory(listing){
-    const info = apartmentCommunityInfo(listing);
-    return !!(info && (info.units.length || info.floorPlanOptions.length));
-  }
-
   // ── Pre-publish validation gate ──────────────────────────────────────────────
   // Must pass before any pipeline record is promoted to a live listing.
   // Returns { ok: boolean, failures: string[] }.
@@ -135,26 +43,15 @@
     const failures = [];
     const desc = listing.description || '';
 
-    const apartmentInfo = apartmentCommunityInfo(listing);
-    const community = apartmentInfo?.isCommunityOverview === true;
-
     // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
     // Listings are pre-screened on import and published regardless of photo count.
 
     // 2. Rent must be set and reasonable
     const monthlyRent = Number(listing.monthly_rent);
-    const communityPrices = [
-      ...(apartmentInfo?.units || []).map(unit => Number(unit.monthly_rent)),
-      ...(apartmentInfo?.floorPlanOptions || []).map(plan => Number(plan.starting_rent)),
-    ].filter(price => Number.isFinite(price) && price > 0);
-    if ((!Number.isFinite(monthlyRent) || monthlyRent <= 0) && !(community && communityPrices.length)) {
+    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
       failures.push('Monthly rent is not set');
-    } else if (Number.isFinite(monthlyRent) && monthlyRent > 100000 && !community) {
+    } else if (monthlyRent > 100000) {
       failures.push('Monthly rent looks incorrect ($' + monthlyRent + ') — please verify');
-    }
-
-    if (apartmentInfo?.unclassifiedOptions.length) {
-      failures.push('Captured apartment options include unclassified records; review or remove them before publishing');
     }
 
     // 2b. Application fee structured field must be exactly 50
@@ -248,7 +145,6 @@
     const od = parseJSON(l.original_data);
     if(od && od._import && String(od._import).startsWith('ios-scriptable')) return 'ios';
     if(od && od._import && String(od._import).startsWith('admin-url-import')) return 'admin-url';
-    if(od && od._import && String(od._import).startsWith('browser-extension-v')) return 'browser-extension';
     if(od && od._phase === 'detail') return 'enriched';
     return 'search';
   }
@@ -396,8 +292,8 @@
           ${qsBadge(score)}
           ${folderBadge}
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
-          ${srcImp === 'browser-extension' ? `<span class="qs-badge qs-high" title="Imported from a supported listing page by the browser extension">Browser extension</span>` : ''}
           ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
+          ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
           ${l.source_status && l.source_status !== 'available' ? `<span class="qs-badge ${l.source_status === 'pending' ? 'qs-mid' : 'qs-low'}" title="Source site status: ${S.esc(l.source_status)}">${l.source_status === 'pending' ? '⏳ Pending' : l.source_status === 'rented' ? '🔒 Rented' : '⚠ ' + S.esc(l.source_status)}</span>` : ''}
         </div>
       </div>
@@ -416,6 +312,7 @@
         ${!isArchived ? `<button class="btn btn-sm btn-ghost pl-arc-btn" data-id="${S.esc(l.id)}" title="Archive">Archive</button>` : '<span class="pill pill-muted" style="font-size:.68rem">Archived</span>'}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-primary pl-pub-btn" data-id="${S.esc(l.id)}" title="Publish to site">Publish →</button>` : ''}
         ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-ghost pl-del-btn" data-id="${S.esc(l.id)}" title="Delete from pipeline" style="color:var(--danger)">Delete</button>` : ''}
+        ${l.photo_import_status === 'failed' && !isArchived ? `<button class="btn btn-sm btn-outline pl-retry-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id || '')}" title="Retry downloading photos to ImageKit">Retry photos</button>` : ''}
         ${isPublished && l.choice_property_id ? `<a class="btn btn-sm btn-ghost" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}" target="_blank" onclick="event.stopPropagation()">Edit ↗</a>` : ''}
       </div>
     </div>`;
@@ -453,7 +350,8 @@
   async function panelPhotos(l){
     const imgs = imageUrls(l.original_image_urls);
     
-    // Published photo rows retain the source CDN URLs and their original order.
+    // If published and has a choice_property_id, fetch the actual ImageKit photos
+    // from property_photos (transferred by import-pipeline-photos).
     if(l.choice_property_id){
       try {
         const photoQuery = CP.sb()
@@ -466,7 +364,7 @@
         
         if(!error && Array.isArray(photos) && photos.length){
           const urls = photos.map(p => p.url).filter(Boolean);
-          return renderPhotoStatus(l) + renderGallery(urls, 'from source');
+          return renderPhotoStatus(l) + renderGallery(urls, 'on ImageKit');
         }
       } catch(err){
         console.warn('[pipeline] property photo query failed; using source photos', err);
@@ -475,14 +373,16 @@
     
     if(!imgs.length) return renderPhotoStatus(l) + '<p class="pl-photo-count">No photos from source.</p>';
 
-    // Zillow/Realtor CDN images block hotlinking from the admin domain.
-    // Use the admin session token to proxy source URLs through the
+    // FIX: Zillow/Realtor CDN images block hotlinking from the admin domain.
+    // Use the admin session token to proxy non-ImageKit URLs through the
     // proxy-image edge function so they display correctly.
+    // ImageKit URLs (ik.imagekit.io) work directly.
     try {
       const session = await withTimeout(CP.sb().auth.getSession(), 3000);
       const token = session?.data?.session?.access_token || '';
       const supabaseUrl = (window.CONFIG?.SUPABASE_URL || '').replace(/\/+$/, '');
       const proxied = imgs.map(u => {
+        if (u.includes('ik.imagekit.io')) return u;
         if (!token || !supabaseUrl) return u;
         return supabaseUrl + '/functions/v1/proxy-image?url=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(token);
       });
@@ -517,12 +417,19 @@
     const photos = imageUrls(l.original_image_urls);
     const hasSource = photos.length > 0;
     const imported = Boolean(l.choice_property_id);
+    const status = l.photo_import_status;
     const labels = [];
 
     if (imported) {
-      labels.push('<div class="pl-panel-alert pl-panel-alert-success">Published photo URLs are preserved in their original source order.</div>');
+      if (status === 'failed') {
+        labels.push(`<div class="pl-panel-alert pl-panel-alert-warning">Photo transfer to ImageKit failed. <button class="btn btn-sm btn-outline" id="pl-transfer-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id)}">Retry transfer</button></div>`);
+      } else if (status === 'pending') {
+        labels.push('<div class="pl-panel-alert pl-panel-alert-info">Photo transfer is pending. It may take a few minutes to complete.</div>');
+      } else {
+        labels.push('<div class="pl-panel-alert pl-panel-alert-success">Photos are stored on ImageKit and ready for the live listing.</div>');
+      }
     } else if (hasSource) {
-      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. Their URLs will be copied on publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
+      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. They will be transferred after publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
     } else {
       labels.push('<div class="pl-panel-alert pl-panel-alert-warning">No source photos found. Add at least one photo before publishing.</div>');
     }
@@ -555,7 +462,6 @@
     const enriched = isEnriched(l);
     const srcType  = importSource(l);
     const photoCount = imageUrls(l.original_image_urls).length;
-    const apartmentInfo = apartmentCommunityInfo(l);
 
     return `
     <div class="pl-panel-hd">
@@ -565,7 +471,6 @@
           ${score != null ? ` · <span class="qs-badge ${qsClass(score)}">Q: ${score}/100</span>` : ''}
           ${srcType === 'ios'       ? ` · <span class="qs-badge qs-high" title="Imported from Zillow detail page via iOS Scriptable">📱 iOS import</span>` :
             srcType === 'admin-url' ? ` · <span class="qs-badge qs-high" title="Imported via admin URL import on desktop">🖥 Desktop import</span>` :
-            srcType === 'browser-extension' ? ` · <span class="qs-badge qs-high" title="Imported from a supported listing page by the browser extension">Browser extension</span>` :
             srcType === 'enriched'  ? ` · <span class="qs-badge qs-high" title="Phase 2 detail scrape complete">✓ Full data</span>` :
                                       ` · <span class="qs-badge qs-low" title="Only basic search data — open the listing and re-import for full details">Search only</span>`}
           ${editedFields.length ? ` · <span style="font-size:.7rem;color:var(--brand)">${editedFields.length} fields edited</span>` : ''}
@@ -594,12 +499,14 @@
         ${missingTags(l)}
       </div>
 
-      ${renderApartmentOverview(apartmentInfo)}
-
       <!-- Core fields -->
       <div class="pl-section">
         <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between">
           <span>Listing details</span>
+          <button type="button" class="btn btn-sm btn-outline" id="pl-relocate-btn" title="Address changing & relocation is temporarily disabled across the pipeline until further notice" style="font-size:.72rem;padding:2px 8px;display:flex;align-items:center;gap:4px;opacity:0.6;cursor:not-allowed">
+            <svg class="i i-sm" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Relocate / Change Address (Disabled)
+          </button>
         </div>
         <div class="pl-form-grid full">${fi('title','Title', l.title,'text',true,true)}</div>
         <div class="pl-form-grid" style="margin-top:10px">
@@ -631,10 +538,8 @@
           ${fi('garage_spaces','Garage spaces', l.garage_spaces,'number',false)}
           ${fi('property_type','Property type', l.property_type,'text',false,false,[
             {v:'',l:'— select —'},{v:'SINGLE_FAMILY',l:'Single family'},{v:'CONDOS',l:'Condo'},
-            {v:'TOWNHOMES',l:'Townhouse'},{v:'DUPLEX',l:'Duplex'},{v:'TRIPLEX',l:'Triplex'},
-            {v:'APARTMENT',l:'Apartment'},{v:'MULTI_FAMILY',l:'Multi-family'},{v:'STUDIO',l:'Studio'},
-            {v:'ROOM',l:'Room'},{v:'LOFT',l:'Loft'},{v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},
-            {v:'FARM',l:'Farm'},{v:'COMMERCIAL',l:'Commercial'},{v:'OTHER',l:'Other'}
+            {v:'TOWNHOMES',l:'Townhouse'},{v:'APARTMENT',l:'Apartment'},{v:'MULTI_FAMILY',l:'Multi-family'},
+            {v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},{v:'FARM',l:'Farm'}
           ])}
           ${fi('available_date','Available date', l.available_date,'date',false)}
           ${fi('minimum_lease_months','Min lease (mo)', l.minimum_lease_months,'number',false)}
@@ -734,14 +639,7 @@
         <label style="display:flex;align-items:center;gap:8px;margin-right:auto">
           <input type="checkbox" id="pf-delete-on-publish" style="width:16px;height:16px"> <span style="font-size:.78rem;color:var(--muted-2)">Delete from pipeline after publish</span>
         </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.75rem">
-          Visibility
-          <select id="pf-publish-visibility" aria-label="Published listing visibility">
-            <option value="private_placement" selected>Private placement</option>
-            <option value="active">Public site</option>
-          </select>
-        </label>
-        <button class="btn btn-primary pl-pub-btn-panel" data-id="${S.esc(l.id)}">Publish listing →</button>
+        <button class="btn btn-primary pl-pub-btn-panel" data-id="${S.esc(l.id)}">Publish as draft →</button>
       ` : ''}
     </div>`;
   }
@@ -825,6 +723,8 @@
       const pubBtn = panel.querySelector('.pl-pub-btn-panel');
       if(pubBtn) pubBtn.addEventListener('click', () => doPublish(l.id));
 
+      const relocateBtn = panel.querySelector('#pl-relocate-btn');
+      if(relocateBtn) relocateBtn.addEventListener('click', () => openRelocateModal(l));
 
       const compareBtn = panel.querySelector('#pl-compare-desc-btn');
       if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
@@ -865,12 +765,16 @@
         }
       });
 
-      // Load source and published photo rows asynchronously.
+      // Load photos asynchronously (may fetch from ImageKit for published listings)
+      // FIX: photoCount was referenced from renderPanel() scope (undefined here),
+      // so panelPhotos() never ran and "Loading…" stayed stuck on screen.
+      // Now it always runs — panelPhotos() handles the empty case itself.
       const photoContainer = panel.querySelector('#panel-photos-container');
       if(photoContainer){
         panelPhotos(l).then(html => {
           if(photoContainer) photoContainer.innerHTML = html;
           wireGalleryEvents();
+          wirePanelPhotoActions();
           // Wire edit photos button (if present)
           const editBtn = panel.querySelector('#pl-edit-photos-btn');
           if(editBtn) editBtn.addEventListener('click', e => { e.stopPropagation(); openPhotoEditor(l); });
@@ -940,6 +844,19 @@
         if(Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
       }, { passive: true });
     }
+  }
+
+function wirePanelPhotoActions(){
+    const btn = document.getElementById('pl-transfer-photos-btn');
+    if(!btn) return;
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      btn.disabled = true;
+      btn.textContent = 'Retrying…';
+      await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
+      btn.disabled = false;
+      btn.textContent = 'Retry transfer';
+    });
   }
 
   function closePanel(){
@@ -1216,7 +1133,179 @@
     }
   }
 
+  // ── Relocate & Synthetic Address Generation Modal ──────────────────────────
+  function openRelocateModal(l){
+    const modal = document.createElement('div');
+    modal.id = 'pl-relocate-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:var(--surface,#131b2e);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:16px;max-width:540px;width:100%;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);color:var(--text,#fff);display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,rgba(255,255,255,.1));padding-bottom:12px">
+          <h3 style="margin:0;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px">
+            <svg class="i" style="width:18px;height:18px;color:var(--brand,#006aff)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Relocate & Generate Address
+          </h3>
+          <button style="background:none;border:none;color:var(--muted-2,#94a3b8);font-size:1.2rem;cursor:pointer;padding:4px" id="pl-relocate-x">✕</button>
+        </div>
 
+        <div style="font-size:.84rem;color:var(--muted,#cbd5e1);line-height:1.45">
+          Generate an authentic, census-verified synthetic address for this property. You can relocate cross-city to any US destination or apply same-block privacy aliasing.
+        </div>
+
+        <div style="background:rgba(255,255,255,.04);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:10px;padding:12px;font-size:.82rem">
+          <span style="color:var(--muted-2,#94a3b8)">Current Listing:</span>
+          <div style="font-weight:600;margin-top:2px;color:#fff">${S.esc(l.address || '(No address)')}, ${S.esc(l.city || '')}, ${S.esc(l.state || '')} ${S.esc(l.zip || '')}</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Relocation Mode</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="relocate-mode" value="cross_location" checked>
+                <span>Target City / ZIP</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="relocate-mode" value="same_block_alias">
+                <span>Same-Block (+8)</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="relocate-target-group">
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Target Destination (City, State, or ZIP)</label>
+            <input type="text" id="relocate-target-input" placeholder="e.g. Tulsa, OK or 74104 or Charlotte, NC" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.15));background:rgba(0,0,0,.25);color:#fff;font-size:.88rem">
+          </div>
+
+          <div id="relocate-preview-box" style="display:none;background:rgba(0,106,255,.08);border:1px solid rgba(0,106,255,.3);border-radius:10px;padding:12px;font-size:.82rem">
+            <div style="font-weight:700;color:var(--brand,#006aff);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+              <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Generated & Verified Address:
+            </div>
+            <div id="relocate-preview-addr" style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:4px"></div>
+            <div id="relocate-preview-meta" style="color:var(--muted-2,#94a3b8);font-size:.75rem"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--border,rgba(255,255,255,.1));padding-top:16px">
+          <button type="button" class="btn btn-ghost btn-sm" id="pl-relocate-cancel">Cancel</button>
+          <button type="button" class="btn btn-outline btn-sm" id="pl-relocate-generate-btn">
+            Generate & Preview
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="pl-relocate-apply-btn" disabled>
+            Apply to Listing
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    const closeRelocateModal = () => modal.remove();
+    modal.querySelector('#pl-relocate-x').addEventListener('click', closeRelocateModal);
+    modal.querySelector('#pl-relocate-cancel').addEventListener('click', closeRelocateModal);
+
+    const modeRadios = modal.querySelectorAll('input[name="relocate-mode"]');
+    const targetGroup = modal.querySelector('#relocate-target-group');
+    const targetInput = modal.querySelector('#relocate-target-input');
+    const previewBox = modal.querySelector('#relocate-preview-box');
+    const previewAddr = modal.querySelector('#relocate-preview-addr');
+    const previewMeta = modal.querySelector('#relocate-preview-meta');
+    const genBtn = modal.querySelector('#pl-relocate-generate-btn');
+    const applyBtn = modal.querySelector('#pl-relocate-apply-btn');
+
+    let currentGenerated = null;
+
+    modeRadios.forEach(r => r.addEventListener('change', () => {
+      targetGroup.style.display = r.value === 'same_block_alias' ? 'none' : 'block';
+    }));
+
+    genBtn.addEventListener('click', async () => {
+      const mode = modal.querySelector('input[name="relocate-mode"]:checked')?.value || 'cross_location';
+      const targetQuery = targetInput.value.trim();
+
+      if (mode === 'cross_location' && !targetQuery) {
+        S.toast('Please enter a target city, state, or ZIP code', 'error');
+        targetInput.focus();
+        return;
+      }
+
+      genBtn.disabled = true;
+      genBtn.textContent = 'Generating…';
+      applyBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/relocate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            property: l,
+            targetQuery,
+            mode,
+            apply: false
+          })
+        });
+
+        const data = await res.json();
+        if (!data.ok || !data.result) {
+          throw new Error(data.error || 'Failed to generate address');
+        }
+
+        currentGenerated = data.result;
+        previewAddr.textContent = currentGenerated.newTitle;
+        previewMeta.textContent = `Coordinates: ${currentGenerated.newLat}, ${currentGenerated.newLng} · Method: ${currentGenerated.method}` +
+          (currentGenerated.verifiedCensus ? ' · ✓ US Census Verified' : '');
+
+        previewBox.style.display = 'block';
+        applyBtn.disabled = false;
+        S.toast('Address generated successfully!', 'success');
+      } catch (err) {
+        S.toast(err.message, 'error');
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = 'Re-Generate';
+      }
+    });
+
+    applyBtn.addEventListener('click', () => {
+      if (!currentGenerated) return;
+
+      const panel = document.getElementById('pl-panel');
+      if (panel) {
+        const fTitle = panel.querySelector('#pf-title');
+        const fAddr = panel.querySelector('#pf-address');
+        const fCity = panel.querySelector('#pf-city');
+        const fState = panel.querySelector('#pf-state');
+        const fZip = panel.querySelector('#pf-zip');
+        const fCounty = panel.querySelector('#pf-county');
+        const fDesc = panel.querySelector('#pf-description');
+
+        if (fTitle) { fTitle.value = currentGenerated.newTitle; fTitle.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fAddr) { fAddr.value = currentGenerated.newAddress; fAddr.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fCity) { fCity.value = currentGenerated.newCity; fCity.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fState) { fState.value = currentGenerated.newState; fState.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fZip) { fZip.value = currentGenerated.newZip; fZip.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fCounty) { fCounty.value = currentGenerated.newCounty; fCounty.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (fDesc && currentGenerated.newDescription) { fDesc.value = currentGenerated.newDescription; fDesc.dispatchEvent(new Event('input', { bubbles: true })); }
+
+        // Update local in-memory property snapshot
+        l.address = currentGenerated.newAddress;
+        l.title = currentGenerated.newTitle;
+        l.city = currentGenerated.newCity;
+        l.state = currentGenerated.newState;
+        l.zip = currentGenerated.newZip;
+        l.county = currentGenerated.newCounty;
+        l.lat = currentGenerated.newLat;
+        l.lng = currentGenerated.newLng;
+        l.description = currentGenerated.newDescription;
+
+        // Auto-save patch to database
+        doSave(l.id);
+        S.toast('Relocated address applied and saved to pipeline!', 'success');
+      }
+
+      closeRelocateModal();
+    });
+  }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -1318,13 +1407,37 @@
     fetchCounts().catch(()=>{});
   }
 
+  // Transfer source photos to ImageKit in the background after publish
+  async function doTransferPhotos(pipelineId, propertyId){
+    const listing = _pageData.find(l => l.id === pipelineId);
+    const urls = listing ? (parseJSON(listing.original_image_urls) || []) : [];
+    if(!urls.length) return;
+
+    S.toast(`Transferring ${Math.min(urls.length, 20)} photo${urls.length !== 1 ? 's' : ''} to ImageKit…`, 'info');
+
+    try {
+      const { data, error } = await CP.sb().functions.invoke('import-pipeline-photos', {
+        body: { pipeline_id: pipelineId, property_id: propertyId }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(res?.transferred > 0){
+        S.toast(`${res.transferred} photo${res.transferred !== 1 ? 's' : ''} added to ImageKit ✓`, 'success');
+      } else if(res?.skipped > 0){
+        S.toast('Photos could not be transferred — add manually in property edit', 'info');
+      }
+    } catch(e){
+      console.warn('[pipeline] photo transfer failed', e);
+      // Non-fatal — property is published, photos can be added manually
+    }
+  }
+
   async function doPublish(id){
     const panel = document.getElementById('pl-panel');
-    const panelIsForListing = !!panel && _current?.id === id;
     const required = ['pf-title','pf-address','pf-city','pf-state','pf-zip'];
     const missing = [];
-    if(panelIsForListing) required.forEach(fid => {
-      const el = panel.querySelector('#'+fid);
+    required.forEach(fid => {
+      const el = panel && panel.querySelector('#'+fid);
       if(el && !el.value.trim()) missing.push(fid.replace('pf-',''));
     });
     if(missing.length){
@@ -1333,19 +1446,14 @@
     }
 
     // Save any unsaved changes first
-    const patch = panelIsForListing ? collectPatch() : {};
+    const patch = collectPatch();
     if(Object.keys(patch).length){
       const { error: se } = await CP.sb().rpc('pipeline_save', { p_id: id, p_patch: patch });
       if(se){ S.toast('Could not save changes before publishing: ' + se.message, 'error'); return; }
     }
 
     // Merge unsaved patch into _current so validation sees the just-saved values.
-    const listing = _pageData.find(item => item.id === id) || (panelIsForListing ? _current : null);
-    if(!listing){
-      S.toast('Could not find this pipeline listing. Refresh and try again.', 'error');
-      return;
-    }
-    const l = Object.assign({}, listing, patch);
+    const l = Object.assign({}, _current || {}, patch);
 
     // ── Pre-publish validation gate ──────────────────────────────────────────
     // Must run before any RPC call. Mirrors validate_for_publish() in enrichment.py.
@@ -1358,67 +1466,35 @@
       return;
     }
 
-    const inventoryReviewed = panelIsForListing &&
-      panel.querySelector('#pl-inventory-reviewed')?.checked === true;
-    if (hasApartmentInventory(l) && !inventoryReviewed) {
-      S.toast('Review and confirm every captured apartment unit and floor plan before publishing.', 'error');
-      return;
-    }
-
     const desc = [l.address, l.city, l.state].filter(Boolean).join(', ');
-    const visibility = panelIsForListing && panel.querySelector('#pf-publish-visibility')?.value === 'active' ? 'active' : 'private_placement';
-    const visibilityLabel = visibility === 'active' ? 'publicly' : 'as a private placement';
     const ok = await S.confirm(
-      'Publish "' + desc + '" ' + visibilityLabel + '?',
-      visibility === 'active'
-        ? 'This listing will appear on the public site immediately. Source photo URLs will be kept in their original order.'
-        : 'This listing will stay hidden from public browse and direct public pages. Create a client share link to grant access. Source photo URLs will be kept in their original order.'
+      'Publish "' + desc + '" as a draft?',
+      'A draft property will be created in your listings. Photos will be transferred to ImageKit automatically.'
     );
     if(!ok) return;
     _cClear();
 
-    const btn = panelIsForListing
-      ? panel.querySelector('.pl-pub-btn-panel')
-      : document.querySelector(`.pl-pub-btn[data-id="${CSS.escape(id)}"]`);
+    const btn = document.querySelector('.pl-pub-btn-panel');
     if(btn){ btn.disabled = true; btn.textContent = 'Publishing…'; }
 
-    const deleteOnPublishEl = panelIsForListing ? panel.querySelector('#pf-delete-on-publish') : null;
+    // If the user chose to delete the pipeline record after publishing, call the new RPC
+    const deleteOnPublishEl = panel.querySelector('#pf-delete-on-publish');
     const deleteOnPublish = deleteOnPublishEl && deleteOnPublishEl.checked;
-    let data;
-    let error;
-    try {
-      ({ data, error } = await CP.sb().rpc('pipeline_publish', {
-        p_id: id,
-        p_landlord_id: null,
-        p_status: visibility,
-        p_inventory_reviewed: inventoryReviewed,
-      }));
-    } catch (publishError) {
-      if(btn){ btn.disabled = false; btn.textContent = 'Publish listing →'; }
-      S.toast('Publish failed: ' + (publishError?.message || 'unknown error'), 'error');
-      return;
-    }
-    if(btn){ btn.disabled = false; btn.textContent = 'Publish listing →'; }
+    const rpcName = deleteOnPublish ? 'pipeline_publish_and_delete' : 'pipeline_publish';
+    const { data, error } = await CP.sb().rpc(rpcName, { p_id: id, p_landlord_id: null });
+    if(btn){ btn.disabled = false; btn.textContent = 'Publish as draft →'; }
     if(error){ S.toast('Publish failed: ' + error.message, 'error'); return; }
     const res = typeof data === 'string' ? JSON.parse(data) : data;
     if(!res?.ok){ S.toast('Publish failed: ' + (res?.error||'unknown'), 'error'); return; }
 
     const propId = res.choice_property_id;
-    let deleteWarning = '';
-    if (deleteOnPublish) {
-      const { data: deleteData, error: deleteError } = await CP.sb().rpc('pipeline_delete', { p_id: id });
-      const deleteResult = typeof deleteData === 'string' ? JSON.parse(deleteData) : deleteData;
-      if (deleteError || !deleteResult?.ok) {
-        deleteWarning = ' Pipeline record was not deleted: ' + (deleteError?.message || deleteResult?.error || 'unknown error');
-      }
-    }
-    S.toast(
-      (visibility === 'active' ? 'Published publicly.' : 'Published as a private placement.') + deleteWarning + ' Opening edit page…',
-      deleteWarning ? 'info' : 'success'
-    );
+    S.toast('Published! Opening edit page…', 'success');
     removeCard(id);
-    if(panelIsForListing) closePanel();
+    closePanel();
     fetchCounts().catch(()=>{});
+
+    // Transfer photos in background (non-blocking)
+    doTransferPhotos(id, propId);
 
     // Open edit page
     setTimeout(() => {
@@ -1441,13 +1517,9 @@
       return;
     }
 
-    const visibility = document.getElementById('pl-bulk-visibility')?.value === 'active' ? 'active' : 'private_placement';
-    const visibilityLabel = visibility === 'active' ? 'publicly' : 'as private placements';
     const ok = await S.confirm(
-      `Publish ${publishable.length} listing${publishable.length !== 1 ? 's' : ''} ${visibilityLabel}?`,
-      visibility === 'active'
-        ? 'These listings will appear on the public site immediately. Photos are not auto-transferred for bulk publish.'
-        : 'These listings will stay hidden from public browse and direct public pages. Create client share links to grant access. Photos are not auto-transferred for bulk publish.'
+      `Publish ${publishable.length} listing${publishable.length !== 1 ? 's' : ''} as drafts?`,
+      'Each will become a draft property. Photos are not auto-transferred for bulk publish — add them individually from each property\'s edit page.'
     );
     if(!ok) return;
 
@@ -1463,11 +1535,6 @@
         const listing = _pageData.find(x => x.id === id);
         if (!listing) { failed++; continue; }
 
-        if (hasApartmentInventory(listing)) {
-          blocked++;
-          continue;
-        }
-
         // Pre-publish validation gate — skip invalid records in bulk mode
         const validation = await validateForPublish(listing);
         if (!validation.ok) {
@@ -1476,12 +1543,7 @@
           continue;
         }
 
-        const { data, error } = await CP.sb().rpc('pipeline_publish', {
-          p_id: id,
-          p_landlord_id: null,
-          p_status: visibility,
-          p_inventory_reviewed: false,
-        });
+        const { data, error } = await CP.sb().rpc('pipeline_publish', { p_id: id, p_landlord_id: null });
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;
         if(!res?.ok) throw new Error(res?.error || 'unknown');
@@ -1499,7 +1561,7 @@
     fetchCounts().catch(()=>{});
 
     if(succeeded > 0 && failed === 0 && blocked === 0){
-      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} published ${visibility === 'active' ? 'publicly' : 'as private placements'} ✓`, 'success');
+      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} published as drafts ✓`, 'success');
     } else if(succeeded > 0 && blocked > 0){
       S.toast(`${succeeded} published, ${blocked} blocked (fix photos/descriptions first)`, 'info');
     } else if(succeeded > 0){
@@ -1589,6 +1651,19 @@
     // Archive buttons on cards
     document.querySelectorAll('.pl-arc-btn').forEach(btn => {
       btn.onclick = e => { e.stopPropagation(); doArchive(btn.dataset.id); };
+    });
+
+    // Retry photos buttons on cards (photo_import_status === 'failed')
+    document.querySelectorAll('.pl-retry-photos-btn').forEach(btn => {
+      btn.onclick = async e => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = 'Retrying…';
+        await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
+        btn.disabled = false;
+        btn.textContent = 'Retry photos';
+        load(false).catch(()=>{});
+      };
     });
 
     // Selection checkboxes
@@ -1751,6 +1826,154 @@
   function wireImportButton(){
     const btn = document.getElementById('pl-import-url-btn');
     if(btn) btn.addEventListener('click', openImportModal);
+
+    const bulkRelocateBtn = document.getElementById('pl-bulk-relocate-btn');
+    if(bulkRelocateBtn) bulkRelocateBtn.addEventListener('click', openBulkRelocateModal);
+  }
+
+  function openBulkRelocateModal(){
+    const selectedIds = Array.from(_selected);
+    const count = selectedIds.length;
+    const targetListings = count > 0 
+      ? _listings.filter(l => selectedIds.includes(l.id))
+      : visibleListings();
+
+    if (targetListings.length === 0) {
+      S.toast('No listings available to relocate', 'error');
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-bulk-relocate-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:var(--surface,#131b2e);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:16px;max-width:540px;width:100%;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);color:var(--text,#fff);display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,rgba(255,255,255,.1));padding-bottom:12px">
+          <h3 style="margin:0;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px">
+            <svg class="i" style="width:18px;height:18px;color:var(--brand,#006aff)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Bulk Relocate & Generate Addresses
+          </h3>
+          <button style="background:none;border:none;color:var(--muted-2,#94a3b8);font-size:1.2rem;cursor:pointer;padding:4px" id="pl-bulk-x">✕</button>
+        </div>
+
+        <div style="font-size:.84rem;color:var(--muted,#cbd5e1);line-height:1.45">
+          Batch relocate <strong>${targetListings.length}</strong> ${count > 0 ? 'selected' : 'visible'} listing(s) to a target city or ZIP code. Each property receives a unique, verified residential street address with live coordinates.
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Relocation Mode</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="bulk-relocate-mode" value="cross_location" checked>
+                <span>Target City / ZIP</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border,rgba(255,255,255,.1));cursor:pointer;font-size:.82rem">
+                <input type="radio" name="bulk-relocate-mode" value="same_block_alias">
+                <span>Same-Block (+8)</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="bulk-target-group">
+            <label style="font-size:.78rem;font-weight:600;color:var(--muted-2,#94a3b8);display:block;margin-bottom:6px">Target Destination (City, State, or ZIP)</label>
+            <input type="text" id="bulk-target-input" placeholder="e.g. Tulsa, OK or 74104 or Charlotte, NC" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.15));background:rgba(0,0,0,.25);color:#fff;font-size:.88rem">
+          </div>
+
+          <div id="bulk-progress-box" style="display:none;background:rgba(255,255,255,.04);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted-2,#94a3b8);margin-bottom:6px">
+              <span id="bulk-progress-status">Relocating listings…</span>
+              <span id="bulk-progress-count">0 / ${targetListings.length}</span>
+            </div>
+            <div style="width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+              <div id="bulk-progress-bar" style="width:0%;height:100%;background:var(--brand,#006aff);transition:width .2s ease"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--border,rgba(255,255,255,.1));padding-top:16px">
+          <button type="button" class="btn btn-ghost btn-sm" id="pl-bulk-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="pl-bulk-start-btn">
+            Start Bulk Relocation (${targetListings.length})
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    const closeBulkModal = () => modal.remove();
+    modal.querySelector('#pl-bulk-x').addEventListener('click', closeBulkModal);
+    modal.querySelector('#pl-bulk-cancel').addEventListener('click', closeBulkModal);
+
+    const modeRadios = modal.querySelectorAll('input[name="bulk-relocate-mode"]');
+    const targetGroup = modal.querySelector('#bulk-target-group');
+    const targetInput = modal.querySelector('#bulk-target-input');
+    const startBtn = modal.querySelector('#pl-bulk-start-btn');
+    const progressBox = modal.querySelector('#bulk-progress-box');
+    const progressStatus = modal.querySelector('#bulk-progress-status');
+    const progressCount = modal.querySelector('#bulk-progress-count');
+    const progressBar = modal.querySelector('#bulk-progress-bar');
+
+    modeRadios.forEach(r => r.addEventListener('change', () => {
+      targetGroup.style.display = r.value === 'same_block_alias' ? 'none' : 'block';
+    }));
+
+    startBtn.addEventListener('click', async () => {
+      const mode = modal.querySelector('input[name="bulk-relocate-mode"]:checked')?.value || 'cross_location';
+      const targetQuery = targetInput.value.trim();
+
+      if (mode === 'cross_location' && !targetQuery) {
+        S.toast('Please enter a target city, state, or ZIP code', 'error');
+        targetInput.focus();
+        return;
+      }
+
+      startBtn.disabled = true;
+      progressBox.style.display = 'block';
+
+      let successCount = 0;
+      for (let i = 0; i < targetListings.length; i++) {
+        const item = targetListings[i];
+        progressStatus.textContent = `Relocating [${i + 1}/${targetListings.length}]: ${item.address || item.id}…`;
+        progressCount.textContent = `${i + 1} / ${targetListings.length}`;
+        progressBar.style.width = `${Math.round(((i + 1) / targetListings.length) * 100)}%`;
+
+        try {
+          const res = await fetch('/api/relocate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              property: item,
+              targetQuery,
+              mode,
+              apply: true
+            })
+          });
+
+          const data = await res.json();
+          if (data.ok && data.result) {
+            successCount++;
+            // Update in-memory listing
+            item.address = data.result.newAddress;
+            item.title = data.result.newTitle;
+            item.city = data.result.newCity;
+            item.state = data.result.newState;
+            item.zip = data.result.newZip;
+            item.county = data.result.newCounty;
+            item.lat = data.result.newLat;
+            item.lng = data.result.newLng;
+            item.description = data.result.newDescription;
+          }
+        } catch (err) {
+          console.error('[bulk-relocate] error for', item.id, err);
+        }
+      }
+
+      S.toast(`Bulk relocation complete! Successfully relocated ${successCount} listings.`, 'success');
+      renderList(visibleListings(), false);
+      wireCardEvents();
+      setTimeout(closeBulkModal, 1000);
+    });
   }
 
   function wireRefreshButton(){
@@ -1846,15 +2069,8 @@
         <div class="pl-folder-banner-meta">${total} listing${total !== 1 ? 's' : ''} · ${published} published · ${archived} archived · ${missing} needs review</div>
       </div>
       <div class="pl-folder-banner-actions">
-        <label for="pl-folder-visibility" style="font-size:.72rem;display:flex;align-items:center;gap:6px">
-          Visibility
-          <select id="pl-folder-visibility" aria-label="Folder publish visibility">
-            <option value="private_placement" selected>Private</option>
-            <option value="active">Public</option>
-          </select>
-        </label>
         <button class="btn btn-sm btn-outline" id="pl-banner-close-folder-btn">Close folder</button>
-        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">Publish folder →</button>
+        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">Publish folder</button>
       </div>
     `;
 
@@ -2076,7 +2292,7 @@
       closePhotoEditor();
       // Refresh panel photos
       const photoContainer = document.getElementById('panel-photos-container');
-      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); }); }
+      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); wirePanelPhotoActions(); }); }
     }
 
     document.getElementById('pl-photo-edit-save').addEventListener('click', saveEdits);
@@ -2196,67 +2412,22 @@
     if(!_activeFolder) return;
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder) return;
-    let folderProperties;
-    try {
-      const { data, error } = await CP.sb().rpc('pipeline_folder_properties', { p_folder_id: _activeFolder });
-      if(error) throw error;
-      folderProperties = typeof data === 'string' ? JSON.parse(data) : data;
-      if(!Array.isArray(folderProperties)) throw new Error('Folder contents could not be verified');
-    } catch(e){
-      S.toast('Could not verify apartment units before publishing: ' + (e.message || 'unknown error'), 'error');
-      return;
-    }
-    const publishable = folderProperties.filter(listing =>
-      listing.status !== 'published' && listing.status !== 'archived' && !listing.choice_property_id
-    );
-    if(!publishable.length){
-      S.toast('This folder has no unpublished listings to publish.', 'info');
-      return;
-    }
-    const visibility = document.getElementById('pl-folder-visibility')?.value === 'active' ? 'active' : 'private_placement';
-    const communityCount = publishable.filter(isCommunityOverview).length;
-    const inventoryCount = publishable.filter(hasApartmentInventory).length;
-    if(communityCount || inventoryCount){
-      S.toast(`${communityCount || inventoryCount} apartment community listing${(communityCount || inventoryCount) === 1 ? '' : 's'} require individual inventory review and must be published one at a time.`, 'error');
-      return;
-    }
     const ok = await S.confirm(
-      `Publish ${publishable.length} listing${publishable.length === 1 ? '' : 's'} in "${folder.name}" ${visibility === 'active' ? 'publicly' : 'as private placements'}?`,
-      visibility === 'active'
-        ? 'These listings will appear on the public site immediately.'
-        : 'These listings will remain hidden from public browse and direct public pages. Create client share links to grant access.'
+      `Publish all in "${folder.name}"?`,
+      `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`
     );
     if(!ok) return;
-    let succeeded = 0;
-    let failed = 0;
-    let blocked = 0;
-    for(const listing of publishable){
-      const validation = await validateForPublish(listing);
-      if(!validation.ok){
-        blocked++;
-        continue;
-      }
-      try{
-        const { data, error } = await CP.sb().rpc('pipeline_publish', {
-          p_id: listing.id,
-          p_landlord_id: null,
-          p_status: visibility,
-          p_inventory_reviewed: false,
-        });
-        if(error) throw error;
-        const res = typeof data === 'string' ? JSON.parse(data) : data;
-        if(!res?.ok) throw new Error(res?.error || 'Publish failed');
-        succeeded++;
-        removeCard(listing.id);
-      }catch(error){
-        console.error('[pipeline] folder publish failed', listing.id, error);
-        failed++;
-      }
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_publish', { p_folder_id: _activeFolder });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Failed to publish folder');
+      S.toast(`${res.published} published, ${res.failed} failed`, res.failed > 0 ? 'info' : 'success');
+      await loadFolders();
+      selectFolder(_activeFolder);
+    } catch(e){
+      S.toast('Publish failed: ' + e.message, 'error');
     }
-    const visibilityText = visibility === 'active' ? 'publicly' : 'as private placements';
-    S.toast(`${succeeded} published ${visibilityText}, ${failed} failed, ${blocked} blocked`, failed || blocked ? 'info' : 'success');
-    await loadFolders();
-    selectFolder(_activeFolder);
   }
 
   async function renameActiveFolder(){

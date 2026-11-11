@@ -28,7 +28,8 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     enc.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']);
+    ['sign'],
+  );
   const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(message));
   const bytes = new Uint8Array(sigBuf);
   let hex = '';
@@ -87,7 +88,8 @@ export async function gasSend(input: GasSendInput): Promise<GasSendResult> {
   // payloads; the escape is a no-op there.
   const innerJsonAscii = JSON.stringify(inner).replace(
     /[\u0080-\uffff]/g,
-    (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+    (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
+  );
   const sig      = await hmacSha256Hex(gasSecret, ts + '.' + innerJsonAscii);
   const fullBody = JSON.stringify({ ...inner, sig });
 

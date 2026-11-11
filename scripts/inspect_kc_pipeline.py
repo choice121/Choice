@@ -1,11 +1,10 @@
-import os
 import http.client
 import json
 
 conn = http.client.HTTPSConnection('tlfmwetmhthpyrytrcfo.supabase.co', timeout=30)
 headers = {
-    'apikey': os.environ['SUPABASE_SERVICE_ROLE_KEY'],
-    'Authorization': f"Bearer {os.environ['SUPABASE_SERVICE_ROLE_KEY']}",
+    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE',
     'Accept': 'application/json',
     'Accept-Profile': 'pipeline',
     'Content-Profile': 'pipeline'
@@ -29,6 +28,7 @@ if isinstance(pub_props, list):
         print(f"{idx}. ID: {p.get('id')} | Address: {p.get('address')}, {p.get('city')}, {p.get('state')} {p.get('zip')} | Rent: ${p.get('monthly_rent')} | Beds: {p.get('bedrooms')} | Baths: {p.get('bathrooms')} | Status: {p.get('status')} | Photos: {photos_cnt} | Title: {p.get('title')}")
 else:
     print("Pub props error response:", pub_props)
+
 
 # 2. Fetch all pipeline properties in Kansas City
 pipeline_headers = dict(headers)

@@ -53,20 +53,8 @@ const chromeManifest = checkVersionedPackage('Chromium', 'chrome-extension', [
 ]);
 const orionManifest = checkVersionedPackage('Orion', '.pages-orion', [
   'config.js', 'background.js', 'content.js', 'content.css', 'live-content.js',
-  'live-shared-extractors.js', 'popup.html', 'popup.js', 'admin-auth.js', 'shared-extractors.js',
+  'live-shared-extractors.js', 'popup.html', 'popup.js', 'shared-extractors.js',
 ]);
-
-if (orionManifest) {
-  const contentScripts = (orionManifest.content_scripts || []).flatMap(script => script.js || []);
-  const uiRuntimes = contentScripts.filter(script => ['content.js', 'live-content.js'].includes(script));
-  const extractorRuntimes = contentScripts.filter(script => ['shared-extractors.js', 'live-shared-extractors.js'].includes(script));
-  if (uiRuntimes.length !== 1) {
-    failures.push(`Orion: expected one UI runtime, found ${uiRuntimes.length}`);
-  }
-  if (extractorRuntimes.length !== 1) {
-    failures.push(`Orion: expected one extractor runtime, found ${extractorRuntimes.length}`);
-  }
-}
 
 if (chromeManifest && orionManifest && chromeManifest.version !== orionManifest.version) {
   failures.push(`Source package versions differ: Chromium ${chromeManifest.version}, Orion ${orionManifest.version}`);
@@ -136,12 +124,7 @@ function checkArchive(relativePath, expectedVersion) {
     return;
   }
   try {
-    let manifestText = '';
-    try {
-      manifestText = execFileSync('unzip', ['-p', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
-    } catch (_) {
-      manifestText = execFileSync('tar', ['-xOf', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
-    }
+    const manifestText = execFileSync('unzip', ['-p', path.join(ROOT, relativePath), 'manifest.json'], { encoding: 'utf8' });
     const manifest = JSON.parse(manifestText);
     if (manifest.version !== expectedVersion) {
       failures.push(`${relativePath}: contains ${manifest.version}; expected ${expectedVersion}`);

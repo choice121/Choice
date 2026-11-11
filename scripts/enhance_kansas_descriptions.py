@@ -5,16 +5,13 @@ with rich property details, mature language, background-friendly inclusive revie
 and strict adherence to Choice Properties platform rules.
 """
 
-import os
 import json
 import http.client
 import urllib.parse
 import sys
 
 SUPABASE_HOST = "tlfmwetmhthpyrytrcfo.supabase.co"
-SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-if not SERVICE_ROLE_KEY:
-    raise SystemExit("SUPABASE_SERVICE_ROLE_KEY is required")
+SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE"
 
 HEADERS = {
     "apikey": SERVICE_ROLE_KEY,
@@ -206,6 +203,7 @@ Ready to apply? Submit your application directly through Choice Properties for p
     }
 }
 
+
 def main():
     print("Applying enriched, mature, background-friendly descriptions to all 6 properties...\n")
     for prop_id, item in PROPERTY_DESCRIPTIONS.items():
@@ -231,6 +229,7 @@ def main():
         print(f"  pipeline_properties -> HTTP {st_p}")
 
     print("\nAll 6 Kansas City property descriptions successfully enriched and updated!")
+
 
 if __name__ == "__main__":
     main()

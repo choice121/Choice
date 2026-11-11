@@ -5,7 +5,7 @@
 ***
 
 ```markdown
-# TASK: Autonomous Opendoor Scraping, 
+# TASK: Autonomous Opendoor Scraping, Relocation, Full Enrichment & Private Placement Publishing
 
 ### RUNTIME PARAMETERS (FILL IN BEFORE SENDING):
 1. **Source City / URLs**: [e.g. Dallas, TX (or paste Opendoor listing URLs)]
@@ -41,10 +41,10 @@ Execute this end-to-end publishing pipeline autonomously using the project files
 
 ---
 
-### STEP 2: 
+### STEP 2: ADDRESS RELOCATION & MULTI-ZIP DISTRIBUTION (STRICT RULES)
 1. **Verified Municipal Street Mapping Protocol**:
    - NEVER invent fictional or synthetic street names (e.g. do NOT use fabricated names like "Traditions Dr").
-   - Every relocated address MUST be an authentic, recognized municipal residential street and valid parcel range in the target destination, verified against municipal geocoders (OpenStreetMap Nominatim or US 
+   - Every relocated address MUST be an authentic, recognized municipal residential street and valid parcel range in the target destination, verified against municipal geocoders (OpenStreetMap Nominatim or US Census Geocoder).
 2. **Multi-ZIP Geographic Distribution Rule (CRITICAL)**:
    - Unless a specific ZIP override was provided above, DO NOT publish all properties in the same single ZIP code.
    - Distribute the properties across the different valid residential ZIP codes covering the target municipality and its adjacent residential corridors (e.g., for Yukon: `73099`, `73127`, `73132`, `73064`).

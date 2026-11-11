@@ -42,7 +42,8 @@ from cjproperties_scraper import (
     _extract_details, _extract_description, _extract_image_urls,
     _extract_unit_url, _fetch_detail_html, _extract_image_urls_from_detail_html,
     _build_record, RM_SEARCH_URL, RM_CORP_ID, RM_LOCATIONS_DEFAULT,
-    REQUEST_DELAY)
+    REQUEST_DELAY,
+)
 
 # Config
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tlfmwetmhthpyrytrcfo.supabase.co").rstrip("/")
@@ -71,6 +72,7 @@ SB_PIPELINE_HEADERS["Accept-Profile"] = "pipeline"
 SB_PIPELINE_HEADERS["Content-Profile"] = "pipeline"
 
 TARGET_STATES = ["MO", "KS"]
+
 
 def scrape_one_property():
     """Fetch just the first MO/KS property from cjproperties.org."""
@@ -131,7 +133,8 @@ def scrape_one_property():
             "{} {}".format(address.get("street") or "?", address.get("city") or "?").strip(),
             details.get("rent"),
             details.get("beds"),
-            len(image_urls)))
+            len(image_urls),
+        ))
 
         rec = _build_record(
             unit_id=unit_id,
@@ -140,7 +143,8 @@ def scrape_one_property():
             details=details,
             description=description,
             image_urls=image_urls,
-            unit_url=unit_url)
+            unit_url=unit_url,
+        )
         if rec:
             print("\nSelected property:")
             print("  Address: {} {}, {} {}".format(
@@ -155,6 +159,7 @@ def scrape_one_property():
         time.sleep(REQUEST_DELAY)
 
     sys.exit("ERROR: No MO/KS property found")
+
 
 def upload_photo(url, folder, idx):
     """Download a photo from source URL and upload to ImageKit."""
@@ -176,7 +181,8 @@ def upload_photo(url, folder, idx):
                 headers={"Authorization": IK_AUTH},
                 files={"file": (fname, rd.content, "image/jpeg")},
                 data={"fileName": fname, "folder": folder},
-                timeout=60)
+                timeout=60,
+            )
             if r.status_code == 200:
                 url = r.json().get("url")
                 if url:
@@ -188,6 +194,7 @@ def upload_photo(url, folder, idx):
         if attempt < 3:
             time.sleep(2 * attempt)
     return idx, None
+
 
 def main():
     print("=" * 65)
@@ -206,7 +213,8 @@ def main():
             "{}/rest/v1/pipeline_properties?source_listing_id=eq.{}&select=id,source_listing_id,choice_property_id".format(
                 SUPABASE_URL, urllib.parse.quote(sid)),
             headers=SB_PIPELINE_HEADERS,
-            timeout=20)
+            timeout=20,
+        )
         if r.ok:
             existing = r.json()
             if existing and existing[0].get("choice_property_id"):
@@ -245,7 +253,8 @@ def main():
             "{}/rest/v1/pipeline_properties?on_conflict=source_listing_id".format(SUPABASE_URL),
             headers={**SB_PIPELINE_HEADERS, "Prefer": "return=representation,resolution=merge-duplicates"},
             data=json.dumps(rec, default=str).encode(),
-            timeout=30)
+            timeout=30,
+        )
         if not r.ok:
             print("  ERROR: Stage failed: {} {}".format(r.status_code, r.text[:200]))
             sys.exit(1)
@@ -265,7 +274,8 @@ def main():
             "{}/rest/v1/rpc/pipeline_publish".format(SUPABASE_URL),
             headers=SB_HEADERS,
             json={"p_id": staged_id, "p_landlord_id": None},
-            timeout=30)
+            timeout=30,
+        )
         if not r.ok:
             print("  ERROR: Publish RPC failed: {} {}".format(r.status_code, r.text[:200]))
             sys.exit(1)
@@ -295,7 +305,8 @@ def main():
             "{}/rest/v1/properties?id=eq.{}".format(SUPABASE_URL, urllib.parse.quote(str(prop_id))),
             headers=SB_HEADERS,
             json={"status": "active"},
-            timeout=15)
+            timeout=15,
+        )
         if r.ok:
             print("  Activated")
         else:
@@ -345,7 +356,8 @@ def main():
                     "{}/rest/v1/property_photos".format(SUPABASE_URL),
                     headers={**SB_HEADERS, "Prefer": "return=minimal"},
                     data=json.dumps(photo_rows).encode(),
-                    timeout=30)
+                    timeout=30,
+                )
                 if r.ok:
                     print("  Inserted {} photo row(s)".format(len(photo_rows)))
                 else:
@@ -368,6 +380,7 @@ def main():
     print("Property ID: {}".format(prop_id))
     print("URL: {}".format(url))
     print("=" * 65)
+
 
 if __name__ == "__main__":
     main()

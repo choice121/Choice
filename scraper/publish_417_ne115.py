@@ -117,7 +117,8 @@ def upload_photo(idx, path, folder):
                 auth=IK_AUTH,
                 files={"file": (fname, data, "image/webp")},
                 data={"fileName": fname, "folder": folder},
-                timeout=60)
+                timeout=60,
+            )
             if r.status_code == 200:
                 url = r.json().get("url")
                 if url:
@@ -163,7 +164,8 @@ r = requests.post(
     "{}/rest/v1/pipeline_properties?on_conflict=source_listing_id".format(SUPABASE_URL),
     headers={**SB_PIPELINE_HEADERS, "Prefer": "return=representation,resolution=merge-duplicates"},
     data=json.dumps(LISTING).encode(),
-    timeout=30)
+    timeout=30,
+)
 if not r.ok:
     sys.exit("ERROR: Stage failed: {} {}".format(r.status_code, r.text[:300]))
 
@@ -182,7 +184,8 @@ r = requests.post(
     "{}/rest/v1/rpc/pipeline_publish".format(SUPABASE_URL),
     headers=SB_HEADERS,
     json={"p_id": staged_id, "p_landlord_id": None},
-    timeout=30)
+    timeout=30,
+)
 if not r.ok:
     sys.exit("ERROR: Publish RPC failed: {} {}".format(r.status_code, r.text[:300]))
 
@@ -211,7 +214,8 @@ r = requests.patch(
     "{}/rest/v1/properties?id=eq.{}".format(SUPABASE_URL, urllib.parse.quote(str(prop_id))),
     headers=SB_HEADERS,
     json={"status": "active"},
-    timeout=15)
+    timeout=15,
+)
 print("Activate: HTTP {}".format(r.status_code))
 if not r.ok:
     sys.exit("ERROR: activate failed: {}".format(r.text[:200]))
@@ -236,7 +240,8 @@ r = requests.post(
     "{}/rest/v1/property_photos".format(SUPABASE_URL),
     headers={**SB_HEADERS, "Prefer": "return=minimal"},
     data=json.dumps(photo_rows).encode(),
-    timeout=30)
+    timeout=30,
+)
 print("Insert photos: HTTP {}".format(r.status_code))
 if not r.ok:
     sys.exit("ERROR: photo insert failed: {}".format(r.text[:300]))

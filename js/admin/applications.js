@@ -79,7 +79,7 @@
       ? `<span title="Applicant's preferred payment method" style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;color:#1d4ed8;margin-left:4px;"><svg viewBox="0 0 24 24" width="11" height="11" style="stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>${S.esc(prefMethod)}</span>`
       : '';
 
-    const ds = `data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||app.id)}" data-name="${S.esc(name)}" data-status="${S.esc(app.status||'')}" data-fee="${app.application_fee || 50}"`;
+    const ds = `data-id="${S.esc(app.id)}" data-app-id="${S.esc(app.app_id||app.id)}" data-name="${S.esc(name)}" data-status="${S.esc(app.status||'')}"`;
 
     const checked = _selected.has(app.id) ? 'checked' : '';
     return `<div class="app-card" id="card-${S.esc(app.id)}">
@@ -479,20 +479,6 @@
     const willEmail = ['approved','denied','waitlisted'].includes(status);
     const labels = { approved:'Approve application?', denied:'Deny application?', waitlisted:'Move to waitlist?', pending:'Reset to pending?', new:'Reset to new?', archived:'Archive application?', withdrawn:'Mark as withdrawn?' };
     const verbs  = { approved:'Approve', denied:'Deny', waitlisted:'Waitlist', pending:'Reset', new:'Reset', archived:'Archive', withdrawn:'Withdraw' };
-
-    if(status === 'approved'){
-      const app = _allData.find(r => r.id === dbId);
-      if(app && app.payment_status === 'unpaid'){
-        const confirmUnpaid = await S.confirm({
-          title: 'Unpaid Application Warning',
-          message: 'This application fee ($' + (app.application_fee || 50) + ') is marked UNPAID. Are you sure you want to approve without fee confirmation?',
-          ok: 'Approve anyway',
-          danger: true
-        });
-        if(!confirmUnpaid) return;
-      }
-    }
-
     const proceed = await S.confirm({
       title: labels[status] || ('Set status to ' + status + '?'),
       message: willEmail
@@ -529,15 +515,12 @@
   }
 
   // ───── Payment ─────
-  async function openPaySheet(dbId, appId, name, feeRaw){
-    const app = _allData.find(r => r.id === dbId);
-    const expectedFee = (app && app.application_fee) ? Number(app.application_fee) : (feeRaw ? Number(feeRaw) : 50);
-    const feeStr = expectedFee.toFixed(2);
+  async function openPaySheet(dbId, appId, name){
     const data = await S.formSheet({
       title: 'Mark as paid · ' + name,
       submit: 'Mark as paid',
       fields: [
-        { name:'amount', label:'Application fee collected ($' + feeStr + ')', type:'number', value:feeStr, placeholder:feeStr },
+        { name:'amount', label:'Application fee collected ($50.00)', type:'number', value:'50.00', placeholder:'50.00' },
         { name:'method', label:'Payment method', type:'select', value:'', options:[
           { value:'', label:'(none selected)' },
           // Mirrors the application form (apply/index.html) — keep in sync.
@@ -555,11 +538,8 @@
       ]
     });
     if(!data) return;
-    const amount = data.amount ? parseFloat(data.amount) : expectedFee;
-    if(isNaN(amount) || amount <= 0 || (amount % 50 !== 0 && amount !== expectedFee)){
-      S.toast('Application fee must be recorded in increments of $50.00.', 'error');
-      return;
-    }
+    const amount = data.amount ? parseFloat(data.amount) : 50;
+    if(amount !== 50){ S.toast('Application fee must be recorded as exactly $50.00.', 'error'); return; }
     const method = data.method || null;
     const notes  = data.notes || null;
     const { ok, error } = await CP.Applications.updatePaymentWithDetails(dbId, 'paid', amount, method, notes, { sendEmail:false });
@@ -909,7 +889,7 @@
     // ───── Wiring (after S is available) ─────
     S.on('toggle',       (t) => toggleDetail(t.dataset.id));
     S.on('status',       (t) => setStatus(t.dataset.id, t.dataset.appId, t.dataset.set));
-    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name, t.dataset.fee));
+    S.on('pay',          (t) => openPaySheet(t.dataset.id, t.dataset.appId, t.dataset.name));
     S.on('unpay',        (t) => markUnpaid(t.dataset.id));
     S.on('refund',       (t) => openRefundSheet(t.dataset.id, t.dataset.name));
     S.on('waive',        (t) => markWaived(t.dataset.id));

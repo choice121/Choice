@@ -23,7 +23,7 @@
 // function returns.
 // ============================================================
 
-const ID_RE = /(prop[-_][a-z0-9_-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
+const ID_RE = /(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
 
 function escHtml(s) {
   return String(s ?? '')
@@ -94,6 +94,7 @@ function makeJsonLd(p, photos, canonicalUrl) {
       availability: 'https://schema.org/InStock',
       url: canonicalUrl,
     };
+    if (p.available_date) ld.offers.availabilityStarts = p.available_date;
   }
   if (p.bedrooms != null) ld.numberOfRooms = Number(p.bedrooms);
   if (p.bathrooms != null) ld.numberOfBathroomsTotal = Number(p.bathrooms);
@@ -104,6 +105,7 @@ function makeJsonLd(p, photos, canonicalUrl) {
       unitCode: 'FTK', // square feet
     };
   }
+  if (p.pets_allowed != null) ld.petsAllowed = !!p.pets_allowed;
   if (p.year_built) ld.yearBuilt = Number(p.year_built);
 
   // Strip undefined values so the JSON is clean.

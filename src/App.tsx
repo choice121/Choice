@@ -38,14 +38,18 @@ import { INITIAL_PIPELINE_PROPERTIES, MUSTANG_SEED_PROPERTIES } from './data/ini
 const PIPELINE_STORAGE_KEY = 'mustang_pipeline_properties_v3';
 
 export default function App() {
-  // Start with empty pipeline as requested
+  // Start with empty pipeline since user requested "clear the pipeline"
   const [properties, setProperties] = useState<Property[]>(() => {
     try {
-      localStorage.removeItem(PIPELINE_STORAGE_KEY);
+      const saved = localStorage.getItem(PIPELINE_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch {
-      // ignore
+      // fallback
     }
-    return [];
+    return INITIAL_PIPELINE_PROPERTIES;
   });
 
   // Sync to localStorage

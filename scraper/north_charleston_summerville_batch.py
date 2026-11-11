@@ -69,13 +69,15 @@ RENT_MAX      = 1600   # scrape up to $1,600; published price will be reduced to
 RENT_FLOOR    = 1280   # published price floor
 RENT_CAP      = 1300   # published price cap
 
+
 # ---------------------------------------------------------------------------
 # Pricing function
 # ---------------------------------------------------------------------------
 
 def compute_ncs_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None):
+    seen_rents: Optional[Set[int]] = None,
+):
     """
     Scrape up to $1,600; publish in the $1,280–$1,300 band.
     Maps the scrape range [$600, $1,600] proportionally to [$1,280, $1,300],
@@ -105,6 +107,7 @@ def compute_ncs_rent(
 
     return int(published), rent
 
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -132,7 +135,8 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_ncs_rent)
+        pricing_fn=compute_ncs_rent,
+    )
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
@@ -144,6 +148,7 @@ def main():
 
     if result.errors and result.published == 0:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

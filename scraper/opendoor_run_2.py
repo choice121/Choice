@@ -66,11 +66,13 @@ HEADERS = {
 TARGET_COUNT  = 2
 IK_MAX_PHOTOS = 50   # must match pipeline.py IK_MAX_PHOTOS
 
+
 def _get(url, timeout=30):
     """Fetch url using curl_cffi Chrome impersonation when available."""
     if _IMPERSONATE:
         return _http.get(url, headers=HEADERS, timeout=timeout, impersonate=_IMPERSONATE)
     return _http.get(url, headers=HEADERS, timeout=timeout)
+
 
 def get_sitemap_urls(n=60):
     """Fetch the Opendoor listings sitemap and return up to n property URLs.
@@ -85,6 +87,7 @@ def get_sitemap_urls(n=60):
             "Sitemap returned 0 property URLs — check connectivity or sitemap format."
         )
     return urls[:n]
+
 
 def _count_expected_photos(rec):
     """
@@ -108,6 +111,7 @@ def _count_expected_photos(rec):
             break
     return count
 
+
 def _verify_photos_on_imagekit(prop_id, expected):
     """Query property_photos and assert actual count == expected.
     Returns (actual_count, ok_bool, message)."""
@@ -121,7 +125,8 @@ def _verify_photos_on_imagekit(prop_id, expected):
             "{}/rest/v1/property_photos".format(SUPABASE_URL),
             headers=H,
             params={"select": "id", "property_id": "eq.{}".format(prop_id)},
-            timeout=15)
+            timeout=15,
+        )
         actual = len(r.json()) if isinstance(r.json(), list) else 0
     except Exception as e:
         return 0, False, "DB query failed: {}".format(e)
@@ -129,10 +134,12 @@ def _verify_photos_on_imagekit(prop_id, expected):
     msg = "{}/{} photos in DB".format(actual, expected)
     return actual, ok, msg
 
+
 def _extract_prop_id(published_url):
     """Extract UUID from a published property URL."""
     m = re.search(r"[?&]id=([a-f0-9\-]{36})", published_url)
     return m.group(1) if m else None
+
 
 def main():
     print("=" * 65)
@@ -202,7 +209,8 @@ def main():
     result = orchestrator.run_records(
         records=records,
         batch_name="Opendoor 2-Property Run",
-        dry_run=False)
+        dry_run=False,
+    )
 
     print("\n" + "=" * 65)
     print("PIPELINE SUMMARY")
@@ -240,6 +248,7 @@ def main():
 
     print("\nDone. {}/{} properties published, {}/{} photos verified on ImageKit.".format(
         result.published, TARGET_COUNT, result.photos_ok, expected_total))
+
 
 if __name__ == "__main__":
     main()

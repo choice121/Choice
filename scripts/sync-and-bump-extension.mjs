@@ -146,11 +146,9 @@ function updateTextFile(filePath, replacements) {
 }
 
 updateTextFile(path.join(ROOT, 'chrome-extension', 'config.js'), [
-  [/^\s*IMPORT_SECRET:\s*['"][^'"]*['"],?\s*\n/m, ''],
   [/VERSION:\s*['"][^'"]+['"]/, `VERSION: '${newVersion}'`],
 ]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'config.js'), [
-  [/^\s*IMPORT_SECRET:\s*['"][^'"]*['"],?\s*\n/m, ''],
   [/VERSION:\s*['"][^'"]+['"]/, `VERSION: '${newVersion}'`],
 ]);
 updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
@@ -158,10 +156,6 @@ updateTextFile(path.join(ROOT, '.pages-orion', 'content.js'), [
 ]);
 updateTextFile(path.join(ROOT, 'chrome-extension', 'README.md'), [
   [/^# Choice Properties — Universal Chrome Extension \(v[^)]+\)/m, `# Choice Properties — Universal Chrome Extension (v${newVersion})`],
-]);
-updateTextFile(path.join(ROOT, '.pages-orion', 'README.md'), [
-  [/One-tap mobile save — v[^\n]+/, `One-tap mobile save — v${newVersion}`],
-  [/### v[\d.]+ verification/, `### v${newVersion} verification`],
 ]);
 updateTextFile(path.join(ROOT, 'README.md'), [
   [/\(v[0-9.]+\s*—\s*1-click stage\)/, `(v${newVersion} — 1-click stage)`],
@@ -238,7 +232,7 @@ console.log('✓ Generated public/extension-updates.xml');
 
 // ── 5. Zip both extension packages ─────────────────────────────────────
 function packageExtension(sourceDir, outputPath, label) {
-  const pythonScript = [
+  const python = [
     'import zipfile, os',
     `output_path = ${JSON.stringify(outputPath)}`,
     `source_dir = ${JSON.stringify(sourceDir)}`,
@@ -250,18 +244,7 @@ function packageExtension(sourceDir, outputPath, label) {
     '            zipf.write(file_path, arcname)',
     `print("✅ Packaged ${label} v${newVersion} (" + str(os.path.getsize(output_path)) + " bytes)")`,
   ].join('\n');
-  const candidates = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
-  let packaged = false;
-  for (const bin of candidates) {
-    try {
-      execFileSync(bin, ['-c', pythonScript], { cwd: ROOT, stdio: 'inherit' });
-      packaged = true;
-      break;
-    } catch (_) {}
-  }
-  if (!packaged) {
-    throw new Error('Could not find python to package zip archive');
-  }
+  execFileSync('python3', ['-c', python], { cwd: ROOT, stdio: 'inherit' });
 }
 
 console.log('📦 Packaging extension zips...');

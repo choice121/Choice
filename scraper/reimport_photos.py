@@ -75,6 +75,7 @@ TARGETS = {
         "/aid_1f497f03-3ac0-5cc1-9da0-396a513f2504",
 }
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -95,6 +96,7 @@ def scrape_source_urls(listing_url):
         urls = []
     return addr, [u for u in urls if u]
 
+
 def dedup_cap(urls):
     """Mirror the pipeline's dedup + IK_MAX_PHOTOS cap."""
     seen, out = set(), []
@@ -107,6 +109,7 @@ def dedup_cap(urls):
         if len(out) >= IK_MAX_PHOTOS:
             break
     return out
+
 
 def upload_one(idx, url, prop_id):
     """Upload a single image to ImageKit. Returns (idx, ik_url, file_id, err)."""
@@ -129,7 +132,8 @@ def upload_one(idx, url, prop_id):
                 headers={"Authorization": IK_AUTH},
                 files={"file": (fname, rd.content, "image/{}".format(ext))},
                 data={"fileName": fname, "folder": folder},
-                timeout=60)
+                timeout=60,
+            )
             if ru.status_code == 200:
                 d = ru.json()
                 return idx, d.get("url"), d.get("fileId"), None
@@ -140,7 +144,9 @@ def upload_one(idx, url, prop_id):
                 time.sleep(RETRY_BACKOFF * attempt)
     return idx, None, None, "exhausted {} retries".format(IK_MAX_RETRIES)
 
+
 _STAGING_OFFSET = 1000   # display_order offset for staging rows
+
 
 def _delete_staging(prop_id):
     """Best-effort cleanup of any staging rows left over from a failed swap."""
@@ -151,7 +157,9 @@ def _delete_staging(prop_id):
             "property_id":   "eq.{}".format(prop_id),
             "display_order": "gte.{}".format(_STAGING_OFFSET),
         },
-        timeout=15)
+        timeout=15,
+    )
+
 
 def swap_db_rows(prop_id, results_by_idx):
     """
@@ -190,7 +198,8 @@ def swap_db_rows(prop_id, results_by_idx):
                 "is_hero":          False,   # finalized in Phase 3
                 "watermark_status": "pending",
             },
-            timeout=15)
+            timeout=15,
+        )
         if ri.status_code in (200, 201):
             staged.add(idx)
         else:
@@ -212,7 +221,8 @@ def swap_db_rows(prop_id, results_by_idx):
             "property_id":   "eq.{}".format(prop_id),
             "display_order": "lt.{}".format(_STAGING_OFFSET),
         },
-        timeout=15)
+        timeout=15,
+    )
     if rd.status_code not in (200, 204):
         _delete_staging(prop_id)
         return 0, (
@@ -231,7 +241,8 @@ def swap_db_rows(prop_id, results_by_idx):
                 "display_order": "eq.{}".format(_STAGING_OFFSET + idx),
             },
             json={"display_order": idx, "is_hero": idx == 0},
-            timeout=15)
+            timeout=15,
+        )
         if rp.status_code not in (200, 204):
             failed_patch.append(idx)
 
@@ -244,6 +255,7 @@ def swap_db_rows(prop_id, results_by_idx):
         )
 
     return len(staged), None
+
 
 # ---------------------------------------------------------------------------
 # Per-property re-import
@@ -303,6 +315,7 @@ def reimport(prop_id, listing_url):
     print("  Done: {}/{} photos in DB".format(inserted, len(photo_urls)))
     return inserted, 0, None
 
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -337,6 +350,7 @@ def main():
         for e in errors:
             print("  - {}".format(e))
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,24 +1,11 @@
-import nodeTest from 'node:test';
-import assertNode from 'node:assert/strict';
+import { assertEquals, assert } from 'https://deno.land/std@0.220.0/assert/mod.ts';
 import {
   categorizeNearbyPlace,
   haversineMeters,
   normalizeNearbyPlaces,
 } from '../location-intelligence.ts';
 
-const testRunner = (typeof Deno !== 'undefined'
-  ? Deno.test
-  : nodeTest) as (name: string, fn: () => void | Promise<void>) => void;
-
-function assertEquals(actual: unknown, expected: unknown, message?: string): void {
-  assertNode.deepStrictEqual(actual, expected, message);
-}
-
-function assert(condition: unknown, message?: string): asserts condition {
-  assertNode.ok(condition, message);
-}
-
-testRunner('categorizeNearbyPlace maps supported location groups and ignores unrelated categories', () => {
+Deno.test('categorizeNearbyPlace maps supported location groups and ignores unrelated categories', () => {
   assertEquals(categorizeNearbyPlace(['education.school']), 'school');
   assertEquals(categorizeNearbyPlace(['leisure.park']), 'park');
   assertEquals(categorizeNearbyPlace(['commercial.supermarket']), 'shopping');
@@ -29,11 +16,11 @@ testRunner('categorizeNearbyPlace maps supported location groups and ignores unr
   assertEquals(categorizeNearbyPlace(['commercial.restaurant']), null);
 });
 
-testRunner('haversineMeters returns a plausible great-circle distance', () => {
+Deno.test('haversineMeters returns a plausible great-circle distance', () => {
   assert(Math.abs(haversineMeters(0, 0, 0, 1) - 111_195) < 5);
 });
 
-testRunner('normalizeNearbyPlaces filters distant records and sorts nearest place results', () => {
+Deno.test('normalizeNearbyPlaces filters distant records and sorts nearest place results', () => {
   const places = normalizeNearbyPlaces([
     {
       properties: { place_id: 'school-1', name: 'Nearby School', categories: ['education.school'] },

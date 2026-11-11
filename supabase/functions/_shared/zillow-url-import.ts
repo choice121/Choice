@@ -122,7 +122,8 @@ function hasRentStatus(property: Record<string, unknown>, html: string): boolean
  */
 function verifiedRentalProperty(html: string, zpid: string): Record<string, unknown> | null {
   const nextData = html.match(
-    /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+    /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i,
+  );
   if (!nextData?.[1]) return null;
 
   try {
@@ -190,7 +191,8 @@ function photoUrl(value: unknown): string | null {
  */
 export function extractVerifiedZillowRental(
   html: string,
-  zpid: string): Record<string, unknown> | null {
+  zpid: string,
+): Record<string, unknown> | null {
   const property = verifiedRentalProperty(html, zpid);
   if (!property) return null;
 
@@ -278,7 +280,8 @@ export function extractVerifiedZillowRental(
     total_bathrooms: bathrooms,
     monthly_rent: parsePositiveNumber(property.price ?? property.unformattedPrice),
     square_footage: numericValue(
-      property.livingArea ?? property.livingAreaValue ?? resoFacts.livingArea),
+      property.livingArea ?? property.livingAreaValue ?? resoFacts.livingArea,
+    ),
     lot_size_sqft: numericValue(property.lotAreaValue ?? property.lotSize),
     year_built: numericValue(property.yearBuilt ?? resoFacts.yearBuilt),
     description: textValue(property.description || resoFacts.description),
@@ -293,7 +296,8 @@ export function extractVerifiedZillowRental(
     laundry_type: laundry.join(", ") || textValue(resoFacts.laundry),
     agent_name: textValue(attribution.agentName || property.agentName),
     broker_name: textValue(
-      attribution.brokerName || property.brokerName || property.brokerageName),
+      attribution.brokerName || property.brokerName || property.brokerageName,
+    ),
     source_status: status,
     original_image_urls: JSON.stringify(photos),
   };

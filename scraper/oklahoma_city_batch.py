@@ -65,13 +65,15 @@ RENT_MAX    = 1600
 RENT_CAP    = 1400
 RENT_FLOOR  = 1300
 
+
 # ---------------------------------------------------------------------------
 # Pricing function
 # ---------------------------------------------------------------------------
 
 def compute_okc_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None):
+    seen_rents: Optional[Set[int]] = None,
+):
     """
     Tiered pricing for the Oklahoma City market.
 
@@ -110,6 +112,7 @@ def compute_okc_rent(
 
     return int(published), rent
 
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -139,7 +142,8 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_okc_rent)
+        pricing_fn=compute_okc_rent,
+    )
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
@@ -153,6 +157,7 @@ def main():
 
     if result.errors:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

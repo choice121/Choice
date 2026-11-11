@@ -1,13 +1,10 @@
-import nodeTest from 'node:test';
+/// <reference lib="deno.ns" />
+
 import {
   extractVerifiedZillowRental,
   isExplicitZillowRentalPage,
   parseZillowDetailUrl,
 } from "../zillow-url-import.ts";
-
-const testRunner = (typeof Deno !== 'undefined'
-  ? Deno.test
-  : nodeTest) as (name: string, fn: () => void | Promise<void>) => void;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -26,21 +23,22 @@ function pageFor(property: Record<string, unknown>, label = "House for rent"): s
   return `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify(payload)}</script><h1>${label}</h1>`;
 }
 
-testRunner("accepts canonical Zillow home detail URLs and strips tracking", () => {
+Deno.test("accepts canonical Zillow home detail URLs and strips tracking", () => {
   const result = parseZillowDetailUrl(
-    "https://www.zillow.com/homedetails/2165-Sunshine-Peak-Dr/455321734_zpid/?utm_source=test");
+    "https://www.zillow.com/homedetails/2165-Sunshine-Peak-Dr/455321734_zpid/?utm_source=test",
+  );
   assert(result.ok, "Expected valid Zillow home detail URL.");
   assert(result.zpid === "455321734", "Expected to extract the Zillow property ID.");
   assert(result.url.search === "", "Expected tracking query parameters to be removed.");
 });
 
-testRunner("rejects non-Zillow hosts, HTTP URLs, and search pages", () => {
+Deno.test("rejects non-Zillow hosts, HTTP URLs, and search pages", () => {
   assert(!parseZillowDetailUrl("https://zillow.com.evil.example/homedetails/x/1_zpid/").ok, "Rejected host.");
   assert(!parseZillowDetailUrl("http://www.zillow.com/homedetails/x/1_zpid/").ok, "Rejected HTTP.");
   assert(!parseZillowDetailUrl("https://www.zillow.com/homes/for_rent/").ok, "Rejected search page.");
 });
 
-testRunner("requires matching property ID, rental status, and asking price", () => {
+Deno.test("requires matching property ID, rental status, and asking price", () => {
   const rental = pageFor({ zpid: 123, homeStatus: "FOR_RENT", price: 2800 });
   assert(isExplicitZillowRentalPage(rental, "123"), "Expected an explicit rental listing to pass.");
   assert(!isExplicitZillowRentalPage(rental, "456"), "Rejected a different property ID.");
@@ -54,7 +52,7 @@ testRunner("requires matching property ID, rental status, and asking price", () 
   assert(!isExplicitZillowRentalPage(estimateOnly, "123"), "Rejected a rent estimate without asking price.");
 });
 
-testRunner("uses the visible rental label when Zillow omits a status field", () => {
+Deno.test("uses the visible rental label when Zillow omits a status field", () => {
   const page = pageFor({ zpid: 123, price: "$2,800" }, "House for rent");
   assert(isExplicitZillowRentalPage(page, "123"), "Expected the explicit rental page label to pass.");
 });

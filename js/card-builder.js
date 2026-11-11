@@ -42,7 +42,10 @@
 
   function cityPageUrl(city, state) {
     if (!city || !state) return null;
-    return '/listings.html?' + new URLSearchParams({ city: city, state: state });
+    var stateSlug = _STATE_SLUG[String(state).toUpperCase()] || toSlug(state);
+    var citySlug  = toSlug(city);
+    if (!stateSlug || !citySlug) return null;
+    return '/listings/' + stateSlug + '/' + citySlug;
   }
 
   // ── Rent formatter ──────────────────────────────────────────
@@ -94,13 +97,11 @@
     if (rawId && typeof window !== 'undefined' && window.location) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const hashStr = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
-        const hashParams = new URLSearchParams(hashStr);
-        const rawShare = urlParams.get('share') || hashParams.get('share') || (typeof window.__CP_ACTIVE_SHARE_TOKEN__ === 'string' ? window.__CP_ACTIVE_SHARE_TOKEN__ : '') || '';
-        const cleanShare = rawShare ? String(rawShare).trim().replace(/^[{'"]+|[}'"]+$/g, '').trim() : '';
+        const share = urlParams.get('share');
+        const shareHash = new URLSearchParams(window.location.hash.slice(1)).get('share');
         const fromP = opts.from_p || urlParams.get('p') || urlParams.get('ids') || urlParams.get('from_p');
-        if (cleanShare) {
-          propUrl += '#share=' + encodeURIComponent(cleanShare);
+        if (share || shareHash) {
+          propUrl += '#share=' + encodeURIComponent(share || shareHash);
         } else if (fromP) {
           propUrl += '&from_p=' + encodeURIComponent(fromP);
         }
@@ -128,42 +129,22 @@
       );
     }).join('');
 
-    // ── Multi-unit community detection ────────────────────────
-    var isCommunity = !!(p.is_multi_unit || p.community_starting_rent != null ||
-      (Array.isArray(p.unit_options) && p.unit_options.length > 0) ||
-      (Array.isArray(p.property_units) && p.property_units.length > 0) ||
-      (p.property_type && String(p.property_type).toUpperCase() === 'APARTMENT' && (!p.unit_number || p.total_units > 1 || p.price_range)));
-
     // ── Specs row — beds + baths + sqft (sqft is rounded to ~25 increments) ─
     var specParts = [];
-    if (p.unit_number && !isCommunity) {
-      specParts.push('<span class="property-card-spec-item"><i class="fas fa-door-open"></i>Unit ' + esc(p.unit_number) + '</span>');
-    }
     if (p.bedrooms != null) specParts.push('<span class="property-card-spec-item"><i class="fas fa-bed"></i>' + (p.bedrooms === 0 ? 'Studio' : p.bedrooms + ' Bed' + (Number(p.bedrooms) === 1 ? '' : 's')) + '</span>');
     if (p.bathrooms)        specParts.push('<span class="property-card-spec-item"><i class="fas fa-bath"></i>' + p.bathrooms + ' Bath' + (Number(p.bathrooms) === 1 ? '' : 's') + '</span>');
     if (p.square_footage) {
       var roundedSqft = Math.round(Number(p.square_footage) / 25) * 25;
       specParts.push('<span class="property-card-spec-item"><i class="fas fa-ruler-combined"></i>~' + roundedSqft.toLocaleString() + ' sqft</span>');
     }
-    if (isCommunity) {
-      var unitCount = p.total_units || (Array.isArray(p.unit_options) ? p.unit_options.length : 0) || (Array.isArray(p.property_units) ? p.property_units.length : 0);
-      if (unitCount > 1) {
-        specParts.push('<span class="property-card-spec-item"><i class="fas fa-layer-group"></i>' + unitCount + ' Units</span>');
-      }
-      if (p.floors && p.floors > 1) {
-        specParts.push('<span class="property-card-spec-item"><i class="fas fa-stairs"></i>' + p.floors + ' Floors</span>');
-      }
-    }
     var specsHtml = specParts.map(function (s, i) {
       return i === 0 ? s : '<span class="property-card-spec-sep">·</span>' + s;
     }).join('');
 
-    // ── Badge — priority: featured, then community ──
+    // ── Badge — priority: featured only (Private placement badges completely disabled) ──
     var badge = '';
     if (p.featured) {
       badge = '<div class="property-card-badge badge-featured"><i class="fas fa-star"></i> Featured</div>';
-    } else if (isCommunity) {
-      badge = '<div class="property-card-badge badge-community"><i class="fas fa-building"></i> Community</div>';
     }
 
     var tourChipHtml = p.virtual_tour_url
@@ -191,22 +172,17 @@
     // ── Address ───────────────────────────────────────────────
     var addrLine = esc([p.address, p.city, p.state].filter(Boolean).join(', '));
 
-    // ── Price ─────────────────────────────────────────────────
-    var rentHtml;
-    var rentUnit;
-    if (isCommunity && Number(p.community_starting_rent) > 0) {
-      rentHtml = '<span style="font-size:0.75rem;font-weight:600;margin-right:3px;color:var(--m-muted,#64748b)">From</span>' + fmtRent(p.community_starting_rent);
-      rentUnit = '<span class="property-card-price-unit">/mo</span>';
-    } else if (isCommunity && p.price_range) {
-      rentHtml = esc(p.price_range);
-      rentUnit = '<span class="property-card-price-unit">/mo</span>';
-    } else if (isCommunity && Number(p.monthly_rent) > 0) {
-      rentHtml = '<span style="font-size:0.75rem;font-weight:600;margin-right:3px;color:var(--m-muted,#64748b)">From</span>' + fmtRent(p.monthly_rent);
-      rentUnit = '<span class="property-card-price-unit">/mo</span>';
-    } else {
-      rentHtml = fmtRent(p.monthly_rent);
-      rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
+    // ── Pet policy chip — shown when pets are allowed ─────────
+    var petChip = '';
+    if (p.pets_allowed === true) {
+      petChip = '<span class="property-card-pet-chip"><i class="fas fa-paw"></i> Pets OK</span>';
+    } else if (p.pets_allowed === false) {
+      petChip = '<span class="property-card-pet-chip property-card-pet-chip--no"><i class="fas fa-ban"></i> No Pets</span>';
     }
+
+    // ── Price ─────────────────────────────────────────────────
+    var rentHtml = fmtRent(p.monthly_rent);
+    var rentUnit = Number(p.monthly_rent) > 0 ? '<span class="property-card-price-unit">/mo</span>' : '';
 
     return (
       '<article class="property-card" id="card-' + id + '" data-id="' + id + '"' + (p.featured ? ' data-featured="1"' : '') + '>' +
@@ -246,6 +222,8 @@
           '</div>' +
           // 3. Specs — beds + baths + sqft
           (specsHtml ? '<div class="property-card-specs">' + specsHtml + '</div>' : '') +
+          // 3b. Pet policy chip
+          (petChip ? '<div class="property-card-pet-row">' + petChip + '</div>' : '') +
           // 4. Footer — price pinned to bottom (no divider)
           '<div class="property-card-footer">' +
             '<div class="property-card-price">' + rentHtml + rentUnit + '</div>' +

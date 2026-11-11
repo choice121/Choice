@@ -1,7 +1,15 @@
 User-agent: *
 
-# Private administration — no indexing
+# Private portals — no indexing
 Disallow: /admin/
+Disallow: /landlord/login.html
+Disallow: /landlord/register.html
+Disallow: /landlord/dashboard.html
+Disallow: /landlord/applications.html
+Disallow: /landlord/inquiries.html
+Disallow: /landlord/new-listing.html
+Disallow: /landlord/edit-listing.html
+Disallow: /landlord/settings.html
 
 # Application flow — contains personal data
 Disallow: /apply.html
@@ -9,6 +17,9 @@ Disallow: /apply/
 
 # Internal tooling
 Disallow: /health.html
+
+# Public landlord profiles are allowed
+Allow: /landlord/profile.html
 
 # Sitemaps. The root file is a sitemap INDEX that fans out to:
 #   /sitemap-pages.xml       — static marketing pages

@@ -6,7 +6,6 @@
 // ============================================================
 import { supabase, buildApplyURL, incrementCounter, getSession, SavedProperties } from '/js/cp-api.js?v=20261007_prop_fix';
 import { updateNav as _updateNav } from '/js/cp-api.js?v=20261007_prop_fix';
-import { normalizePhotoList, getPrimaryPhoto } from '/js/property-photo-utils.js';
 
 // Shared helpers — defined globally by /js/cp-ui.js (loaded before this module).
 //   - esc:            HTML-escape, null-safe (CP.UI.esc)
@@ -51,18 +50,8 @@ updateNav();
 
 const params    = new URLSearchParams(window.location.search);
 const isPreview = params.get('preview') === 'true';
-const sanitizeShareToken = (t) => String(t || '').trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim();
-const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
-const hashParams = new URLSearchParams(rawHash);
-const shareToken = sanitizeShareToken(
-  params.get('share') || 
-  params.get('token') || 
-  hashParams.get('share') || 
-  hashParams.get('token') || 
-  (rawHash.startsWith('share=') ? rawHash.slice(6) : '') ||
-  (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || 
-  ''
-);
+const isEmbedded = params.get('embedded') === 'true';
+const shareToken = params.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || '';
 if (shareToken) {
   try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
 }
@@ -71,7 +60,6 @@ let _nearbyMarkerLayer = null;
 let _nearbyLegendControl = null;
 let _locationSnapshot = null;
 let _propertyLatLng = null;
-const isEmbedded = params.get('embedded') === 'true' || window.self !== window.top;
 if (isEmbedded) {
   document.body.setAttribute('data-embedded', 'true');
 }
@@ -90,7 +78,7 @@ if (isEmbedded) {
 function resolvePropertyId() {
   const fromQuery = (params.get('id') || '').trim();
   if (fromQuery) return fromQuery.toLowerCase();
-  const m = window.location.pathname.match(/(prop[-_][a-z0-9_-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
+  const m = window.location.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
   return m ? m[1].toLowerCase() : '';
 }
 const propertyId = resolvePropertyId();
@@ -194,37 +182,13 @@ async function loadProperty(id) {
       prop = (data?.properties || []).find((item) => String(item.id).toLowerCase() === cleanId) || null;
       if (!prop) throw new Error('Property is not included in this share');
     } else {
-      let { data, error } = await client
+      const { data, error } = await client
         .from('properties')
         .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
         .eq('id', cleanId)
-        .eq('status', 'active')
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      if (!data) {
-        const session = await getSession();
-        if (session?.user) {
-          const privateLookup = await client
-            .from('properties')
-            .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
-            .eq('id', cleanId)
-            .maybeSingle();
-          if (privateLookup.error) throw new Error(privateLookup.error.message);
-          data = privateLookup.data;
-        }
-      }
-      if (!data) throw new Error('Not found');
+        .single();
+      if (error || !data) throw new Error(error ? error.message : 'Not found');
       prop = data;
-      try {
-        const { data: mediaData } = await client
-          .from('property_media')
-          .select('id, kind, title, floor_label, provider, url, file_id, poster_url, display_order, metadata')
-          .eq('property_id', cleanId)
-          .order('display_order', { ascending: true });
-        prop.property_media = mediaData || [];
-      } catch (_) {
-        prop.property_media = [];
-      }
     }
   } catch (e) {
     if (shareToken) {
@@ -232,9 +196,27 @@ async function loadProperty(id) {
       renderUnavailable('not_found');
       return;
     }
-    console.error('[property] lookup failed for id=', cleanId, e);
-    renderUnavailable('not_found');
-    return;
+    // Fallback: If direct query fails (e.g. for private_placement listings under strict RLS), try secure RPC
+    let fallbackSuccess = false;
+    try {
+      const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
+      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+        prop = rpcData[0];
+        const [photosRes, landlordRes] = await Promise.all([
+          client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+          prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
+        ]);
+        prop.property_photos = photosRes.data || [];
+        if (landlordRes?.data) prop.landlords = landlordRes.data;
+        fallbackSuccess = true;
+      }
+    } catch (_) {}
+
+    if (!fallbackSuccess) {
+      console.error('[property] lookup failed for id=', cleanId, e);
+      renderUnavailable('not_found');
+      return;
+    }
   }
 
   // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
@@ -340,14 +322,7 @@ async function loadProperty(id) {
 function renderUnavailable(status, cityFromProp = null) {
   document.title = 'Listing Unavailable — Choice Properties';
   const gallery = document.getElementById('gallery');
-  if (gallery) {
-    gallery.classList.remove('skeleton-loading');
-    gallery.style.display = 'none';
-  }
-  const splitPhotos = document.getElementById('propSplitPhotos');
-  if (splitPhotos) splitPhotos.style.display = 'none';
-  const mobBar = document.getElementById('mobile-apply-bar');
-  if (mobBar) mobBar.style.display = 'none';
+  if (gallery) gallery.style.display = 'none';
   
   let msg = 'This listing has been paused or removed by the landlord.';
   if (status === 'rented') msg = 'This property has already been rented.';
@@ -369,7 +344,7 @@ function renderUnavailable(status, cityFromProp = null) {
   const detailEl = document.querySelector('.property-detail') || document.querySelector('.prop-split-content');
   if (detailEl) {
     detailEl.innerHTML = `
-      <div id="unavailableState" class="container" style="padding:80px 16px;text-align:center;max-width:540px;margin:0 auto">
+      <div class="container" style="padding:80px 16px;text-align:center;max-width:540px;margin:0 auto">
         <div style="font-size:48px;margin-bottom:16px;color:var(--m-brand)"><i class="fas fa-house-circle-exclamation"></i></div>
         <h1 style="font-size:1.5rem;font-weight:700;color:var(--m-ink);margin-bottom:12px">
           This listing is not currently available.
@@ -475,235 +450,17 @@ function amenityIconColor(text) {
   return '';
 }
 
-function parseUnitDetails(rawUnitNum, existingFloor, existingBuilding) {
-  let floor = existingFloor != null && String(existingFloor).trim() !== '' ? String(existingFloor).trim() : null;
-  let building = existingBuilding != null && String(existingBuilding).trim() !== '' ? String(existingBuilding).trim() : null;
-
-  if (floor && building) return { floor, building };
-
-  const raw = String(rawUnitNum || '').trim();
-  if (!raw) return { floor, building };
-
-  // Case 1: Prefixes like "PH", "G", "LL", "B"
-  if (!floor) {
-    if (/^ph[\s-]?\d*/i.test(raw)) floor = 'PH';
-    else if (/^(ll|sub)[\s-]?\d*/i.test(raw)) floor = 'LL';
-    else if (/^g[\s-]?\d*/i.test(raw)) floor = 'Ground';
-  }
-
-  // Case 2: "1-0102", "2-1506", "A-0402", "Tower1-1204"
-  // Format: [Building]-[Floor(1-2 digits)][Door(2 digits)]
-  const dashMatch = raw.match(/^([A-Za-z0-9\s]+)-(\d{1,2})(\d{2})$/);
-  if (dashMatch) {
-    if (!building) {
-      const bRaw = dashMatch[1].trim();
-      building = /^\d+$/.test(bRaw) ? `Building ${bRaw}` : bRaw;
-    }
-    if (!floor) {
-      floor = String(parseInt(dashMatch[2], 10));
-    }
-    return { floor, building };
-  }
-
-  // Case 3: "1-02", "A-3" (simple building - floor/unit)
-  const simpleDash = raw.match(/^([A-Za-z0-9\s]+)-(\d+)$/);
-  if (simpleDash) {
-    if (!building) {
-      const bRaw = simpleDash[1].trim();
-      building = /^\d+$/.test(bRaw) ? `Building ${bRaw}` : bRaw;
-    }
-    const num = parseInt(simpleDash[2], 10);
-    if (!floor && num >= 100) {
-      floor = String(Math.floor(num / 100));
-    }
-    return { floor, building };
-  }
-
-  // Case 4: Standard 3 or 4 digit unit: "304" -> floor 3, "1506" -> floor 15, "0102" -> floor 1
-  const cleanNum = raw.replace(/^(unit|apt|suite|#)\s*/i, '').trim();
-  const stdMatch = cleanNum.match(/^0*(\d{1,2})(\d{2})$/);
-  if (stdMatch && !floor) {
-    floor = String(parseInt(stdMatch[1], 10));
-  }
-
-  return { floor, building };
-}
-
-function deriveCommunityRentRange(property) {
-  if (!property) return null;
-  if (property.price_range) return property.price_range;
-  const rawUnits = Array.isArray(property.unit_options) && property.unit_options.length > 0
-    ? property.unit_options
-    : (Array.isArray(property.property_units) && property.property_units.length > 0 ? property.property_units : null);
-  if (rawUnits && rawUnits.length > 0) {
-    const rents = [];
-    rawUnits.forEach(u => {
-      const r = u?.monthly_rent ?? u?.starting_rent ?? u?.rent;
-      if (r != null && !isNaN(Number(r)) && Number(r) > 0) rents.push(Number(r));
-    });
-    if (rents.length > 0) {
-      const min = Math.min(...rents);
-      const max = Math.max(...rents);
-      if (min < max) {
-        return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
-      } else {
-        return `$${min.toLocaleString()}`;
-      }
-    }
-  }
-  return null;
-}
-
-function isCommunityProperty(property) {
-  if (!property) return false;
-
-  // Explicit single-unit guard: if the property has a known single-unit type, it is NEVER a community.
-  const pType = String(property.type || property.property_type || '').toLowerCase();
-  const singleUnitTypes = new Set([
-    'single_family', 'duplex', 'townhouse', 'condo', 'studio',
-    'mobile_home', 'land', 'commercial', 'other',
-  ]);
-  if (singleUnitTypes.has(pType)) return false;
-
-  // If explicitly flagged as not multi-unit by the DB, trust it.
-  if (property.is_multi_unit === false) return false;
-
-  // If only 1 unit total and no unit-option array, it's a single listing.
-  if (!property.is_multi_unit && (!property.total_units || Number(property.total_units) <= 1) &&
-      (!Array.isArray(property.unit_options) || !property.unit_options.length) &&
-      (!Array.isArray(property.property_units) || !property.property_units.length)) {
-    return false;
-  }
-
-  // True community: explicitly flagged, or has multiple units/options.
-  return Boolean(
-    property.is_multi_unit ||
-    Number(property.total_units) > 1 ||
-    (Array.isArray(property.unit_options) && property.unit_options.length > 1) ||
-    (Array.isArray(property.property_units) && property.property_units.length > 1) ||
-    // apartment/multi_family type only counts as community when they have actual multiple units
-    ((pType === 'apartment' || pType === 'multi_family' || pType === 'apartment_complex') &&
-      (property.is_multi_unit || Number(property.total_units) > 1 ||
-       (Array.isArray(property.unit_options) && property.unit_options.length > 1)))
-  );
-}
-
-function formatPropertyRent(property, suffix = '') {
-  const isCommunity = isCommunityProperty(property);
-  // Only compute a range for true community listings
-  if (isCommunity) {
-    const range = deriveCommunityRentRange(property);
-    if (range && range.includes('-')) {
-      return range + suffix;
-    }
-    const amount = property.community_starting_rent ?? property.monthly_rent;
-    if (amount == null) return 'TBD';
-    return 'From $' + Number(amount).toLocaleString() + suffix;
-  }
-  // Single-unit listing: always show a plain price, never "From"
-  const amount = property.monthly_rent ?? property.community_starting_rent;
-  if (amount == null) return 'TBD';
-  return '$' + Number(amount).toLocaleString() + suffix;
-}
-
 function renderProperty(p) {
-  const pageHeadingTitle = p.building_name || p.title || p.address || 'Property Details';
-  document.title = `${pageHeadingTitle} — Choice Properties`;
-
-  const isCommunityListing = isCommunityProperty(p);
-
-  // Stamp the normalized property type on <body> so CSS can use attribute selectors
-  // and so other components can read it without re-running the check.
-  const normalizedType = (p.type || p.property_type || 'unknown').toLowerCase();
-  document.body.dataset.propertyType = normalizedType;
-  document.body.dataset.isCommunity = isCommunityListing ? 'true' : 'false';
-
-  // Hide community inventory section immediately for non-community listings (CSS safety net)
-  if (!isCommunityListing) {
-    const ciSection = document.getElementById('communityInventorySection');
-    if (ciSection) ciSection.style.display = 'none';
-    const ciDivider = document.getElementById('dividerAfterCommunityInventory');
-    if (ciDivider) ciDivider.style.display = 'none';
-  }
-
-  const formatPrice = formatPropertyRent;
-
-  // Derive community aggregates if available
-  let communityBeds = null;
-  let communityBaths = null;
-  let communitySqft = null;
-  let communityFloors = null;
-  let communityTotalUnits = null;
-
-  const rawUnits = Array.isArray(p.unit_options) && p.unit_options.length > 0
-    ? p.unit_options
-    : (Array.isArray(p.property_units) && p.property_units.length > 0 ? p.property_units : null);
-
-  if (rawUnits && rawUnits.length > 0) {
-    communityTotalUnits = rawUnits.length;
-    const beds = [];
-    const baths = [];
-    const sqfts = [];
-    const floorNums = new Set();
-
-    rawUnits.forEach(u => {
-      if (u) {
-        const b = u.bedrooms ?? u.beds;
-        if (b != null && !isNaN(Number(b))) beds.push(Number(b));
-
-        const ba = u.bathrooms ?? u.baths;
-        if (ba != null && !isNaN(Number(ba))) baths.push(Number(ba));
-
-        const sq = u.square_footage ?? u.sqft;
-        if (sq != null && !isNaN(Number(sq)) && Number(sq) > 0) sqfts.push(Number(sq));
-
-        const parsed = parseUnitDetails(u.unit_number || u.unit, u.unit_floor, u.building_name || u.building);
-        if (parsed.floor && !isNaN(Number(parsed.floor))) {
-          floorNums.add(Number(parsed.floor));
-        }
-      }
-    });
-
-    if (beds.length > 0) {
-      const minB = Math.min(...beds);
-      const maxB = Math.max(...beds);
-      communityBeds = minB === maxB
-        ? (minB === 0 ? 'Studio' : `${minB} Bed${minB === 1 ? '' : 's'}`)
-        : (minB === 0 ? `Studio - ${maxB} Beds` : `${minB} - ${maxB} Beds`);
-    }
-
-    if (baths.length > 0) {
-      const minBa = Math.min(...baths);
-      const maxBa = Math.max(...baths);
-      communityBaths = minBa === maxBa
-        ? `${minBa} Bath${minBa === 1 ? '' : 's'}`
-        : `${minBa} - ${maxBa} Baths`;
-    }
-
-    if (sqfts.length > 0) {
-      const minSq = Math.min(...sqfts);
-      const maxSq = Math.max(...sqfts);
-      communitySqft = minSq === maxSq
-        ? `${minSq.toLocaleString()} sqft`
-        : `${minSq.toLocaleString()} - ${maxSq.toLocaleString()} sqft`;
-    }
-
-    if (floorNums.size > 1) {
-      communityFloors = Math.max(...Array.from(floorNums));
-    }
-  }
+  document.title = `${p.title} — Choice Properties`;
 
   // Build apply URL early — used by both the structured data potentialAction
   // and the Apply button wiring later in this function.
-  const applyURL = isCommunityListing ? null : buildApplyURL(p, shareToken);
+  const applyURL = buildApplyURL(p, shareToken);
 
   // OG meta
   const ogImg  = CONFIG.img(p.photo_urls?.[0] || '', 'og') || '/assets/placeholder-property.jpg';
-  const specsDescription = isCommunityListing
-    ? (communityBeds ? `${communityBeds}${communityBaths ? ' · ' + communityBaths : ''}` : 'Apartment community')
-    : `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms != null ? p.bedrooms + ' bed' : 'Home')} · ${p.bathrooms != null ? p.bathrooms + ' bath' : ''}`;
-  const ogDesc = `${specsDescription} · ${formatPrice(p, '/mo')} · ${p.address}, ${p.city}, ${p.state}`;
-  ['ogTitle','twTitle'].forEach(id => setMeta(id, `${pageHeadingTitle} — Choice Properties`));
+  const ogDesc = `${p.bedrooms === 0 ? 'Studio' : (p.bedrooms + ' bed')} · ${p.bathrooms} bath · ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'} · ${p.address}, ${p.city}, ${p.state}`;
+  ['ogTitle','twTitle'].forEach(id => setMeta(id, `${p.title} — Choice Properties`));
   ['ogDescription','twDescription'].forEach(id => setMeta(id, ogDesc));
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
   document.querySelector('meta[name="description"]')?.setAttribute('content', ogDesc);
@@ -730,27 +487,18 @@ function renderProperty(p) {
   // Added: potentialAction (RentalAction), numberOfRooms, floorSize, leaseLength,
   // amenityFeature, and BreadcrumbList. These fields are required or strongly
   // recommended for Google's RentalListing rich result eligibility.
-  let sd = document.getElementById('property-jsonld');
-  if (!sd) {
-    sd = document.createElement('script');
-    sd.id = 'property-jsonld';
-    sd.type = 'application/ld+json';
-    document.head.appendChild(sd);
-  }
+  const sd = document.createElement('script');
+  sd.type = 'application/ld+json';
   const amenities = [];
   if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
+  if (p.pets_allowed) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Pets Allowed",   "value": true });
   if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
   if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
   if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
                       amenities.push({ "@type": "LocationFeatureSpecification", "name": "Air Conditioning","value": p.cooling_type });
-  
-  const schemaType = isCommunityListing
-    ? ["ApartmentComplex", "RealEstateListing"]
-    : (p.property_type === 'single_family' ? ["SingleFamilyResidence", "RealEstateListing"] : "RealEstateListing");
-
   sd.textContent = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": schemaType,
+    "@type": "RealEstateListing",
     "name": p.title,
     "description": p.description || undefined,
     "url": canonicalUrl,
@@ -782,13 +530,6 @@ function renderProperty(p) {
         "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
       }
     },
-    "additionalProperty": [
-      {
-        "@type": "PropertyValue",
-        "name": "Application Fee",
-        "value": "$50"
-      }
-    ],
     "numberOfRooms": p.bedrooms,
     "numberOfBathroomsTotal": p.bathrooms,
     "floorSize": p.square_footage ? {
@@ -797,7 +538,7 @@ function renderProperty(p) {
       "unitCode": "FTK"
     } : undefined,
     "amenityFeature": amenities.length ? amenities : undefined,
-    ...(applyURL ? { "potentialAction": {
+    "potentialAction": {
       "@type": "RentAction",
       "name": "Apply for Lease",
       "target": {
@@ -808,7 +549,7 @@ function renderProperty(p) {
           "https://schema.org/MobileWebPlatform"
         ]
       }
-    } } : {})
+    }
   });
   document.head.appendChild(sd);
 
@@ -854,9 +595,8 @@ function renderProperty(p) {
     return reordered;
   }
 
-  // Gallery: normalize to a valid, deduplicated list so broken/empty media
-  // cannot leave the details page stuck in a perpetual loading state.
-  allPhotos = normalizePhotoList(optimizePhotoOrder(p.photo_urls));
+  // Gallery
+  allPhotos = p.photo_urls?.length ? optimizePhotoOrder(p.photo_urls) : ['/assets/placeholder-property.jpg'];
   try {
     renderGallery(allPhotos);
   } catch (e) {
@@ -883,27 +623,18 @@ function renderProperty(p) {
   const existingPpBadge = document.getElementById('privatePlacementBadge');
   if (existingPpBadge) existingPpBadge.remove();
 
-  document.getElementById('detailPrice').innerHTML = `${esc(formatPrice(p))}<span>/month</span>`;
-  const streetAddress = p.address || p.title || 'Property Details';
-  const addressUnit = p.unit_number ? `, Unit ${p.unit_number}` : '';
-  const locality = [p.city, [p.state, p.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-
-  if (p.building_name) {
-    document.getElementById('detailTitle').textContent = p.building_name;
-    const fullStreet = p.address ? `${streetAddress}${addressUnit}` : '';
-    const fullLocality = [fullStreet, locality].filter(Boolean).join(', ');
-    document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(fullLocality || streetAddress)}`;
-  } else {
-    document.getElementById('detailTitle').textContent = p.address
-      ? `${streetAddress}${p.unit_number ? `, Unit ${p.unit_number}` : ''}`
-      : streetAddress;
-    document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(locality || streetAddress + addressUnit)}`;
-  }
+  document.getElementById('detailPrice').innerHTML = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD'}<span>/month</span>`;
+  document.getElementById('detailTitle').textContent = p.title;
+  const _addrUnit = p.unit_number ? ` ${esc(p.unit_number)}` : '';
+  document.getElementById('detailAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${esc(p.address)}${_addrUnit}, ${esc(p.city)}, ${esc(p.state)} ${esc(p.zip || '')}`;
 
   const existingChipRow = document.getElementById('detailHeaderChips');
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
+  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
+  if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
+  if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
   if (headerChips.length) {
     const chipRow = document.createElement('div');
@@ -927,45 +658,21 @@ function renderProperty(p) {
 
   // Meta row
   const metas = [];
-  if (p.bedrooms != null) {
-    metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
-  } else if (communityBeds) {
-    metas.push({ label:'Bedrooms', value: communityBeds, icon:'fa-bed' });
-  }
-
+  if (p.bedrooms != null) metas.push({ label:'Bedrooms', value: p.bedrooms === 0 ? 'Studio' : p.bedrooms, icon:'fa-bed' });
   if (p.bathrooms) {
     const numBaths = Number(p.bathrooms);
     const bathVal = (p.half_bathrooms && Number.isInteger(numBaths))
       ? `${p.bathrooms} + ½`
       : p.bathrooms;
     metas.push({ label:'Bathrooms', value: bathVal, icon:'fa-bath' });
-  } else if (communityBaths) {
-    metas.push({ label:'Bathrooms', value: communityBaths, icon:'fa-bath' });
   }
-
-  if (p.square_footage) {
-    metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
-  } else if (communitySqft) {
-    metas.push({ label:'Sq. Ft.', value: communitySqft, icon:'fa-ruler-combined' });
-  }
-
-  if (p.property_type) {
-    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  }
-
-  const effectiveFloors = p.floors || communityFloors;
-  if (effectiveFloors > 1) {
-    metas.push({ label:'Floors', value: effectiveFloors, icon:'fa-layer-group' });
-  }
-
-  const effectiveUnits = p.total_units || communityTotalUnits;
-  if (effectiveUnits > 1 && isCommunityListing) {
-    metas.push({ label:'Total Units', value: effectiveUnits, icon:'fa-city' });
-  }
-
+  if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
+  if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
+  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
+  if (p.floors > 1)       metas.push({ label:'Floors', value: p.floors, icon:'fa-layer-group' });
   if (p.lot_size_sqft)    metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   if (p.has_basement === true)    metas.push({ label:'Basement',    value:'Yes', icon:'fa-dungeon' });
   if (p.has_central_air === true) metas.push({ label:'Central Air', value:'Yes', icon:'fa-snowflake' });
@@ -1005,6 +712,7 @@ function renderProperty(p) {
     vtBtn.addEventListener('click', () => openVirtualTourModal(p));
     descEl.closest('.detail-section').appendChild(vtBtn);
 
+    // Also wire up hero mosaic tour button if present
     const mosaicTourBtn = document.getElementById('mosaicTourBtn');
     if (mosaicTourBtn) {
       mosaicTourBtn.style.display = 'inline-flex';
@@ -1013,49 +721,6 @@ function renderProperty(p) {
         openVirtualTourModal(p);
       };
     }
-  }
-
-  // Render additional media (videos, floor plans, tours) from property_media
-  if (Array.isArray(p.property_media) && p.property_media.length) {
-    const groups = {};
-    p.property_media.forEach((item) => {
-      if (!item || typeof item.url !== 'string') return;
-      let url;
-      try {
-        url = new URL(item.url);
-      } catch (_) {
-        return;
-      }
-      if (url.protocol !== 'https:') return;
-      (groups[item.kind] = groups[item.kind] || []).push({ ...item, url: url.href });
-    });
-    const section = descEl.closest('.detail-section');
-    Object.keys(groups).forEach(kind => {
-      if (kind === 'virtual_tour') return;
-      const wrap = document.createElement('div');
-      wrap.style.cssText = 'margin-top:12px;display:flex;flex-wrap:wrap;gap:8px';
-      groups[kind].sort((a,b)=> (a.display_order||0)-(b.display_order||0)).forEach(m => {
-        const link = document.createElement('a');
-        link.href = m.url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.className = 'btn btn-outline';
-        link.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:.85rem';
-        if (kind === 'floor_plan') {
-          const image = document.createElement('img');
-          image.src = m.url;
-          image.alt = m.title || 'Floor plan';
-          image.loading = 'lazy';
-          image.style.cssText = 'width:120px;max-height:90px;object-fit:contain';
-          link.appendChild(image);
-        }
-        const label = document.createElement('span');
-        label.textContent = m.title || kind.replace('_', ' ');
-        link.appendChild(label);
-        wrap.appendChild(link);
-      });
-      if (wrap.childElementCount) section.appendChild(wrap);
-    });
   }
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
@@ -1079,57 +744,30 @@ function renderProperty(p) {
   p.utilities_included = safeArr(p.utilities_included);
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
-  const COMMUNITY_AMENITY_RE = /pool|fitness|gym|clubhouse|business\s*center|courtyard|dog\s*park|pet\s*park|playground|bbq|grill|elevator|gated|concierge|package|lounge|spa|sauna|tennis|pickleball|basketball|car\s*wash|billiards|game\s*room/i;
-
   if (p.amenities?.length) {
     hasAmenities = true;
-    const validAmenities = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a));
-
-    const isApt = isCommunityProperty(p) || String(p.property_type || '').toLowerCase() === 'apartment';
-    const amGrid = document.getElementById('amenitiesGrid');
-
-    if (isApt && validAmenities.some(a => COMMUNITY_AMENITY_RE.test(a))) {
-      const inUnit = validAmenities.filter(a => !COMMUNITY_AMENITY_RE.test(a));
-      const community = validAmenities.filter(a => COMMUNITY_AMENITY_RE.test(a));
-
-      let splitHtml = '';
-      if (inUnit.length) {
-        splitHtml += `<div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-bottom:10px;width:100%;grid-column:1/-1"><i class="fas fa-home" style="margin-right:6px"></i>In-Unit Features</div>` +
-          inUnit.slice(0, 10).map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
-      }
-      if (community.length) {
-        splitHtml += `<div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m-muted-2);margin-top:${inUnit.length ? '16px' : '0'};margin-bottom:10px;width:100%;grid-column:1/-1"><i class="fas fa-building" style="margin-right:6px"></i>Community Amenities</div>` +
-          community.slice(0, 10).map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
-      }
-      if (amGrid) amGrid.innerHTML = splitHtml;
+    const amenityItems = p.amenities
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .slice(0, 12)
+      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
+    if (amenityItems.length) {
+      document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
     } else {
-      const amenityItems = validAmenities
-        .slice(0, 12)
-        .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
-      if (amGrid) {
-        amGrid.innerHTML = amenityItems.length
-          ? amenityItems.join('')
-          : '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
-      }
+      document.getElementById('amenitiesGrid').innerHTML = '<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional amenities will be listed here as they are confirmed.</div>';
     }
   }
   if (p.appliances?.length) {
     hasAmenities = true;
-    const appSec = document.getElementById('appliancesSection');
-    if (appSec) appSec.style.display = '';
-    const appGrid = document.getElementById('appliancesGrid');
-    if (appGrid) {
-      appGrid.innerHTML = p.appliances
-        .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a) && !/pet|dog|cat/i.test(a))
-        .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
-    }
+    document.getElementById('appliancesSection').style.display = '';
+    document.getElementById('appliancesGrid').innerHTML = p.appliances
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
     hasAmenities = true;
-    const flooringSec = document.getElementById('appliancesSection') || document.getElementById('amenitiesSection');
+    const flooringSec = document.getElementById('appliancesSection');
     let flooringDiv = document.getElementById('flooringSection');
-    if (!flooringDiv && flooringSec) {
+    if (!flooringDiv) {
       flooringDiv = document.createElement('div');
       flooringDiv.id = 'flooringSection';
       flooringDiv.style.marginTop = '20px';
@@ -1138,13 +776,10 @@ function renderProperty(p) {
         <div class="amenities-grid" id="flooringGrid"></div>`;
       flooringSec.insertAdjacentElement('afterend', flooringDiv);
     }
-    if (flooringDiv) flooringDiv.style.display = '';
-    const flooringGrid = document.getElementById('flooringGrid');
-    if (flooringGrid) {
-      flooringGrid.innerHTML = p.flooring
-        .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f) && !/pet|dog|cat/i.test(f))
-        .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
-    }
+    flooringDiv.style.display = '';
+    document.getElementById('flooringGrid').innerHTML = p.flooring
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
+      .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
@@ -1166,11 +801,18 @@ function renderProperty(p) {
   }
 
   const leaseItems = [];
-  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $50 per adult being screened</div>`);
+  const leaseAppFee = (p.application_fee != null && Number(p.application_fee) > 0) ? Number(p.application_fee) : 50;
+  leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${leaseAppFee.toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
+  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
+  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
+  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
+  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
+  if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
+  if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
   if (leaseItems.length) {
     hasLease = true;
     document.getElementById('leaseGrid').innerHTML = leaseItems.join('');
@@ -1225,11 +867,7 @@ function renderProperty(p) {
   }
 
   // Map — Leaflet if lat/lng, fallback to Google embed
-  try {
-    renderMap(p);
-  } catch (mapErr) {
-    console.warn('[property] renderMap error:', mapErr);
-  }
+  renderMap(p);
 
   // Open in Maps button
   const mapOpenBtn = document.getElementById('mapOpenBtn');
@@ -1244,7 +882,7 @@ function renderProperty(p) {
   }
 
   // Sidebar
-  const rentStr = formatPrice(p);
+  const rentStr = p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() : 'TBD';
   const priceHtml = `${rentStr}<span>/month</span>`;
   const sbPrice = document.getElementById('sidebarPrice');
   if (sbPrice) sbPrice.innerHTML = priceHtml;
@@ -1258,16 +896,19 @@ function renderProperty(p) {
   document.getElementById('sidebarRent').textContent = rentStr;
   const _depEl = document.getElementById('sidebarDeposit');
   if (_depEl) {
-    _depEl.textContent = isCommunityListing
-      ? 'Based on selected unit rent'
-      : p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
+    _depEl.textContent = p.security_deposit ? `$${Number(p.security_deposit).toLocaleString()}` : 'Contact landlord';
   }
-  const _appFee = 50;
+  // Flat $50 application fee is the platform standard. If a property has no
+  // explicit fee, default to $50 rather than showing "Free" (which contradicts
+  // the marketing promise and the scraper normalization rules).
+  const _appFee = (p.application_fee != null && p.application_fee > 0)
+    ? Number(p.application_fee)
+    : 50;
   document.getElementById('sidebarFee').textContent = `$${_appFee.toLocaleString()}`;
   // Update apply disclaimer fee amount dynamically
   const _feeAmtEl = document.getElementById('applyFeeAmt');
   if (_feeAmtEl) {
-    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} per adult being screened`;
+    _feeAmtEl.textContent = `$${_appFee.toLocaleString()} application fee`;
   }
   if (p.last_months_rent) {
     document.getElementById('sidebarLastMonthRow').style.display = '';
@@ -1282,19 +923,12 @@ function renderProperty(p) {
     document.getElementById('sidebarMoveInSpecial').textContent = p.move_in_special;
   }
 
+
+
   // Apply button — wire URL with full property context for form prefill
   const _wireApply = (id) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    if (!applyURL) {
-      btn.href = '#communityInventorySection';
-      btn.innerHTML = 'Choose a unit below <i class="fas fa-arrow-down" style="font-size:11px"></i>';
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('communityInventorySection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      return;
-    }
     btn.href = applyURL;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1305,10 +939,13 @@ function renderProperty(p) {
   _wireApply('sidebarApplyBtn');
   _wireApply('csCardApply');
 
-  // Wire "Track your application" link to internal tenant portal
+  // Wire "Track your application" link to internal application portal
   const _trackLink = document.getElementById('trackAppLink');
   if (_trackLink) {
-    _trackLink.href = '/tenant/portal.html';
+    const _applyBase = (typeof CONFIG !== 'undefined' && CONFIG.APPLY_FORM_URL)
+      ? CONFIG.APPLY_FORM_URL
+      : '/apply';
+    _trackLink.href = _applyBase + '/?path=dashboard';
   }
 
   // Guard apply button for non-active listings (allow active and private_placement)
@@ -1332,7 +969,7 @@ function renderProperty(p) {
 
   // Mobile sticky Apply bar — for active and private_placement listings
   if (p.status === 'active' || p.status === 'private_placement') {
-    document.getElementById('mobBarRent').textContent = formatPrice(p, '/mo');
+    document.getElementById('mobBarRent').textContent = `${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}`;
     _wireApply('mobApplyBtn');
     document.getElementById('mobile-apply-bar').classList.add('active');
     document.body.classList.add('mob-bar-active');
@@ -1344,10 +981,10 @@ function renderProperty(p) {
   saveBtn.addEventListener('click', () => toggleSave(p.id, saveBtn));
 
   // ── Enrichment sections ──
+  try { renderRenterRequirements(p); } catch (e) { console.warn('[property] renderRenterRequirements error:', e); }
   try { renderPropFacts(p); } catch (e) { console.warn('[property] renderPropFacts error:', e); }
   try { renderScoresSection(p); } catch (e) { console.warn('[property] renderScoresSection error:', e); }
   try { loadSimilarListings(p); } catch (e) { console.warn('[property] loadSimilarListings error:', e); }
-  try { initCommunityInventory(p); } catch (e) { console.warn('[property] initCommunityInventory error:', e); }
 }
 
 /* ── Leaflet mini-map (lazy-loaded via IntersectionObserver) ── */
@@ -1506,7 +1143,7 @@ function _initLeafletMap(p) {
 
   const icon = L.divIcon({
     className: '',
-    html: `<div style="background:${markerBg};color:${markerColor};padding:6px 14px;border-radius:24px;font-weight:800;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:${markerBorder};box-shadow:${markerShadow};display:inline-flex;align-items:center;gap:6px;cursor:pointer"><i class="fas fa-home" style="font-size:10px;color:${isDark ? '#006aff' : '#38bdf8'}"></i> ${p.monthly_rent != null ? esc(formatPropertyRent(p, '/mo')) : 'Available'}</div>`,
+    html: `<div style="background:${markerBg};color:${markerColor};padding:6px 14px;border-radius:24px;font-weight:800;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;border:${markerBorder};box-shadow:${markerShadow};display:inline-flex;align-items:center;gap:6px;cursor:pointer"><i class="fas fa-home" style="font-size:10px;color:${isDark ? '#006aff' : '#38bdf8'}"></i> ${p.monthly_rent != null ? '$' + Number(p.monthly_rent).toLocaleString() + '/mo' : 'Available'}</div>`,
     iconAnchor: [50, 16], iconSize: [100, 32]
   });
 
@@ -1516,7 +1153,7 @@ function _initLeafletMap(p) {
       <div style="font-size:11.5px;color:var(--m-muted,#475569);margin-top:2px">${esc(p.address)}, ${esc(p.city)}, ${esc(p.state)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--m-border,#e2e8f0)">
         <span style="font-size:10.5px;font-weight:700;color:#475569;background:rgba(148,163,184,0.16);padding:2px 7px;border-radius:4px">Map location</span>
-        ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">${esc(formatPropertyRent(p, '/mo'))}</span>` : ''}
+        ${p.monthly_rent ? `<span style="font-size:12px;font-weight:800;color:var(--m-ink,#0f172a)">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
       </div>
     </div>
   `;
@@ -1657,7 +1294,6 @@ function renderMap(p) {
 
 /* ── Gallery Mosaic ── */
 function renderGallery(photos) {
-  const safePhotos = normalizePhotoList(Array.isArray(photos) ? photos : []);
   photoIndex = 0;
   const mainImg    = document.getElementById('mosaicMainImg');
   const mosaicMain = document.getElementById('mosaicMain');
@@ -1666,15 +1302,12 @@ function renderGallery(photos) {
   const mobileCount = document.getElementById('mosaicMobileCount');
   const prevBtn    = document.getElementById('mosaicPrev');
   const nextBtn    = document.getElementById('mosaicNext');
-  if (!mainImg || !mosaicMain || !mosaicSide || !prevBtn || !nextBtn) {
-    return;
-  }
 
   // Remove skeleton once we have real photos to show
-  document.getElementById('gallery')?.classList.remove('skeleton-loading');
+  document.getElementById('gallery').classList.remove('skeleton-loading');
 
   // Hero image — LCP candidate, load at high priority with srcset for retina
-  const heroUrl = getPrimaryPhoto(safePhotos);
+  const heroUrl = photos[0];
   mainImg.src    = CONFIG.img(heroUrl, 'gallery');
   if (CONFIG.IMAGEKIT_URL && heroUrl && heroUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
     mainImg.srcset = `${CONFIG.img(heroUrl, 'card')} 600w, ${CONFIG.img(heroUrl, 'gallery')} 1200w, ${CONFIG.img(heroUrl, 'gallery_2x')} 2400w`;
@@ -1682,13 +1315,12 @@ function renderGallery(photos) {
     mainImg.srcset = '';
   }
   mainImg.sizes  = '(max-width: 768px) 100vw, (max-width: 1280px) 65vw, 55vw';
-  const propTitle = currentProperty?.title || 'Property photo';
-  mainImg.alt    = `${propTitle} — Photo 1 of ${safePhotos.length}`;
+  mainImg.alt    = 'Property photo 1';
   mainImg.setAttribute('referrerpolicy', 'no-referrer');
   mainImg.onerror = function() { this.onerror = null; this.srcset = ''; this.src = '/assets/placeholder-property.jpg'; };
 
   // LQIP blur-up for hero image — tiny blurred placeholder fades out once full image loads
-  const heroLqip = lqipUrl(safePhotos[0]);
+  const heroLqip = lqipUrl(photos[0]);
   if (heroLqip) {
     const lqBg = document.createElement('div');
     lqBg.className = 'lqip-bg';
@@ -1699,32 +1331,20 @@ function renderGallery(photos) {
     if (mainImg.complete && mainImg.naturalWidth > 0) fadeLqip();
   }
 
-  mosaicMain.addEventListener('click', () => openLightbox(photoIndex));
-  mosaicMain.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openLightbox(photoIndex);
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      showPhoto((photoIndex + 1) % safePhotos.length);
-    }
-  });
+  mosaicMain.addEventListener('click', () => openLightbox(0));
   mosaicMain.addEventListener('contextmenu', e => e.preventDefault());
   mosaicMain.addEventListener('dragstart', e => e.preventDefault());
 
   // Side 2×2 grid — use gallery preset for crisp quality, lazy-load each cell
-  const sidePanels = safePhotos.slice(1, 5);
+  const sidePanels = photos.slice(1, 5);
   if (sidePanels.length > 0) {
     mosaicSide.innerHTML = sidePanels.map((url, i) => {
       const idx = i + 1;
-      const isLast = (i === sidePanels.length - 1) && (safePhotos.length > 5);
-      const remaining = Math.max(safePhotos.length - 5, 0);
+      const isLast = (i === sidePanels.length - 1) && (photos.length > 5);
+      const remaining = photos.length - 5;
       const lqUrl = lqipUrl(url);
       return `
-        <div class="mosaic-cell" data-idx="${idx}" role="button" tabindex="0" aria-label="Open photo ${idx + 1} in the gallery">
+        <div class="mosaic-cell" data-idx="${idx}">
           ${lqUrl ? `<div class="lqip-bg" style="background-image:url('${lqUrl}')"></div>` : ''}
           <img src="${CONFIG.img(url,'gallery')}"
                srcset="${CONFIG.img(url,'gallery')} 1x, ${CONFIG.img(url,'gallery_2x')} 2x"
@@ -1758,14 +1378,7 @@ function renderGallery(photos) {
     // Fade out each cell's LQIP placeholder once its image loads;
     // wire CSP-safe onerror via JS (not HTML attribute — blocked by nonce CSP)
     mosaicSide.querySelectorAll('.mosaic-cell').forEach(cell => {
-      const openCellPhoto = () => openLightbox(parseInt(cell.dataset.idx, 10));
-      cell.addEventListener('click', openCellPhoto);
-      cell.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openCellPhoto();
-        }
-      });
+      cell.addEventListener('click', () => openLightbox(parseInt(cell.dataset.idx)));
       cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('dragstart', e => e.preventDefault());
       const img = cell.querySelector('img');
@@ -1785,26 +1398,16 @@ function renderGallery(photos) {
   }
 
   if (expandBtn) {
-    expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${safePhotos.length}</span>`;
-    expandBtn.hidden = safePhotos.length < 2;
-    expandBtn.setAttribute('aria-label', `See all ${safePhotos.length} property photos`);
+    expandBtn.innerHTML = `<i class="fas fa-images"></i> <span class="mosaic-expand-label">See All Photos</span> <span class="mosaic-photo-count">${photos.length}</span>`;
     expandBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      openLightbox(photoIndex, true);
+      openLightbox(0, true);
     });
   }
 
-  if (mobileCount) mobileCount.textContent = `1 / ${safePhotos.length}`;
-  prevBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    showPhoto((photoIndex - 1 + safePhotos.length) % safePhotos.length);
-  });
-  nextBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    showPhoto((photoIndex + 1) % safePhotos.length);
-  });
+  if (mobileCount) mobileCount.textContent = `1 / ${photos.length}`;
+  prevBtn.addEventListener('click', () => showPhoto((photoIndex - 1 + photos.length) % photos.length));
+  nextBtn.addEventListener('click', () => showPhoto((photoIndex + 1) % photos.length));
 
   // Touch swipe on mosaic (mobile carousel) — velocity-aware
   let touchX = 0, touchT = 0;
@@ -1817,7 +1420,7 @@ function renderGallery(photos) {
     const dt   = Date.now() - touchT;
     const vel  = Math.abs(diff) / dt; // px/ms
     if (Math.abs(diff) > 30 || vel > 0.3) {
-      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + safePhotos.length) % safePhotos.length);
+      showPhoto((photoIndex + (diff > 0 ? 1 : -1) + photos.length) % photos.length);
     }
   }, { passive: true });
 
@@ -1842,17 +1445,16 @@ function renderGallery(photos) {
   document.getElementById('galleryExpand').addEventListener('click', () => openLightbox(photoIndex));
 
   // Build thumbnail strip
-  buildGalleryStrip(safePhotos);
+  buildGalleryStrip(photos);
 }
 
 /* ── Thumbnail Strip ── */
 function buildGalleryStrip(photos) {
-  const safePhotos = normalizePhotoList(Array.isArray(photos) ? photos : []);
   const strip = document.getElementById('galleryStrip');
   if (!strip) return;
-  if (safePhotos.length < 2) { strip.style.display = 'none'; return; }
+  if (photos.length < 2) { strip.style.display = 'none'; return; }
 
-  strip.innerHTML = safePhotos.map((url, i) => `
+  strip.innerHTML = photos.map((url, i) => `
     <button class="gallery-strip-thumb${i === 0 ? ' active' : ''}"
             data-idx="${i}" role="listitem"
             aria-label="View photo ${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">
@@ -1885,43 +1487,35 @@ function syncStripActive(idx) {
 function showPhoto(idx) {
   photoIndex = idx;
   const mainImg = document.getElementById('mosaicMainImg');
-  const mosaicMain = document.getElementById('mosaicMain');
-  if (!mainImg || !allPhotos.length) return;
-  const safeIdx = Math.min(Math.max(idx, 0), allPhotos.length - 1);
-  const curUrl = allPhotos[safeIdx];
   mainImg.style.opacity = '0';
   mainImg.style.transition = 'opacity 150ms';
   setTimeout(() => {
+    const curUrl = allPhotos[idx];
     mainImg.src = CONFIG.img(curUrl, 'gallery');
     if (CONFIG.IMAGEKIT_URL && curUrl && curUrl.startsWith(CONFIG.IMAGEKIT_URL)) {
       mainImg.srcset = `${CONFIG.img(curUrl, 'card')} 600w, ${CONFIG.img(curUrl, 'gallery')} 1200w, ${CONFIG.img(curUrl, 'gallery_2x')} 2400w`;
     } else {
       mainImg.srcset = '';
     }
-    const propTitle = currentProperty?.title || 'Property photo';
-    mainImg.alt    = `${propTitle} — Photo ${safeIdx + 1} of ${allPhotos.length}`;
-    if (mosaicMain) mosaicMain.setAttribute('aria-label', `Open photo ${safeIdx + 1} in the gallery`);
+    mainImg.alt    = `Property photo ${idx + 1}`;
     mainImg.style.opacity = '1';
   }, 150);
   const mobileCount = document.getElementById('mosaicMobileCount');
-  if (mobileCount) mobileCount.textContent = `${safeIdx + 1} / ${allPhotos.length}`;
-  syncStripActive(safeIdx);
-  photoIndex = safeIdx;
+  if (mobileCount) mobileCount.textContent = `${idx + 1} / ${allPhotos.length}`;
+  syncStripActive(idx);
 }
 
 /* ── Lightbox ── */
 let lightboxThumbsBuilt = false;
 let _lbOpener = null;  // element that opened the lightbox — restored on close
-let _lbPreviousBodyOverflow = '';
 
 // Focus trap — keep keyboard navigation inside the lightbox while open
 function _lbFocusTrap(e) {
   const lb = document.getElementById('lightbox');
   if (!lb.classList.contains('open')) return;
-  const focusable = [...lb.querySelectorAll(
+  const focusable = lb.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )].filter(el => !el.hidden && !el.disabled && el.getClientRects().length);
-  if (!focusable.length) return;
+  );
   const first = focusable[0];
   const last  = focusable[focusable.length - 1];
   if (e.key === 'Tab') {
@@ -1934,17 +1528,11 @@ function _lbFocusTrap(e) {
 }
 
 function openLightbox(idx, openInGridView = false) {
-  if (!allPhotos.length) return;
+  _lbOpener = document.activeElement;
   const lb = document.getElementById('lightbox');
   if (!lb) return;
-  _lbOpener = document.activeElement;
-  if (!lb.classList.contains('open')) _lbPreviousBodyOverflow = document.body.style.overflow;
   lb.classList.add('open');
   document.body.style.overflow = 'hidden';
-  const prevBtn = document.getElementById('lightboxPrev');
-  const nextBtn = document.getElementById('lightboxNext');
-  if (prevBtn) prevBtn.hidden = allPhotos.length < 2;
-  if (nextBtn) nextBtn.hidden = allPhotos.length < 2;
 
   // Set property title and address meta in header
   if (currentProperty) {
@@ -1975,8 +1563,7 @@ function closeLightbox() {
   const lb = document.getElementById('lightbox');
   if (!lb) return;
   lb.classList.remove('open');
-  document.body.style.overflow = _lbPreviousBodyOverflow;
-  _lbPreviousBodyOverflow = '';
+  document.body.style.overflow = '';
   document.removeEventListener('keydown', _lbFocusTrap);
   if (_lbOpener && typeof _lbOpener.focus === 'function') _lbOpener.focus();
   _lbOpener = null;
@@ -1991,19 +1578,15 @@ function setLightboxViewMode(mode) {
   const gridEl    = document.getElementById('lightboxGridView');
   const toggleBtn = document.getElementById('lbToggleGrid');
   const toggleTxt = document.getElementById('lbToggleGridText');
-  const counterEl = document.getElementById('lightboxCounter');
 
   if (mode === 'grid') {
     if (stageEl)  stageEl.style.display  = 'none';
     if (thumbsEl) thumbsEl.style.display = 'none';
     if (gridEl)   gridEl.style.display   = 'block';
-    if (counterEl) counterEl.textContent = `${allPhotos.length} photos`;
     if (toggleTxt) toggleTxt.textContent = 'Single Photo';
     if (toggleBtn) {
       toggleBtn.classList.add('active');
       toggleBtn.innerHTML = '<i class="fas fa-image"></i> <span id="lbToggleGridText">Single Photo</span>';
-      toggleBtn.setAttribute('aria-label', 'Show selected photo');
-      toggleBtn.setAttribute('aria-pressed', 'true');
     }
   } else {
     if (stageEl)  stageEl.style.display  = 'flex';
@@ -2013,8 +1596,6 @@ function setLightboxViewMode(mode) {
     if (toggleBtn) {
       toggleBtn.classList.remove('active');
       toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="lbToggleGridText">All Photos</span>';
-      toggleBtn.setAttribute('aria-label', 'Show all photos');
-      toggleBtn.setAttribute('aria-pressed', 'false');
     }
   }
 }
@@ -2023,7 +1604,7 @@ function buildLightboxThumbs() {
   const thumbsEl = document.getElementById('lightboxThumbs');
   if (!thumbsEl || !allPhotos.length) return;
   thumbsEl.innerHTML = allPhotos.map((url, i) =>
-    `<button type="button" class="lightbox-thumb" data-idx="${i}" aria-label="View photo ${i + 1}" aria-pressed="${i === photoIndex}">
+    `<button type="button" class="lightbox-thumb" data-idx="${i}" aria-label="View photo ${i + 1}">
       <img src="${CONFIG.img(url, 'thumb')}" alt="" loading="lazy" referrerpolicy="no-referrer" decoding="async">
     </button>`
   ).join('');
@@ -2039,10 +1620,10 @@ function buildLightboxGrid() {
   const container = document.getElementById('lightboxGridContainer');
   if (!container || !allPhotos.length) return;
   container.innerHTML = allPhotos.map((url, i) => `
-    <button type="button" class="lightbox-grid-item" data-idx="${i}" aria-label="View photo ${i + 1} of ${allPhotos.length}">
-      <img src="${CONFIG.img(url, 'gallery')}" alt="" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+    <div class="lightbox-grid-item" data-idx="${i}">
+      <img src="${CONFIG.img(url, 'gallery')}" alt="Property photo ${i + 1}" loading="lazy" referrerpolicy="no-referrer" decoding="async">
       <div class="lightbox-grid-badge">${i + 1} of ${allPhotos.length}</div>
-    </button>
+    </div>
   `).join('');
 
   container.querySelectorAll('.lightbox-grid-item').forEach(item => {
@@ -2050,9 +1631,6 @@ function buildLightboxGrid() {
       const idx = parseInt(item.dataset.idx, 10);
       setLightboxViewMode('stage');
       lightboxShow(idx);
-      requestAnimationFrame(() => {
-        document.getElementById(allPhotos.length > 1 ? 'lightboxNext' : 'lightboxClose')?.focus();
-      });
     });
   });
 }
@@ -2060,8 +1638,6 @@ function buildLightboxGrid() {
 let _lbNavDir = 0;  // -1 = prev, 1 = next, 0 = direct click
 
 function lightboxShow(idx) {
-  if (!allPhotos.length) return;
-  idx = Math.min(Math.max(idx, 0), allPhotos.length - 1);
   photoIndex = idx;
   const wrap    = document.getElementById('lightboxImgWrap');
   const img     = document.getElementById('lightboxImg');
@@ -2104,8 +1680,7 @@ function lightboxShow(idx) {
     const isIk = CONFIG.IMAGEKIT_URL && allPhotos[idx] && allPhotos[idx].startsWith(CONFIG.IMAGEKIT_URL);
     img.srcset = isIk ? `${CONFIG.img(allPhotos[idx], 'gallery')} 1200w, ${CONFIG.img(allPhotos[idx], 'gallery_2x')} 2400w, ${CONFIG.img(allPhotos[idx], 'lightbox')} 4000w` : '';
     img.sizes  = '100vw';
-    const propTitle = currentProperty?.title || 'Property photo';
-    img.alt    = `${propTitle} — Photo ${idx + 1} of ${allPhotos.length}`;
+    img.alt    = `Property photo ${idx + 1}`;
     img.setAttribute('referrerpolicy', 'no-referrer');
 
     const reveal = () => {
@@ -2140,7 +1715,6 @@ function lightboxShow(idx) {
   // Sync lightbox filmstrip
   document.querySelectorAll('.lightbox-thumb').forEach((t, i) => {
     t.classList.toggle('active', i === idx);
-    t.setAttribute('aria-pressed', i === idx ? 'true' : 'false');
   });
   const activeThumb = document.querySelector('.lightbox-thumb.active');
   if (activeThumb) {
@@ -2152,7 +1726,6 @@ function lightboxShow(idx) {
 }
 
 function lightboxNav(dir) {
-  if (allPhotos.length < 2) return;
   if (_lbViewMode === 'grid') {
     setLightboxViewMode('stage');
   }
@@ -2180,26 +1753,11 @@ function lightboxNav(dir) {
   }, { passive: true });
 })();
 
-document.getElementById('lightboxClose')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  closeLightbox();
-});
-document.getElementById('lightboxPrev')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  lightboxNav(-1);
-});
-document.getElementById('lightboxNext')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  lightboxNav(1);
-});
-document.getElementById('lbToggleGrid')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (_lbViewMode === 'grid') {
-    setLightboxViewMode('stage');
-    lightboxShow(photoIndex);
-  } else {
-    setLightboxViewMode('grid');
-  }
+document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev')?.addEventListener('click', () => lightboxNav(-1));
+document.getElementById('lightboxNext')?.addEventListener('click', () => lightboxNav(1));
+document.getElementById('lbToggleGrid')?.addEventListener('click', () => {
+  setLightboxViewMode(_lbViewMode === 'grid' ? 'stage' : 'grid');
 });
 document.getElementById('lightbox')?.addEventListener('click', e => {
   if (e.target === document.getElementById('lightbox') ||
@@ -2366,31 +1924,24 @@ document.getElementById('lightbox')?.addEventListener('click', e => {
 })();
 
 /* ── Inquiry ── */
-document.getElementById('inqMessage')?.addEventListener('input', function() {
-  const countEl = document.getElementById('inqCharCount');
-  if (countEl) countEl.textContent = this.value.length;
+document.getElementById('inqMessage').addEventListener('input', function() {
+  document.getElementById('inqCharCount').textContent = this.value.length;
 });
 
 let inquiryCooldown = false;
-document.getElementById('sendInquiryBtn')?.addEventListener('click', async () => {
+document.getElementById('sendInquiryBtn').addEventListener('click', async () => {
   if (inquiryCooldown) { showToast('Please wait before sending another message.', 'info'); return; }
 
-  const nameEl    = document.getElementById('inqName');
-  const emailEl   = document.getElementById('inqEmail');
-  const phoneEl   = document.getElementById('inqPhone');
-  const msgEl     = document.getElementById('inqMessage');
-  const name      = nameEl ? nameEl.value.trim() : '';
-  const email     = emailEl ? emailEl.value.trim() : '';
-  const phone     = phoneEl ? phoneEl.value.trim() : '';
-  const message   = msgEl ? msgEl.value.trim() : '';
+  const name    = document.getElementById('inqName').value.trim();
+  const email   = document.getElementById('inqEmail').value.trim();
+  const phone   = document.getElementById('inqPhone').value.trim();
+  const message = document.getElementById('inqMessage').value.trim();
   if (!name || !email || !message) { showToast('Please fill in name, email, and message.', 'error'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email address.', 'error'); return; }
 
   const btn = document.getElementById('sendInquiryBtn');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending\u2026';
-  }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending\u2026';
 
   // Use window.CP.Inquiries.submit() so the edge function fires confirmation + landlord emails.
   const { error } = (window.CP?.Inquiries?.submit)
@@ -2408,7 +1959,7 @@ document.getElementById('sendInquiryBtn')?.addEventListener('click', async () =>
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
   } else {
-    showToast('Message sent! Choice Properties management will be in touch soon.', 'success');
+    showToast('Message sent! The landlord will be in touch soon.', 'success');
     btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
 
     // Clear form fields after successful send
@@ -2945,7 +2496,7 @@ function initAdminPropertyPanel(prop) {
 function buildAdminEditDrawer(prop) {
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
-  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','multi_family','loft','mobile_home','land','farm','commercial','other'];
+  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','loft','mobile_home','commercial','other'];
   const STATUSES   = ['active','rented','inactive','maintenance','draft','paused','archived'];
   const LAUNDRY    = ['','In-unit','Washer/Dryer Hookups','Shared (On-site)','Laundromat Nearby','None'];
   const HEATING    = ['','Central','Forced Air','Baseboard','Radiant','Heat Pump','Wall Unit','None'];
@@ -3033,7 +2584,7 @@ function buildAdminEditDrawer(prop) {
           </div>
           <div class="adw-field">
             <label class="adw-label" for="adwAppFee">App Fee ($)</label>
-            <input class="adw-input" id="adwAppFee" type="number" min="50" max="50" value="50" readonly>
+            <input class="adw-input" id="adwAppFee" type="number" min="0" value="${p.application_fee??''}">
           </div>
         </div>
         <div class="adw-row">
@@ -3217,8 +2768,8 @@ function buildAdminEditDrawer(prop) {
   }
 
   overlay.addEventListener('click', closeDrawer);
-  document.getElementById('adwCloseBtn')?.addEventListener('click', closeDrawer);
-  document.getElementById('adwCancelBtn')?.addEventListener('click', closeDrawer);
+  document.getElementById('adwCloseBtn').addEventListener('click', closeDrawer);
+  document.getElementById('adwCancelBtn').addEventListener('click', closeDrawer);
   document.getElementById('adwDeleteBtn')?.addEventListener('click', (e) => {
     executeAdminDeleteProperty(prop, e.currentTarget);
   });
@@ -3488,9 +3039,8 @@ function buildAdminEditDrawer(prop) {
   });
 
   // ── Save ──
-  document.getElementById('adwSaveBtn')?.addEventListener('click', async () => {
+  document.getElementById('adwSaveBtn').addEventListener('click', async () => {
     const sb = document.getElementById('adwSaveBtn');
-    if (!sb) return;
     sb.disabled = true;
     sb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
@@ -3885,9 +3435,37 @@ function renderRenterRequirements(p) {
   if (!section) return;
   injectEnrichmentStyles();
 
-   const reqs = [];
+  const reqs = [];
 
-   if (!reqs.length) return;
+  if (p.pets_allowed != null) {
+    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
+    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
+    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
+    reqs.push({
+      icon: 'fa-paw',
+      label: 'Pets',
+      value: petVal,
+      type: p.pets_allowed ? 'req-emerald' : 'req-rose'
+    });
+  }
+  if (p.minimum_credit_score) {
+    reqs.push({
+      icon: 'fa-chart-line',
+      label: 'Min. credit score',
+      value: Number(p.minimum_credit_score).toLocaleString() + '+',
+      type: 'req-blue'
+    });
+  }
+  if (p.minimum_income_multiplier) {
+    reqs.push({
+      icon: 'fa-coins',
+      label: 'Min. income',
+      value: p.minimum_income_multiplier + '× monthly rent',
+      type: 'req-amber'
+    });
+  }
+
+  if (!reqs.length) return;
 
   section.style.display = '';
   section.innerHTML = `
@@ -4024,7 +3602,8 @@ function renderNeighborhoodIntelligence(p) {
   bikeScore = parseScore(bikeScore);
   const qualifiedLocationCtx = locationCtx.replace(
     /(^|;\s*)Schools:\s*([^;]+)/gi,
-    '$1Listing-reported school names (not independently verified): $2');
+    '$1Listing-reported school names (not independently verified): $2',
+  );
 
   const neighborhoodName = (p.neighborhood || '').trim();
   const countyName = (p.county || '').trim();
@@ -4186,7 +3765,7 @@ async function loadSimilarListings(p) {
     if (!similar.length && p.status !== 'private_placement') {
       const { data } = await supabase
         .from('properties')
-        .select('id, title, address, city, state, monthly_rent, community_starting_rent, community_max_rent, is_multi_unit, total_units, price_range, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
+        .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, property_type, property_photos(url, display_order, is_hero)')
         .eq('status', 'active')
         .eq('city', p.city)
         .neq('id', p.id)
@@ -4223,7 +3802,7 @@ async function loadSimilarListings(p) {
           <div class="similar-card-body">
             <div class="similar-card-price">
               ${s.monthly_rent != null
-                ? esc(formatPropertyRent(s)) + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
+                ? '$' + Number(s.monthly_rent).toLocaleString() + '<span style="font-size:11px;font-weight:500;color:var(--m-muted)">/mo</span>'
                 : 'TBD'}
             </div>
             <div class="similar-card-title">${esc(s.title || 'Rental')}</div>
@@ -4297,514 +3876,4 @@ function preloadLightboxAdjacentImages(idx) {
       pre.src = CONFIG.img(allPhotos[i], 'lightbox');
     }
   });
-}
-
-
-// ── Multi-Floor & Multi-Unit Community Inventory Browser ─────────────────────
-async function initCommunityInventory(p) {
-  // Guard: only render community inventory for true community/multi-unit properties.
-  // isCommunityProperty() already encodes all the type + unit-count logic.
-  if (!isCommunityProperty(p)) {
-    const container = document.getElementById('communityInventorySection');
-    if (container) container.style.display = 'none';
-    const divider = document.getElementById('dividerAfterCommunityInventory');
-    if (divider) divider.style.display = 'none';
-    return;
-  }
-
-  const container = document.getElementById('communityInventorySection');
-  const content = document.getElementById('communityInventoryContent');
-  const divider = document.getElementById('dividerAfterCommunityInventory');
-  if (!container || !content) return;
-
-  const isCommunity = isCommunityProperty(p);
-
-  let units = [];
-  let floors = [];
-  let embeddedFloorPlanOptions = [];
-
-  // Share resolution may provide private inventory only after token validation.
-  if (Array.isArray(p.property_units) && p.property_units.length > 0) {
-    units = p.property_units.map(unit => ({
-      ...unit,
-      unit_floor: unit.unit_floor_label || unit.unit_floor || null,
-      unit_photos: Array.isArray(unit.unit_photos) ? unit.unit_photos : (Array.isArray(unit.photo_urls) ? unit.photo_urls : []),
-      photo_urls: Array.isArray(unit.photo_urls) ? unit.photo_urls : (Array.isArray(unit.unit_photos) ? unit.unit_photos : []),
-    }));
-  }
-  if (Array.isArray(p.property_floor_plans) && p.property_floor_plans.length > 0) {
-    embeddedFloorPlanOptions = p.property_floor_plans.map(plan => ({
-      ...plan,
-      name: plan.name || plan.floor_plan_name || 'Floor Plan',
-      floor_plan_name: plan.name || plan.floor_plan_name || null,
-    }));
-  }
-
-  // 1. Fetch public normalized inventory; the database policy excludes private parents.
-  if (!units.length) {
-    try {
-      const res = await (window.CP?.Properties?.getCommunityUnits ? window.CP.Properties.getCommunityUnits(p.id) : null);
-      if (res && res.ok) {
-        if (Array.isArray(res.data?.units) && res.data.units.length > 0) {
-          units = res.data.units.map(u => ({
-            ...u,
-            unit_floor: u.unit_floor_label || u.unit_floor || null,
-            unit_photos: Array.isArray(u.unit_photos) ? u.unit_photos : (Array.isArray(u.photo_urls) ? u.photo_urls : []),
-            photo_urls: Array.isArray(u.photo_urls) ? u.photo_urls : (Array.isArray(u.unit_photos) ? u.unit_photos : []),
-          }));
-        }
-        if (Array.isArray(res.data?.floors) && res.data.floors.length > 0) {
-          floors = res.data.floors;
-        }
-        if (!embeddedFloorPlanOptions.length && Array.isArray(res.data?.floorPlans) && res.data.floorPlans.length > 0) {
-          embeddedFloorPlanOptions = res.data.floorPlans.map(plan => ({
-            ...plan,
-            name: plan.name || plan.floor_plan_name || 'Floor Plan',
-            floor_plan_name: plan.name || plan.floor_plan_name || null,
-          }));
-        }
-      } else if (res && !res.ok) {
-        console.warn('[property] community inventory lookup failed:', res.error);
-      }
-    } catch (err) {
-      console.warn('[property] getCommunityUnits error:', err);
-    }
-  }
-
-  // 2. Fallback to embedded unit_options or original_data across all listing types
-  if (!units.length || !embeddedFloorPlanOptions.length) {
-    let embeddedOptions = null;
-    if (Array.isArray(p.unit_options) && p.unit_options.length > 0) {
-      embeddedOptions = p.unit_options;
-    } else if (p.original_data) {
-      try {
-        const orig = typeof p.original_data === 'string' ? JSON.parse(p.original_data) : p.original_data;
-        if (Array.isArray(orig?.unit_options) && orig.unit_options.length > 0) {
-          embeddedOptions = orig.unit_options;
-        }
-      } catch (_) {}
-    }
-
-    if (embeddedOptions && embeddedOptions.length > 0) {
-      const isFloorPlanOption = opt =>
-        opt && typeof opt === 'object' &&
-        (opt.source_kind === 'floor_plan' || (!opt.unit_number && !opt.unit && opt.floor_plan_name));
-
-      if (!embeddedFloorPlanOptions.length) {
-        embeddedFloorPlanOptions = embeddedOptions
-          .filter(isFloorPlanOption)
-          .map((fp, idx) => ({
-            id: fp.id || null,
-            property_id: p.id,
-            name: fp.name || fp.floor_plan_name || ('Floor Plan ' + (idx + 1)),
-            floor_plan_name: fp.floor_plan_name || fp.name || null,
-            building_name: fp.building_name || fp.building || null,
-            bedrooms: fp.bedrooms ?? (fp.beds ?? null),
-            bathrooms: fp.bathrooms ?? (fp.baths ?? null),
-            square_footage: fp.square_footage ?? (fp.sqft ?? null),
-            starting_rent: fp.starting_rent ?? fp.monthly_rent ?? null,
-            rent_basis: fp.rent_basis || null,
-            image_url: fp.image_url || (Array.isArray(fp.photo_urls) ? fp.photo_urls[0] : null) || null,
-          }));
-      }
-
-      if (!units.length) {
-        units = embeddedOptions
-          .filter(opt => opt && typeof opt === 'object' && !isFloorPlanOption(opt) &&
-            String(opt.unit_number || opt.unit || '').trim())
-          .map((opt, idx) => {
-            const unitPhotos = Array.isArray(opt.unit_photos) ? opt.unit_photos
-              : Array.isArray(opt.photo_urls) ? opt.photo_urls : [];
-            const rawUnit = String(opt.unit_number || opt.unit || '').trim();
-            const parsed = parseUnitDetails(rawUnit, opt.unit_floor, opt.building_name || opt.building);
-            return {
-              id: opt.id || ('opt-' + (idx + 1)),
-              property_id: p.id,
-              unit_number: rawUnit,
-              unit_floor: parsed.floor,
-              building_name: parsed.building,
-              floor_plan_name: opt.floor_plan_name || null,
-              bedrooms: opt.bedrooms ?? (opt.beds ?? null),
-              bathrooms: opt.bathrooms ?? (opt.baths ?? null),
-              square_footage: opt.square_footage ?? (opt.sqft ?? null),
-              monthly_rent: opt.monthly_rent ?? null,
-              rent_basis: opt.rent_basis || null,
-              unit_photos: unitPhotos,
-              photo_urls: unitPhotos,
-            };
-          });
-      }
-    }
-  }
-
-  if (units.length > 0) {
-    units.forEach(u => {
-      if (u.unit_number && (!u.unit_floor || !u.building_name)) {
-        const parsed = parseUnitDetails(u.unit_number, u.unit_floor, u.building_name);
-        if (!u.unit_floor && parsed.floor) u.unit_floor = parsed.floor;
-        if (!u.building_name && parsed.building) u.building_name = parsed.building;
-      }
-    });
-
-    const floorSet = new Set();
-    units.forEach(u => {
-      const fl = u.unit_floor == null ? '' : String(u.unit_floor).trim();
-      if (fl) floorSet.add(fl);
-    });
-
-    floors = Array.from(floorSet).sort((a, b) => {
-      const aNumber = Number(a);
-      const bNumber = Number(b);
-      if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    });
-  }
-
-  // 3. Collect floor plan media
-  const floorPlans = (Array.isArray(p.property_media) ? p.property_media : []).filter(m => m && m.kind === 'floor_plan' && m.url);
-  const safeHttpsUrl = value => {
-    try {
-      const url = new URL(value);
-      return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
-    } catch (_) {
-      return null;
-    }
-  };
-
-  if (!units.length && !floorPlans.length && !embeddedFloorPlanOptions.length && !isCommunity) {
-    container.style.display = 'none';
-    if (divider) divider.style.display = 'none';
-    return;
-  }
-
-  container.style.display = '';
-  if (divider) divider.style.display = '';
-
-  let selectedFloor = 'all';
-  let selectedBeds = 'all';
-
-  
-  // Interactive Building Stack / Site Map Visualizer
-  let selectedStackFloor = 'all';
-
-  function renderBuildingStack() {
-    const stackContainer = document.getElementById('buildingStackVisualizer');
-    if (!stackContainer) return;
-
-    if (floors.length < 2) {
-      stackContainer.style.display = 'none';
-      return;
-    }
-    stackContainer.style.display = 'block';
-
-    let tiersHtml = '';
-    floors.slice().reverse().forEach(floorLabel => {
-      const floorUnits = units.filter(u => String(u.unit_floor) === String(floorLabel));
-      const isSelected = String(selectedStackFloor) === String(floorLabel);
-
-      tiersHtml += '<div class="building-stack-tier ' + (isSelected ? 'active' : '') + '" data-stack-floor="' + esc(floorLabel) + '">' +
-        '<button type="button" class="building-stack-floor-button" data-stack-floor="' + esc(floorLabel) + '" aria-label="Show floor ' + esc(floorLabel) + ', ' + floorUnits.length + ' units" aria-pressed="' + isSelected + '">' +
-          '<span class="building-stack-tier-label"><i class="fas fa-layer-group" aria-hidden="true"></i> Floor ' + esc(floorLabel) + '</span>' +
-          '<span class="building-stack-count">' + floorUnits.length + '</span>' +
-        '</button>' +
-        '<div class="building-stack-units-row">' +
-          (floorUnits.length ? floorUnits.map(u =>
-            '<button type="button" class="building-stack-unit-chip ' + (isSelected && String(u.unit_floor) === String(selectedFloor) ? 'highlighted' : '') + '" data-unit-target="' + esc('unit-' + (u.id || u.unit_number)) + '" data-unit-floor="' + esc(floorLabel) + '" title="Show ' + esc([u.building_name, 'unit ' + u.unit_number].filter(Boolean).join(', ')) + '">' +
-              (u.building_name ? '<span class="unit-building">' + esc(u.building_name) + '</span>' : '') +
-              '<span class="unit-num">' + esc(u.unit_number) + '</span>' +
-              '<span class="unit-rent">' + (Number.isFinite(Number(u.monthly_rent)) && Number(u.monthly_rent) > 0 ? ('$' + Number(u.monthly_rent).toLocaleString()) : 'Price pending') + '</span>' +
-            '</button>'
-          ).join('') : '<span class="building-stack-empty">No active units listed on this level</span>') +
-        '</div>' +
-      '</div>';
-    });
-
-    stackContainer.innerHTML = '<div class="building-stack-card">' +
-      '<div class="building-stack-header">' +
-        '<div>' +
-          '<div class="building-stack-title">Building floors</div>' +
-          '<div class="building-stack-caption">Select a floor or unit to jump to its details.</div>' +
-        '</div>' +
-        '<button type="button" class="community-pill-btn ' + (selectedStackFloor === 'all' ? 'active' : '') + '" data-stack-floor="all" aria-pressed="' + (selectedStackFloor === 'all') + '">' +
-          'All floors' +
-        '</button>' +
-      '</div>' +
-      '<div class="building-stack-tiers" role="group" aria-label="Building floors">' +
-        tiersHtml +
-      '</div>' +
-    '</div>';
-
-    stackContainer.querySelectorAll('button[data-stack-floor]').forEach(button => {
-      button.addEventListener('click', () => {
-        const fl = button.getAttribute('data-stack-floor');
-        selectedStackFloor = fl;
-        selectedFloor = fl;
-        renderInventoryUI();
-      });
-    });
-    stackContainer.querySelectorAll('[data-unit-target]').forEach(button => {
-      button.addEventListener('click', () => {
-        selectedFloor = button.getAttribute('data-unit-floor') || 'all';
-        selectedStackFloor = selectedFloor;
-        const targetId = button.getAttribute('data-unit-target');
-        renderInventoryUI();
-        requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-      });
-    });
-  }
-
-  function renderInventoryUI() {
-    let filtered = units.slice();
-    if (selectedFloor !== 'all') {
-      filtered = filtered.filter(u => String(u.unit_floor) === String(selectedFloor));
-    }
-    if (selectedBeds !== 'all') {
-      if (selectedBeds === '0') {
-        filtered = filtered.filter(u => Number(u.bedrooms) === 0);
-      } else if (selectedBeds === '3+') {
-        filtered = filtered.filter(u => Number(u.bedrooms) >= 3);
-      } else {
-        filtered = filtered.filter(u => Number(u.bedrooms) === Number(selectedBeds));
-      }
-    }
-
-    // Floor filter pills
-    let floorFiltersHtml = '';
-    if (floors.length > 1) {
-      floorFiltersHtml = '<div class="community-filter-row" role="group" aria-label="Filter by floor">' +
-        '<span class="community-filter-label"><i class="fas fa-layer-group"></i> Floor</span>' +
-        '<button type="button" class="community-pill-btn ' + (selectedFloor === 'all' ? 'active' : '') + '" data-floor="all" aria-pressed="' + (selectedFloor === 'all') + '">' +
-          'All Floors <span class="count-badge">' + units.length + '</span>' +
-        '</button>' +
-        floors.map(f => {
-          const count = units.filter(u => String(u.unit_floor) === String(f)).length;
-          const isSelected = String(selectedFloor) === String(f);
-          return '<button type="button" class="community-pill-btn ' + (isSelected ? 'active' : '') + '" data-floor="' + esc(f) + '" aria-pressed="' + isSelected + '">' +
-            'Floor ' + esc(f) + ' <span class="count-badge">' + count + '</span>' +
-          '</button>';
-        }).join('') +
-      '</div>';
-    }
-
-    // Bedroom filter pills
-    const bedCounts = { all: units.length, 0: 0, 1: 0, 2: 0, '3+': 0 };
-    units.forEach(u => {
-      const b = Number(u.bedrooms);
-      if (b === 0) bedCounts[0]++;
-      else if (b === 1) bedCounts[1]++;
-      else if (b === 2) bedCounts[2]++;
-      else if (b >= 3) bedCounts['3+']++;
-    });
-
-    let bedFiltersHtml = '';
-    if (units.length > 2) {
-      bedFiltersHtml = '<div class="community-filter-row" role="group" aria-label="Filter by bedrooms">' +
-        '<span class="community-filter-label"><i class="fas fa-bed"></i> Beds</span>' +
-        '<button type="button" class="community-pill-btn ' + (selectedBeds === 'all' ? 'active' : '') + '" data-beds="all" aria-pressed="' + (selectedBeds === 'all') + '">' +
-          'All Layouts <span class="count-badge">' + units.length + '</span>' +
-        '</button>' +
-        (bedCounts[0] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '0' ? 'active' : '') + '" data-beds="0" aria-pressed="' + (selectedBeds === '0') + '">Studio <span class="count-badge">' + bedCounts[0] + '</span></button>' : '') +
-        (bedCounts[1] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '1' ? 'active' : '') + '" data-beds="1" aria-pressed="' + (selectedBeds === '1') + '">1 Bed <span class="count-badge">' + bedCounts[1] + '</span></button>' : '') +
-        (bedCounts[2] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '2' ? 'active' : '') + '" data-beds="2" aria-pressed="' + (selectedBeds === '2') + '">2 Beds <span class="count-badge">' + bedCounts[2] + '</span></button>' : '') +
-        (bedCounts['3+'] ? '<button type="button" class="community-pill-btn ' + (selectedBeds === '3+' ? 'active' : '') + '" data-beds="3+" aria-pressed="' + (selectedBeds === '3+') + '">3+ Beds <span class="count-badge">' + bedCounts['3+'] + '</span></button>' : '') +
-      '</div>';
-    }
-
-    // Units cards list
-    let unitsListHtml = '';
-    if (filtered.length > 0) {
-      unitsListHtml = '<div class="community-units-list">' +
-        filtered.map(u => {
-          const unitId = u.property_id === p.id &&
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(u.id || ''))
-            ? String(u.id)
-            : null;
-          const hasVerifiedUnitPrice = Number.isFinite(Number(u.monthly_rent)) && Number(u.monthly_rent) > 0;
-          const applyFn = window.CP?.buildApplyURL || buildApplyURL;
-          const applyHref = hasVerifiedUnitPrice && applyFn
-            ? applyFn(p, shareToken, {
-                unit: u.unit_number,
-                rent: u.monthly_rent,
-                floor: u.unit_floor,
-                bedrooms: u.bedrooms,
-                bathrooms: u.bathrooms,
-                unit_id: unitId || undefined,
-              })
-            : null;
-
-          const bedroomCount = u.bedrooms == null ? null : Number(u.bedrooms);
-          const bathroomCount = u.bathrooms == null ? null : Number(u.bathrooms);
-          const squareFeet = u.square_footage == null ? null : Number(u.square_footage);
-          const bedText = bedroomCount === 0 ? 'Studio' : (Number.isFinite(bedroomCount) ? bedroomCount + ' Bed' + (bedroomCount === 1 ? '' : 's') : '');
-          const bathText = Number.isFinite(bathroomCount) ? bathroomCount + ' Bath' + (bathroomCount === 1 ? '' : 's') : '';
-          const sqftText = Number.isFinite(squareFeet) && squareFeet > 0 ? ('~' + (Math.round(squareFeet / 25) * 25) + ' sqft') : '';
-          const floorText = u.unit_floor != null ? ('Floor ' + u.unit_floor) : '';
-          const monthlyRent = u.monthly_rent == null ? null : Number(u.monthly_rent);
-          const rentText = Number.isFinite(monthlyRent) && monthlyRent > 0
-            ? ('$' + monthlyRent.toLocaleString())
-            : 'Price not listed';
-          const rentBasisText = u.rent_basis === 'base_rent'
-            ? 'Base rent'
-            : u.rent_basis === 'total_monthly_price'
-              ? 'Total monthly price'
-              : '';
-          const unitPhotos = Array.isArray(u.unit_photos) ? u.unit_photos
-            : Array.isArray(u.photo_urls) ? u.photo_urls : [];
-          const unitPhotoUrls = unitPhotos
-            .map(photo => {
-              const rawUrl = typeof photo === 'string' ? photo : photo?.url;
-              return safeHttpsUrl(rawUrl);
-            })
-            .filter(Boolean);
-          const unitPhotosHtml = unitPhotoUrls.length
-            ? '<div class="community-unit-photos" aria-label="Photos for unit ' + esc(u.unit_number) + '">' +
-                unitPhotoUrls.map((url, index) =>
-                  '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
-                    '<img src="' + esc(url) + '" alt="' + esc('Unit ' + u.unit_number + ' photo ' + (index + 1)) + '" loading="lazy">' +
-                  '</a>'
-                ).join('') +
-              '</div>'
-            : '';
-
-          const cardId = 'unit-' + (u.id || u.unit_number);
-          const specItems = [
-            bedText ? '<span><i class="fas fa-bed" aria-hidden="true"></i> ' + esc(bedText) + '</span>' : '',
-            bathText ? '<span><i class="fas fa-bath" aria-hidden="true"></i> ' + esc(bathText) + '</span>' : '',
-            sqftText ? '<span><i class="fas fa-ruler-combined" aria-hidden="true"></i> ' + esc(sqftText) + '</span>' : '',
-          ].filter(Boolean).join('');
-
-          return '<article class="community-unit-card" id="' + esc(cardId) + '" aria-label="Unit ' + esc(u.unit_number || '') + ' details">' +
-            '<div class="community-unit-left">' +
-              '<div class="community-unit-title-row">' +
-                '<h3 class="community-unit-number">Unit ' + esc(u.unit_number || 'Details') + '</h3>' +
-                (floorText ? '<span class="community-floor-tag"><i class="fas fa-layer-group" aria-hidden="true"></i> ' + esc(floorText) + '</span>' : '') +
-                (u.building_name ? '<span class="community-floor-tag"><i class="fas fa-building" aria-hidden="true"></i> ' + esc(u.building_name) + '</span>' : '') +
-                (u.floor_plan_name ? '<span class="community-floor-tag community-layout-tag">' + esc(u.floor_plan_name) + '</span>' : '') +
-              '</div>' +
-              (specItems ? '<div class="community-unit-specs">' + specItems + '</div>' : '') +
-              unitPhotosHtml +
-            '</div>' +
-            '<div class="community-unit-right">' +
-              '<div class="community-unit-price">' + esc(rentText) + (Number.isFinite(monthlyRent) && monthlyRent > 0 ? ' <small>/mo</small>' : '') +
-                (rentBasisText ? '<small class="community-unit-rent-basis">' + esc(rentBasisText) + '</small>' : '') + '</div>' +
-              (applyHref
-                ? '<a href="' + esc(applyHref) + '" class="community-unit-apply-btn">Apply for Unit ' + esc(u.unit_number) + ' <i class="fas fa-arrow-right" aria-hidden="true"></i></a>'
-                : '<a href="#contactCard" class="community-unit-apply-btn community-unit-inquire-btn" title="Contact Choice Properties to inquire about this unit">Inquire <i class="fas fa-envelope" aria-hidden="true"></i></a>') +
-            '</div>' +
-          '</article>';
-        }).join('') +
-      '</div>';
-    } else {
-      const emptyMessage = units.length
-        ? 'No units match these filters. Adjust the floor or bedroom selection above.'
-        : 'This community offers multiple floor plans and unit layouts. Contact Choice Properties or submit an inquiry below for today’s real-time unit availability, upcoming move-ins, and floor plans.';
-      unitsListHtml = '<div class="community-empty-state" role="status">' +
-        '<i class="fas ' + (units.length ? 'fa-filter' : 'fa-building') + '" aria-hidden="true"></i>' +
-        '<div><p>' + emptyMessage + '</p>' +
-        (!units.length ? '<a href="#contactCard" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:0.8rem;font-weight:700;color:var(--m-brand)">Inquire About Availability <i class="fas fa-arrow-down"></i></a>' : '') +
-        '</div></div>';
-    }
-
-    // Floor plans gallery (if floor plan diagrams/images exist)
-    let floorPlansHtml = '';
-    if (floorPlans.length > 0 || embeddedFloorPlanOptions.length > 0) {
-      const renderFloorPlanCard = (plan, index, mediaItem = false) => {
-        const title = plan.floor_plan_name || plan.name || plan.title || 'Floor Plan ' + (index + 1);
-        const imageUrl = safeHttpsUrl(mediaItem ? plan.url : plan.image_url);
-        const metadata = [
-          plan.building_name || null,
-          plan.bedrooms === 0 ? 'Studio' : plan.bedrooms != null ? plan.bedrooms + ' bd' : null,
-          plan.bathrooms != null ? plan.bathrooms + ' ba' : null,
-          plan.square_footage != null ? Number(plan.square_footage).toLocaleString() + ' sqft' : null,
-          plan.starting_rent != null ? 'From $' + Number(plan.starting_rent).toLocaleString() + '/mo' : null,
-          mediaItem && plan.floor_label ? plan.floor_label : null,
-        ].filter(Boolean).map(esc).join(' · ');
-        const image = imageUrl
-          ? '<a class="community-fp-image-link" href="' + esc(imageUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + esc(title) + ' floor plan image">' +
-              '<div class="community-fp-thumb"><img src="' + esc(imageUrl) + '" alt="' + esc(title + ' floor plan') + '" loading="lazy"></div>' +
-            '</a>'
-          : '';
-        return '<article class="community-fp-card ' + (mediaItem ? 'community-fp-media-card' : 'community-fp-data-card') + '">' +
-          image +
-          '<div class="community-fp-info">' +
-            '<h4 class="community-fp-title">' + esc(title) + '</h4>' +
-            (metadata ? '<div class="community-fp-meta">' + metadata + '</div>' : '') +
-          '</div>' +
-        '</article>';
-      };
-
-      floorPlansHtml = '<section class="community-floorplans" aria-label="Floor plan layouts">' +
-        '<div class="community-floorplan-heading">' +
-          '<h3>Floor plans</h3>' +
-          '<p>Layouts show a home design, not an individual unit.</p>' +
-        '</div>' +
-        '<div class="community-floorplan-gallery">' +
-          embeddedFloorPlanOptions.map((plan, index) => renderFloorPlanCard(plan, index)).join('') +
-          floorPlans.map((plan, index) => renderFloorPlanCard(plan, index, true)).join('') +
-        '</div>' +
-      '</section>';
-    }
-
-    const layoutCount = embeddedFloorPlanOptions.length + floorPlans.length;
-    const summaryHtml = '<div class="community-inventory-summary" aria-label="Community inventory summary">' +
-      '<div class="community-summary-item"><strong>' + units.length + '</strong><span>listed units</span></div>' +
-      '<div class="community-summary-item"><strong>' + floors.length + '</strong><span>floors</span></div>' +
-      '<div class="community-summary-item"><strong>' + layoutCount + '</strong><span>layouts</span></div>' +
-    '</div>';
-
-    content.innerHTML = '<div class="community-inv-wrap">' +
-      summaryHtml +
-      '<div id="buildingStackVisualizer"></div>' +
-      ((floorFiltersHtml || bedFiltersHtml) ? ('<div class="community-filters-bar">' + floorFiltersHtml + bedFiltersHtml + '</div>') : '') +
-      '<div class="community-results-count" aria-live="polite">Showing ' + filtered.length + ' of ' + units.length + ' listed units</div>' +
-      unitsListHtml +
-      floorPlansHtml +
-    '</div>';
-
-    renderBuildingStack();
-
-    // Attach filter click handlers
-    content.querySelectorAll('[data-floor]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        selectedFloor = btn.getAttribute('data-floor');
-        selectedStackFloor = selectedFloor;
-        renderInventoryUI();
-      });
-    });
-    content.querySelectorAll('[data-beds]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        selectedBeds = btn.getAttribute('data-beds');
-        renderInventoryUI();
-      });
-    });
-  }
-
-  renderInventoryUI();
-}
-
-
-// Enhanced Geoapify Geocoding & Address Lookup Helper
-async function geocodeAddressGeoapify(addressStr) {
-  const apiKey = window.CONFIG?.GEOAPIFY_API_KEY || 'bea2afb13c904abea5cb2c2693541dcf';
-  if (!apiKey) return null;
-  try {
-    const res = await fetch('https://api.geoapify.com/v1/geocode/search?text=' + encodeURIComponent(addressStr) + '&apiKey=' + apiKey);
-    const json = await res.json();
-    if (json && Array.isArray(json.features) && json.features.length > 0) {
-      const props = json.features[0].properties;
-      return {
-        lat: props.lat,
-        lng: props.lon,
-        formatted: props.formatted,
-        city: props.city,
-        state: props.state_code || props.state,
-        zip: props.postcode
-      };
-    }
-  } catch (err) {
-    console.warn('[geocoder] Geoapify lookup error:', err);
-  }
-  return null;
 }

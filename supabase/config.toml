@@ -1,41 +1,5 @@
 [functions.property-location]
 verify_jwt = false
 
-[functions.zillow-gallery-reference]
-verify_jwt = false
-
 [functions.receive-pipeline-import]
-verify_jwt = false
-
-[functions.extension-diagnostics]
-verify_jwt = false
-
-[functions.receive-application]
-verify_jwt = false
-
-[functions.property-share]
-verify_jwt = false
-
-[functions.property-media]
-verify_jwt = false
-
-[functions.confirm-co-applicant-screening]
-verify_jwt = false
-
-[functions.send-co-applicant-consent]
-verify_jwt = false
-
-[functions.import-from-url]
-verify_jwt = false
-
-[functions.send-inquiry]
-verify_jwt = false
-
-[functions.send-message]
-verify_jwt = false
-
-[functions.imagekit-upload]
-verify_jwt = false
-
-[functions.imagekit-delete]
 verify_jwt = false

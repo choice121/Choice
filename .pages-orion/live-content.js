@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v59.0.0
+// Choice Properties — Live Content Script v31.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -16,12 +16,14 @@
   var EXTENSION_API = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome :
     ((typeof browser !== 'undefined' && browser.runtime) ? browser : null);
 
-  var VERSION  = '59.0.0-live';
-
-  // Prevent multiple executions for the same version while letting newer builds reload correctly.
-  if (window.__CP_LIVE_CONTENT_LOADED__ && window.__CP_LIVE_CONTENT_VERSION__ === VERSION) return;
+  // Prevent multiple executions
+  if (window.__CP_LIVE_CONTENT_LOADED__) return;
   window.__CP_LIVE_CONTENT_LOADED__ = true;
-  window.__CP_LIVE_CONTENT_VERSION__ = VERSION;
+
+  // ── Configuration ──────────────────────────────────────────
+  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
+  var VERSION  = '31.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -116,7 +118,13 @@
         return bgRes.folders;
       }
     }
-    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
+    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+    var res = await fetch(url);
+    if (res.ok) {
+      var data = await res.json();
+      if (data && Array.isArray(data.folders)) return data.folders;
+    }
+    return null;
   }
 
   async function apiCreateFolder(name, description) {
@@ -138,7 +146,20 @@
         return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
       }
     }
-    throw new Error('The extension background service is unavailable. Reload the extension and try again.');
+    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+      body: JSON.stringify({
+        action: 'create_folder',
+        name: rawName,
+        description: rawDesc
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data && data.ok && data.id) {
+      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
+    }
+    throw new Error((data && data.error) || 'Failed to create folder');
   }
 
   // ── Inject Custom Styles ────────────────────────────────────
@@ -152,9 +173,8 @@
         bottom: max(16px, env(safe-area-inset-bottom));
         right: max(12px, env(safe-area-inset-right));
         z-index: 2147483647;
-        width: min(320px, calc(100vw - 18px));
-        max-width: calc(100vw - 18px);
-        max-height: min(58vh, 520px);
+        width: 360px;
+        max-width: calc(100vw - 32px);
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
@@ -163,10 +183,10 @@
         box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: #f8fafc;
-        overflow: auto;
+        overflow: hidden;
         transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
         box-sizing: border-box;
-        touch-action: pan-y;
+        touch-action: none;
       }
       #cp-widget-container.cp-dragging {
         opacity: 0.98;
@@ -240,7 +260,6 @@
         cursor: grab;
         user-select: none;
         -webkit-user-select: none;
-        touch-action: none;
       }
       .cp-header:active,
       #cp-widget-container.cp-dragging .cp-header {
@@ -690,27 +709,22 @@
       }
       @media (max-width: 480px) {
         #cp-widget-container {
-          width: min(276px, calc(100vw - 12px));
-          max-width: calc(100vw - 12px);
-          right: 6px;
-          bottom: max(8px, env(safe-area-inset-bottom));
-          border-radius: 16px;
+          width: calc(100vw - 20px);
+          max-width: calc(100vw - 20px);
+          right: 10px;
           backdrop-filter: none;
           -webkit-backdrop-filter: none;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
           transition: opacity 0.15s ease;
         }
         #cp-widget-container.cp-minimized {
           width: auto;
-          max-width: calc(100vw - 14px);
-          border-radius: 20px;
+          max-width: calc(100vw - 20px);
+          border-radius: 26px;
         }
         #cp-widget-container.cp-mobile-save-compact .cp-mini-trigger {
           gap: 8px;
-          padding: 7px 10px 7px 10px;
-        }
-        .cp-mini-trigger > span {
-          max-width: min(38vw, 150px);
+          padding: 6px 7px 6px 10px;
         }
         .cp-header {
           padding: 8px 10px;
@@ -810,15 +824,6 @@
   // ── Smart Layout Collision Avoidance ────────────────────────
   function updateWidgetPosition() {
     if (!activeWidget || activeWidget._userPositioned) return;
-
-    if (window.innerWidth <= 480) {
-      activeWidget.style.right = '6px';
-      activeWidget.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
-      activeWidget.style.width = 'min(276px, calc(100vw - 12px))';
-      activeWidget.style.maxWidth = 'calc(100vw - 12px)';
-      return;
-    }
-
     var bottomOffset = 24;
 
     // Check Zillow's sticky bottom bars or action panels
@@ -845,10 +850,7 @@
       }
     }
 
-    activeWidget.style.right = '24px';
     activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
-    activeWidget.style.width = 'min(320px, calc(100vw - 18px))';
-    activeWidget.style.maxWidth = 'calc(100vw - 18px)';
   }
 
   function scheduleWidgetPositionUpdate() {
@@ -862,9 +864,6 @@
 
   // ── URL & Page Support Detection ────────────────────────────
   function isDetailPage(url) {
-    if (window.CP_Extractors && typeof window.CP_Extractors.detect === 'function') {
-      if (window.CP_Extractors.detect(url)) return true;
-    }
     return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
            /zillow\.com\/.*_zpid/i.test(url) ||
            /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
@@ -998,52 +997,6 @@
     return urls;
   }
 
-  function normalizeMediaArray(items) {
-    if (!Array.isArray(items)) return [];
-    var normalized = [];
-    var seen = new Set();
-
-    items.forEach(function (item) {
-      if (!item || typeof item !== 'object') return;
-      var rawUrl = typeof item.url === 'string' ? item.url.trim() : (typeof item.href === 'string' ? item.href.trim() : (typeof item.src === 'string' ? item.src.trim() : ''));
-      if (!rawUrl) return;
-
-      var kind = String(item.kind || item.type || '').trim().toLowerCase();
-      if (!kind) {
-        if (/matterport|virtual|tour|3d|view-3d|imx/i.test(rawUrl)) kind = 'virtual_tour';
-        else if (/youtube|vimeo|mp4|webm|mov|video/i.test(rawUrl)) kind = 'video';
-        else if (/floor|plan/i.test((item.title || item.label || ''))) kind = 'floor_plan';
-        else kind = 'photo';
-      }
-
-      if (kind === '3d_tour' || kind === 'tour_3d' || kind === 'tour3d') kind = 'tour_3d';
-      if (kind === 'virtual-tour' || kind === 'virtual_tour') kind = 'virtual_tour';
-      if (kind === 'floorplan' || kind === 'floor_plan') kind = 'floor_plan';
-      if (kind === 'video_walkthrough' || kind === 'walkthrough_video') kind = 'video';
-
-      var key = kind + '::' + rawUrl.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      normalized.push({
-        kind: kind,
-        title: item.title || item.name || (kind === 'video' ? 'Video walkthrough' : kind === 'floor_plan' ? 'Floor plan' : kind === 'tour_3d' ? '3D Virtual Tour' : 'Media'),
-        floor_label: item.floor_label || item.floorLabel || null,
-        provider: item.provider || item.source_provider || null,
-        url: rawUrl,
-        file_id: item.file_id || item.fileId || null,
-        poster_url: item.poster_url || item.posterUrl || null,
-        display_order: Number.isFinite(Number(item.display_order)) ? Number(item.display_order) : normalized.length,
-        is_hero: !!(item.is_hero || item.isHero),
-        width: item.width != null ? Number(item.width) : null,
-        height: item.height != null ? Number(item.height) : null,
-        metadata: item.metadata || {}
-      });
-    });
-
-    return normalized;
-  }
-
   function dedupePhotoUrls(urls) {
     var seen = new Set();
     var unique = [];
@@ -1098,8 +1051,6 @@
     if (extracted && (extracted.monthly_rent || extracted.rent)) {
       var rentNum = extracted.monthly_rent || extracted.rent;
       rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
-    } else if (extracted && extracted.community_starting_rent != null) {
-      rentStr = 'Starting at $' + Number(extracted.community_starting_rent).toLocaleString() + '/mo';
     }
 
     var bedsBaths = 'Listing details';
@@ -1174,12 +1125,6 @@
               <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
               <span class="cp-chip cp-chip-photos" id="cp-photos-chip">📸 ${escapeHtml(photoCount)} photos</span>
             </div>
-            <div class="cp-diagnostics-control">
-              <button type="button" class="cp-diagnostic-btn" id="cp-btn-diagnostics">Run &amp; Send Diagnostics</button>
-              <span class="cp-diagnostic-status" id="cp-diagnostic-status" role="status" aria-live="polite">
-                Sends listing facts and page structure only. No cookies, session data, or full page text.
-              </span>
-            </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>
             </button>
@@ -1187,6 +1132,8 @@
               <div class="cp-inspector-grid">
                 <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
                 <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
+                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
               </div>
             </div>
           </div>
@@ -1340,8 +1287,6 @@
     var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
     var inspectorTray = container.querySelector('#cp-inspector-tray');
     var chevron = container.querySelector('#cp-chevron');
-    var diagnosticsBtn = container.querySelector('#cp-btn-diagnostics');
-    var diagnosticsStatus = container.querySelector('#cp-diagnostic-status');
     var saveBtn = container.querySelector('#cp-btn-save');
     var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
 
@@ -1559,44 +1504,6 @@
       }
     });
 
-    diagnosticsBtn.addEventListener('click', async function () {
-      diagnosticsBtn.disabled = true;
-      diagnosticsStatus.textContent = 'Analyzing this listing…';
-      diagnosticsStatus.classList.remove('cp-diagnostic-error', 'cp-diagnostic-success');
-      try {
-        if (!window.CP_Extractors || typeof window.CP_Extractors.diagnose !== 'function') {
-          throw new Error('Diagnostics are unavailable in this extension build');
-        }
-        if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
-          throw new Error('Extension background service is unavailable');
-        }
-        var report = window.CP_Extractors.diagnose(location.href, document);
-        var response = await new Promise(function (resolve, reject) {
-          var settled = false;
-          var responseTimer = setTimeout(function () {
-            settled = true;
-            reject(new Error('Diagnostics request timed out'));
-          }, 20_000);
-          EXTENSION_API.runtime.sendMessage({ type: 'SEND_DIAGNOSTIC', diagnostic: report }, function (result) {
-            if (settled) return;
-            settled = true;
-            clearTimeout(responseTimer);
-            var runtimeError = EXTENSION_API.runtime.lastError;
-            if (runtimeError) reject(new Error(runtimeError.message));
-            else resolve(result);
-          });
-        });
-        if (!response || !response.ok) throw new Error(response && response.error || 'Report could not be sent');
-        diagnosticsStatus.textContent = 'Report sent to the admin diagnostics inbox · ' + response.report_id;
-        diagnosticsStatus.classList.add('cp-diagnostic-success');
-      } catch (error) {
-        diagnosticsStatus.textContent = 'Could not send report: ' + String(error.message || error).slice(0, 180);
-        diagnosticsStatus.classList.add('cp-diagnostic-error');
-      } finally {
-        diagnosticsBtn.disabled = false;
-      }
-    });
-
     saveBtn.addEventListener('click', handleSave);
     if (miniSaveBtn) {
       miniSaveBtn.addEventListener('click', function (event) {
@@ -1733,28 +1640,9 @@
         });
       }
 
-      var rentVal = extracted.monthly_rent != null
-        ? extracted.monthly_rent
-        : (extracted.rent != null ? extracted.rent : null);
+      var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
-      var mediaItems = normalizeMediaArray(extracted.media);
-      if (!mediaItems.length && extracted.virtual_tour_url) {
-        mediaItems = [{
-          kind: 'virtual_tour',
-          title: '3D Virtual Tour',
-          floor_label: null,
-          provider: null,
-          url: extracted.virtual_tour_url,
-          file_id: null,
-          poster_url: null,
-          display_order: 0,
-          is_hero: false,
-          width: null,
-          height: null,
-          metadata: {}
-        }];
-      }
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1778,17 +1666,11 @@
         floors: extracted.floors,
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
-        building_name: extracted.building_name,
-        is_multi_unit: extracted.is_multi_unit,
-        price_range: extracted.price_range,
-        rent_basis: extracted.rent_basis,
-        community_starting_rent: extracted.community_starting_rent,
-        unit_options: Array.isArray(extracted.unit_options) ? extracted.unit_options : [],
-        property_type: extracted.property_type || null,
+        property_type: extracted.property_type || 'APARTMENT',
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
         available_date: null,
-        pets_allowed: null,
+        pets_allowed: true, // Choice Properties standard
         application_fee: 50, // Choice Properties standard
         security_deposit: rentVal,
         last_months_rent: extracted.last_months_rent,
@@ -1809,14 +1691,13 @@
         county: extracted.county,
         location_context: extracted.location_context,
         virtual_tour_url: extracted.virtual_tour_url,
-        media: mediaItems,
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
         original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v59.0.0-live',
+        _import: 'browser-extension-v31.0.0-live',
       };
 
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
@@ -1891,25 +1772,6 @@
     }
   }
 
-  function describeSaveError(rawError) {
-    var message = rawError && typeof rawError === 'string' ? rawError : (rawError && rawError.message ? rawError.message : 'Save failed');
-    var text = String(message).trim();
-    if (!text) return 'Save failed';
-    if (/401|administrator sign-in|sign-in expired|connect your choice admin/i.test(text)) {
-      return 'Connect your Choice admin account in the extension popup, then retry.';
-    }
-    if (/timed out|timeout|background save timed out/i.test(text)) {
-      return 'Save timed out. Please retry.';
-    }
-    if (/network|fetch|connection|failed to fetch|receiving end|message port/i.test(text)) {
-      return 'Network connection error. Please retry.';
-    }
-    if (/too large|payload is too large/i.test(text)) {
-      return 'Listing payload too large. Try fewer photos.';
-    }
-    return text.length > 60 ? text.slice(0, 60) + '…' : text;
-  }
-
   async function submitPayload(payload) {
     var canMessageBackground = EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage;
     var bridgeError = null;
@@ -1958,12 +1820,30 @@
       }
     }
 
-    return {
-      ok: false,
-      error: bridgeError
-        ? bridgeError + '; reload the extension background service before retrying'
-        : 'The extension background service is unavailable. Reload the extension and try again.',
-    };
+    try {
+      var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+        body: JSON.stringify(payload),
+      });
+      var body = await saveRes.json().catch(function () { return null; });
+      if (!saveRes.ok) {
+        return {
+          ok: false,
+          error: body && body.error ? body.error : 'Server rejected import (HTTP ' + saveRes.status + ')'
+        };
+      }
+      if (!body || typeof body !== 'object') {
+        return { ok: false, error: 'Import service returned an invalid response' };
+      }
+      return body;
+    } catch (err) {
+      var directError = err && err.message ? err.message : 'Network connection error';
+      return {
+        ok: false,
+        error: bridgeError ? bridgeError + '; direct retry failed: ' + directError : directError
+      };
+    }
   }
 
   function setError(msg) {
@@ -1974,14 +1854,13 @@
       activeWidget.classList.remove('cp-minimized');
       isMinimized = false;
     }
-    var friendly = describeSaveError(msg);
-    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(friendly) + '</span>';
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
     saveBtn.style.background = '#dc2626';
     saveBtn.disabled = false;
     if (miniSaveBtn) {
       miniSaveBtn.disabled = false;
       miniSaveBtn.textContent = 'Retry';
-      miniSaveBtn.title = friendly;
+      miniSaveBtn.title = msg;
     }
     setTimeout(function () {
       if (saveBtn) {

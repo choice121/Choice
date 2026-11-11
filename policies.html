@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794379704019"></script>
-  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <script src="/js/cp-error-reporter.js?v=1792706594436"></script>
+  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1794379704019">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1794379704019">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792706594436">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792706594436">
   <style>
     .policy-toc{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:20px 24px;margin-bottom:32px}
     .policy-toc h3{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:#475569}
@@ -69,9 +69,9 @@
     <a href="/listings/" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings/"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
     <a href="/how-to-apply.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
     <a href="/faq.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
-    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>
+    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>    <a href="/landlord/register.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
     <div class="nav-drawer-divider"></div>
-    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-it-works.html"><i class="fas fa-info-circle"></i> How Choice Works</a>
+    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
     <a href="/about.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
     <a href="#" class="nav-drawer-link mv2-nav-drawer-link nav-drawer-theme-toggle" data-theme-toggle role="button" aria-pressed="false">
         <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
@@ -81,7 +81,7 @@
   
   </div>
   <div class="nav-drawer-cta">
-    <a href="/listings.html" class="btn btn-primary btn-full" id="drawerAuthLink">Browse Rentals</a>
+    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
   </div>
   <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="tel:7077063137">707-706-3137 (Text Only)</a></div>
 </nav>
@@ -109,6 +109,7 @@
       <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
         <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
       </a>
+      <a href="/landlord/register.html" class="nav-link mv2-nav-link nav-link--landlord mv2-nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
     </div>
       <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
           <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"></i>
@@ -250,14 +251,12 @@
 
         <div class="info-section" id="s7">
           <h2>7. Application Fee &amp; Credit Policy</h2>
-          <p>Application fees are required for processing applications ($50 per adult applicant or guarantor screened), are disclosed before collection, and are collected after submission through coordinated payment. Application fees are non-refundable once payment is confirmed and are required before screening begins.</p>
-          <p><strong>Move-In Credit &amp; Reapplication Protection:</strong></p>
+          <p>Application fees are required for processing applications, are disclosed before collection, and are collected after submission through coordinated payment. Application fees are non-refundable once payment is confirmed and are required before review begins.</p>
+          <p><strong>Reapplication Protection:</strong></p>
           <ul>
-            <li>Application credits are valid for <strong>30 days</strong> from fee payment confirmation</li>
-            <li><strong>Applied Towards Move-In Costs:</strong> Upon lease execution, 100% of the application fees paid are credited directly toward initial move-in costs (first month's rent or security deposit)</li>
-            <li><strong>Total Household Coverage:</strong> The credit covers the total applicants and guarantors who applied on that household application</li>
-            <li>If an application is not approved for a particular home, the 30-day credit may be applied toward reapplying for another available Choice Properties listing without duplicate fees</li>
-            <li>Credits are non-transferable, have no cash redemption value, and cannot be exchanged for an unearned refund</li>
+            <li>If denied after paying the application fee, applicants automatically receive application credits that can be applied toward the fee on a future application</li>
+            <li>Application credits remain valid for <strong>45 days</strong> from the date of issuance and may be used toward the fee for any available listing during that period</li>
+            <li>Credits are non-transferable, have no cash value, and cannot be exchanged for a refund</li>
           </ul>
           <p>Full details are published in the <a href="/application-credit-policy.html">Application Credit Policy</a>.</p>
         </div>
@@ -404,10 +403,10 @@
           <a href="/tenant/portal.html" class="footer-link mv2-footer-link" target="_blank" rel="noopener noreferrer">Track Application</a>
         </div>
         <div>
-          <div class="footer-col-title mv2-footer-col-title">About Choice</div>
+          <div class="footer-col-title mv2-footer-col-title">Landlords</div>
+          <a href="/landlord/register.html" class="footer-link mv2-footer-link">List a Property</a>
+          <a href="/landlord/login.html" class="footer-link mv2-footer-link">Landlord Login</a>
           <a href="/how-it-works.html" class="footer-link mv2-footer-link">How It Works</a>
-          <a href="/about.html" class="footer-link mv2-footer-link">About Us</a>
-          <a href="tel:7077063137" class="footer-link mv2-footer-link" data-cfg-phone>Contact Us</a>
         </div>
         <div>
           <div class="footer-col-title mv2-footer-col-title">Company</div>
@@ -440,9 +439,8 @@
   </div>
 
 <script defer src="/config.js"></script>
-<script defer src="/js/supabase.min.js?v=1794379704019"></script>
-<script type="module" src="/js/cp-api.js?v=1794379704019"></script>
-<script defer src="/js/components.js?v=1794379704019"></script>
-<script defer src="/js/policy-toc.js?v=1794379704019"></script>
+<script type="module" src="/js/cp-api.js?v=1792706594436"></script>
+<script defer src="/js/components.js?v=1792706594436"></script>
+<script defer src="/js/policy-toc.js?v=1792706594436"></script>
 </body>
 </html>

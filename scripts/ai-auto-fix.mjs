@@ -68,7 +68,8 @@ async function sql(query) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query }),
-    });
+    },
+  );
   if (!r.ok) {
     throw new Error(`SQL HTTP ${r.status}: ${(await r.text()).slice(0, 400)}`);
   }
@@ -219,7 +220,8 @@ async function callModel(messages) {
 async function listRepoFiles() {
   const out = execSync(
     `git ls-files | grep -vE "^(node_modules/|\\.git/|attached_assets/|backups/)"`,
-    { encoding: 'utf8' });
+    { encoding: 'utf8' },
+  );
   return out.trim().split('\n').filter(Boolean);
 }
 

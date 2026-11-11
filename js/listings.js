@@ -25,15 +25,13 @@ document.addEventListener('error', function(e) {
 // ── State ────────────────────────────────────────────────────────────────
 let activeType     = 'all';
 let activeBeds     = '';
-let activeMinBeds  = '';
-let activeCity     = '';
-let activeState    = '';
 let activeMaxRent  = '';
 let activeMinRent  = '';
 let activeSearch   = '';
 let activeMinBaths = '';
 let activeLaundry  = '';
 let activeHeating  = '';
+let activePetType  = '';
 let sortBy         = 'newest';
 let currentPage    = 1;
 let totalPages     = 1;
@@ -49,7 +47,6 @@ let savedIds       = loadSavedIds();
 let pageProperties = [];
 let activeTargetIds = [];
 let activeShareToken = '';
-let browseCityView = false;
 const PER_PAGE     = 24;
 
 // ── Admin mode state ───────────────────────────────────────────────────────
@@ -78,28 +75,6 @@ async function waitForCP(timeoutMs = 8000) {
   }
 }
 
-async function renderCityDirectory() {
-    const grid = document.getElementById('cityDirectoryGrid');
-    const result = await CP.Properties.getLocationIndex();
-    if (!result.ok) {
-      grid.innerHTML = '<p role="alert">Markets could not be loaded. Please try again.</p>';
-      return;
-    }
-    const locations = result.data || [];
-    if (!locations.length) {
-      grid.innerHTML = '<p>No active markets are available right now.</p>';
-      return;
-    }
-    grid.innerHTML = locations.map(location => {
-      const params = new URLSearchParams({ city: location.city, state: location.state });
-      const countLabel = `${location.count} ${location.count === 1 ? 'rental' : 'rentals'}`;
-      return `<a class="city-directory-link" href="/listings.html?${params}">
-        <span>${esc(location.city)}, ${esc(location.state)}</span>
-        <span class="city-directory-count">${countLabel}</span>
-      </a>`;
-    }).join('');
-}
-
 function fmtRent(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? `$${n.toLocaleString()}` : 'Rent TBD';
@@ -109,23 +84,10 @@ function fmtRent(value) {
 function readURL() {
   const p = new URLSearchParams(window.location.search);
   const targetIdsRaw = p.get('p') || p.get('ids') || '';
-  const rawHash = window.location.hash ? window.location.hash.replace(/^[#/?]+/, '') : '';
-  const hashParams = new URLSearchParams(rawHash);
-  const rawShare = p.get('share') || hashParams.get('share') || hashParams.get('token') || (rawHash.startsWith('share=') ? rawHash.slice(6) : '') || '';
-  activeShareToken = rawShare ? String(rawShare).trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim() : '';
-  if (activeShareToken) {
-    try { sessionStorage.setItem('cp_active_share_token', activeShareToken); } catch (_) {}
-  } else {
-    try { activeShareToken = (sessionStorage.getItem('cp_active_share_token') || '').trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim(); } catch (_) {}
-  }
-  window.__CP_ACTIVE_SHARE_TOKEN__ = activeShareToken;
+  activeShareToken = p.get('share') || new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
   activeTargetIds = !activeShareToken && targetIdsRaw ? targetIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   activeSearch   = p.get('q')        || '';
   activeBeds     = p.get('beds')     || '';
-  activeMinBeds  = p.get('minbeds')  || '';
-  activeCity     = p.get('city')     || '';
-  activeState    = p.get('state')    || '';
-  browseCityView = p.get('view') === 'cities';
   activeMaxRent  = p.get('maxrent')  || '';
   activeMinRent  = p.get('minrent')  || '';
   activeMinBaths = p.get('minbaths') || '';
@@ -141,10 +103,6 @@ function pushURL(replace = false) {
   if (!activeShareToken && activeTargetIds && activeTargetIds.length) p.set('p', activeTargetIds.join(','));
   if (activeSearch)   p.set('q',        activeSearch);
   if (activeBeds)     p.set('beds',     activeBeds);
-  if (activeMinBeds)  p.set('minbeds',  activeMinBeds);
-  if (activeCity)     p.set('city',     activeCity);
-  if (activeState)    p.set('state',    activeState);
-  if (browseCityView) p.set('view',     'cities');
   if (activeMaxRent)  p.set('maxrent',  activeMaxRent);
   if (activeMinRent)  p.set('minrent',  activeMinRent);
   if (activeMinBaths) p.set('minbaths', activeMinBaths);
@@ -171,11 +129,13 @@ function syncControls() {
   document.querySelectorAll('.filter-pill[data-filter]').forEach(pill => {
     pill.classList.toggle('active', pill.dataset.filter === activeType);
   });
+  const at    = document.getElementById('advTypeFilter');
   const ab    = document.getElementById('advMinBeds');
   const abath = document.getElementById('advMinBaths');
   const amin  = document.getElementById('advMinRent');
   const amax  = document.getElementById('advMaxRent');
-  if (ab)    ab.value    = activeMinBeds || (activeBeds === '0' ? '0' : '');
+  if (at)    at.value    = ['apartment','house','condo','townhouse'].includes(activeType) ? activeType : '';
+  if (ab)    ab.value    = activeBeds;
   if (abath) abath.value = activeMinBaths;
   if (amin)  amin.value  = activeMinRent;
   if (amax)  amax.value  = activeMaxRent;
@@ -848,14 +808,6 @@ async function adminCSVExport() {
     setupScrollTop();
     setupGridDelegation(); // P1-A: wire delegated listeners once at boot
     readURL();
-    if (browseCityView) {
-      document.querySelector('.listings-search-row')?.setAttribute('hidden', '');
-      document.querySelector('.filter-bar')?.setAttribute('hidden', '');
-      document.getElementById('listings')?.setAttribute('hidden', '');
-      document.getElementById('cityDirectory').hidden = false;
-      await renderCityDirectory();
-      return;
-    }
     syncControls();
     setupFilters();
     // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
@@ -905,8 +857,6 @@ async function fetchAndRender() {
           q:       activeSearch,
           status:  adminStatusFilter,
           landlord: adminLandlordId,
-          city:    activeCity,
-          state:   activeState,
           beds:    activeBeds,
           min_rent: activeMinRent,
           max_rent: activeMaxRent,
@@ -921,13 +871,11 @@ async function fetchAndRender() {
           type:         activeType,
           beds:         activeBeds,
           min_baths:    activeMinBaths,
-          min_beds:     activeMinBeds,
-          city:         activeCity,
-          state:        activeState,
           min_rent:     activeMinRent,
           max_rent:     activeMaxRent,
           laundry_type: activeLaundry,
           heating_type: activeHeating,
+          pet_type:     activePetType,
           sort:         sortBy,
           page:      currentPage,
           per_page:  PER_PAGE,
@@ -936,17 +884,11 @@ async function fetchAndRender() {
 
     if (!result.ok) {
       console.error('Failed to load listings:', result.error);
-      if (result.isShareError) {
-        try { sessionStorage.removeItem('cp_active_share_token'); } catch (_) {}
-      }
       const subheadingEl = document.getElementById('listingsSubheading');
       if (subheadingEl) {
         subheadingEl.innerHTML = '<span style="color:var(--color-error);font-size:0.9rem;"><i class="fas fa-exclamation-circle"></i> Unable to load listings. Please try again.</span>';
       }
-      const userMessage = result.isShareError
-        ? (result.error && !result.error.includes('non-2xx') ? result.error : 'This client share link could not be found or has expired.')
-        : result.error;
-      renderError(userMessage);
+      renderError(result.error);
       return;
     }
 
@@ -1024,7 +966,7 @@ function renderProperties(props) {
   const heading   = document.getElementById('listingsHeading');
   const hasTargetIds = activeTargetIds && activeTargetIds.length > 0;
   const hasShare = !!activeShareToken;
-  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeCity || activeState || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
+  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
 
   if (heading) {
     if (hasShare) {
@@ -1044,21 +986,6 @@ function renderProperties(props) {
         <p style="color:var(--color-text-secondary)">Try adjusting your search or <button onclick="window.clearAllFilters()" style="background:none;border:none;color:var(--color-brand);cursor:pointer;font-size:inherit;padding:0;text-decoration:underline">clearing all filters</button></p>
       </div>`;
     return;
-  }
-
-  // Render Top Featured Ribbon if on page 1 and without deep filters
-  const ribbon = document.getElementById('featuredRibbonContainer');
-  const ribbonTrack = document.getElementById('featuredRibbonTrack');
-  if (ribbon && ribbonTrack) {
-    const featuredList = (!hasFilters && currentPage === 1) ? props.filter(p => p.featured) : [];
-    if (featuredList.length > 0) {
-      ribbonTrack.innerHTML = featuredList.map(p => buildCard(p)).join('');
-      ribbon.style.display = 'block';
-      lazyInitCarousels(ribbonTrack);
-    } else {
-      ribbon.style.display = 'none';
-      ribbonTrack.innerHTML = '';
-    }
   }
 
   grid.innerHTML = props.map(p => buildCard(p)).join('');
@@ -1343,7 +1270,7 @@ function initMap(props, isBoundsUpdate = false) {
             ${p.bathrooms ? `<span>${p.bathrooms} ba</span>` : ''}
             ${p.virtual_tour_url ? `<span style="background:#0284c7;color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700"><i class="fas fa-cube"></i> 3D</span>` : ''}
           </div>
-          <span class="map-popup-apply">View Property →</span>
+          <a href="${popupHref}" class="map-popup-apply">View Property →</a>
         </div>
       </a>`, { maxWidth: 260 });
     mapMarkers.push(marker);
@@ -1400,11 +1327,7 @@ function setupFilters() {
   document.getElementById('searchBtn').addEventListener('click', doSearch);
   document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   document.getElementById('searchInput').addEventListener('input', debouncedSearch);
-  document.getElementById('bedroomsFilter').addEventListener('change', e => {
-    activeBeds = e.target.value;
-    activeMinBeds = '';
-    refreshResults();
-  });
+  document.getElementById('bedroomsFilter').addEventListener('change', e => { activeBeds = e.target.value; refreshResults(); });
   document.getElementById('maxRentFilter').addEventListener('change', e => { activeMaxRent = e.target.value; refreshResults(); });
   document.getElementById('sortSelect').addEventListener('change', e => { sortBy = e.target.value; refreshResults(); });
 
@@ -1454,14 +1377,9 @@ function setupFilters() {
     activeMinBaths = document.getElementById('advMinBaths').value;
     activeLaundry  = document.getElementById('advLaundryFilter').value;
     activeHeating  = document.getElementById('advHeatingFilter').value;
+    activePetType  = document.getElementById('advPetTypeFilter').value;
     const advBeds = document.getElementById('advMinBeds').value;
-    if (advBeds === '0') {
-      activeBeds = '0';
-      activeMinBeds = '';
-    } else {
-      activeBeds = '';
-      activeMinBeds = advBeds;
-    }
+    if (advBeds !== '') activeBeds = advBeds;
     document.getElementById('moreFiltersDropdown').classList.remove('open');
     sessionStorage.setItem('filters_dropdown_open', 'false');
     refreshResults();
@@ -1469,9 +1387,8 @@ function setupFilters() {
   });
 
   document.getElementById('clearAdvFilters').addEventListener('click', () => {
-    ['advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
-      const control = document.getElementById(id);
-      if (control) control.value = '';
+    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
+      document.getElementById(id).value = '';
     });
     window.clearAllFilters();
     document.getElementById('moreFiltersDropdown').classList.remove('open');
@@ -1480,10 +1397,9 @@ function setupFilters() {
 }
 
 window.clearAllFilters = function() {
-  activeType = 'all'; activeSearch = ''; activeBeds = ''; activeMinBeds = '';
-  activeCity = ''; activeState = '';
+  activeType = 'all'; activeSearch = ''; activeBeds = '';
   activeMaxRent = ''; activeMinRent = ''; activeMinBaths = '';
-  activeLaundry = ''; activeHeating = '';
+  activeLaundry = ''; activeHeating = ''; activePetType = '';
   sortBy = 'newest'; currentPage = 1;
   syncControls();
   pushURL(true);
@@ -1499,7 +1415,7 @@ function updateFilterBadge() {
     const badge = document.getElementById('filterActiveBadge');
     const clearAllPill = document.getElementById('clearAllPill');
     const mobileBadge = document.getElementById('mobileFiltersBadge');
-    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMinBeds, !!activeCity, !!activeState, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating].filter(Boolean).length;
+    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
     if (badge) { badge.textContent = count || ''; badge.style.display = count > 0 ? 'inline-flex' : 'none'; }
     if (clearAllPill) clearAllPill.style.display = count > 0 ? '' : 'none';
     if (mobileBadge) { mobileBadge.textContent = count || ''; mobileBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
@@ -1523,6 +1439,7 @@ function renderError(errorMsg = 'Failed to load listings') {
       </button>
     </div>`;
 }
+
 
 // showToast() is provided as a window global by /js/cp-ui.js (issue #16 dedup).
 

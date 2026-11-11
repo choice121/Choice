@@ -11,9 +11,13 @@
 /apply/success.html         /apply/?path=dashboard                       302
 /apply/lease.html           /apply/                                      302
 /apply/*                    /apply/index.html                            200
-# Decommissioned landlord routes — return 404
-/landlord/*                 /404.html                                    404
-/landlord                   /404.html                                    404
+# Legacy landlord routes
+/landlord/properties.html   /landlord/dashboard.html                      302
+/landlord/properties        /landlord/dashboard.html                      302
+/landlord/listings.html     /landlord/dashboard.html                      302
+/landlord/listings          /landlord/dashboard.html                      302
+/landlord/messages.html     /landlord/inquiries.html                     302
+/landlord/messages          /landlord/inquiries.html                     302
 # --- Block source / config / docs from being served on the CDN -----------
 # (Cloudflare Pages serves static files before _redirects is consulted
 #  only for exact file matches; wildcard rules below override static serving

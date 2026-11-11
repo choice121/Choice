@@ -1,17 +1,15 @@
 export async function onRequestGet(context) {
   return new Response(JSON.stringify({
     ok: true,
-    version: 'v2.6.0',
+    version: 'v2.5.0',
     buildTimestamp: new Date().toISOString(),
     environment: 'production',
     engine: 'Choice Properties AI Inquiry Assistant (Cloudflare Pages Worker)',
     rules: {
       applicationFee: '$50',
       depositInText: 'Stripped (1x monthly rent in DB)',
-      zeroRelocation: true,
       voucherFriendly: true,
-      autoSyncShortcuts: true,
-      modeBUserInitiatedEnrichment: true
+      autoSyncShortcuts: true
     },
     supabaseConnected: true
   }, null, 2), {

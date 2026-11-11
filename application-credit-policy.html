@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794379704019"></script>
-  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <script src="/js/cp-error-reporter.js?v=1792706594436"></script>
+  <script nonce="__CSP_NONCE__">(function(){try{var t=localStorage.getItem('cp-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/cp-design.css?v=1794379704019">
-  <link rel="stylesheet" href="/css/cp-marketing.css?v=1794379704019">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1792706594436">
+  <link rel="stylesheet" href="/css/cp-marketing.css?v=1792706594436">
 </head>
 <body data-portal="public" data-page="application-credit-policy">
 
@@ -55,9 +55,9 @@
     <a href="/listings/" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/listings/"><i class="fas fa-map-marker-alt"></i> Browse by City</a>
     <a href="/how-to-apply.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-to-apply.html"><i class="fas fa-question-circle"></i> How to Apply</a>
     <a href="/faq.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/faq.html"><i class="fas fa-life-ring"></i> FAQ</a>
-    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>
+    <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-drawer-link"><i class="fas fa-file-alt"></i> Track Application</a>    <a href="/landlord/register.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/landlord/register.html"><i class="fas fa-user-tie"></i> Landlord Portal</a>
     <div class="nav-drawer-divider"></div>
-    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/how-it-works.html"><i class="fas fa-info-circle"></i> How Choice Works</a>
+    <a href="/how-it-works.html" class="nav-drawer-link mv2-nav-drawer-link" id="drawerListPropertyLink" data-nav-path="/how-it-works.html"><i class="fas fa-building"></i> For Landlords</a>
     <a href="/about.html" class="nav-drawer-link mv2-nav-drawer-link" data-nav-path="/about.html"><i class="fas fa-info-circle"></i> About Us</a>
     <a href="#" class="nav-drawer-link mv2-nav-drawer-link nav-drawer-theme-toggle" data-theme-toggle role="button" aria-pressed="false">
         <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon"></i>
@@ -67,7 +67,7 @@
   
   </div>
   <div class="nav-drawer-cta">
-    <a href="/listings.html" class="btn btn-primary btn-full" id="drawerAuthLink">Browse Rentals</a>
+    <a href="/landlord/login.html" class="btn btn-primary btn-full" id="drawerAuthLink">Landlord Login</a>
   </div>
   <div class="nav-drawer-footer"><a id="drawerFooterEmail" href="tel:7077063137">707-706-3137 (Text Only)</a></div>
 </nav>
@@ -95,6 +95,7 @@
       <a href="/tenant/portal.html" target="_blank" rel="noopener noreferrer" class="nav-link nav-link--track">
         <i class="fas fa-file-alt" style="font-size:11px"></i> Track Application
       </a>
+      <a href="/landlord/register.html" class="nav-link mv2-nav-link nav-link--landlord mv2-nav-link--landlord" data-nav-path="/landlord/register.html">Landlord Portal</a>
     </div>
       <button class="theme-toggle mv2-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
           <i class="fas fa-moon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"></i>
@@ -132,37 +133,37 @@
   
         <div class="info-section">
           <h2>What Are Application Credits?</h2>
-          <p>Application credits provide complete financial clarity and protection for Choice Properties prospective tenants. When you submit and pay the application fee for a home, your application credit is valid for <strong>30 days</strong> and is applied directly toward your <strong>move-in costs</strong> upon lease signing. Furthermore, the application credit covers the <strong>total applicants who applied</strong> on the household application (primary applicant plus all screened co-applicants and guarantors).</p>
-          <p>If your application is not approved for a specific property, your paid application fee converts into a 30-day household credit that can be applied toward reapplying for any other available Choice Properties home, or credited towards move-in costs when you lease.</p>
+          <p>Application credits are a formal commitment by Choice Properties. When your application is <strong>not approved</strong> after you have paid the application fee and completed all required steps, you automatically receive credits that can be applied toward the application fee on a future application — so a single denial doesn't prevent you from quickly applying for another available property.</p>
         </div>
 
         <div class="info-section">
-          <h2>How Credits Are Applied Towards Move-In Costs</h2>
+          <h2>How Credits Are Issued</h2>
           <ul>
-            <li><strong>Full Household Coverage:</strong> The application credit covers the total applicants that applied. For instance, if a household with 3 applicants paid $150 ($50 × 3), the full $150 is credited towards your move-in balance.</li>
-            <li><strong>Direct Rent / Deposit Deduction:</strong> When you execute a lease for a Choice Properties listing, the entire amount paid in application fees is credited directly on your move-in accounting statement toward your first month's rent or security deposit.</li>
-            <li><strong>30-Day Reapplication Courtesy:</strong> If an application is not approved for a particular property, your credit remains active for 30 days, allowing your household to apply for another available home without paying duplicate screening fees.</li>
+            <li>Credits are issued automatically when an application is marked as Not Selected (denied)</li>
+            <li>You receive <strong>2 credits</strong> each time a paid application is denied</li>
+            <li>Credits are tied to the email address used on the original application</li>
+            <li>You may have a maximum of <strong>2 active credits</strong> at any time — if you already have 2 active credits when a new denial occurs, no additional credits are issued until your current credits are used or expire</li>
           </ul>
         </div>
 
         <div class="info-section">
           <h2>Credit Validity</h2>
           <ul>
-            <li>Application credits remain valid for <strong>30 days</strong> from the date of fee confirmation</li>
-            <li>Covers the total applicants and guarantors included on the household application</li>
-            <li>Credits are credited directly against move-in costs upon lease execution</li>
-            <li>Credits have no cash redemption value and cannot be redeemed for an unearned cash refund</li>
+            <li>Credits expire <strong>45 days</strong> from the date of issuance</li>
+            <li>Expired credits cannot be reinstated or extended</li>
+            <li>Credits have no cash value and cannot be redeemed for a refund</li>
           </ul>
         </div>
 
         <div class="info-section">
           <h2>How to Use Credits</h2>
-          <p>When your lease is prepared, our accounting system automatically credits 100% of your paid application fees against your move-in costs:</p>
+          <p>When you start a new application, our system automatically checks whether valid credits are associated with your email address. If valid credits exist:</p>
           <ul>
-            <li>The total application fees paid for all household members are listed as a credit on your lease financial summary</li>
-            <li>Your total move-in balance is reduced dollar-for-dollar by the application credit amount</li>
-            <li>If reapplying for a different property within 30 days of a non-approval, management verifies your eligibility and applies your household credit</li>
+            <li>The application fee is <strong>fully waived</strong> for your next application, regardless of the fee amount set for that listing</li>
+            <li>Your credit balance is reduced by 1 per application submitted</li>
+            <li>You will see a notice: "You have [X] application credit(s) — your application fee is covered"</li>
           </ul>
+          <p>If no valid credits exist, the standard fee is required before submission.</p>
         </div>
 
         <div class="info-section">
@@ -227,10 +228,10 @@
           <a href="/tenant/portal.html" class="footer-link mv2-footer-link" target="_blank" rel="noopener noreferrer">Track Application</a>
         </div>
         <div>
-          <div class="footer-col-title mv2-footer-col-title">About Choice</div>
+          <div class="footer-col-title mv2-footer-col-title">Landlords</div>
+          <a href="/landlord/register.html" class="footer-link mv2-footer-link">List a Property</a>
+          <a href="/landlord/login.html" class="footer-link mv2-footer-link">Landlord Login</a>
           <a href="/how-it-works.html" class="footer-link mv2-footer-link">How It Works</a>
-          <a href="/about.html" class="footer-link mv2-footer-link">About Us</a>
-          <a href="tel:7077063137" class="footer-link mv2-footer-link" data-cfg-phone>Contact Us</a>
         </div>
         <div>
           <div class="footer-col-title mv2-footer-col-title">Company</div>
@@ -263,9 +264,8 @@
   </div>
 
 <script defer src="/config.js"></script>
-<script defer src="/js/supabase.min.js?v=1794379704019"></script>
-<script type="module" src="/js/cp-api.js?v=1794379704019"></script>
-<script defer src="/js/components.js?v=1794379704019"></script>
-<script defer src="/js/policy-toc.js?v=1794379704019"></script>
+<script type="module" src="/js/cp-api.js?v=1792706594436"></script>
+<script defer src="/js/components.js?v=1792706594436"></script>
+<script defer src="/js/policy-toc.js?v=1792706594436"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Import to Choice Properties",
-  "version": "59.0.0",
+  "version": "31.0.0",
   "description": "Save listings to Choice Properties pipeline with instant live updates.",
   "permissions": [
     "storage",
@@ -28,6 +28,12 @@
     "https://*.rdcpix.com/*",
     "https://cdn-redfin.com/*",
     "https://*.cdn-redfin.com/*",
+    "https://cloudinary.com/*",
+    "https://*.cloudinary.com/*",
+    "https://fastly.net/*",
+    "https://*.fastly.net/*",
+    "https://amazonaws.com/*",
+    "https://*.amazonaws.com/*",
     "https://appfolio.com/*",
     "https://*.appfolio.com/*",
     "https://www.invitationhomes.com/*",
@@ -82,7 +88,9 @@
       "js": [
         "config.js",
         "shared-extractors.js",
-        "live-content.js"
+        "live-shared-extractors.js",
+        "live-content.js",
+        "content.js"
       ],
       "run_at": "document_idle"
     }

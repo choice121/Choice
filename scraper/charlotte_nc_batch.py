@@ -75,13 +75,15 @@ RENT_MIN       = 1400
 RENT_MAX       = 1700
 RENT_CAP       = 1700
 
+
 # ---------------------------------------------------------------------------
 # Pricing function
 # ---------------------------------------------------------------------------
 
 def compute_charlotte_rent(
     original_rent,
-    seen_rents: Optional[Set[int]] = None):
+    seen_rents: Optional[Set[int]] = None,
+):
     """
     No pricing tiers — publish at original advertised rent.
     Validates rent is within [$1,400, $1,700].
@@ -104,6 +106,7 @@ def compute_charlotte_rent(
                 break
 
     return int(published), rent
+
 
 # ---------------------------------------------------------------------------
 # Main
@@ -134,13 +137,15 @@ def main():
         past_days=args.past_days,
         limit=args.limit,
         min_score=args.min_score,
-        pricing_fn=compute_charlotte_rent)
+        pricing_fn=compute_charlotte_rent,
+    )
 
     orchestrator = PipelineOrchestrator(verbose=True)
     result = orchestrator.run(criteria, dry_run=args.dry_run)
 
     if result.errors and result.published == 0:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

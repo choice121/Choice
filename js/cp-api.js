@@ -131,23 +131,16 @@ function _ok(data, error) {
 // -- Auth helpers ------------------------------------------
 const Auth = {
   async getUser() {
-    try {
-      const { data: sd } = await sb().auth.getSession();
-      if (!sd?.session) return null;
-      const { data } = await sb().auth.getUser();
-      return data?.user || null;
-    } catch {
-      return null;
-    }
+    // I-406: auth.getUser() always makes a server round-trip to validate the JWT.
+    // For anonymous visitors (nothing in localStorage) this triggers an unnecessary
+    // network request that can surface as a 406/401 console error when a stale token
+    // exists. Check the local session first; only hit the server if we have a token.
+    const { data: sd } = await sb().auth.getSession();
+    if (!sd?.session) return null;
+    const { data } = await sb().auth.getUser();
+    return data?.user || null;
   },
-  async getSession() {
-    try {
-      const { data } = await sb().auth.getSession();
-      return data?.session || null;
-    } catch {
-      return null;
-    }
-  },
+  async getSession()    { const { data } = await sb().auth.getSession(); return data?.session || null; },
   // Returns a valid access token, or null if the session is invalid/expired.
   //
   // Strategy (updated):
@@ -309,9 +302,8 @@ const _TYPE_FILTER_MAP = {
   condo:     ['condo', 'condos', 'CONDOS', 'CONDO'],
   townhouse: ['townhouse', 'townhomes', 'TOWNHOMES', 'TOWNHOUSE'],
   duplex:    ['duplex', 'DUPLEX'],
-  triplex:   ['triplex', 'TRIPLEX'],
   multi_family: ['multi_family', 'MULTI_FAMILY', 'multi-family'],
-  mobile_home:  ['mobile_home', 'MOBILE_HOME', 'mobile-home', 'MOBILE', 'mobile', 'manufactured'],
+  mobile_home:  ['mobile_home', 'MOBILE_HOME', 'mobile-home'],
   studio:    ['studio', 'STUDIO'],
 };
 
@@ -324,7 +316,6 @@ function _normalizePropertyType(t) {
     apartment: 'apartment', townhome: 'townhouse', townhomes: 'townhouse',
     townhouse: 'townhouse', condo: 'condo', condos: 'condo',
     duplex: 'duplex', studio: 'studio', mobile_home: 'mobile_home',
-    mobile: 'mobile_home', manufactured: 'mobile_home',
     multi_family: 'multi_family', land: 'land', commercial: 'commercial',
     other: 'other',
   };
@@ -339,37 +330,6 @@ function _typeFilterOr(canonicalType) {
 }
 
 const Properties = {
-    async getLocationIndex() {
-      const PAGE_SIZE = 1000;
-      const rows = [];
-      for (let from = 0; ; from += PAGE_SIZE) {
-        const { data, error } = await sb()
-          .from('properties')
-          .select('city,state')
-          .eq('status', 'active')
-          .not('city', 'is', null)
-          .not('state', 'is', null)
-          .order('state', { ascending: true })
-          .order('city', { ascending: true })
-          .range(from, from + PAGE_SIZE - 1);
-        if (error) return _ok(null, error);
-        rows.push(...(data || []));
-        if (!data || data.length < PAGE_SIZE) break;
-      }
-
-      const locations = new Map();
-      rows.forEach(row => {
-        const city = String(row.city || '').trim();
-        const state = String(row.state || '').trim();
-        if (!city || !state) return;
-        const key = `${state.toLowerCase()}|${city.toLowerCase()}`;
-        const location = locations.get(key) || { city, state, count: 0 };
-        location.count++;
-        locations.set(key, location);
-      });
-      return _ok([...locations.values()], null);
-    },
-
   // getListings - server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
   // Returns { ok, data: { rows, total, page, per_page, total_pages }, error }
@@ -382,24 +342,16 @@ const Properties = {
     if (filters.share_token || (filters.target_ids && Array.isArray(filters.target_ids) && filters.target_ids.length > 0)) {
       let rows = [];
       if (filters.share_token) {
-        const cleanToken = String(filters.share_token).trim().replace(/^[\s{'"(\[]+|[\s}'")\].,;:\/]+$/g, '').trim();
         const { data, error } = await sb().functions.invoke('property-share', {
-          body: { action: 'resolve', token: cleanToken },
+          body: { action: 'resolve', token: filters.share_token },
         });
-        if (error) {
-          const errMsg = (data && (data.error || data.message)) || (error.message && !error.message.includes('non-2xx') ? error.message : 'This client share link could not be found or has expired.');
-          return { ok: false, data: null, error: errMsg, isShareError: true };
-        }
+        if (error) return { ok: false, data: null, error: error.message };
         rows = Array.isArray(data?.properties) ? data.properties.slice() : [];
       } else {
-        // Legacy ID-only links may resolve only explicitly public listings.
-        const { data, error } = await sb()
-          .from('properties')
-          .select(PROPERTIES_SELECT_FULL)
-          .in('id', filters.target_ids)
-          .eq('status', 'active');
+        // Legacy ID-only links can resolve public listings, never private ones.
+        const { data, error } = await sb().rpc('get_properties_by_ids', { p_ids: filters.target_ids });
         if (error) return { ok: false, data: null, error: error.message };
-        rows = (data || []).filter(row => row.status === 'active');
+        rows = (data || []).slice();
       }
 
       const propIds = rows.map(r => r.id).filter(Boolean);
@@ -621,8 +573,6 @@ const Properties = {
 
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status);
     if (filters.landlord) q = q.eq('landlord_id', filters.landlord);
-    if (filters.city) q = q.ilike('city', filters.city);
-    if (filters.state) q = q.eq('state', filters.state);
 
     if (filters.q) {
       const term = filters.q.trim();
@@ -677,88 +627,12 @@ const Properties = {
   async getOne(id) {
     // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
     // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-     const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero), property_media(id, kind, url, display_order, is_hero, metadata)').eq('id', id).single();
+    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }
     if (data) _attachPhotoArrays(data);
     return _ok(data, error);
-  },
-  // Multi-unit & multi-floor community unit resolver
-  async getCommunityUnits(communityId) {
-    if (!communityId) return { ok: true, data: { units: [], floors: [], floorPlans: [] }, error: null };
-    const cleanId = String(communityId).trim();
-    try {
-      const { data: inventory, error: inventoryError } = await sb()
-        .from('property_units')
-        .select('id, property_id, unit_number, unit_floor_label, building_name, floor_plan_name, bedrooms, bathrooms, square_footage, monthly_rent, unit_photos, status, rent_basis, source_order')
-        .eq('property_id', cleanId)
-        .eq('status', 'active')
-        .eq('review_status', 'approved')
-        .order('source_order', { ascending: true });
-      if (inventoryError) {
-        console.warn('[cp-api] normalized community-unit query failed:', inventoryError);
-        return { ok: false, data: null, error: inventoryError.message };
-      }
-
-      let units = (inventory || []).map(unit => ({
-        ...unit,
-        unit_floor: unit.unit_floor_label || null,
-      }));
-      if (!units.length) {
-        const { data: activeParent, error: parentError } = await sb()
-          .from('properties')
-          .select('id')
-          .eq('id', cleanId)
-          .eq('status', 'active')
-          .maybeSingle();
-        if (parentError) {
-          console.warn('[cp-api] community parent visibility check failed:', parentError);
-          return { ok: false, data: null, error: parentError.message };
-        }
-        if (activeParent) {
-          const { data: legacyUnits, error: legacyError } = await sb()
-            .from('properties')
-            .select('id, title, address, unit_number, unit_floor, bedrooms, bathrooms, half_bathrooms, square_footage, monthly_rent, status, price_range, property_photos(id, url, file_id, display_order, is_hero)')
-            .eq('parent_property_id', cleanId)
-            .eq('status', 'active')
-            .order('unit_floor', { ascending: true })
-            .order('unit_number', { ascending: true });
-          if (legacyError) {
-            console.warn('[cp-api] legacy community-unit query failed:', legacyError);
-            return { ok: false, data: null, error: legacyError.message };
-          }
-          units = (legacyUnits || []).map(_attachPhotoArrays);
-        }
-      }
-
-      const { data: floorPlans, error: floorPlanError } = await sb()
-        .from('property_floor_plans')
-        .select('id, property_id, source_plan_id, name, bedrooms, bathrooms, square_footage, starting_rent, rent_basis, image_url, source_order, building_name, status')
-        .eq('property_id', cleanId)
-        .eq('status', 'active')
-        .eq('review_status', 'approved')
-        .order('source_order', { ascending: true });
-      if (floorPlanError) {
-        console.warn('[cp-api] normalized floor-plan query failed:', floorPlanError);
-        return { ok: false, data: null, error: floorPlanError.message };
-      }
-
-      const floorSet = new Set();
-      units.forEach(u => {
-        const floor = u.unit_floor == null ? '' : String(u.unit_floor).trim();
-        if (floor) floorSet.add(floor);
-      });
-      const floors = Array.from(floorSet).sort((a, b) => {
-        const aNumber = Number(a);
-        const bNumber = Number(b);
-        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
-        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-      });
-      return { ok: true, data: { units, floors, floorPlans: floorPlans || [] }, error: null };
-    } catch (err) {
-      return { ok: false, data: null, error: err.message || String(err) };
-    }
   },
   // I-026: NOTE - this method is not currently used by new-listing.html.
   // That page calls generate_property_id() RPC + .insert() directly so it
@@ -1064,6 +938,7 @@ const EmailLogs = {
   },
 };
 
+
 // -- UI utilities ------------------------------------------
 const UI = {
   fmt: {
@@ -1196,15 +1071,7 @@ function esc(str) {
 // Defined here so they live in one place and are accessible
 // via both window.CP (inline scripts) and ES named exports below.
 
-function buildApplyURL(property, shareToken = '', unitOptions = {}) {
-  const isUnitTarget = Boolean(unitOptions && (unitOptions.unit_id || unitOptions.unit));
-  const targetRent = (unitOptions && unitOptions.rent != null)
-    ? unitOptions.rent
-    : (isUnitTarget ? null : (property.monthly_rent || null));
-  const targetUnit = (unitOptions && unitOptions.unit) || property.unit_number || null;
-  const targetFloor = (unitOptions && unitOptions.floor != null) ? unitOptions.floor : (property.unit_floor != null ? property.unit_floor : null);
-  const targetBeds = (unitOptions && unitOptions.bedrooms != null) ? unitOptions.bedrooms : (property.bedrooms != null ? property.bedrooms : null);
-  const targetBaths = (unitOptions && unitOptions.bathrooms != null) ? unitOptions.bathrooms : (property.bathrooms != null ? property.bathrooms : null);
+function buildApplyURL(property, shareToken = '') {
   // -- Layer 1: sessionStorage (same-origin only) ----------------------------
   // Stores full context for same-origin use. Legacy cross-origin forms
   // cannot read sessionStorage - they rely entirely on the URL params below.
@@ -1217,9 +1084,7 @@ function buildApplyURL(property, shareToken = '', unitOptions = {}) {
       city:             property.city,
       state:            property.state,
       zip:              property.zip              || '',
-      monthly_rent:     targetRent,
-      unit_number:      targetUnit,
-      unit_floor:       targetFloor,
+      monthly_rent:     property.monthly_rent     || null,
       security_deposit: property.security_deposit || null,
       application_fee:  property.application_fee  != null ? property.application_fee  : 50,
       available_date:   property.available_date   || null,
@@ -1263,10 +1128,6 @@ function buildApplyURL(property, shareToken = '', unitOptions = {}) {
 
   // -- Identity & location ---------------------------------------------------
   p.set('id',    property.id);
-  if (targetUnit) p.set('unit', String(targetUnit).trim());
-  if (targetFloor != null) p.set('floor', String(targetFloor));
-  if (unitOptions && unitOptions.unit_id) p.set('unit_id', String(unitOptions.unit_id));
-  if (unitOptions && unitOptions.plan_name) p.set('plan', String(unitOptions.plan_name));
   if (property.title)   p.set('pn',    property.title.substring(0, 120));
   if (property.address) p.set('addr',  property.address.substring(0, 100));
   if (property.city)    p.set('city',  property.city);
@@ -1274,7 +1135,7 @@ function buildApplyURL(property, shareToken = '', unitOptions = {}) {
   if (property.zip)     p.set('zip',   property.zip);
 
   // -- Financials ------------------------------------------------------------
-  if (targetRent) p.set('rent', targetRent);
+  if (property.monthly_rent)     p.set('rent',    property.monthly_rent);
   if (property.security_deposit) p.set('deposit', property.security_deposit);
   p.set('fee', (property.application_fee != null && Number(property.application_fee) > 0) ? property.application_fee : 50); // Choice Properties standard: always $50
 
@@ -1366,9 +1227,8 @@ function buildApplyURL(property, shareToken = '', unitOptions = {}) {
           console.warn('[buildApplyURL] URL still ' + _finalUrl.length + ' chars after reduction — may truncate on some browsers');
         }
       }
-      const cleanedShareToken = String(shareToken || '').trim();
-      if (cleanedShareToken && (/^[A-Za-z0-9_-]{43}$/.test(cleanedShareToken) || /^[a-z0-9]+(?:-[a-z0-9]+){1,4}$/i.test(cleanedShareToken))) {
-        _finalUrl += `#share=${encodeURIComponent(cleanedShareToken)}`;
+      if (/^[A-Za-z0-9_-]{43}$/.test(shareToken)) {
+        _finalUrl += `#share=${encodeURIComponent(shareToken)}`;
       }
       return _finalUrl;
     }
@@ -1430,7 +1290,7 @@ async function updateNav() {
         .from('applications')
         .select(
           'id,app_id,created_at,updated_at,status,payment_status,payment_date,' +
-          'admin_notes,application_fee,application_fee_per_adult,screened_adult_count,property_id,property_address,' +
+          'admin_notes,application_fee,property_id,property_address,' +
           'first_name,last_name,email,phone,dob,ssn,' +
           'requested_move_in_date,desired_lease_term,' +
           'current_address,residency_duration,current_rent_amount,reason_for_leaving,' +
@@ -1449,9 +1309,7 @@ async function updateNav() {
           'has_pets,pet_details,total_occupants,additional_occupants,ever_evicted,smoker,' +
           'preferred_contact_method,preferred_time,' +
           'vehicle_make,vehicle_model,vehicle_year,vehicle_license_plate,' +
-          'has_co_applicant,co_applicant_first_name,co_applicant_last_name,co_applicant_email,co_applicant_phone,co_applicant_dob,co_applicant_ssn,' +
-          'co_applicant_role,co_applicant_consent,co_applicant_consent_timestamp,co_applicant_consent_version,co_applicant_employer,co_applicant_job_title,co_applicant_monthly_income,co_applicant_employment_duration,' +
-          'landlord_email,document_urls,' +
+          'has_co_applicant,co_applicant_ssn,landlord_email,document_urls,' +
           'lease_status,lease_sent_date,lease_signed_date,lease_start_date,lease_end_date,' +
           'monthly_rent,security_deposit,move_in_costs,lease_notes,lease_pdf_url,' +
           'tenant_signature,signature_timestamp,' +

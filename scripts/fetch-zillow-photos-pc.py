@@ -27,7 +27,6 @@ import time
 import base64
 import random
 import sys
-import os
 
 try:
     import requests
@@ -38,12 +37,8 @@ except ImportError:
 # ─── CONFIGURATION (pre-filled) ──────────────────────────────────────────────
 
 SUPABASE_URL      = "https://tlfmwetmhthpyrytrcfo.supabase.co"
-SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-if not SUPABASE_KEY:
-    raise RuntimeError('SUPABASE_SERVICE_ROLE_KEY is required')
-IK_PRIVATE_KEY    = os.environ.get("IMAGEKIT_PRIVATE_KEY")
-if not IK_PRIVATE_KEY:
-    raise RuntimeError("IMAGEKIT_PRIVATE_KEY is required")
+SUPABASE_KEY      = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE"
+IK_PRIVATE_KEY    = "private_0EEkHXTzdRqJ++giVS30rF+qDAs="
 IK_UPLOAD_URL     = "https://upload.imagekit.io/api/v1/files/upload"
 
 PROPERTIES = [
@@ -223,7 +218,8 @@ def upload_to_imagekit(image_bytes, filename, folder):
             headers={"Authorization": f"Basic {auth}"},
             files={"file": (filename, image_bytes, "image/jpeg")},
             data={"fileName": filename, "folder": folder, "useUniqueFileName": "false"},
-            timeout=60)
+            timeout=60,
+        )
         if resp.status_code == 200:
             d = resp.json()
             return d.get("url"), d.get("fileId")
@@ -264,7 +260,8 @@ def sb_insert(table, records):
             "Prefer": "return=representation",
         },
         json=records,
-        timeout=30)
+        timeout=30,
+    )
     return resp.status_code, resp.json()
 
 def delete_ik_file(file_id):
@@ -274,7 +271,8 @@ def delete_ik_file(file_id):
         resp = requests.delete(
             f"https://api.imagekit.io/v1/files/{file_id}",
             headers={"Authorization": f"Basic {auth}"},
-            timeout=20)
+            timeout=20,
+        )
         return resp.status_code in (200, 204)
     except Exception:
         return False

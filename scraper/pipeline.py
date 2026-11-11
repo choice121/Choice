@@ -41,7 +41,8 @@ Usage
       rent_floor=1300, rent_cap=1400,
       allowed_types={"SINGLE_FAMILY", "TOWNHOMES"},
       target=10,
-      past_days=90)
+      past_days=90,
+  )
 
   orchestrator = PipelineOrchestrator()
   result = orchestrator.run(criteria, dry_run=False)
@@ -74,6 +75,7 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
+
 def _load_dotenv():
     for candidate in [
         ".env",
@@ -92,6 +94,7 @@ def _load_dotenv():
                     if k and k not in os.environ:
                         os.environ[k] = v.strip().strip('"').strip("'")
             break
+
 
 _load_dotenv()
 
@@ -129,7 +132,7 @@ try:
         filter_record_photos,
         rule_based_enrich,
         normalize_hvac,
-        apply_enrichment_pipeline_contextual)
+    )
     _ENRICH_OK = True
 except Exception as _ee:
     _ENRICH_OK = False
@@ -141,11 +144,13 @@ try:
         _enrich_realtor_batch,
         _quality_score,
         _missing_fields,
-        _get_existing_ids)
+        _get_existing_ids,
+    )
     _SCRAPER_OK = True
 except Exception as _se:
     _SCRAPER_OK = False
     print("WARNING: scraper.py imports unavailable: {}".format(_se))
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -187,6 +192,7 @@ _DL_HEADERS_ZILLOW = {
     "Referer": "https://www.zillow.com/",
 }
 
+
 def _dl_headers_for(url: str) -> dict:
     """Return the correct download headers for a given image URL.
     Zillow's CDN (zillowstatic.com) requires a zillow.com Referer;
@@ -195,6 +201,7 @@ def _dl_headers_for(url: str) -> dict:
     if "zillow" in url.lower() or "zillowstatic" in url.lower():
         return _DL_HEADERS_ZILLOW
     return _DL_HEADERS_REALTOR
+
 
 # ---------------------------------------------------------------------------
 # HTTP session helpers
@@ -218,6 +225,7 @@ def _make_pipeline_session():
     })
     return s
 
+
 def _make_public_session():
     if not _REQUESTS_OK:
         return None
@@ -233,6 +241,7 @@ def _make_public_session():
         "Prefer": "return=representation",
     })
     return s
+
 
 # ---------------------------------------------------------------------------
 # BatchCriteria dataclass
@@ -268,6 +277,7 @@ class BatchCriteria:
     batch_name: str = "batch"                    # used in logs
     folder_name: Optional[str] = None            # optional folder to assign all published properties to
     source: str = "realtor"                      # "realtor" or "zillow" (apify-backed)
+
 
 # ---------------------------------------------------------------------------
 # PipelineResult
@@ -314,6 +324,7 @@ class PipelineResult:
         lines.append("=" * 65)
         return "\n".join(lines)
 
+
 # ---------------------------------------------------------------------------
 # Zillow / Apify Record Mapping Helper
 # ---------------------------------------------------------------------------
@@ -336,6 +347,7 @@ def _map_zillow_service_property(p):
     rec.setdefault("latitude", rec.get("latitude"))
     rec.setdefault("longitude", rec.get("longitude"))
     return rec
+
 
 # ---------------------------------------------------------------------------
 # PipelineOrchestrator
@@ -434,7 +446,8 @@ class PipelineOrchestrator:
                 allowed_types=criteria.allowed_types,
                 past_days=criteria.past_days,
                 limit=criteria.limit,
-                batch_name=criteria.batch_name + " (fallback)")
+                batch_name=criteria.batch_name + " (fallback)",
+            )
             fb_recs = self._step1_scrape(fb_criteria)
             fb_recs = self._step2_availability_dedup(fb_recs)
             existing_sids = {r.get("source_listing_id") for r in records}
@@ -472,11 +485,6 @@ class PipelineOrchestrator:
         if _ENRICH_OK:
             records, wm_count = apply_enrichment_pipeline(records, verbose=self.verbose)
             result.watermarked_dropped += wm_count
-            try:
-                records = apply_enrichment_pipeline_contextual(records, verbose=self.verbose)
-                self._log("   Contextual enrichment applied")
-            except Exception as e:
-                self._log("   WARNING: contextual enrichment failed: {}".format(str(e)[:80]))
         else:
             self._log("   WARNING: enrichment module unavailable — skipping")
 
@@ -532,7 +540,8 @@ class PipelineOrchestrator:
                 (rec.get("city") or "").lower().strip(),
                 (rec.get("address") or "").lower().strip(),
                 rec.get("square_footage") or rec.get("square_feet"),
-                rec.get("monthly_rent"))
+                rec.get("monthly_rent"),
+            )
             # Deduplicate only when city, address, sqft, and rent are all present
             if all(k is not None for k in key) and key[1] and key[2] and key[3]:
                 if key in seen_floorplans:
@@ -572,7 +581,8 @@ class PipelineOrchestrator:
                     r = self._pipe_session.post(
                         "{}/rest/v1/rpc/pipeline_folder_add_property".format(SUPABASE_URL),
                         json={"p_property_id": pid, "p_folder_name": criteria.folder_name},
-                        timeout=15)
+                        timeout=15,
+                    )
                     if r.ok:
                         data = r.json()
                         if isinstance(data, list):
@@ -692,7 +702,8 @@ class PipelineOrchestrator:
                 min_score=0,
                 fallback_locations=[],
                 pricing_fn=None,
-                batch_name=batch_name)
+                batch_name=batch_name,
+            )
         return self._run_records(records, criteria, dry_run)
 
     def _run_records(self, records: List[Dict], criteria: BatchCriteria, dry_run: bool) -> PipelineResult:
@@ -747,7 +758,8 @@ class PipelineOrchestrator:
                 allowed_types=criteria.allowed_types,
                 past_days=criteria.past_days,
                 limit=criteria.limit,
-                batch_name=criteria.batch_name + " (fallback)")
+                batch_name=criteria.batch_name + " (fallback)",
+            )
             fb_recs = self._step1_scrape(fb_criteria)
             fb_recs = self._step2_availability_dedup(fb_recs)
             existing_sids = {r.get("source_listing_id") for r in records}
@@ -783,11 +795,6 @@ class PipelineOrchestrator:
         if _ENRICH_OK:
             records, wm_count = apply_enrichment_pipeline(records, verbose=self.verbose)
             result.watermarked_dropped += wm_count
-            try:
-                records = apply_enrichment_pipeline_contextual(records, verbose=self.verbose)
-                self._log("   Contextual enrichment applied")
-            except Exception as e:
-                self._log("   WARNING: contextual enrichment failed: {}".format(str(e)[:80]))
         else:
             self._log("   WARNING: enrichment module unavailable — skipping")
 
@@ -832,7 +839,8 @@ class PipelineOrchestrator:
                 (rec.get("city") or "").lower().strip(),
                 (rec.get("address") or "").lower().strip(),
                 rec.get("square_footage") or rec.get("square_feet"),
-                rec.get("monthly_rent"))
+                rec.get("monthly_rent"),
+            )
             if all(k is not None for k in key) and key[1] and key[2] and key[3]:
                 if key in seen_floorplans:
                     addr = "{} {}".format(rec.get("address", ""), rec.get("city", "")).strip()
@@ -977,7 +985,8 @@ class PipelineOrchestrator:
                     beds_max=beds_max,
                     price_min=criteria.rent_min,
                     price_max=criteria.rent_max,
-                    extra_property_data=True)
+                    extra_property_data=True,
+                )
                 self._log("   {} returned {} listing(s)".format(location, len(props)))
                 for p in props:
                     try:
@@ -1122,7 +1131,8 @@ class PipelineOrchestrator:
                     criteria.rent_min,
                     criteria.rent_max,
                     criteria.rent_floor or criteria.rent_min,
-                    criteria.rent_cap)
+                    criteria.rent_cap,
+                )
             else:
                 published = int(orig)
 
@@ -1215,7 +1225,8 @@ class PipelineOrchestrator:
                     "{}/rest/v1/pipeline_properties?on_conflict=source_listing_id".format(SUPABASE_URL),
                     data=json.dumps(batch, default=str).encode(),
                     headers={"Prefer": "return=representation,resolution=ignore-duplicates"},
-                    timeout=30)
+                    timeout=30,
+                )
                 r.raise_for_status()
                 self._log("   Staged batch {}: {} record(s)".format(
                     i // 50 + 1, len(r.json()) if isinstance(r.json(), list) else len(batch)))
@@ -1256,7 +1267,8 @@ class PipelineOrchestrator:
                         "application_fee": 50,
                         "available_date": clean_ad,
                     },
-                    timeout=20)
+                    timeout=20,
+                )
                 if not r.ok:
                     self._log("   WARNING: PATCH failed {}: {}".format(pid, r.text[:80]))
             except Exception as e:
@@ -1270,7 +1282,8 @@ class PipelineOrchestrator:
             r = self._pub_session.post(
                 "{}/rest/v1/rpc/pipeline_publish".format(SUPABASE_URL),
                 json={"p_id": pipeline_id, "p_landlord_id": None},
-                timeout=30)
+                timeout=30,
+            )
             r.raise_for_status()
             data = r.json()
             if isinstance(data, list):
@@ -1296,7 +1309,8 @@ class PipelineOrchestrator:
                 "{}/rest/v1/properties?id=eq.{}".format(
                     SUPABASE_URL, urllib.parse.quote(prop_id)),
                 json={"status": "active"},
-                timeout=15)
+                timeout=15,
+            )
             return r.ok
         except Exception:
             return False
@@ -1355,7 +1369,8 @@ class PipelineOrchestrator:
                         headers={"Authorization": self._ik_auth},
                         files={"file": (fname, data, mime)},
                         data={"fileName": fname, "folder": folder},
-                        timeout=60)
+                        timeout=60,
+                    )
                     if ru.status_code == 200:
                         d = ru.json()
                         return idx, d.get("url"), d.get("fileId"), None
@@ -1403,7 +1418,8 @@ class PipelineOrchestrator:
                         "is_hero": idx == 0,
                         "watermark_status": "pending",
                     },
-                    timeout=15)
+                    timeout=15,
+                )
                 if ri.status_code in (200, 201):
                     uploaded += 1
                     if self.verbose and idx == 0:
@@ -1434,7 +1450,8 @@ class PipelineOrchestrator:
                     "{}/rest/v1/pipeline_properties"
                     "?source_listing_id=in.({})&select=id,source_listing_id,choice_property_id&limit=1000".format(
                         SUPABASE_URL, encoded),
-                    timeout=20)
+                    timeout=20,
+                )
                 r.raise_for_status()
                 for row in r.json():
                     result[row["source_listing_id"]] = row["id"]
@@ -1459,7 +1476,8 @@ class PipelineOrchestrator:
                 "{}/rest/v1/pipeline_properties?id=eq.{}".format(
                     SUPABASE_URL, urllib.parse.quote(pipeline_id)),
                 json={"status": "failed"},
-                timeout=10)
+                timeout=10,
+            )
         except Exception as e:
             self._log("   WARNING: _cleanup_staged failed for {}: {}".format(
                 pipeline_id, str(e)[:80]))
@@ -1490,7 +1508,8 @@ class PipelineOrchestrator:
                     "Authorization": self._ik_auth,
                     "Content-Type": "application/json",
                     "Content-Length": str(len(body)),
-                })
+                },
+            )
             with _urllib_req.urlopen(req, timeout=15) as r:
                 status = r.status
             if status not in (200, 204, 404):
@@ -1509,7 +1528,8 @@ class PipelineOrchestrator:
             r = self._pub_session.get(
                 "{}/rest/v1/properties?id=eq.{}&select=id,city,state,property_type,bedrooms&limit=1".format(
                     SUPABASE_URL, urllib.parse.quote(prop_id)),
-                timeout=15)
+                timeout=15,
+            )
             r.raise_for_status()
             rows = r.json()
             return rows[0] if rows else None
@@ -1569,7 +1589,8 @@ class PipelineOrchestrator:
         src_min: int,
         src_max: int,
         dst_floor: int,
-        dst_cap: int) -> int:
+        dst_cap: int,
+    ) -> int:
         """Proportional reduction: map [src_min, src_max] -> [dst_floor, dst_cap]."""
         original = float(original)
         if src_max == src_min:

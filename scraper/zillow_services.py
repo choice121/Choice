@@ -63,9 +63,11 @@ def _get_config():
         },
     }
 
+
 def _get_default_service():
     """Get the default service from environment or 'auto'."""
     return os.environ.get("ZILLOW_SCRAPER_SERVICE", "auto").lower()
+
 
 # ── Base scraper interface ──────────────────────────────────────────────────────
 
@@ -88,7 +90,8 @@ class ZillowScraperService:
         beds_max: Optional[int] = None,
         price_min: Optional[int] = None,
         price_max: Optional[int] = None,
-        verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool]:
+        verbose: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """
         Scrape Zillow listings.
         
@@ -102,6 +105,7 @@ class ZillowScraperService:
     def _normalize_record(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize raw service data to pipeline_properties format."""
         raise NotImplementedError
+
 
 # ── Apify service ──────────────────────────────────────────────────────────────
 
@@ -127,7 +131,8 @@ class ApifyService(ZillowScraperService):
         beds_max: Optional[int] = None,
         price_min: Optional[int] = None,
         price_max: Optional[int] = None,
-        verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool]:
+        verbose: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """Scrape Zillow via Apify actor."""
         if not self.is_available():
             if verbose:
@@ -461,6 +466,7 @@ class ApifyService(ZillowScraperService):
         
         return record
 
+
 # ── ScrapeBadger service ────────────────────────────────────────────────────────
 
 class ScrapeBadgerService(ZillowScraperService):
@@ -483,7 +489,8 @@ class ScrapeBadgerService(ZillowScraperService):
         beds_max: Optional[int] = None,
         price_min: Optional[int] = None,
         price_max: Optional[int] = None,
-        verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool]:
+        verbose: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """Scrape Zillow via ScrapeBadger API."""
         if not self.is_available():
             if verbose:
@@ -718,6 +725,7 @@ class ScrapeBadgerService(ZillowScraperService):
         
         return record
 
+
 # ── Oxylabs service ─────────────────────────────────────────────────────────────
 
 class OxylabsService(ZillowScraperService):
@@ -741,7 +749,8 @@ class OxylabsService(ZillowScraperService):
         beds_max: Optional[int] = None,
         price_min: Optional[int] = None,
         price_max: Optional[int] = None,
-        verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool]:
+        verbose: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """Scrape Zillow via Oxylabs Real-Time Scraper API."""
         if not self.is_available():
             if verbose:
@@ -876,6 +885,7 @@ class OxylabsService(ZillowScraperService):
             # Fallback to basic normalization
             return ApifyService._normalize_record(self, raw)
 
+
 # ── Direct service (existing zillow_scraper.py) ────────────────────────────────
 
 class DirectService(ZillowScraperService):
@@ -896,7 +906,8 @@ class DirectService(ZillowScraperService):
         beds_max: Optional[int] = None,
         price_min: Optional[int] = None,
         price_max: Optional[int] = None,
-        verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool]:
+        verbose: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """Scrape Zillow directly using zillow_scraper.py."""
         try:
             from zillow_scraper import scrape_and_map
@@ -910,7 +921,8 @@ class DirectService(ZillowScraperService):
                 price_max=price_max,
                 min_score=0,
                 fetch_details=True,
-                verbose=verbose)
+                verbose=verbose,
+            )
             return records, blocked
             
         except ImportError as e:
@@ -921,6 +933,7 @@ class DirectService(ZillowScraperService):
             if verbose:
                 print(f"  [Direct] Error: {e}")
             return [], False
+
 
 # ── Service factory ─────────────────────────────────────────────────────────────
 
@@ -939,6 +952,7 @@ def _create_service(service_name: str, config: Dict[str, Any]) -> ZillowScraperS
     
     return service_class(config)
 
+
 def get_available_services(verbose: bool = False) -> List[str]:
     """Get list of available (configured) services."""
     config = _get_config()
@@ -953,6 +967,7 @@ def get_available_services(verbose: bool = False) -> List[str]:
     
     return available
 
+
 # ── Main interface ──────────────────────────────────────────────────────────────
 
 def scrape_zillow_with_service(
@@ -963,7 +978,8 @@ def scrape_zillow_with_service(
     beds_max: Optional[int] = None,
     price_min: Optional[int] = None,
     price_max: Optional[int] = None,
-    verbose: bool = False) -> Tuple[List[Dict[str, Any]], bool, str]:
+    verbose: bool = False,
+) -> Tuple[List[Dict[str, Any]], bool, str]:
     """
     Scrape Zillow listings using the specified service or auto-select.
     
@@ -1010,12 +1026,14 @@ def scrape_zillow_with_service(
         beds_max=beds_max,
         price_min=price_min,
         price_max=price_max,
-        verbose=verbose)
+        verbose=verbose,
+    )
     
     if verbose:
         print(f"  [zillow_services] {service} returned {len(records)} records (blocked={blocked})")
     
     return records, blocked, service
+
 
 # ── CLI entry point for testing ────────────────────────────────────────────────
 
@@ -1037,7 +1055,8 @@ if __name__ == "__main__":
         location=args.location,
         service=args.service,
         limit=args.limit,
-        verbose=args.verbose)
+        verbose=args.verbose,
+    )
     
     print(f"\nResults:")
     print(f"  Service used: {used}")

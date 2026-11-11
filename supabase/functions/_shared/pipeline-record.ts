@@ -87,161 +87,6 @@ export function safeBool(v: unknown): boolean | null {
   return null;
 }
 
-function sanitizeUnitOptions(value: unknown): Record<string, unknown>[] {
-  if (!Array.isArray(value)) return [];
-
-  const options: Record<string, unknown>[] = [];
-  value.slice(0, 100).forEach((raw, sourceOrder) => {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
-    const item = raw as Record<string, unknown>;
-    const sourceKind = safeStr(item.source_kind)?.toLowerCase();
-    const unitNumber = safeStr(item.unit_number) ?? safeStr(item.unit);
-    const floorPlanName = safeStr(item.floor_plan_name) ?? safeStr(item.name);
-    const isFloorPlan = sourceKind === 'floor_plan' || sourceKind === 'floorplan' ||
-      (!unitNumber && Boolean(floorPlanName));
-    if (!isFloorPlan && (!unitNumber ||
-      !/^(?:\d{1,6}[a-z]?|[a-z]{1,3}\d{1,5}|[a-z]|[a-z]{1,4}-\d{1,5}|\d{1,4}[a-z]?-\d{1,4})$/i
-        .test(unitNumber.replace(/^#/, '')))) return;
-
-    const option: Record<string, unknown> = {
-      source_kind: isFloorPlan ? 'floor_plan' : 'unit',
-      source_order: sourceOrder,
-    };
-    if (isFloorPlan) {
-      if (floorPlanName) option.floor_plan_name = floorPlanName.slice(0, 120);
-    } else {
-      option.unit_number = unitNumber!.slice(0, 80);
-      const floor = safeStr(item.unit_floor) ?? safeStr(item.floor);
-      if (floor) option.unit_floor = floor.slice(0, 60);
-    }
-    const buildingName = safeStr(item.building_name);
-    if (buildingName) option.building_name = buildingName.slice(0, 120);
-    if (!isFloorPlan) {
-      const buildingCode = safeStr(item.building_code);
-      const buildingSourceId = safeStr(item.building_source_id) ?? safeStr(item.building_id);
-      const floorSourceId = safeStr(item.floor_source_id) ?? safeStr(item.floor_id);
-      if (buildingCode) option.building_code = buildingCode.slice(0, 80);
-      if (buildingSourceId) option.building_source_id = buildingSourceId.slice(0, 120);
-      if (floorSourceId) option.floor_source_id = floorSourceId.slice(0, 120);
-    }
-
-    const sourceId = safeStr(item.source_id) ?? safeStr(item.id);
-    if (sourceId) option.source_id = sourceId.slice(0, 120);
-    const imageUrl = safeStr(item.image_url) ?? safeStr(item.floor_plan_image);
-    if (isFloorPlan && imageUrl) {
-      try {
-        const parsedUrl = new URL(imageUrl);
-        if (parsedUrl.protocol === 'https:' && !parsedUrl.username && !parsedUrl.password) {
-          option.image_url = parsedUrl.toString().slice(0, 2048);
-        }
-      } catch {
-        // Ignore invalid floor-plan image URLs; the source media list remains available.
-      }
-    }
-    const rawPhotoList = item.photo_urls ?? item.photos;
-    if (!isFloorPlan && Array.isArray(rawPhotoList)) {
-      const photoUrls = new Set<string>();
-      for (const rawPhoto of rawPhotoList.slice(0, 40)) {
-        const rawUrl = typeof rawPhoto === 'string'
-          ? rawPhoto
-          : rawPhoto && typeof rawPhoto === 'object' && !Array.isArray(rawPhoto)
-            ? safeStr((rawPhoto as Record<string, unknown>).url)
-            : null;
-        if (!rawUrl || rawUrl.length > 2048) continue;
-        try {
-          const parsedUrl = new URL(rawUrl);
-          if (parsedUrl.protocol === 'https:' && !parsedUrl.username && !parsedUrl.password) {
-            photoUrls.add(parsedUrl.toString());
-          }
-        } catch {
-          // Ignore invalid unit-photo URLs.
-        }
-      }
-      if (photoUrls.size) option.photo_urls = Array.from(photoUrls);
-    }
-
-    for (const [target, aliases] of [
-      ['bedrooms', ['bedrooms', 'beds']],
-      ['bathrooms', ['bathrooms', 'baths']],
-      ['square_footage', ['square_footage', 'sqft']],
-    ] as const) {
-      const rawNumber = aliases.map(key => item[key]).find(entry => entry != null);
-      const number = safeFloat(rawNumber);
-      if (number != null && number >= 0 &&
-        (target === 'bathrooms' || Number.isInteger(number))) {
-        option[target] = number;
-      }
-    }
-
-    const rent = safeFloat(item.monthly_rent ?? item.rent);
-    const startingRent = safeFloat(item.starting_rent);
-    if (!isFloorPlan && rent != null && rent > 0) option.monthly_rent = rent;
-    if (isFloorPlan && startingRent != null && startingRent > 0) option.starting_rent = startingRent;
-
-    const rentBasis = safeStr(item.rent_basis);
-    if (rentBasis) {
-      option.rent_basis = /\btotal\s+monthly\b/i.test(rentBasis)
-        ? 'total_monthly_price'
-        : /\bbase\s+rent\b/i.test(rentBasis)
-          ? 'base_rent'
-          : rentBasis.slice(0, 80);
-    }
-    options.push(option);
-  });
-  return options;
-}
-
-const APPLICATION_NOTE = 'Application Fee: $50. Submit your rental application today at Choice Properties.';
-const PROHIBITED_DESCRIPTION_BLOCKS = [
-  /\*\*\*\s*BEWARE[\s\S]*?\*\*\*/gi,
-  /\*\*\*\s*IF\s+YOU\s+READ\s+THIS[\s\S]*?\*\*\*/gi,
-  /(?:REQUIREMENTS\s*&\s*QUALIFICATIONS|QUALIFICATIONS\s*&\s*REQUIREMENTS|RENTAL\s+REQUIREMENTS):?[\s\S]*?(?=(?:Key Property Features|Property Highlights|•|\n\n[A-Z]|$))/gi,
-];
-const PROHIBITED_DESCRIPTION_SENTENCES = [
-  /\bsecurity\s+deposit\b/i,
-  /\b(?:minimum\s+)?lease\s+(?:term|duration|length)\b|\b\d+[- ]month\s+lease\b/i,
-  /\bavailab(?:le|ility)\b|\bmove[- ]in\b/i,
-  /\bsmok(?:e|ing)(?:-free|\s+policy|\s+allowed|\s+not\s+allowed)?\b/i,
-  /\b(?:pets?|animals?|cats?|dogs?)\b/i,
-  /\b(?:schedule|book|request|arrange)\s+(?:a\s+)?(?:tour|showing|viewing)\b|\b(?:tour|showing|viewing)\s+(?:this|the|the property|the home|today|now)\b|\bopen\s+house\b|\bcontact\s+(?:the\s+)?(?:agent|owner|landlord|manager)\b/i,
-  /\bapply\s+(?:through|via|on|at)\s+(?:zillow|realtor|turbotenant|apartments\.com|rentcafe|rentspree|appfolio)\b|https?:\/\/\S+/i,
-  /\bMLS\s*#?\s*\d+\b|\blisted\s+by\b|\bcourtesy\s+of\b/i,
-  /\bfor\s+sale\b|\bmortgage\b|\bdown\s+payment\b|\bclosing\s+costs?\b|\bmake\s+an\s+offer\b/i,
-  /\b(?:free|no|zero|waived|complimentary)\s+(?:application\s+)?fee\b|\b(?:application|app)\s+fee\s+(?:is\s+)?(?:free|waived|zero|complimentary)\b|\b(?:application|app)\s+fee\b[^.!?\n]*\$?\s*(?:0|[1-4]?\d|5[1-9]|[6-9]\d|\d{3,})\b|\$\s*(?:0|[1-4]?\d|5[1-9]|[6-9]\d|\d{3,})\s*(?:application|app)\s+fee\b/i,
-  /\bno\s+corporate\s+leases\b|\bairbnb\b|\bcredit\s+score\b|\bminimum\s+\d{3}\s+credit\b/i,
-  /\bincome\s+must\s+exceed\b|\b3\.0\s*x?\s*(?:the\s+)?(?:monthly\s+)?rent\b|\bthree\s+times\s+the\s+monthly\s+rent\b/i,
-  /\bno\s+evictions\s+or\s+broken\s+leases\b|\bno\s+criminal\s+history\b|\bapplication\s+pending\b|\bwaiting\s+list\s+options?\b/i,
-  /\bphotos\s+are\s+stock\s+images\b|\bpictures\s+are\s+for\s+marketing\s+purposes\b|\billustrative\s+purposes\s+only\b|\bvirtual\s+furniture\s+staging\b/i,
-  /\b(?:beware|warning|alert|notice|protect yourself)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?)\b|\bscam(?:s|mer|mers)?\b/i,
-  /\b(?:craigslist|facebook\s+marketplace|tiktok|offerup)\b|\b(?:do\s+not|don['']t|never)\s+(?:advertise|post|list)\s+on\b/i,
-  /\b(?:cash\s*apps?|cashapp|zelle|paypal|venmo|apple\s*pay|wire\s*transfers?|western\s*union|money\s+orders?)\b|\bnever\s+wire\s+money\b|\bwire\s+funds\b/i,
-  /\b(?:requirements\s*&\s*qualifications|qualifications?\s*&\s*requirements|rental\s+requirements|lease\s+requirements|meets\s+all\s+lease\s+requirements)\b/i,
-];
-const PROHIBITED_CONTACT = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/i;
-
-export function sanitizePipelineDescription(value: unknown): string | null {
-  if (typeof value !== 'string' || !value.trim()) return null;
-
-  let cleaned = value;
-  for (const pattern of PROHIBITED_DESCRIPTION_BLOCKS) {
-    cleaned = cleaned.replace(pattern, '');
-  }
-
-  const sentences = cleaned
-    .replace(/We\s+do\s+not\s+advertise\s+on\s+Craigslist\s+or\s+TikTok\.\s*/gi, '')
-    .replace(/We\s+also\s+do\s+not\s+ask\s+for\s+payment\s+via[^.!?\n]*[.!?]?\s*/gi, '')
-    .split(/(?<=[.!?])\s+|\n+/)
-    .filter((sentence) => !PROHIBITED_DESCRIPTION_SENTENCES.some((pattern) => pattern.test(sentence)))
-    .filter((sentence) => !PROHIBITED_CONTACT.test(sentence))
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
-
-  const sourceText = sentences.join(' ').replace(/[ \t]{2,}/g, ' ').trim();
-  if (!sourceText) return null;
-  if (/application fee:\s*\$50\b/i.test(sourceText)) return sourceText;
-  return sourceText + ' ' + APPLICATION_NOTE;
-}
-
 export function extractFeaturesFromNarrative(desc: string | null | undefined): Record<string, any> {
   if (!desc || typeof desc !== 'string') return {};
   const text = desc.toLowerCase();
@@ -258,15 +103,10 @@ export function extractFeaturesFromNarrative(desc: string | null | undefined): R
   if (/\bmicrowaves?\b/i.test(text)) appSet.add('Microwave');
   if (/\b(?:garbage\s*disposal|disposal)\b/i.test(text)) appSet.add('Garbage Disposal');
   if (/\bfreezer\b/i.test(text)) appSet.add('Freezer');
-
-  // Strict distinction: washer hookups/connections do NOT mean included appliances
-  const hasHookupsOnly = /\b(?:washer\s*(?:and|&)\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?|laundry\s*hookups?|hookups?\s*for\s*(?:washer|laundry)|washer\/dryer\s*connections?|w\/d\s*connections?)\b/i.test(text);
-  const hasIncludedWasherDryer = /\b(?:washer\s*(?:and|&)\s*dryer\s*(?:included|provided|in\s*unit|in-unit|units?\s*included)|in-unit\s*washer|washer\s*and\s*dryer\s*appliances?|full\s*size\s*washer\s*and\s*dryer)\b/i.test(text);
-
-  if (hasIncludedWasherDryer || (!hasHookupsOnly && /\b(?:washer\s*(?:and|&)\s*dryer|full\s*size\s*washer)\b/i.test(text) && !/\bhookups?\b/i.test(text) && !/\bconnections?\b/i.test(text))) {
+  if (/\b(?:full\s*size\s*washer|washer\s*(?:and|&)\s*dryer|washer\s*and\s*dryer\s*units?)\b/i.test(text)) {
     appSet.add('Washer');
     appSet.add('Dryer');
-  } else if (!hasHookupsOnly && !/\bhookups?\b/i.test(text)) {
+  } else {
     if (/\bwashers?\b/i.test(text) && !/\bdishwasher/i.test(text)) appSet.add('Washer');
     if (/\bdryers?\b/i.test(text)) appSet.add('Dryer');
   }
@@ -274,13 +114,10 @@ export function extractFeaturesFromNarrative(desc: string | null | undefined): R
 
   // Parking / Garage
   const garageMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*garage\b/i);
-  const carportMatch = text.match(/\b([1-4])\s*(?:car|bay)\s*carport\b/i);
-  if (garageMatch && !/\b(?:no\s*garage|without\s*garage)\b/i.test(text)) {
+  if (garageMatch) {
     res.garage_spaces = parseInt(garageMatch[1], 10);
     res.parking = `${garageMatch[1]}-Car Garage`;
-  } else if (carportMatch) {
-    res.parking = `${carportMatch[1]}-Car Carport`;
-  } else if (/\b(?:attached\s*garage|2-car\s*garage|detached\s*garage|garage)\b/i.test(text) && !/\b(?:no\s*garage|without\s*garage|carport)\b/i.test(text)) {
+  } else if (/\b(?:attached\s*garage|2-car\s*garage|garage)\b/i.test(text)) {
     res.parking = 'Attached Garage';
   } else if (/\bcarport\b/i.test(text)) {
     res.parking = 'Carport';
@@ -291,7 +128,7 @@ export function extractFeaturesFromNarrative(desc: string | null | undefined): R
   // Laundry
   if (/\b(?:separate\s*laundry\s*room|laundry\s*room|in-unit\s*washer|in\s*unit\s*washer|washer\s*and\s*dryer\s*in\s*unit)\b/i.test(text)) {
     res.laundry_type = 'In Unit (Dedicated Laundry Room)';
-  } else if (hasHookupsOnly || /\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?|laundry\s*hookups?)\b/i.test(text)) {
+  } else if (/\b(?:washer\s*and\s*dryer\s*hookups?|w\/d\s*hookups?|washer\s*hookups?|dryer\s*hookups?)\b/i.test(text)) {
     res.laundry_type = 'Washer/Dryer Hookups';
   } else if (/\b(?:shared\s*laundry|on-site\s*laundry)\b/i.test(text)) {
     res.laundry_type = 'On-Site Laundry';
@@ -319,16 +156,7 @@ export function extractFeaturesFromNarrative(desc: string | null | undefined): R
   // Amenities
   const extraAmenities: string[] = [];
   if (/\b(?:swimming\s*pool|pool)\b/i.test(text)) extraAmenities.push('Swimming Pool');
-  // Strict Fenced Yard distinction: ONLY add Private Fenced Yard if fence or fenced is explicitly stated!
-  if (/\b(?:fenced\s*(?:in\s*)?(?:back)?yard|fenced\s*backyard|privately\s*fenced|fenced\s*patio|fence\s*around)\b/i.test(text)) {
-    extraAmenities.push('Private Fenced Yard');
-  } else if (/\b(?:private\s*backyard|backyard|large\s*yard|landscaped\s*backyard|spacious\s*yard)\b/i.test(text)) {
-    if (/\bfence\b/i.test(text)) {
-      extraAmenities.push('Private Fenced Yard');
-    } else {
-      extraAmenities.push('Backyard');
-    }
-  }
+  if (/\b(?:private\s*backyard|backyard|fenced\s*yard|large\s*yard|landscaped\s*backyard)\b/i.test(text)) extraAmenities.push('Private Fenced Yard');
   if (/\b(?:patio|balcony|deck)\b/i.test(text)) extraAmenities.push('Patio / Outdoor Living Area');
   if (/\bfireplaces?\b/i.test(text)) extraAmenities.push('Fireplace');
   if (/\bbasement\b/i.test(text) && !/\bno\s*basement\b/i.test(text)) {
@@ -430,17 +258,9 @@ export interface PipelineRecordInput {
   lng?: number | null;
   location_context?: string | null;
   property_type?: string | null;
-  building_name?: string | null;
-  is_multi_unit?: boolean | null;
-  price_range?: string | null;
-  rent_basis?: string | null;
-  community_starting_rent?: number | null;
-  unit_options?: unknown[] | null;
-  media?: unknown[] | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
-  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
@@ -464,7 +284,7 @@ export interface PipelineRecordInput {
   showing_instructions?: string | null;
   available_date?: string | null;
   minimum_lease_months?: number | null;
-  lease_terms?: string | string[] | null;
+  lease_terms?: string | null;
   pets_allowed?: boolean | null;
   pet_types_allowed?: string | null;
   pet_weight_limit?: number | null;
@@ -553,51 +373,14 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     harvested.amenities.forEach((a: string) => { if (!cleanedAmenities.includes(a)) cleanedAmenities.push(a); });
   }
 
-  const originalData = {
+  const originalData = JSON.stringify({
     zpid:        body.source_listing_id,
     detailUrl:   body.source_url,
     homeType:    propType,
-    building_name: safeStr(body.building_name),
-    is_multi_unit: safeBool(body.is_multi_unit),
-    total_units: safeInt(body.total_units),
-    floors: safeInt(body.floors),
-    price_range: safeStr(body.price_range),
-    rent_basis: safeStr(body.rent_basis),
-    community_starting_rent: safeInt(body.community_starting_rent),
-    unit_options: sanitizeUnitOptions(body.unit_options),
-    media: Array.isArray(body.media) ? body.media.slice(0, 100) : [],
     _source:     source,
     _import:     body._import ?? 'browser-extension-v2',
     _imported_at: now,
-  };
-  const serializedOriginalData = JSON.stringify(originalData);
-  let preservedOriginalData = safeStr(body.original_data) ?? serializedOriginalData;
-  if (preservedOriginalData !== serializedOriginalData) {
-    try {
-      const supplied = JSON.parse(preservedOriginalData);
-      if (supplied && typeof supplied === 'object' && !Array.isArray(supplied)) {
-        const merged = { ...originalData, ...supplied };
-        [
-          'building_name', 'is_multi_unit', 'total_units', 'floors', 'community_starting_rent',
-          'price_range', 'rent_basis',
-        ].forEach((key) => {
-          if (merged[key] == null) merged[key] = originalData[key];
-        });
-        ['media'].forEach((key) => {
-          if ((!Array.isArray(merged[key]) || merged[key].length === 0) && originalData[key].length) {
-            merged[key] = originalData[key];
-          }
-        });
-        const suppliedOptions = Array.isArray(merged.unit_options) ? merged.unit_options : [];
-        merged.unit_options = sanitizeUnitOptions(
-          originalData.unit_options.length ? originalData.unit_options : suppliedOptions,
-        );
-        preservedOriginalData = JSON.stringify(merged);
-      }
-    } catch {
-      // Preserve source-provided opaque metadata unchanged when it is not JSON.
-    }
-  }
+  });
 
   const record: Record<string, unknown> = {
     // Identity
@@ -638,10 +421,10 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
 
     // Financials
     monthly_rent:         safeInt(body.monthly_rent),
-    security_deposit:     safeInt(body.monthly_rent),
+    security_deposit:     safeInt(body.security_deposit),
     last_months_rent:     safeInt(body.last_months_rent),
-    application_fee:      50,
-    pet_deposit:          null,
+    application_fee:      safeInt(body.application_fee),
+    pet_deposit:          safeInt(body.pet_deposit),
     admin_fee:            safeInt(body.admin_fee),
     move_in_special:      safeStr(body.move_in_special),
     parking_fee:          safeInt(body.parking_fee),
@@ -649,18 +432,18 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     tax_value:            null,
 
     // Listing details
-    description:          sanitizePipelineDescription(body.description),
-    original_description: sanitizePipelineDescription(body.original_description ?? body.description),
+    description:          safeStr(body.description),
+    original_description: safeStr(body.original_description) ?? safeStr(body.description),
     showing_instructions: safeStr(body.showing_instructions),
     available_date:       null,
     minimum_lease_months: null,
     lease_terms:          '[]',
 
     // Pets & policies
-    pets_allowed:         null,
-    pet_types_allowed:    null,
-    pet_weight_limit:     null,
-    pet_details:          null,
+    pets_allowed:         safeBool(body.pets_allowed),
+    pet_types_allowed:    safeJsonStr(body.pet_types_allowed) ?? '[]',
+    pet_weight_limit:     safeInt(body.pet_weight_limit),
+    pet_details:          safeStr(body.pet_details),
     smoking_allowed:      null,
 
     // Amenities & features
@@ -689,52 +472,13 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     imported_at:          importedAt,
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
-    original_data:        preservedOriginalData,
+    original_data:        safeStr(body.original_data) ?? originalData,
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,
     choice_property_id:   safeStr(body.choice_property_id),
     scraped_at:           safeStr(body.scraped_at) ?? now,
     updated_at:           safeStr(body.updated_at) ?? now,
-
-    // Master Engineering Spec Mode A additions
-    source_raw_payload:   body,
-    source_facts_ledger:  {
-      address: safeStr(body.address),
-      city: safeStr(body.city),
-      state: safeStr(body.state),
-      zip: safeStr(body.zip),
-      bedrooms: safeInt(body.bedrooms),
-      bathrooms: safeFloat(body.bathrooms),
-      half_bathrooms: safeInt(body.half_bathrooms),
-      square_footage: safeInt(body.square_footage),
-      year_built: safeInt(body.year_built),
-      monthly_rent: safeInt(body.monthly_rent),
-      property_type: propType,
-      parking: finalParking,
-      garage_spaces: finalGarageSpaces,
-      laundry_type: finalLaundry,
-      appliances: finalAppliances,
-      amenities: cleanedAmenities,
-      heating_type: finalHeating,
-      cooling_type: finalCooling,
-      flooring: finalFlooring,
-      has_basement: finalHasBasement,
-      has_central_air: finalHasCentralAir,
-      source_url: safeStr(body.source_url),
-      source_listing_id: body.source_listing_id,
-    },
-    validation_report: {
-      valid: !!(safeStr(body.address) && safeStr(body.city) && safeStr(body.state) && (safeInt(body.monthly_rent) ?? 0) > 0),
-      checks: [
-        { check: 'address', pass: !!(safeStr(body.address) && safeStr(body.city) && safeStr(body.state)), message: 'Real postal address verified' },
-        { check: 'monthly_rent', pass: (safeInt(body.monthly_rent) ?? 0) > 0, message: `Rent set to $${safeInt(body.monthly_rent)}` },
-        { check: 'bathrooms', pass: safeFloat(body.bathrooms) != null, message: `Bathrooms preserved with decimal precision: ${safeFloat(body.bathrooms)}` },
-        { check: 'zero_relocation', pass: true, message: 'Source address preserved 100% untouched without relocation' },
-      ],
-      verified_at: now,
-    },
-    operator_approved: false,
   };
 
   record.data_quality_score = qualityScore(record);

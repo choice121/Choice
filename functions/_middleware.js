@@ -24,7 +24,7 @@ const CSP_TEMPLATE = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
   "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
-  "img-src 'self' data: blob: https://ik.imagekit.io https://*.supabase.co https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://maps.geoapify.com https://images.unsplash.com https://*.zillowstatic.com https://photos.zillowstatic.com https://*.rdcpix.com https://ap.rdcpix.com https://*.realtor.com https://*.rentpath.com https://*.trulia.com https://*.apartments.com https://*.redfin.com https://*.opendoor.com https://images.opendoor.com https://*.rentprogress.com https://photos.rentprogress.com https://*.invitationhomes.com https://invitationhomes.com https://*.appfolio.com https://appfolio.com https://*.amazonaws.com https://*.cloudinary.com https://*.fastly.net",
+  "img-src 'self' data: blob: https://ik.imagekit.io https://*.supabase.co https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://maps.geoapify.com https://images.unsplash.com https://*.zillowstatic.com https://photos.zillowstatic.com https://*.rdcpix.com https://ap.rdcpix.com https://*.realtor.com https://*.rentpath.com https://*.trulia.com https://*.apartments.com https://*.redfin.com https://*.opendoor.com https://images.opendoor.com https://*.rentprogress.com https://photos.rentprogress.com",
   "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://api.ipify.org https://api.my-ip.io https://ipapi.co https://nominatim.openstreetmap.org https://api.geoapify.com https://upload.imagekit.io https://api.imagekit.io",
   "frame-src 'self' https://maps.google.com https://www.google.com",
   "worker-src 'self' blob:",
@@ -59,7 +59,6 @@ const BLOCKED_EXACT = new Set([
   '/README.md',
 ]);
 const BLOCKED_PREFIXES = [
-  '/landlord/',
   '/scripts/',
   '/supabase/',
   '/.agents/',
@@ -75,24 +74,6 @@ function isBlocked(pathname) {
   // Any *.sql, *.gs, or top-level *.md file falls through to here too:
   if (/^\/[^/]+\.(sql|gs)$/i.test(pathname)) return true;
   return false;
-}
-
-function escHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escAttr(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 export async function onRequest(context) {
@@ -139,50 +120,46 @@ export async function onRequest(context) {
   }
 
   // --- OPEN GRAPH INJECTION ---
-  if ((url.pathname === '/property.html' || url.pathname.startsWith('/rent/')) && !html.includes('property="og:title"')) {
+  if (url.pathname === '/property.html' || url.pathname.startsWith('/rent/')) {
     const idParam = url.searchParams.get('id');
     const slugMatch = url.pathname.match(/(prop-[a-z0-9]{8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
     const propId = idParam || (slugMatch ? slugMatch[1] : null);
     
     if (propId) {
       try {
-        const supabaseUrl = context.env && context.env.SUPABASE_URL;
-        const supabaseKey = context.env && (
-          context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_ANON_KEY
-        );
+        const supabaseUrl = "https://tlfmwetmhthpyrytrcfo.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZm13ZXRtaHRocHlyeXRyY2ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE4MzAyNCwiZXhwIjoyMDkwNzU5MDI0fQ.oO9N8LslPcDjQrzZWiUoTkOlDBqUVHBiVhRSGLC-EPE";
         
-        if (supabaseUrl && supabaseKey) {
-          const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${encodeURIComponent(propId)}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
-            headers: {
-              'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`
+        const fetchRes = await fetch(`${supabaseUrl}/rest/v1/properties?id=eq.${propId}&status=eq.active&select=title,monthly_rent,property_photos(url,display_order)`, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          }
+        });
+        
+        if (fetchRes.ok) {
+          const props = await fetchRes.json();
+          if (props && props.length > 0) {
+            const p = props[0];
+            const title = p.title || 'Property for Rent';
+            const price = p.monthly_rent ? `$${p.monthly_rent}/mo` : '';
+            const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
+            
+            let photoUrl = '';
+            if (p.property_photos && p.property_photos.length > 0) {
+               p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+               photoUrl = p.property_photos[0].url;
             }
-          });
-        
-          if (fetchRes.ok) {
-            const props = await fetchRes.json();
-            if (props && props.length > 0) {
-              const p = props[0];
-              const title = p.title || 'Property for Rent';
-              const price = p.monthly_rent ? `$${Number(p.monthly_rent).toLocaleString()}/mo` : '';
-              const pageTitle = price ? `${price} - ${title} | Choice Properties` : `${title} | Choice Properties`;
-            
-              let photoUrl = '';
-              if (p.property_photos && p.property_photos.length > 0) {
-                 p.property_photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-                 photoUrl = p.property_photos[0].url || '';
-              }
 
-              html = html.replace('<title>Property — Choice Properties</title>', `<title>${escHtml(pageTitle)}</title>`);
+            html = html.replace('<title>Property — Choice Properties</title>', `<title>${pageTitle}</title>`);
             
-              const ogTags = `
-              <meta property="og:title" content="${escAttr(pageTitle)}">
+            const ogTags = `
+              <meta property="og:title" content="${pageTitle}">
               <meta property="og:description" content="View property details and apply online.">
-              ${photoUrl ? `<meta property="og:image" content="${escAttr(photoUrl)}">` : ''}
+              ${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ''}
               <meta name="twitter:card" content="summary_large_image">
             `;
-              html = html.replace('</head>', ogTags + '</head>');
-            }
+            html = html.replace('</head>', ogTags + '</head>');
           }
         }
       } catch (e) {

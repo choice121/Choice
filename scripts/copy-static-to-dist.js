@@ -66,8 +66,6 @@ const filesToCopy = [
   '_headers',
   '_redirects',
   'about.html',
-  'application-credit-policy.html',
-  'download-extension.html',
   'fair-housing.html',
   'faq.html',
   'health.html',
@@ -90,18 +88,9 @@ const filesToCopy = [
   'chat.html',
   'setup-credentials.html',
   '404.html',
-  'co-applicant-consent.html',
   'extension-meta.json',
   'extension-updates.xml',
 ];
-
-// Automatically copy any other root HTML files if present
-const rootEntries = fs.readdirSync(ROOT_DIR);
-for (const entry of rootEntries) {
-  if (entry.endsWith('.html') && !filesToCopy.includes(entry)) {
-    filesToCopy.push(entry);
-  }
-}
 
 filesToCopy.forEach((file) => {
   const src = path.join(ROOT_DIR, file);
@@ -119,13 +108,6 @@ for (const zipName of ['choice-properties-extension.zip', 'choice-properties-ori
     fs.copyFileSync(zipSrc, path.join(DIST_DIR, zipName));
     console.log(`✅ Copied public/${zipName} to dist/${zipName}`);
   }
-}
-
-// Copy versioned extensions directory to dist/extensions for direct versioned downloads
-const extensionsSrc = path.join(ROOT_DIR, 'public', 'extensions');
-if (fs.existsSync(extensionsSrc)) {
-  copyRecursive(extensionsSrc, path.join(DIST_DIR, 'extensions'));
-  console.log('✅ Copied public/extensions/ to dist/extensions/');
 }
 
 console.log('🎉 Successfully populated dist/ with all static admin, landlord, tenant, apply, and platform resources.');

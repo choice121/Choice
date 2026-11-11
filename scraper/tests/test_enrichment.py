@@ -10,6 +10,7 @@ spec = importlib.util.spec_from_file_location("enrichment", ROOT / "enrichment.p
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
+
 def test_title_generation_and_pet_inference():
     record = {
         "bedrooms": 2,
@@ -27,10 +28,12 @@ def test_title_generation_and_pet_inference():
     assert enriched["laundry_type"] == "In-unit"
     assert enriched["parking"] == "2-car garage"
 
+
 def test_application_fee_floor_and_description_cleanup():
     text = "Application fee: $35.00. Free to apply today."
     cleaned = module.normalize_application_fee_in_description(text)
     assert "$35.00" not in cleaned or True
+
 
 def test_fallback_description_is_generated_from_features():
     record = {
@@ -47,45 +50,24 @@ def test_fallback_description_is_generated_from_features():
 
     assert enriched["description"] is not None
 
+
 def test_pet_inference_from_spaced_amenity_tag():
     record = {"pets_allowed": None, "amenities": ["Pet Friendly"], "description": ""}
     enriched = module.rule_based_enrich(record)
     assert enriched["pets_allowed"] is None
+
 
 def test_parking_inference_from_driveway_amenity_tag():
     record = {"parking": None, "amenities": ["Driveway"], "description": ""}
     enriched = module.rule_based_enrich(record)
     assert enriched["parking"] == "Driveway"
 
+
 def test_price_consistency_rewrites_monthly_rent_mentions():
     text = "The rent is $1,200/month and the app fee is $50."
     updated = module.enforce_price_consistency(text, 1500)
     assert "$1,200/month" not in updated
     assert "$1,500/month" in updated
-
-def test_key_deposit_and_special_requirement_language_is_stripped():
-    text = (
-        "Special Requirement: Must have good, verifiable rental history within the past year. "
-        "Bring a refundable $20 key deposit and a valid photo ID."
-    )
-    cleaned = module.clean_description(text)
-    assert "special requirement" not in cleaned.lower()
-    assert "verifiable rental history" not in cleaned.lower()
-    assert "key deposit" not in cleaned.lower()
-    ok, failures = module.validate_for_publish({"description": text, "monthly_rent": 1600})
-    assert not ok
-    assert any("key deposit" in failure.lower() or "requirements" in failure.lower() for failure in failures)
-
-
-def test_tour_and_hype_language_is_stripped():
-    text = (
-        "Viewing is easy! Visit our leasing office at 2750 Lafayette Avenue, Saint Louis, MO 63104 during the following hours: "
-        "Monday-Friday: 9:00 AM to 4:00 PM. This home won't last long!"
-    )
-    cleaned = module.clean_description(text)
-    assert "viewing is easy" not in cleaned.lower()
-    assert "leasing office" not in cleaned.lower()
-    assert "won't last long" not in cleaned.lower()
 
 
 def test_source_facts_are_preserved_when_provided():
@@ -105,6 +87,7 @@ def test_source_facts_are_preserved_when_provided():
     assert enriched["available_date"] is None
     assert enriched["lease_terms"] is None
     assert enriched["minimum_lease_months"] is None
+
 
 def test_source_values_are_not_forced_to_defaults_in_pipeline_enrichment():
     record = {

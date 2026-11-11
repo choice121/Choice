@@ -15,6 +15,7 @@ if _SCRAPER not in sys.path:
 
 import pytest
 
+
 # ---------------------------------------------------------------------------
 # Helpers shared between tests
 # ---------------------------------------------------------------------------
@@ -31,11 +32,13 @@ def _make_rec(n_photos=20, addr="123 Main St", city="Testville", state="TX"):
         "original_image_urls": json.dumps(urls),
     }
 
+
 # ---------------------------------------------------------------------------
 # opendoor_run_2: _count_expected_photos
 # ---------------------------------------------------------------------------
 
 from opendoor_run_2 import _count_expected_photos, IK_MAX_PHOTOS, _extract_prop_id
+
 
 class TestCountExpectedPhotos:
     def test_normal_count(self):
@@ -75,6 +78,7 @@ class TestCountExpectedPhotos:
     def test_missing_key_returns_zero(self):
         assert _count_expected_photos({}) == 0
 
+
 class TestExtractPropId:
     def test_valid_url(self):
         url = "https://choice-properties-site.pages.dev/property.html?id=05235e4d-baba-48ba-a0c6-d9cca834dafd"
@@ -90,6 +94,7 @@ class TestExtractPropId:
     def test_malformed_returns_none(self):
         assert _extract_prop_id("not-a-url") is None
 
+
 # ---------------------------------------------------------------------------
 # opendoor_run_2: abort logic when fewer than TARGET_COUNT records scraped
 # ---------------------------------------------------------------------------
@@ -100,14 +105,16 @@ class TestRunAbortOnInsufficientRecords:
         monkeypatch.setattr(
             "opendoor_run_2.get_sitemap_urls",
             lambda n=60: ["https://www.opendoor.com/properties/fake-1",
-                          "https://www.opendoor.com/properties/fake-2"])
+                          "https://www.opendoor.com/properties/fake-2"],
+        )
         # scraper always returns None (all fetches fail)
         monkeypatch.setattr(
             "opendoor_run_2.scrape_opendoor_url" if hasattr(
                 __import__("opendoor_run_2"), "scrape_opendoor_url") else
             "opendoor_run_2.scrape_opendoor_url",
             lambda url, verbose=False: None,
-            raising=False)
+            raising=False,
+        )
         with pytest.raises(SystemExit) as exc:
             # Patch the import inside main() by injecting into the module namespace
             import opendoor_run_2 as m
@@ -133,11 +140,13 @@ class TestRunAbortOnInsufficientRecords:
                 sys.exit(1)
         assert exc.value.code == 1
 
+
 # ---------------------------------------------------------------------------
 # reimport_photos: dedup_cap
 # ---------------------------------------------------------------------------
 
 from reimport_photos import dedup_cap, IK_MAX_PHOTOS as RI_MAX
+
 
 class TestDedupCap:
     def test_unique_urls_pass_through(self):
@@ -171,6 +180,7 @@ class TestDedupCap:
     def test_empty_input(self):
         assert dedup_cap([]) == []
 
+
 # ---------------------------------------------------------------------------
 # reimport_photos: non-destructive behaviour on upload failure
 # ---------------------------------------------------------------------------
@@ -185,15 +195,18 @@ class TestReimportNonDestructive:
         monkeypatch.setattr(
             "reimport_photos.scrape_source_urls",
             lambda url: ("123 Main, TX", ["https://cdn.example.com/photo_{}.jpg".format(i)
-                                          for i in range(3)]))
+                                          for i in range(3)]),
+        )
         # All uploads fail
         monkeypatch.setattr(
             "reimport_photos.upload_one",
-            lambda idx, url, prop_id: (idx, None, None, "simulated failure"))
+            lambda idx, url, prop_id: (idx, None, None, "simulated failure"),
+        )
         # swap_db_rows should never be called — track if it is
         monkeypatch.setattr(
             "reimport_photos.swap_db_rows",
-            lambda prop_id, results: deleted.append(prop_id) or (0, None))
+            lambda prop_id, results: deleted.append(prop_id) or (0, None),
+        )
 
         ok, fail, err = _reimport("test-prop-id", "https://www.opendoor.com/properties/fake")
         assert err is not None, "should return an error when uploads fail"
@@ -211,7 +224,8 @@ class TestReimportNonDestructive:
         swapped = []
         monkeypatch.setattr(
             "reimport_photos.swap_db_rows",
-            lambda prop_id, results: swapped.append(prop_id) or (0, None))
+            lambda prop_id, results: swapped.append(prop_id) or (0, None),
+        )
 
         ok, fail, err = _reimport("test-prop-id", "https://www.opendoor.com/properties/fake")
         assert ok == 0
@@ -225,21 +239,25 @@ class TestReimportNonDestructive:
         monkeypatch.setattr(
             "reimport_photos.scrape_source_urls",
             lambda url: ("123 Main, TX", ["https://cdn.example.com/photo_{}.jpg".format(i)
-                                          for i in range(3)]))
+                                          for i in range(3)]),
+        )
         monkeypatch.setattr(
             "reimport_photos.upload_one",
             lambda idx, url, prop_id: (idx, "https://ik.imagekit.io/test/p{}.jpg".format(idx),
-                                       "fid{}".format(idx), None))
+                                       "fid{}".format(idx), None),
+        )
         swapped = []
         monkeypatch.setattr(
             "reimport_photos.swap_db_rows",
-            lambda prop_id, results: swapped.append(prop_id) or (len(results), None))
+            lambda prop_id, results: swapped.append(prop_id) or (len(results), None),
+        )
 
         ok, fail, err = _reimport("test-prop-id", "https://www.opendoor.com/properties/fake")
         assert err is None
         assert fail == 0
         assert ok == 3
         assert len(swapped) == 1, "swap_db_rows must be called exactly once on success"
+
 
 class TestSwapDbRowsCompensatingRollback:
     """

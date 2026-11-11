@@ -100,17 +100,8 @@
           <option value="condo"     ${sel(prop.property_type,'condo')}>Condo</option>
           <option value="townhouse" ${sel(prop.property_type,'townhouse')}>Townhouse</option>
           <option value="duplex"    ${sel(prop.property_type,'duplex')}>Duplex</option>
-          <option value="triplex"   ${sel(prop.property_type,'triplex')}>Triplex</option>
-          <option value="multi_family" ${sel(prop.property_type,'multi_family')}>Multi-family</option>
           <option value="studio"    ${sel(prop.property_type,'studio')}>Studio</option>
-          <option value="room"      ${sel(prop.property_type,'room')}>Room</option>
-          <option value="loft"      ${sel(prop.property_type,'loft')}>Loft</option>
-          <option value="mobile_home" ${sel(prop.property_type,'mobile_home')}>Mobile / Manufactured Home</option>
-          <option value="land"      ${sel(prop.property_type,'land')}>Land</option>
-          <option value="farm"      ${sel(prop.property_type,'farm')}>Farm</option>
-          <option value="commercial" ${sel(prop.property_type,'commercial')}>Commercial</option>
           <option value="basement"  ${sel(prop.property_type,'basement')}>Basement Unit</option>
-          <option value="other"     ${sel(prop.property_type,'other')}>Other</option>
         </select>
       </div>
       <div class="form-group">
@@ -821,3 +812,5 @@
     CP.UI.toast('Listing deleted.', 'success');
     setTimeout(() => window.location.href = backURL, 1500);
   });
+
+

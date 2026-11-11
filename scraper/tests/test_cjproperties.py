@@ -1,5 +1,6 @@
 from scraper.cjproperties_scraper import _extract_image_urls_from_detail_html
 
+
 def test_extracts_multiple_gallery_urls_from_detail_html():
     html = """
     <html><body>

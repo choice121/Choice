@@ -4,7 +4,7 @@
 // ============================================================
 // Accepts parsed listing payloads and folder actions from Chrome /
 // Orion extensions on Zillow, Realtor, Apartments.com, etc.
-// Authenticates Choice administrator sessions via a Supabase access token.
+// Authenticates via a shared secret (x-import-secret header or ?secret= query).
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -37,24 +37,18 @@ function parseImageEntries(raw: unknown): ImageEntry[] {
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
     if (!Array.isArray(parsed)) return [];
-    const images: ImageEntry[] = [];
-    for (const entry of parsed as unknown[]) {
-      if (typeof entry === 'string') {
-        images.push(entry);
-        continue;
+    return parsed.map((entry) => {
+      if (typeof entry === 'string') return entry;
+      if (entry && typeof entry === 'object' && typeof (entry as any).url === 'string') {
+        return {
+          url: (entry as any).url,
+          fileId: (entry as any).fileId ?? null,
+          width: typeof (entry as any).width === 'number' ? (entry as any).width : null,
+          height: typeof (entry as any).height === 'number' ? (entry as any).height : null,
+        };
       }
-      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
-
-      const image = entry as Record<string, unknown>;
-      if (typeof image.url !== 'string') continue;
-      images.push({
-        url: image.url,
-        fileId: typeof image.fileId === 'string' ? image.fileId : null,
-        width: typeof image.width === 'number' ? image.width : null,
-        height: typeof image.height === 'number' ? image.height : null,
-      });
-    }
-    return images;
+      return null;
+    }).filter((entry): entry is ImageEntry => entry !== null);
   } catch {
     return [];
   }
@@ -73,7 +67,18 @@ const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return permissiveCorsResponse(req);
 
+  // ── Auth: shared secret ──────────────────────────────────────
+  const IMPORT_SECRET = Deno.env.get('SHORTCUT_IMPORT_SECRET') || Deno.env.get('IMPORT_SECRET');
+  if (!IMPORT_SECRET) {
+    console.error('[receive-pipeline-import] Import secret is not configured');
+    return permissiveJsonErr(503, 'Import service is not configured', req);
+  }
   const url = new URL(req.url);
+  const incoming = url.searchParams.get('secret') || req.headers.get('x-import-secret');
+  if (!incoming || incoming !== IMPORT_SECRET) {
+    return permissiveJsonErr(401, 'Invalid import secret', req);
+  }
+
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
   if (!SUPABASE_URL || !SERVICE_KEY) {
@@ -83,20 +88,6 @@ Deno.serve(async (req) => {
   const adminClient  = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-
-  // Zero-Auth Direct Pipeline Ingestion:
-  // Browser extensions (Chrome and Orion) can ingest listings directly without requiring user login.
-  // Optional admin authentication is still accepted and resolved if a token is provided.
-  let isAuthorized = true;
-  const bearer = req.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (bearer && bearer !== 'null' && bearer !== 'undefined') {
-    try {
-      const { data: { user } } = await adminClient.auth.getUser(bearer);
-      if (user) {
-        // Optional role audit if user provided
-      }
-    } catch (_) {}
-  }
 
   // ── GET or Action Handling ──────────────────────────────────
   const actionFromQuery = url.searchParams.get('action');

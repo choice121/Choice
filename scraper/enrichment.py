@@ -88,6 +88,7 @@ from datetime import date
 
 logger = logging.getLogger(__name__)
 
+
 # =============================================================================
 # 1. Description cleaner
 # =============================================================================
@@ -119,10 +120,6 @@ _BOILERPLATE_PATTERNS = [
     r"Visit our website for more properties[^.]*\.",
     r"Don['']t miss (?:this|out)[^!.]*[!.]",
     r"This (?:won['']t|will not) last[^!.]*[!.]",
-    r"This\s+home\s+(?:won['']t|will not)\s+last\s+long[^.!?]*[.!?]",
-    r"Viewing\s+is\s+easy!\s*Visit\s+our\s+leasing\s+office[^.!?]*[.!?]",
-    r"Visit\s+our\s+leasing\s+office[^.!?]*[.!?]",
-    r"pick up keys for a self-guided tour[^.!?]*[.!?]",
     r"Apply Now[^\n]*",
     r"Apply (?:today|now|online)[^!.]*[!.]",
     r"Move-in (?:today|now|immediately) -- [^.]*\.",
@@ -144,33 +141,6 @@ _BOILERPLATE_PATTERNS = [
     r"[Cc]redit check required[^.]*\.",
     r"All applicants must[^.]*\.",
     r"We (?:do not|don['']t) accept[^.]*applications[^.]*\.",
-    # ── Prohibited Requirements & Qualifications block and clauses ─────────
-    r"(?:REQUIREMENTS\s*&\s*QUALIFICATIONS|QUALIFICATIONS\s*&\s*REQUIREMENTS|QUALIFICATIONS|REQUIREMENTS)\s*[:.]?",
-    r"No corporate leases allowed or AIRBNB[^.!?\n]*[.!?]?",
-    r"Credit score must be a minimum of \d+[^.!?\n]*[.!?]?",
-    r"Income must exceed [\d.]+ times the monthly rent to qualify[^.!?\n]*[.!?]?",
-    r"No evictions or broken leases on your rental history[^.!?\n]*[.!?]?",
-    r"No criminal history ever[^.!?\n]*[.!?]?",
-    r"Application pending\s*-\s*Waiting list options are available at present[^.!?\n]*[.!?]?",
-    r"Photos are stock images provided,?\s*video tour of actual unit available upon request[^.!?\n]*[.!?]?",
-    r"Pictures are for marketing purposes only[^.!?\n]*[.!?]?",
-    r"NO VOUCHERS ACCEPTED[^.!?\n]*[.!?]?",
-    r"All information provided is deemed reliable however is not guaranteed[^.!?\n]*[.!?]?",
-    r"(?:special\s+requirement|special\s+requirements)\s*[:.]?[^.!?\n]*[.!?]?",
-    r"Must\s+have\s+good,?\s*verifiable\s+rental\s+history\s+within\s+the\s+past\s+year[^.!?\n]*[.!?]?",
-    r"(?:bring|please\s+bring|must\s+bring)\s+(?:a\s+)?(?:refundable\s+)?(?:key\s+)?deposit[^.!?\n]*[.!?]?",
-    r"refundable\s+\$?\d+(?:\.\d{2})?\s+key\s+deposit[^.!?\n]*[.!?]?",
-    # ── Scam / fraud warnings and social media / classified ads disclaimers ──
-    r"(?:beware|warning|alert|notice|protect yourself|caution)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?|fraudulent)[^.!?\n]*[.!?]?",
-    r"[^.!?\n]*\b(?:scammers?|fraudsters?|scam\s+alert|scam\s+warning)\b[^.!?\n]*[.!?]?",
-    r"(?:we\s+)?(?:do not|don['']t|never)\s+(?:advertise|post|list|solicit)\s+(?:on\s+)?[^.!?\n]*(?:craigslist|facebook|marketplace|tiktok|offerup|social media)[^.!?\n]*[.!?]?",
-    r"[^.!?\n]*\b(?:craigslist|facebook marketplace|tiktok|offerup)\b[^.!?\n]*[.!?]?",
-    r"(?:do not|never)\s+wire\s+(?:money|funds)[^.!?\n]*[.!?]?",
-    # ── Third-party payment methods ──────────────────────────────────────────
-    r"[^.!?\n]*\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|google\s*pay|wire\s*transfer|western\s*union|money\s*order)\b[^.!?\n]*[.!?]?",
-    # ── Free application / non-$50 fee language ─────────────────────────────
-    r"[^.!?\n]*\b(?:free|no|\$0|zero|waived|complimentary)\s+(?:application|app)\s+fee\b[^.!?\n]*[.!?]?",
-    r"[^.!?\n]*\bapplication\s+fee\s+(?:is\s+)?(?:waived|\$0|zero|free|none|complimentary)\b[^.!?\n]*[.!?]?",
     # Separator lines
     r"-{8,}",
     r"={8,}",
@@ -193,8 +163,6 @@ _DEPOSIT_STRIP_PATTERNS = [
     re.compile(r"(?i)\s+and\s+(?:a\s+)?security\s+deposit\b", re.IGNORECASE),
     # 3. Any remaining sentence explicitly mentioning security deposit
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\bsecurity\s+deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
-    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:Bring|Please\s+bring|Must\s+bring|Remember\s+to\s+bring)[^\n.!?]*\b(?:refundable\s+)?(?:key\s+)?deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
-    re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?\s*(?:refundable\s+\$?\d+(?:\.\d{2})?\s+)?(?:key\s+)?deposit\b[^\n.!?]*[.!?]?", re.IGNORECASE),
 ]
 
 # Patterns to strip home-sale, buyer, financing, and investment jargon (for Opendoor & sale-to-rent conversions)
@@ -208,6 +176,7 @@ _FOR_SALE_PATTERNS = [
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:make\s+an\s+offer|submit\s+all\s+offers|as-is\s+sale|sold\s+as-is|subject\s+to\s+inspection)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
     re.compile(r"(?i)\b(?:great\s+starter\s+home|perfect\s+for\s+first[- ]time\s+home\s*buyers?|first[- ]time\s+buyer)\b", re.IGNORECASE),
 ]
+
 
 # Patterns to completely strip availability and move-in mentions from descriptions
 _AVAILABILITY_STRIP_PATTERNS = [
@@ -224,6 +193,7 @@ _AVAILABILITY_STRIP_PATTERNS = [
     re.compile(r"(?i)\bavailable\s+for\s+(?:immediate\s+)?(?:move-?in|occupancy)\b", re.IGNORECASE),
     re.compile(r"(?i)\bmove-?in\s+ready\b", re.IGNORECASE),
 ]
+
 
 def strip_for_sale_jargon_from_description(text):
     """
@@ -242,6 +212,7 @@ def strip_for_sale_jargon_from_description(text):
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
 
+
 def strip_security_deposit_from_description(text):
     """
     Remove all security deposit mentions, amounts, and clauses from listing descriptions.
@@ -258,6 +229,7 @@ def strip_security_deposit_from_description(text):
     text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
+
 
 def strip_availability_from_description(text):
     """
@@ -276,6 +248,7 @@ def strip_availability_from_description(text):
     text = re.sub(r"(?<=\w)\s+([.!?])", r"\1", text)
     return text.strip()
 
+
 def clean_description(text):
     """
     Strip agent boilerplate, CTA language, screening criteria, for-sale jargon,
@@ -293,6 +266,7 @@ def clean_description(text):
     text = text.strip()
     return text
 
+
 def normalize_allcaps_description(text):
     """
     Convert fully ALL-CAPS descriptions to sentence case.
@@ -302,6 +276,7 @@ def normalize_allcaps_description(text):
     sentence case.  Normal mixed-case text is returned unchanged.
     """
     return text
+
 
 # =============================================================================
 # 2. Corporate management company fee block stripper
@@ -341,6 +316,7 @@ _CORPORATE_FEE_PATTERNS = [
 
 _CORPORATE_FEE_RE = [re.compile(p, re.IGNORECASE) for p in _CORPORATE_FEE_PATTERNS]
 
+
 def strip_corporate_fees(text):
     """
     Remove management company fee schedules and boilerplate that contradict
@@ -352,6 +328,7 @@ def strip_corporate_fees(text):
         text = pat.sub("", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
 
 # =============================================================================
 # 1b. External application instructions — remove references to applying
@@ -370,6 +347,7 @@ _EXTERNAL_APPLICATION_PATTERNS = [
 ]
 _EXTERNAL_APPLICATION_RE = [re.compile(p) for p in _EXTERNAL_APPLICATION_PATTERNS]
 
+
 def strip_external_application_instructions(text):
     """Remove any instructions to apply through a third-party portal/site."""
     if not text:
@@ -378,6 +356,7 @@ def strip_external_application_instructions(text):
         text = pat.sub("", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
 
 # =============================================================================
 # 1c. Property manager / owner / third-party brand references — replace with
@@ -410,13 +389,16 @@ _THIRD_PARTY_BRAND_RE = [re.compile(p) for p in _THIRD_PARTY_BRAND_PATTERNS]
 # since _WATERMARKED_BRANDS is defined further down in this module.
 _INLINE_BRAND_RE = None
 
+
 def _inline_brand_re():
     global _INLINE_BRAND_RE
     if _INLINE_BRAND_RE is None:
         _INLINE_BRAND_RE = re.compile(
             r"\b(?:" + "|".join(re.escape(b) for b in _WATERMARKED_BRANDS if len(b) > 3) + r")\b",
-            re.IGNORECASE)
+            re.IGNORECASE,
+        )
     return _INLINE_BRAND_RE
+
 
 def replace_owner_manager_references(text):
     """
@@ -432,6 +414,7 @@ def replace_owner_manager_references(text):
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
+
 def strip_third_party_branding(text):
     """Remove brokerage / MLS / other-platform branding from descriptions."""
     if not text:
@@ -443,12 +426,14 @@ def strip_third_party_branding(text):
     text = re.sub(r"[ \t]{2,}", " ", text)
     return text.strip()
 
+
 # =============================================================================
 # 1d. Price consistency — a description must never quote a rent figure that
 #     differs from the property's final published monthly_rent.
 # =============================================================================
 
 _PRICE_MENTION_RE = re.compile(r"\$\s?[\d,]+(?:\.\d{2})?\s*(?:/\s*(?:mo|month)|per\s+month|monthly)?", re.IGNORECASE)
+
 
 def enforce_price_consistency(text, published_rent):
     """
@@ -471,6 +456,7 @@ def enforce_price_consistency(text, published_rent):
     text = re.sub(r"\$[\d,]+\s*/\s*month", _repl, text)
     text = re.sub(r"\$[\d,]+\s*per\s*month", _repl, text)
     return text
+
 
 # =============================================================================
 # 1e. Application fee normalization in descriptions
@@ -495,7 +481,8 @@ _APP_FEE_AMOUNT_RE = re.compile(
         |0*(\d{1,4})\s+dollars?\s+(?:application|app)\s+fee)
     )
     """,
-    re.IGNORECASE | re.VERBOSE)
+    re.IGNORECASE | re.VERBOSE,
+)
 
 # Matches any wording that indicates the application is free
 _FREE_APP_RE = re.compile(
@@ -517,16 +504,19 @@ _FREE_APP_RE = re.compile(
     [^.!?\n]*                                             # rest of the sentence
     [.!?\n]?                                              # optional sentence terminator
     """,
-    re.IGNORECASE | re.VERBOSE)
+    re.IGNORECASE | re.VERBOSE,
+)
 
 # Sentence-level patterns that explicitly state fee amounts in context
 _FEE_SENTENCE_RE = re.compile(
     r"[^.!?\n]*"
     r"(?:application|app|rental)\s+fee[^.!?\n]*"
     r"[.!?\n]",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 
 _NORMALIZED_FEE_STATEMENT = "Application Fee: $50."
+
 
 def normalize_application_fee_in_description(text):
     """
@@ -556,6 +546,7 @@ def normalize_application_fee_in_description(text):
 
     text = _FEE_SENTENCE_RE.sub(_remove_unverified_fee_sentence, text)
     return re.sub(r"[ \t]{2,}", " ", text).strip()
+
 
 # =============================================================================
 # Pre-publish validation gate
@@ -615,14 +606,16 @@ def validate_for_publish(record, transferred_photo_count=None):
         r"|book\s+a\s+(?:tour|showing)"
         r"|open\s+house"
         r"|contact\s+(?:us|the\s+agent|the\s+landlord|owner)",
-        re.IGNORECASE)
+        re.IGNORECASE,
+    )
     if _TOUR_CHECK.search(desc):
         failures.append("Description contains tour/showing/contact CTA language")
 
     # 5. Description must not reference external application portals
     _PORTAL_CHECK = re.compile(
         r"turbotenant|zillow\s+application|apartments\.com|apply\s+on\s+\w+",
-        re.IGNORECASE)
+        re.IGNORECASE,
+    )
     if _PORTAL_CHECK.search(desc):
         failures.append("Description references an external application portal")
 
@@ -640,50 +633,13 @@ def validate_for_publish(record, transferred_photo_count=None):
         r"|move-?in\s+ready"
         r"|ready\s+for\s+(?:immediate\s+)?move-?in"
         r"|available\s+date",
-        re.IGNORECASE)
+        re.IGNORECASE,
+    )
     if _AVAIL_CHECK.search(desc):
         failures.append("Description contains availability date or move-in language")
 
-    # 9. Description must not contain prohibited qualifications or screening clauses
-    _QUAL_CHECK = re.compile(
-        r"special\s+requirement"
-        r"|requirements\s*&\s*qualifications"
-        r"|no\s+corporate\s+leases"
-        r"|airbnb"
-        r"|credit\s+score\s+must\s+be\s+a\s+minimum"
-        r"|income\s+must\s+exceed"
-        r"|must\s+have\s+good,?\s*verifiable\s+rental\s+history"
-        r"|no\s+evictions\s+or\s+broken\s+leases"
-        r"|no\s+criminal\s+history"
-        r"|application\s+pending\s*-\s*waiting\s+list"
-        r"|photos\s+are\s+stock\s+images"
-        r"|pictures\s+are\s+for\s+marketing\s+purposes",
-        re.IGNORECASE)
-    if _QUAL_CHECK.search(desc):
-        failures.append("Description contains prohibited requirements & qualifications language")
-
-    # 9b. Description must not contain key deposit or refundable deposit language
-    if re.search(r"bring\s+(?:a\s+)?(?:refundable\s+)?(?:key\s+)?deposit|refundable\s+\$?\d+(?:\.\d{2})?\s+key\s+deposit|key\s+deposit", desc, re.IGNORECASE):
-        failures.append("Description contains prohibited key deposit language")
-
-    # 10. Description must not contain scam/fraud warnings or social media disclaimers
-    _SCAM_CHECK = re.compile(
-        r"\b(?:scams?|scammers?|fraud)\b"
-        r"|we\s+(?:do\s+not|don['']t|never)\s+(?:advertise|post|list)\s+on"
-        r"|\b(?:craigslist|facebook\s+marketplace|tiktok|offerup)\b"
-        r"|never\s+wire\s+money",
-        re.IGNORECASE)
-    if _SCAM_CHECK.search(desc):
-        failures.append("Description contains scam/fraud warning or social media disclaimer")
-
-    # 11. Description must not contain third-party payment methods
-    _PAYMENT_CHECK = re.compile(
-        r"\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|wire\s*transfer|western\s*union|money\s*order)\b",
-        re.IGNORECASE)
-    if _PAYMENT_CHECK.search(desc):
-        failures.append("Description references third-party payment methods")
-
     return (len(failures) == 0, failures)
+
 
 # =============================================================================
 # 3. Watermark / competitor-brand filter
@@ -718,11 +674,14 @@ _WATERMARKED_BRANDS = (
     "main street renewal",
     "amh",
     "invitation_homes",
-    "nfm lending")
+    "nfm lending",
+)
+
 
 def _norm(s):
     """Lowercase + collapse non-alphanumeric to spaces."""
     return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
 
 def is_watermarked(record):
     """
@@ -755,6 +714,7 @@ def is_watermarked(record):
             return True
     return False
 
+
 def watermark_reason(record):
     """Return the matched brand name for log output, or None."""
     parts = []
@@ -767,6 +727,7 @@ def watermark_reason(record):
         if brand in combined:
             return brand
     return None
+
 
 # =============================================================================
 # 3b. Branded photo filter — remove individual photos showing company branding
@@ -825,6 +786,7 @@ _BRANDED_PHOTO_URL_PATTERNS = [
 
 _BRANDED_PHOTO_RE = [re.compile(p, re.IGNORECASE) for p in _BRANDED_PHOTO_URL_PATTERNS]
 
+
 def filter_branded_photos(photo_urls):
     """
     Given a list of photo URLs, remove any that appear to show company
@@ -844,6 +806,7 @@ def filter_branded_photos(photo_urls):
             filtered.append(url)
 
     return filtered
+
 
 def filter_record_photos(record):
     """
@@ -865,12 +828,14 @@ def filter_record_photos(record):
             logger.debug(
                 "filter_record_photos: removed %d branded photo(s) from %s",
                 removed,
-                (record.get("address") or record.get("source_listing_id") or "?"))
+                (record.get("address") or record.get("source_listing_id") or "?"),
+            )
         record["original_image_urls"] = json.dumps(filtered)
     except Exception:
         pass
 
     return record
+
 
 # =============================================================================
 # 3c. Apply Now CTA — append a Choice Properties call-to-action to every
@@ -894,9 +859,11 @@ _APPLY_CTAS = [
 _CTA_ALREADY_RE = re.compile(
     r"apply\s+now|submit\s+(?:your\s+)?application|apply\s+today|apply\s+online"
     r"|choice\s+properties.*apply",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 
 _CTA_TAIL_CHARS = 300   # how many characters from the end to scan
+
 
 def append_apply_cta(description):
     """
@@ -916,6 +883,7 @@ def append_apply_cta(description):
     if cta not in (description or ""):
         description = (description or "").rstrip() + "\n\n" + cta
     return description
+
 
 # =============================================================================
 # 4. HVAC normalization — parse raw MLS blobs into separate heating/cooling
@@ -960,6 +928,7 @@ def normalize_heating_type(raw):
 
     return None
 
+
 def normalize_cooling_type(raw):
     """
     Extract the cooling type from a raw MLS combined text.
@@ -992,6 +961,7 @@ def normalize_cooling_type(raw):
         return None
 
     return None
+
 
 def normalize_hvac(record):
     """
@@ -1029,6 +999,7 @@ def normalize_hvac(record):
 
     return record
 
+
 # =============================================================================
 # 5. Rule-based enrichment  (no API calls, runs locally)
 # =============================================================================
@@ -1043,7 +1014,8 @@ _PET_YES_RE = re.compile(
     r"|pets\s+are\s+allowed"
     r"|animals\s+(?:ok|allowed|welcome)"
     r"|pet\s+(?:ok|friendly)",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 _PET_NO_RE = re.compile(
     r"no\s+pets"
     r"|pets?\s+not\s+allowed"
@@ -1052,7 +1024,8 @@ _PET_NO_RE = re.compile(
     r"|no animals"
     r"|no dogs"
     r"|no cats",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 
 # Laundry inference — checked against amenity tags (lowercase)
 _LAUNDRY_IN_UNIT_TAGS = {
@@ -1069,24 +1042,28 @@ _LAUNDRY_IN_UNIT_RE = re.compile(
     r"|in[- ]unit\s+(?:laundry|washer)"
     r"|w/?d\s+in\s+unit"
     r"|(?:washer|dryer)\s+included",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 _LAUNDRY_HOOKUP_RE = re.compile(
     r"washer[/\s-]*dryer\s+hookups?"
     r"|laundry\s+hookups?"
     r"|w/?d\s+hookups?"
     r"|washer\s+and\s+dryer\s+hookup",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 
 # Parking inference from amenity tags
 _GARAGE_TAGS_RE = re.compile(
     r"garage_(\d+)_or_more|garage_spaces?_(\d+)|attached_garage|detached_garage",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 _PARKING_DESC_RE = re.compile(
     r"(\d+)[- ]car\s+(?:attached\s+)?garage"
     r"|(\d+)\s+car\s+garage"
     r"|two[- ]car\s+garage"
     r"|2[- ]car\s+garage",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 
 _HEATING_RULES = [
     (r"(?i)forced[- ]air|gas\s+forced", "Forced Air"),
@@ -1104,6 +1081,7 @@ _COOLING_RULES = [
     (r"(?i)evaporative|swamp cool", "Evaporative"),
     (r"(?i)no\s+(?:a/?c|air conditioning|cooling)", "None"),
 ]
+
 
 def _infer_laundry(record):
     """
@@ -1154,6 +1132,7 @@ def _infer_laundry(record):
         return None
 
     return existing
+
 
 def _infer_parking(record):
     """
@@ -1219,6 +1198,7 @@ def _infer_parking(record):
         return "Carport"
 
     return None
+
 
 def rule_based_enrich(record):
     """
@@ -1385,6 +1365,7 @@ def rule_based_enrich(record):
     record["lease_terms"] = None
     record["minimum_lease_months"] = None
     return record
+
 
 def _build_fallback_description(record, existing=None):
     """
@@ -1556,6 +1537,7 @@ def _build_fallback_description(record, existing=None):
 
     return "\n\n".join(p for p in paragraphs if p.strip()) or "A well-maintained rental property available now."
 
+
 # =============================================================================
 # 6. Regex extraction from listing detail page
 # =============================================================================
@@ -1581,23 +1563,27 @@ _LAUNDRY_RULES = [
         r"|washer.*?dryer\s+in\s+unit"
         r"|w/?d\s+in\s+unit"
         r"|washer\s*/?\s*dryer\s+included",
-        "In-unit"),
+        "In-unit",
+    ),
     (
         r"(?i)washer[- ]dryer hookups?"
         r"|laundry hookups?"
         r"|w/?d\s+hookups?"
         r"|washer.*?dryer\s+hookup",
-        "Washer/dryer hookups"),
+        "Washer/dryer hookups",
+    ),
     (
         r"(?i)shared laundry"
         r"|laundry\s+on[- ]site"
         r"|coin[- ]operated laundry"
         r"|communal laundry",
-        "Shared laundry"),
+        "Shared laundry",
+    ),
 ]
 
 # Only fetch detail pages for records below this quality score
 _DETAIL_FETCH_THRESHOLD = 75
+
 
 def regex_extract_missing(record, verbose=False):
     """
@@ -1705,6 +1691,7 @@ def regex_extract_missing(record, verbose=False):
         logger.debug("regex_extract done for %s (score was %d)", url[:60], score)
 
     return record
+
 
 # =============================================================================
 # 7. Combined pipeline entry-point
@@ -1838,6 +1825,7 @@ def apply_enrichment_pipeline(records, verbose=False, enable_detail_fetch=True):
 
     return clean_records, count_watermarked
 
+
 # =============================================================================
 # Internal helpers
 # =============================================================================
@@ -1857,6 +1845,7 @@ _RESCORE_TRACKABLE = [
     "parking", "pets_allowed", "security_deposit", "amenities", "appliances",
     "available_date", "heating_type", "cooling_type", "laundry_type",
 ]
+
 
 def _rescore(records):
     """Re-calculate data_quality_score + missing_fields after enrichment."""
@@ -1964,435 +1953,3 @@ Respond ONLY with a valid JSON object using this exact schema:
                 print("      => Gemini API rate limit reached, skipping further AI enrichment.")
         elif verbose:
             print(f"      => AI extraction failed: {e}")
-
-
-# =============================================================================
-# 8. Contextual AI-powered description enrichment (compliant, minimal edits)
-# =============================================================================
-
-import hashlib
-import json as _json
-import os
-
-ENRICHMENT_RULESET_VERSION = "v1.1.0"
-
-# Prohibited qualification fragments, scam warnings, social media ads warnings, and payment methods to strip
-_QUAL_PROHIBITED = [
-    r"(?i)REQUIREMENTS\s*&\s*QUALIFICATIONS\s*:?",
-    r"(?i)No corporate leases allowed or AIRBNB\.?",
-    r"(?i)Credit score must be a minimum of \d+\.?",
-    r"(?i)Income must exceed [\d.]+ times the monthly rent to qualify\.?",
-    r"(?i)No evictions or broken leases on your rental history\.?",
-    r"(?i)No criminal history ever\.?",
-    r"(?i)Application pending\s*-\s*Waiting list options are available at present\.?",
-    r"(?i)Photos are stock images provided,?\s*video tour of actual unit available upon request\.?",
-    r"(?i)Pictures are for marketing purposes only\.?",
-    r"(?i)NO VOUCHERS ACCEPTED\.?",
-    r"(?i)All information provided is deemed reliable however is not guaranteed[^.!?\n]*[.!?]?",
-    r"(?i)(?:beware|warning|alert|notice|protect yourself|caution)\s*(?:of|from|against)?\s*(?:scams?|fraud|scammers?|fraudulent)[^.!?\n]*[.!?]?",
-    r"(?i)[^.!?\n]*\b(?:scammers?|fraudsters?|scam\s+alert|scam\s+warning)\b[^.!?\n]*[.!?]?",
-    r"(?i)(?:we\s+)?(?:do not|don['']t|never)\s+(?:advertise|post|list|solicit)\s+(?:on\s+)?[^.!?\n]*(?:craigslist|facebook|marketplace|tiktok|offerup|social media)[^.!?\n]*[.!?]?",
-    r"(?i)[^.!?\n]*\b(?:craigslist|facebook marketplace|tiktok|offerup)\b[^.!?\n]*[.!?]?",
-    r"(?i)(?:do not|never)\s+wire\s+(?:money|funds)[^.!?\n]*[.!?]?",
-    r"(?i)[^.!?\n]*\b(?:cash\s*app|cashapp|zelle|paypal|venmo|apple\s*pay|google\s*pay|wire\s*transfer|western\s*union|money\s*order)\b[^.!?\n]*[.!?]?",
-    r"(?i)[^.!?\n]*\b(?:free|no|\$0|zero|waived|complimentary)\s+(?:application|app)\s+fee\b[^.!?\n]*[.!?]?",
-    r"(?i)[^.!?\n]*\bapplication\s+fee\s+(?:is\s+)?(?:waived|\$0|zero|free|none|complimentary)\b[^.!?\n]*[.!?]?",
-]
-
-# Known portals/domains to detect for external redirects
-_EXTERNAL_DOMAINS = [
-    r"zillow\.com",
-    r"apartments\.com",
-    r"trulia\.com",
-    r"realtor\.com",
-    r"hotpads\.com",
-    r"turbotenant\.com",
-    r"rentspree\.com",
-    r"rentcafe\.com",
-    r"cozy\.com",
-    r"appfolio\.com",
-    r"rently\.com",
-    r"showmojo\.com",
-]
-
-# Phone/email patterns
-_PHONE_RE = re.compile(r"(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
-_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_URL_RE = re.compile(r"https?://[^\s)]+", re.IGNORECASE)
-
-# Price patterns (for price consistency)
-_PRICE_ANY_RE = re.compile(r"\$\s?([\d,]+)(?:\.\d{2})?", re.IGNORECASE)
-_PRICE_MO_RE = re.compile(r"\$\s?[\d,]+(?:\.\d{2})?\s*(?:/\s*mo|/month|per\s+month|monthly)", re.IGNORECASE)
-
-
-def _hash_text(s):
-    if not s:
-        return None
-    return hashlib.sha256(s.encode('utf-8', errors='ignore')).hexdigest()
-
-
-def _is_redirect_context(line):
-    """Heuristic: does this line appear to redirect off-platform?"""
-    lower = line.lower()
-    redirect_markers = [
-        'contact', 'call', 'text', 'email', 'reach out',
-        'apply', 'submit application', 'schedule', 'book', 'tour', 'showing', 'viewing',
-        'visit', 'click', 'go to', 'website', 'portal', 'link',
-    ]
-    domain_hit = any(re.search(d, lower) for d in _EXTERNAL_DOMAINS)
-    if domain_hit:
-        return True
-    if _PHONE_RE.search(line) or _EMAIL_RE.search(line):
-        # If also has redirect markers, likely redirecting
-        if any(m in lower for m in ['contact', 'call', 'text', 'email', 'reach', 'apply', 'schedule']):
-            return True
-    if any(m in lower for m in redirect_markers):
-        # More specific - external app/tour/contact
-        if any(x in lower for x in ['apply', 'schedule', 'tour', 'showing', 'agent', 'owner', 'landlord', 'manager', 'portal']):
-            return True
-    return False
-
-
-def _classify_span_deterministic(span):
-    """Classify a span deterministically. Returns (action, reason, confidence, needs_review)."""
-    if not span or not span.strip():
-        return 'PRESERVE', None, 1.0, False
-    lower = span.lower()
-    
-    # External application instructions
-    if any(re.search(p, span, re.I) for p in _EXTERNAL_APPLICATION_PATTERNS):
-        return 'REMOVE', 'external_application_instructions', 0.95, False
-    # External domains
-    if any(re.search(d, span, re.I) for d in _EXTERNAL_DOMAINS) and any(m in lower for m in ['apply', 'visit', 'click', 'submit']):
-        return 'REMOVE', 'external_portal_redirect', 0.95, False
-    # Tour/showing/contact redirecting
-    if re.search(r"(schedule|book|request|arrange).*?(tour|showing|viewing|appointment)", span, re.I):
-        if _PHONE_RE.search(span) or _EMAIL_RE.search(span) or _is_redirect_context(span):
-            return 'REMOVE', 'external_tour_redirect', 0.9, False
-        # Just mentioning tour without redirect might be borderline - be conservative and review if unclear
-    # Direct contact with phone/email in redirect context
-    if (_PHONE_RE.search(span) or _EMAIL_RE.search(span)) and _is_redirect_context(span):
-        # Could be mixed - check if it's just contact info
-        if re.search(r"contact|call|text|email|reach", span, re.I):
-            return 'REMOVE', 'direct_contact_redirect', 0.9, False
-    # Property/listing ID for external application
-    if re.search(r"(property|listing)\s*(id|#|code)", span, re.I) and any(m in lower for m in ['apply', 'enter', 'use', 'submit']):
-        return 'REMOVE', 'external_listing_id_redirect', 0.9, False
-    # Scam warnings that are just redirecting/hiding platform issues - flag for review
-    if re.search(r"beware.*scam|rental scam|fraudulent", span, re.I):
-        # If it's just a warning without being malicious redirect, could be legitimate disclosure - REVIEW
-        if any(m in lower for m in ['contact', 'send money', 'wire', 'payment']):  # payment redirect combined
-            return 'REVIEW', 'scam_warning_with_payment_redirect', 0.7, True
-        return 'REVIEW', 'scam_warning_disclosure', 0.6, True
-    # Third-party branding/attribution redirecting
-    if re.search(r"(listed by|courtesy of|presented by|brokered by)", span, re.I):
-        # May be attribution - could be needed? But we strip in normal flow; be conservative
-        return 'REMOVE', 'third_party_attribution', 0.85, False
-    # Payment redirects
-    if any(m in lower for m in ['send payment', 'pay.*owner', 'zelle', 'cash app', 'venmo']) and not any(m in lower for m in ['application fee']):
-        return 'REMOVE', 'external_payment_redirect', 0.9, False
-    
-    return 'PRESERVE', None, 0.8, False
-
-
-def _number_words_to_int(s):
-    """Simple number word conversion for small numbers."""
-    if not s:
-        return None
-    s = s.lower().strip()
-    mapping = {
-        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
-        'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
-        'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20,
-        'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
-        'eighty': 80, 'ninety': 90, 'hundred': 100, 'thousand': 1000
-    }
-    # Try direct match
-    if s in mapping:
-        return mapping[s]
-    # Try compound (simple cases)
-    parts = re.findall(r'\b\w+\b', s)
-    if not parts:
-        return None
-    total = 0
-    current = 0
-    for p in parts:
-        if p not in mapping:
-            continue
-        val = mapping[p]
-        if val == 100:
-            current = max(current, 1) * 100
-        elif val == 1000:
-            total += current * 1000
-            current = 0
-        else:
-            current += val
-    total += current
-    return total if total > 0 else None
-
-
-def _extract_amounts_with_context(text):
-    """Extract amounts with surrounding context to classify."""
-    results = []
-    # Numeric amounts
-    for m in _PRICE_ANY_RE.finditer(text):
-        start = max(0, m.start() - 80)
-        end = min(len(text), m.end() + 80)
-        context = text[start:end]
-        amount_str = m.group(1).replace(',', '')
-        try:
-            amount = float(amount_str)
-        except:
-            continue
-        results.append({
-            'type': 'numeric',
-            'amount': amount,
-            'amount_str': m.group(0),
-            'start': m.start(),
-            'end': m.end(),
-            'context': context
-        })
-    # Word amounts like "twelve hundred dollars"
-    for m in re.finditer(r'\b((?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|\s)+)\s+dollars?\b', text, re.I):
-        start = max(0, m.start() - 80)
-        end = min(len(text), m.end() + 80)
-        context = text[start:end]
-        amt = _number_words_to_int(m.group(1))
-        if amt:
-            results.append({
-                'type': 'words',
-                'amount': float(amt),
-                'amount_str': m.group(0),
-                'start': m.start(),
-                'end': m.end(),
-                'context': context
-            })
-    return results
-
-
-def _classify_amount_context(amount_info, old_rent, new_rent):
-    """Classify if amount is old rent vs deposit/fee/utility/historical."""
-    ctx = amount_info['context'].lower()
-    amt = amount_info['amount']
-    
-    # Historical indicators
-    if any(x in ctx for x in ['previously', 'was ', 'used to be', 'reduced from', 'down from']):
-        return 'HISTORICAL', 0.9
-    
-    # Deposit indicators
-    if any(x in ctx for x in ['deposit', 'security deposit']):
-        return 'DEPOSIT', 0.95
-    
-    # Fee indicators
-    if any(x in ctx for x in ['application fee', 'pet fee', 'admin fee', 'fee']):
-        # But not if it's the main rent context
-        if 'rent' not in ctx.split('deposit')[0] if 'deposit' in ctx else True:
-            # Could be fee
-            if amt < 500:  # typical fees small
-                return 'FEE', 0.9
-    
-    # Rent indicators
-    rent_indicators = ['rent', 'monthly', '/mo', 'per month', 'monthly rent', 'rental rate']
-    if any(x in ctx for x in rent_indicators):
-        # If it matches old rent and different from new rent
-        if old_rent and abs(amt - float(old_rent)) < 0.01 and new_rent and abs(float(old_rent) - float(new_rent)) > 0.01:
-            return 'OLD_RENT', 0.95
-        if old_rent and abs(amt - float(old_rent)) < 0.01:
-            return 'OLD_RENT', 0.9
-        return 'RENT', 0.7  # Could be current rent - don't change
-    
-    # If amount equals old rent and different from new rent, and no other strong classification
-    if old_rent and abs(amt - float(old_rent)) < 0.01 and new_rent and abs(float(old_rent) - float(new_rent)) > 0.01:
-        # Be more careful - could be coincidentally same as deposit
-        if 'deposit' not in ctx:
-            return 'OLD_RENT', 0.8  # Lower confidence if no strong rent indicators
-    
-    return 'OTHER', 0.3
-
-
-def enrich_description_contextual(original_description, current_rent=None, original_rent=None, 
-                                    enable_ai=False, verbose=False):
-    """
-    Contextually enrich description with minimal edits. Works from original_description.
-    Only does price-consistency if rent actually changed.
-    Returns (cleaned_description, enrichment_meta)
-    """
-    if not original_description or not str(original_description).strip():
-        return original_description, {'status': 'skipped', 'reason': 'empty'}
-    
-    text = str(original_description)
-    original_hash = _hash_text(text)
-    
-    changes = []
-    reasons = []
-    needs_review = False
-    overall_confidence = 1.0
-    price_correction_applied = False
-    
-    # Work on a copy
-    cleaned = text
-    
-    # Split into sentences/paragraphs for processing
-    # Use regex to split on sentence boundaries
-    # Process paragraph by paragraph
-    paragraphs = re.split(r'(\n\s*\n)', cleaned)
-    
-    new_paragraphs = []
-    for para in paragraphs:
-        if re.match(r'\n\s*\n', para):
-            new_paragraphs.append(para)
-            continue
-        if not para.strip():
-            new_paragraphs.append(para)
-            continue
-        
-        # Split into sentences
-        sentences = re.split(r'([.!?]+[\s\n]+)', para)
-        new_sentences = []
-        i = 0
-        while i < len(sentences):
-            sent = sentences[i]
-            punct = sentences[i+1] if i+1 < len(sentences) else ''
-            full_sent = sent + punct
-            if not sent.strip():
-                i += 2
-                continue
-            
-            action, reason, conf, review = _classify_span_deterministic(full_sent)
-            if action == 'REMOVE':
-                changes.append({'type': 'remove', 'span': full_sent[:100] + '...' if len(full_sent) > 100 else full_sent, 'reason': reason})
-                reasons.append(reason)
-                overall_confidence = min(overall_confidence, conf)
-                i += 2
-                continue  # Skip this sentence
-            elif action == 'REVIEW':
-                needs_review = True
-                overall_confidence = min(overall_confidence, conf)
-                reasons.append(reason)
-                new_sentences.append(full_sent)
-                i += 2
-                continue
-            else:  # PRESERVE or MINIMALLY_EDIT
-                new_sentences.append(full_sent)
-                i += 2
-                continue
-        
-        rebuilt = ''.join(new_sentences)
-        # Clean up multiple spaces
-        rebuilt = re.sub(r' +', ' ', rebuilt)
-        rebuilt = re.sub(r'\n +', '\n', rebuilt)
-        new_paragraphs.append(rebuilt)
-    
-    cleaned = ''.join(new_paragraphs)
-    
-    # Price consistency - only if rent actually changed
-    if current_rent is not None and original_rent is not None:
-        try:
-            cur_rent_f = float(current_rent)
-            orig_rent_f = float(original_rent)
-            if abs(cur_rent_f - orig_rent_f) > 0.01:  # Rent actually changed
-                amounts = _extract_amounts_with_context(cleaned)
-                # Process from right to left to preserve positions
-                replacements = []
-                for amt_info in sorted(amounts, key=lambda x: x['start'], reverse=True):
-                    classification, conf = _classify_amount_context(amt_info, orig_rent_f, cur_rent_f)
-                    if classification == 'OLD_RENT' and conf >= 0.75:
-                        # Replace with current rent
-                        new_price_str = f"${cur_rent_f:,.0f}/month"
-                        replacements.append((amt_info['start'], amt_info['end'], new_price_str, amt_info['amount_str']))
-                        price_correction_applied = True
-                        changes.append({'type': 'price_correction', 'old': amt_info['amount_str'], 'new': new_price_str, 'reason': 'rent_changed'})
-                        overall_confidence = min(overall_confidence, conf)
-                    elif classification == 'OLD_RENT' and conf < 0.75:
-                        needs_review = True
-                        reasons.append('ambiguous_price_correction')
-                # Apply replacements
-                for start, end, new_str, old_str in replacements:
-                    cleaned = cleaned[:start] + new_str + cleaned[end:]
-        except Exception as e:
-            if verbose:
-                logger.debug(f"Price consistency error: {e}")
-    
-    # Final cleanup
-    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
-    cleaned = re.sub(r' +', ' ', cleaned)
-    cleaned = cleaned.strip()
-    
-    # Validation
-    # Check for obvious prohibited patterns that should have been removed
-    validation_issues = []
-    if _PHONE_RE.search(cleaned):
-        # Check if it's in redirect context
-        for m in _PHONE_RE.finditer(cleaned):
-            ctx_start = max(0, m.start() - 40)
-            ctx_end = min(len(cleaned), m.end() + 40)
-            ctx = cleaned[ctx_start:ctx_end].lower()
-            if any(x in ctx for x in ['contact', 'call', 'text', 'apply', 'schedule']):
-                validation_issues.append('phone_in_redirect_context')
-                needs_review = True
-                break
-    if any(re.search(d, cleaned, re.I) for d in _EXTERNAL_DOMAINS):
-        if any(m in cleaned.lower() for m in ['apply', 'visit', 'click']):
-            validation_issues.append('external_domain_redirect')
-            needs_review = True
-    
-    cleaned_hash = _hash_text(cleaned)
-    
-    enrichment_meta = {
-        'status': 'review' if needs_review else 'clean',
-        'ruleset_version': ENRICHMENT_RULESET_VERSION,
-        'changes': changes,
-        'reasons': list(set(reasons)),
-        'confidence': overall_confidence,
-        'needs_review': needs_review,
-        'price_correction_applied': price_correction_applied,
-        'original_hash': original_hash,
-        'cleaned_hash': cleaned_hash,
-        'validation_issues': validation_issues,
-        'enriched_at': __import__('datetime').datetime.utcnow().isoformat()
-    }
-    
-    return cleaned, enrichment_meta
-
-
-def apply_enrichment_pipeline_contextual(records, verbose=False, enable_ai=False):
-    """
-    Apply contextual enrichment to records. Works from original_description if available,
-    otherwise from description. Stores metadata.
-    """
-    enriched = []
-    for rec in records:
-        try:
-            orig_desc = rec.get('original_description') or rec.get('description')
-            current_rent = rec.get('monthly_rent')
-            original_rent = rec.get('original_monthly_rent') or rec.get('source_monthly_rent')
-            
-            if orig_desc:
-                cleaned_desc, meta = enrich_description_contextual(
-                    orig_desc,
-                    current_rent=current_rent,
-                    original_rent=original_rent,
-                    enable_ai=enable_ai,
-                    verbose=verbose
-                )
-                rec['description'] = cleaned_desc
-                rec['description_enrichment_meta'] = meta
-                rec['enrichment_status'] = meta.get('status', 'clean')
-                rec['needs_review'] = meta.get('needs_review', False)
-                rec['enrichment_version'] = ENRICHMENT_RULESET_VERSION
-                rec['last_enriched_hash'] = meta.get('cleaned_hash')
-                rec['enriched_at'] = meta.get('enriched_at')
-                if verbose:
-                    print(f"   [ctx-enrich] {rec.get('address','?')}: {len(meta.get('changes',[]))} changes, review={meta.get('needs_review')}")
-            else:
-                rec['enrichment_status'] = 'clean'
-                rec['needs_review'] = False
-        except Exception as e:
-            if verbose:
-                print(f"   [ctx-enrich] ERROR for {rec.get('address','?')}: {e}")
-            rec['enrichment_status'] = 'failed'
-            rec['needs_review'] = True
-            rec['description_enrichment_meta'] = {'status': 'failed', 'error': str(e)}
-        enriched.append(rec)
-    return enriched

@@ -139,8 +139,10 @@ _FETCH_TIMEOUT = int(os.environ.get("OPENDOOR_FETCH_TIMEOUT", "25"))
 _FETCH_RETRIES = int(os.environ.get("OPENDOOR_FETCH_RETRIES", "3"))
 _FETCH_RETRY_DELAY = float(os.environ.get("OPENDOOR_FETCH_RETRY_DELAY", "2.0"))
 
+
 def is_opendoor_url(url: str) -> bool:
     return bool(_OPENDOOR_URL_RE.match(str(url or "")))
+
 
 def _parse_price(value):
     if value is None:
@@ -155,6 +157,7 @@ def _parse_price(value):
         return int(float(match.group(0).replace(",", "")))
     except Exception:
         return None
+
 
 def estimate_rent_from_sale_price(sale_price, state=None):
     """
@@ -194,6 +197,7 @@ def estimate_rent_from_sale_price(sale_price, state=None):
         rent = _OPENDOOR_RENT_MIN
     return rent
 
+
 def _normalize_image_urls(values, max_count=50):
     """Deduplicate and validate a list of image URL strings."""
     urls = []
@@ -218,6 +222,7 @@ def _normalize_image_urls(values, max_count=50):
             break
     return urls
 
+
 def _upgrade_image_url(url):
     """
     Try to swap known thumbnail/small size tokens in an OpenDoor CDN URL
@@ -236,6 +241,7 @@ def _upgrade_image_url(url):
     # _small / _medium / _thumbnail suffixes before extension
     url = re.sub(r"_(small|medium|thumb|thumbnail|sm|md)\.", ".", url, flags=re.IGNORECASE)
     return url.rstrip("?&")
+
 
 def _choose_jsonld_object(obj):
     if isinstance(obj, list):
@@ -257,10 +263,12 @@ def _choose_jsonld_object(obj):
         return obj
     return None
 
+
 def _extract_jsonld(html):
     pattern = re.compile(
         r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
-        re.DOTALL | re.IGNORECASE)
+        re.DOTALL | re.IGNORECASE,
+    )
     for match in pattern.finditer(html):
         text = match.group(1).strip()
         if not text:
@@ -274,6 +282,7 @@ def _extract_jsonld(html):
             return record
     return None
 
+
 def _extract_nextdata(html):
     """
     Extract the full __NEXT_DATA__ JSON blob from the page.
@@ -283,13 +292,15 @@ def _extract_nextdata(html):
     m = re.search(
         r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>',
         html,
-        re.DOTALL | re.IGNORECASE)
+        re.DOTALL | re.IGNORECASE,
+    )
     if not m:
         return None
     try:
         return json.loads(m.group(1))
     except Exception:
         return None
+
 
 def _walk(obj, *keys):
     """Safely traverse a nested dict/list by key path; return None on any miss."""
@@ -307,6 +318,7 @@ def _walk(obj, *keys):
         else:
             return None
     return node
+
 
 def _find_listing_in_nextdata(nd):
     """
@@ -345,11 +357,13 @@ def _find_listing_in_nextdata(nd):
     _LISTING_SIGNALS = (
         "address", "id", "listingId", "price", "photos", "images",
         "bedrooms", "beds", "yearBuilt", "year_built", "squareFeet",
-        "squareFootage", "sqft", "latitude", "lat")
+        "squareFootage", "sqft", "latitude", "lat",
+    )
     for c in candidates:
         if isinstance(c, dict) and any(c.get(k) for k in _LISTING_SIGNALS):
             return c
     return None
+
 
 def _collect_nextdata_photos(nd_listing):
     """
@@ -406,6 +420,7 @@ def _collect_nextdata_photos(nd_listing):
 
     return photos[:50]
 
+
 def _normalize_property_type(raw):
     if not raw:
         return None
@@ -415,6 +430,7 @@ def _normalize_property_type(raw):
     if not raw:
         return None
     return _PROPERTY_TYPE_MAP.get(raw) or raw.upper().replace("-", "_").replace(" ", "_")
+
 
 def _parse_boolean(value):
     if isinstance(value, bool):
@@ -428,10 +444,12 @@ def _parse_boolean(value):
         return False
     return None
 
+
 def _normalize_tag(item):
     if not item:
         return None
     return str(item).strip()
+
 
 def _normalize_amenity_tags(tags):
     items = []
@@ -447,11 +465,13 @@ def _normalize_amenity_tags(tags):
         items.append(norm)
     return items
 
+
 _APPLIANCE_KEYWORDS = [
     "dishwasher", "microwave", "refrigerator", "range", "oven", "stove",
     "washer", "dryer", "garbage disposal", "disposal", "cooktop",
     "freezer", "cooktop", "vent hood",
 ]
+
 
 def _parse_appliances(jsonld, description):
     appliances = set()
@@ -465,6 +485,7 @@ def _parse_appliances(jsonld, description):
         if keyword in (description or "").lower():
             appliances.add(keyword.replace(" ", "_"))
     return sorted(appliances)
+
 
 def _parse_pets(jsonld, description):
     pets = None
@@ -484,6 +505,7 @@ def _parse_pets(jsonld, description):
     if re.search(r"\b(pet[- ]friendly|pets allowed|dogs allowed|cats allowed|small pets allowed)\b", text):
         return True
     return pets
+
 
 def _parse_parking(jsonld, description):
     garage = None
@@ -515,6 +537,7 @@ def _parse_parking(jsonld, description):
         return "Driveway"
     return None
 
+
 def _parse_hvac(jsonld, description):
     heating = None
     cooling = None
@@ -539,6 +562,7 @@ def _parse_hvac(jsonld, description):
     if heating and heating == cooling:
         cooling = None
     return heating, cooling
+
 
 def _parse_laundry(jsonld, description):
     text = (description or "").lower()
@@ -565,6 +589,7 @@ def _parse_laundry(jsonld, description):
                 return "Shared laundry"
     return None
 
+
 def _parse_available_date(jsonld, html):
     raw = None
     if isinstance(jsonld.get("offers"), dict):
@@ -581,7 +606,8 @@ def _parse_available_date(jsonld, html):
         m = re.search(
             r"available\s+(?:now|immediately|from\s+([A-Z][a-z]+ \d{1,2},? \d{4}))",
             text,
-            re.IGNORECASE)
+            re.IGNORECASE,
+        )
         if m:
             if m.group(1):
                 try:
@@ -591,6 +617,7 @@ def _parse_available_date(jsonld, html):
             return date.today().isoformat()
     return None
 
+
 _MOVE_IN_SPECIAL_PATTERNS = [
     r"first month free",
     r"one month free",
@@ -598,6 +625,7 @@ _MOVE_IN_SPECIAL_PATTERNS = [
     r"move[- ]in special[:]?",
     r"special pricing.*rent",
 ]
+
 
 def _parse_move_in_special(html, description):
     text = " ".join(filter(None, [description, html or ""]))
@@ -610,6 +638,7 @@ def _parse_move_in_special(html, description):
             return snippet[:200]
     return None
 
+
 _SALE_LANGUAGE_PATTERNS = [
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:for\s+sale|listed\s+for\s+sale|on\s+the\s+market|priced\s+to\s+sell|motivated\s+seller|seller\s+is\s+motivated)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:mortgage|down\s*payment|fha(?:\s+loan)?|conventional\s+(?:loan|financing)|va\s+loan|usda\s+loan|pre-?approved\s+buyers?|lender\s+(?:letter|pre-?approval|credit)|seller\s+financing|assumable\s+mortgage)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
@@ -620,6 +649,7 @@ _SALE_LANGUAGE_PATTERNS = [
     re.compile(r"(?i)(?:(?<=[\n.!?])|\A)\s*[-*•]?[^\n.!?]*\b(?:make\s+an\s+offer|submit\s+all\s+offers|as-is\s+sale|sold\s+as-is|subject\s+to\s+inspection)\b[^\n.!?]*[.!?]?", re.IGNORECASE),
     re.compile(r"(?i)\b(?:for sale|sale listing|sale price|asking price|new construction|original list price|open house|selling for|list price|MLS[#:\s]+\w+)\b", re.IGNORECASE),
 ]
+
 
 def _clean_sale_description(text, monthly_rent):
     if not text:
@@ -637,6 +667,7 @@ def _clean_sale_description(text, monthly_rent):
     result = result.replace(". .", ".")
     return result
 
+
 def _missing_fields(record):
     missing = []
     for field in _TRACKABLE_MISSING:
@@ -644,6 +675,7 @@ def _missing_fields(record):
         if value in (None, "", "[]"):
             missing.append(field)
     return missing
+
 
 def _data_quality_score(record):
     score = 0
@@ -663,6 +695,7 @@ def _data_quality_score(record):
         score += 6 if len(photos) >= 5 else 3 if len(photos) >= 1 else 0
     return min(score, 100)
 
+
 def _format_source_id(url, jsonld):
     if isinstance(jsonld, dict):
         source_id = jsonld.get("@id") or jsonld.get("identifier") or jsonld.get("url")
@@ -676,6 +709,7 @@ def _format_source_id(url, jsonld):
         return url
     return "opendoor:" + path.replace("/", "-")
 
+
 def _build_address_fields(address_block):
     if not isinstance(address_block, dict):
         return None, None, None, None
@@ -683,7 +717,9 @@ def _build_address_fields(address_block):
         address_block.get("streetAddress") or address_block.get("address") or address_block.get("name"),
         address_block.get("addressLocality") or address_block.get("city"),
         address_block.get("addressRegion") or address_block.get("state"),
-        address_block.get("postalCode") or address_block.get("zip"))
+        address_block.get("postalCode") or address_block.get("zip"),
+    )
+
 
 def _parse_amenities(jsonld):
     amenities = []
@@ -697,6 +733,7 @@ def _parse_amenities(jsonld):
         amenities.extend([kw.strip() for kw in jsonld["keywords"].split(",") if kw.strip()])
     return amenities
 
+
 def _safe_int(value):
     """Parse a numeric-like value to int, handling ints, floats, and strings like '3.0'."""
     if value is None:
@@ -709,6 +746,7 @@ def _safe_int(value):
         pass
     return None
 
+
 def _safe_float(value):
     """Parse a numeric-like value to float."""
     if value is None:
@@ -718,6 +756,7 @@ def _safe_float(value):
         return f if f > 0 else None
     except (ValueError, TypeError):
         return None
+
 
 def _parse_lot_size(jsonld):
     """Extract lot size in sqft from JSON-LD lotSize field."""
@@ -735,6 +774,7 @@ def _parse_lot_size(jsonld):
             return int(round(n * 43560))
         return int(n)
     return _safe_int(raw)
+
 
 def _parse_year_built(jsonld, nd_listing):
     """Try JSON-LD then __NEXT_DATA__ listing object for yearBuilt."""
@@ -754,6 +794,7 @@ def _parse_year_built(jsonld, nd_listing):
                 if yr and 1800 < yr <= datetime.utcnow().year + 1:
                     return yr
     return None
+
 
 def _parse_neighborhood(jsonld, nd_listing):
     """Extract neighborhood / subdivision name."""
@@ -777,6 +818,7 @@ def _parse_neighborhood(jsonld, nd_listing):
             if isinstance(v, str):
                 return v.strip()
     return None
+
 
 def _parse_walk_scores(nd_listing):
     """
@@ -818,6 +860,7 @@ def _parse_walk_scores(nd_listing):
 
     return walk, transit, bike
 
+
 def _parse_virtual_tour(jsonld, nd_listing):
     """Extract virtual tour URL from JSON-LD or __NEXT_DATA__."""
     if isinstance(jsonld, dict):
@@ -831,6 +874,7 @@ def _parse_virtual_tour(jsonld, nd_listing):
                 return v.strip()
     return None
 
+
 def _parse_has_basement(jsonld, description):
     """Detect basement presence from amenityFeature or description."""
     for raw in (jsonld.get("amenityFeature") or []):
@@ -842,6 +886,7 @@ def _parse_has_basement(jsonld, description):
     if re.search(r"\bbasement\b", text):
         return True
     return None
+
 
 def _parse_has_central_air(jsonld, description, cooling):
     """Detect central AC from JSON-LD, description, or extracted cooling type."""
@@ -856,6 +901,7 @@ def _parse_has_central_air(jsonld, description, cooling):
     if re.search(r"\bcentral air\b|\bcentral a/?c\b", text):
         return True
     return None
+
 
 def _build_rental_description(rec, scraped_text=None):
     """
@@ -1077,6 +1123,7 @@ def _build_rental_description(rec, scraped_text=None):
     description = "\n\n".join(p for p in paragraphs if p.strip())
     return description if description.strip() else None
 
+
 def _parse_opendoor_html(html, url, verbose=False):
     """
     Parse an Opendoor listing HTML page into a normalised pipeline record.
@@ -1244,7 +1291,8 @@ def _parse_opendoor_html(html, url, verbose=False):
         print("[opendoor_scraper] collected {} images (nextdata={}, jsonld={})".format(
             len(images),
             len(_collect_nextdata_photos(nd_listing)),
-            len(jsonld.get("image") or []) if isinstance(jsonld.get("image"), list) else (1 if jsonld.get("image") else 0)))
+            len(jsonld.get("image") or []) if isinstance(jsonld.get("image"), list) else (1 if jsonld.get("image") else 0),
+        ))
 
     # ── Description ──────────────────────────────────────────────────────────
     raw_desc = str(jsonld.get("description") or "").strip()
@@ -1407,9 +1455,11 @@ def _parse_opendoor_html(html, url, verbose=False):
     if verbose:
         print("[opendoor_scraper] extracted {} images, rent=${}, quality={}, desc_len={}".format(
             len(images), monthly_rent, rec["data_quality_score"],
-            len(rec.get("description") or "")))
+            len(rec.get("description") or ""),
+        ))
 
     return rec
+
 
 def _fetch_with_retry(url, verbose=False):
     """Fetch a URL with up to _FETCH_RETRIES attempts and exponential backoff.
@@ -1425,7 +1475,8 @@ def _fetch_with_retry(url, verbose=False):
                     url,
                     timeout=_FETCH_TIMEOUT,
                     headers=_FETCH_HEADERS,
-                    impersonate="chrome110")
+                    impersonate="chrome110",
+                )
             else:
                 resp = _req.get(url, timeout=_FETCH_TIMEOUT, headers=_FETCH_HEADERS)
             resp.raise_for_status()
@@ -1442,6 +1493,7 @@ def _fetch_with_retry(url, verbose=False):
         print("[opendoor_scraper] all fetch attempts failed for {}".format(url))
     return None
 
+
 def scrape_opendoor_url(url, verbose=False):
     if not is_opendoor_url(url):
         return None
@@ -1449,6 +1501,7 @@ def scrape_opendoor_url(url, verbose=False):
     if resp is None:
         return None
     return _parse_opendoor_html(resp.text, url, verbose=verbose)
+
 
 def scrape_opendoor_urls(urls, verbose=False):
     records = []

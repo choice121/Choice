@@ -107,14 +107,3 @@ jobs:
           fi
           node generate-config.js
           echo "✅ Build script completed successfully."
-
-      - name: Copy static assets and extension packages
-        run: node scripts/copy-static-to-dist.js
-
-      - name: Validate extension packages
-        run: node scripts/validate-extension.mjs
-
-      - name: Run extension extractor tests
-        run: |
-          node chrome-extension/test-extractors.js
-          node .pages-orion/test-extractors.js

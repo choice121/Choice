@@ -72,7 +72,7 @@ jobs:
             # Skip the _shared utilities directory.
             case "$slug" in _*) continue;; esac
             echo "::group::Deploying $slug"
-            supabase functions deploy "$slug" --project-ref "$SUPABASE_PROJECT_REF" --yes
+            supabase functions deploy "$slug" --project-ref "$SUPABASE_PROJECT_REF"
             echo "::endgroup::"
           done
 
