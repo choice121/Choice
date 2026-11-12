@@ -62,7 +62,7 @@ MANDATORY EXECUTION & ISOLATION RULES
 - Architectural Classification: `DUPLEX` / `TOWNHOUSE` / `APARTMENT` / `CONDO` / `SINGLE_FAMILY` based on physical structure over portal defaults.
 - Titles: Clean standardized address format: `{Address}, {City}, {State} {Zip}`.
 - Photos: Direct source CDN URLs in strict original source order (`display_order: 1`, `is_hero: true` for photo 1). Zero photo count gate and zero automated reordering.
-- Duplicate Guard & Idempotent Retry: Check `public.properties` and `publishing_batch_properties` before inserting; skip existing live addresses/source IDs unless explicit republish is ordered. Retrying a completed or partial batch (`--retry-batch <PB-ID>`) never creates duplicate properties, shares, or logs.
+- Independent Cross-Batch Republication & Intra-Batch Deduplication: Every new publishing batch is independent. A property that was previously published (publicly, privately, or in any earlier batch at the same or different rent) is NEVER skipped and must be processed again as an independent publishing instance linked to its physical property parent (`parent_property_id`). Within the same batch only, duplicate entries for the same physical property are detected and deduplicated so the property is not processed twice in one batch. Retrying a completed or partial batch (`--retry-batch <PB-ID>`) remains idempotent and never creates duplicate properties, shares, or logs.
 
 5. VERIFY -> RECORD HISTORY -> STAGE 1 CLEANUP (24-HOUR RECOVERABLE)
 1. Verify every inserted row in `public.properties` + `public.property_photos` exists with exact counts.

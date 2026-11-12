@@ -127,10 +127,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(`Matched Target Market:  ${res.matchedCount} (${res.uniqueCount} unique)`);
       console.log(`Cities in Queue:        ${res.citiesPresentInPipeline.join(' | ') || 'None'}`);
       if (res.duplicateIdsInPipeline.length) {
-        console.log(`Pipeline Duplicates:    ${res.duplicateIdsInPipeline.join(', ')}`);
+        console.log(`Intra-Batch Duplicates: ${res.duplicateIdsInPipeline.join(', ')} (will deduplicate within batch)`);
       }
       if (res.alreadyLiveIds.length) {
-        console.log(`Already Live on Site:   ${res.alreadyLiveIds.join(', ')}`);
+        console.log(`Previously Published:   ${res.alreadyLiveIds.join(', ')} (eligible for independent batch republication)`);
       }
       if (res.uniqueCount === 0) {
         console.log(`Unindexed Raw Blobs:    ${res.unindexedRawRootCount} file(s) in root of pipeline-raw-payloads`);

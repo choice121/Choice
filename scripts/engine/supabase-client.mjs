@@ -92,6 +92,15 @@ export async function listRawPayloadObjects(prefix = '', limit = 1000) {
   return all;
 }
 
+export async function uploadRawPayload(path, content) {
+  const cleanPath = path.replace(/^\/+/, '');
+  return fetchJson(`${SUPABASE_URL}/storage/v1/object/pipeline-raw-payloads/${cleanPath}`, {
+    method: 'POST',
+    headers: publicHeaders({ 'Content-Type': 'application/json' }),
+    body: typeof content === 'string' ? content : JSON.stringify(content),
+  });
+}
+
 export async function moveRawPayloadToRecovery(objectPath, batchId) {
   if (!objectPath || objectPath.startsWith('recovery/')) return objectPath;
   const relPath = objectPath.replace(/^\/+/, '');

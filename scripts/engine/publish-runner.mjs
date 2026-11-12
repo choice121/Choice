@@ -52,7 +52,7 @@ function parseCliArgs(argv) {
     importUrls: [],
     scrapeSource: 'realtor',
     dryRun: false,
-    allowRepublish: false,
+    allowRepublish: true,
     skipCleanup: false,
     retryBatch: '',
   };
@@ -147,31 +147,38 @@ async function fetchMatchingPendingPipeline(opts) {
   if (opts.bathsMax !== null) candidates = candidates.filter((r) => Number(r.bathrooms) <= opts.bathsMax);
   if (opts.maxRent !== null) candidates = candidates.filter((r) => Number(r.monthly_rent) <= opts.maxRent);
 
-  // Deduplicate within pipeline batch
+  // Deduplicate within pipeline batch (intra-batch deduplication only)
   const seenSrc = new Set();
   const seenAddr = new Set();
   const deduped = [];
+  const intraBatchDuplicates = [];
   for (const r of candidates) {
     const srcKey = r.source_listing_id ? `${r.source || 'src'}:${r.source_listing_id}` : null;
     const addrKey = `${(r.address || '').toLowerCase().trim()}|${(r.city || '').toLowerCase().trim()}|${(r.state || '').toUpperCase().trim()}`;
-    if ((srcKey && seenSrc.has(srcKey)) || (r.address && seenAddr.has(addrKey))) continue;
+    if ((srcKey && seenSrc.has(srcKey)) || (r.address && seenAddr.has(addrKey))) {
+      intraBatchDuplicates.push(r);
+      continue;
+    }
     if (srcKey) seenSrc.add(srcKey);
     if (r.address) seenAddr.add(addrKey);
     deduped.push(r);
   }
 
-  return deduped.slice(0, opts.count || 50);
+  return {
+    candidates: deduped.slice(0, opts.count || 50),
+    intraBatchDuplicates,
+  };
 }
 
 async function fetchExistingLiveAddressSet(city) {
   const url = city
-    ? `${SUPABASE_URL}/rest/v1/properties?select=id,address,city,state&city=ilike.${encodeURIComponent(city)}&limit=1000`
-    : `${SUPABASE_URL}/rest/v1/properties?select=id,address,city,state&limit=1000`;
+    ? `${SUPABASE_URL}/rest/v1/properties?select=id,parent_property_id,status,address,city,state,monthly_rent&city=ilike.${encodeURIComponent(city)}&limit=1000`
+    : `${SUPABASE_URL}/rest/v1/properties?select=id,parent_property_id,status,address,city,state,monthly_rent&limit=1000`;
   const rows = await fetchJson(url, { headers: publicHeaders() });
   const map = new Map();
   for (const r of (Array.isArray(rows) ? rows : [])) {
     const key = `${(r.address || '').toLowerCase().trim()}|${(r.city || '').toLowerCase().trim()}|${(r.state || '').toUpperCase().trim()}`;
-    map.set(key, r.id);
+    if (!map.has(key)) map.set(key, r);
   }
   return map;
 }
@@ -187,14 +194,14 @@ async function fetchExistingPublishedSourceMap(city) {
     if (propIds.length === 0) return srcMap;
 
     const liveRows = await fetchJson(
-      `${SUPABASE_URL}/rest/v1/properties?select=id&id=in.(${propIds.map((id) => encodeURIComponent(id)).join(',')})`,
+      `${SUPABASE_URL}/rest/v1/properties?select=id,parent_property_id,status,address,city,state,monthly_rent&id=in.(${propIds.map((id) => encodeURIComponent(id)).join(',')})`,
       { headers: publicHeaders() }
     );
-    const liveSet = new Set((Array.isArray(liveRows) ? liveRows : []).map((r) => r.id));
+    const liveMap = new Map((Array.isArray(liveRows) ? liveRows : []).map((r) => [r.id, r]));
 
     for (const r of rows) {
-      if (r.source_listing_id && r.property_id && liveSet.has(r.property_id)) {
-        srcMap.set(`${r.source || 'src'}:${r.source_listing_id}`, r.property_id);
+      if (r.source_listing_id && r.property_id && liveMap.has(r.property_id)) {
+        srcMap.set(`${r.source || 'src'}:${r.source_listing_id}`, liveMap.get(r.property_id));
       }
     }
     return srcMap;
@@ -216,7 +223,7 @@ export async function executePublishingRun(opts) {
     );
     const existingBatch = Array.isArray(existingBatches) ? existingBatches[0] : null;
     if (existingBatch) {
-      if (existingBatch.status === 'completed' && Number(existingBatch.failed_count || 0) === 0 && !opts.allowRepublish) {
+      if (existingBatch.status === 'completed' && Number(existingBatch.failed_count || 0) === 0) {
         console.log(`[IDEMPOTENT RETRY] Batch ${opts.retryBatch} is already completed (${existingBatch.published_count} published). Zero duplicate properties, shares, or logs created.`);
         return {
           ok: true,
@@ -238,7 +245,7 @@ export async function executePublishingRun(opts) {
         const retryIds = (Array.isArray(batchProps) ? batchProps : [])
           .filter((p) => p.published_status === 'failed' && p.pipeline_id)
           .map((p) => p.pipeline_id);
-        if (retryIds.length === 0 && !opts.allowRepublish) {
+        if (retryIds.length === 0) {
           console.log(`[IDEMPOTENT RETRY] Batch ${opts.retryBatch} has no retryable failed items.`);
           return {
             ok: true,
@@ -271,13 +278,13 @@ export async function executePublishingRun(opts) {
     }
   }
 
-  const candidates = await fetchMatchingPendingPipeline(opts);
-  if (candidates.length === 0) {
+  const { candidates, intraBatchDuplicates } = await fetchMatchingPendingPipeline(opts);
+  if (candidates.length === 0 && intraBatchDuplicates.length === 0) {
     console.log('No matching pending properties found in pipeline.pipeline_properties.');
     return { ok: false, batchId, error: 'no_matching_pipeline_properties' };
   }
 
-  const marketObj = parseMarketTarget(opts.market || `${candidates[0].city}, ${candidates[0].state}`);
+  const marketObj = parseMarketTarget(opts.market || (candidates[0] ? `${candidates[0].city}, ${candidates[0].state}` : ''));
   const liveAddrMap = await fetchExistingLiveAddressSet(marketObj.city);
   const liveSourceMap = await fetchExistingPublishedSourceMap(marketObj.city);
 
@@ -288,37 +295,45 @@ export async function executePublishingRun(opts) {
   const failedPipelineIds = [];
   const skippedPipelineIds = [];
 
-  // Enrich, validate, and publish each candidate independently
+  // Handle intra-batch duplicates (same physical property queued twice within the same batch)
+  for (const dup of intraBatchDuplicates) {
+    console.log(`  ↷ INTRA-BATCH DUPLICATE (queued in same batch): ${dup.address} (${dup.id})`);
+    skippedPipelineIds.push(dup.id);
+    verifiedPipelineIds.push(dup.id); // Archive with batch so it does not linger orphaned in active queue
+    snapshots.push({
+      batch_id: batchId,
+      property_id: null,
+      pipeline_id: dup.id,
+      source_listing_id: dup.source_listing_id || null,
+      source: dup.source || null,
+      address: dup.address || dup.title || dup.id,
+      city: dup.city || '',
+      state: dup.state || '',
+      zip: dup.zip || '',
+      property_type: dup.property_type || 'SINGLE_FAMILY',
+      bedrooms: dup.bedrooms,
+      bathrooms: dup.bathrooms,
+      square_footage: dup.square_footage,
+      monthly_rent: dup.monthly_rent,
+      visibility: opts.visibility,
+      photo_count: 0,
+      published_status: 'skipped',
+      recovery_status: 'active',
+      error_message: 'Intra-batch duplicate: identical physical property already queued in this batch',
+    });
+  }
+
+  // Enrich, validate, and publish each candidate independently as a new batch instance
   for (const pipeRow of candidates) {
     const addrKey = `${(pipeRow.address || '').toLowerCase().trim()}|${(pipeRow.city || '').toLowerCase().trim()}|${(pipeRow.state || '').toUpperCase().trim()}`;
     const srcKey = pipeRow.source_listing_id ? `${pipeRow.source || 'src'}:${pipeRow.source_listing_id}` : null;
-    const existingLiveId = liveAddrMap.get(addrKey) || (srcKey ? liveSourceMap.get(srcKey) : null);
+    const existingPhysical = liveAddrMap.get(addrKey) || (srcKey ? liveSourceMap.get(srcKey) : null);
+    const canonicalParentId = existingPhysical ? (existingPhysical.parent_property_id || existingPhysical.id) : null;
 
-    if (existingLiveId && !opts.allowRepublish) {
-      console.log(`  ↷ SKIPPED (already live as ${existingLiveId}): ${pipeRow.address}`);
-      skippedPipelineIds.push(pipeRow.id);
-      snapshots.push({
-        batch_id: batchId,
-        property_id: existingLiveId,
-        pipeline_id: pipeRow.id,
-        source_listing_id: pipeRow.source_listing_id || null,
-        source: pipeRow.source || null,
-        address: pipeRow.address,
-        city: pipeRow.city,
-        state: pipeRow.state,
-        zip: pipeRow.zip,
-        property_type: pipeRow.property_type || 'SINGLE_FAMILY',
-        bedrooms: pipeRow.bedrooms,
-        bathrooms: pipeRow.bathrooms,
-        square_footage: pipeRow.square_footage,
-        monthly_rent: pipeRow.monthly_rent,
-        visibility: opts.visibility,
-        photo_count: 0,
-        published_status: 'skipped',
-        recovery_status: 'active',
-        error_message: `Duplicate prevented: already exists in public.properties (${existingLiveId})`,
-      });
-      continue;
+    if (existingPhysical) {
+      console.log(`  → Independent cross-batch publishing instance for physical property (${canonicalParentId}): ${pipeRow.address}`);
+    } else {
+      console.log(`  → Initial publishing instance for physical property: ${pipeRow.address}`);
     }
 
     const enriched = enrichPipelineProperty(pipeRow, { visibility: opts.visibility });
@@ -357,13 +372,33 @@ export async function executePublishingRun(opts) {
       continue;
     }
 
+    // If publishing public 'active' and an earlier active listing exists for this physical property,
+    // supersede the older active listing to 'archived' so public search never duplicates cards
+    if (opts.visibility === 'active' && existingPhysical && existingPhysical.status === 'active') {
+      try {
+        await fetchJson(`${SUPABASE_URL}/rest/v1/properties?id=eq.${encodeURIComponent(existingPhysical.id)}`, {
+          method: 'PATCH',
+          headers: publicHeaders({ Prefer: 'return=minimal' }),
+          body: { status: 'archived', updated_at: new Date().toISOString() },
+        });
+        console.log(`  ↺ Superseded previous active listing ${existingPhysical.id} -> archived`);
+      } catch (e) {
+        console.warn(`  ⚠ Could not archive older active listing ${existingPhysical.id}: ${e.message}`);
+      }
+    }
+
     // Live publish into public.properties + public.property_photos
     const newPropId = 'prop_' + crypto.randomBytes(6).toString('hex');
     try {
       await fetchJson(`${SUPABASE_URL}/rest/v1/properties`, {
         method: 'POST',
         headers: publicHeaders({ Prefer: 'return=minimal' }),
-        body: { id: newPropId, ...enriched.propertyRecord },
+        body: {
+          id: newPropId,
+          parent_property_id: canonicalParentId,
+          batch_id: batchId,
+          ...enriched.propertyRecord,
+        },
       });
 
       const photoRows = enriched.photos.map((url, idx) => ({
@@ -406,7 +441,7 @@ export async function executePublishingRun(opts) {
         },
       });
 
-      console.log(`  ✓ PUBLISHED ${newPropId} (${pipeRow.address}, ${enriched.photos.length} photos)`);
+      console.log(`  ✓ PUBLISHED ${newPropId} (${pipeRow.address}, ${enriched.photos.length} photos) [batch: ${batchId}]`);
       publishedPropertyIds.push(newPropId);
       verifiedPipelineIds.push(pipeRow.id);
 
@@ -472,10 +507,10 @@ export async function executePublishingRun(opts) {
     return { ok: true, dryRun: true, batchId, readyCount: verifiedPipelineIds.length, failedCount: failedPipelineIds.length };
   }
 
-  // Pure idempotent retry guard: if EVERY candidate was already live and nothing new failed or published,
+  // Idempotent guard: if EVERY candidate was skipped (e.g. intra-batch duplicates) and nothing new failed or published,
   // do NOT create duplicate shares or pollute publishing_batches with bogus 'failed' log rows.
-  if (publishedPropertyIds.length === 0 && failedPipelineIds.length === 0 && skippedPipelineIds.length > 0 && !opts.allowRepublish) {
-    console.log(`\n[IDEMPOTENT NO-OP] All ${skippedPipelineIds.length} candidate(s) are already published on site. Zero duplicate properties, shares, or batch logs created.`);
+  if (publishedPropertyIds.length === 0 && failedPipelineIds.length === 0 && skippedPipelineIds.length > 0) {
+    console.log(`\n[IDEMPOTENT NO-OP] All ${skippedPipelineIds.length} candidate(s) were intra-batch duplicates or skipped. Zero duplicate properties, shares, or batch logs created.`);
     return {
       ok: true,
       idempotentNoOp: true,
@@ -486,7 +521,7 @@ export async function executePublishingRun(opts) {
       magicLinkUrl: null,
       shareVerified: false,
       historyRecorded: false,
-      cleanupResult: { ok: true, skipped: true, reason: 'all_candidates_already_live' },
+      cleanupResult: { ok: true, skipped: true, reason: 'all_candidates_skipped_or_intra_batch_duplicates' },
     };
   }
 
