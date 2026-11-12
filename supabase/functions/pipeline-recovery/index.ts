@@ -129,9 +129,12 @@ Deno.serve(async (req) => {
     if (error) return jsonResp({ ok: false, error: error.message }, 500, origin);
     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
 
-    if (parsed?.ok && pathsToRestore.length > 0) {
+    const rpcRawPaths = Array.isArray(parsed?.restored_raw_paths) ? parsed.restored_raw_paths : [];
+    const uniquePaths = [...new Set([...pathsToRestore, ...rpcRawPaths].filter((p): p is string => typeof p === 'string' && p.startsWith('recovery/')))];
+
+    if (parsed?.ok && uniquePaths.length > 0) {
       const recoveryPrefix = `recovery/${batchId}/`;
-      for (const srcPath of pathsToRestore) {
+      for (const srcPath of uniquePaths) {
         const destPath = srcPath.startsWith(recoveryPrefix)
           ? srcPath.slice(recoveryPrefix.length)
           : (srcPath.split('/').pop() || srcPath);

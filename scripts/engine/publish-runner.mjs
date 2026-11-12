@@ -264,7 +264,7 @@ export async function executePublishingRun(opts) {
   console.log(`Target:   ${opts.market || (opts.ids.length ? `IDs (${opts.ids.join(',')})` : 'Unspecified')}`);
   console.log('=============================================================================\n');
 
-  if (opts.workflow === 'scrape_and_publish' && !opts.dryRun) {
+  if (opts.workflow === 'scrape_and_publish' && !opts.dryRun && (opts.importUrls.length > 0 || opts.ids.length === 0)) {
     const stagedFromUrls = await runWorkflowBScrape(opts);
     if (stagedFromUrls.length > 0 && opts.ids.length === 0) {
       opts.ids = stagedFromUrls;

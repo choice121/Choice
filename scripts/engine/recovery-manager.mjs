@@ -96,8 +96,13 @@ export async function restoreBatch({ batchId = null, latest = false, market = nu
     p_reason: reason,
   });
 
-  if (res?.ok && pathsToRestore.length > 0) {
-    for (const p of pathsToRestore) {
+  if (Array.isArray(res?.restored_raw_paths)) {
+    pathsToRestore.push(...res.restored_raw_paths);
+  }
+  const uniquePaths = [...new Set(pathsToRestore.filter((p) => typeof p === 'string' && p.startsWith('recovery/')))];
+
+  if (res?.ok && uniquePaths.length > 0) {
+    for (const p of uniquePaths) {
       await restoreRawPayloadFromRecovery(p);
     }
   }

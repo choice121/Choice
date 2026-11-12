@@ -204,6 +204,7 @@ DECLARE
   v_total_elig    INTEGER := 0;
   v_remaining_rec INTEGER := 0;
   v_restored_ids  TEXT[] := ARRAY[]::TEXT[];
+  v_raw_paths     JSONB := '[]'::jsonb;
   v_folder_exists BOOLEAN;
 BEGIN
   IF auth.role() <> 'service_role' AND NOT public.is_admin() THEN
@@ -291,6 +292,10 @@ BEGIN
     WHERE batch_id = p_batch_id
       AND pipeline_id = v_arch.pipeline_id;
 
+    IF jsonb_typeof(v_arch.raw_storage_paths) = 'array' THEN
+      v_raw_paths := v_raw_paths || v_arch.raw_storage_paths;
+    END IF;
+
     v_restored_cnt := v_restored_cnt + 1;
     v_restored_ids := array_append(v_restored_ids, v_arch.pipeline_id);
   END LOOP;
@@ -332,12 +337,16 @@ BEGIN
     'batch_id', p_batch_id,
     'restored_count', v_restored_cnt,
     'restored_pipeline_ids', to_jsonb(v_restored_ids),
+    'restored_raw_paths', v_raw_paths,
     'remaining_recoverable', v_remaining_rec,
     'restored_at', v_now,
     'note', 'Restored to active pipeline in original batch. Republishing requires explicit instruction.'
   );
 END;
 $$;
+
+REVOKE ALL ON TABLE pipeline.pipeline_recovery_archive FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE pipeline.pipeline_recovery_archive TO service_role;
 
 CREATE OR REPLACE FUNCTION public.pipeline_get_recoverable_batches()
 RETURNS JSONB
