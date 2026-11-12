@@ -99,9 +99,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const share = urlParams.get('share');
         const shareHash = new URLSearchParams(window.location.hash.slice(1)).get('share');
+        const activeShare = share || shareHash || (window.__CP_ACTIVE_SHARE_TOKEN__ || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })());
         const fromP = opts.from_p || urlParams.get('p') || urlParams.get('ids') || urlParams.get('from_p');
-        if (share || shareHash) {
-          propUrl += '#share=' + encodeURIComponent(share || shareHash);
+        if (activeShare) {
+          propUrl += '#share=' + encodeURIComponent(activeShare);
         } else if (fromP) {
           propUrl += '&from_p=' + encodeURIComponent(fromP);
         }

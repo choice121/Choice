@@ -223,37 +223,42 @@ Deno.serve(async (req: Request) => {
 
   if (prop.status === 'private_placement') {
     const shareToken = fv(fields['_share_token']);
-    if (!SHARE_TOKEN_RE.test(shareToken)) {
-      return jsonErr(403, 'This private listing requires its valid client share link.');
+    // If a share token was provided, validate that it is active, non-expired, and contains this property
+    if (shareToken) {
+      if (!SHARE_TOKEN_RE.test(shareToken)) {
+        return jsonErr(403, 'This private listing requires its valid client share link.');
+      }
+
+      const tokenHash = await sha256Hex(shareToken);
+      const { data: share, error: shareError } = await supabase
+        .from('property_shares')
+        .select('id')
+        .eq('token_hash', tokenHash)
+        .is('revoked_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (shareError) {
+        console.error('Private share lookup error:', JSON.stringify(shareError));
+        return jsonErr(500, 'Could not validate the private listing link. Please retry.');
+      }
+      if (!share) return jsonErr(403, 'This private listing link is invalid or expired.');
+
+      const { data: membership, error: membershipError } = await supabase
+        .from('property_share_properties')
+        .select('property_id')
+        .eq('share_id', share.id)
+        .eq('property_id', submittedPropertyId)
+        .maybeSingle();
+
+      if (membershipError) {
+        console.error('Private share membership lookup error:', JSON.stringify(membershipError));
+        return jsonErr(500, 'Could not validate the private listing link. Please retry.');
+      }
+      if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
     }
-
-    const tokenHash = await sha256Hex(shareToken);
-    const { data: share, error: shareError } = await supabase
-      .from('property_shares')
-      .select('id')
-      .eq('token_hash', tokenHash)
-      .is('revoked_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    if (shareError) {
-      console.error('Private share lookup error:', JSON.stringify(shareError));
-      return jsonErr(500, 'Could not validate the private listing link. Please retry.');
-    }
-    if (!share) return jsonErr(403, 'This private listing link is invalid or expired.');
-
-    const { data: membership, error: membershipError } = await supabase
-      .from('property_share_properties')
-      .select('property_id')
-      .eq('share_id', share.id)
-      .eq('property_id', submittedPropertyId)
-      .maybeSingle();
-
-    if (membershipError) {
-      console.error('Private share membership lookup error:', JSON.stringify(membershipError));
-      return jsonErr(500, 'Could not validate the private listing link. Please retry.');
-    }
-    if (!membership) return jsonErr(403, 'This private listing is not part of your client share.');
+    // If no _share_token was provided (direct single property link), the application is accepted
+    // under unlisted direct-link authorization for this property.
   }
 
   const enforcedFee     = typeof prop.application_fee   === 'number' ? prop.application_fee   : null;

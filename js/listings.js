@@ -1098,7 +1098,11 @@ function setupGridDelegation() {
     const btn = e.target.closest('.property-card-share');
     if (!btn) return;
     e.preventDefault(); e.stopPropagation();
-    const url   = location.origin + btn.dataset.url;
+    let targetPath = btn.dataset.url || (btn.dataset.id ? `/property.html?id=${encodeURIComponent(btn.dataset.id)}` : '');
+    let url = location.origin + targetPath;
+    if (activeShareToken && !url.includes('#share=')) {
+      url += `#share=${encodeURIComponent(activeShareToken)}`;
+    }
     const title = btn.dataset.title || 'Check out this property';
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});

@@ -172,51 +172,81 @@ async function loadProperty(id) {
   }
 
   try {
+    // 1. If a client shareToken is present, attempt collection resolution first
     if (shareToken) {
-      const { data, error } = await client.functions.invoke('property-share', {
-        body: { action: 'resolve', token: shareToken },
-      });
-      if (error) throw error;
-      window.__CP_SHARED_PROPERTIES__ = data?.properties || [];
-      window.__CP_ACTIVE_SHARE_TOKEN__ = shareToken;
-      prop = (data?.properties || []).find((item) => String(item.id).toLowerCase() === cleanId) || null;
-      if (!prop) throw new Error('Property is not included in this share');
-    } else {
-      const { data, error } = await client
-        .from('properties')
-        .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
-        .eq('id', cleanId)
-        .single();
-      if (error || !data) throw new Error(error ? error.message : 'Not found');
-      prop = data;
+      try {
+        const { data, error } = await client.functions.invoke('property-share', {
+          body: { action: 'resolve', token: shareToken },
+        });
+        if (!error && Array.isArray(data?.properties)) {
+          window.__CP_SHARED_PROPERTIES__ = data.properties;
+          window.__CP_ACTIVE_SHARE_TOKEN__ = shareToken;
+          prop = data.properties.find((item) => String(item.id).toLowerCase() === cleanId) || null;
+        }
+      } catch (stErr) {
+        console.warn('[property] share token batch resolve failed, falling back to direct property lookup:', stErr);
+      }
+    }
+
+    // 2. Direct property query (standard for public active listings)
+    if (!prop) {
+      try {
+        const { data, error } = await client
+          .from('properties')
+          .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
+          .eq('id', cleanId)
+          .single();
+        if (!error && data) {
+          prop = data;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Unlisted / private_placement direct resolution via property-share Edge Function
+    if (!prop) {
+      try {
+        const { data: edgeData, error: edgeErr } = await client.functions.invoke('property-share', {
+          body: { action: 'resolve_property', property_id: cleanId, token: shareToken || undefined },
+        });
+        if (!edgeErr && edgeData?.property) {
+          prop = edgeData.property;
+          if (Array.isArray(edgeData.collection) && edgeData.collection.length > 0) {
+            window.__CP_SHARED_PROPERTIES__ = [prop, ...edgeData.collection];
+          }
+          if (shareToken) {
+            window.__CP_ACTIVE_SHARE_TOKEN__ = shareToken;
+          }
+        }
+      } catch (edgeErr) {
+        console.warn('[property] edge single property resolve failed:', edgeErr);
+      }
+    }
+
+    // 4. Fallback RPC for active listings
+    if (!prop) {
+      try {
+        const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
+        if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+          prop = rpcData[0];
+          const [photosRes, landlordRes] = await Promise.all([
+            client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+            prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
+          ]);
+          prop.property_photos = photosRes.data || [];
+          if (landlordRes?.data) prop.landlords = landlordRes.data;
+        }
+      } catch (_) {}
+    }
+
+    if (!prop) {
+      console.error('[property] lookup failed for id=', cleanId);
+      renderUnavailable('not_found');
+      return;
     }
   } catch (e) {
-    if (shareToken) {
-      console.warn('[property] share token lookup failed', e);
-      renderUnavailable('not_found');
-      return;
-    }
-    // Fallback: If direct query fails (e.g. for private_placement listings under strict RLS), try secure RPC
-    let fallbackSuccess = false;
-    try {
-      const { data: rpcData, error: rpcErr } = await client.rpc('get_properties_by_ids', { p_ids: [cleanId] });
-      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-        prop = rpcData[0];
-        const [photosRes, landlordRes] = await Promise.all([
-          client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
-          prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
-        ]);
-        prop.property_photos = photosRes.data || [];
-        if (landlordRes?.data) prop.landlords = landlordRes.data;
-        fallbackSuccess = true;
-      }
-    } catch (_) {}
-
-    if (!fallbackSuccess) {
-      console.error('[property] lookup failed for id=', cleanId, e);
-      renderUnavailable('not_found');
-      return;
-    }
+    console.error('[property] unexpected error resolving property id=', cleanId, e);
+    renderUnavailable('not_found');
+    return;
   }
 
   // Phase 3c: derive photo_urls / photo_file_ids from the property_photos join
@@ -230,11 +260,12 @@ async function loadProperty(id) {
     prop.photo_file_ids = [];
   }
 
-  // Only wait for authentication when a listing is not public. Active listings
-  // are readable without a session, so auth/session refresh must not hold up
-  // their first render.
+  // Only wait for authentication when a listing is not public and not private_placement.
+  // Active and private_placement listings are readable without an admin session.
+  // Draft, archived, maintenance listings strictly require admin / landlord owner session.
   let viewerSession = null;
-  if (prop.status !== 'active' && (!shareToken || prop.status !== 'private_placement')) {
+  const isPublicOrPrivate = (prop.status === 'active' || prop.status === 'private_placement');
+  if (!isPublicOrPrivate) {
     try {
       viewerSession = await getSession();
       if (viewerSession?.user) {
@@ -573,9 +604,20 @@ function renderProperty(p) {
     const usp = new URLSearchParams(window.location.search);
     const fromP = usp.get('from_p') || usp.get('p');
     const backToResults = document.getElementById('backToResults');
-    if (backToResults && fromP) {
-      backToResults.href = `/listings.html?p=${encodeURIComponent(fromP)}`;
-      backToResults.innerHTML = '<i class="fas fa-arrow-left" style="font-size:10px;margin-right:4px"></i> Tailored Selection';
+    const activeToken = shareToken || window.__CP_ACTIVE_SHARE_TOKEN__ || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })();
+    if (backToResults) {
+      if (activeToken) {
+        backToResults.href = `/listings.html#share=${encodeURIComponent(activeToken)}`;
+        backToResults.innerHTML = '<i class="fas fa-arrow-left" style="font-size:10px;margin-right:4px"></i> Curated Selection';
+      } else if (fromP) {
+        backToResults.href = `/listings.html?p=${encodeURIComponent(fromP)}`;
+        backToResults.innerHTML = '<i class="fas fa-arrow-left" style="font-size:10px;margin-right:4px"></i> Tailored Selection';
+      } else if (p.status === 'private_placement') {
+        // Standalone unlisted listing — hide back to results so client doesn't navigate to public browse
+        backToResults.style.display = 'none';
+        const sep = backToResults.nextElementSibling;
+        if (sep && sep.classList.contains('breadcrumb-separator')) sep.style.display = 'none';
+      }
     }
   } catch (_) {}
 
@@ -2022,8 +2064,19 @@ document.getElementById('detailTabs')?.addEventListener('click', e => {
 
 /* ── Share & Save ── */
 window.shareProp = () => {
-  if (navigator.share) navigator.share({ title: currentProperty?.title, url: window.location.href });
-  else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!', 'success'); }
+  const activeToken = shareToken || window.__CP_ACTIVE_SHARE_TOKEN__ || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })();
+  let shareUrl = `${window.location.origin}/property.html?id=${encodeURIComponent(currentProperty?.id || propertyId)}`;
+  if (activeToken) {
+    shareUrl += `#share=${encodeURIComponent(activeToken)}`;
+  }
+  const title = currentProperty?.title || 'Check out this property';
+  if (navigator.share) {
+    navigator.share({ title, url: shareUrl }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => showToast('Listing link copied to clipboard!', 'success'))
+      .catch(() => showToast('Could not copy link', 'error'));
+  }
 };
 document.getElementById('shareBtn')?.addEventListener('click', window.shareProp);
 

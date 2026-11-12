@@ -79,10 +79,10 @@ Deno.serve(async (req) => {
 
       const propertyIds = linkData.map(l => l.property_id);
 
-      // Fetch properties
+      // Fetch properties with landlord profile
       const { data: properties, error: propError } = await supabase
         .from("properties")
-        .select("*")
+        .select("*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified)")
         .in("id", propertyIds);
 
       if (propError) {
@@ -114,6 +114,101 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ properties: enriched }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "resolve_property" || action === "resolve_single") {
+      const propertyId = body.property_id || body.id;
+      if (!propertyId) {
+        return new Response(
+          JSON.stringify({ error: "Missing property_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const cleanPropId = String(propertyId).toLowerCase().trim();
+
+      // Fetch property if status is active or private_placement (unlisted direct access)
+      const { data: property, error: propError } = await supabase
+        .from("properties")
+        .select("*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified)")
+        .eq("id", cleanPropId)
+        .in("status", ["active", "private_placement"])
+        .maybeSingle();
+
+      if (propError || !property) {
+        return new Response(
+          JSON.stringify({ error: "property_not_found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch photos for this property
+      const { data: photos } = await supabase
+        .from("property_photos")
+        .select("id, property_id, url, file_id, display_order, is_hero")
+        .eq("property_id", property.id)
+        .order("display_order", { ascending: true });
+
+      property.property_photos = photos || [];
+
+      // If a share token was provided, optionally fetch other properties from that share
+      let collection: Array<Record<string, unknown>> = [];
+      if (body.token) {
+        try {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(body.token);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+          const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+          const { data: shareData } = await supabase
+            .from("property_shares")
+            .select("id, expires_at")
+            .eq("token_hash", tokenHash)
+            .is("revoked_at", null)
+            .gt("expires_at", new Date().toISOString())
+            .maybeSingle();
+
+          if (shareData) {
+            const { data: linkData } = await supabase
+              .from("property_share_properties")
+              .select("property_id")
+              .eq("share_id", shareData.id);
+
+            if (linkData && linkData.length > 0) {
+              const otherIds = linkData.map(l => l.property_id).filter(id => id !== property.id);
+              if (otherIds.length > 0) {
+                const { data: otherProps } = await supabase
+                  .from("properties")
+                  .select("id, title, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, property_type, status")
+                  .in("id", otherIds);
+
+                const { data: otherPhotos } = await supabase
+                  .from("property_photos")
+                  .select("id, property_id, url, file_id, display_order, is_hero")
+                  .in("property_id", otherIds)
+                  .order("display_order", { ascending: true });
+
+                const otherPhotoMap: Record<string, Array<Record<string, unknown>>> = {};
+                if (otherPhotos) {
+                  otherPhotos.forEach(ph => {
+                    otherPhotoMap[ph.property_id] = otherPhotoMap[ph.property_id] || [];
+                    otherPhotoMap[ph.property_id].push(ph);
+                  });
+                }
+                collection = (otherProps || []).map(p => ({
+                  ...p,
+                  property_photos: otherPhotoMap[p.id] || []
+                }));
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      return new Response(
+        JSON.stringify({ property, collection }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
