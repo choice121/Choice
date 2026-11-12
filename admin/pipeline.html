@@ -420,6 +420,23 @@
   .pl-compare-col-content{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;
     font-size:.84rem;line-height:1.6;color:var(--text);white-space:pre-wrap;overflow-y:auto;flex:1;max-height:420px;word-break:break-word}
   .pl-compare-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-shrink:0}
+
+  /* ── Publishing History & 24h Recovery Modals ───────────── */
+  .pl-gov-modal{position:fixed;inset:0;z-index:460;display:flex;align-items:center;justify-content:center;padding:16px}
+  .pl-gov-dialog{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md,14px);
+    width:100%;max-width:860px;max-height:min(88dvh,740px);box-shadow:0 12px 48px rgba(0,0,0,.38);
+    display:flex;flex-direction:column;animation:fadeUp .2s ease;overflow:hidden}
+  .pl-gov-body{padding:18px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+  .pl-gov-card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  .pl-gov-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .pl-gov-pill{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em}
+  .pl-gov-pill-ok{background:rgba(34,197,94,.15);color:#22c55e}
+  .pl-gov-pill-warn{background:rgba(234,179,8,.15);color:#eab308}
+  .pl-gov-pill-bad{background:rgba(239,68,68,.15);color:#ef4444}
+  .pl-gov-pill-info{background:rgba(99,102,241,.16);color:var(--brand,#6366f1)}
+  .pl-gov-props{display:flex;flex-direction:column;gap:6px;margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}
+  .pl-gov-prop-item{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.03)}
+  .pl-recovery-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--brand,#6366f1);color:#fff;font-size:.64rem;font-weight:800;min-width:17px;height:17px;border-radius:9px;padding:0 5px;margin-left:4px}
 </style>
 </head>
 <body data-page-title="Pipeline" data-page-sub="Scraped listings for review">
@@ -483,6 +500,12 @@
         </button>
         <button class="btn btn-outline" id="pl-import-url-btn" title="Import a Zillow listing by pasting its URL" style="white-space:nowrap;flex-shrink:0">
           ↑ Import URL
+        </button>
+        <button class="btn btn-outline" id="pl-history-btn" title="View lightweight publishing activity history" style="white-space:nowrap;flex-shrink:0">
+          📋 History
+        </button>
+        <button class="btn btn-outline" id="pl-recovery-btn" title="Inspect & explicitly restore batches deleted within the last 24 hours" style="white-space:nowrap;flex-shrink:0">
+          ♻ 24h Recovery <span class="pl-recovery-badge" id="pl-recovery-badge" style="display:none">0</span>
         </button>
         <button class="btn btn-ghost" id="pl-refresh-btn" title="Reload pipeline from server" style="white-space:nowrap;flex-shrink:0;padding:7px 10px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>

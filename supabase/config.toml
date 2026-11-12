@@ -3,3 +3,9 @@ verify_jwt = false
 
 [functions.receive-pipeline-import]
 verify_jwt = false
+
+[functions.purge-expired-pipeline-recovery]
+verify_jwt = false
+
+[functions.pipeline-recovery]
+verify_jwt = false

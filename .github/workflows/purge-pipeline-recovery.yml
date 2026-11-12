@@ -1,0 +1,57 @@
+# Scheduled Stage 2 Permanent Purge for Expired 24-Hour Pipeline Recovery
+#
+# Runs hourly to permanently remove pipeline recovery snapshots and raw
+# scraping payloads from Supabase Storage once their 24-hour recovery window
+# has elapsed, while preserving lightweight audit records in publishing_batches.
+
+name: Purge expired pipeline recovery (hourly)
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # Every hour on the hour
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (preview expired items without deleting)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      CRON_SECRET:          ${{ secrets.CRON_SECRET }}
+      DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+    steps:
+      - name: POST purge-expired-pipeline-recovery
+        shell: bash
+        run: |
+          set -u
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF or CRON_SECRET not set; cannot invoke."
+            exit 1
+          fi
+          URL="https://${SUPABASE_PROJECT_REF}.functions.supabase.co/purge-expired-pipeline-recovery"
+          BODY=$(printf '{"dry_run":%s}' "${DRY_RUN}")
+          echo "POST ${URL}  body=${BODY}"
+          HTTP_CODE=$(curl -sS -o /tmp/purge_body.txt -w '%{http_code}' \
+            -X POST "${URL}" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            --data "${BODY}" || echo "000")
+          echo "HTTP ${HTTP_CODE}"
+          cat /tmp/purge_body.txt || true
+          echo
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::purge-expired-pipeline-recovery returned ${HTTP_CODE}"
+            exit 1
+          fi

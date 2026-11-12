@@ -2480,6 +2480,334 @@ function wirePanelPhotoActions(){
     if(closeFolderBtn) closeFolderBtn.addEventListener('click', closeActiveFolder);
   }
 
+  // ── Publishing History & 24-Hour Recovery Modals ─────────────────────────
+
+  function fmtRemainingWindow(expiresIso){
+    if(!expiresIso) return 'Expired';
+    const ms = new Date(expiresIso).getTime() - Date.now();
+    if(ms <= 0) return 'Expired (>24h)';
+    const mins = Math.floor(ms / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return hrs > 0 ? `${hrs}h ${remMins}m left` : `${remMins}m left`;
+  }
+
+  function recoveryBadgeHtml(status){
+    const s = String(status || 'active');
+    if(s === 'recoverable') return '<span class="pl-gov-pill pl-gov-pill-warn">24h Recoverable</span>';
+    if(s === 'partially_restored') return '<span class="pl-gov-pill pl-gov-pill-info">Partially Restored</span>';
+    if(s === 'restored') return '<span class="pl-gov-pill pl-gov-pill-info">Restored</span>';
+    if(s === 'expired') return '<span class="pl-gov-pill pl-gov-pill-bad">Window Expired</span>';
+    if(s === 'permanently_deleted') return '<span class="pl-gov-pill pl-gov-pill-bad">Purged (&gt;24h)</span>';
+    return `<span class="pl-gov-pill pl-gov-pill-ok">${S.esc(s)}</span>`;
+  }
+
+  async function updateRecoveryBadge(){
+    const badge = document.getElementById('pl-recovery-badge');
+    if(!badge) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_get_recoverable_batches');
+      if(error) { badge.style.display = 'none'; return; }
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      const count = Array.isArray(parsed?.batches) ? parsed.batches.length : 0;
+      if(count > 0){
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch(_){
+      badge.style.display = 'none';
+    }
+  }
+
+  async function openPublishingHistoryModal(){
+    const existing = document.getElementById('pl-history-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-history-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Publishing Activity History">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">📋 Publishing Activity History</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Lightweight batch ledger retained permanently after pipeline cleanup</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div style="padding:12px 20px 0;display:flex;gap:8px;align-items:center">
+          <input id="pl-hist-market" type="search" placeholder="Filter by city/market (e.g. Dallas, TX)…" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 11px;font-size:.82rem;color:var(--text)">
+          <button class="btn btn-sm btn-outline" id="pl-hist-filter-btn">Filter</button>
+        </div>
+        <div class="pl-gov-body" id="pl-history-body">
+          <div style="text-align:center;padding:30px;color:var(--muted-2)">Loading publishing history…</div>
+        </div>
+        <div class="pl-import-ft">
+          <span style="font-size:.74rem;color:var(--muted-2)">Live published listings &amp; 90-day client shares remain intact after pipeline purge.</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-hist-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-hist-close-btn').addEventListener('click', closeModal);
+
+    async function loadHistory(marketFilter){
+      const bodyEl = modal.querySelector('#pl-history-body');
+      bodyEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().rpc('pipeline_get_publishing_history', {
+          p_limit: 30,
+          p_market: marketFilter || null,
+          p_batch_id: null
+        });
+        if(error){
+          const msg = String(error.message || '');
+          const isPending = msg.includes('does not exist') || msg.includes('PGRST202') || error.code === '42883';
+          bodyEl.innerHTML = `<div class="pl-gov-card"><strong>${isPending ? 'Database Migration Pending' : 'Failed to load history'}</strong><p style="font-size:.8rem;color:var(--muted-2);margin:4px 0 0">${S.esc(isPending ? 'Run supabase/migrations/20261112000001_publishing_history_and_recovery.sql via Supabase deploy workflow to enable history tracking.' : msg)}</p></div>`;
+          return;
+        }
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const batches = Array.isArray(parsed?.batches) ? parsed.batches : [];
+        if(!batches.length){
+          bodyEl.innerHTML = '<div style="text-align:center;padding:36px;color:var(--muted-2)">No publishing batches recorded yet.</div>';
+          return;
+        }
+        bodyEl.innerHTML = batches.map(b => {
+          const props = Array.isArray(b.properties) ? b.properties : [];
+          const hasShare = Boolean(b.magic_link_url);
+          const expIso = b.live_share_expires_at || b.share_expires_at;
+          const shareRevoked = Boolean(b.live_share_revoked_at);
+          const shareExpired = expIso && new Date(expIso).getTime() <= Date.now();
+          const recoveryState = b.recovery_status || (b.permanently_deleted_at ? 'permanently_deleted' : b.restored_at ? 'restored' : b.pipeline_deleted_at ? 'recoverable' : 'active');
+          return `<div class="pl-gov-card">
+            <div class="pl-gov-row">
+              <div>
+                <strong style="font-size:.9rem">${S.esc(b.id)}</strong>
+                <span style="margin-left:8px;font-size:.82rem;color:var(--muted-2)">${S.esc(b.target_market || 'Mixed Market')}</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <span class="pl-gov-pill pl-gov-pill-info">${S.esc(b.workflow_type)}</span>
+                <span class="pl-gov-pill ${b.status === 'completed' ? 'pl-gov-pill-ok' : b.status === 'failed' ? 'pl-gov-pill-bad' : 'pl-gov-pill-warn'}">${S.esc(b.status)}</span>
+                ${recoveryBadgeHtml(recoveryState)}
+              </div>
+            </div>
+            <div style="font-size:.76rem;color:var(--muted-2);display:flex;gap:14px;flex-wrap:wrap">
+              <span>Published: <strong>${b.published_count || 0}</strong></span>
+              <span>Failed: <strong>${b.failed_count || 0}</strong></span>
+              <span>Visibility: <strong>${S.esc(b.visibility)}</strong></span>
+              <span>Cleanup: <strong>${b.cleanup_completed ? 'Verified' : 'Pending'}</strong></span>
+              <span>Date: <strong>${b.started_at ? new Date(b.started_at).toLocaleString() : '—'}</strong></span>
+              ${b.recovery_expires_at && recoveryState === 'recoverable' ? `<span>Window: <strong>${S.esc(fmtRemainingWindow(b.recovery_expires_at))}</strong></span>` : ''}
+            </div>
+            ${hasShare ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.76rem;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);padding:8px 10px;border-radius:8px">
+              <span style="font-weight:700;color:var(--brand)">Client Magic Link:</span>
+              <a href="${S.esc(b.magic_link_url)}" target="_blank" style="color:var(--text);word-break:break-all;flex:1">${S.esc(b.magic_link_url)}</a>
+              <span class="pl-gov-pill ${shareRevoked || shareExpired ? 'pl-gov-pill-bad' : b.share_verified ? 'pl-gov-pill-ok' : 'pl-gov-pill-warn'}">${shareRevoked ? 'Revoked' : shareExpired ? 'Expired' : b.share_verified ? 'Verified' : 'Unverified'}</span>
+              <button class="btn btn-sm btn-ghost pl-copy-link-btn" data-url="${S.esc(b.magic_link_url)}">Copy</button>
+            </div>` : ''}
+            ${props.length ? `<details>
+              <summary style="cursor:pointer;font-size:.75rem;font-weight:700;color:var(--brand)">View ${props.length} property snapshot${props.length === 1 ? '' : 's'}</summary>
+              <div class="pl-gov-props">
+                ${props.map(p => `<div class="pl-gov-prop-item">
+                  <div>
+                    <strong>${S.esc(p.address || p.pipeline_id)}</strong>
+                    <span style="color:var(--muted-2);margin-left:6px">${S.esc([p.city, p.state, p.zip].filter(Boolean).join(' '))}</span>
+                    ${p.monthly_rent ? `<span style="margin-left:6px;font-weight:700">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <span class="pl-gov-pill ${p.published_status === 'published' ? 'pl-gov-pill-ok' : p.published_status === 'failed' ? 'pl-gov-pill-bad' : 'pl-gov-pill-warn'}">${S.esc(p.published_status)}</span>
+                    ${p.property_id ? `<a href="/property.html?id=${S.esc(p.property_id)}" target="_blank" class="btn btn-sm btn-ghost" style="padding:2px 7px;font-size:.68rem">Live ↗</a>` : ''}
+                  </div>
+                </div>`).join('')}
+              </div>
+            </details>` : ''}
+          </div>`;
+        }).join('');
+
+        bodyEl.querySelectorAll('.pl-copy-link-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(btn.dataset.url || '');
+              S.toast('Magic link copied', 'success');
+            } catch(_){
+              S.toast('Copy failed — use link directly', 'info');
+            }
+          });
+        });
+      } catch(err){
+        bodyEl.innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Unknown error')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-hist-filter-btn').addEventListener('click', () => {
+      loadHistory(modal.querySelector('#pl-hist-market').value.trim());
+    });
+    modal.querySelector('#pl-hist-market').addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); loadHistory(e.target.value.trim()); }
+    });
+    await loadHistory('');
+  }
+
+  async function openRecoveryArchiveModal(){
+    const existing = document.getElementById('pl-recovery-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-recovery-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="24-Hour Pipeline Recovery Archive">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">♻ 24-Hour Pipeline Recovery Archive</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Isolated from normal publishing. Explicitly restore original batches within 24 hours, or purge expired (&gt;24h) snapshots.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" id="pl-recovery-body">
+          <div style="text-align:center;padding:30px;color:var(--muted-2)">Loading recoverable batches…</div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-sm btn-outline" id="pl-purge-expired-btn" style="color:var(--danger);border-color:rgba(239,68,68,.35)">Purge Expired (&gt;24h)</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-rec-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-rec-close-btn').addEventListener('click', closeModal);
+
+    async function loadRecoverable(){
+      const bodyEl = modal.querySelector('#pl-recovery-body');
+      bodyEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().rpc('pipeline_get_recoverable_batches');
+        if(error){
+          const msg = String(error.message || '');
+          const isPending = msg.includes('does not exist') || msg.includes('PGRST202') || error.code === '42883';
+          bodyEl.innerHTML = `<div class="pl-gov-card"><strong>${isPending ? 'Database Migration Pending' : 'Failed to load recovery archive'}</strong><p style="font-size:.8rem;color:var(--muted-2);margin:4px 0 0">${S.esc(isPending ? 'Deploy supabase/migrations/20261112000001_publishing_history_and_recovery.sql to activate 24h recovery.' : msg)}</p></div>`;
+          return;
+        }
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const batches = Array.isArray(parsed?.batches) ? parsed.batches : [];
+        if(!batches.length){
+          bodyEl.innerHTML = '<div style="text-align:center;padding:36px;color:var(--muted-2)">No batches are currently inside the 24-hour recovery window.</div>';
+          return;
+        }
+        bodyEl.innerHTML = batches.map(b => {
+          const items = Array.isArray(b.items) ? b.items : [];
+          const propCount = b.recoverable_count || items.length;
+          return `<div class="pl-gov-card">
+            <div class="pl-gov-row">
+              <div>
+                <strong style="font-size:.92rem">${S.esc(b.batch_id)}</strong>
+                <span style="margin-left:8px;font-size:.82rem;color:var(--muted-2)">${S.esc(b.target_market || 'Mixed Market')}</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="pl-gov-pill pl-gov-pill-warn">${S.esc(fmtRemainingWindow(b.recovery_expires_at))}</span>
+                <button class="btn btn-sm btn-primary pl-restore-batch-btn" data-batch-id="${S.esc(b.batch_id)}" data-count="${propCount}">
+                  ↺ Restore Batch (${propCount})
+                </button>
+              </div>
+            </div>
+            <div style="font-size:.75rem;color:var(--muted-2);display:flex;gap:14px;flex-wrap:wrap">
+              <span>Deleted: <strong>${b.deleted_at ? new Date(b.deleted_at).toLocaleString() : '—'}</strong></span>
+              <span>Expires: <strong>${b.recovery_expires_at ? new Date(b.recovery_expires_at).toLocaleString() : '—'}</strong></span>
+            </div>
+            ${items.length ? `<div class="pl-gov-props">
+              ${items.map(it => `<div class="pl-gov-prop-item">
+                <div>
+                  <strong>${S.esc(it.address || it.pipeline_id)}</strong>
+                  <span style="color:var(--muted-2);margin-left:6px">${S.esc(it.pipeline_id)}</span>
+                  ${it.source_listing_id ? `<span style="color:var(--muted-2);margin-left:6px">src: ${S.esc(it.source_listing_id)}</span>` : ''}
+                </div>
+                <span class="pl-gov-pill pl-gov-pill-info">${it.has_raw_payload ? 'Raw Payload Preserved' : 'Metadata Snapshot'}</span>
+              </div>`).join('')}
+            </div>` : ''}
+          </div>`;
+        }).join('');
+
+        bodyEl.querySelectorAll('.pl-restore-batch-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const batchId = btn.dataset.batchId;
+            const count = btn.dataset.count;
+            const ok = await S.confirm(
+              `Restore batch ${batchId}?`,
+              `This restores ${count} property record(s) back to the active pipeline in their original batch grouping. It does NOT automatically republish them.`
+            );
+            if(!ok) return;
+            btn.disabled = true;
+            btn.textContent = 'Restoring…';
+            try {
+              const { data: rData, error: rErr } = await CP.sb().rpc('pipeline_restore_batch', {
+                p_batch_id: batchId,
+                p_pipeline_ids: null,
+                p_reason: 'Explicit administrator restoration via Admin Console'
+              });
+              if(rErr) throw rErr;
+              const rParsed = typeof rData === 'string' ? JSON.parse(rData) : rData;
+              if(!rParsed?.ok) throw new Error(rParsed?.error || 'Restoration failed');
+              S.toast(`Restored ${rParsed.restored_count || count} property record(s) from ${batchId} ✓`, 'success');
+              _cClear();
+              await Promise.all([load(false), fetchCounts(), updateRecoveryBadge(), loadRecoverable()]);
+            } catch(e){
+              S.toast('Restore failed: ' + (e.message || 'unknown'), 'error');
+              btn.disabled = false;
+              btn.textContent = `↺ Restore Batch (${count})`;
+            }
+          });
+        });
+      } catch(err){
+        bodyEl.innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Unknown error')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-purge-expired-btn').addEventListener('click', async () => {
+      const ok = await S.confirm(
+        'Purge all expired (>24h) recovery archives?',
+        'This permanently deletes snapshots and raw payload storage blobs older than 24 hours while retaining lightweight publishing history.'
+      );
+      if(!ok) return;
+      const purgeBtn = modal.querySelector('#pl-purge-expired-btn');
+      purgeBtn.disabled = true;
+      purgeBtn.textContent = 'Purging…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('purge-expired-pipeline-recovery', {
+          body: { dry_run: false, limit: 200 }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        S.toast(`Purge complete: ${res?.purged_count || 0} expired records permanently deleted`, 'success');
+        await Promise.all([loadRecoverable(), updateRecoveryBadge()]);
+      } catch(e){
+        S.toast('Purge failed: ' + (e.message || 'unknown'), 'error');
+      } finally {
+        purgeBtn.disabled = false;
+        purgeBtn.textContent = 'Purge Expired (>24h)';
+      }
+    });
+
+    await loadRecoverable();
+  }
+
+  function wireHistoryAndRecoveryButtons(){
+    const histBtn = document.getElementById('pl-history-btn');
+    if(histBtn) histBtn.addEventListener('click', openPublishingHistoryModal);
+    const recBtn = document.getElementById('pl-recovery-btn');
+    if(recBtn) recBtn.addEventListener('click', openRecoveryArchiveModal);
+  }
+
   // ── Main load ─────────────────────────────────────────────────────────────────
 
   async function load(showSkeleton){
@@ -2575,6 +2903,7 @@ function wirePanelPhotoActions(){
       wireImportButton();
       wireRefreshButton();
       wireFolderButtons();
+      wireHistoryAndRecoveryButtons();
       // Power-user keyboard triage shortcuts
       document.addEventListener('keydown', e => {
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
@@ -2618,6 +2947,7 @@ function wirePanelPhotoActions(){
       });
       load(false);
       loadFolders();
+      updateRecoveryBadge();
     })
     .catch(err => console.error('[pipeline] boot failed', err));
 
