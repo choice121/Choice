@@ -62,7 +62,7 @@ MANDATORY EXECUTION & ISOLATION RULES
 - Architectural Classification: `DUPLEX` / `TOWNHOUSE` / `APARTMENT` / `CONDO` / `SINGLE_FAMILY` based on physical structure over portal defaults.
 - Titles: Clean standardized address format: `{Address}, {City}, {State} {Zip}`.
 - Photos: Direct source CDN URLs in strict original source order (`display_order: 1`, `is_hero: true` for photo 1). Zero photo count gate and zero automated reordering.
-- Duplicate Guard: Check `public.properties` before inserting; skip existing live addresses unless explicit republish is ordered.
+- Duplicate Guard & Idempotent Retry: Check `public.properties` and `publishing_batch_properties` before inserting; skip existing live addresses/source IDs unless explicit republish is ordered. Retrying a completed or partial batch (`--retry-batch <PB-ID>`) never creates duplicate properties, shares, or logs.
 
 5. VERIFY -> RECORD HISTORY -> STAGE 1 CLEANUP (24-HOUR RECOVERABLE)
 1. Verify every inserted row in `public.properties` + `public.property_photos` exists with exact counts.

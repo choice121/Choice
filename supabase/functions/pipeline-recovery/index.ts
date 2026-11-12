@@ -103,6 +103,24 @@ Deno.serve(async (req) => {
       ? body.reason.trim()
       : 'Explicit administrator restoration from Admin Console';
 
+    // Fetch raw storage paths before restoring so storage objects are restored alongside DB rows
+    const { data: archiveRows } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_recovery_archive')
+      .select('pipeline_id, raw_storage_paths')
+      .eq('batch_id', batchId);
+
+    const pathsToRestore: string[] = [];
+    for (const row of (archiveRows || [])) {
+      if (!pipelineIds || pipelineIds.length === 0 || pipelineIds.includes(row.pipeline_id)) {
+        if (Array.isArray(row.raw_storage_paths)) {
+          for (const p of row.raw_storage_paths) {
+            if (typeof p === 'string' && p.startsWith('recovery/')) pathsToRestore.push(p);
+          }
+        }
+      }
+    }
+
     const { data, error } = await adminClient.rpc('pipeline_restore_batch', {
       p_batch_id: batchId,
       p_pipeline_ids: pipelineIds && pipelineIds.length > 0 ? pipelineIds : null,
@@ -110,6 +128,19 @@ Deno.serve(async (req) => {
     });
     if (error) return jsonResp({ ok: false, error: error.message }, 500, origin);
     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+
+    if (parsed?.ok && pathsToRestore.length > 0) {
+      const recoveryPrefix = `recovery/${batchId}/`;
+      for (const srcPath of pathsToRestore) {
+        const destPath = srcPath.startsWith(recoveryPrefix)
+          ? srcPath.slice(recoveryPrefix.length)
+          : (srcPath.split('/').pop() || srcPath);
+        if (destPath && destPath !== srcPath) {
+          await adminClient.storage.from('pipeline-raw-payloads').move(srcPath, destPath);
+        }
+      }
+    }
+
     return jsonResp(parsed, parsed?.ok ? 200 : 400, origin);
   }
 

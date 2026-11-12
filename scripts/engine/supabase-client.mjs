@@ -68,16 +68,22 @@ export function generateBatchId(date = new Date()) {
 export async function listRawPayloadObjects(prefix = '', limit = 1000) {
   const all = [];
   let offset = 0;
+  const cleanPrefix = prefix.replace(/^\/+|\/+$/g, '');
   while (true) {
     const batch = await fetchJson(`${SUPABASE_URL}/storage/v1/object/list/pipeline-raw-payloads`, {
       method: 'POST',
       headers: publicHeaders(),
-      body: { limit, offset, prefix },
+      body: { limit, offset, prefix: cleanPrefix },
     });
     if (!Array.isArray(batch) || batch.length === 0) break;
     for (const item of batch) {
-      if (item && item.name && item.id) {
-        all.push(prefix ? `${prefix.replace(/\/$/, '')}/${item.name}` : item.name);
+      if (!item || !item.name) continue;
+      const fullPath = cleanPrefix ? `${cleanPrefix}/${item.name}` : item.name;
+      if (item.id) {
+        all.push(fullPath);
+      } else if (item.name !== 'recovery' && !fullPath.startsWith('recovery/')) {
+        const nested = await listRawPayloadObjects(fullPath, limit);
+        all.push(...nested);
       }
     }
     if (batch.length < limit) break;
@@ -88,8 +94,8 @@ export async function listRawPayloadObjects(prefix = '', limit = 1000) {
 
 export async function moveRawPayloadToRecovery(objectPath, batchId) {
   if (!objectPath || objectPath.startsWith('recovery/')) return objectPath;
-  const baseName = objectPath.split('/').pop();
-  const destPath = `recovery/${batchId}/${baseName}`;
+  const relPath = objectPath.replace(/^\/+/, '');
+  const destPath = `recovery/${batchId}/${relPath}`;
   try {
     await fetchJson(`${SUPABASE_URL}/storage/v1/object/move`, {
       method: 'POST',
@@ -108,8 +114,9 @@ export async function moveRawPayloadToRecovery(objectPath, batchId) {
 
 export async function restoreRawPayloadFromRecovery(objectPath) {
   if (!objectPath || !objectPath.startsWith('recovery/')) return objectPath;
-  const baseName = objectPath.split('/').pop();
-  if (!baseName) return objectPath;
+  const match = objectPath.match(/^recovery\/[^/]+\/(.+)$/);
+  const destPath = match ? match[1] : objectPath.split('/').pop();
+  if (!destPath) return objectPath;
   try {
     await fetchJson(`${SUPABASE_URL}/storage/v1/object/move`, {
       method: 'POST',
@@ -117,10 +124,10 @@ export async function restoreRawPayloadFromRecovery(objectPath) {
       body: {
         bucketId: 'pipeline-raw-payloads',
         sourceKey: objectPath,
-        destinationKey: baseName,
+        destinationKey: destPath,
       },
     });
-    return baseName;
+    return destPath;
   } catch {
     return objectPath;
   }

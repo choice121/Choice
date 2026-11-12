@@ -276,6 +276,7 @@
     const srcLabel = l.source === 'zillow' ? 'Zillow' : l.source === 'realtor' ? 'Realtor' : (l.source ? S.esc(l.source) : '');
     const srcImp = importSource(l);
     const folderBadge = l.folder_serial ? `<span class="qs-badge" style="background:rgba(99,102,241,.15);color:var(--brand)" title="Folder serial number">#${l.folder_serial}</span>` : '';
+    const batchBadge = l.batch_id ? `<span class="qs-badge" style="background:rgba(234,179,8,.16);color:#eab308" title="Restored from batch ${S.esc(l.batch_id)}">Batch ${S.esc(l.batch_id)}</span>` : '';
 
     return `<div class="pl-card${isChecked ? ' pl-card-selected' : ''}" data-pl-id="${S.esc(l.id)}" role="button" tabindex="0" aria-label="${S.esc((l.address||'Listing') + ', ' + (l.city||''))}">
       <div class="pl-thumb-wrap">
@@ -291,6 +292,7 @@
           ${l.source ? `<span class="src-badge src-${S.esc(l.source)}">${srcLabel}</span>` : ''}
           ${qsBadge(score)}
           ${folderBadge}
+          ${batchBadge}
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
           ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
           ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
@@ -2732,11 +2734,45 @@ function wirePanelPhotoActions(){
                   <span style="color:var(--muted-2);margin-left:6px">${S.esc(it.pipeline_id)}</span>
                   ${it.source_listing_id ? `<span style="color:var(--muted-2);margin-left:6px">src: ${S.esc(it.source_listing_id)}</span>` : ''}
                 </div>
-                <span class="pl-gov-pill pl-gov-pill-info">${it.has_raw_payload ? 'Raw Payload Preserved' : 'Metadata Snapshot'}</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span class="pl-gov-pill pl-gov-pill-info">${it.has_raw_payload ? 'Raw Payload Preserved' : 'Metadata Snapshot'}</span>
+                  <button class="btn btn-sm btn-outline pl-restore-item-btn" data-batch-id="${S.esc(b.batch_id)}" data-pipeline-id="${S.esc(it.pipeline_id)}" style="padding:2px 8px;font-size:.68rem">↺ Restore</button>
+                </div>
               </div>`).join('')}
             </div>` : ''}
           </div>`;
         }).join('');
+
+        bodyEl.querySelectorAll('.pl-restore-item-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const batchId = btn.dataset.batchId;
+            const pipelineId = btn.dataset.pipelineId;
+            const ok = await S.confirm(
+              `Restore ${pipelineId} from ${batchId}?`,
+              'This restores only this individual property record back to the active pipeline while keeping its original batch identity. It does NOT automatically republish it.'
+            );
+            if(!ok) return;
+            btn.disabled = true;
+            btn.textContent = 'Restoring…';
+            try {
+              const { data: rData, error: rErr } = await CP.sb().rpc('pipeline_restore_batch', {
+                p_batch_id: batchId,
+                p_pipeline_ids: [pipelineId],
+                p_reason: 'Explicit individual property restoration via Admin Console'
+              });
+              if(rErr) throw rErr;
+              const rParsed = typeof rData === 'string' ? JSON.parse(rData) : rData;
+              if(!rParsed?.ok) throw new Error(rParsed?.error || 'Restoration failed');
+              S.toast(`Restored ${pipelineId} (${batchId}) ✓`, 'success');
+              _cClear();
+              await Promise.all([load(false), fetchCounts(), updateRecoveryBadge(), loadRecoverable()]);
+            } catch(e){
+              S.toast('Restore failed: ' + (e.message || 'unknown'), 'error');
+              btn.disabled = false;
+              btn.textContent = '↺ Restore';
+            }
+          });
+        });
 
         bodyEl.querySelectorAll('.pl-restore-batch-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
@@ -2913,6 +2949,10 @@ function wirePanelPhotoActions(){
           if (_current) closePanel();
           const helpModal = document.getElementById('pl-shortcuts-modal');
           if (helpModal) helpModal.remove();
+          const histModal = document.getElementById('pl-history-modal');
+          if (histModal) histModal.remove();
+          const recModal = document.getElementById('pl-recovery-modal');
+          if (recModal) recModal.remove();
           return;
         }
 

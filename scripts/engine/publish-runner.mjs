@@ -54,6 +54,7 @@ function parseCliArgs(argv) {
     dryRun: false,
     allowRepublish: false,
     skipCleanup: false,
+    retryBatch: '',
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -69,6 +70,7 @@ function parseCliArgs(argv) {
     else if (arg === '--ids' && argv[i + 1]) opts.ids = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
     else if (arg === '--import-urls' && argv[i + 1]) opts.importUrls = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
     else if (arg === '--scrape-source' && argv[i + 1]) opts.scrapeSource = argv[++i];
+    else if (arg === '--retry-batch' && argv[i + 1]) opts.retryBatch = argv[++i].trim();
     else if (arg === '--dry-run') opts.dryRun = true;
     else if (arg === '--allow-republish') opts.allowRepublish = true;
     else if (arg === '--skip-cleanup') opts.skipCleanup = true;
@@ -174,10 +176,87 @@ async function fetchExistingLiveAddressSet(city) {
   return map;
 }
 
+async function fetchExistingPublishedSourceMap(city) {
+  const url = city
+    ? `${SUPABASE_URL}/rest/v1/publishing_batch_properties?select=source,source_listing_id,property_id&published_status=eq.published&city=ilike.${encodeURIComponent(city)}&limit=1000`
+    : `${SUPABASE_URL}/rest/v1/publishing_batch_properties?select=source,source_listing_id,property_id&published_status=eq.published&limit=1000`;
+  try {
+    const rows = await fetchJson(url, { headers: publicHeaders() });
+    const srcMap = new Map();
+    const propIds = [...new Set((Array.isArray(rows) ? rows : []).map((r) => r.property_id).filter(Boolean))];
+    if (propIds.length === 0) return srcMap;
+
+    const liveRows = await fetchJson(
+      `${SUPABASE_URL}/rest/v1/properties?select=id&id=in.(${propIds.map((id) => encodeURIComponent(id)).join(',')})`,
+      { headers: publicHeaders() }
+    );
+    const liveSet = new Set((Array.isArray(liveRows) ? liveRows : []).map((r) => r.id));
+
+    for (const r of rows) {
+      if (r.source_listing_id && r.property_id && liveSet.has(r.property_id)) {
+        srcMap.set(`${r.source || 'src'}:${r.source_listing_id}`, r.property_id);
+      }
+    }
+    return srcMap;
+  } catch {
+    return new Map();
+  }
+}
+
 export async function executePublishingRun(opts) {
   const startedAt = new Date().toISOString();
   const batchId = generateBatchId();
   const schemaStatus = await checkSchemaDeployed();
+
+  // Retry-batch idempotency guard: prevent duplicate properties, shares, or logs when retrying an existing batch
+  if (opts.retryBatch && schemaStatus.publishingBatches) {
+    const existingBatches = await fetchJson(
+      `${SUPABASE_URL}/rest/v1/publishing_batches?select=*&id=eq.${encodeURIComponent(opts.retryBatch)}&limit=1`,
+      { headers: publicHeaders() }
+    );
+    const existingBatch = Array.isArray(existingBatches) ? existingBatches[0] : null;
+    if (existingBatch) {
+      if (existingBatch.status === 'completed' && Number(existingBatch.failed_count || 0) === 0 && !opts.allowRepublish) {
+        console.log(`[IDEMPOTENT RETRY] Batch ${opts.retryBatch} is already completed (${existingBatch.published_count} published). Zero duplicate properties, shares, or logs created.`);
+        return {
+          ok: true,
+          idempotentNoOp: true,
+          batchId: existingBatch.id,
+          publishedPropertyIds: [],
+          failedPipelineIds: [],
+          magicLinkUrl: existingBatch.magic_link_url || null,
+          shareVerified: Boolean(existingBatch.share_verified),
+          historyRecorded: false,
+          cleanupResult: { ok: true, skipped: true, reason: 'batch_already_completed' },
+        };
+      }
+      if ((existingBatch.status === 'partial' || existingBatch.status === 'failed') && opts.ids.length === 0) {
+        const batchProps = await fetchJson(
+          `${SUPABASE_URL}/rest/v1/publishing_batch_properties?select=pipeline_id,published_status&batch_id=eq.${encodeURIComponent(opts.retryBatch)}`,
+          { headers: publicHeaders() }
+        );
+        const retryIds = (Array.isArray(batchProps) ? batchProps : [])
+          .filter((p) => p.published_status === 'failed' && p.pipeline_id)
+          .map((p) => p.pipeline_id);
+        if (retryIds.length === 0 && !opts.allowRepublish) {
+          console.log(`[IDEMPOTENT RETRY] Batch ${opts.retryBatch} has no retryable failed items.`);
+          return {
+            ok: true,
+            idempotentNoOp: true,
+            batchId: existingBatch.id,
+            publishedPropertyIds: [],
+            failedPipelineIds: [],
+            magicLinkUrl: existingBatch.magic_link_url || null,
+            shareVerified: Boolean(existingBatch.share_verified),
+            historyRecorded: false,
+            cleanupResult: { ok: true, skipped: true, reason: 'no_retryable_failed_items' },
+          };
+        }
+        opts.ids = retryIds;
+        if (!opts.market && existingBatch.target_market) opts.market = existingBatch.target_market;
+      }
+    }
+  }
 
   console.log('=============================================================================');
   console.log(`CHOICE PROPERTIES — STATELESS PUBLISHING ENGINE (${opts.dryRun ? 'DRY RUN' : 'LIVE'})`);
@@ -200,36 +279,24 @@ export async function executePublishingRun(opts) {
 
   const marketObj = parseMarketTarget(opts.market || `${candidates[0].city}, ${candidates[0].state}`);
   const liveAddrMap = await fetchExistingLiveAddressSet(marketObj.city);
+  const liveSourceMap = await fetchExistingPublishedSourceMap(marketObj.city);
 
   const executionErrors = [];
   const snapshots = [];
   const publishedPropertyIds = [];
   const verifiedPipelineIds = [];
   const failedPipelineIds = [];
-
-  if (!opts.dryRun && schemaStatus.publishingBatches) {
-    await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batches`, {
-      method: 'POST',
-      headers: publicHeaders({ Prefer: 'return=minimal' }),
-      body: {
-        id: batchId,
-        target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
-        workflow_type: opts.workflow,
-        visibility: opts.visibility,
-        status: 'in_progress',
-        total_processed: candidates.length,
-        started_at: startedAt,
-      },
-    });
-  }
+  const skippedPipelineIds = [];
 
   // Enrich, validate, and publish each candidate independently
   for (const pipeRow of candidates) {
     const addrKey = `${(pipeRow.address || '').toLowerCase().trim()}|${(pipeRow.city || '').toLowerCase().trim()}|${(pipeRow.state || '').toUpperCase().trim()}`;
-    const existingLiveId = liveAddrMap.get(addrKey);
+    const srcKey = pipeRow.source_listing_id ? `${pipeRow.source || 'src'}:${pipeRow.source_listing_id}` : null;
+    const existingLiveId = liveAddrMap.get(addrKey) || (srcKey ? liveSourceMap.get(srcKey) : null);
 
     if (existingLiveId && !opts.allowRepublish) {
       console.log(`  ↷ SKIPPED (already live as ${existingLiveId}): ${pipeRow.address}`);
+      skippedPipelineIds.push(pipeRow.id);
       snapshots.push({
         batch_id: batchId,
         property_id: existingLiveId,
@@ -328,12 +395,13 @@ export async function executePublishingRun(opts) {
         throw new Error('Post-insert verification mismatch for property or photos');
       }
 
-      // Mark choice_property_id on pipeline row before archival snapshot
+      // Mark choice_property_id & batch_id on pipeline row before archival snapshot
       await fetchJson(`${SUPABASE_URL}/rest/v1/pipeline_properties?id=eq.${encodeURIComponent(pipeRow.id)}`, {
         method: 'PATCH',
         headers: pipelineHeaders({ Prefer: 'return=minimal' }),
         body: {
           choice_property_id: newPropId,
+          batch_id: batchId,
           published_at: new Date().toISOString(),
         },
       });
@@ -403,6 +471,24 @@ export async function executePublishingRun(opts) {
     return { ok: true, dryRun: true, batchId, readyCount: verifiedPipelineIds.length, failedCount: failedPipelineIds.length };
   }
 
+  // Pure idempotent retry guard: if EVERY candidate was already live and nothing new failed or published,
+  // do NOT create duplicate shares or pollute publishing_batches with bogus 'failed' log rows.
+  if (publishedPropertyIds.length === 0 && failedPipelineIds.length === 0 && skippedPipelineIds.length > 0 && !opts.allowRepublish) {
+    console.log(`\n[IDEMPOTENT NO-OP] All ${skippedPipelineIds.length} candidate(s) are already published on site. Zero duplicate properties, shares, or batch logs created.`);
+    return {
+      ok: true,
+      idempotentNoOp: true,
+      batchId,
+      publishedPropertyIds: [],
+      failedPipelineIds: [],
+      skippedPipelineIds,
+      magicLinkUrl: null,
+      shareVerified: false,
+      historyRecorded: false,
+      cleanupResult: { ok: true, skipped: true, reason: 'all_candidates_already_live' },
+    };
+  }
+
   // Step 6: Magic Link Generation & Verification (when private_placement)
   let shareId = null;
   let magicLinkUrl = null;
@@ -454,22 +540,19 @@ export async function executePublishingRun(opts) {
     : 'completed';
 
   if (schemaStatus.publishingBatches) {
-    if (snapshots.length > 0) {
-      await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batch_properties`, {
-        method: 'POST',
-        headers: publicHeaders({ Prefer: 'return=minimal' }),
-        body: snapshots,
-      });
-    }
-
-    await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batches?id=eq.${encodeURIComponent(batchId)}`, {
-      method: 'PATCH',
+    await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batches`, {
+      method: 'POST',
       headers: publicHeaders({ Prefer: 'return=minimal' }),
       body: {
+        id: batchId,
+        target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
+        workflow_type: opts.workflow,
+        visibility: opts.visibility,
         status: batchStatus,
+        total_processed: candidates.length,
         published_count: publishedPropertyIds.length,
         failed_count: failedPipelineIds.length,
-        skipped_count: snapshots.filter((s) => s.published_status === 'skipped').length,
+        skipped_count: skippedPipelineIds.length,
         share_id: shareId,
         magic_link_url: magicLinkUrl,
         share_token_hash: shareTokenHash,
@@ -481,11 +564,20 @@ export async function executePublishingRun(opts) {
         images_synchronized: publishedPropertyIds.length > 0,
         publishing_succeeded: publishedPropertyIds.length > 0,
         magic_link_succeeded: opts.visibility !== 'private_placement' || shareVerified,
-        execution_summary: `Published ${publishedPropertyIds.length}/${candidates.length} properties (${failedPipelineIds.length} failed).`,
+        execution_summary: `Published ${publishedPropertyIds.length}/${candidates.length} properties (${failedPipelineIds.length} failed, ${skippedPipelineIds.length} skipped).`,
         errors: executionErrors,
+        started_at: startedAt,
         completed_at: new Date().toISOString(),
       },
     });
+
+    if (snapshots.length > 0) {
+      await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batch_properties`, {
+        method: 'POST',
+        headers: publicHeaders({ Prefer: 'return=minimal' }),
+        body: snapshots,
+      });
+    }
     historyRecorded = true;
   }
 
@@ -499,27 +591,40 @@ export async function executePublishingRun(opts) {
     (opts.visibility !== 'private_placement' || shareVerified);
 
   if (canCleanup) {
-    // Match raw payload files in root of pipeline-raw-payloads for verified IDs
-    const rootObjects = (await listRawPayloadObjects('', 1000)).filter((p) => !p.startsWith('recovery/'));
-    const rawPathsByPipelineId = {};
+    try {
+      // Match raw payload files in pipeline-raw-payloads (excluding recovery/) for verified IDs
+      const rootObjects = (await listRawPayloadObjects('', 1000)).filter((p) => !p.startsWith('recovery/'));
+      const rawPathsByPipelineId = {};
 
-    for (const pipeId of verifiedPipelineIds) {
-      const matchingFiles = rootObjects.filter((name) => name.includes(pipeId));
-      const movedPaths = [];
-      for (const fileKey of matchingFiles) {
-        const moved = await moveRawPayloadToRecovery(fileKey, batchId);
-        movedPaths.push(moved);
+      for (const pipeId of verifiedPipelineIds) {
+        const matchingFiles = rootObjects.filter((name) => name.includes(pipeId));
+        const movedPaths = [];
+        for (const fileKey of matchingFiles) {
+          const moved = await moveRawPayloadToRecovery(fileKey, batchId);
+          movedPaths.push(moved);
+        }
+        rawPathsByPipelineId[pipeId] = movedPaths;
       }
-      rawPathsByPipelineId[pipeId] = movedPaths;
-    }
 
-    cleanupResult = await callRpc('pipeline_archive_and_remove', {
-      p_batch_id: batchId,
-      p_pipeline_ids: verifiedPipelineIds,
-      p_raw_paths: rawPathsByPipelineId,
-      p_target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
-    });
-    console.log(`\n✓ Stage 1 Cleanup Complete: ${cleanupResult.deleted} removed from active pipeline, archived for 24h until ${cleanupResult.recovery_expires_at}`);
+      cleanupResult = await callRpc('pipeline_archive_and_remove', {
+        p_batch_id: batchId,
+        p_pipeline_ids: verifiedPipelineIds,
+        p_raw_paths: rawPathsByPipelineId,
+        p_target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
+      });
+      console.log(`\n✓ Stage 1 Cleanup Complete: ${cleanupResult.deleted} removed from active pipeline, archived for 24h until ${cleanupResult.recovery_expires_at}`);
+    } catch (archErr) {
+      cleanupResult = { ok: false, skipped: false, error: archErr.message };
+      executionErrors.push({ step: 'stage1_archival', error: archErr.message });
+      if (schemaStatus.publishingBatches) {
+        await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batches?id=eq.${encodeURIComponent(batchId)}`, {
+          method: 'PATCH',
+          headers: publicHeaders({ Prefer: 'return=minimal' }),
+          body: { errors: executionErrors },
+        }).catch(() => {});
+      }
+      console.error(`\n✗ Stage 1 Archival Failed (active pipeline rows preserved): ${archErr.message}`);
+    }
   } else {
     console.warn('\n⚠ Cleanup skipped or held (failed verification gate or schema migration not yet applied).');
   }
@@ -536,6 +641,7 @@ export async function executePublishingRun(opts) {
   console.log(`Batch ID:            ${batchId}`);
   console.log(`Published Count:     ${publishedPropertyIds.length}`);
   console.log(`Failed Count:        ${failedPipelineIds.length}`);
+  console.log(`Skipped Count:       ${skippedPipelineIds.length}`);
   if (magicLinkUrl) console.log(`Master Magic Link:   ${magicLinkUrl} (Verified: ${shareVerified})`);
   console.log(`History Recorded:    ${historyRecorded}`);
   console.log(`Active Pipeline Left:${Array.isArray(stillInActive) ? stillInActive.length : 'unknown'} for processed IDs`);
@@ -545,6 +651,7 @@ export async function executePublishingRun(opts) {
     batchId,
     publishedPropertyIds,
     failedPipelineIds,
+    skippedPipelineIds,
     magicLinkUrl,
     shareVerified,
     historyRecorded,
