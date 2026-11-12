@@ -429,6 +429,7 @@ export async function executePublishingRun(opts) {
         photo_count: photoRows.length,
         published_status: 'published',
         recovery_status: 'active',
+        error_message: null,
       });
     } catch (err) {
       // Roll back partial property if photo insertion or verification failed
