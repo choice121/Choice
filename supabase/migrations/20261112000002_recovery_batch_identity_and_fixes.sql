@@ -223,15 +223,18 @@ BEGIN
       AND (p_pipeline_ids IS NULL OR pipeline_id = ANY(p_pipeline_ids))
     FOR UPDATE
   LOOP
-    -- Enforce strict 24h expiration boundary using server timestamp
-    IF v_arch.recovery_status = 'recoverable' AND v_arch.recovery_expires_at <= v_now THEN
-      UPDATE pipeline.pipeline_recovery_archive
-      SET recovery_status = 'expired'
-      WHERE id = v_arch.id;
+    -- Enforce strict 24h expiration boundary using server timestamp (and handle pre-marked 'expired' rows)
+    IF v_arch.recovery_status = 'expired'
+       OR (v_arch.recovery_status = 'recoverable' AND v_arch.recovery_expires_at <= v_now) THEN
+      IF v_arch.recovery_status = 'recoverable' THEN
+        UPDATE pipeline.pipeline_recovery_archive
+        SET recovery_status = 'expired'
+        WHERE id = v_arch.id;
 
-      UPDATE public.publishing_batch_properties
-      SET recovery_status = 'expired'
-      WHERE batch_id = p_batch_id AND pipeline_id = v_arch.pipeline_id;
+        UPDATE public.publishing_batch_properties
+        SET recovery_status = 'expired'
+        WHERE batch_id = p_batch_id AND pipeline_id = v_arch.pipeline_id;
+      END IF;
 
       v_expired_cnt := v_expired_cnt + 1;
       CONTINUE;
