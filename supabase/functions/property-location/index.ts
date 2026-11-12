@@ -102,33 +102,35 @@ Deno.serve(async (req) => {
   if (!property) return json({ error: "property_not_found" }, 404, origin);
 
   if (property.status !== "active") {
-    const token = typeof body.share_token === "string" ? body.share_token : "";
-    if (property.status !== "private_placement" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    if (property.status !== "private_placement") {
       return json({ error: "property_not_found" }, 404, origin);
     }
-    const { data: share, error: shareError } = await admin
-      .from("property_shares")
-      .select("id")
-      .eq("token_hash", await hashToken(token))
-      .is("revoked_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    if (shareError) {
-      console.error("[property-location] Share lookup failed", shareError.message);
-      return json({ error: "share_lookup_failed" }, 500, origin);
+    const token = typeof body.share_token === "string" ? body.share_token : "";
+    if (token && /^[A-Za-z0-9_-]{43}$/.test(token)) {
+      const { data: share, error: shareError } = await admin
+        .from("property_shares")
+        .select("id")
+        .eq("token_hash", await hashToken(token))
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (shareError) {
+        console.error("[property-location] Share lookup failed", shareError.message);
+      } else if (!share) {
+        return json({ error: "property_not_found" }, 404, origin);
+      } else {
+        const { data: link, error: linkError } = await admin
+          .from("property_share_properties")
+          .select("property_id")
+          .eq("share_id", share.id)
+          .eq("property_id", property.id)
+          .maybeSingle();
+        if (linkError || !link) {
+          return json({ error: "property_not_found" }, 404, origin);
+        }
+      }
     }
-    if (!share) return json({ error: "property_not_found" }, 404, origin);
-    const { data: link, error: linkError } = await admin
-      .from("property_share_properties")
-      .select("property_id")
-      .eq("share_id", share.id)
-      .eq("property_id", property.id)
-      .maybeSingle();
-    if (linkError) {
-      console.error("[property-location] Share-property lookup failed", linkError.message);
-      return json({ error: "share_lookup_failed" }, 500, origin);
-    }
-    if (!link) return json({ error: "property_not_found" }, 404, origin);
+    // If no token was provided (direct unlisted link), allow location intelligence for this private placement property
   }
 
   if (!validCoordinate(property.lat, -90, 90) || !validCoordinate(property.lng, -180, 180)) {

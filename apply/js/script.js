@@ -401,7 +401,10 @@ class RentalApplication {
             const city  = p.get('city') || '';
             const state = p.get('state') || '';
             const rent  = p.get('rent') || '';
-            const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || '';
+            const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || p.get('share') || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || '';
+            if (shareToken) {
+              try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
+            }
 
             // Nothing useful in the URL — show manual-entry prompt and return
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
