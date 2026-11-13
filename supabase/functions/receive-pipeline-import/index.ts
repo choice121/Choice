@@ -31,6 +31,10 @@ type ImageEntry = string | {
   fileId?: string | null;
   width?: number | null;
   height?: number | null;
+  caption?: string | null;
+  room_label?: string | null;
+  source_url?: string | null;
+  media_type?: string | null;
 };
 
 function parseImageEntries(raw: unknown): ImageEntry[] {
@@ -45,6 +49,10 @@ function parseImageEntries(raw: unknown): ImageEntry[] {
           fileId: (entry as any).fileId ?? null,
           width: typeof (entry as any).width === 'number' ? (entry as any).width : null,
           height: typeof (entry as any).height === 'number' ? (entry as any).height : null,
+          caption: typeof (entry as any).caption === 'string' ? (entry as any).caption : null,
+          room_label: typeof (entry as any).room_label === 'string' ? (entry as any).room_label : null,
+          source_url: typeof (entry as any).source_url === 'string' ? (entry as any).source_url : null,
+          media_type: typeof (entry as any).media_type === 'string' ? (entry as any).media_type : null,
         };
       }
       return null;

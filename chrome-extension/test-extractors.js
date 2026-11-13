@@ -204,7 +204,7 @@ t('detect Progress Residential', () => assert.strictEqual(api.detect(PR).id, 'pr
 t('detect CJ Real Estate', () => assert.strictEqual(api.detect(CJ).id, 'cj_real_estate'));
 t('detect AppFolio', () => assert.strictEqual(api.detect(AF).id, 'cj_real_estate'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
-t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, null); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
+t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-09-01'); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
 t('Realtor payload', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
@@ -288,5 +288,92 @@ t('Zillow URL zpid match passthrough', () => {
   assert.strictEqual(p.source_url, ZGOOD, 'should keep URL when zpid matches');
 });
 
+t('Zillow lossless fields, acre lot conversion, schools, floor plans, photo metadata, and raw payload', () => {
+  const d = doc(cache({
+    zpid: 55566677,
+    homeStatus: 'FOR_RENT',
+    address: { streetAddress: '500 Park Ave Unit 4B', unitNumber: '4B', city: 'Denver', state: 'CO', zipcode: '80202' },
+    price: 2950,
+    bedrooms: 3,
+    bathrooms: 2.5,
+    livingArea: 1920,
+    lotAreaValue: 0.5,
+    lotAreaUnit: 'acres',
+    monthlyHoaFee: 125,
+    taxAnnualAmount: 4200,
+    zestimate: 625000,
+    rentZestimate: 3000,
+    schools: [{ name: 'Lincoln Elementary', rating: 8, grades: 'K-5', level: 'Elementary', distance: 0.4 }],
+    floorPlans: [{ name: 'Plan A', bedrooms: 3, bathrooms: 2.5, sqft: 1920, price: 2950 }],
+    videos: [{ url: 'https://videos.zillowstatic.com/tour.mp4', title: 'Walkthrough' }],
+    responsivePhotos: [
+      { caption: 'Chef Kitchen', subjectType: 'Kitchen', mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/aabbccdd11223344aabbccdd11223344-uncropped_scaled_within_1536_1152.jpg' }] } }
+    ],
+    resoFacts: {
+      propertySubType: 'Detached Single Family',
+      architecturalStyle: 'Craftsman',
+      roofType: 'Composition Shingle',
+      fencing: 'Privacy Wood',
+      electricVehicleChargingStations: 'Level 2 Charger',
+      utilitiesIncluded: ['Water', 'Trash'],
+      utilities: ['Cable Available', 'Sewer Connected'],
+      leaseTerm: '12 Months',
+      smokingAllowed: false,
+      petWeightLimit: 45
+    }
+  }));
+  const p = api.extractZillow(d, Z);
+  assert.strictEqual(p.unit_number, '4B');
+  assert.strictEqual(p.property_subtype, 'Detached Single Family');
+  assert.strictEqual(p.lot_size_sqft, 21780);
+  assert.strictEqual(p.hoa_fee, 125);
+  assert.strictEqual(p.hoa_fee_frequency, 'Monthly');
+  assert.strictEqual(p.tax_annual_amount, 4200);
+  assert.strictEqual(p.ev_charging, 'Level 2 Charger');
+  assert.strictEqual(p.minimum_lease_months, 12);
+  assert.strictEqual(p.smoking_allowed, false);
+  assert.strictEqual(p.pet_weight_limit, 45);
+  assert.strictEqual(p.source_status, 'FOR_RENT');
+  assert.strictEqual(p.structural_details.architectural_style, 'Craftsman');
+  assert.strictEqual(p.utility_details.utilities_included_confirmed[0], 'Water');
+  assert.strictEqual(p.financial_details.zestimate, 625000);
+  assert.strictEqual(p.location_details.schools[0].name, 'Lincoln Elementary');
+  assert.strictEqual(p.floor_plans.length, 1);
+  assert.strictEqual(p.videos[0].url, 'https://videos.zillowstatic.com/tour.mp4');
+  assert.strictEqual(p.photo_metadata[0].caption, 'Chef Kitchen');
+  assert.strictEqual(p.photo_metadata[0].room_label, 'Kitchen');
+  assert.strictEqual(p.source_raw_payload.zpid, 55566677);
+});
+
+t('Zillow dispatcher merges without null overwrite and keeps >2000 char DOM description', () => {
+  const longDesc = 'Spacious remodeled home with gourmet kitchen. '.repeat(60); // > 2500 chars
+  assert.ok(longDesc.length > 2200);
+  const domAndNextDoc = {
+    body: { innerText: '3 bd 2 ba 1,800 sqft Year built: 2012 Heating: Forced air Lot size: 0.25 acres' },
+    getElementById: (id) => id === '__NEXT_DATA__' ? {
+      textContent: JSON.stringify(cache({
+        zpid: 44455566,
+        address: { streetAddress: '77 Merge Rd', city: 'Austin', state: 'TX', zipcode: '78701' },
+        price: 2400,
+        bedrooms: 3,
+        yearBuilt: null
+      }))
+    } : null,
+    querySelector: (sel) => {
+      if (sel.includes('h1')) return { textContent: '77 Merge Rd, Austin, TX 78701' };
+      if (sel.includes('DescriptionWrapper') || sel.includes('description')) return { textContent: longDesc };
+      if (sel.includes('price')) return { textContent: '$2,400/mo' };
+      return null;
+    },
+    querySelectorAll: () => []
+  };
+  const p = api.extractZillow(domAndNextDoc, Z);
+  assert.strictEqual(p.year_built, 2012, 'DOM year_built must not be overwritten by NextData null');
+  assert.strictEqual(p.lot_size_sqft, 10890, 'DOM acre lot must convert cleanly');
+  assert.strictEqual(p.heating_type, 'Forced air', 'DOM heating_type must survive merge');
+  assert.strictEqual(p.description.length, longDesc.trim().length, 'DOM description must not truncate at 2000 chars');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail > 0 ? 1 : 0);
+

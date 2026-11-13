@@ -69,6 +69,7 @@ export interface ZillowExtracted {
   source_url: string | null;
   title: string | null;
   address: string | null;
+  unit_number: string | null;
   city: string | null;
   state: string | null;
   zip: string | null;
@@ -86,15 +87,23 @@ export interface ZillowExtracted {
   garage_spaces: number | null;
   total_units: number | null;
   property_type: string | null;
+  property_subtype: string | null;
   description: string | null;
   original_description: string | null;
+  showing_instructions: string | null;
   neighborhood: string | null;
   county: string | null;
   location_context: string | null;
   pets_allowed: boolean | null;
   pet_types_allowed: string | null;
+  pet_weight_limit: number | null;
+  pet_details: string | null;
   available_date: string | null;
+  listed_at: string | null;
+  source_last_updated_at: string | null;
+  source_status: string | null;
   minimum_lease_months: number | null;
+  lease_terms: string | null;
   smoking_allowed: boolean | null;
   security_deposit: number | null;
   pet_deposit: number | null;
@@ -102,9 +111,12 @@ export interface ZillowExtracted {
   parking_fee: number | null;
   application_fee: number | null;
   hoa_fee: number | null;
+  hoa_fee_frequency: string | null;
+  tax_annual_amount: number | null;
   last_months_rent: number | null;
   move_in_special: string | null;
   parking: string | null;
+  ev_charging: string | null;
   amenities: string | null;
   appliances: string | null;
   flooring: string | null;
@@ -118,6 +130,13 @@ export interface ZillowExtracted {
   original_image_urls: string;
   agent_name: string | null;
   broker_name: string | null;
+  structural_details: Record<string, unknown> | null;
+  utility_details: Record<string, unknown> | null;
+  financial_details: Record<string, unknown> | null;
+  location_details: Record<string, unknown> | null;
+  floor_plans: unknown[] | null;
+  videos: unknown[] | null;
+  source_raw_payload: Record<string, unknown> | null;
 }
 
 // ── Type coercion helpers ──────────────────────────────────────────────
@@ -262,12 +281,11 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   addPhoto(prop.heroImage);
   const photosCapped = photos.slice(0, 50);
 
-  // Price
+  // Price (asking rent only; never substitute rentZestimate for asking rent)
   let rent: number | null = null;
   const rawPrice = prop.price || prop.unformattedPrice;
   if (typeof rawPrice === 'number' && rawPrice > 0) { rent = rawPrice; }
   else if (typeof rawPrice === 'string') { const d = rawPrice.replace(/[^0-9]/g, ''); rent = d ? parseInt(d, 10) : null; }
-  if (!rent && prop.rentZestimate) rent = parseInt(String(prop.rentZestimate), 10) || null;
 
   // Bathrooms (Decimal precision without truncation per Rule 6A)
   const bathsRaw = prop.bathrooms ?? prop.baths ?? null;
@@ -278,11 +296,14 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   let lotSqft: number | null = null;
   if (prop.lotAreaValue) {
     const lv = parseFloat(String(prop.lotAreaValue));
-    const lu = String(prop.lotAreaUnit || '').toLowerCase();
-    if (!isNaN(lv) && lv > 0) lotSqft = lu.includes('acre') ? Math.round(lv * 43560) : Math.round(lv);
+    const lu = String(prop.lotAreaUnit || rf.lotAreaUnits || '').toLowerCase();
+    if (!isNaN(lv) && lv > 0) lotSqft = (lu.includes('acre') || /\\bac\\b/.test(lu)) ? Math.round(lv * 43560) : Math.round(lv);
   } else if (prop.lotSize) {
-    const ls = parseFloat(String(prop.lotSize));
-    if (!isNaN(ls) && ls > 0) lotSqft = Math.round(ls);
+    const lsStr = String(prop.lotSize);
+    const ls = parseFloat(lsStr.replace(/,/g, ''));
+    if (!isNaN(ls) && ls > 0) lotSqft = /acre/i.test(lsStr) ? Math.round(ls * 43560) : Math.round(ls);
+  } else if (prop.lotSizeSquareFeet > 0) {
+    lotSqft = Math.round(Number(prop.lotSizeSquareFeet));
   }
 
   // Min lease months
@@ -299,36 +320,45 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
   // Amenities
   const amenityMap: Record<string, boolean> = {};
   // deno-lint-ignore no-explicit-any
-  for (const t of (prop.tags || []) as any[]) { const s = String(t).trim(); if (s) amenityMap[s] = true; }
+  for (const t of (prop.tags || []) as any[]) { const s = String(t).trim(); if (s && !/smoke|smoking|tobacco/i.test(s)) amenityMap[s] = true; }
   for (const arr of [
     rf.communityFeatures, rf.interiorFeatures, rf.exteriorFeatures,
     rf.lotFeatures, rf.poolFeatures, rf.accessibilityFeatures,
   ]) {
     // deno-lint-ignore no-explicit-any
-    for (const t of (arr || []) as any[]) { const s = String(t).trim(); if (s) amenityMap[s] = true; }
+    for (const t of (arr || []) as any[]) { const s = String(t).trim(); if (s && !/smoke|smoking|tobacco/i.test(s)) amenityMap[s] = true; }
   }
 
-  // Walk/transit/bike → location_context
+  // Walk/transit/bike + schools → location_context
   const ctxParts: string[] = [];
   if (prop.walkScore != null) ctxParts.push('Walk score: ' + prop.walkScore);
   if (prop.transitScore != null) ctxParts.push('Transit score: ' + prop.transitScore);
   if (prop.bikeScore != null) ctxParts.push('Bike score: ' + prop.bikeScore);
 
-  // Parking
+  // Parking & EV
   let parking: string | null = null;
   if (rf.parkingFeatures?.length) parking = (rf.parkingFeatures as string[]).join(', ');
   else if (prop.parkingType) parking = String(prop.parkingType).replace(/_/g, ' ');
+  const evCharging: string | null = rf.electricVehicleChargingStations || rf.evCharger ||
+    ((rf.parkingFeatures as string[] | undefined)?.some((f: string) => /\\bev\\b|electric vehicle|charging/i.test(f)) ? 'EV Charging Available' : null);
 
-  // Central air + basement
-  const centralAir = !!(rf.hasCooling || (rf.cooling as string[] | undefined)?.some((c: string) => c.toLowerCase().includes('central')));
-  const basement = !!(rf.basement && rf.basement !== 'None' && rf.basement !== 'No basement' && rf.basement !== 'false' && rf.basement !== false);
+  // Central air + basement (distinguish false vs unknown)
+  let centralAir: boolean | null = rf.hasCooling === false ? false : null;
+  if (Array.isArray(rf.cooling) && rf.cooling.length) {
+    centralAir = (rf.cooling as string[]).some((c: string) => c.toLowerCase().includes('central'));
+  }
+  let basement: boolean | null = null;
+  if (typeof rf.basement === 'boolean') basement = rf.basement;
+  else if (typeof rf.basement === 'string' && rf.basement.trim()) {
+    basement = !/^(?:none|no(?:\\s+basement)?|false|n\\/a)$/i.test(rf.basement.trim());
+  }
 
   // Pet types
   const petTypes: string[] = [];
   if (rf.catsAllowed) petTypes.push('cats');
   if (rf.dogsAllowed) petTypes.push('dogs');
 
-  // Title
+  // Title & Unit
   const beds = prop.bedrooms ?? prop.beds ?? null;
   const propType = normalizePropType(prop.homeType);
   function fmtType(t: string | null) {
@@ -336,6 +366,8 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     return t.replace(/_/g, ' ').replace(/\\b\\w/g, (c: string) => c.toUpperCase());
   }
   const streetAddr = addr.streetAddress || prop.streetAddress;
+  const unitMatch = typeof streetAddr === 'string' ? streetAddr.match(/(?:,?\\s+(?:#|apt\\.?|unit|ste\\.?|suite)\\s*([a-z0-9-]+))$/i) : null;
+  const unitNumber = addr.unitNumber || prop.unitNumber || rf.unitNumber || (unitMatch ? unitMatch[1].trim() : null);
   const title = (prop.title && String(prop.title).trim()) ||
     (streetAddr
       ? (city && (addr.state || prop.state)
@@ -343,12 +375,19 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
           : (city ? \`\${streetAddr}, \${city}\` : streetAddr))
       : (city ? ((beds ? beds + 'BR ' : '') + fmtType(propType) + ' in ' + city) : 'Zillow Rental'));
 
+  const vtour = prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || null;
+  const sqftNum = prop.livingArea || prop.livingAreaValue || prop.area || rf.livingArea || null;
+  const hoaFee = safeInt(prop.monthlyHoaFee || prop.hoaFee || rf.hoaFee);
+  const hoaFreq = rf.hoaFeeFrequency || prop.hoaFeeFrequency || (prop.monthlyHoaFee ? 'Monthly' : null);
+  const taxAnnual = safeInt(prop.taxAnnualAmount || rf.taxAnnualAmount);
+
   return {
     source: 'zillow',
     source_listing_id: String(prop.zpid || ''),
     source_url: null, // caller provides the URL
     title,
     address: addr.streetAddress || prop.streetAddress || null,
+    unit_number: unitNumber,
     city,
     state: addr.state || prop.state || null,
     zip: addr.zipcode || prop.zipcode || null,
@@ -359,45 +398,124 @@ export function extractFromNextData(html: string): Record<string, unknown> | { _
     bathrooms: bathVal,
     half_bathrooms: bathH,
     total_bathrooms: bathVal,
-    square_footage: prop.livingArea || prop.area || null,
+    square_footage: sqftNum,
     lot_size_sqft: lotSqft,
     year_built: prop.yearBuilt || rf.yearBuilt || null,
     floors: prop.stories || rf.stories || null,
     garage_spaces: prop.garageParkingCapacity || prop.garageSpaces || rf.garageSpaces || null,
     total_units: prop.unitCount || prop.numberOfUnitsTotal || null,
     property_type: propType,
-    description: prop.description || null,
+    property_subtype: rf.propertySubType || prop.homeSubType || rf.structureType || null,
+    description: prop.description || rf.description || null,
     original_description: prop.description || rf.description || null,
+    showing_instructions: rf.showingInstructions || prop.showingInstructions || null,
     neighborhood: prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null,
     county: prop.county || addr.county || null,
     location_context: ctxParts.length ? ctxParts.join('; ') : null,
-    available_date: normalizeDate(rf.dateAvailable || rf.availableFrom || prop.dateAvailable),
+    available_date: normalizeDate(rf.dateAvailable || rf.availableFrom || prop.dateAvailable || rf.availabilityDate),
+    listed_at: normalizeDate(prop.datePosted || rf.listingDate || rf.onMarketDate || prop.datePostedString),
+    source_last_updated_at: prop.dateSold || prop.lastSoldDate || prop.updatedAt || rf.listingLastUpdatedDate || null,
+    source_status: prop.homeStatus || rf.listingStatus || prop.listingStatus || null,
     minimum_lease_months: minLease,
+    lease_terms: ltRaw ? JSON.stringify(Array.isArray(ltRaw) ? ltRaw : [String(ltRaw)]) : null,
     pets_allowed: prop.isPetFriendly ?? (rf.petsAllowed !== undefined ? rf.petsAllowed : null),
     pet_types_allowed: JSON.stringify(petTypes),
+    pet_weight_limit: safeInt(rf.petWeightLimit),
+    pet_details: rf.petRestrictions || rf.petsComments || null,
     smoking_allowed: rf.smokingAllowed != null ? !!rf.smokingAllowed : null,
     security_deposit: safeInt(rf.securityDeposit),
     pet_deposit: safeInt(rf.petFee || rf.petDepositFee || rf.petDeposit),
     admin_fee: safeInt(rf.adminFee),
     parking_fee: safeInt(rf.parkingFee),
     application_fee: safeInt(rf.applicationFeeAmount || rf.applicationFee),
-    hoa_fee: safeInt(prop.monthlyHoaFee || prop.hoaFee),
+    hoa_fee: hoaFee,
+    hoa_fee_frequency: hoaFreq,
+    tax_annual_amount: taxAnnual,
     last_months_rent: safeInt(rf.lastMonthRent),
     move_in_special: rf.concessions ? String(rf.concessions).slice(0, 200) : null,
     parking,
+    ev_charging: evCharging,
     amenities: JSON.stringify(Object.keys(amenityMap)),
     appliances: JSON.stringify(rf.appliances || []),
     flooring: rf.flooring ? JSON.stringify(Array.isArray(rf.flooring) ? rf.flooring : [String(rf.flooring)]) : null,
-    utilities_included: JSON.stringify(rf.utilities || rf.utilitiesIncluded || []),
+    utilities_included: JSON.stringify(rf.utilitiesIncluded || rf.utilities || []),
     heating_type: (rf.heating as string[] | undefined)?.join(', ') || null,
     cooling_type: (rf.cooling as string[] | undefined)?.join(', ') || null,
     laundry_type: (rf.laundryFeatures as string[] | undefined)?.join(', ') || null,
     has_basement: basement,
     has_central_air: centralAir,
-    virtual_tour_url: prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || null,
+    virtual_tour_url: vtour,
     original_image_urls: JSON.stringify(photosCapped),
     agent_name: ai.agentName || null,
     broker_name: ai.brokerName || null,
+    structural_details: {
+      architectural_style: rf.architecturalStyle || null,
+      construction_materials: rf.constructionMaterials || null,
+      foundation_details: rf.foundationDetails || null,
+      roof: rf.roofType || rf.roof || null,
+      exterior_features: rf.exteriorFeatures || null,
+      interior_features: rf.interiorFeatures || null,
+      window_features: rf.windowFeatures || null,
+      fencing: rf.fencing || null,
+      patio_and_porch_features: rf.patioAndPorchFeatures || null,
+      fireplace_features: rf.fireplaceFeatures || null,
+      pool_features: rf.poolFeatures || null,
+      spa_features: rf.spaFeatures || null,
+      levels: rf.levels || prop.stories || rf.stories || null,
+      accessibility_features: rf.accessibilityFeatures || null,
+      parking_features: rf.parkingFeatures || null,
+      other_structures: rf.otherStructures || null,
+      lot_features: rf.lotFeatures || null,
+      ev_charging: evCharging,
+    },
+    utility_details: {
+      utilities_included_confirmed: Array.isArray(rf.utilitiesIncluded) ? rf.utilitiesIncluded : null,
+      utilities: rf.utilities || null,
+      electric: rf.electric || null,
+      gas: rf.gas || null,
+      water_source: rf.waterSource || null,
+      sewer: rf.sewer || null,
+      green_energy: rf.greenEnergyEfficient || null,
+      heating_systems: rf.heating || null,
+      cooling_systems: rf.cooling || null,
+      appliances: rf.appliances || null,
+      laundry_features: rf.laundryFeatures || null,
+    },
+    financial_details: {
+      price_per_sqft: rf.pricePerSquareFoot || prop.pricePerSquareFoot || null,
+      zestimate: prop.zestimate || null,
+      rent_zestimate: prop.rentZestimate || null,
+      security_deposit: safeInt(rf.securityDeposit),
+      application_fee: safeInt(rf.applicationFeeAmount || rf.applicationFee),
+      hoa_fee: hoaFee,
+      hoa_fee_frequency: hoaFreq,
+      tax_annual_amount: taxAnnual,
+      concessions: rf.concessions || null,
+      price_history: Array.isArray(prop.priceHistory) ? prop.priceHistory.slice(0, 25) : null,
+      tax_history: Array.isArray(prop.taxHistory) ? prop.taxHistory.slice(0, 15) : null,
+    },
+    location_details: {
+      county: prop.county || addr.county || null,
+      neighborhood: prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null,
+      subdivision: rf.subdivision || null,
+      school_district: rf.highSchoolDistrict || rf.elementarySchoolDistrict || null,
+      schools: Array.isArray(prop.schools) ? prop.schools.slice(0, 10) : null,
+      walk_score: prop.walkScore ?? null,
+      transit_score: prop.transitScore ?? null,
+      bike_score: prop.bikeScore ?? null,
+    },
+    floor_plans: Array.isArray(prop.floorPlans || prop.buildingFloorPlans || rf.floorPlans)
+      ? (prop.floorPlans || prop.buildingFloorPlans || rf.floorPlans).slice(0, 20)
+      : null,
+    videos: vtour ? [{ url: vtour, title: '3D / Virtual Tour', type: 'virtual_tour' }] : null,
+    source_raw_payload: {
+      source: 'zillow',
+      zpid: prop.zpid || null,
+      homeStatus: prop.homeStatus || null,
+      homeType: prop.homeType || null,
+      resoFacts: rf,
+      attributionInfo: ai,
+    },
   };
 }
 `;

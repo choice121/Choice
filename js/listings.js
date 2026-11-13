@@ -29,6 +29,9 @@ let activeMaxRent  = '';
 let activeMinRent  = '';
 let activeSearch   = '';
 let activeMinBaths = '';
+let activeMinSqft  = '';
+let activeMaxSqft  = '';
+let activeAmenity  = '';
 let activeLaundry  = '';
 let activeHeating  = '';
 let activePetType  = '';
@@ -91,6 +94,12 @@ function readURL() {
   activeMaxRent  = p.get('maxrent')  || '';
   activeMinRent  = p.get('minrent')  || '';
   activeMinBaths = p.get('minbaths') || '';
+  activeMinSqft  = p.get('minsqft')  || '';
+  activeMaxSqft  = p.get('maxsqft')  || '';
+  activeAmenity  = p.get('amenity')  || '';
+  activeLaundry  = p.get('laundry')  || '';
+  activeHeating  = p.get('heating')  || '';
+  activePetType  = p.get('pettype')  || '';
   activeType     = p.get('type')     || 'all';
   sortBy         = p.get('sort')     || 'newest';
   currentPage    = parseInt(p.get('page') || '1', 10);
@@ -106,6 +115,12 @@ function pushURL(replace = false) {
   if (activeMaxRent)  p.set('maxrent',  activeMaxRent);
   if (activeMinRent)  p.set('minrent',  activeMinRent);
   if (activeMinBaths) p.set('minbaths', activeMinBaths);
+  if (activeMinSqft)  p.set('minsqft',  activeMinSqft);
+  if (activeMaxSqft)  p.set('maxsqft',  activeMaxSqft);
+  if (activeAmenity)  p.set('amenity',  activeAmenity);
+  if (activeLaundry)  p.set('laundry',  activeLaundry);
+  if (activeHeating)  p.set('heating',  activeHeating);
+  if (activePetType)  p.set('pettype',  activePetType);
   if (activeType && activeType !== 'all') p.set('type', activeType);
   if (sortBy && sortBy !== 'newest') p.set('sort', sortBy);
   if (currentPage > 1) p.set('page', currentPage);
@@ -134,11 +149,23 @@ function syncControls() {
   const abath = document.getElementById('advMinBaths');
   const amin  = document.getElementById('advMinRent');
   const amax  = document.getElementById('advMaxRent');
-  if (at)    at.value    = ['apartment','house','condo','townhouse'].includes(activeType) ? activeType : '';
-  if (ab)    ab.value    = activeBeds;
-  if (abath) abath.value = activeMinBaths;
-  if (amin)  amin.value  = activeMinRent;
-  if (amax)  amax.value  = activeMaxRent;
+  const aminSq = document.getElementById('advMinSqft');
+  const amaxSq = document.getElementById('advMaxSqft');
+  const aamen  = document.getElementById('advAmenityFilter');
+  const alaun  = document.getElementById('advLaundryFilter');
+  const aheat  = document.getElementById('advHeatingFilter');
+  const apet   = document.getElementById('advPetTypeFilter');
+  if (at)     at.value     = ['apartment','house','condo','townhouse','duplex'].includes(activeType) ? activeType : '';
+  if (ab)     ab.value     = activeBeds;
+  if (abath)  abath.value  = activeMinBaths;
+  if (amin)   amin.value   = activeMinRent;
+  if (amax)   amax.value   = activeMaxRent;
+  if (aminSq) aminSq.value = activeMinSqft;
+  if (amaxSq) amaxSq.value = activeMaxSqft;
+  if (aamen)  aamen.value  = activeAmenity;
+  if (alaun)  alaun.value  = activeLaundry;
+  if (aheat)  aheat.value  = activeHeating;
+  if (apet)   apet.value   = activePetType;
   updateFilterBadge();
 }
 
@@ -854,15 +881,23 @@ async function fetchAndRender() {
     );
     const fetchPromise = (isAdminMode && !activeShareToken && !(activeTargetIds && activeTargetIds.length))
       ? CP.Properties.getListingsAdmin({
-          q:       activeSearch,
-          status:  adminStatusFilter,
-          landlord: adminLandlordId,
-          beds:    activeBeds,
-          min_rent: activeMinRent,
-          max_rent: activeMaxRent,
-          sort:    sortBy,
-          page:    currentPage,
-          per_page: PER_PAGE,
+          q:            activeSearch,
+          status:       adminStatusFilter,
+          landlord:     adminLandlordId,
+          type:         activeType,
+          beds:         activeBeds,
+          min_baths:    activeMinBaths,
+          min_rent:     activeMinRent,
+          max_rent:     activeMaxRent,
+          min_sqft:     activeMinSqft,
+          max_sqft:     activeMaxSqft,
+          amenity:      activeAmenity,
+          laundry_type: activeLaundry,
+          heating_type: activeHeating,
+          pet_type:     activePetType,
+          sort:         sortBy,
+          page:         currentPage,
+          per_page:     PER_PAGE,
         })
       : CP.Properties.getListings({
           target_ids:   activeTargetIds,
@@ -873,12 +908,15 @@ async function fetchAndRender() {
           min_baths:    activeMinBaths,
           min_rent:     activeMinRent,
           max_rent:     activeMaxRent,
+          min_sqft:     activeMinSqft,
+          max_sqft:     activeMaxSqft,
+          amenity:      activeAmenity,
           laundry_type: activeLaundry,
           heating_type: activeHeating,
           pet_type:     activePetType,
           sort:         sortBy,
-          page:      currentPage,
-          per_page:  PER_PAGE,
+          page:         currentPage,
+          per_page:     PER_PAGE,
         });
     const result = await Promise.race([fetchPromise, fetchTimeout]);
 
@@ -966,7 +1004,7 @@ function renderProperties(props) {
   const heading   = document.getElementById('listingsHeading');
   const hasTargetIds = activeTargetIds && activeTargetIds.length > 0;
   const hasShare = !!activeShareToken;
-  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeBeds || activeMaxRent || activeMinRent || activeMinBaths;
+  const hasFilters = hasTargetIds || hasShare || activeType !== 'all' || activeSearch || activeBeds || activeMaxRent || activeMinRent || activeMinBaths || activeMinSqft || activeMaxSqft || activeAmenity || activeLaundry || activeHeating || activePetType;
 
   if (heading) {
     if (hasShare) {
@@ -1223,6 +1261,8 @@ function initMap(props, isBoundsUpdate = false) {
       const result = await CP.Properties.getListings({
         q: activeSearch, type: activeType, beds: activeBeds,
         min_baths: activeMinBaths, min_rent: activeMinRent, max_rent: activeMaxRent,
+        min_sqft: activeMinSqft, max_sqft: activeMaxSqft, amenity: activeAmenity,
+        laundry_type: activeLaundry, heating_type: activeHeating, pet_type: activePetType,
         sort: sortBy, per_page: 50,
         min_lat: b.getSouth(), max_lat: b.getNorth(),
         min_lng: b.getWest(), max_lng: b.getEast()
@@ -1361,7 +1401,7 @@ function setupFilters() {
     // Fix 3: Clear All inside dropdown header (mobile)
     const clearAllMobile = document.getElementById('clearAllMobile');
     if (clearAllMobile) clearAllMobile.addEventListener('click', () => {
-      ['advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
+      ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advMinSqft','advMaxSqft','advAmenityFilter','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
       window.clearAllFilters();
@@ -1376,13 +1416,16 @@ function setupFilters() {
   });
 
   document.getElementById('applyAdvFilters').addEventListener('click', () => {
-    activeMinRent  = document.getElementById('advMinRent').value;
-    activeMaxRent  = document.getElementById('advMaxRent').value || activeMaxRent;
-    activeMinBaths = document.getElementById('advMinBaths').value;
-    activeLaundry  = document.getElementById('advLaundryFilter').value;
-    activeHeating  = document.getElementById('advHeatingFilter').value;
-    activePetType  = document.getElementById('advPetTypeFilter').value;
-    const advBeds = document.getElementById('advMinBeds').value;
+    activeMinRent  = document.getElementById('advMinRent')?.value || '';
+    activeMaxRent  = document.getElementById('advMaxRent')?.value || activeMaxRent;
+    activeMinBaths = document.getElementById('advMinBaths')?.value || '';
+    activeMinSqft  = document.getElementById('advMinSqft')?.value || '';
+    activeMaxSqft  = document.getElementById('advMaxSqft')?.value || '';
+    activeAmenity  = document.getElementById('advAmenityFilter')?.value || '';
+    activeLaundry  = document.getElementById('advLaundryFilter')?.value || '';
+    activeHeating  = document.getElementById('advHeatingFilter')?.value || '';
+    activePetType  = document.getElementById('advPetTypeFilter')?.value || '';
+    const advBeds = document.getElementById('advMinBeds')?.value || '';
     if (advBeds !== '') activeBeds = advBeds;
     document.getElementById('moreFiltersDropdown').classList.remove('open');
     sessionStorage.setItem('filters_dropdown_open', 'false');
@@ -1391,8 +1434,9 @@ function setupFilters() {
   });
 
   document.getElementById('clearAdvFilters').addEventListener('click', () => {
-    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
-      document.getElementById(id).value = '';
+    ['advTypeFilter','advMinBeds','advMinBaths','advMinRent','advMaxRent','advMinSqft','advMaxSqft','advAmenityFilter','advLaundryFilter','advHeatingFilter','advPetTypeFilter'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
     });
     window.clearAllFilters();
     document.getElementById('moreFiltersDropdown').classList.remove('open');
@@ -1403,6 +1447,7 @@ function setupFilters() {
 window.clearAllFilters = function() {
   activeType = 'all'; activeSearch = ''; activeBeds = '';
   activeMaxRent = ''; activeMinRent = ''; activeMinBaths = '';
+  activeMinSqft = ''; activeMaxSqft = ''; activeAmenity = '';
   activeLaundry = ''; activeHeating = ''; activePetType = '';
   sortBy = 'newest'; currentPage = 1;
   syncControls();
@@ -1419,7 +1464,7 @@ function updateFilterBadge() {
     const badge = document.getElementById('filterActiveBadge');
     const clearAllPill = document.getElementById('clearAllPill');
     const mobileBadge = document.getElementById('mobileFiltersBadge');
-    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
+    const count = [activeType && activeType !== 'all', !!activeBeds, !!activeMaxRent, !!activeMinRent, !!activeMinBaths, !!activeMinSqft, !!activeMaxSqft, !!activeAmenity, !!activeSearch, !!activeLaundry, !!activeHeating, !!activePetType].filter(Boolean).length;
     if (badge) { badge.textContent = count || ''; badge.style.display = count > 0 ? 'inline-flex' : 'none'; }
     if (clearAllPill) clearAllPill.style.display = count > 0 ? '' : 'none';
     if (mobileBadge) { mobileBadge.textContent = count || ''; mobileBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }

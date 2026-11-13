@@ -259,13 +259,15 @@ Deno.serve(async (req) => {
     source_url: parsedUrl.url.toString(),
     _import: "admin-url-import-v1",
   });
-  record.original_data = JSON.stringify({
+  record.original_data = {
     source: "zillow",
     zpid: parsedUrl.zpid,
     source_url: parsedUrl.url.toString(),
-    import_method: "admin-url-import-v1",
+    import_method: "admin-url-import-v2",
     fetched_at: new Date().toISOString(),
-  });
+    source_status: extracted.source_status || null,
+    property_subtype: extracted.property_subtype || null,
+  };
 
   const photoUrls = (() => {
     try {

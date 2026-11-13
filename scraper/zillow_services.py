@@ -332,22 +332,87 @@ class ApifyService(ZillowScraperService):
             elif isinstance(val, str) and val.startswith("http"):
                 photos.append(val)
         
-        # Deduplicate
+        # Deduplicate while preserving exact order
         photos = list(dict.fromkeys(photos))[:50]
-        
-        # Description
+
+        # Full description & resoFacts
         desc = raw.get("description") or raw.get("descriptionText") or ""
-        
-        # ZPID
+        rf = raw.get("resoFacts") if isinstance(raw.get("resoFacts"), dict) else {}
+
+        # ZPID & unit
         zpid = str(raw.get("zpid") or raw.get("id") or "")
-        
-        # Build title
+        unit_number = address.get("unitNumber") or raw.get("unitNumber") or rf.get("unitNumber")
+
+        # Lot sqft with acre conversion
+        lot_sqft = raw.get("lotSizeSquareFeet")
+        if lot_sqft is None and raw.get("lotAreaValue") is not None:
+            try:
+                lv = float(raw.get("lotAreaValue"))
+                lu = str(raw.get("lotAreaUnit") or rf.get("lotAreaUnits") or "").lower()
+                if lv > 0:
+                    lot_sqft = round(lv * 43560) if ("acre" in lu or lu == "ac") else round(lv)
+            except Exception:
+                lot_sqft = None
+
+        # Amenities / Appliances / Flooring / HVAC / Laundry / Utilities
+        def _as_list(val):
+            if isinstance(val, list):
+                return [str(x).strip() for x in val if x]
+            if isinstance(val, str) and val.strip():
+                return [s.strip() for s in val.split(",") if s.strip()]
+            return []
+
+        amenities = []
+        for item in (
+            _as_list(raw.get("tags"))
+            + _as_list(rf.get("communityFeatures"))
+            + _as_list(rf.get("interiorFeatures"))
+            + _as_list(rf.get("exteriorFeatures"))
+            + _as_list(rf.get("poolFeatures"))
+            + _as_list(rf.get("accessibilityFeatures"))
+        ):
+            if item not in amenities and not any(w in item.lower() for w in ("smoke", "smoking", "tobacco")):
+                amenities.append(item)
+
+        appliances = _as_list(rf.get("appliances") or raw.get("appliances"))
+        flooring = _as_list(rf.get("flooring") or raw.get("flooring"))
+        utilities_inc = _as_list(rf.get("utilitiesIncluded") or rf.get("utilities") or raw.get("utilitiesIncluded"))
+        heating_list = _as_list(rf.get("heating"))
+        cooling_list = _as_list(rf.get("cooling"))
+        laundry_list = _as_list(rf.get("laundryFeatures"))
+
+        heating_type = ", ".join(heating_list) if heating_list else raw.get("heating")
+        cooling_type = ", ".join(cooling_list) if cooling_list else raw.get("cooling")
+        laundry_type = ", ".join(laundry_list) if laundry_list else raw.get("laundry")
+        parking_list = _as_list(rf.get("parkingFeatures"))
+        parking_val = ", ".join(parking_list) if parking_list else raw.get("parkingType")
+
+        basement_raw = rf.get("basement")
+        has_basement = None
+        if isinstance(basement_raw, bool):
+            has_basement = basement_raw
+        elif isinstance(basement_raw, str) and basement_raw.strip():
+            has_basement = basement_raw.strip().lower() not in ("none", "no basement", "false", "n/a")
+
+        has_central_air = None
+        if rf.get("hasCooling") is False:
+            has_central_air = False
+        elif cooling_list:
+            has_central_air = any("central" in c.lower() for c in cooling_list)
+
+        ev_charging = rf.get("electricVehicleChargingStations") or rf.get("evCharger")
+        vtour = raw.get("virtualTourUrl") or raw.get("threeDimensionalTourUrl") or rf.get("virtualTourUrl")
+
+        # Title
         bed_pfx = f"{beds}BR " if beds else ""
         type_lbl = (prop_type or "Rental").replace("_", " ").title()
-        title = f"{bed_pfx}{type_lbl} in {city}" if city else (street or "Zillow Rental")
-        
+        title = raw.get("title") or (f"{street}, {city}, {state} {zipcode}".strip(", ") if street and city and state else (f"{bed_pfx}{type_lbl} in {city}" if city else (street or "Zillow Rental")))
+
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        
+        hoa_fee = raw.get("monthlyHoaFee") or raw.get("hoaFee") or rf.get("hoaFee")
+        hoa_freq = rf.get("hoaFeeFrequency") or ("Monthly" if raw.get("monthlyHoaFee") else None)
+        tax_annual = raw.get("taxAnnualAmount") or rf.get("taxAnnualAmount")
+
         record = {
             "id": "PP-" + __import__('uuid').uuid4().hex[:8].upper(),
             "source": "zillow",
@@ -356,70 +421,118 @@ class ApifyService(ZillowScraperService):
             "status": "scraped",
             "title": title,
             "address": street,
-            "unit_number": None,
+            "unit_number": unit_number,
             "city": city,
             "state": state,
             "zip": zipcode,
-            "county": None,
-            "neighborhood": raw.get("neighborhood") or raw.get("neighborhoodName"),
+            "county": raw.get("county") or address.get("county"),
+            "neighborhood": raw.get("neighborhood") or raw.get("neighborhoodName") or rf.get("subdivision"),
             "lat": raw.get("lat") or raw.get("latitude"),
             "lng": raw.get("lng") or raw.get("longitude"),
             "location_context": None,
             "property_type": prop_type,
+            "property_subtype": rf.get("propertySubType") or raw.get("homeSubType"),
             "bedrooms": beds,
             "bathrooms": baths if baths is not None else None,
             "half_bathrooms": 1 if baths is not None and baths != int(baths) else None,
             "total_bathrooms": baths,
             "square_footage": raw.get("livingArea") or raw.get("sqft") or raw.get("area"),
-            "lot_size_sqft": raw.get("lotSizeSquareFeet"),
-            "year_built": raw.get("yearBuilt"),
-            "floors": raw.get("stories") or raw.get("levels"),
-            "garage_spaces": raw.get("garageSpaces"),
+            "lot_size_sqft": lot_sqft,
+            "year_built": raw.get("yearBuilt") or rf.get("yearBuilt"),
+            "floors": raw.get("stories") or raw.get("levels") or rf.get("stories"),
+            "garage_spaces": raw.get("garageSpaces") or rf.get("garageParkingCapacity"),
             "total_units": raw.get("unitCount") or raw.get("numberOfUnitsTotal"),
-            "has_basement": None,
-            "has_central_air": None,
-            "virtual_tour_url": None,
+            "has_basement": has_basement,
+            "has_central_air": has_central_air,
+            "virtual_tour_url": vtour,
             "monthly_rent": price,
-            "security_deposit": raw.get("securityDeposit"),
-            "last_months_rent": None,
-            "application_fee": raw.get("applicationFee"),
-            "pet_deposit": raw.get("petFee"),
-            "admin_fee": raw.get("adminFee"),
-            "move_in_special": raw.get("specialOffers") or raw.get("concessions"),
-            "parking_fee": raw.get("parkingFee"),
-            "hoa_fee": raw.get("monthlyHoaFee") or raw.get("hoaFee"),
-            "tax_value": raw.get("taxAnnualAmount"),
-            "description": desc[:2000] if desc else None,
-            "showing_instructions": None,
-            "available_date": None,
+            "security_deposit": raw.get("securityDeposit") or rf.get("securityDeposit"),
+            "last_months_rent": rf.get("lastMonthRent"),
+            "application_fee": raw.get("applicationFee") or rf.get("applicationFeeAmount"),
+            "pet_deposit": raw.get("petFee") or rf.get("petFee"),
+            "admin_fee": raw.get("adminFee") or rf.get("adminFee"),
+            "move_in_special": raw.get("specialOffers") or raw.get("concessions") or rf.get("concessions"),
+            "parking_fee": raw.get("parkingFee") or rf.get("parkingFee"),
+            "hoa_fee": hoa_fee,
+            "hoa_fee_frequency": hoa_freq,
+            "tax_annual_amount": tax_annual,
+            "tax_value": tax_annual,
+            "description": desc if desc else None,
+            "original_description": desc if desc else None,
+            "showing_instructions": rf.get("showingInstructions"),
+            "available_date": rf.get("dateAvailable") or rf.get("availableFrom") or raw.get("dateAvailable"),
             "minimum_lease_months": None,
-            "lease_terms": "[]",
-            "pets_allowed": raw.get("isPetFriendly") or raw.get("petsAllowed"),
-            "pet_types_allowed": "[]",
-            "pet_weight_limit": None,
-            "pet_details": None,
-            "smoking_allowed": None,
-            "parking": raw.get("parkingType"),
-            "amenities": json.dumps(raw.get("tags") or []),
-            "appliances": "[]",
-            "utilities_included": "[]",
-            "flooring": "[]",
-            "heating_type": None,
-            "cooling_type": None,
-            "laundry_type": None,
+            "lease_terms": json.dumps(_as_list(rf.get("leaseTerm") or rf.get("leaseTerms"))),
+            "pets_allowed": raw.get("isPetFriendly") if raw.get("isPetFriendly") is not None else raw.get("petsAllowed"),
+            "pet_types_allowed": json.dumps([t for t, ok in (("cats", rf.get("catsAllowed")), ("dogs", rf.get("dogsAllowed"))) if ok]),
+            "pet_weight_limit": rf.get("petWeightLimit"),
+            "pet_details": rf.get("petRestrictions") or rf.get("petsComments"),
+            "smoking_allowed": rf.get("smokingAllowed"),
+            "parking": parking_val,
+            "ev_charging": ev_charging,
+            "amenities": json.dumps(amenities),
+            "appliances": json.dumps(appliances),
+            "utilities_included": json.dumps(utilities_inc),
+            "flooring": json.dumps(flooring),
+            "heating_type": heating_type,
+            "cooling_type": cooling_type,
+            "laundry_type": laundry_type,
             "original_image_urls": json.dumps(photos),
             "local_image_paths": "[]",
             "agent_name": raw.get("agentName") or raw.get("brokerName"),
             "broker_name": raw.get("brokerName") or raw.get("officeName"),
             "agent_image_url": None,
             "poster_landlord_id": None,
-            "original_data": json.dumps({
+            "original_data": {
                 "zpid": zpid,
                 "detailUrl": raw.get("url") or raw.get("detailUrl"),
                 "_source": "zillow",
                 "_service": "apify",
                 "_imported_at": now,
-            }, default=str),
+            },
+            "source_raw_payload": {
+                "zpid": zpid,
+                "homeStatus": raw.get("homeStatus"),
+                "homeType": raw.get("homeType"),
+                "resoFacts": rf,
+            },
+            "structural_details": {
+                "architectural_style": rf.get("architecturalStyle"),
+                "construction_materials": rf.get("constructionMaterials"),
+                "foundation_details": rf.get("foundationDetails"),
+                "roof": rf.get("roofType") or rf.get("roof"),
+                "exterior_features": rf.get("exteriorFeatures"),
+                "fencing": rf.get("fencing"),
+                "fireplace_features": rf.get("fireplaceFeatures"),
+                "pool_features": rf.get("poolFeatures"),
+                "ev_charging": ev_charging,
+            },
+            "utility_details": {
+                "utilities_included_confirmed": rf.get("utilitiesIncluded"),
+                "utilities": rf.get("utilities"),
+                "electric": rf.get("electric"),
+                "gas": rf.get("gas"),
+                "water_source": rf.get("waterSource"),
+                "sewer": rf.get("sewer"),
+            },
+            "financial_details": {
+                "zestimate": raw.get("zestimate"),
+                "rent_zestimate": raw.get("rentZestimate"),
+                "hoa_fee": hoa_fee,
+                "hoa_fee_frequency": hoa_freq,
+                "tax_annual_amount": tax_annual,
+                "price_history": (raw.get("priceHistory") or [])[:25] if isinstance(raw.get("priceHistory"), list) else None,
+            },
+            "location_details": {
+                "county": raw.get("county") or address.get("county"),
+                "neighborhood": raw.get("neighborhood") or raw.get("neighborhoodName"),
+                "schools": (raw.get("schools") or [])[:10] if isinstance(raw.get("schools"), list) else None,
+                "walk_score": raw.get("walkScore"),
+                "transit_score": raw.get("transitScore"),
+                "bike_score": raw.get("bikeScore"),
+            },
+            "floor_plans": raw.get("floorPlans") if isinstance(raw.get("floorPlans"), list) else None,
+            "videos": [{"url": vtour, "title": "Virtual Tour", "type": "virtual_tour"}] if vtour else None,
             "edited_fields": "[]",
             "inferred_features": "[]",
             "data_quality_score": 50,  # Will be recalculated

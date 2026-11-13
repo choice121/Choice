@@ -104,9 +104,15 @@
           <option value="basement"  ${sel(prop.property_type,'basement')}>Basement Unit</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="address">Street Address *</label>
-        <input type="text" class="form-input" id="address" value="${esc(prop.address)}">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="address">Street Address *</label>
+          <input type="text" class="form-input" id="address" value="${esc(prop.address)}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="unitNumber">Unit / Apt #</label>
+          <input type="text" class="form-input" id="unitNumber" value="${esc(prop.unit_number||'')}" placeholder="e.g. Apt 4B">
+        </div>
       </div>
       <div class="form-grid-3">
         <div class="form-group"><label class="form-label" for="city">City *</label><input type="text" class="form-input" id="city" value="${esc(prop.city)}"></div>
@@ -118,6 +124,10 @@
           </select>
         </div>
         <div class="form-group"><label class="form-label" for="zip">ZIP</label><input type="text" class="form-input" id="zip" value="${esc(prop.zip||'')}"></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label" for="county">County</label><input type="text" class="form-input" id="county" value="${esc(prop.county||'')}"></div>
+        <div class="form-group"><label class="form-label" for="neighborhood">Neighborhood</label><input type="text" class="form-input" id="neighborhood" value="${esc(prop.neighborhood||'')}"></div>
       </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:var(--sp-5) 0">
@@ -146,6 +156,12 @@
         </div>
         <div class="form-group"><label class="form-label" for="sqft">Sq. Footage</label><input type="number" class="form-input" id="sqft" value="${prop.square_footage||''}"></div>
       </div>
+      <div class="form-grid-3">
+        <div class="form-group"><label class="form-label" for="halfBathrooms">Half Baths</label><input type="number" class="form-input" id="halfBathrooms" value="${prop.half_bathrooms??''}" min="0"></div>
+        <div class="form-group"><label class="form-label" for="lotSizeSqft">Lot Size (sqft)</label><input type="number" class="form-input" id="lotSizeSqft" value="${prop.lot_size_sqft||''}" min="0"></div>
+        <div class="form-group"><label class="form-label" for="floors">Floors</label><input type="number" class="form-input" id="floors" value="${prop.floors||''}" min="1"></div>
+      </div>
+      <div class="form-group"><label class="form-label" for="yearBuilt">Year Built</label><input type="number" class="form-input" id="yearBuilt" value="${prop.year_built||''}" min="1800" max="2030"></div>
       <div class="form-grid-2">
         <div class="form-group">
           <label class="form-label" for="rent">Monthly Rent *</label>
@@ -293,6 +309,18 @@
         </div>
       </div>
       <div class="form-group">
+        <label class="form-label">Appliances</label>
+        <div class="checkbox-group">
+          ${['Refrigerator','Range / Oven','Microwave','Dishwasher','Disposal','Washer','Dryer'].map(a=>`<label class="checkbox-pill"><input type="checkbox" name="appliances" value="${a}" ${chk(prop.appliances,a)}> ${a}</label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Flooring</label>
+        <div class="checkbox-group">
+          ${['Hardwood','Laminate','Tile','Carpet','Vinyl','Concrete'].map(f=>`<label class="checkbox-pill"><input type="checkbox" name="flooring" value="${f}" ${chk(prop.flooring,f)}> ${f}</label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Lease Terms</label>
         <div class="checkbox-group">
           ${['Month-to-month','6 months','12 months','24 months'].map(t=>`<label class="checkbox-pill"><input type="checkbox" name="leaseTerms" value="${t}" ${chk(prop.lease_terms,t)}> ${t}</label>`).join('')}
@@ -340,6 +368,24 @@
               ['Evaporative cooler','Evaporative cooler'],
               ['None','No A/C']
             ].map(([v,l])=>`<option value="${v}" ${prop.cooling_type===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="hasCentralAir">Central Air</label>
+          <select class="form-select" id="hasCentralAir">
+            <option value="" ${prop.has_central_air===null||prop.has_central_air===undefined?'selected':''}>Unknown / Not specified</option>
+            <option value="true" ${prop.has_central_air===true?'selected':''}>Yes</option>
+            <option value="false" ${prop.has_central_air===false?'selected':''}>No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="hasBasement">Basement</label>
+          <select class="form-select" id="hasBasement">
+            <option value="" ${prop.has_basement===null||prop.has_basement===undefined?'selected':''}>Unknown / Not specified</option>
+            <option value="true" ${prop.has_basement===true?'selected':''}>Yes</option>
+            <option value="false" ${prop.has_basement===false?'selected':''}>No</option>
           </select>
         </div>
       </div>
@@ -676,13 +722,20 @@
           title               : v('title'),
           property_type       : v('propertyType'),
           address             : v('address'),
+          unit_number         : v('unitNumber') || null,
           city                : v('city'),
           state               : v('state') || null,
           zip                 : v('zip') || null,
+          county              : v('county') || null,
+          neighborhood        : v('neighborhood') || null,
           lat, lng,
           bedrooms            : parseInt(v('bedrooms')),
           bathrooms           : parseFloat(v('bathrooms')),
+          half_bathrooms      : v('halfBathrooms') ? parseInt(v('halfBathrooms')) : null,
           square_footage      : parseInt(v('sqft')) || null,
+          lot_size_sqft       : v('lotSizeSqft') ? parseInt(v('lotSizeSqft')) : null,
+          floors              : v('floors') ? parseInt(v('floors')) : null,
+          year_built          : v('yearBuilt') ? parseInt(v('yearBuilt')) : null,
           monthly_rent        : parseInt(v('rent')),
           security_deposit    : parseInt(v('deposit')) || null,
           last_months_rent    : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
@@ -704,10 +757,14 @@
           ev_charging         : v('evCharging') || null,
           utilities_included  : getChecked('utilities'),
           amenities           : getChecked('amenities'),
+          appliances          : getChecked('appliances'),
+          flooring            : getChecked('flooring'),
           lease_terms         : getChecked('leaseTerms'),
           laundry_type        : v('laundryType') || null,
           heating_type        : v('heatingType') || null,
           cooling_type        : v('coolingType') || null,
+          has_central_air     : v('hasCentralAir') === 'true' ? true : v('hasCentralAir') === 'false' ? false : null,
+          has_basement        : v('hasBasement') === 'true' ? true : v('hasBasement') === 'false' ? false : null,
           description         : v('description'),
           showing_instructions: v('showingInstructions') || null,
           minimum_income_multiplier: v('minIncome') ? parseFloat(v('minIncome')) : null,

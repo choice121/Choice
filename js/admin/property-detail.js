@@ -151,13 +151,14 @@
 
   // ── Status toggle ────────────────────────────────────────────────────────────
   const STATUS_OPTIONS = [
-    { value:'active',      label:'Active',      cls:'pd-status-chip active' },
-    { value:'rented',      label:'Rented',      cls:'pd-status-chip rented' },
-    { value:'inactive',    label:'Inactive',    cls:'pd-status-chip inactive' },
-    { value:'maintenance', label:'Maintenance', cls:'pd-status-chip maintenance' },
-    { value:'draft',       label:'Draft',       cls:'pd-status-chip inactive' },
-    { value:'paused',      label:'Paused',      cls:'pd-status-chip maintenance' },
-    { value:'archived',    label:'Archived',    cls:'pd-status-chip inactive' },
+    { value:'active',            label:'Active',            cls:'pd-status-chip active' },
+    { value:'private_placement', label:'Private Placement', cls:'pd-status-chip rented' },
+    { value:'rented',            label:'Rented',            cls:'pd-status-chip rented' },
+    { value:'inactive',          label:'Inactive',          cls:'pd-status-chip inactive' },
+    { value:'maintenance',       label:'Maintenance',       cls:'pd-status-chip maintenance' },
+    { value:'draft',             label:'Draft',             cls:'pd-status-chip inactive' },
+    { value:'paused',            label:'Paused',            cls:'pd-status-chip maintenance' },
+    { value:'archived',          label:'Archived',          cls:'pd-status-chip inactive' },
   ];
 
   function renderStatusBar(currentStatus) {
@@ -503,10 +504,20 @@
       { label:'Monthly rent',   value: fmtMoney(p.monthly_rent) },
       { label:'Security deposit', value: p.security_deposit ? fmtMoney(p.security_deposit) : '—' },
       { label:'Application fee', value: p.application_fee != null ? fmtMoney(p.application_fee) : '—' },
+      { label:'Last month rent', value: p.last_months_rent ? fmtMoney(p.last_months_rent) : '—' },
+      { label:'Admin fee',      value: p.admin_fee ? fmtMoney(p.admin_fee) : '—' },
+      { label:'HOA fee',        value: p.hoa_fee ? `${fmtMoney(p.hoa_fee)}${p.hoa_fee_frequency ? ' / ' + p.hoa_fee_frequency : ''}` : '—' },
+      { label:'Annual tax',     value: p.tax_annual_amount ? fmtMoney(p.tax_annual_amount) : '—' },
+      { label:'Unit number',    value: p.unit_number || '—' },
+      { label:'County',         value: p.county || '—' },
+      { label:'Neighborhood',   value: p.neighborhood || '—' },
+      { label:'Location context', value: p.location_context || '—' },
       { label:'Bedrooms',       value: p.bedrooms != null ? (p.bedrooms === 0 ? 'Studio' : p.bedrooms) : '—' },
       { label:'Bathrooms',      value: p.bathrooms != null ? p.bathrooms + (p.half_bathrooms ? ' + ½' : '') : '—' },
       { label:'Sq. footage',    value: p.square_footage ? Number(p.square_footage).toLocaleString() + ' sqft' : '—' },
+      { label:'Lot size',       value: p.lot_size_sqft ? Number(p.lot_size_sqft).toLocaleString() + ' sqft' : '—' },
       { label:'Type',           value: p.property_type ? capitalize(p.property_type) : '—' },
+      { label:'Subtype',        value: p.property_subtype || '—' },
       { label:'Year built',     value: p.year_built || '—' },
       { label:'Floors',         value: p.floors || '—' },
       { label:'Available',      value: fmt(p.available_date) },
@@ -516,10 +527,11 @@
       { label:'Last verified',  value: p.last_verified_at ? fmt(p.last_verified_at) : 'Not yet verified' },
       { label:'Pets allowed',   value: p.pets_allowed ? 'Yes' : 'No' },
       { label:'Parking',        value: p.parking || 'No' },
+      { label:'Garage spaces',  value: p.garage_spaces || '—' },
+      { label:'EV charging',    value: p.ev_charging && p.ev_charging !== 'none' ? capitalize(p.ev_charging) : '—' },
       { label:'Laundry',        value: p.laundry_type || '—' },
       { label:'Heating',        value: p.heating_type || '—' },
       { label:'Cooling',        value: p.cooling_type || '—' },
-      { label:'Garage spaces',  value: p.garage_spaces || '—' },
       { label:'Views',          value: p.views_count != null ? Number(p.views_count).toLocaleString() : '—' },
       { label:'Created',        value: fmt(p.created_at) },
       { label:'Updated',        value: fmt(p.updated_at) },
@@ -532,10 +544,15 @@
     </div>`;
 
     // ── Description ──
-    const descHtml = p.description
+    const descHtml = (p.description || p.original_description)
       ? `<div class="pd-section">
           <div class="pd-section-title">Description</div>
-          <div class="pd-desc">${esc(p.description)}</div>
+          <div class="pd-desc">${esc(p.description || '')}</div>
+          ${p.original_description && p.original_description !== p.description ? `
+            <details style="margin-top:12px">
+              <summary style="cursor:pointer;font-size:.78rem;font-weight:600;color:var(--brand)">Compare original source description</summary>
+              <div class="pd-desc" style="margin-top:8px;padding:12px;background:var(--surface-2,#f8fafc);border:1px solid var(--border);border-radius:8px;font-size:.82rem">${esc(p.original_description)}</div>
+            </details>` : ''}
         </div>`
       : '';
 
@@ -682,13 +699,53 @@
       </tr></thead><tbody>${inqRows}</tbody></table></div>
     </div>`;
 
-    // ── Virtual tour ──
-    const vtHtml = p.virtual_tour_url
+    // ── Virtual tour & rich media (floor plans / videos) ──
+    const _fpList = Array.isArray(p.floor_plans) ? p.floor_plans : [];
+    const _vidList = Array.isArray(p.videos) ? p.videos : [];
+    const vtHtml = (p.virtual_tour_url || _fpList.length || _vidList.length)
       ? `<div class="pd-section">
-          <div class="pd-section-title">Virtual Tour</div>
-          <a href="${esc(p.virtual_tour_url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">
-            ${ico('vr')} Open virtual tour ↗
-          </a>
+          <div class="pd-section-title">Virtual Tour &amp; Media</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            ${p.virtual_tour_url ? `<a href="${esc(p.virtual_tour_url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">${ico('vr')} Open virtual tour ↗</a>` : ''}
+            ${_vidList.map((v, idx) => v?.url ? `<a href="${esc(v.url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">${esc(v.title || ('Video ' + (idx + 1)))} ↗</a>` : '').join('')}
+            ${_fpList.length ? `<span class="pill pill-muted">${_fpList.length} floor plan${_fpList.length === 1 ? '' : 's'} captured</span>` : ''}
+          </div>
+          ${_fpList.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${_fpList.map((fp, idx) => {
+            const url = typeof fp === 'string' ? fp : (fp?.url || fp?.image || '');
+            const lbl = (typeof fp === 'object' && fp?.title) ? fp.title : ('Floor Plan ' + (idx + 1));
+            return url ? `<a href="${esc(url)}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">${esc(lbl)} ↗</a>` : `<span class="pill pill-muted">${esc(lbl)}</span>`;
+          }).join('')}</div>` : ''}
+        </div>`
+      : '';
+
+    // ── Source Raw Data & Provenance (collapsible, read-only) ──
+    const _provSections = [
+      ['Field provenance', p.field_provenance],
+      ['Structural details', p.structural_details],
+      ['Utility details', p.utility_details],
+      ['Financial details', p.financial_details],
+      ['Location details', p.location_details],
+      ['Floor plans', p.floor_plans],
+      ['Videos', p.videos],
+      ['Original data metadata', p.original_data],
+      ['Source raw payload', p.source_raw_payload],
+    ].filter(([, v]) => v != null && (Array.isArray(v) ? v.length > 0 : (typeof v === 'object' ? Object.keys(v).length > 0 : String(v).trim() !== '')));
+
+    const provenanceHtml = _provSections.length
+      ? `<div class="pd-section">
+          <details>
+            <summary class="pd-section-title" style="cursor:pointer;user-select:none">Source Raw Data &amp; Provenance (${_provSections.length})</summary>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+              ${_provSections.map(([lbl, val]) => {
+                let txt = '';
+                try { txt = typeof val === 'string' ? val : JSON.stringify(val, null, 2); } catch(_) { txt = String(val); }
+                return `<div>
+                  <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${esc(lbl)}</div>
+                  <pre style="max-height:220px;overflow:auto;background:var(--surface-2,#0f172a);color:var(--text,#e2e8f0);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:.72rem;line-height:1.45;margin:0;white-space:pre-wrap;word-break:break-word">${esc(txt)}</pre>
+                </div>`;
+              }).join('')}
+            </div>
+          </details>
         </div>`
       : '';
 
@@ -711,6 +768,7 @@
       + descHtml
       + vtHtml
       + tabsHtml
+      + provenanceHtml
       + renderMap(p)
       + landlordHtml
       + wmHtml
@@ -785,7 +843,7 @@
         } else if (res?.transferred > 0) {
           S.toast(`${res.transferred} photo${res.transferred !== 1 ? 's' : ''} imported from source to ImageKit ✓`, 'success');
           // Reload photos section
-          const fresh = await CP.sb().from('property_photos').select('id,url,display_order,watermark_status,file_id').eq('property_id', propId).order('display_order');
+          const fresh = await CP.sb().from('property_photos').select('id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url').eq('property_id', propId).order('display_order');
           if (!fresh.error && fresh.data) {
             _photos = fresh.data.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
             refreshGalleryInPlace();
@@ -1180,8 +1238,8 @@
               <label class="pd-edit-label">Status
                 <span class="pd-edit-hint">Changes here override the inline status toggle</span>
                 <select class="pd-edit-input" name="status">
-                  ${['active','rented','inactive','maintenance','draft','paused','archived'].map(v =>
-                    `<option value="${v}"${(_prop?.status||p.status)===v?' selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`
+                  ${['active','private_placement','rented','inactive','maintenance','draft','paused','archived'].map(v =>
+                    `<option value="${v}"${(_prop?.status||p.status)===v?' selected':''}>${v.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`
                   ).join('')}
                 </select>
               </label>
@@ -1192,6 +1250,9 @@
               <div class="pd-edit-row">
                 <label class="pd-edit-label">Type
                   <select class="pd-edit-input" name="property_type">${PROPERTY_TYPE_OPTIONS}</select>
+                </label>
+                <label class="pd-edit-label">Subtype
+                  <input class="pd-edit-input" name="property_subtype" type="text" value="${esc(p.property_subtype || '')}" placeholder="e.g. Colonial, Split Level">
                 </label>
                 <label class="pd-edit-label">Year built
                   <input class="pd-edit-input" name="year_built" type="number" value="${esc(String(p.year_built || ''))}" placeholder="1995" min="1800" max="2030">
@@ -1247,6 +1308,17 @@
                 </label>
                 <label class="pd-edit-label">Last month rent ($)
                   <input class="pd-edit-input" name="last_months_rent" type="number" value="${esc(String(p.last_months_rent || ''))}" placeholder="0" min="0">
+                </label>
+              </div>
+              <div class="pd-edit-row">
+                <label class="pd-edit-label">HOA fee ($)
+                  <input class="pd-edit-input" name="hoa_fee" type="number" value="${esc(String(p.hoa_fee ?? ''))}" placeholder="0" min="0">
+                </label>
+                <label class="pd-edit-label">HOA frequency
+                  <input class="pd-edit-input" name="hoa_fee_frequency" type="text" value="${esc(p.hoa_fee_frequency || '')}" placeholder="monthly">
+                </label>
+                <label class="pd-edit-label">Annual tax ($)
+                  <input class="pd-edit-input" name="tax_annual_amount" type="number" value="${esc(String(p.tax_annual_amount ?? ''))}" placeholder="0" min="0">
                 </label>
               </div>
               <div class="pd-edit-row">
@@ -1326,6 +1398,14 @@
                     <option value="" ${p.has_central_air === null || p.has_central_air === undefined ? 'selected' : ''}>—</option>
                     <option value="true"  ${p.has_central_air === true  ? 'selected' : ''}>Yes</option>
                     <option value="false" ${p.has_central_air === false ? 'selected' : ''}>No</option>
+                  </select>
+                </label>
+                <label class="pd-edit-label">EV charging
+                  <select class="pd-edit-input" name="ev_charging">
+                    <option value="" ${!p.ev_charging ? 'selected' : ''}>—</option>
+                    <option value="none" ${p.ev_charging === 'none' ? 'selected' : ''}>Not Available</option>
+                    <option value="available" ${p.ev_charging === 'available' ? 'selected' : ''}>Available (Level 1/2)</option>
+                    <option value="included" ${p.ev_charging === 'included' ? 'selected' : ''}>Included in Rent</option>
                   </select>
                 </label>
               </div>
@@ -1803,6 +1883,7 @@
       zip:                get('zip') || null,
       unit_number:        get('unit_number') || null,
       property_type:      get('property_type') || null,
+      property_subtype:   get('property_subtype') || null,
       year_built:         getNum('year_built'),
       floors:             getNum('floors'),
       bedrooms:           getNum('bedrooms'),
@@ -1816,12 +1897,16 @@
       location_context:   get('location_context') || null,
       has_basement:       getBool('has_basement'),
       has_central_air:    getBool('has_central_air'),
+      ev_charging:        get('ev_charging') || null,
       virtual_tour_url:   get('virtual_tour_url') || null,
       monthly_rent:       getNum('monthly_rent'),
       security_deposit:   getNum('security_deposit'),
       application_fee:    getNum('application_fee'),
       admin_fee:          getNum('admin_fee'),
       last_months_rent:   getNum('last_months_rent'),
+      hoa_fee:            getNum('hoa_fee'),
+      hoa_fee_frequency:  get('hoa_fee_frequency') || null,
+      tax_annual_amount:  getNum('tax_annual_amount'),
       available_date:     get('available_date') || null,
       listed_at:          get('listed_at') || null,
       minimum_lease_months:        getNum('minimum_lease_months'),
@@ -1853,6 +1938,24 @@
       landlord_id:        get('landlord_id') || null,
       updated_at:         new Date().toISOString(),
     };
+
+    // Merge updated provenance stamps for admin-modified fields
+    const existingProv = (_editOriginal && typeof _editOriginal.field_provenance === 'object' && _editOriginal.field_provenance !== null)
+      ? { ..._editOriginal.field_provenance }
+      : {};
+    const _nowIso = patch.updated_at;
+    for (const [k, v] of Object.entries(patch)) {
+      if (k === 'updated_at' || k === 'field_provenance') continue;
+      const prev = _editOriginal ? _editOriginal[k] : undefined;
+      if (JSON.stringify(prev ?? null) !== JSON.stringify(v ?? null)) {
+        existingProv[k] = {
+          ...(typeof existingProv[k] === 'object' && existingProv[k] !== null ? existingProv[k] : {}),
+          origin: 'admin_edited',
+          edited_at: _nowIso,
+        };
+      }
+    }
+    patch.field_provenance = existingProv;
 
     const { error } = await CP.sb().from('properties').update(patch).eq('id', propId);
 
@@ -1902,7 +2005,7 @@
     // Reload page data
     const { data } = await CP.sb()
       .from('properties')
-      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url)')
       .eq('id', propId)
       .single();
     if (data) {
@@ -2754,7 +2857,7 @@
     // Phase 1: load property first for fast first paint
     const propRes = await CP.sb()
       .from('properties')
-      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url)')
       .eq('id', propId)
       .single();
 
@@ -2839,7 +2942,7 @@
             // Auto-refresh page data without requiring a manual reload
             const { data: freshProp } = await CP.sb()
               .from('properties')
-              .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+              .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url)')
               .eq('id', propId).single();
             if (freshProp) {
               render(freshProp, [], []);
@@ -2856,7 +2959,7 @@
             // Skip while photo manager is open — an upload may be in progress
             if (document.getElementById('pd-photo-manager')) return;
             const fresh = await CP.sb().from('property_photos')
-              .select('id,url,display_order,watermark_status,file_id')
+              .select('id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url')
               .eq('property_id', propId).order('display_order');
             if (!fresh.error && fresh.data) {
               _photos = fresh.data.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));

@@ -79,6 +79,21 @@ export function safeJsonStr(v: unknown): string | null {
   return s || null;
 }
 
+export function safeJsonValue(v: unknown): unknown | null {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'object') return v;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    if (!t || t === 'null') return null;
+    try {
+      return JSON.parse(t);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function safeBool(v: unknown): boolean | null {
   if (v === null || v === undefined) return null;
   if (typeof v === 'boolean') return v;
@@ -258,9 +273,11 @@ export interface PipelineRecordInput {
   lng?: number | null;
   location_context?: string | null;
   property_type?: string | null;
+  property_subtype?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   half_bathrooms?: number | null;
+  total_bathrooms?: number | null;
   square_footage?: number | null;
   lot_size_sqft?: number | null;
   year_built?: number | null;
@@ -279,6 +296,9 @@ export interface PipelineRecordInput {
   move_in_special?: string | null;
   parking_fee?: number | null;
   hoa_fee?: number | null;
+  hoa_fee_frequency?: string | null;
+  tax_annual_amount?: number | null;
+  tax_value?: number | null;
   description?: string | null;
   original_description?: string | null;
   showing_instructions?: string | null;
@@ -291,6 +311,7 @@ export interface PipelineRecordInput {
   pet_details?: string | null;
   smoking_allowed?: boolean | null;
   parking?: string | null;
+  ev_charging?: string | null;
   amenities?: string | null;
   appliances?: string | null;
   utilities_included?: string | null;
@@ -304,7 +325,15 @@ export interface PipelineRecordInput {
   broker_name?: string | null;
   agent_image_url?: string | null;
   poster_landlord_id?: string | null;
-  original_data?: string | null;
+  original_data?: string | Record<string, unknown> | null;
+  source_raw_payload?: string | Record<string, unknown> | null;
+  field_provenance?: string | Record<string, unknown> | null;
+  structural_details?: string | Record<string, unknown> | null;
+  utility_details?: string | Record<string, unknown> | null;
+  financial_details?: string | Record<string, unknown> | null;
+  location_details?: string | Record<string, unknown> | null;
+  floor_plans?: string | unknown[] | null;
+  videos?: string | unknown[] | null;
   edited_fields?: string | null;
   inferred_features?: string | null;
   listed_at?: string | null;
@@ -405,6 +434,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
 
     // Property details
     property_type:        propType,
+    property_subtype:     safeStr(body.property_subtype),
     bedrooms:             safeInt(body.bedrooms),
     bathrooms:            safeFloat(body.bathrooms),
     half_bathrooms:       safeInt(body.half_bathrooms),
@@ -429,25 +459,28 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     move_in_special:      safeStr(body.move_in_special),
     parking_fee:          safeInt(body.parking_fee),
     hoa_fee:              safeInt(body.hoa_fee),
-    tax_value:            null,
+    hoa_fee_frequency:    safeStr(body.hoa_fee_frequency),
+    tax_annual_amount:    safeInt(body.tax_annual_amount),
+    tax_value:            safeInt(body.tax_value) ?? safeInt(body.tax_annual_amount),
 
-    // Listing details
+    // Listing details (capture source values into pipeline; Choice publish enforces public rules)
     description:          safeStr(body.description),
     original_description: safeStr(body.original_description) ?? safeStr(body.description),
     showing_instructions: safeStr(body.showing_instructions),
-    available_date:       null,
-    minimum_lease_months: null,
-    lease_terms:          '[]',
+    available_date:       normalizeDate(body.available_date),
+    minimum_lease_months: safeInt(body.minimum_lease_months),
+    lease_terms:          safeJsonStr(body.lease_terms) ?? '[]',
 
     // Pets & policies
     pets_allowed:         safeBool(body.pets_allowed),
     pet_types_allowed:    safeJsonStr(body.pet_types_allowed) ?? '[]',
     pet_weight_limit:     safeInt(body.pet_weight_limit),
     pet_details:          safeStr(body.pet_details),
-    smoking_allowed:      null,
+    smoking_allowed:      safeBool(body.smoking_allowed),
 
     // Amenities & features
     parking:              finalParking,
+    ev_charging:          safeStr(body.ev_charging),
     amenities:            safeJsonStr(cleanedAmenities) ?? '[]',
     appliances:           safeJsonStr(finalAppliances) ?? '[]',
     utilities_included:   safeJsonStr(body.utilities_included) ?? '[]',
@@ -472,7 +505,19 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
     imported_at:          importedAt,
     source_status:        sourceStatus,
     last_verified_at:     lastVerifiedAt,
-    original_data:        safeStr(body.original_data) ?? originalData,
+    original_data:        safeJsonValue(body.original_data) ?? JSON.parse(originalData),
+    source_raw_payload:   safeJsonValue(body.source_raw_payload),
+    field_provenance:     safeJsonValue(body.field_provenance) ?? {
+      source,
+      imported_at: importedAt,
+      import_channel: body._import ?? 'browser-extension-v2',
+    },
+    structural_details:   safeJsonValue(body.structural_details),
+    utility_details:      safeJsonValue(body.utility_details),
+    financial_details:    safeJsonValue(body.financial_details),
+    location_details:     safeJsonValue(body.location_details),
+    floor_plans:          safeJsonValue(body.floor_plans),
+    videos:               safeJsonValue(body.videos),
     edited_fields:        safeStr(body.edited_fields) ?? '[]',
     inferred_features:    safeStr(body.inferred_features) ?? '[]',
     published_at:         publishedAt,

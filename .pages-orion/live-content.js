@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v31.0.0
+// Choice Properties — Live Content Script v32.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '31.0.0-live';
+  var VERSION  = '32.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -1130,10 +1130,10 @@
             </button>
             <div class="cp-inspector-tray" id="cp-inspector-tray">
               <div class="cp-inspector-grid">
-                <div class="cp-inspector-item">Deposit: <strong>1x Rent</strong></div>
-                <div class="cp-inspector-item">App Fee: <strong>$50</strong></div>
-                <div class="cp-inspector-item">Pets: <strong>Pet Friendly ✓</strong></div>
-                <div class="cp-inspector-item">Lease Term: <strong>Omitted ✓</strong></div>
+                <div class="cp-inspector-item">Deposit Default: <strong>1x Rent</strong></div>
+                <div class="cp-inspector-item">App Fee Default: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Source Capture: <strong>Full Fidelity ✓</strong></div>
+                <div class="cp-inspector-item">Publish Policy: <strong>Sanitized ✓</strong></div>
               </div>
             </div>
           </div>
@@ -1643,6 +1643,22 @@
       var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
       var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
       var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
+      var metaByUrl = {};
+      if (Array.isArray(extracted.photo_metadata)) {
+        extracted.photo_metadata.forEach(function (pm) {
+          if (pm && pm.url) metaByUrl[pm.url] = pm;
+        });
+      }
+      var richPhotos = photoUrls.map(function (u) {
+        var pm = metaByUrl[u];
+        if (!pm) return { url: u };
+        var entry = { url: u };
+        if (pm.caption) entry.caption = pm.caption;
+        if (pm.room_label) entry.room_label = pm.room_label;
+        if (pm.source_url) entry.source_url = pm.source_url;
+        if (pm.media_type) entry.media_type = pm.media_type;
+        return entry;
+      });
 
       var payload = {
         source: extracted.source || 'zillow',
@@ -1650,6 +1666,7 @@
         source_url: extracted.source_url || extracted.url || location.href,
         title: extracted.title,
         address: extracted.address,
+        unit_number: extracted.unit_number || null,
         city: extracted.city,
         state: extracted.state,
         zip: extracted.zip,
@@ -1667,21 +1684,34 @@
         garage_spaces: extracted.garage_spaces,
         total_units: extracted.total_units,
         property_type: extracted.property_type || 'APARTMENT',
+        property_subtype: extracted.property_subtype || null,
         description: extracted.description,
         original_description: extracted.original_description || extracted.description,
-        available_date: null,
-        pets_allowed: true, // Choice Properties standard
-        application_fee: 50, // Choice Properties standard
-        security_deposit: rentVal,
+        showing_instructions: extracted.showing_instructions || null,
+        available_date: extracted.available_date || null,
+        minimum_lease_months: extracted.minimum_lease_months != null ? extracted.minimum_lease_months : null,
+        lease_terms: typeof extracted.lease_terms === 'string' ? extracted.lease_terms : (extracted.lease_terms ? JSON.stringify(extracted.lease_terms) : null),
+        pets_allowed: extracted.pets_allowed != null ? extracted.pets_allowed : null,
+        pet_types_allowed: typeof extracted.pet_types_allowed === 'string' ? extracted.pet_types_allowed : (extracted.pet_types_allowed ? JSON.stringify(extracted.pet_types_allowed) : null),
+        pet_weight_limit: extracted.pet_weight_limit != null ? extracted.pet_weight_limit : null,
+        pet_details: extracted.pet_details || null,
+        smoking_allowed: extracted.smoking_allowed != null ? extracted.smoking_allowed : null,
+        application_fee: 50,
+        security_deposit: extracted.security_deposit != null ? extracted.security_deposit : rentVal,
+        pet_deposit: extracted.pet_deposit != null ? extracted.pet_deposit : null,
+        admin_fee: extracted.admin_fee != null ? extracted.admin_fee : null,
         last_months_rent: extracted.last_months_rent,
         move_in_special: extracted.move_in_special,
         parking_fee: extracted.parking_fee,
         hoa_fee: extracted.hoa_fee,
+        hoa_fee_frequency: extracted.hoa_fee_frequency || null,
+        tax_annual_amount: extracted.tax_annual_amount != null ? extracted.tax_annual_amount : null,
         amenities: typeof extracted.amenities === 'string' ? extracted.amenities : JSON.stringify(extracted.amenities || []),
         appliances: typeof extracted.appliances === 'string' ? extracted.appliances : JSON.stringify(extracted.appliances || []),
         flooring: typeof extracted.flooring === 'string' ? extracted.flooring : (extracted.flooring ? JSON.stringify(extracted.flooring) : null),
         utilities_included: typeof extracted.utilities_included === 'string' ? extracted.utilities_included : JSON.stringify(extracted.utilities_included || []),
         parking: extracted.parking,
+        ev_charging: extracted.ev_charging || null,
         heating_type: extracted.heating_type,
         cooling_type: extracted.cooling_type,
         laundry_type: extracted.laundry_type,
@@ -1694,12 +1724,30 @@
         agent_name: extracted.agent_name,
         broker_name: extracted.broker_name,
         listed_at: extracted.listed_at,
+        source_last_updated_at: extracted.source_last_updated_at || null,
+        source_status: extracted.source_status || null,
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
-        original_image_urls: JSON.stringify(photoUrls.map(function (u) { return { url: u }; })),
-        _import: 'browser-extension-v31.0.0-live',
+        original_image_urls: JSON.stringify(richPhotos),
+        structural_details: extracted.structural_details || null,
+        utility_details: extracted.utility_details || null,
+        financial_details: extracted.financial_details || null,
+        location_details: extracted.location_details || null,
+        floor_plans: extracted.floor_plans || null,
+        videos: extracted.videos || null,
+        source_raw_payload: extracted.source_raw_payload || null,
+        field_provenance: {
+          source: extracted.source || 'zillow',
+          extractor_version: 'v' + VERSION,
+          captured_at: new Date().toISOString(),
+          normalized_defaults: ['application_fee']
+        },
+        _import: 'browser-extension-v' + VERSION,
       };
 
+      if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES && payload.source_raw_payload) {
+        payload.source_raw_payload = null;
+      }
       if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
         isSaving = false;
         setError('Listing payload is too large');

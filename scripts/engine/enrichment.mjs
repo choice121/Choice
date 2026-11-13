@@ -185,6 +185,16 @@ export function enrichPipelineProperty(prop, options = {}) {
   const cleanTitle = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zip}`.trim();
   const photos = extractPhotoUrlsInOrder(prop);
 
+  const utilitiesInc = parseJsonArrayField(prop.utilities_included);
+  const parseObjField = (v) => {
+    if (!v) return null;
+    if (typeof v === 'object') return v;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch { return null; }
+    }
+    return null;
+  };
+
   const propertyRecord = {
     landlord_id: prop.poster_landlord_id || null,
     status: options.visibility === 'active' ? 'active' : 'private_placement',
@@ -200,6 +210,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     lat: prop.lat ?? null,
     lng: prop.lng ?? null,
     property_type: propType,
+    property_subtype: prop.property_subtype || null,
     year_built: yearBuilt,
     floors: prop.floors || (prop.square_footage && Number(prop.square_footage) > 2000 ? 2 : 1),
     unit_number: prop.unit_number || null,
@@ -214,6 +225,9 @@ export function enrichPipelineProperty(prop, options = {}) {
     monthly_rent: monthlyRent,
     security_deposit: monthlyRent, // Strictly 1x monthly rent in DB, 0 in description
     application_fee: 50,           // Strictly $50 in DB
+    hoa_fee: prop.hoa_fee != null ? Number(prop.hoa_fee) : null,
+    hoa_fee_frequency: prop.hoa_fee_frequency || null,
+    tax_annual_amount: prop.tax_annual_amount != null ? Number(prop.tax_annual_amount) : null,
     pet_deposit: null,             // Platform invariant: never display pet info
     pets_allowed: null,
     pet_types_allowed: null,
@@ -223,8 +237,10 @@ export function enrichPipelineProperty(prop, options = {}) {
     minimum_lease_months: null,
     available_date: null,          // Platform invariant: never display move-in dates
     parking,
+    ev_charging: prop.ev_charging || null,
     amenities: Array.from(amenitiesSet),
     appliances: Array.from(appliancesSet),
+    utilities_included: utilitiesInc.length > 0 ? utilitiesInc : null,
     flooring: flooring.length > 0 ? flooring : null,
     heating_type: prop.heating_type || null,
     cooling_type: prop.cooling_type || (prop.has_central_air ? 'Central Air' : null),
@@ -237,6 +253,15 @@ export function enrichPipelineProperty(prop, options = {}) {
     imported_at: prop.imported_at || prop.scraped_at || new Date().toISOString(),
     source_status: prop.source_status || 'available',
     last_verified_at: new Date().toISOString(),
+    original_data: parseObjField(prop.original_data),
+    source_raw_payload: parseObjField(prop.source_raw_payload),
+    field_provenance: parseObjField(prop.field_provenance),
+    structural_details: parseObjField(prop.structural_details),
+    utility_details: parseObjField(prop.utility_details),
+    financial_details: parseObjField(prop.financial_details),
+    location_details: parseObjField(prop.location_details),
+    floor_plans: parseObjField(prop.floor_plans),
+    videos: parseObjField(prop.videos),
   };
 
   return {

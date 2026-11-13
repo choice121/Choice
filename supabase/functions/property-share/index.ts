@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       // Fetch photos for these properties
       const { data: photos, error: photoError } = await supabase
         .from("property_photos")
-        .select("id, property_id, url, display_order, is_hero")
+        .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
         .in("property_id", propertyIds)
         .order("display_order", { ascending: true });
 
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
       // Fetch photos for this property
       const { data: photos } = await supabase
         .from("property_photos")
-        .select("id, property_id, url, file_id, display_order, is_hero")
+        .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
         .eq("property_id", property.id)
         .order("display_order", { ascending: true });
 
@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
 
                 const { data: otherPhotos } = await supabase
                   .from("property_photos")
-                  .select("id, property_id, url, file_id, display_order, is_hero")
+                  .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
                   .in("property_id", otherIds)
                   .order("display_order", { ascending: true });
 

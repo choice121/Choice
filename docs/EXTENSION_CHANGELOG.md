@@ -4,6 +4,16 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v32.0.0] - 2026-11-13
+### Complete Lossless Zillow Extraction & Platform-Wide Preservation
+- **Complete `resoFacts` & Zillow GraphQL Extraction**: Captures architectural subtypes, lot size, stories/floors, EV charging, appliances, flooring, interior/exterior/foundation/roof/fireplace/pool details, HOA fee + frequency, annual tax disclosures, utility service hookups, `listed_at`, unit numbers, counties, neighborhoods, and listing-reported school data alongside complete `original_data`, `source_raw_payload`, and `field_provenance`.
+- **Rich Source Media Metadata**: Preserves photo captions, room labels, media types, `source_url`, `floor_plans`, and `videos` in original sequence with zero photo count gates and direct CDN URLs.
+- **Pipeline & Database Parity**: Added `20261113000001_lossless_property_provenance.sql` migration, updated `receive-pipeline-import`, `import-from-url`, `property-share`, and `pipeline_publish` RPCs so zero extracted facts are silently dropped between extension capture, staging, admin/landlord editors, and live properties.
+- **Search, Filter & Display Upgrades**: Upgraded public property detail pages, listings search/filter parity (including `#share=` curated collections and `private_placement` admin status support), and enforced `AGENTS.md` §1 public display compliance.
+- **Platform Compatibility**: Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes; Chromium extension and Orion-compatible iPhone browser build.
+
+---
+
 ## [v28.0.6] - 2026-10-16 09:10 UTC
 ### One-Tap Mobile Pipeline Save
 - **Compact Property Bar**: On phones, the importer starts as a small address/rent bar with a one-tap Save button, avoiding the full floating panel over Zillow's listing content.

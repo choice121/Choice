@@ -91,6 +91,50 @@
     return dedupZillowPhotos(photos).slice(0, 50);
   }
 
+  function collectPhotoMetadata(prop) {
+    const metaByHash = new Map();
+    const scoreOf = (u) => {
+      if (/-uncropped_scaled_within_1536_1152\.jpg/.test(u)) return 3;
+      if (/-cc_ft_1536\.jpg/.test(u)) return 2;
+      if (/-p_h\.jpg/.test(u)) return 1;
+      return 0;
+    };
+    const pushMeta = (raw, caption, roomLabel) => {
+      if (!raw || typeof raw !== 'string' || !raw.startsWith('http')) return;
+      const m = raw.match(/\/fp\/([a-f0-9]{16,})-/i);
+      const hash = m ? m[1] : raw;
+      const score = scoreOf(raw);
+      const cur = metaByHash.get(hash);
+      const cleanCap = caption && String(caption).trim() ? String(caption).trim() : (cur ? cur.caption : null);
+      const cleanRoom = roomLabel && String(roomLabel).trim() ? String(roomLabel).trim() : (cur ? cur.room_label : null);
+      if (!cur || score > cur.score) {
+        metaByHash.set(hash, {
+          url: raw,
+          caption: cleanCap,
+          room_label: cleanRoom,
+          source_url: raw,
+          media_type: 'photo',
+          score
+        });
+      } else {
+        cur.caption = cleanCap;
+        cur.room_label = cleanRoom;
+      }
+    };
+    for (const arr of [prop.responsivePhotosOriginalRatio, prop.responsivePhotos, prop.hugePhotos, prop.largePhotos, prop.photos]) {
+      for (const p of (arr || [])) {
+        if (typeof p === 'string') pushMeta(p, null, null);
+        else if (p && typeof p === 'object') {
+          const u = bestJpeg(p.mixedSources) || p.url || p.href || p.src;
+          pushMeta(u, p.caption || p.description || null, p.subjectType || p.roomType || null);
+        }
+      }
+    }
+    pushMeta(prop.desktopWebHdpImageLink, null, null);
+    pushMeta(prop.heroImage, null, 'Exterior');
+    return [...metaByHash.values()].slice(0, 50).map(({ score, ...rest }) => rest);
+  }
+
   function collectPhotoUrls(prop, keys) {
     const photos = [], seen = new Set();
     const add = (u) => { if (u && typeof u === 'string' && u.startsWith('http') && !seen.has(u)) { photos.push(u); seen.add(u); } };
@@ -127,6 +171,105 @@
       rent = match ? parseFloat(match[1]) : null;
     }
     return rent;
+  }
+
+  function parseUnit(street) {
+    if (!street || typeof street !== 'string') return null;
+    const m = street.match(/(?:,?\s+(?:#|apt\.?|unit|ste\.?|suite)\s*([a-z0-9-]+))$/i);
+    return m ? m[1].trim() : null;
+  }
+
+  function parseLeaseMonths(raw) {
+    if (!raw) return null;
+    const s = Array.isArray(raw) ? raw.join(' ') : String(raw);
+    const l = s.toLowerCase();
+    const m = l.match(/(\d+)\s*month/);
+    if (m) return parseInt(m[1], 10);
+    if (/month[\s-]*to[\s-]*month|m2m|mtm/.test(l)) return 1;
+    if (/\byear\b|12[\s-]*month|annual/.test(l)) return 12;
+    return null;
+  }
+
+  function extractLotSqft(prop, factMap) {
+    const rf = (prop && prop.resoFacts) || {};
+    const val = prop.lotAreaValue != null ? prop.lotAreaValue : (rf.lotAreaValue != null ? rf.lotAreaValue : null);
+    const unit = String(prop.lotAreaUnit || rf.lotAreaUnits || prop.lotAreaUnits || '').toLowerCase();
+    if (val != null) {
+      const num = parseFloat(String(val).replace(/,/g, ''));
+      if (!isNaN(num) && num > 0) {
+        if (unit.includes('acre') || /\bac\b/.test(unit)) return Math.round(num * 43560);
+        return Math.round(num);
+      }
+    }
+    const rawStr = prop.lotSize || rf.lotSize || (factMap && factMap['lot size']) || null;
+    if (rawStr != null) {
+      if (typeof rawStr === 'number' && rawStr > 0) return Math.round(rawStr);
+      const s = String(rawStr).trim();
+      const acreM = s.match(/([\d.,]+)\s*(?:acres?|ac\.?)/i);
+      if (acreM) {
+        const av = parseFloat(acreM[1].replace(/,/g, ''));
+        if (!isNaN(av) && av > 0) return Math.round(av * 43560);
+      }
+      const sqftM = s.match(/([\d,]+)\s*(?:sqft|sq\.?\s*ft\.?|square\s*feet)?/i);
+      if (sqftM) {
+        const sv = parseInt(sqftM[1].replace(/,/g, ''), 10);
+        if (!isNaN(sv) && sv > 0) return sv;
+      }
+    }
+    if (prop.lotSizeSquareFeet > 0) return Math.round(Number(prop.lotSizeSquareFeet));
+    return null;
+  }
+
+  function buildCompactRawPayload(prop, url) {
+    if (!prop || typeof prop !== 'object') return null;
+    const snap = {
+      source: 'zillow',
+      source_url: url || null,
+      captured_at: new Date().toISOString(),
+      zpid: prop.zpid || null,
+      homeStatus: prop.homeStatus || prop.listingStatus || null,
+      homeType: prop.homeType || null,
+      propertySubType: (prop.resoFacts && prop.resoFacts.propertySubType) || prop.homeSubType || null,
+      address: prop.address || null,
+      streetAddress: prop.streetAddress || null,
+      city: prop.city || null,
+      state: prop.state || null,
+      zipcode: prop.zipcode || null,
+      county: prop.county || null,
+      neighborhood: prop.neighborhoodName || prop.neighborhood || null,
+      latitude: prop.latitude || (prop.latLong && prop.latLong.latitude) || null,
+      longitude: prop.longitude || (prop.latLong && prop.latLong.longitude) || null,
+      price: prop.price || null,
+      unformattedPrice: prop.unformattedPrice || null,
+      zestimate: prop.zestimate || null,
+      rentZestimate: prop.rentZestimate || null,
+      taxAnnualAmount: prop.taxAnnualAmount || null,
+      monthlyHoaFee: prop.monthlyHoaFee || prop.hoaFee || null,
+      datePosted: prop.datePosted || prop.datePostedString || null,
+      dateSold: prop.dateSold || null,
+      timeOnZillow: prop.timeOnZillow || null,
+      resoFacts: prop.resoFacts || null,
+      attrMap: prop.attrMap || null,
+      attributionInfo: prop.attributionInfo || null,
+      schools: Array.isArray(prop.schools) ? prop.schools.slice(0, 10) : null,
+      nearbyCities: Array.isArray(prop.nearbyCities) ? prop.nearbyCities.slice(0, 8) : null,
+      nearbyNeighborhoods: Array.isArray(prop.nearbyNeighborhoods) ? prop.nearbyNeighborhoods.slice(0, 8) : null,
+      priceHistory: Array.isArray(prop.priceHistory) ? prop.priceHistory.slice(0, 25) : null,
+      taxHistory: Array.isArray(prop.taxHistory) ? prop.taxHistory.slice(0, 15) : null,
+      floorPlans: prop.floorPlans || prop.buildingFloorPlans || null,
+      videos: prop.videos || prop.videoUrl || null,
+      virtualTourUrl: prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || null
+    };
+    try {
+      const json = JSON.stringify(snap);
+      if (json.length > 150000) {
+        delete snap.priceHistory;
+        delete snap.taxHistory;
+      }
+      return snap;
+    } catch (_) {
+      return null;
+    }
   }
 
   const TYPE_MAP = {
@@ -318,18 +461,25 @@
   function basePayload(source, id, url, overrides) {
     return Object.assign({
       source, source_listing_id: id, source_url: url,
-      title: null, address: null, city: null, state: null, zip: null, lat: null, lng: null,
-      monthly_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null,
+      title: null, address: null, unit_number: null, city: null, state: null, zip: null, lat: null, lng: null,
+      monthly_rent: null, bedrooms: null, bathrooms: null, half_bathrooms: null, total_bathrooms: null,
       square_footage: null, year_built: null, lot_size_sqft: null, floors: null,
-      garage_spaces: null, total_units: null, property_type: null, description: null, original_description: null,
+      garage_spaces: null, total_units: null, property_type: null, property_subtype: null,
+      description: null, original_description: null, showing_instructions: null,
       neighborhood: null, county: null, location_context: null, pets_allowed: null,
-      pet_types_allowed: null, available_date: null, listed_at: null, minimum_lease_months: null,
+      pet_types_allowed: null, pet_weight_limit: null, pet_details: null,
+      available_date: null, listed_at: null, source_last_updated_at: null, source_status: null,
+      minimum_lease_months: null, lease_terms: null,
       smoking_allowed: null, security_deposit: null, pet_deposit: null, admin_fee: null,
-      parking_fee: null, application_fee: null, hoa_fee: null, last_months_rent: null,
-      move_in_special: null, parking: null, amenities: null, appliances: null, flooring: null,
+      parking_fee: null, application_fee: null, hoa_fee: null, hoa_fee_frequency: null,
+      tax_annual_amount: null, last_months_rent: null,
+      move_in_special: null, parking: null, ev_charging: null,
+      amenities: null, appliances: null, flooring: null,
       utilities_included: null, heating_type: null, cooling_type: null, laundry_type: null,
       virtual_tour_url: null, has_basement: null, has_central_air: null,
-      original_image_urls: '[]', agent_name: null, broker_name: null,
+      original_image_urls: '[]', photo_metadata: null, agent_name: null, broker_name: null,
+      structural_details: null, utility_details: null, financial_details: null, location_details: null,
+      floor_plans: null, videos: null, source_raw_payload: null,
       _import: 'browser-extension-v5.0-resilient'
     }, overrides);
   }
@@ -375,6 +525,7 @@
     const addr = prop.address   || {};
     const zpid = String(prop.zpid || '');
     const street = addr.streetAddress || prop.streetAddress || '';
+    const unitNumber = addr.unitNumber || prop.unitNumber || rf.unitNumber || parseUnit(street) || null;
     const city   = addr.city    || prop.city    || '';
     const state  = addr.state   || prop.state   || '';
     const zip    = addr.zipcode || prop.zipcode || '';
@@ -386,25 +537,47 @@
     );
     const lat    = prop.latitude  || (prop.latLong && prop.latLong.latitude)  || null;
     const lng    = prop.longitude || (prop.latLong && prop.latLong.longitude) || null;
-    const sqft   = prop.livingArea || prop.area || null;
+    const sqft   = prop.livingArea || prop.area || prop.livingAreaValue || rf.livingArea || null;
     let yr       = prop.yearBuilt || rf.yearBuilt || null;
     const hood   = prop.neighborhoodName || prop.neighborhood || rf.subdivision || addr.neighborhood || null;
     const county = prop.county || addr.county || null;
     const vtour  = prop.virtualTourUrl || prop.threeDimensionalTourUrl || prop.tour3d || prop.view3dUrl || (rf && (rf.virtualTourUrl || rf.threeDimensionalTourUrl)) || (prop.view3dHomeId ? 'https://www.zillow.com/view-3d-home/' + prop.view3dHomeId : null) || null;
     const propType = detectPropType(prop.homeType, rawDesc, prop.title || '', street);
+    const propSubType = rf.propertySubType || prop.homeSubType || rf.structureType || null;
 
     const ctxParts = [];
     if (prop.walkScore    != null) ctxParts.push('Walk score: '    + prop.walkScore);
     if (prop.transitScore != null) ctxParts.push('Transit score: ' + prop.transitScore);
     if (prop.bikeScore    != null) ctxParts.push('Bike score: '    + prop.bikeScore);
 
+    const schoolObjects = [];
     const schoolList = [];
+    if (Array.isArray(prop.schools) && prop.schools.length) {
+      prop.schools.forEach(s => {
+        if (s && s.name) {
+          schoolObjects.push({
+            name: s.name,
+            rating: s.rating != null ? s.rating : null,
+            grades: s.grades || null,
+            level: s.level || null,
+            distance: s.distance != null ? s.distance : null,
+            type: s.type || null
+          });
+          schoolList.push(s.name + (s.level ? ' (' + s.level + ')' : ''));
+        }
+      });
+    }
     if (rf.elementarySchool) schoolList.push('Elementary: ' + rf.elementarySchool);
     if (rf.middleOrJuniorSchool) schoolList.push('Middle: ' + rf.middleOrJuniorSchool);
     if (rf.highSchool) schoolList.push('High: ' + rf.highSchool);
     if (Array.isArray(rf.schools)) {
       rf.schools.forEach(s => {
-        if (s && s.name) schoolList.push(s.name + (s.level ? ' (' + s.level + ')' : ''));
+        if (s && s.name) {
+          if (!schoolObjects.some(o => o.name === s.name)) {
+            schoolObjects.push({ name: s.name, level: s.level || null, grades: s.grades || null, rating: s.rating ?? null });
+          }
+          schoolList.push(s.name + (s.level ? ' (' + s.level + ')' : ''));
+        }
       });
     }
     if (schoolList.length) ctxParts.push('Schools: ' + schoolList.slice(0, 3).join(', '));
@@ -503,7 +676,8 @@
       hasCentralAir = coolingType.toLowerCase().includes('central');
     }
     if (factMap['parking']) parking = factMap['parking'];
-    if (factMap['lot size']) lotSizeSqft = parseInt(factMap['lot size'].replace(/[^0-9]/g, ''), 10) || lotSizeSqft;
+    if (factMap['lot size']) lotSizeSqft = extractLotSqft({ lotSize: factMap['lot size'] }, factMap) || lotSizeSqft;
+    if (lotSizeSqft == null) lotSizeSqft = extractLotSqft(prop, factMap);
     if (factMap['basement']) {
       hasBasement = !/^(?:none|no(?:\s+basement)?|false|n\/a)$/i.test(factMap['basement'].trim());
     }
@@ -533,7 +707,7 @@
     // -----------------------------------------------------------------------------
 
     // --- In-Extractor Narrative Fallback Harvesting (Eliminates Feature Blindness) ---
-    let garageSpaces = safeI(prop.garageParkingCapacity || prop.garageSpaces);
+    let garageSpaces = safeI(prop.garageParkingCapacity || prop.garageSpaces || rf.garageParkingCapacity || rf.garageSpaces);
     const harvested = extractFeaturesFromNarrative(rawDesc);
     if ((!appliances || appliances.length === 0) && harvested.appliances) {
       appliances = harvested.appliances;
@@ -562,10 +736,130 @@
       harvested.amenities.forEach(a => addA(a));
     }
 
-    let utilitiesInc = rf.utilities || rf.utilitiesIncluded || [];
+    let utilitiesInc = Array.isArray(rf.utilitiesIncluded) && rf.utilitiesIncluded.length
+      ? [...rf.utilitiesIncluded]
+      : (Array.isArray(rf.utilities) ? [...rf.utilities] : []);
     if ((!utilitiesInc || !utilitiesInc.length) && factMap['utilities']) {
       utilitiesInc = factMap['utilities'].split(',').map(s => s.trim());
     }
+
+    const evCharging = rf.electricVehicleChargingStations || rf.evCharger ||
+      ((rf.parkingFeatures || []).some(f => /\bev\b|electric vehicle|charging/i.test(String(f))) ? 'EV Charging Available' : null);
+
+    const leaseRaw = rf.leaseTerm || rf.leaseTerms || rf.minimumLease || null;
+    const minLease = parseLeaseMonths(leaseRaw);
+    const leaseTermsJson = leaseRaw
+      ? JSON.stringify(Array.isArray(leaseRaw) ? leaseRaw : [String(leaseRaw)])
+      : null;
+
+    const hoaFee = safeI(prop.monthlyHoaFee || prop.hoaFee || rf.hoaFee);
+    const hoaFeeFreq = rf.hoaFeeFrequency || prop.hoaFeeFrequency || (prop.monthlyHoaFee ? 'Monthly' : null);
+    const taxAnnual = safeI(prop.taxAnnualAmount || rf.taxAnnualAmount);
+    const rentNum = parseRent(prop.price || prop.unformattedPrice);
+    const sqftNum = sqft ? parseInt(String(sqft), 10) : null;
+
+    const structuralDetails = {
+      architectural_style: rf.architecturalStyle || prop.architecturalStyle || null,
+      construction_materials: rf.constructionMaterials || null,
+      foundation_details: rf.foundationDetails || null,
+      roof: rf.roofType || rf.roof || null,
+      exterior_features: rf.exteriorFeatures || null,
+      interior_features: rf.interiorFeatures || null,
+      window_features: rf.windowFeatures || null,
+      fencing: rf.fencing || null,
+      patio_and_porch_features: rf.patioAndPorchFeatures || null,
+      fireplace_features: rf.fireplaceFeatures || null,
+      pool_features: rf.poolFeatures || null,
+      spa_features: rf.spaFeatures || null,
+      levels: rf.levels || prop.stories || rf.stories || null,
+      entry_level: rf.entryLevel || null,
+      accessibility_features: rf.accessibilityFeatures || null,
+      parking_features: rf.parkingFeatures || null,
+      other_structures: rf.otherStructures || null,
+      lot_features: rf.lotFeatures || null,
+      security_features: rf.securityFeatures || null,
+      ev_charging: evCharging
+    };
+
+    const utilityDetails = {
+      utilities_included_confirmed: Array.isArray(rf.utilitiesIncluded) ? rf.utilitiesIncluded : null,
+      utilities: rf.utilities || null,
+      electric: rf.electric || null,
+      gas: rf.gas || null,
+      water_source: rf.waterSource || null,
+      sewer: rf.sewer || null,
+      green_energy: rf.greenEnergyEfficient || rf.greenBuildingVerificationType || null,
+      internet_availability: rf.internetService || rf.internet || null,
+      heating_systems: rf.heating || null,
+      cooling_systems: rf.cooling || null,
+      appliances: rf.appliances || appliances || null,
+      laundry_features: rf.laundryFeatures || null
+    };
+
+    const financialDetails = {
+      price_per_sqft: rf.pricePerSquareFoot || prop.pricePerSquareFoot || (rentNum && sqftNum ? Number((rentNum / sqftNum).toFixed(2)) : null),
+      zestimate: prop.zestimate || null,
+      rent_zestimate: prop.rentZestimate || null,
+      security_deposit: safeI(rf.securityDeposit),
+      application_fee: safeI(rf.applicationFeeAmount || rf.applicationFee),
+      admin_fee: safeI(rf.adminFee),
+      pet_deposit: safeI(rf.petFee || rf.petDepositFee || rf.petDeposit),
+      parking_fee: safeI(rf.parkingFee),
+      last_months_rent: safeI(rf.lastMonthRent),
+      hoa_fee: hoaFee,
+      hoa_fee_frequency: hoaFeeFreq,
+      tax_annual_amount: taxAnnual,
+      tax_assessed_value: prop.taxAssessedValue || rf.taxAssessedValue || null,
+      concessions: rf.concessions || null,
+      deposits_and_fees: rf.depositsAndFees || null,
+      price_history: Array.isArray(prop.priceHistory) ? prop.priceHistory.slice(0, 25) : null,
+      tax_history: Array.isArray(prop.taxHistory) ? prop.taxHistory.slice(0, 15) : null
+    };
+
+    const locationDetails = {
+      county: county || null,
+      neighborhood: hood || null,
+      subdivision: rf.subdivision || null,
+      school_district: rf.highSchoolDistrict || rf.elementarySchoolDistrict || rf.middleOrJuniorSchoolDistrict || null,
+      elementary_school: rf.elementarySchool || null,
+      middle_school: rf.middleOrJuniorSchool || null,
+      high_school: rf.highSchool || null,
+      schools: schoolObjects.length ? schoolObjects : null,
+      walk_score: prop.walkScore ?? null,
+      transit_score: prop.transitScore ?? null,
+      bike_score: prop.bikeScore ?? null,
+      nearby_cities: Array.isArray(prop.nearbyCities) ? prop.nearbyCities.slice(0, 8) : null,
+      nearby_neighborhoods: Array.isArray(prop.nearbyNeighborhoods) ? prop.nearbyNeighborhoods.slice(0, 8) : null,
+      zoning: rf.zoning || null
+    };
+
+    const rawFloorPlans = prop.floorPlans || prop.buildingFloorPlans || rf.floorPlans || [];
+    const floorPlans = Array.isArray(rawFloorPlans) && rawFloorPlans.length
+      ? rawFloorPlans.slice(0, 20).map(fp => ({
+          name: fp.name || fp.planName || fp.title || 'Floor Plan',
+          url: fp.url || fp.imageUrl || fp.pdfUrl || null,
+          bedrooms: fp.bedrooms ?? fp.beds ?? null,
+          bathrooms: fp.bathrooms ?? fp.baths ?? null,
+          sqft: fp.sqft || fp.squareFeet || fp.livingArea || null,
+          price: fp.price || fp.minPrice || null
+        }))
+      : null;
+
+    const videosList = [];
+    if (Array.isArray(prop.videos)) {
+      prop.videos.forEach(v => {
+        const u = typeof v === 'string' ? v : (v && (v.url || v.videoUrl));
+        if (u) videosList.push({ url: u, title: (v && v.title) || 'Property Video', type: 'video' });
+      });
+    }
+    if (prop.videoUrl && typeof prop.videoUrl === 'string') {
+      videosList.push({ url: prop.videoUrl, title: 'Video Walkthrough', type: 'video' });
+    }
+    if (vtour) {
+      videosList.push({ url: vtour, title: '3D / Virtual Tour', type: 'virtual_tour' });
+    }
+
+    const photoMeta = collectPhotoMetadata(prop);
 
     const zTitle = (prop.title && String(prop.title).trim()) ||
       (street ? (city ? street + ', ' + city + ', ' + state + (zip ? ' ' + zip : '') : street).trim() : null) ||
@@ -573,34 +867,45 @@
 
     return basePayload('zillow', zpid, canonicalZillowUrl(url, zpid), {
       title: zTitle,
-      address: street, city, state, zip, lat, lng,
-      monthly_rent: parseRent(prop.price || prop.unformattedPrice),
+      address: street, unit_number: unitNumber, city, state, zip, lat, lng,
+      monthly_rent: rentNum,
       bedrooms: beds, bathrooms: bathVal, half_bathrooms: bathH, total_bathrooms: bathVal,
-      square_footage: sqft ? parseInt(String(sqft), 10) : null,
+      square_footage: sqftNum,
       year_built: yr ? parseInt(String(yr), 10) : null,
       lot_size_sqft: lotSizeSqft,
       floors: safeI(prop.stories || rf.stories),
       garage_spaces: garageSpaces,
-      total_units: safeI(prop.unitCount),
+      total_units: safeI(prop.unitCount || prop.numberOfUnitsTotal),
       property_type: propType,
-      description: prop.description || null,
+      property_subtype: propSubType,
+      description: prop.description || rf.description || null,
       original_description: prop.description || rf.description || null,
+      showing_instructions: rf.showingInstructions || prop.showingInstructions || null,
       neighborhood: hood, county,
       location_context: ctxParts.length ? ctxParts.join('; ') : null,
       pets_allowed: pets,
       pet_types_allowed: JSON.stringify([...new Set(petTypes)]),
-      available_date: null,
-      minimum_lease_months: null,
-      smoking_allowed: null,
+      pet_weight_limit: safeI(rf.petWeightLimit),
+      pet_details: rf.petRestrictions || rf.petsComments || null,
+      available_date: parseDate(rf.dateAvailable || rf.availableFrom || prop.dateAvailable || rf.availabilityDate),
+      listed_at: parseDate(prop.datePosted || rf.listingDate || rf.onMarketDate || prop.datePostedString),
+      source_last_updated_at: prop.dateSold || prop.lastSoldDate || prop.updatedAt || rf.listingLastUpdatedDate || null,
+      source_status: prop.homeStatus || rf.listingStatus || prop.listingStatus || null,
+      minimum_lease_months: minLease,
+      lease_terms: leaseTermsJson,
+      smoking_allowed: rf.smokingAllowed != null ? !!rf.smokingAllowed : null,
       security_deposit: safeI(rf.securityDeposit),
-      pet_deposit: safeI(rf.petFee || rf.petDepositFee),
+      pet_deposit: safeI(rf.petFee || rf.petDepositFee || rf.petDeposit),
       admin_fee: safeI(rf.adminFee),
       parking_fee: safeI(rf.parkingFee),
       application_fee: safeI(rf.applicationFeeAmount || rf.applicationFee),
-      hoa_fee: safeI(prop.monthlyHoaFee || prop.hoaFee),
+      hoa_fee: hoaFee,
+      hoa_fee_frequency: hoaFeeFreq,
+      tax_annual_amount: taxAnnual,
       last_months_rent: safeI(rf.lastMonthRent),
       move_in_special: rf.concessions ? String(rf.concessions).slice(0, 200) : null,
       parking,
+      ev_charging: evCharging,
       amenities: JSON.stringify(Object.keys(amenityMap)),
       appliances: JSON.stringify(appliances),
       flooring,
@@ -612,8 +917,16 @@
       has_basement: hasBasement,
       has_central_air: hasCentralAir,
       original_image_urls: JSON.stringify(collectPhotos(prop)),
+      photo_metadata: photoMeta.length ? photoMeta : null,
       agent_name: (prop.attributionInfo && prop.attributionInfo.agentName)  || null,
       broker_name: (prop.attributionInfo && prop.attributionInfo.brokerName) || null,
+      structural_details: structuralDetails,
+      utility_details: utilityDetails,
+      financial_details: financialDetails,
+      location_details: locationDetails,
+      floor_plans: floorPlans,
+      videos: videosList.length ? videosList : null,
+      source_raw_payload: buildCompactRawPayload(prop, url),
     });
   }
 
@@ -792,19 +1105,24 @@
     const yearMatch = summaryText.match(/Year built:?\s*(\d{4})/i);
     if (yearMatch) yr = parseInt(yearMatch[1], 10);
 
-    const heatingMatch = summaryText.match(/Heating:?\s*([^\n]+)/i);
+    const heatingMatch = summaryText.match(/Heating:?\s*([^\n•|]+?)(?=\s+(?:Cooling|Parking|Lot size|Year built|Pets|Pet policy|Laundry|Basement|HOA):|$|\n)/i);
     if (heatingMatch && !heatingMatch[1].toLowerCase().includes('no data')) heatingType = heatingMatch[1].trim();
 
-    const coolingMatch = summaryText.match(/Cooling:?\s*([^\n]+)/i);
+    const coolingMatch = summaryText.match(/Cooling:?\s*([^\n•|]+?)(?=\s+(?:Heating|Parking|Lot size|Year built|Pets|Pet policy|Laundry|Basement|HOA):|$|\n)/i);
     if (coolingMatch && !coolingMatch[1].toLowerCase().includes('no data')) coolingType = coolingMatch[1].trim();
 
-    const parkingMatch = summaryText.match(/Parking:?\s*([^\n]+)/i);
+    const parkingMatch = summaryText.match(/Parking:?\s*([^\n•|]+?)(?=\s+(?:Heating|Cooling|Lot size|Year built|Pets|Pet policy|Laundry|Basement|HOA):|$|\n)/i);
     if (parkingMatch && !parkingMatch[1].toLowerCase().includes('no data')) parking = parkingMatch[1].trim();
 
-    const lotMatch = summaryText.match(/Lot size:?\s*([\d,]+)\s*sqft/i);
-    if (lotMatch) lotSizeSqft = parseInt(lotMatch[1].replace(/,/g, ''), 10);
+    const lotMatch = summaryText.match(/Lot size:?\s*([\d.,]+)\s*(acres?|ac\.?|sqft|sq\s*ft)/i);
+    if (lotMatch) {
+      const lv = parseFloat(lotMatch[1].replace(/,/g, ''));
+      if (!isNaN(lv) && lv > 0) {
+        lotSizeSqft = /acre|\bac/i.test(lotMatch[2]) ? Math.round(lv * 43560) : Math.round(lv);
+      }
+    }
 
-    const petsTextMatch = summaryText.match(/(?:Pets|Pet policy):?\s*([^\n]+)/i);
+    const petsTextMatch = summaryText.match(/(?:Pets|Pet policy):?\s*([^\n•|]+?)(?=\s+(?:Heating|Cooling|Parking|Lot size|Year built|Laundry|Basement|HOA):|$|\n)/i);
     if (petsTextMatch) {
       const pText = petsTextMatch[1].toLowerCase();
       if (pText.includes('allowed') || pText.includes('ok') || pText.includes('yes') || pText.includes('cat') || pText.includes('dog')) {
@@ -831,11 +1149,11 @@
       }
     });
 
-    // 5. Description
+    // 5. Description (full text, no 2000-char cap)
     let description = null;
     const descEl = doc.querySelector('[data-testid="description"], [class*="DescriptionWrapper"], .summary-container p');
     if (descEl && descEl.textContent) {
-      description = descEl.textContent.trim().slice(0, 2000);
+      description = descEl.textContent.trim();
     }
 
     const zpidMatch = (url.match(/(\d+)_zpid/i) || url.match(/\/b\/([^/]+)/i) || [])[1];
@@ -848,10 +1166,12 @@
     const { bathrooms: domBaths, half_bathrooms: domHalf } = parseBaths(baths, rawDomDesc);
     const domPropType = detectPropType(null, rawDomDesc, (h1El && h1El.textContent) || address || '', address || '');
     const domTitle = (h1El && h1El.textContent.trim()) || buildTitle(beds, domPropType, city, address, null, state, zip);
+    const domUnit = parseUnit(address);
 
     return basePayload('zillow', sourceId, url, {
       title: domTitle,
       address: address || 'Zillow Property',
+      unit_number: domUnit,
       city: city || null,
       state: state || null,
       zip: zip || null,
@@ -883,6 +1203,32 @@
     });
   }
 
+  function mergeNonEmpty() {
+    const out = {};
+    for (let i = 0; i < arguments.length; i++) {
+      const src = arguments[i];
+      if (!src || typeof src !== 'object') continue;
+      for (const key of Object.keys(src)) {
+        const val = src[key];
+        if (!(key in out)) out[key] = null;
+        if (val === null || val === undefined) continue;
+        if (typeof val === 'string') {
+          const t = val.trim();
+          if (!t || t === '[]' || t === '{}') {
+            if (out[key] === null) out[key] = val;
+            continue;
+          }
+        }
+        if (Array.isArray(val) && val.length === 0) {
+          if (out[key] === null) out[key] = val;
+          continue;
+        }
+        out[key] = val;
+      }
+    }
+    return out;
+  }
+
   // ── Zillow Dispatcher (Tiers 1, 2, 3) ─────────────────────────
   function extractZillow(doc, url) {
     // Tier 1: NextData / gdpClientCache
@@ -898,8 +1244,8 @@
     const ld = extractFromJsonLd(doc, url, 'zillow');
     const ldPhotos = ld ? (JSON.parse(ld.original_image_urls || '[]')) : [];
 
-    // Merge best available attributes: NextData > DOM > JSON-LD
-    let merged = Object.assign({}, ld || {}, dom || {}, res || {});
+    // Merge best available attributes without letting null/empty defaults overwrite populated data
+    let merged = mergeNonEmpty(ld, dom, res);
     if (!merged.address && !merged.monthly_rent) return null;
 
     // Ensure best photo collection is kept

@@ -513,6 +513,7 @@
         <div class="pl-form-grid full">${fi('title','Title', l.title,'text',true,true)}</div>
         <div class="pl-form-grid" style="margin-top:10px">
           ${fi('address','Street address', l.address,'text',true)}
+          ${fi('unit_number','Unit / Apt #', l.unit_number,'text',false)}
           ${fi('city','City', l.city,'text',true)}
           ${fi('state','State', l.state,'text',true)}
           ${fi('zip','ZIP', l.zip,'text',true)}
@@ -528,22 +529,31 @@
           ${fi('monthly_rent','Monthly rent ($)', l.monthly_rent,'number',true)}
           ${fi('security_deposit','Security deposit ($)', l.security_deposit,'number',false)}
           ${fi('application_fee','App fee ($)', l.application_fee,'number',false)}
+          ${fi('last_months_rent','Last month rent ($)', l.last_months_rent,'number',false)}
+          ${fi('admin_fee','Admin fee ($)', l.admin_fee,'number',false)}
           ${fi('pet_deposit','Pet deposit ($)', l.pet_deposit,'number',false)}
           ${fi('parking_fee','Parking fee ($)', l.parking_fee,'number',false)}
           ${fi('hoa_fee','HOA fee ($)', l.hoa_fee,'number',false)}
+          ${fi('hoa_fee_frequency','HOA frequency', l.hoa_fee_frequency,'text',false)}
+          ${fi('tax_annual_amount','Annual tax ($)', l.tax_annual_amount,'number',false)}
           ${fi('bedrooms','Bedrooms', l.bedrooms,'number',false)}
           ${fi('bathrooms','Bathrooms', l.bathrooms,'number',false)}
+          ${fi('half_bathrooms','Half baths', l.half_bathrooms,'number',false)}
           ${fi('square_footage','Sqft', l.square_footage,'number',false)}
           ${fi('lot_size_sqft','Lot sqft', l.lot_size_sqft,'number',false)}
           ${fi('year_built','Year built', l.year_built,'number',false)}
           ${fi('floors','Floors / stories', l.floors,'number',false)}
           ${fi('garage_spaces','Garage spaces', l.garage_spaces,'number',false)}
           ${fi('property_type','Property type', l.property_type,'text',false,false,[
-            {v:'',l:'— select —'},{v:'SINGLE_FAMILY',l:'Single family'},{v:'CONDOS',l:'Condo'},
-            {v:'TOWNHOMES',l:'Townhouse'},{v:'APARTMENT',l:'Apartment'},{v:'MULTI_FAMILY',l:'Multi-family'},
+            {v:'',l:'— select —'},{v:'SINGLE_FAMILY',l:'Single family'},{v:'DUPLEX',l:'Duplex'},
+            {v:'TOWNHOMES',l:'Townhouse'},{v:'CONDOS',l:'Condo'},{v:'APARTMENT',l:'Apartment'},
+            {v:'STUDIO',l:'Studio'},{v:'MULTI_FAMILY',l:'Multi-family'},
             {v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},{v:'FARM',l:'Farm'}
           ])}
+          ${fi('property_subtype','Property subtype', l.property_subtype,'text',false)}
+          ${fi('ev_charging','EV charging', l.ev_charging,'text',false)}
           ${fi('available_date','Available date', l.available_date,'date',false)}
+          ${fi('listed_at','Source listed date', l.listed_at ? String(l.listed_at).split('T')[0] : '','date',false)}
           ${fi('minimum_lease_months','Min lease (mo)', l.minimum_lease_months,'number',false)}
         </div>
       </div>
@@ -628,6 +638,50 @@
           <a class="btn btn-sm btn-outline" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}">Edit full listing</a>
         </div>
       </div>` : ''}
+
+      ${(() => {
+        const provenanceBlocks = [
+          ['Field provenance', l.field_provenance],
+          ['Structural details', l.structural_details],
+          ['Utility details', l.utility_details],
+          ['Financial details', l.financial_details],
+          ['Location details', l.location_details],
+          ['Floor plans', l.floor_plans],
+          ['Videos / Tours', l.videos],
+          ['Original data metadata', l.original_data],
+          ['Source raw payload', l.source_raw_payload],
+        ].filter(([, val]) => {
+          if (val == null) return false;
+          if (typeof val === 'string') return val.trim() !== '' && val.trim() !== '{}' && val.trim() !== '[]';
+          if (Array.isArray(val)) return val.length > 0;
+          if (typeof val === 'object') return Object.keys(val).length > 0;
+          return true;
+        });
+        if (!provenanceBlocks.length) return '';
+        return `
+      <div class="pl-section">
+        <details>
+          <summary class="pl-section-title" style="cursor:pointer;user-select:none;margin-bottom:8px">
+            Source Raw Data &amp; Provenance (${provenanceBlocks.length} sections)
+          </summary>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            ${provenanceBlocks.map(([label, val]) => {
+              let formatted = val;
+              if (typeof val === 'string') {
+                const parsed = parseJSON(val);
+                formatted = parsed ? JSON.stringify(parsed, null, 2) : val;
+              } else {
+                try { formatted = JSON.stringify(val, null, 2); } catch(_) { formatted = String(val); }
+              }
+              return `<div>
+                <div style="font-size:.7rem;font-weight:700;color:var(--muted-2);text-transform:uppercase;margin-bottom:4px">${S.esc(label)}</div>
+                <pre style="max-height:220px;overflow:auto;background:var(--surface-2,#0f172a);color:var(--text,#e2e8f0);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:.7rem;line-height:1.45;margin:0;white-space:pre-wrap;word-break:break-word">${S.esc(formatted)}</pre>
+              </div>`;
+            }).join('')}
+          </div>
+        </details>
+      </div>`;
+      })()}
 
       <div style="height:20px"></div>
 
@@ -1319,16 +1373,16 @@ function wirePanelPhotoActions(){
 
     // Plain text fields
     const textFields = [
-      'title','address','city','state','zip','county','neighborhood',
+      'title','address','unit_number','city','state','zip','county','neighborhood',
       'description','original_description','showing_instructions','move_in_special','location_context','virtual_tour_url',
-      'property_type','available_date',
+      'property_type','property_subtype','hoa_fee_frequency','ev_charging','available_date','listed_at',
       'heating_type','cooling_type','laundry_type','parking',
     ];
     // Integer fields
     const intFields = [
       'monthly_rent','security_deposit','application_fee',
-      'pet_deposit','parking_fee','hoa_fee',
-      'bedrooms','square_footage','minimum_lease_months','garage_spaces',
+      'last_months_rent','admin_fee','pet_deposit','parking_fee','hoa_fee','tax_annual_amount',
+      'bedrooms','half_bathrooms','square_footage','minimum_lease_months','garage_spaces',
       'year_built','floors','lot_size_sqft',
     ];
     // Float fields

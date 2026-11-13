@@ -288,7 +288,7 @@ function _attachPhotoArrays(row) {
 
 // Standard select fragment used by every property fetch below.
 const PROPERTIES_SELECT_FULL =
-  '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(id, url, file_id, display_order, is_hero)';
+  '*, landlords(contact_name, business_name, avatar_url, verified), property_photos(id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url)';
 
 // ── Property type normalization ─────────────────────────────────────────────
 // The scraper writes UPPER_SNAKE values (SINGLE_FAMILY, TOWNHOMES, APARTMENT,
@@ -329,6 +329,123 @@ function _typeFilterOr(canonicalType) {
   return variants.map(v => `property_type.eq.${v}`).join(',');
 }
 
+// ── Normalized advanced filter helpers (shared across DB queries & in-memory share branches) ─
+const _LAUNDRY_PATTERNS = {
+  'in-unit':    ['%in-unit%', '%in unit%', '%in_unit%', '%inside%'],
+  'hookups':    ['%hookup%', '%w/d hookup%'],
+  'shared':     ['%shared%', '%building%', '%on-site%', '%common%'],
+  'laundromat': ['%laundromat%'],
+  'none':       ['none', '%no laundry%'],
+};
+function _laundryMatches(rawVal, filterSlug) {
+  if (!filterSlug) return true;
+  const v = String(rawVal || '').toLowerCase();
+  if (!v) return false;
+  const f = String(filterSlug).toLowerCase();
+  if (f === 'in-unit') return /in[-_\s]?unit|inside/.test(v);
+  if (f === 'hookups') return /hookup/.test(v);
+  if (f === 'shared') return /shared|building|on-site|common/.test(v);
+  if (f === 'laundromat') return /laundromat/.test(v);
+  if (f === 'none') return /^none$|no laundry/.test(v);
+  return v.includes(f);
+}
+function _applyLaundryFilter(q, filterSlug) {
+  const pats = _LAUNDRY_PATTERNS[String(filterSlug || '').toLowerCase()];
+  if (pats && pats.length) {
+    return q.or(pats.map(p => (p.includes('%') ? `laundry_type.ilike.${p}` : `laundry_type.eq.${p}`)).join(','));
+  }
+  return q.ilike('laundry_type', `%${filterSlug}%`);
+}
+
+const _HEATING_PATTERNS = {
+  'gas-forced-air': ['%gas%', '%forced air%', '%forced_air%'],
+  'electric':       ['%electric%'],
+  'baseboard':      ['%baseboard%'],
+  'radiant':        ['%radiant%'],
+  'heat-pump':      ['%heat pump%', '%heat_pump%'],
+  'boiler':         ['%boiler%'],
+};
+function _heatingMatches(rawVal, filterSlug) {
+  if (!filterSlug) return true;
+  const v = String(rawVal || '').toLowerCase();
+  if (!v) return false;
+  const f = String(filterSlug).toLowerCase();
+  if (f === 'gas-forced-air') return /gas|forced[\s_-]?air/.test(v);
+  if (f === 'heat-pump') return /heat[\s_-]?pump/.test(v);
+  return v.includes(f.replace(/-/g, ' ')) || v.includes(f);
+}
+function _applyHeatingFilter(q, filterSlug) {
+  const pats = _HEATING_PATTERNS[String(filterSlug || '').toLowerCase()];
+  if (pats && pats.length) {
+    return q.or(pats.map(p => `heating_type.ilike.${p}`).join(','));
+  }
+  return q.ilike('heating_type', `%${filterSlug}%`);
+}
+
+function _petTypeMatches(arr, filterPet) {
+  if (!filterPet) return true;
+  const needle = String(filterPet).toLowerCase().trim();
+  const list = Array.isArray(arr) ? arr : (typeof arr === 'string' ? [arr] : []);
+  return list.some(item => String(item || '').toLowerCase().includes(needle));
+}
+function _applyPetTypeFilter(q, filterPet) {
+  const raw = String(filterPet || '').trim();
+  if (!raw) return q;
+  const variants = [...new Set([raw, raw.toLowerCase(), raw.replace(/\s+/g, '_').toLowerCase()])];
+  return q.or(variants.map(v => `pet_types_allowed.cs.${JSON.stringify([v])}`).join(','));
+}
+
+const _AMENITY_VARIANTS = {
+  garage:       { tags: ['garage', 'attached_garage', 'detached_garage', 'Attached Garage', 'Detached Garage', 'Garage'], extra: ['garage_spaces.gt.0', 'parking.ilike.%garage%'] },
+  central_air:  { tags: ['central_air', 'central air', 'Central Air', 'Central A/C'], extra: ['has_central_air.eq.true', 'cooling_type.ilike.%central%'] },
+  washer_dryer: { tags: ['washer_dryer', 'in_unit_laundry', 'Washer/Dryer', 'Washer', 'Dryer'], extra: ['laundry_type.ilike.%in-unit%', 'laundry_type.ilike.%in unit%', 'appliances.cs.{"Washer"}', 'appliances.cs.{"Dryer"}'] },
+  dishwasher:   { tags: ['dishwasher', 'Dishwasher'], extra: ['appliances.cs.{"Dishwasher"}', 'appliances.cs.{"dishwasher"}'] },
+  hardwood:     { tags: ['hardwood', 'hardwood_floors', 'Hardwood', 'Hardwood Floors'], extra: ['flooring.cs.{"Hardwood"}', 'flooring.cs.{"hardwood"}', 'flooring.cs.{"Hardwood Floors"}'] },
+  basement:     { tags: ['basement', 'Basement', 'Finished Basement', 'Full Basement'], extra: ['has_basement.eq.true'] },
+  fenced_yard:  { tags: ['fenced_yard', 'Fenced Yard', 'Fenced'], extra: [] },
+  balcony:      { tags: ['balcony', 'patio', 'deck', 'Balcony', 'Patio', 'Deck'], extra: [] },
+  fireplace:    { tags: ['fireplace', 'Fireplace'], extra: [] },
+  pool:         { tags: ['pool', 'community_pool', 'Pool', 'Swimming Pool', 'Community Pool'], extra: [] },
+  ev_charging:  { tags: ['ev_charging', 'EV Charging'], extra: ['ev_charging.not.is.null,ev_charging.neq.none'] },
+};
+function _amenityMatches(row, filterAmenity) {
+  if (!filterAmenity) return true;
+  const f = String(filterAmenity).toLowerCase().trim();
+  const hay = []
+    .concat(Array.isArray(row.amenities) ? row.amenities : [])
+    .concat(Array.isArray(row.appliances) ? row.appliances : [])
+    .concat(Array.isArray(row.flooring) ? row.flooring : [])
+    .map(x => String(x || '').toLowerCase());
+  if (f === 'garage') return (row.garage_spaces > 0) || /garage/i.test(row.parking || '') || hay.some(x => x.includes('garage'));
+  if (f === 'central_air') return row.has_central_air === true || /central/i.test(row.cooling_type || '') || hay.some(x => /central[\s_]?a/.test(x));
+  if (f === 'washer_dryer') return /in[-_\s]?unit|washer/i.test(row.laundry_type || '') || hay.some(x => /washer|dryer|laundry/.test(x));
+  if (f === 'dishwasher') return hay.some(x => x.includes('dishwasher'));
+  if (f === 'hardwood') return hay.some(x => x.includes('hardwood'));
+  if (f === 'basement') return row.has_basement === true || hay.some(x => x.includes('basement'));
+  if (f === 'fenced_yard') return hay.some(x => x.includes('fenced'));
+  if (f === 'balcony') return hay.some(x => /balcony|patio|deck/.test(x));
+  if (f === 'fireplace') return hay.some(x => x.includes('fireplace'));
+  if (f === 'pool') return hay.some(x => x.includes('pool'));
+  if (f === 'ev_charging') return (!!row.ev_charging && !/^none$/i.test(row.ev_charging)) || hay.some(x => x.includes('ev'));
+  return hay.some(x => x.includes(f.replace(/_/g, ' ')) || x.includes(f));
+}
+function _applyAmenityFilter(q, filterAmenity) {
+  const f = String(filterAmenity || '').toLowerCase().trim();
+  if (!f) return q;
+  const spec = _AMENITY_VARIANTS[f];
+  const clauses = [];
+  if (spec) {
+    spec.tags.forEach(t => clauses.push(`amenities.cs.${JSON.stringify([t])}`));
+    spec.extra.forEach(e => { if (!e.includes(',')) clauses.push(e); });
+    if (f === 'ev_charging') {
+      clauses.push('ev_charging.ilike.%level%', 'ev_charging.ilike.%240%', 'ev_charging.ilike.%charger%', 'ev_charging.ilike.%yes%');
+    }
+  } else {
+    clauses.push(`amenities.cs.${JSON.stringify([f])}`);
+  }
+  return q.or(clauses.join(','));
+}
+
 const Properties = {
   // getListings - server-side filtered, sorted, paginated query for the listings page.
   // filters: { q, type, beds, min_beds, min_baths, min_rent, max_rent, pets, parking, available, sort, page, per_page }
@@ -363,7 +480,7 @@ const Properties = {
           const [photosRes, landlordsRes] = await Promise.all([
             sb()
               .from('property_photos')
-              .select('id, property_id, url, file_id, display_order, is_hero')
+              .select('id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url')
               .in('property_id', propIds)
               .order('display_order', { ascending: true }),
             landlordIds.length > 0
@@ -413,6 +530,12 @@ const Properties = {
         const b = parseInt(filters.beds, 10);
         if (b === 4) rows = rows.filter(r => (r.bedrooms ?? 0) >= 4);
         else rows = rows.filter(r => (r.bedrooms ?? 0) === b);
+      } else if (filters.min_beds !== undefined && filters.min_beds !== '') {
+        rows = rows.filter(r => (r.bedrooms ?? 0) >= parseInt(filters.min_beds, 10));
+      }
+      if (filters.min_baths !== undefined && filters.min_baths !== '') {
+        const mb = parseFloat(filters.min_baths);
+        if (!isNaN(mb)) rows = rows.filter(r => (Number(r.bathrooms) || 0) >= mb);
       }
       if (filters.min_rent !== undefined && filters.min_rent !== '') {
         const minR = parseInt(filters.min_rent, 10);
@@ -422,6 +545,14 @@ const Properties = {
         const maxR = parseInt(filters.max_rent, 10);
         rows = rows.filter(r => (r.monthly_rent ?? 0) <= maxR);
       }
+      if (filters.min_sqft !== undefined && filters.min_sqft !== '') {
+        const minS = parseInt(filters.min_sqft, 10);
+        if (!isNaN(minS)) rows = rows.filter(r => (Number(r.square_footage) || 0) >= minS);
+      }
+      if (filters.max_sqft !== undefined && filters.max_sqft !== '') {
+        const maxS = parseInt(filters.max_sqft, 10);
+        if (!isNaN(maxS)) rows = rows.filter(r => r.square_footage != null && Number(r.square_footage) <= maxS);
+      }
       if (filters.type && filters.type !== 'all' && !['pets','parking','available'].includes(filters.type)) {
         const typeVariants = _TYPE_FILTER_MAP[filters.type] || [filters.type];
         rows = rows.filter(r => typeVariants.includes(r.property_type));
@@ -429,15 +560,30 @@ const Properties = {
       if (filters.type === 'pets') {
         rows = rows.filter(r => r.pets_allowed === true);
       }
+      if (filters.type === 'parking') {
+        rows = rows.filter(r => r.parking && String(r.parking).trim() !== '' && !/^none$/i.test(String(r.parking).trim()));
+      }
+      if (filters.laundry_type) {
+        rows = rows.filter(r => _laundryMatches(r.laundry_type, filters.laundry_type));
+      }
+      if (filters.heating_type) {
+        rows = rows.filter(r => _heatingMatches(r.heating_type, filters.heating_type));
+      }
+      if (filters.pet_type) {
+        rows = rows.filter(r => _petTypeMatches(r.pet_types_allowed, filters.pet_type));
+      }
+      if (filters.amenity) {
+        rows = rows.filter(r => _amenityMatches(r, filters.amenity));
+      }
 
       // Sort
       if (filters.sort === 'rent-asc' || filters.sort === 'price_asc') {
         rows.sort((a, b) => (a.monthly_rent ?? 0) - (b.monthly_rent ?? 0));
       } else if (filters.sort === 'rent-desc' || filters.sort === 'price_desc') {
         rows.sort((a, b) => (b.monthly_rent ?? 0) - (a.monthly_rent ?? 0));
-      } else if (filters.sort === 'beds-desc') {
+      } else if (filters.sort === 'beds-desc' || filters.sort === 'beds_desc') {
         rows.sort((a, b) => (b.bedrooms ?? 0) - (a.bedrooms ?? 0));
-      } else if (filters.sort === 'sqft-desc') {
+      } else if (filters.sort === 'sqft-desc' || filters.sort === 'sqft_desc') {
         rows.sort((a, b) => (b.square_footage ?? 0) - (a.square_footage ?? 0));
       }
 
@@ -502,12 +648,18 @@ const Properties = {
       q = q.gte('bathrooms', parseFloat(filters.min_baths));
     }
 
-    // Rent range
+    // Rent & Sqft range
     if (filters.min_rent !== undefined && filters.min_rent !== '') {
       q = q.gte('monthly_rent', parseInt(filters.min_rent));
     }
     if (filters.max_rent !== undefined && filters.max_rent !== '') {
       q = q.lte('monthly_rent', parseInt(filters.max_rent));
+    }
+    if (filters.min_sqft !== undefined && filters.min_sqft !== '') {
+      q = q.gte('square_footage', parseInt(filters.min_sqft));
+    }
+    if (filters.max_sqft !== undefined && filters.max_sqft !== '') {
+      q = q.lte('square_footage', parseInt(filters.max_sqft));
     }
 
     // Location filters — used by the dynamic city/state location pages
@@ -520,20 +672,18 @@ const Properties = {
     if (filters.min_lng !== undefined) q = q.gte('lng', parseFloat(filters.min_lng));
     if (filters.max_lng !== undefined) q = q.lte('lng', parseFloat(filters.max_lng));
 
-    // Laundry type filter
-    if (filters.laundry_type) q = q.eq('laundry_type', filters.laundry_type);
-
-    // Heating type filter
-    if (filters.heating_type) q = q.eq('heating_type', filters.heating_type);
-
-    // Pet type filter - checks if pet_types_allowed array contains the requested type
-    if (filters.pet_type) q = q.contains('pet_types_allowed', [filters.pet_type]);
+    // Laundry, heating, pet type, and amenity filters (normalized against scraped DB labels)
+    if (filters.laundry_type) q = _applyLaundryFilter(q, filters.laundry_type);
+    if (filters.heating_type) q = _applyHeatingFilter(q, filters.heating_type);
+    if (filters.pet_type)     q = _applyPetTypeFilter(q, filters.pet_type);
+    if (filters.amenity)      q = _applyAmenityFilter(q, filters.amenity);
 
     // Sort
     switch (filters.sort) {
-      case 'price_asc':  q = q.order('monthly_rent', { ascending: true });  break;
-      case 'price_desc': q = q.order('monthly_rent', { ascending: false }); break;
-      case 'beds_desc':  q = q.order('bedrooms', { ascending: false });      break;
+      case 'price_asc':  q = q.order('monthly_rent',   { ascending: true });  break;
+      case 'price_desc': q = q.order('monthly_rent',   { ascending: false }); break;
+      case 'beds_desc':  q = q.order('bedrooms',       { ascending: false }); break;
+      case 'sqft_desc':  q = q.order('square_footage', { ascending: false, nullsFirst: false }); break;
       default:
         // High-performance indexed sort by creation date
         q = q.order('created_at', { ascending: false });
@@ -580,18 +730,35 @@ const Properties = {
       if (safeForTs) q = q.textSearch('search_tsv', term, { type: 'websearch', config: 'english' });
       else           q = q.ilike('title', `%${term}%`);
     }
+    if (filters.type && filters.type !== 'all' && !['pets','parking','available'].includes(filters.type)) {
+      const typeOr = _typeFilterOr(filters.type);
+      if (typeOr) q = q.or(typeOr);
+      else        q = q.eq('property_type', filters.type);
+    }
+    if (filters.type === 'pets')      q = q.eq('pets_allowed', true);
+    if (filters.type === 'parking')   q = q.not('parking', 'is', null).neq('parking', '').neq('parking', 'None');
+    if (filters.type === 'available') q = q.or(`available_date.is.null,available_date.lte.${new Date().toISOString().slice(0,10)}`);
+
     if (filters.beds !== undefined && filters.beds !== '') {
       const beds = parseInt(filters.beds);
       if (beds === 4) q = q.gte('bedrooms', 4);
       else            q = q.eq('bedrooms', beds);
     }
+    if (filters.min_baths !== undefined && filters.min_baths !== '') q = q.gte('bathrooms', parseFloat(filters.min_baths));
     if (filters.min_rent) q = q.gte('monthly_rent', parseInt(filters.min_rent));
     if (filters.max_rent) q = q.lte('monthly_rent', parseInt(filters.max_rent));
+    if (filters.min_sqft) q = q.gte('square_footage', parseInt(filters.min_sqft));
+    if (filters.max_sqft) q = q.lte('square_footage', parseInt(filters.max_sqft));
+    if (filters.laundry_type) q = _applyLaundryFilter(q, filters.laundry_type);
+    if (filters.heating_type) q = _applyHeatingFilter(q, filters.heating_type);
+    if (filters.pet_type)     q = _applyPetTypeFilter(q, filters.pet_type);
+    if (filters.amenity)      q = _applyAmenityFilter(q, filters.amenity);
 
     switch (filters.sort) {
-      case 'price_asc':  q = q.order('monthly_rent', { ascending: true });  break;
-      case 'price_desc': q = q.order('monthly_rent', { ascending: false }); break;
-      case 'beds_desc':  q = q.order('bedrooms',     { ascending: false }); break;
+      case 'price_asc':  q = q.order('monthly_rent',   { ascending: true });  break;
+      case 'price_desc': q = q.order('monthly_rent',   { ascending: false }); break;
+      case 'beds_desc':  q = q.order('bedrooms',       { ascending: false }); break;
+      case 'sqft_desc':  q = q.order('square_footage', { ascending: false, nullsFirst: false }); break;
       default:
         q = q.order('created_at', { ascending: false });
         break;
@@ -627,7 +794,7 @@ const Properties = {
   async getOne(id) {
     // landlords(*) would 401 once authenticated SELECT is column-restricted (000013).
     // Public landlord card only needs the safe-cols set granted to anon + authenticated.
-    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero)').eq('id', id).single();
+    const { data, error } = await sb().from('properties').select('*, landlords(id, user_id, contact_name, business_name, avatar_url, verified, tagline), property_photos(id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url)').eq('id', id).single();
     if (data && data.landlords && !data.landlords.avatar_url) {
       data.landlords.avatar_url = '/assets/avatar-placeholder.svg';
     }

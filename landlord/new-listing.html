@@ -283,9 +283,15 @@
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="address">Street Address *</label>
-          <input type="text" class="form-input" id="address" placeholder="123 Main Street">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="address">Street Address *</label>
+            <input type="text" class="form-input" id="address" placeholder="123 Main Street">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="unitNumber">Unit / Apt # <span style="color:var(--muted);font-weight:400;font-size:.78rem">(optional)</span></label>
+            <input type="text" class="form-input" id="unitNumber" placeholder="e.g. Apt 4B, Unit 2">
+          </div>
         </div>
 
         <div class="form-grid-3">
@@ -300,6 +306,17 @@
           <div class="form-group">
             <label class="form-label" for="zip">ZIP Code *</label>
             <input type="text" class="form-input" id="zip" placeholder="e.g. 78701" maxlength="10" pattern="\d{5}(-\d{4})?">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="county">County <span style="color:var(--muted);font-weight:400;font-size:.78rem">(optional)</span></label>
+            <input type="text" class="form-input" id="county" placeholder="e.g. Travis County">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="neighborhood">Neighborhood <span style="color:var(--muted);font-weight:400;font-size:.78rem">(optional)</span></label>
+            <input type="text" class="form-input" id="neighborhood" placeholder="e.g. Zilker">
           </div>
         </div>
 
@@ -335,6 +352,26 @@
             <label class="form-label" for="sqft">Sq. Footage</label>
             <input type="number" class="form-input" id="sqft" placeholder="850" min="0">
           </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label" for="halfBathrooms">Half Baths <span style="color:var(--muted);font-weight:400;font-size:.78rem">(optional)</span></label>
+            <input type="number" class="form-input" id="halfBathrooms" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lotSizeSqft">Lot Size (sqft)</label>
+            <input type="number" class="form-input" id="lotSizeSqft" placeholder="5000" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="floors">Floors / Stories</label>
+            <input type="number" class="form-input" id="floors" placeholder="1" min="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="yearBuilt">Year Built <span style="color:var(--muted);font-weight:400;font-size:.78rem">(optional)</span></label>
+          <input type="number" class="form-input" id="yearBuilt" placeholder="e.g. 2005" min="1800" max="2030">
         </div>
 
         <div class="form-grid-2">
@@ -589,6 +626,50 @@
               <option value="Evaporative cooler">Evaporative cooler</option>
               <option value="None">No A/C</option>
             </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="hasCentralAir">Central Air</label>
+            <select class="form-select" id="hasCentralAir">
+              <option value="">Unknown / Not specified</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="hasBasement">Basement</label>
+            <select class="form-select" id="hasBasement">
+              <option value="">Unknown / Not specified</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Appliances Included</label>
+          <div class="checkbox-group" id="appliancesGroup">
+            <label class="checkbox-pill"><input type="checkbox" value="Refrigerator"> Refrigerator</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Range / Oven"> Range / Oven</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Microwave"> Microwave</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Dishwasher"> Dishwasher</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Disposal"> Garbage Disposal</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Washer"> Washer</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Dryer"> Dryer</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Flooring</label>
+          <div class="checkbox-group" id="flooringGroup">
+            <label class="checkbox-pill"><input type="checkbox" value="Hardwood"> Hardwood</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Laminate"> Laminate</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Tile"> Tile</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Carpet"> Carpet</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Vinyl"> Vinyl</label>
+            <label class="checkbox-pill"><input type="checkbox" value="Concrete"> Concrete</label>
           </div>
         </div>
 

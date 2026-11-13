@@ -159,12 +159,19 @@
       title:         document.getElementById('title').value,
       propertyType:  document.getElementById('propertyType').value,
       address:       document.getElementById('address').value,
+      unitNumber:    document.getElementById('unitNumber')?.value || '',
       city:          document.getElementById('city').value,
       state:         document.getElementById('state').value,
       zip:           document.getElementById('zip').value,
+      county:        document.getElementById('county')?.value || '',
+      neighborhood:  document.getElementById('neighborhood')?.value || '',
       bedrooms:      document.getElementById('bedrooms').value,
       bathrooms:     document.getElementById('bathrooms').value,
+      halfBathrooms: document.getElementById('halfBathrooms')?.value || '',
       sqft:          document.getElementById('sqft').value,
+      lotSizeSqft:   document.getElementById('lotSizeSqft')?.value || '',
+      floors:        document.getElementById('floors')?.value || '',
+      yearBuilt:     document.getElementById('yearBuilt')?.value || '',
       rent:          document.getElementById('rent').value,
       deposit:       document.getElementById('deposit').value,
       lastMonthRent: document.getElementById('lastMonthRent').value,
@@ -182,6 +189,8 @@
       laundryType:   document.getElementById('laundryType').value,
       heatingType:   document.getElementById('heatingType').value,
       coolingType:   document.getElementById('coolingType').value,
+      hasCentralAir: document.getElementById('hasCentralAir')?.value || '',
+      hasBasement:   document.getElementById('hasBasement')?.value || '',
       description:   document.getElementById('description').value,
       showingInstructions: document.getElementById('showingInstructions').value,
       petsAllowed:   document.querySelector('input[name="pets"]:checked')?.value || 'false',
@@ -190,6 +199,8 @@
       leaseTerms:    [...document.querySelectorAll('#step2 .checkbox-group input:checked')].map(c => c.value),
       utilities:     [...document.querySelectorAll('#utilitiesGroup input:checked')].map(c => c.value),
       amenities:     [...document.querySelectorAll('#amenitiesGroup input:checked')].map(c => c.value),
+      appliances:    [...document.querySelectorAll('#appliancesGroup input:checked')].map(c => c.value),
+      flooring:      [...document.querySelectorAll('#flooringGroup input:checked')].map(c => c.value),
       // Issue #14b: persist already-uploaded photos so a draft resume
       // brings them back instead of forcing the landlord to re-upload.
       // We only save 'ready' photos (URL + fileId from ImageKit). Photos
@@ -206,11 +217,11 @@
     localStorage.setItem('cp_draft_s1', JSON.stringify(draft));
   }
 
-  ['title','address','city','zip','sqft','rent','deposit','availDate','appFee','petDetails','description','showingInstructions','lastMonthRent','adminFee','moveInSpecial','parkingFee','petDeposit']
+  ['title','address','unitNumber','city','zip','county','neighborhood','sqft','halfBathrooms','lotSizeSqft','floors','yearBuilt','rent','deposit','availDate','appFee','petDetails','description','showingInstructions','lastMonthRent','adminFee','moveInSpecial','parkingFee','petDeposit']
     .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', autosaveDraft); });
-  ['propertyType','state','bedrooms','bathrooms','parking','garageSpaces','evCharging','petWeightLimit','laundryType','heatingType','coolingType']
+  ['propertyType','state','bedrooms','bathrooms','parking','garageSpaces','evCharging','petWeightLimit','laundryType','heatingType','coolingType','hasCentralAir','hasBasement']
     .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', autosaveDraft); });
-  document.querySelectorAll('#step2 .checkbox-group input, #utilitiesGroup input, #amenitiesGroup input, input[name="pets"], #petTypesGroup input')
+  document.querySelectorAll('#step2 .checkbox-group input, #utilitiesGroup input, #amenitiesGroup input, #appliancesGroup input, #flooringGroup input, input[name="pets"], #petTypesGroup input')
     .forEach(el => el.addEventListener('change', autosaveDraft));
 
   window.addEventListener('beforeunload', (e) => {
@@ -222,12 +233,19 @@
     if (s1.title)        { document.getElementById('title').value = s1.title; document.getElementById('titleCount').textContent = s1.title.length; }
     if (s1.propertyType) document.getElementById('propertyType').value = s1.propertyType;
     if (s1.address)      document.getElementById('address').value = s1.address;
+    if (s1.unitNumber && document.getElementById('unitNumber')) document.getElementById('unitNumber').value = s1.unitNumber;
     if (s1.city)         document.getElementById('city').value = s1.city;
     if (s1.state)        document.getElementById('state').value = s1.state;
     if (s1.zip)          document.getElementById('zip').value = s1.zip;
+    if (s1.county && document.getElementById('county')) document.getElementById('county').value = s1.county;
+    if (s1.neighborhood && document.getElementById('neighborhood')) document.getElementById('neighborhood').value = s1.neighborhood;
     if (s1.bedrooms)     document.getElementById('bedrooms').value = s1.bedrooms;
     if (s1.bathrooms)    document.getElementById('bathrooms').value = s1.bathrooms;
+    if (s1.halfBathrooms !== undefined && document.getElementById('halfBathrooms')) document.getElementById('halfBathrooms').value = s1.halfBathrooms;
     if (s1.sqft)         document.getElementById('sqft').value = s1.sqft;
+    if (s1.lotSizeSqft && document.getElementById('lotSizeSqft')) document.getElementById('lotSizeSqft').value = s1.lotSizeSqft;
+    if (s1.floors && document.getElementById('floors')) document.getElementById('floors').value = s1.floors;
+    if (s1.yearBuilt && document.getElementById('yearBuilt')) document.getElementById('yearBuilt').value = s1.yearBuilt;
     if (s1.rent)         document.getElementById('rent').value = s1.rent;
     if (s1.deposit)      document.getElementById('deposit').value = s1.deposit;
     if (s1.lastMonthRent !== undefined) document.getElementById('lastMonthRent').value = s1.lastMonthRent;
@@ -245,6 +263,8 @@
     if (s1.laundryType)  document.getElementById('laundryType').value = s1.laundryType;
     if (s1.heatingType)  document.getElementById('heatingType').value = s1.heatingType;
     if (s1.coolingType)  document.getElementById('coolingType').value = s1.coolingType;
+    if (s1.hasCentralAir !== undefined && document.getElementById('hasCentralAir')) document.getElementById('hasCentralAir').value = s1.hasCentralAir;
+    if (s1.hasBasement !== undefined && document.getElementById('hasBasement')) document.getElementById('hasBasement').value = s1.hasBasement;
     if (s1.availType) {
       const availRadio = document.querySelector(`input[name="availType"][value="${s1.availType}"]`);
       if (availRadio) { availRadio.checked = true; _setAvailDateVisibility(s1.availType); }
@@ -264,6 +284,12 @@
     }
     if (Array.isArray(s1.amenities) && s1.amenities.length) {
       document.querySelectorAll('#amenitiesGroup input').forEach(cb => { cb.checked = s1.amenities.includes(cb.value); });
+    }
+    if (Array.isArray(s1.appliances) && s1.appliances.length) {
+      document.querySelectorAll('#appliancesGroup input').forEach(cb => { cb.checked = s1.appliances.includes(cb.value); });
+    }
+    if (Array.isArray(s1.flooring) && s1.flooring.length) {
+      document.querySelectorAll('#flooringGroup input').forEach(cb => { cb.checked = s1.flooring.includes(cb.value); });
     }
     if (s1.description) {
       document.getElementById('description').value = s1.description;
@@ -391,12 +417,19 @@
       title:             v('title') || 'Untitled Listing',
       property_type:     v('propertyType'),
       address:           v('address'),
+      unit_number:       v('unitNumber') || null,
       city:              v('city'),
       state:             v('state'),
       zip:               v('zip'),
+      county:            v('county') || null,
+      neighborhood:      v('neighborhood') || null,
       bedrooms:          v('bedrooms') ? parseInt(v('bedrooms')) : null,
       bathrooms:         v('bathrooms') ? parseFloat(v('bathrooms')) : null,
+      half_bathrooms:    v('halfBathrooms') ? parseInt(v('halfBathrooms')) : null,
       square_footage:    v('sqft') ? parseInt(v('sqft')) : null,
+      lot_size_sqft:     v('lotSizeSqft') ? parseInt(v('lotSizeSqft')) : null,
+      floors:            v('floors') ? parseInt(v('floors')) : null,
+      year_built:        v('yearBuilt') ? parseInt(v('yearBuilt')) : null,
       monthly_rent:      v('rent') ? parseInt(v('rent')) : 0,
       security_deposit:  v('deposit') ? parseInt(v('deposit')) : null,
       available_date:    v('availDate') || null,
@@ -405,8 +438,13 @@
       pets_allowed:      document.querySelector('input[name="pets"]:checked')?.value === 'true',
       pet_details:       v('petDetails') || null,
       parking:           v('parking') || null,
+      ev_charging:       v('evCharging') || null,
+      has_central_air:   v('hasCentralAir') === 'true' ? true : v('hasCentralAir') === 'false' ? false : null,
+      has_basement:      v('hasBasement') === 'true' ? true : v('hasBasement') === 'false' ? false : null,
       utilities_included: getChecked('utilitiesGroup'),
       amenities:         getChecked('amenitiesGroup'),
+      appliances:        getChecked('appliancesGroup'),
+      flooring:          getChecked('flooringGroup'),
       description:       v('description'),
       showing_instructions: v('showingInstructions') || null,
       photo_urls:        previewPhotos,
@@ -753,14 +791,21 @@
       title            : v('title'),
       property_type    : v('propertyType'),
       address          : v('address'),
+      unit_number      : v('unitNumber') || null,
       city             : v('city'),
       state            : v('state'),
       zip              : v('zip'),
+      county           : v('county') || null,
+      neighborhood     : v('neighborhood') || null,
       lat              : geocodedLat,
       lng              : geocodedLng,
       bedrooms         : v('bedrooms') ? parseInt(v('bedrooms')) : null,
       bathrooms        : v('bathrooms') ? parseFloat(v('bathrooms')) : null,
+      half_bathrooms   : v('halfBathrooms') ? parseInt(v('halfBathrooms')) : null,
       square_footage   : v('sqft') ? parseInt(v('sqft')) : null,
+      lot_size_sqft    : v('lotSizeSqft') ? parseInt(v('lotSizeSqft')) : null,
+      floors           : v('floors') ? parseInt(v('floors')) : null,
+      year_built       : v('yearBuilt') ? parseInt(v('yearBuilt')) : null,
       monthly_rent     : parseInt(v('rent')),
       security_deposit : v('deposit') ? parseInt(v('deposit')) : null,
       last_months_rent : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
@@ -780,11 +825,16 @@
       parking          : v('parking') || null,
       garage_spaces    : v('garageSpaces') ? parseInt(v('garageSpaces')) : null,
       parking_fee      : v('parkingFee') ? parseInt(v('parkingFee')) : null,
+      ev_charging      : v('evCharging') || null,
       utilities_included: getChecked('utilitiesGroup'),
       amenities        : getChecked('amenitiesGroup'),
+      appliances       : getChecked('appliancesGroup'),
+      flooring         : getChecked('flooringGroup'),
       laundry_type     : v('laundryType') || null,
       heating_type     : v('heatingType') || null,
       cooling_type     : v('coolingType') || null,
+      has_central_air  : v('hasCentralAir') === 'true' ? true : v('hasCentralAir') === 'false' ? false : null,
+      has_basement     : v('hasBasement') === 'true' ? true : v('hasBasement') === 'false' ? false : null,
       description      : v('description'),
       showing_instructions: v('showingInstructions') || null,
       minimum_income_multiplier: v('minIncome') ? parseFloat(v('minIncome')) : null,

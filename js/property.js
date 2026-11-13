@@ -193,7 +193,7 @@ async function loadProperty(id) {
       try {
         const { data, error } = await client
           .from('properties')
-          .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero)')
+          .select('*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified), property_photos(id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url)')
           .eq('id', cleanId)
           .single();
         if (!error && data) {
@@ -229,7 +229,7 @@ async function loadProperty(id) {
         if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
           prop = rpcData[0];
           const [photosRes, landlordRes] = await Promise.all([
-            client.from('property_photos').select('id, url, file_id, display_order, is_hero').eq('property_id', cleanId).order('display_order', { ascending: true }),
+            client.from('property_photos').select('id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url').eq('property_id', cleanId).order('display_order', { ascending: true }),
             prop.landlord_id ? client.from('landlords').select('id, user_id, business_name, contact_name, avatar_url, tagline, verified').eq('id', prop.landlord_id).single() : Promise.resolve({ data: null })
           ]);
           prop.property_photos = photosRes.data || [];
@@ -253,9 +253,11 @@ async function loadProperty(id) {
   // (the legacy array columns were dropped; property_photos is now the source of truth)
   if (Array.isArray(prop.property_photos)) {
     const _sorted = prop.property_photos.slice().sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    prop._sorted_photos = _sorted;
     prop.photo_urls     = _sorted.map(p => p.url).filter(Boolean);
     prop.photo_file_ids = _sorted.map(p => p.file_id ?? null);
   } else {
+    prop._sorted_photos = [];
     prop.photo_urls     = [];
     prop.photo_file_ids = [];
   }
@@ -522,11 +524,12 @@ function renderProperty(p) {
   sd.type = 'application/ld+json';
   const amenities = [];
   if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
-  if (p.pets_allowed) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Pets Allowed",   "value": true });
   if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
   if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
   if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
                       amenities.push({ "@type": "LocationFeatureSpecification", "name": "Air Conditioning","value": p.cooling_type });
+  if (p.ev_charging && p.ev_charging !== 'none')
+                      amenities.push({ "@type": "LocationFeatureSpecification", "name": "EV Charging",     "value": p.ev_charging });
   sd.textContent = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
@@ -674,9 +677,9 @@ function renderProperty(p) {
   if (existingChipRow) existingChipRow.remove();
 
   const headerChips = [];
-  if (p.pets_allowed != null) headerChips.push({ icon: 'fa-paw', label: p.pets_allowed ? 'Pets Allowed' : 'No Pets' });
   if (p.laundry_type)     headerChips.push({ icon: 'fa-shirt', label: p.laundry_type });
   if (p.parking)          headerChips.push({ icon: 'fa-car', label: p.parking });
+  if (p.ev_charging && p.ev_charging !== 'none') headerChips.push({ icon: 'fa-charging-station', label: 'EV Charging' });
   if (p.move_in_special)  headerChips.push({ icon: 'fa-tag', label: p.move_in_special });
   if (headerChips.length) {
     const chipRow = document.createElement('div');
@@ -710,7 +713,7 @@ function renderProperty(p) {
   }
   if (p.square_footage)   metas.push({ label:'Sq. Ft.', value: p.square_footage.toLocaleString(), icon:'fa-ruler-combined' });
   if (p.property_type)    metas.push({ label:'Type', value: fmtPropType(p.property_type), icon:'fa-home' });
-  if (p.pets_allowed != null) metas.push({ label:'Pets', value: p.pets_allowed ? 'Allowed' : 'No Pets', icon:'fa-paw' });
+  if (p.property_subtype) metas.push({ label:'Style', value: p.property_subtype, icon:'fa-building' });
   if (p.laundry_type)     metas.push({ label:'Laundry', value: p.laundry_type, icon:'fa-shirt' });
   if (p.parking)          metas.push({ label:'Parking', value: p.parking, icon:'fa-car' });
   if (p.year_built)       metas.push({ label:'Year Built', value: p.year_built, icon:'fa-calendar-days' });
@@ -718,6 +721,7 @@ function renderProperty(p) {
   if (p.lot_size_sqft)    metas.push({ label:'Lot Size', value: Number(p.lot_size_sqft).toLocaleString() + ' sqft', icon:'fa-ruler' });
   if (p.has_basement === true)    metas.push({ label:'Basement',    value:'Yes', icon:'fa-dungeon' });
   if (p.has_central_air === true) metas.push({ label:'Central Air', value:'Yes', icon:'fa-snowflake' });
+  if (p.ev_charging && p.ev_charging !== 'none') metas.push({ label:'EV Charging', value: String(p.ev_charging).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), icon:'fa-charging-station' });
   document.getElementById('detailMeta').innerHTML = metas.map(m => `
     <div class="detail-meta-item">
       <div class="detail-meta-icon"><i class="fas ${m.icon}"></i></div>
@@ -765,6 +769,36 @@ function renderProperty(p) {
     }
   }
 
+  // Render additional source media (floor plans & videos) when present
+  const safeMediaItems = (raw) => {
+    let arr = raw;
+    if (typeof arr === 'string') {
+      try { arr = JSON.parse(arr); } catch (_) { arr = []; }
+    }
+    if (!Array.isArray(arr)) return [];
+    return arr.map((item, idx) => {
+      if (typeof item === 'string' && /^https?:\/\//i.test(item.trim())) {
+        return { url: item.trim(), label: `Item ${idx + 1}` };
+      }
+      if (item && typeof item === 'object' && typeof item.url === 'string' && /^https?:\/\//i.test(item.url.trim())) {
+        return { url: item.url.trim(), label: item.title || item.label || item.name || `Item ${idx + 1}` };
+      }
+      return null;
+    }).filter(Boolean);
+  };
+  const fpItems = safeMediaItems(p.floor_plans);
+  const vidItems = safeMediaItems(p.videos);
+  if (fpItems.length || vidItems.length) {
+    const mediaWrap = document.createElement('div');
+    mediaWrap.id = 'extraMediaLinks';
+    mediaWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;';
+    mediaWrap.innerHTML = [
+      ...fpItems.map((fp, i) => `<a href="${esc(fp.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:6px;font-size:.82rem;text-decoration:none"><i class="fas fa-ruler-combined" style="color:#0284c7"></i> Floor Plan${fpItems.length > 1 ? ' ' + (i + 1) : ''}</a>`),
+      ...vidItems.map((vd, i) => `<a href="${esc(vd.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:6px;font-size:.82rem;text-decoration:none"><i class="fas fa-video" style="color:#0284c7"></i> Video Tour${vidItems.length > 1 ? ' ' + (i + 1) : ''}</a>`),
+    ].join('');
+    descEl.closest('.detail-section')?.appendChild(mediaWrap);
+  }
+
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
   const safeArr = (val) => {
@@ -789,8 +823,7 @@ function renderProperty(p) {
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
-      .slice(0, 12)
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(String(a).trim()) && !/smok/i.test(String(a)))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
       document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
@@ -802,7 +835,7 @@ function renderProperty(p) {
     hasAmenities = true;
     document.getElementById('appliancesSection').style.display = '';
     document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(a.trim()) && !/smok/i.test(a))
+      .filter(a => a && !/^(yes|no|true|false)$/i.test(String(a).trim()) && !/smok/i.test(String(a)))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
@@ -820,20 +853,46 @@ function renderProperty(p) {
     }
     flooringDiv.style.display = '';
     document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(f.trim()) && !/smok/i.test(f))
+      .filter(f => f && !/^(yes|no|true|false)$/i.test(String(f).trim()) && !/smok/i.test(String(f)))
       .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 
   const utilRows = [];
-  if (p.utilities_included?.length) utilRows.push(...p.utilities_included
-    .filter(u => u && !/smok/i.test(u))
-    .map(u => `<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>${esc(u)} Included</div>`));
+  const utilDetails = (p.utility_details && typeof p.utility_details === 'object') ? p.utility_details : {};
+  const includedSet = new Set();
+  const addIncludedUtil = (val) => {
+    const clean = String(val || '').trim();
+    if (!clean || /^(yes|no|true|false|none)$/i.test(clean) || /smok/i.test(clean)) return;
+    const key = clean.toLowerCase();
+    if (includedSet.has(key)) return;
+    includedSet.add(key);
+    utilRows.push(`<div class="amenity-item"><i class="fas fa-bolt icon-amber"></i>Included in Rent: ${esc(amenityLabel(clean))}</div>`);
+  };
+  (p.utilities_included || []).forEach(addIncludedUtil);
+  safeArr(utilDetails.utilities_included_confirmed).forEach(addIncludedUtil);
+
+  const fmtUtilVal = (v) => Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean).join(', ') : String(v ?? '').trim();
+  const utilServiceMap = [
+    ['electric', 'Electric Utility', 'fa-plug'],
+    ['gas', 'Gas Utility', 'fa-fire-flame-simple'],
+    ['water_source', 'Water Source', 'fa-droplet'],
+    ['sewer', 'Sewer Service', 'fa-faucet-drip'],
+    ['utilities', 'Utility Hookups / Services', 'fa-network-wired'],
+  ];
+  utilServiceMap.forEach(([key, label, icon]) => {
+    const val = fmtUtilVal(utilDetails[key]);
+    if (val && !/^(none|no|false)$/i.test(val) && !/smok/i.test(val)) {
+      utilRows.push(`<div class="amenity-item"><i class="fas ${icon}"></i>${label}: ${esc(val)}</div>`);
+    }
+  });
+
   if (p.parking) utilRows.push(`<div class="amenity-item"><i class="fas fa-car"></i>Parking: ${esc(p.parking)}</div>`);
   if (p.laundry_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-shirt"></i>Laundry: ${esc(p.laundry_type)}</div>`);
   if (p.heating_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-fire"></i>Heating: ${esc(p.heating_type)}</div>`);
   if (p.cooling_type) utilRows.push(`<div class="amenity-item"><i class="fas fa-snowflake"></i>Cooling: ${esc(p.cooling_type)}</div>`);
   if (p.garage_spaces) utilRows.push(`<div class="amenity-item"><i class="fas fa-car-side"></i>Parking Spaces: ${p.garage_spaces}</div>`);
-  if (p.parking_fee) utilRows.push(`<div class="amenity-item"><i class="fas fa-dollar-sign icon-amber"></i>Parking Fee: ${Number(p.parking_fee).toLocaleString()}/mo</div>`);
+  if (p.parking_fee) utilRows.push(`<div class="amenity-item"><i class="fas fa-dollar-sign icon-amber"></i>Parking Fee: $${Number(p.parking_fee).toLocaleString()}/mo</div>`);
+  if (p.ev_charging && p.ev_charging !== 'none') utilRows.push(`<div class="amenity-item"><i class="fas fa-charging-station icon-teal"></i>EV Charging: ${esc(amenityLabel(p.ev_charging))}</div>`);
   if (!utilRows.length && (p.parking || p.laundry_type || p.heating_type || p.cooling_type)) {
     utilRows.push(`<div class="amenity-item"><i class="fas fa-info-circle"></i>Additional utility details will appear here as the listing is confirmed.</div>`);
   }
@@ -847,11 +906,11 @@ function renderProperty(p) {
   leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Application Fee: $${leaseAppFee.toLocaleString()}</div>`);
   if (p.last_months_rent) leaseItems.push(`<div class="amenity-item"><i class="fas fa-calendar-alt"></i>Last Month's Rent: $${Number(p.last_months_rent).toLocaleString()}</div>`);
   if (p.admin_fee) leaseItems.push(`<div class="amenity-item"><i class="fas fa-receipt"></i>Admin / Move-in Fee: $${Number(p.admin_fee).toLocaleString()}</div>`);
+  if (p.hoa_fee != null && Number(p.hoa_fee) > 0) {
+    const hoaFreq = p.hoa_fee_frequency ? ` / ${esc(p.hoa_fee_frequency)}` : '';
+    leaseItems.push(`<div class="amenity-item"><i class="fas fa-building"></i>HOA Fee: $${Number(p.hoa_fee).toLocaleString()}${hoaFreq}</div>`);
+  }
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.pet_deposit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Deposit: $${Number(p.pet_deposit).toLocaleString()}</div>`);
-  if (p.pet_types_allowed?.length) leaseItems.push(`<div class="amenity-item"><i class="fas fa-paw"></i>Pet Types: ${p.pet_types_allowed.map(esc).join(', ')}</div>`);
-  if (p.pet_weight_limit) leaseItems.push(`<div class="amenity-item"><i class="fas fa-weight-scale"></i>Pet Weight Limit: ${esc(p.pet_weight_limit)} lbs max</div>`);
-  if (p.pet_details) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-paw icon-teal"></i><span><strong>Pet Policy:</strong> ${esc(p.pet_details)}</span></div>`);
   if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
   if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
@@ -1752,7 +1811,11 @@ function lightboxShow(idx) {
   }, _lbNavDir !== 0 ? 120 : 0);
 
   const counterEl = document.getElementById('lightboxCounter');
-  if (counterEl) counterEl.textContent = `${idx + 1} / ${allPhotos.length}`;
+  if (counterEl) {
+    const meta = currentProperty?._sorted_photos?.[idx];
+    const cap = (meta?.caption || meta?.room_label || '').trim();
+    counterEl.textContent = cap ? `${idx + 1} / ${allPhotos.length} — ${cap}` : `${idx + 1} / ${allPhotos.length}`;
+  }
 
   // Sync lightbox filmstrip
   document.querySelectorAll('.lightbox-thumb').forEach((t, i) => {
@@ -2278,8 +2341,9 @@ async function executeAdminDeleteProperty(prop, triggerBtn) {
    • Quick-edit drawer: all core fields, photo reorder/delete, save + audit log, delete
    ──────────────────────────────────────────────────────────────────────── */
 function initAdminPropertyPanel(prop) {
-  const STATUSES = ['active','rented','inactive','maintenance','draft','paused','archived'];
+  const STATUSES = ['active','private_placement','rented','inactive','maintenance','draft','paused','archived'];
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const fmtStatusLabel = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   // ── Inject drawer CSS once ──
   if (!document.getElementById('adminDrawerCSS')) {
@@ -2386,7 +2450,7 @@ function initAdminPropertyPanel(prop) {
     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
       <span style="font-size:11px;color:#64748b">Status:</span>
       <select id="adminStatusSelect" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer">
-        ${STATUSES.map(s => `<option value="${s}"${s===prop.status?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+        ${STATUSES.map(s => `<option value="${s}"${s===prop.status?' selected':''}>${fmtStatusLabel(s)}</option>`).join('')}
       </select>
       <button id="adminStatusSaveBtn" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;display:none">Save</button>
       <span id="adminStatusSpinner" style="color:#64748b;font-size:12px;display:none"><i class="fas fa-spinner fa-spin"></i></span>
@@ -2550,10 +2614,11 @@ function buildAdminEditDrawer(prop) {
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
   const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','loft','mobile_home','commercial','other'];
-  const STATUSES   = ['active','rented','inactive','maintenance','draft','paused','archived'];
+  const STATUSES   = ['active','private_placement','rented','inactive','maintenance','draft','paused','archived'];
   const LAUNDRY    = ['','In-unit','Washer/Dryer Hookups','Shared (On-site)','Laundromat Nearby','None'];
   const HEATING    = ['','Central','Forced Air','Baseboard','Radiant','Heat Pump','Wall Unit','None'];
   const COOLING    = ['','Central AC','Window Units','Mini-Split','None'];
+  const fmtStatusLabel = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   // Working photo array (sorted by display_order)
   let _photos = Array.isArray(prop.property_photos)
@@ -2590,7 +2655,7 @@ function buildAdminEditDrawer(prop) {
   const p = prop;
   const stateOpts   = ['<option value="">— State —</option>',...US_STATES.map(s => `<option value="${s}"${p.state===s?' selected':''}>${s}</option>`)].join('');
   const typeOpts    = PROP_TYPES.map(t => `<option value="${t}"${p.property_type===t?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1).replace(/_/g,' ')}</option>`).join('');
-  const statusOpts  = STATUSES.map(s => `<option value="${s}"${p.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('');
+  const statusOpts  = STATUSES.map(s => `<option value="${s}"${p.status===s?' selected':''}>${fmtStatusLabel(s)}</option>`).join('');
   const laundryOpts = LAUNDRY.map(v => `<option value="${v}"${p.laundry_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
   const heatingOpts = HEATING.map(v => `<option value="${v}"${p.heating_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
   const coolingOpts = COOLING.map(v => `<option value="${v}"${p.cooling_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
@@ -2622,10 +2687,20 @@ function buildAdminEditDrawer(prop) {
             <select class="adw-input" id="adwPropType">${typeOpts}</select>
           </div>
         </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwSubtype">Architectural Subtype</label>
+            <input class="adw-input" id="adwSubtype" type="text" value="${esc(p.property_subtype||'')}" placeholder="e.g. Colonial, Ranch, Side-by-Side">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwUnit">Unit / Apt #</label>
+            <input class="adw-input" id="adwUnit" type="text" value="${esc(p.unit_number||'')}" placeholder="e.g. Apt 2B">
+          </div>
+        </div>
       </div>
 
       <div class="adw-section">
-        <div class="adw-section-title"><i class="fas fa-dollar-sign"></i> Pricing</div>
+        <div class="adw-section-title"><i class="fas fa-dollar-sign"></i> Pricing &amp; Financial</div>
         <div class="adw-row c3">
           <div class="adw-field">
             <label class="adw-label" for="adwRent">Monthly Rent ($)</label>
@@ -2638,6 +2713,20 @@ function buildAdminEditDrawer(prop) {
           <div class="adw-field">
             <label class="adw-label" for="adwAppFee">App Fee ($)</label>
             <input class="adw-input" id="adwAppFee" type="number" min="0" value="${p.application_fee??''}">
+          </div>
+        </div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwHoaFee">HOA Fee ($)</label>
+            <input class="adw-input" id="adwHoaFee" type="number" min="0" value="${p.hoa_fee??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwHoaFreq">HOA Frequency</label>
+            <input class="adw-input" id="adwHoaFreq" type="text" value="${esc(p.hoa_fee_frequency||'')}" placeholder="monthly, annually">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwTaxAnnual">Annual Tax ($)</label>
+            <input class="adw-input" id="adwTaxAnnual" type="number" min="0" value="${p.tax_annual_amount??''}">
           </div>
         </div>
         <div class="adw-row">
@@ -2653,7 +2742,7 @@ function buildAdminEditDrawer(prop) {
       </div>
 
       <div class="adw-section">
-        <div class="adw-section-title"><i class="fas fa-bed"></i> Specs</div>
+        <div class="adw-section-title"><i class="fas fa-bed"></i> Specs &amp; Systems</div>
         <div class="adw-row c3">
           <div class="adw-field">
             <label class="adw-label" for="adwBeds">Bedrooms</label>
@@ -2668,14 +2757,32 @@ function buildAdminEditDrawer(prop) {
             <input class="adw-input" id="adwHalfBaths" type="number" min="0" value="${p.half_bathrooms??''}">
           </div>
         </div>
-        <div class="adw-row">
+        <div class="adw-row c3">
           <div class="adw-field">
             <label class="adw-label" for="adwSqft">Sq Footage</label>
             <input class="adw-input" id="adwSqft" type="number" min="0" value="${p.square_footage??''}">
           </div>
           <div class="adw-field">
+            <label class="adw-label" for="adwLotSize">Lot Size (sqft)</label>
+            <input class="adw-input" id="adwLotSize" type="number" min="0" value="${p.lot_size_sqft??''}">
+          </div>
+          <div class="adw-field">
             <label class="adw-label" for="adwYearBuilt">Year Built</label>
             <input class="adw-input" id="adwYearBuilt" type="number" min="1800" max="2030" value="${p.year_built??''}">
+          </div>
+        </div>
+        <div class="adw-row c3">
+          <div class="adw-field">
+            <label class="adw-label" for="adwFloors">Floors</label>
+            <input class="adw-input" id="adwFloors" type="number" min="1" value="${p.floors??''}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwParking">Parking</label>
+            <input class="adw-input" id="adwParking" type="text" value="${esc(p.parking||'')}" placeholder="2-car garage, driveway">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwGarageSpaces">Garage Spaces</label>
+            <input class="adw-input" id="adwGarageSpaces" type="number" min="0" value="${p.garage_spaces??''}">
           </div>
         </div>
         <div class="adw-row c3">
@@ -2692,10 +2799,16 @@ function buildAdminEditDrawer(prop) {
             <select class="adw-input" id="adwCooling">${coolingOpts}</select>
           </div>
         </div>
+        <div class="adw-row c1">
+          <div class="adw-field">
+            <label class="adw-label" for="adwEvCharging">EV Charging</label>
+            <input class="adw-input" id="adwEvCharging" type="text" value="${esc(p.ev_charging||'')}" placeholder="e.g. Level 2, 240V outlet, None">
+          </div>
+        </div>
       </div>
 
       <div class="adw-section">
-        <div class="adw-section-title"><i class="fas fa-location-dot"></i> Address</div>
+        <div class="adw-section-title"><i class="fas fa-location-dot"></i> Address &amp; Location</div>
         <div class="adw-row c1">
           <div class="adw-field">
             <label class="adw-label" for="adwAddress">Street Address</label>
@@ -2714,6 +2827,40 @@ function buildAdminEditDrawer(prop) {
           <div class="adw-field">
             <label class="adw-label" for="adwZip">ZIP</label>
             <input class="adw-input" id="adwZip" type="text" value="${esc(p.zip||'')}" maxlength="10">
+          </div>
+        </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwCounty">County</label>
+            <input class="adw-input" id="adwCounty" type="text" value="${esc(p.county||'')}">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwNeighborhood">Neighborhood</label>
+            <input class="adw-input" id="adwNeighborhood" type="text" value="${esc(p.neighborhood||'')}">
+          </div>
+        </div>
+      </div>
+
+      <div class="adw-section">
+        <div class="adw-section-title"><i class="fas fa-list-check"></i> Features &amp; Utilities (comma-separated)</div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwAmenities">Amenities</label>
+            <input class="adw-input" id="adwAmenities" type="text" value="${esc((p.amenities||[]).join(', '))}" placeholder="Fenced Yard, Patio, Fireplace">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwAppliances">Appliances</label>
+            <input class="adw-input" id="adwAppliances" type="text" value="${esc((p.appliances||[]).join(', '))}" placeholder="Refrigerator, Dishwasher, Microwave">
+          </div>
+        </div>
+        <div class="adw-row">
+          <div class="adw-field">
+            <label class="adw-label" for="adwFlooring">Flooring</label>
+            <input class="adw-input" id="adwFlooring" type="text" value="${esc((p.flooring||[]).join(', '))}" placeholder="Hardwood, Tile, Carpet">
+          </div>
+          <div class="adw-field">
+            <label class="adw-label" for="adwUtilities">Utilities Included</label>
+            <input class="adw-input" id="adwUtilities" type="text" value="${esc((p.utilities_included||[]).join(', '))}" placeholder="Water, Trash, Sewer">
           </div>
         </div>
       </div>
@@ -3106,26 +3253,46 @@ function buildAdminEditDrawer(prop) {
       return v !== '' && v != null ? parseInt(v) : null;
     };
     const str = (id) => document.getElementById(id)?.value.trim() || null;
+    const csvArr = (id) => {
+      const v = document.getElementById(id)?.value || '';
+      return v.split(',').map(s => s.trim()).filter(Boolean);
+    };
 
     const payload = {
       title:                str('adwTitle'),
       status:               document.getElementById('adwStatus')?.value || prop.status,
       property_type:        document.getElementById('adwPropType')?.value || null,
+      property_subtype:     str('adwSubtype'),
+      unit_number:          str('adwUnit'),
       monthly_rent:         num('adwRent'),
       security_deposit:     num('adwDeposit'),
       application_fee:      num('adwAppFee'),
+      hoa_fee:              num('adwHoaFee'),
+      hoa_fee_frequency:    str('adwHoaFreq'),
+      tax_annual_amount:    num('adwTaxAnnual'),
       bedrooms:             int('adwBeds'),
       bathrooms:            num('adwBaths'),
       half_bathrooms:       int('adwHalfBaths'),
       square_footage:       int('adwSqft'),
+      lot_size_sqft:        int('adwLotSize'),
+      floors:               int('adwFloors'),
       year_built:           int('adwYearBuilt'),
+      parking:              str('adwParking'),
+      garage_spaces:        int('adwGarageSpaces'),
       laundry_type:         document.getElementById('adwLaundry')?.value || null,
       heating_type:         document.getElementById('adwHeating')?.value || null,
       cooling_type:         document.getElementById('adwCooling')?.value || null,
+      ev_charging:          str('adwEvCharging'),
       address:              str('adwAddress'),
       city:                 str('adwCity'),
       state:                document.getElementById('adwState')?.value || null,
       zip:                  str('adwZip'),
+      county:               str('adwCounty'),
+      neighborhood:         str('adwNeighborhood'),
+      amenities:            csvArr('adwAmenities'),
+      appliances:           csvArr('adwAppliances'),
+      flooring:             csvArr('adwFlooring'),
+      utilities_included:   csvArr('adwUtilities'),
       available_date:       document.getElementById('adwAvailDate')?.value || null,
       description:          str('adwDesc'),
       admin_notes:          str('adwAdminNotes'),
@@ -3134,6 +3301,18 @@ function buildAdminEditDrawer(prop) {
     };
 
     try {
+      const nowIso = new Date().toISOString();
+      const baseProv = (prop.field_provenance && typeof prop.field_provenance === 'object') ? { ...prop.field_provenance } : {};
+      Object.keys(payload).forEach((k) => {
+        if (k === 'updated_at') return;
+        const prev = JSON.stringify(prop[k] ?? null);
+        const next = JSON.stringify(payload[k] ?? null);
+        if (prev !== next) {
+          baseProv[k] = { origin: 'admin_edited', edited_at: nowIso };
+        }
+      });
+      payload.field_provenance = baseProv;
+
       // 1. Save core property fields
       const res = await window.CP.Properties.update(prop.id, payload);
       if (!res.ok) throw new Error(res.error || 'Property update failed');
@@ -3265,10 +3444,11 @@ function buildAdminEditDrawer(prop) {
         if (mb) mb.textContent = rentFmt + '/mo';
       }
       // Address
-      if (payload.address || payload.city || payload.state || payload.zip) {
+      if (payload.address || payload.unit_number !== undefined || payload.city || payload.state || payload.zip) {
         const ae = document.getElementById('detailAddress');
+        const unitSeg = payload.unit_number ? ' ' + _esc2(payload.unit_number) : '';
         if (ae) ae.innerHTML = '<i class="fas fa-map-marker-alt"></i> '
-          + _esc2(payload.address||prop.address||'') + ', '
+          + _esc2(payload.address||prop.address||'') + unitSeg + ', '
           + _esc2(payload.city||prop.city||'') + ', '
           + _esc2(payload.state||prop.state||'') + ' '
           + _esc2(payload.zip||prop.zip||'');
@@ -3490,17 +3670,6 @@ function renderRenterRequirements(p) {
 
   const reqs = [];
 
-  if (p.pets_allowed != null) {
-    let petVal = p.pets_allowed ? 'Allowed' : 'Not allowed';
-    if (p.pets_allowed && p.pet_types_allowed?.length) petVal += ' · ' + p.pet_types_allowed.join(', ');
-    if (p.pets_allowed && p.pet_weight_limit)          petVal += ' · up to ' + p.pet_weight_limit + ' lbs';
-    reqs.push({
-      icon: 'fa-paw',
-      label: 'Pets',
-      value: petVal,
-      type: p.pets_allowed ? 'req-emerald' : 'req-rose'
-    });
-  }
   if (p.minimum_credit_score) {
     reqs.push({
       icon: 'fa-chart-line',
@@ -3574,6 +3743,26 @@ function renderPropFacts(p) {
     row('Laundry', p.laundry_type),
   ]);
 
+  const sd = (p.structural_details && typeof p.structural_details === 'object') ? p.structural_details : {};
+  const fmtStructVal = (v) => {
+    if (Array.isArray(v)) return v.map(x => String(x || '').trim()).filter(Boolean).join(', ') || null;
+    if (typeof v === 'boolean') return v ? 'Yes' : null;
+    const s = String(v ?? '').trim();
+    return s && !/^(false|none|no)$/i.test(s) ? s : null;
+  };
+  const architectureCard = card('Home Architecture &amp; Systems', 'fa-compass-drafting', [
+    row('Property Subtype', p.property_subtype),
+    row('Architectural Style', fmtStructVal(sd.architectural_style)),
+    row('Construction Materials', fmtStructVal(sd.construction_materials)),
+    row('Foundation', fmtStructVal(sd.foundation_details)),
+    row('Roof', fmtStructVal(sd.roof)),
+    row('Exterior Features', fmtStructVal(sd.exterior_features)),
+    row('Fencing', fmtStructVal(sd.fencing)),
+    row('Fireplace', fmtStructVal(sd.fireplace_features)),
+    row('Pool Features', fmtStructVal(sd.pool_features)),
+    row('EV Charging', (p.ev_charging && p.ev_charging !== 'none') ? amenityLabel(p.ev_charging) : fmtStructVal(sd.ev_charging)),
+  ]);
+
   // Location: county + neighborhood (not shown elsewhere in detail)
   const locationCard = card('Location', 'fa-map-marker-alt', [
     row('County',       p.county),
@@ -3587,7 +3776,16 @@ function renderPropFacts(p) {
     row('Parking fee',   p.parking_fee ? '$' + Number(p.parking_fee).toLocaleString() + '/mo' : null),
   ]);
 
-  const hasContent = interiorCard || locationCard || parkingCard;
+  const financialCard = card('Property Financial Disclosures', 'fa-file-invoice-dollar', [
+    row('HOA Fee', (p.hoa_fee != null && Number(p.hoa_fee) > 0)
+      ? '$' + Number(p.hoa_fee).toLocaleString() + (p.hoa_fee_frequency ? ' / ' + p.hoa_fee_frequency : '')
+      : null),
+    row('Annual Property Tax (Source)', (p.tax_annual_amount != null && Number(p.tax_annual_amount) > 0)
+      ? '$' + Number(p.tax_annual_amount).toLocaleString() + '/yr'
+      : null),
+  ]);
+
+  const hasContent = interiorCard || architectureCard || locationCard || parkingCard || financialCard;
   if (!hasContent) return;
 
   // Show divider between Features tabs and this section when both are visible
@@ -3605,8 +3803,10 @@ function renderPropFacts(p) {
       <div class="prop-section-eyebrow">Property details</div>
       <div class="prop-section-head">More about <em>this home</em>.</div>
       ${interiorCard}
+      ${architectureCard}
       ${locationCard}
       ${parkingCard}
+      ${financialCard}
     </div>`;
 }
 
@@ -3690,6 +3890,30 @@ function renderNeighborhoodIntelligence(p) {
   section.style.display = '';
   if (divider) divider.style.display = '';
 
+  const reportedSchoolsRaw = (p.location_details && Array.isArray(p.location_details.schools)) ? p.location_details.schools : [];
+  const reportedSchoolsHtml = reportedSchoolsRaw.length ? `
+    <div class="pf-card" style="margin-top:12px">
+      <div class="pf-card-head">
+        <i class="fas fa-graduation-cap" style="color:var(--m-brand);font-size:11px"></i>
+        <span class="pf-card-head-text">Listing-Reported School Information</span>
+      </div>
+      <div class="pf-card-body">
+        ${reportedSchoolsRaw.map((sch, idx) => {
+          const isObj = sch && typeof sch === 'object';
+          const name = isObj ? (sch.name || sch.title || 'Reported School') : String(sch || '');
+          if (!name) return '';
+          const metaParts = isObj ? [sch.level || sch.type, sch.grades, sch.district, sch.distance != null ? `${sch.distance} mi` : null].filter(Boolean) : [];
+          return `<div class="pf-row${idx === reportedSchoolsRaw.length - 1 ? ' pf-row-last' : ''}">
+            <span class="pf-row-label" style="color:var(--m-ink);font-weight:600">${esc(name)}</span>
+            ${metaParts.length ? `<span class="pf-row-value" style="font-weight:500;color:var(--m-muted)">${esc(metaParts.join(' · '))}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="padding:8px 14px;background:var(--m-surface-2);border-top:1px solid var(--m-border);font-size:11.5px;color:var(--m-muted)">
+        Listing-reported school information — verify independently with the school district.
+      </div>
+    </div>` : '';
+
   section.innerHTML = `
     <div class="prop-section">
       <div class="prop-section-eyebrow">Neighborhood &amp; Location Intelligence</div>
@@ -3716,6 +3940,7 @@ function renderNeighborhoodIntelligence(p) {
           </div>
         </a>` : ''}
       </div>
+      ${reportedSchoolsHtml}
       <div id="nearbyPlacesPanel" class="score-card" style="display:block;margin-top:12px;cursor:default">
         <div style="font-weight:700;color:var(--m-ink)">Nearby places</div>
         <div id="nearbyPlacesContent" class="score-card-sub" style="margin-top:6px">Nearby place information loads when this section is viewed.</div>

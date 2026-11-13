@@ -237,6 +237,7 @@
     <button class="filter-pill" data-filter="house"><i class="fas fa-home"></i> Houses</button>
     <button class="filter-pill" data-filter="condo"><i class="fas fa-city"></i> Condos</button>
     <button class="filter-pill" data-filter="townhouse"><i class="fas fa-house-user"></i> Townhomes</button>
+    <button class="filter-pill" data-filter="duplex"><i class="fas fa-building"></i> Duplexes</button>
     <div class="filter-divider"></div>
     <button class="filter-pill" data-filter="pets"><i class="fas fa-paw"></i> Pet Friendly</button>
     <button class="filter-pill" data-filter="parking"><i class="fas fa-car"></i> Parking</button>
@@ -279,6 +280,31 @@
         <div class="filter-dropdown-row">
           <label>Max Price</label>
           <input type="number" id="advMaxRent" placeholder="e.g. 1500" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Min Sqft</label>
+          <input type="number" id="advMinSqft" placeholder="e.g. 900" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Max Sqft</label>
+          <input type="number" id="advMaxSqft" placeholder="e.g. 2500" min="0" step="50">
+        </div>
+        <div class="filter-dropdown-row">
+          <label>Amenity</label>
+          <select id="advAmenityFilter">
+            <option value="">Any</option>
+            <option value="garage">Garage</option>
+            <option value="central_air">Central A/C</option>
+            <option value="washer_dryer">Washer / Dryer</option>
+            <option value="dishwasher">Dishwasher</option>
+            <option value="hardwood">Hardwood Floors</option>
+            <option value="basement">Basement</option>
+            <option value="fenced_yard">Fenced Yard</option>
+            <option value="balcony">Balcony / Patio</option>
+            <option value="fireplace">Fireplace</option>
+            <option value="pool">Pool</option>
+            <option value="ev_charging">EV Charging</option>
+          </select>
         </div>
         <div class="filter-dropdown-row">
           <label>Laundry</label>
@@ -347,6 +373,7 @@
             <option value="price_asc">Price ↑</option>
             <option value="price_desc">Price ↓</option>
             <option value="beds_desc">Most Beds</option>
+            <option value="sqft_desc">Largest Sqft</option>
           </select>
         </div>
       </div>
