@@ -802,29 +802,36 @@ function renderProperty(p) {
 
   let hasAmenities = false, hasUtilities = false, hasLease = false;
 
+  const cleanChipList = (list) => list.filter(item => {
+    const s = String(item ?? '').trim();
+    return s.length > 1 && !/^[\[\]",\\]+$/.test(s) && !/^(yes|no|true|false)$/i.test(s) && !/smok/i.test(s);
+  });
+
   const safeArr = (val) => {
     if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
+    let arr = val;
+    if (typeof arr === 'string') {
+      const trimmed = arr.trim();
+      if (!trimmed || trimmed === '[]') return [];
       try {
-        const parsed = JSON.parse(val);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (_) {}
-      return val.split(',').map(s => s.trim()).filter(Boolean);
+        const parsed = JSON.parse(trimmed);
+        arr = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+      } catch (_) {
+        arr = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+      }
     }
-    return [];
+    return Array.isArray(arr) ? arr : [];
   };
 
-  p.amenities = safeArr(p.amenities);
-  p.appliances = safeArr(p.appliances);
-  p.flooring = safeArr(p.flooring);
+  p.amenities = cleanChipList(safeArr(p.amenities));
+  p.appliances = cleanChipList(safeArr(p.appliances));
+  p.flooring = cleanChipList(safeArr(p.flooring));
   p.utilities_included = safeArr(p.utilities_included);
   p.pet_types_allowed = safeArr(p.pet_types_allowed);
 
   if (p.amenities?.length) {
     hasAmenities = true;
     const amenityItems = p.amenities
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(String(a).trim()) && !/smok/i.test(String(a)))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)} ${amenityIconColor(a)}"></i>${esc(amenityLabel(a))}</div>`);
     if (amenityItems.length) {
       document.getElementById('amenitiesGrid').innerHTML = amenityItems.join('');
@@ -836,7 +843,6 @@ function renderProperty(p) {
     hasAmenities = true;
     document.getElementById('appliancesSection').style.display = '';
     document.getElementById('appliancesGrid').innerHTML = p.appliances
-      .filter(a => a && !/^(yes|no|true|false)$/i.test(String(a).trim()) && !/smok/i.test(String(a)))
       .map(a => `<div class="amenity-item"><i class="fas ${amenityIcon(a)}"></i>${esc(amenityLabel(a))}</div>`).join('');
   }
   if (p.flooring?.length) {
@@ -854,7 +860,6 @@ function renderProperty(p) {
     }
     flooringDiv.style.display = '';
     document.getElementById('flooringGrid').innerHTML = p.flooring
-      .filter(f => f && !/^(yes|no|true|false)$/i.test(String(f).trim()) && !/smok/i.test(String(f)))
       .map(f => `<div class="amenity-item"><i class="fas fa-layer-group"></i>${esc(amenityLabel(f))}</div>`).join('');
   }
 

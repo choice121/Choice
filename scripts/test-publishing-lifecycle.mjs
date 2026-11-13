@@ -124,6 +124,28 @@ async function main() {
     const reEnabled = enrichPipelineProperty(withMediaSample, { visibility: 'private_placement', includeToursAndVideos: true });
     assert.ok(reEnabled.propertyRecord.virtual_tour_url.includes('view-imx'), 'Underlying clean tour logic must remain intact when re-enabled');
     assert.strictEqual(reEnabled.propertyRecord.videos.length, 1, 'Underlying clean video logic must remain intact when re-enabled');
+
+    // Regression guard: JSON-stringified appliances from pipeline_properties must NEVER split character-by-character
+    const stringAppliancesSample = {
+      ...sample,
+      appliances: '["Dishwasher","Oven","Refrigerator"]',
+      amenities: '["Laundry Room","Swimming Pool"]',
+      flooring: '["Tile"]',
+    };
+    const strEnriched = enrichPipelineProperty(stringAppliancesSample, { visibility: 'private_placement' });
+    assert.deepStrictEqual(
+      strEnriched.propertyRecord.appliances,
+      ['Dishwasher', 'Oven', 'Refrigerator'],
+      'JSON-stringified appliances must parse cleanly without splitting characters'
+    );
+
+    const emptyStrAppliances = {
+      ...sample,
+      original_description: 'Nice single-family home with fenced yard.',
+      appliances: '[]',
+    };
+    const emptyEnriched = enrichPipelineProperty(emptyStrAppliances, { visibility: 'private_placement' });
+    assert.deepStrictEqual(emptyEnriched.propertyRecord.appliances, [], 'Empty JSON array string must not yield "[" and "]"');
   });
 
   // 2. Decimal Bath Precision & Architectural Classification

@@ -85,18 +85,27 @@ export function classifyPropertyType(prop) {
 
 export function parseJsonArrayField(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val.filter(Boolean);
-  if (typeof val === 'string') {
-    const trimmed = val.trim();
+  let arr = val;
+  if (typeof arr === 'string') {
+    const trimmed = arr.trim();
     if (!trimmed || trimmed === '[]') return [];
     try {
       const parsed = JSON.parse(trimmed);
-      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+      arr = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
     } catch {
-      return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+      arr = trimmed.split(',').map((s) => s.trim());
     }
   }
-  return [];
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x) => (typeof x === 'string' ? x.trim() : x))
+    .filter((x) => {
+      if (!x) return false;
+      if (typeof x === 'string') {
+        return x.length > 1 && !/^[\[\]",\\]+$/.test(x);
+      }
+      return true;
+    });
 }
 
 export function extractPhotoEntriesInOrder(prop) {

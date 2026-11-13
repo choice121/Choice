@@ -43,7 +43,26 @@ export function extractMinedFacts(rawDescription = '', structuredData = {}) {
   if (text.includes('storage shed') || text.includes('shed')) outdoorFeatures.push('Storage Shed');
   if (text.includes('carport')) outdoorFeatures.push('Sheltered Carport');
 
-  const appliances = new Set(structuredData.appliances || []);
+  const parseArrayInput = (val) => {
+    if (!val) return [];
+    let arr = val;
+    if (typeof arr === 'string') {
+      const trimmed = arr.trim();
+      if (!trimmed || trimmed === '[]') return [];
+      try {
+        const parsed = JSON.parse(trimmed);
+        arr = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+      } catch {
+        arr = trimmed.split(',').map(s => s.trim());
+      }
+    }
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map(item => String(item ?? '').trim())
+      .filter(s => s.length > 1 && !/^[\[\]",\\]+$/.test(s));
+  };
+
+  const appliances = new Set(parseArrayInput(structuredData.appliances));
   if (text.includes('refrigerator') || text.includes('fridge')) appliances.add('Refrigerator');
   if (text.includes('dishwasher')) appliances.add('Dishwasher');
   if (text.includes('microwave')) appliances.add('Microwave');
