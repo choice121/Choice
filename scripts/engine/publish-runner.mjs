@@ -43,7 +43,7 @@ function parseCliArgs(argv) {
     market: '',
     workflow: 'pipeline_publish',
     visibility: 'private_placement',
-    count: 50,
+    count: 500,
     beds: null,
     bathsMin: null,
     bathsMax: null,
@@ -284,7 +284,7 @@ export async function executePublishingRun(opts) {
     return { ok: false, batchId, error: 'no_matching_pipeline_properties' };
   }
 
-  const marketObj = parseMarketTarget(opts.market || (candidates[0] ? `${candidates[0].city}, ${candidates[0].state}` : ''));
+  const marketObj = opts.market ? parseMarketTarget(opts.market) : { city: null, state: null, raw: '' };
   const liveAddrMap = await fetchExistingLiveAddressSet(marketObj.city);
   const liveSourceMap = await fetchExistingPublishedSourceMap(marketObj.city);
 
@@ -586,13 +586,15 @@ export async function executePublishingRun(opts) {
     : failedPipelineIds.length > 0 ? 'partial'
     : 'completed';
 
+  const batchMarketLabel = opts.market || [...new Set(candidates.map((c) => `${c.city}, ${c.state}`).filter(Boolean))].join('; ') || 'ALL';
+
   if (schemaStatus.publishingBatches) {
     await fetchJson(`${SUPABASE_URL}/rest/v1/publishing_batches`, {
       method: 'POST',
       headers: publicHeaders({ Prefer: 'return=minimal' }),
       body: {
         id: batchId,
-        target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
+        target_market: batchMarketLabel,
         workflow_type: opts.workflow,
         visibility: opts.visibility,
         status: batchStatus,
@@ -657,7 +659,7 @@ export async function executePublishingRun(opts) {
         p_batch_id: batchId,
         p_pipeline_ids: verifiedPipelineIds,
         p_raw_paths: rawPathsByPipelineId,
-        p_target_market: opts.market || `${candidates[0].city}, ${candidates[0].state}`,
+        p_target_market: batchMarketLabel,
       });
       console.log(`\n✓ Stage 1 Cleanup Complete: ${cleanupResult.deleted} removed from active pipeline, archived for 24h until ${cleanupResult.recovery_expires_at}`);
     } catch (archErr) {

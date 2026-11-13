@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { CREDENTIALS_CONFIG } from '../credentials-config.mjs';
 import { extractMinedFacts, stripProhibitedContent, lintDescription } from './description-generator.mjs';
+import { DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH } from './engine/enrichment.mjs';
 
 const SUPABASE_URL = CREDENTIALS_CONFIG.SUPABASE_URL;
 const KEY = CREDENTIALS_CONFIG.SUPABASE_API_KEY;
@@ -247,6 +248,9 @@ async function run() {
       parking: parking,
       has_central_air: true,
       has_basement: false,
+      // Temporary owner directive: drop virtual tour & video links on publish (keep code disabled, not removed)
+      virtual_tour_url: DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH ? null : (p.virtual_tour_url || null),
+      videos: DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH ? null : (p.videos || null),
       listed_at: today,
       available_date: null,
       featured: false

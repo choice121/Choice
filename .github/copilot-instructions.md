@@ -121,6 +121,7 @@
     - **Security Deposit**: 1x rent in database, strictly stripped from descriptions (`strip_security_deposit_from_description`).
     - **Photo Filtering**: Min 6 genuine clean property photos; promotional flyers, Realtor contact cards, MLS watermarks stripped. Properties failing photo rules must be rejected/unpublished and remote storage purged.
     - **True Description Uniqueness**: Independent openings, storytelling, paragraph structure, and voice; no templates; cross-batch similarity audit with auto-rewrite loop.
+    - **Virtual Tours & Video Walkthroughs [TEMPORARILY DISABLED ON PUBLISH]**: While `DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true` (`scripts/engine/enrichment.mjs`, `scripts/publish-universal-batch.mjs`, `js/admin/pipeline.js`), drop `virtual_tour_url` and `videos` (`null`) when publishing properties. Do **NOT** delete the extraction, DB schema, or frontend rendering code — it is only disabled temporarily until re-enabled.
     - **End-to-End Workflow**: Scrape → Verify → Deduplicate → Enrich → Clean → Process Images → Synchronize Data → Generate Description → Validate → Auto-Correct → Re-Validate → Publish. Never leave a workflow half-done.
 
   

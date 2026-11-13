@@ -1,27 +1,59 @@
 import { extractMinedFacts, lintDescription } from '../description-generator.mjs';
 import { sanitizeProhibitedDescription } from '../description-sanitizer.mjs';
 
+/**
+ * TEMPORARY OWNER DIRECTIVE — DO NOT REMOVE UNDERLYING CODE:
+ * While `DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH` is `true`, publishing drops
+ * `virtual_tour_url` and `videos` (sets both to `null` on `public.properties`).
+ * Keep all extraction, sanitization, schema fields, and frontend UI intact so
+ * tours and video walkthroughs can be re-enabled immediately by flipping this flag.
+ */
+export const DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true;
+
 export function normalizeBathroomPrecision(prop) {
+  const parseObj = (v) => {
+    if (!v) return null;
+    if (typeof v === 'object') return v;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch { return null; }
+    }
+    return null;
+  };
+
+  const rawPayload = parseObj(prop.source_raw_payload) || parseObj(prop.original_data) || {};
+  const reso = rawPayload.resoFacts || rawPayload || {};
+  const resoFull = reso.bathroomsFull != null ? Number(reso.bathroomsFull) : null;
+  const resoHalf = reso.bathroomsHalf != null ? Number(reso.bathroomsHalf) : null;
+  const resoFloat = reso.bathroomsFloat != null ? Number(reso.bathroomsFloat) : null;
+
   const rawBaths = prop.bathrooms !== null && prop.bathrooms !== undefined ? parseFloat(prop.bathrooms) : 1;
   let baths = Number.isFinite(rawBaths) ? rawBaths : 1;
   let halfBaths = prop.half_bathrooms !== null && prop.half_bathrooms !== undefined
     ? parseInt(prop.half_bathrooms, 10)
     : (baths % 1 !== 0 ? 1 : 0);
 
-  const text = `${prop.original_description || ''} ${prop.description || ''} ${prop.title || ''}`.toLowerCase();
-  if (baths % 1 === 0) {
-    if (/\b1\.5\s*baths?\b|\b1\s+and\s+a\s+half\s+bath|\bpowder\s+room\b/.test(text) && baths === 1) {
+  if (Number.isFinite(resoFull) && Number.isFinite(resoHalf) && resoHalf > 0) {
+    baths = resoFull + (resoHalf * 0.5);
+    halfBaths = resoHalf;
+  } else if (Number.isFinite(resoFloat) && resoFloat > 0 && resoFloat % 1 !== 0) {
+    baths = resoFloat;
+    halfBaths = Number.isFinite(resoHalf) ? resoHalf : 1;
+  } else {
+    const text = `${prop.original_description || ''} ${prop.description || ''} ${prop.title || ''}`.toLowerCase();
+    if (/\b1\.5[- ]*baths?\b|\b1\s+and\s+a\s+half\s+bath|\bone\s+and\s+a\s+half\s+bath/.test(text) && (baths === 1 || baths === 2)) {
       baths = 1.5;
       halfBaths = 1;
-    } else if (/\b2\.5\s*baths?\b|\b2\s+and\s+a\s+half\s+bath/.test(text) && baths === 2) {
-      baths = 2.5;
-      halfBaths = 1;
-    } else if (/\b3\.5\s*baths?\b|\b3\s+and\s+a\s+half\s+bath/.test(text) && baths === 3) {
-      baths = 3.5;
-      halfBaths = 1;
-    } else if (/\bhalf\s+bath\b|\bpowder\s+room\b/.test(text) && halfBaths === 0) {
-      baths = baths + 0.5;
-      halfBaths = 1;
+    } else if (baths % 1 === 0) {
+      if (/\b2\.5[- ]*baths?\b|\b2\s+and\s+a\s+half\s+bath|\btwo\s+and\s+a\s+half\s+bath/.test(text) && baths === 2) {
+        baths = 2.5;
+        halfBaths = 1;
+      } else if (/\b3\.5[- ]*baths?\b|\b3\s+and\s+a\s+half\s+bath|\bthree\s+and\s+a\s+half\s+bath/.test(text) && baths === 3) {
+        baths = 3.5;
+        halfBaths = 1;
+      } else if (/\bhalf\s+bath\b|\bpowder\s+room\b/.test(text) && halfBaths === 0) {
+        baths = baths + 0.5;
+        halfBaths = 1;
+      }
     }
   }
 
@@ -111,7 +143,7 @@ export function buildSourceGroundedDescription(prop) {
     .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '')
     .replace(/https?:\/\/\S+/gi, '')
     .replace(/\b(?:security\s+)?deposit(?:\s*(?:is|of|:))?\s*\$?[\d,]+(?:\.\d{2})?[^.\n]*/gi, '')
-    .replace(/\b(?:12|24|36|6)[- ]?month\s+lease[^.\n]*/gi, '')
+    .replace(/\b(?:12|24|36|6)[- ]?(?:month|year)s?\s+lease[^.\n]*/gi, '')
     .replace(/\b(?:minimum|standard)\s+lease\s+(?:term|duration)[^.\n]*/gi, '')
     .replace(/\b(?:available\s+(?:now|immediately|on)|move-?in\s+(?:ready|date))[^.\n]*/gi, '')
     .replace(/\b(?:no\s+smoking|non-?smoking|smoking\s+policy)[^.\n]*/gi, '')
@@ -145,29 +177,26 @@ export function enrichPipelineProperty(prop, options = {}) {
     if (builtMatch) yearBuilt = parseInt(builtMatch[1], 10);
   }
 
-  // Laundry type strictly 'In Unit' or 'Hookups'
-  let laundryType = prop.laundry_type;
+  // Laundry type: only populate when explicitly present in source or description
+  let laundryType = prop.laundry_type || null;
   if (laundryType !== 'In Unit' && laundryType !== 'Hookups') {
     if (/\b(?:washer\s*(?:and|&|\/)\s*dryer\s*(?:included|in\s*unit)|in[- ]unit\s*laundry)\b/i.test(textLower)) {
       laundryType = 'In Unit';
-    } else {
+    } else if (/\b(?:washer\s*(?:and|&|\/)\s*dryer\s*hookups?|laundry\s*hookups?|w\/d\s*hookups?)\b/i.test(textLower)) {
       laundryType = 'Hookups';
     }
   }
 
-  // Garage spaces & parking
+  // Garage spaces & parking: preserve source values without inventing unknown counts
   let garageSpaces = prop.garage_spaces != null ? parseInt(prop.garage_spaces, 10) : null;
   let parking = prop.parking || null;
   if (garageSpaces == null) {
-    const gMatch = textLower.match(/\b(\d)[- ]?car\s+garage\b/);
-    if (gMatch) garageSpaces = parseInt(gMatch[1], 10);
-    else if (textLower.includes('garage')) garageSpaces = 1;
-    else garageSpaces = 0;
-  }
-  if (!parking) {
-    if (garageSpaces >= 1) parking = `Attached ${garageSpaces}-Car Garage`;
-    else if (textLower.includes('carport')) parking = 'Covered Carport & Driveway';
-    else parking = 'Private Driveway & Off-Street Parking';
+    const gMatch = textLower.match(/\b(\d)[- ]?car\s+(?:attached\s+)?garage\b/) || textLower.match(/\b(?:two|2)[- ]?car\s+(?:attached\s+)?garage\b/);
+    if (gMatch) {
+      garageSpaces = gMatch[1] ? parseInt(gMatch[1], 10) : 2;
+    } else if (/\b(?:1|one)[- ]?car\s+(?:attached\s+)?garage\b/.test(textLower)) {
+      garageSpaces = 1;
+    }
   }
 
   // Appliances & Amenities
@@ -178,7 +207,7 @@ export function enrichPipelineProperty(prop, options = {}) {
   if (laundryType === 'In Unit') {
     appliancesSet.add('Washer');
     appliancesSet.add('Dryer');
-  } else {
+  } else if (laundryType === 'Hookups') {
     appliancesSet.add('Washer/Dryer Hookups');
   }
 
@@ -188,7 +217,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     ...mined.layoutFeatures,
     ...mined.outdoorFeatures,
   ]);
-  if (prop.has_central_air !== false && (textLower.includes('central air') || textLower.includes('central a/c') || prop.cooling_type)) {
+  if (prop.has_central_air === true || textLower.includes('central air') || textLower.includes('central a/c') || textLower.includes('central heat and air') || textLower.includes('central heat & air') || prop.cooling_type) {
     amenitiesSet.add('Central Air Conditioning');
   }
   if (parking) amenitiesSet.add(parking);
@@ -220,6 +249,20 @@ export function enrichPipelineProperty(prop, options = {}) {
     fieldProvenance = { ...(fieldProvenance || {}), monthly_rent: 'admin_override' };
   }
 
+  const isBrandedThirdPartyTour = (u) => /insidemaps\.com/i.test(String(u || ''));
+  const rawVideos = parseObjField(prop.videos);
+  const cleanVideos = Array.isArray(rawVideos)
+    ? rawVideos.filter((v) => !isBrandedThirdPartyTour(typeof v === 'string' ? v : v?.url))
+    : null;
+  const cleanVirtualTourUrl = prop.virtual_tour_url && !isBrandedThirdPartyTour(prop.virtual_tour_url)
+    ? prop.virtual_tour_url
+    : null;
+
+  // Temporary publish-time toggle: drop tour & video links without removing pipeline/UI support
+  const toursAndVideosEnabled = options.includeToursAndVideos === true || !DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH;
+  const publishedVirtualTourUrl = toursAndVideosEnabled ? cleanVirtualTourUrl : null;
+  const publishedVideos = toursAndVideosEnabled && cleanVideos && cleanVideos.length > 0 ? cleanVideos : null;
+
   const propertyRecord = {
     landlord_id: prop.poster_landlord_id || null,
     status: options.visibility === 'active' ? 'active' : 'private_placement',
@@ -237,7 +280,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     property_type: propType,
     property_subtype: prop.property_subtype || null,
     year_built: yearBuilt,
-    floors: prop.floors || (prop.square_footage && Number(prop.square_footage) > 2000 ? 2 : 1),
+    floors: prop.floors ?? (parseObjField(prop.structural_details)?.levels ? Number(parseObjField(prop.structural_details).levels) : null),
     unit_number: prop.unit_number || null,
     total_units: prop.total_units || null,
     bedrooms: Number(prop.bedrooms),
@@ -272,7 +315,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     laundry_type: laundryType,
     has_basement: prop.has_basement ?? null,
     has_central_air: prop.has_central_air ?? null,
-    virtual_tour_url: prop.virtual_tour_url || null,
+    virtual_tour_url: publishedVirtualTourUrl,
     listed_at: prop.listed_at || new Date().toISOString().slice(0, 10),
     source_last_updated_at: prop.source_last_updated_at || null,
     imported_at: prop.imported_at || prop.scraped_at || new Date().toISOString(),
@@ -286,7 +329,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     financial_details: parseObjField(prop.financial_details),
     location_details: parseObjField(prop.location_details),
     floor_plans: parseObjField(prop.floor_plans),
-    videos: parseObjField(prop.videos),
+    videos: publishedVideos,
   };
 
   return {

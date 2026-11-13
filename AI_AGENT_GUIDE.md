@@ -387,6 +387,7 @@ Every listing published to the platform adheres to the privacy protocol in `AGEN
 4. **Soft Spec Rounding**: Square footage numbers are rounded to clean ~25 sqft increments.
 5. **No Private Placement Badges**: Listings must appear completely standard and authentic to clients — all "Verified Private Placement" and "Private Placement" badges/banners are completely disabled and removed.
 6. **Native Multi-Property Magic Sharing**: Multiple tailored homes are shared through the standard marketplace interface using `/listings.html#share={token}`. Share records store a hash of the random bearer token and an explicit property allowlist; tokens expire after 90 days and can be revoked. Raw `?p=` IDs do not authorize private listings. Anyone holding a share URL can use it, so the bearer link must be kept private.
+7. **Virtual Tour & Video Walkthrough Links [TEMPORARILY DISABLED ON PUBLISH]**: While `DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true` (`scripts/engine/enrichment.mjs`, `scripts/publish-universal-batch.mjs`, `js/admin/pipeline.js`), drop `virtual_tour_url` and `videos` (`null`) when publishing properties to `public.properties`. **Do NOT remove** scraper extraction, database columns, `insidemaps.com` filters, or frontend modal/chip code — keep the capability disabled via the flag until the owner instructs re-enabling it.
 
 ---
 

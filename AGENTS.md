@@ -34,6 +34,11 @@
 > 3. **Direct Source CDN Ingestion (No ImageKit Upload Latency)**:
 >    - Ingest high-resolution source CDN photo URLs (Zillow CDN, Opendoor CDN, Realtor CDN) directly into `original_image_urls` and `property_photos`. Do not upload to ImageKit.
 
+> ### ⏸️ DIRECTIVE 4 — VIRTUAL TOUR & VIDEO WALKTHROUGH LINKS [TEMPORARILY DISABLED ON PUBLISH]
+> **STATUS: TEMPORARILY DISABLED DURING PUBLISHING (DO NOT DELETE UNDERLYING CODE)**
+> - **Drop on Publish**: While `DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true` (see `scripts/engine/enrichment.mjs`, `scripts/publish-universal-batch.mjs`, and `js/admin/pipeline.js`), **all property publishing workflows MUST drop `virtual_tour_url` and `videos`** (store `null` on newly published `public.properties` rows).
+> - **Do NOT Remove Code or Schema**: Never delete virtual tour or video extraction in scrapers/extension extractors, `pipeline.pipeline_properties` columns, sanitization filters (`isBrandedThirdPartyTour`), or frontend tour/video UI (`js/property.js`, `js/card-builder.js`, `js/listings.js`). Keep all of it intact and disabled only at publish time so the owner can re-enable it later by flipping the flag to `false`.
+
 ---
 
 ## 1. Non-Negotiable Platform Invariants & Content Cleanup
@@ -132,4 +137,4 @@ Every property follows this complete lifecycle:
 **Scrape → Census Verify → Deduplicate → Basic Privacy Clean → Process Images → Synchronize Data → Validate → Publish**
 
 - **Source of Truth**: Preserve authentic source descriptions and facts; never synthesize room sizes or rewrite listing text.
-- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, and verified Census GPS coordinates.
+- **Final Pre-Publishing Audit**: Verify $50 application fee, 1x deposit in DB / 0 in description, no lease terms, no available dates, strict original photo order, decimal bath accuracy, verified Census GPS coordinates, and **`virtual_tour_url: null` / `videos: null`** while `DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH` is enabled.

@@ -749,7 +749,8 @@ function renderProperty(p) {
     });
     descEl.insertAdjacentElement('afterend', rmBtn);
   }
-  if (p.virtual_tour_url) {
+  const isBrandedTourUrl = (u) => /insidemaps\.com/i.test(String(u || ''));
+  if (p.virtual_tour_url && !isBrandedTourUrl(p.virtual_tour_url)) {
     const vtBtn = document.createElement('button');
     vtBtn.type = 'button';
     vtBtn.className = 'btn btn-outline';
@@ -784,7 +785,7 @@ function renderProperty(p) {
         return { url: item.url.trim(), label: item.title || item.label || item.name || `Item ${idx + 1}` };
       }
       return null;
-    }).filter(Boolean);
+    }).filter((item) => item && !isBrandedTourUrl(item.url));
   };
   const fpItems = safeMediaItems(p.floor_plans);
   const vidItems = safeMediaItems(p.videos);

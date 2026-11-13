@@ -27,6 +27,7 @@ import {
   extractPhotoUrlsInOrder,
   buildSourceGroundedDescription,
   enrichPipelineProperty,
+  DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH,
 } from './engine/enrichment.mjs';
 import { evaluateShareHealth } from './engine/history-lookup.mjs';
 import { runPreflightAudit, parseMarketTarget } from './engine/preflight-audit.mjs';
@@ -108,6 +109,21 @@ async function main() {
     assert.ok(res.photos[0].includes('img1'), 'Hero image must remain exact source photo #1');
     assert.ok(res.photos[1].includes('img2'), 'Photo order #2 preserved');
     assert.ok(res.photos[2].includes('img3'), 'Photo order #3 preserved');
+
+    // Temporary publish-time toggle: drop virtual_tour_url & videos without removing underlying logic
+    const withMediaSample = {
+      ...sample,
+      virtual_tour_url: 'https://www.zillow.com/view-imx/sample-tour/?hidePhotos=true',
+      videos: [{ url: 'https://www.zillow.com/view-imx/sample-tour/?hidePhotos=true', type: 'virtual_tour' }],
+    };
+    const droppedByDefault = enrichPipelineProperty(withMediaSample, { visibility: 'private_placement' });
+    assert.strictEqual(DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH, true);
+    assert.strictEqual(droppedByDefault.propertyRecord.virtual_tour_url, null, 'Must drop virtual_tour_url while toggle is disabled');
+    assert.strictEqual(droppedByDefault.propertyRecord.videos, null, 'Must drop videos while toggle is disabled');
+
+    const reEnabled = enrichPipelineProperty(withMediaSample, { visibility: 'private_placement', includeToursAndVideos: true });
+    assert.ok(reEnabled.propertyRecord.virtual_tour_url.includes('view-imx'), 'Underlying clean tour logic must remain intact when re-enabled');
+    assert.strictEqual(reEnabled.propertyRecord.videos.length, 1, 'Underlying clean video logic must remain intact when re-enabled');
   });
 
   // 2. Decimal Bath Precision & Architectural Classification

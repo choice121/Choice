@@ -145,7 +145,7 @@ export function lintDescription(description = '', prop = {}) {
   if (text.includes('security deposit') || text.includes('deposit of') || text.includes('deposit:')) {
     errors.push('CRITICAL: Description contains security deposit mention. Security deposits must strictly be omitted from descriptions.');
   }
-  if (text.includes('12 month') || text.includes('1 year lease') || text.includes('lease term') || text.includes('minimum lease')) {
+  if (/\b\d+[- ]?(?:month|year)s?\s+lease\b|\brental\s+terms?\b|\blease\s+term\b|\bminimum\s+lease\b/i.test(text)) {
     errors.push('CRITICAL: Description contains lease term or duration. Lease durations must never be displayed.');
   }
   if (text.includes('smoking') || text.includes('no smoking') || text.includes('smoke free')) {

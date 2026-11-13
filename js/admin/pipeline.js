@@ -1544,6 +1544,13 @@ function wirePanelPhotoActions(){
     if(!res?.ok){ S.toast('Publish failed: ' + (res?.error||'unknown'), 'error'); return; }
 
     const propId = res.choice_property_id;
+    // Temporary owner directive: drop virtual_tour_url & videos when publishing (do not remove extraction/UI)
+    const DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true;
+    if (DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH && propId) {
+      try {
+        await CP.sb().from('properties').update({ virtual_tour_url: null, videos: null }).eq('id', propId);
+      } catch (_) {}
+    }
     S.toast('Published! Opening edit page…', 'success');
     removeCard(id);
     closePanel();
@@ -1603,6 +1610,12 @@ function wirePanelPhotoActions(){
         if(error) throw error;
         const res = typeof data === 'string' ? JSON.parse(data) : data;
         if(!res?.ok) throw new Error(res?.error || 'unknown');
+        if (res.choice_property_id) {
+          // Temporary owner directive: drop virtual_tour_url & videos when publishing
+          try {
+            await CP.sb().from('properties').update({ virtual_tour_url: null, videos: null }).eq('id', res.choice_property_id);
+          } catch (_) {}
+        }
         succeeded++;
         removeCard(id);
         _selected.delete(id);
