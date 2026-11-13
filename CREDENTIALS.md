@@ -106,7 +106,6 @@ Scripts that run automated tasks on Replit use the Supabase service role key for
 | `SCRAPING_PROMPT.md` | Copy-paste prompt for AI-assisted scraping jobs |
 | `scraper/PIPELINE_USAGE.md` | `PipelineOrchestrator` API, `BatchCriteria` reference, new-city template |
 | `scraper/PLATFORM_RULES.md` | Mandatory rules enforced automatically by `enrichment.py` |
-| `scraper/SEARCH_PREFERENCES.md` | Active markets and their criteria |
 | `scraper/RULES.md` | Scannable table of enrichment rules |
 
 ---

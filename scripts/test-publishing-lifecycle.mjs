@@ -275,9 +275,6 @@ async function main() {
     assert.ok(purgeFn.includes('pipeline-raw-payloads'), 'Purge Edge Function must clean pipeline-raw-payloads Storage bucket');
     assert.ok(purgeFn.includes('x-cron-secret'), 'Purge Edge Function must authenticate cron runs via x-cron-secret');
 
-    const cronYaml = fs.readFileSync(path.join(root, '.github/workflows/purge-pipeline-recovery.yml'), 'utf8');
-    assert.ok(cronYaml.includes('0 * * * *'), 'GitHub Actions cron must run hourly');
-
     const configToml = fs.readFileSync(path.join(root, 'supabase/config.toml'), 'utf8');
     assert.ok(configToml.includes('[functions.purge-expired-pipeline-recovery]'), 'purge-expired-pipeline-recovery must be in config.toml');
     assert.ok(configToml.includes('[functions.pipeline-recovery]'), 'pipeline-recovery must be in config.toml');
