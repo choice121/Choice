@@ -401,14 +401,25 @@ export async function executePublishingRun(opts) {
         },
       });
 
-      const photoRows = enriched.photos.map((url, idx) => ({
+      const photoEntries = Array.isArray(enriched.photoEntries) && enriched.photoEntries.length > 0
+        ? enriched.photoEntries
+        : enriched.photos.map((url) => ({ url, source_url: url, media_type: 'photo' }));
+
+      const photoRows = photoEntries.map((entry, idx) => ({
         id: crypto.randomUUID(),
         property_id: newPropId,
-        url,
+        url: entry.url,
+        file_id: entry.fileId || null,
+        width: entry.width ?? null,
+        height: entry.height ?? null,
         display_order: idx + 1,
         is_hero: idx === 0,
         watermark_status: 'clean',
-        alt_text: `${pipeRow.address}, ${pipeRow.city} ${pipeRow.state} - Photo ${idx + 1}`,
+        media_type: entry.media_type || 'photo',
+        caption: entry.caption || null,
+        room_label: entry.room_label || null,
+        source_url: entry.source_url || entry.url,
+        alt_text: entry.caption || `${pipeRow.address}, ${pipeRow.city} ${pipeRow.state} - Photo ${idx + 1}`,
       }));
 
       await fetchJson(`${SUPABASE_URL}/rest/v1/property_photos`, {

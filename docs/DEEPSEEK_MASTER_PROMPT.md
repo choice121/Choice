@@ -58,10 +58,12 @@ MANDATORY EXECUTION & ISOLATION RULES
   * No available/move-in dates (`available_date: null`)
   * No smoking policy (`smoking_allowed: null`)
   * Strip external broker/agent phones, emails, MLS cross-links, portal URLs, and showing/tour CTAs.
+  * Source data preserved in `utility_details` or `financial_details` must NEVER re-introduce pet policies/deposits, lease terms, move-in dates, or external contacts into public descriptions or public summaries.
 - Bathroom Decimal Precision: Never truncate fractional baths (`1.5`, `2.5`, `3.5`). Check both structured counts and listing text.
 - Architectural Classification: `DUPLEX` / `TOWNHOUSE` / `APARTMENT` / `CONDO` / `SINGLE_FAMILY` based on physical structure over portal defaults.
-- Titles: Clean standardized address format: `{Address}, {City}, {State} {Zip}`.
-- Photos: Direct source CDN URLs in strict original source order (`display_order: 1`, `is_hero: true` for photo 1). Zero photo count gate and zero automated reordering.
+- Titles: Clean standardized address format: `{Address}, {City}, {State} {Zip}` (preserve `unit_number` in its dedicated field).
+- Photos: Direct source CDN URLs in strict original source order (`display_order: 1`, `is_hero: true` for photo 1), preserving photo `caption`, `room_label`, `source_url`, and `media_type` metadata. Zero photo count gate and zero automated reordering.
+- Lossless Structured Domains & Provenance Preservation: Always preserve captured structured fields (`property_subtype`, `unit_number`, `half_bathrooms`, `ev_charging`, `hoa_fee`, `hoa_fee_frequency`, `tax_annual_amount`, `structural_details`, `utility_details`, `financial_details`, `location_details`, `floor_plans`, `videos`, `field_provenance`) and `original_description` end-to-end across staging and publication. When `CUSTOM_INSTRUCTIONS` overrides a field (e.g., rent adjustment), update `field_provenance` for that field (`admin_override`) without discarding source provenance.
 - Independent Cross-Batch Republication & Intra-Batch Deduplication: Every new publishing batch is independent. A property that was previously published (publicly, privately, or in any earlier batch at the same or different rent) is NEVER skipped and must be processed again as an independent publishing instance linked to its physical property parent (`parent_property_id`). Within the same batch only, duplicate entries for the same physical property are detected and deduplicated so the property is not processed twice in one batch. Retrying a completed or partial batch (`--retry-batch <PB-ID>`) remains idempotent and never creates duplicate properties, shares, or logs.
 
 5. VERIFY -> RECORD HISTORY -> STAGE 1 CLEANUP (24-HOUR RECOVERABLE)

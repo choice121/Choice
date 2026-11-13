@@ -67,18 +67,38 @@ export function parseJsonArrayField(val) {
   return [];
 }
 
-export function extractPhotoUrlsInOrder(prop) {
+export function extractPhotoEntriesInOrder(prop) {
   let raw = parseJsonArrayField(prop.original_image_urls);
   if (raw.length === 0) {
     raw = parseJsonArrayField(prop.local_image_paths);
   }
   return raw
     .map((entry) => {
-      if (typeof entry === 'string') return entry.trim();
-      if (entry && typeof entry === 'object') return String(entry.url || entry.src || '').trim();
-      return '';
+      if (typeof entry === 'string') {
+        const url = entry.trim();
+        return url ? { url, source_url: url, media_type: 'photo' } : null;
+      }
+      if (entry && typeof entry === 'object') {
+        const url = String(entry.url || entry.src || '').trim();
+        if (!url) return null;
+        return {
+          url,
+          fileId: entry.fileId || entry.file_id || null,
+          width: typeof entry.width === 'number' ? entry.width : null,
+          height: typeof entry.height === 'number' ? entry.height : null,
+          caption: typeof entry.caption === 'string' && entry.caption.trim() ? entry.caption.trim() : null,
+          room_label: typeof entry.room_label === 'string' && entry.room_label.trim() ? entry.room_label.trim() : null,
+          source_url: typeof entry.source_url === 'string' && entry.source_url.trim() ? entry.source_url.trim() : url,
+          media_type: typeof entry.media_type === 'string' && entry.media_type.trim() ? entry.media_type.trim() : 'photo',
+        };
+      }
+      return null;
     })
-    .filter((u) => /^https?:\/\//i.test(u));
+    .filter((entry) => entry && /^https?:\/\//i.test(entry.url));
+}
+
+export function extractPhotoUrlsInOrder(prop) {
+  return extractPhotoEntriesInOrder(prop).map((entry) => entry.url);
 }
 
 export function buildSourceGroundedDescription(prop) {
@@ -183,7 +203,8 @@ export function enrichPipelineProperty(prop, options = {}) {
 
   const monthlyRent = options.rentOverride ? Number(options.rentOverride) : Number(prop.monthly_rent);
   const cleanTitle = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zip}`.trim();
-  const photos = extractPhotoUrlsInOrder(prop);
+  const photoEntries = extractPhotoEntriesInOrder(prop);
+  const photos = photoEntries.map((entry) => entry.url);
 
   const utilitiesInc = parseJsonArrayField(prop.utilities_included);
   const parseObjField = (v) => {
@@ -194,6 +215,10 @@ export function enrichPipelineProperty(prop, options = {}) {
     }
     return null;
   };
+  let fieldProvenance = parseObjField(prop.field_provenance);
+  if (options.rentOverride) {
+    fieldProvenance = { ...(fieldProvenance || {}), monthly_rent: 'admin_override' };
+  }
 
   const propertyRecord = {
     landlord_id: prop.poster_landlord_id || null,
@@ -255,7 +280,7 @@ export function enrichPipelineProperty(prop, options = {}) {
     last_verified_at: new Date().toISOString(),
     original_data: parseObjField(prop.original_data),
     source_raw_payload: parseObjField(prop.source_raw_payload),
-    field_provenance: parseObjField(prop.field_provenance),
+    field_provenance: fieldProvenance,
     structural_details: parseObjField(prop.structural_details),
     utility_details: parseObjField(prop.utility_details),
     financial_details: parseObjField(prop.financial_details),
@@ -267,6 +292,7 @@ export function enrichPipelineProperty(prop, options = {}) {
   return {
     propertyRecord,
     photos,
+    photoEntries,
     lint,
     isValid:
       Boolean(cleanTitle && prop.address && prop.city && prop.state && prop.zip) &&
