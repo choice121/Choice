@@ -131,14 +131,63 @@
     return [...checked, ...other.filter(v => !optionsList.includes(v))];
   }
 
+  function _canonicalizePropType(val) {
+    if (val == null || val === '') return '';
+    const norm = String(val).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const aliases = {
+      single_family: 'SINGLE_FAMILY',
+      single_family_residence: 'SINGLE_FAMILY',
+      singlefamily: 'SINGLE_FAMILY',
+      house: 'SINGLE_FAMILY',
+      apartment: 'APARTMENT',
+      apartments: 'APARTMENT',
+      flat: 'APARTMENT',
+      townhouse: 'TOWNHOUSE',
+      townhome: 'TOWNHOUSE',
+      townhomes: 'TOWNHOUSE',
+      rowhouse: 'TOWNHOUSE',
+      row_home: 'TOWNHOUSE',
+      condo: 'CONDO',
+      condos: 'CONDO',
+      condominium: 'CONDO',
+      duplex: 'DUPLEX',
+      half_duplex: 'DUPLEX',
+      '1/2_duplex': 'DUPLEX',
+      multi_family: 'MULTI_FAMILY',
+      multifamily: 'MULTI_FAMILY',
+      fourplex: 'MULTI_FAMILY',
+      four_plex: 'MULTI_FAMILY',
+      quadplex: 'MULTI_FAMILY',
+      studio: 'STUDIO',
+      mobile_home: 'MOBILE_HOME',
+      manufactured: 'MOBILE_HOME',
+      triplex: 'TRIPLEX',
+      loft: 'LOFT',
+      room: 'ROOM',
+      land: 'LAND',
+      commercial: 'COMMERCIAL',
+      other: 'OTHER',
+    };
+    return aliases[norm] || String(val).trim();
+  }
+
   function _makeSelect(name, options, current, labelFn) {
-    return `<select class="pd-edit-input" name="${name}">${options.map(v => {
-      const label = labelFn ? labelFn(v) : (v || '—');
-      return `<option value="${esc(v)}"${current===v?' selected':''}>${esc(label)}</option>`;
+    const cur = current == null ? '' : String(current);
+    const hasExact = options.some(o => (typeof o === 'object' ? o.value : o) === cur);
+    const list = options.slice();
+    if (cur && !hasExact) {
+      const insertAt = list.length && (typeof list[0] === 'object' ? list[0].value === '' : list[0] === '') ? 1 : 0;
+      list.splice(insertAt, 0, { value: cur, label: labelFn ? labelFn(cur) : cur });
+    }
+    return `<select class="pd-edit-input" name="${name}">${list.map(o => {
+      const v = typeof o === 'object' ? o.value : o;
+      const label = typeof o === 'object' ? o.label : (labelFn ? labelFn(v) : (v || '—'));
+      return `<option value="${esc(v)}"${cur===v?' selected':''}>${esc(label)}</option>`;
     }).join('')}</select>`;
   }
 
   let _editOriginal = null;
+  let _editInitialFormState = null;
   let _formDirty = false;
   let _landlordCache = null;
   let _lastSavedAt = null;
@@ -1167,8 +1216,30 @@
     const existing = document.getElementById('pd-edit-panel');
     if (existing) existing.remove();
 
-    const PROPERTY_TYPE_OPTIONS = ['', 'apartment', 'house', 'condo', 'townhouse', 'studio', 'duplex', 'room', 'land'].map(v =>
-      `<option value="${v}" ${p.property_type === v ? 'selected' : ''}>${v ? (v.charAt(0).toUpperCase() + v.slice(1)) : 'Select type…'}</option>`
+    const PROPERTY_TYPE_LIST = [
+      { value: '',             label: 'Select type…' },
+      { value: 'SINGLE_FAMILY',label: 'Single Family' },
+      { value: 'APARTMENT',    label: 'Apartment' },
+      { value: 'TOWNHOUSE',    label: 'Townhouse' },
+      { value: 'CONDO',        label: 'Condo' },
+      { value: 'DUPLEX',       label: 'Duplex' },
+      { value: 'MULTI_FAMILY', label: 'Multi-Family' },
+      { value: 'STUDIO',       label: 'Studio' },
+      { value: 'MOBILE_HOME',  label: 'Mobile Home' },
+      { value: 'TRIPLEX',      label: 'Triplex' },
+      { value: 'LOFT',         label: 'Loft' },
+      { value: 'ROOM',         label: 'Room' },
+      { value: 'LAND',         label: 'Land' },
+      { value: 'COMMERCIAL',   label: 'Commercial' },
+      { value: 'OTHER',        label: 'Other' },
+    ];
+    const _curPropType = _canonicalizePropType(p.property_type);
+    const _propTypeList = PROPERTY_TYPE_LIST.slice();
+    if (_curPropType && !_propTypeList.some(o => o.value === _curPropType)) {
+      _propTypeList.splice(1, 0, { value: _curPropType, label: _curPropType });
+    }
+    const PROPERTY_TYPE_OPTIONS = _propTypeList.map(o =>
+      `<option value="${esc(o.value)}" ${_curPropType === o.value ? 'selected' : ''}>${esc(o.label)}</option>`
     ).join('');
 
     const panel = document.createElement('div');
@@ -1214,10 +1285,7 @@
               <div class="pd-edit-row">
                 <label class="pd-edit-label">City <input class="pd-edit-input" name="city" type="text" value="${esc(p.city || '')}" placeholder="San Francisco"></label>
                 <label class="pd-edit-label">State
-                  <select class="pd-edit-input" name="state">
-                    <option value="">—</option>
-                    ${US_STATES.map(s => `<option value="${s}"${p.state===s?' selected':''}>${s}</option>`).join('')}
-                  </select>
+                  ${_makeSelect('state', ['', ...US_STATES], p.state || '')}
                 </label>
                 <label class="pd-edit-label">Zip <input class="pd-edit-input" name="zip" type="text" value="${esc(p.zip || '')}" placeholder="94101"></label>
               </div>
@@ -1235,14 +1303,10 @@
               <label class="pd-edit-label">Location context
                 <input class="pd-edit-input" name="location_context" type="text" value="${esc(p.location_context || '')}" placeholder="Near downtown, 5 min walk to transit">
               </label>
-              <label class="pd-edit-label">Status
-                <span class="pd-edit-hint">Changes here override the inline status toggle</span>
-                <select class="pd-edit-input" name="status">
-                  ${['active','private_placement','rented','inactive','maintenance','draft','paused','archived'].map(v =>
-                    `<option value="${v}"${(_prop?.status||p.status)===v?' selected':''}>${v.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`
-                  ).join('')}
-                </select>
-              </label>
+                <label class="pd-edit-label">Status
+                  <span class="pd-edit-hint">Changes here override the inline status toggle</span>
+                  ${_makeSelect('status', ['active','private_placement','rented','inactive','maintenance','draft','paused','archived'], _prop?.status || p.status || '', v => v.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()))}
+                </label>
             </div>
 
             <div class="pd-edit-group">
@@ -1561,10 +1625,13 @@
     // Initialise history with current (pre-edit) state
     _editHistory = [];
     _editHistoryIdx = -1;
+    _editInitialFormState = null;
     const _initForm = document.getElementById('pd-edit-form');
     if (_initForm) {
-      _editHistory = [_captureFormState(_initForm)];
+      const snap = _captureFormState(_initForm);
+      _editHistory = [snap];
       _editHistoryIdx = 0;
+      _editInitialFormState = JSON.parse(JSON.stringify(snap));
     }
     _syncEditUndoRedo();
 
@@ -1760,6 +1827,9 @@
         const cur = sel.querySelector(`option[value="${esc(String(p.landlord_id))}"]`);
         if (cur) cur.selected = true;
       }
+      if (_editInitialFormState && !filter) {
+        _editInitialFormState.landlord_id = sel.value;
+      }
     }
     function _initLandlordSearch(rows) {
       _populateLandlordSel(rows);
@@ -1874,7 +1944,7 @@
       }
     }
 
-    const patch = {
+    const allFields = {
       title:              get('title'),
       status:             get('status') || _prop.status || 'active',
       address:            get('address'),
@@ -1936,28 +2006,55 @@
       lat:                resolvedLat,
       lng:                resolvedLng,
       landlord_id:        get('landlord_id') || null,
-      updated_at:         new Date().toISOString(),
     };
 
-    // Merge updated provenance stamps for admin-modified fields
-    const existingProv = (_editOriginal && typeof _editOriginal.field_provenance === 'object' && _editOriginal.field_provenance !== null)
-      ? { ..._editOriginal.field_provenance }
-      : {};
-    const _nowIso = patch.updated_at;
-    for (const [k, v] of Object.entries(patch)) {
-      if (k === 'updated_at' || k === 'field_provenance') continue;
-      const prev = _editOriginal ? _editOriginal[k] : undefined;
-      if (JSON.stringify(prev ?? null) !== JSON.stringify(v ?? null)) {
-        existingProv[k] = {
-          ...(typeof existingProv[k] === 'object' && existingProv[k] !== null ? existingProv[k] : {}),
-          origin: 'admin_edited',
-          edited_at: _nowIso,
-        };
+    const currentFormState = _captureFormState(form);
+    const patch = {};
+    const tagCols = new Set(['amenities', 'appliances', 'flooring', 'utilities_included']);
+    for (const [k, v] of Object.entries(allFields)) {
+      if (!_editInitialFormState) {
+        patch[k] = v;
+        continue;
+      }
+      if (tagCols.has(k)) {
+        const initTags = _editInitialFormState['__tags__' + k] || [];
+        const initOther = _editInitialFormState[k + '_other'] || '';
+        const curTags = currentFormState['__tags__' + k] || [];
+        const curOther = currentFormState[k + '_other'] || '';
+        if (JSON.stringify(initTags) !== JSON.stringify(curTags) || initOther !== curOther) {
+          patch[k] = v;
+        }
+      } else if ((k === 'lat' || k === 'lng') && (resolvedLat !== latVal || resolvedLng !== lngVal)) {
+        patch[k] = v;
+      } else if (_editInitialFormState[k] !== currentFormState[k]) {
+        patch[k] = v;
       }
     }
-    patch.field_provenance = existingProv;
 
-    const { error } = await CP.sb().from('properties').update(patch).eq('id', propId);
+    let error = null;
+    if (Object.keys(patch).length > 0) {
+      patch.updated_at = new Date().toISOString();
+      // Merge updated provenance stamps for admin-modified fields
+      const existingProv = (_editOriginal && typeof _editOriginal.field_provenance === 'object' && _editOriginal.field_provenance !== null)
+        ? { ..._editOriginal.field_provenance }
+        : {};
+      const _nowIso = patch.updated_at;
+      for (const [k, v] of Object.entries(patch)) {
+        if (k === 'updated_at' || k === 'field_provenance') continue;
+        const prev = _editOriginal ? _editOriginal[k] : undefined;
+        if (JSON.stringify(prev ?? null) !== JSON.stringify(v ?? null)) {
+          existingProv[k] = {
+            ...(typeof existingProv[k] === 'object' && existingProv[k] !== null ? existingProv[k] : {}),
+            origin: 'admin_edited',
+            edited_at: _nowIso,
+          };
+        }
+      }
+      patch.field_provenance = existingProv;
+
+      const res = await CP.sb().from('properties').update(patch).eq('id', propId);
+      error = res.error;
+    }
 
     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = ico('check') + ' Save changes'; }
 
@@ -1982,7 +2079,7 @@
       const uid = data?.session?.user?.id || null;
       const orig = _editOriginal || {};
       const changes = {};
-      const skip = new Set(['updated_at']);
+      const skip = new Set(['updated_at', 'field_provenance']);
       for (const [k, v] of Object.entries(patch)) {
         if (skip.has(k)) continue;
         const oldV = orig[k];
@@ -1997,7 +2094,7 @@
           action: 'property.edit',
           target_type: 'property',
           target_id: String(propId),
-          metadata: { title: patch.title, changes, updated_at: patch.updated_at }
+          metadata: { title: patch.title || orig.title || _prop?.title || '', changes, updated_at: patch.updated_at || new Date().toISOString() }
         }]).catch(() => {});
       }
     }).catch(() => {});

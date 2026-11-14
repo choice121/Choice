@@ -43,7 +43,7 @@ t('detect Realtor', () => assert.strictEqual(api.detect(R).id, 'realtor'));
 t('detect Apartments', () => assert.strictEqual(api.detect(A).id, 'apartments'));
 t('detect Redfin', () => assert.strictEqual(api.detect(F).id, 'redfin'));
 t('detect null', () => assert.strictEqual(api.detect('https://fb.com/'), null));
-t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, null); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
+t('Zillow payload', () => { const p = api.extractZillow(ZD, Z); assert.strictEqual(p.source_listing_id, '98765432'); assert.strictEqual(p.address, '123 Main St'); assert.strictEqual(p.monthly_rent, 1850); assert.strictEqual(p.bedrooms, 3); assert.strictEqual(p.bathrooms, 2); assert.strictEqual(p.square_footage, 1450); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-09-01'); assert.strictEqual(p.minimum_lease_months, null); assert.strictEqual(p.smoking_allowed, null); assert.strictEqual(p.security_deposit, 1850); assert.ok(p.location_context.includes('Walk score: 78')); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); assert.strictEqual(p.agent_name, 'Jane Agent'); });
 t('Realtor payload', () => { const p = api.extractRealtor(RD, R); assert.strictEqual(p.source_listing_id, '1012345678'); assert.strictEqual(p.address, '456 Oak Ave'); assert.strictEqual(p.state, 'TX'); assert.strictEqual(p.monthly_rent, 2200); assert.strictEqual(p.bedrooms, 2); assert.strictEqual(p.property_type, 'CONDOS'); const ph = JSON.parse(p.original_image_urls); assert.strictEqual(ph.length, 2); assert.ok(ph[0].includes('primary')); });
 t('Apartments payload', () => { const p = api.extractApartments(AD, A); assert.strictEqual(p.source_listing_id, 'abc123'); assert.strictEqual(p.address, '789 Pine St'); assert.strictEqual(p.monthly_rent, 1500); assert.strictEqual(p.property_type, 'APARTMENT'); assert.strictEqual(p.pets_allowed, true); assert.strictEqual(p.available_date, '2026-07-15'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
 t('Redfin payload', () => { const p = api.extractRedfin(FD, F); assert.strictEqual(p.source_listing_id, '123456789'); assert.strictEqual(p.address, '101 Maple Dr'); assert.strictEqual(p.monthly_rent, 2300); assert.strictEqual(p.bedrooms, 4); assert.strictEqual(p.bathrooms, 3); assert.strictEqual(p.property_type, 'SINGLE_FAMILY'); assert.strictEqual(JSON.parse(p.original_image_urls).length, 1); });
@@ -100,6 +100,48 @@ t('Zillow URL zpid mismatch fix', () => {
 t('Zillow URL zpid match passthrough', () => {
   const p = api.extractZillow(ZD, ZGOOD);
   assert.strictEqual(p.source_url, ZGOOD, 'should keep URL when zpid matches');
+});
+
+t('Zillow accepts 4+ photos in Tier-1 NextData without noisy DOM image scraping', () => {
+  const fourPhotoDoc = {
+    body: { innerText: '3 bd 2 ba 1,500 sqft' },
+    getElementById: (id) => id === '__NEXT_DATA__' ? {
+      textContent: JSON.stringify(cache({
+        zpid: 77889900,
+        address: { streetAddress: '400 Four Photo Way', city: 'Charlotte', state: 'NC', zipcode: '28202' },
+        price: 1650,
+        bedrooms: 3,
+        bathrooms: 2,
+        livingArea: 1500,
+        homeType: 'SINGLE_FAMILY',
+        responsivePhotos: [
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/11111111111111111111111111111111-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/22222222222222222222222222222222-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/33333333333333333333333333333333-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/44444444444444444444444444444444-cc_ft_1536.jpg' }] } },
+        ],
+      }))
+    } : null,
+    querySelector: () => null,
+    querySelectorAll: (sel) => {
+      if (String(sel).includes('zillowstatic.com')) {
+        return [
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999991-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999992-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999993-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999994-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999995-cc_ft_1536.jpg', getAttribute: () => null },
+        ];
+      }
+      return [];
+    },
+  };
+  const p = api.extractZillow(fourPhotoDoc, 'https://www.zillow.com/homedetails/400-Four-Photo-Way-Charlotte-NC-28202/77889900_zpid/');
+  assert.ok(p);
+  const urls = JSON.parse(p.original_image_urls);
+  assert.strictEqual(urls.length, 4);
+  assert.ok(urls[0].includes('11111111111111111111111111111111'));
+  assert.ok(!urls.some(u => u.includes('9999999999999999999999999999999')), 'must not fall back to unrelated DOM photos when 4 NextData photos exist');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

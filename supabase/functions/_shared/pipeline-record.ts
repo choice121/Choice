@@ -34,7 +34,7 @@ export function qualityScore(r: Record<string, unknown>): number {
   for (const f of BONUS_FIELDS) if (!isEmpty(r[f])) sc += 2;
   try {
     const urls = JSON.parse((r.original_image_urls as string) || '[]');
-    sc += Array.isArray(urls) && urls.length >= 5 ? 6 : urls.length >= 1 ? 3 : 0;
+    sc += Array.isArray(urls) && urls.length >= 4 ? 6 : urls.length >= 1 ? 3 : 0;
   } catch { /* ignore */ }
   return Math.min(sc, 100);
 }

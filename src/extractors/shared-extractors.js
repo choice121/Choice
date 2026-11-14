@@ -1234,7 +1234,7 @@
     // Tier 1: NextData / gdpClientCache
     let res = extractZillowNextData(doc, url);
     const resPhotos = res ? (JSON.parse(res.original_image_urls || '[]')) : [];
-    if (res && res.address && res.monthly_rent && res.bedrooms != null && resPhotos.length >= 6) return res;
+    if (res && res.address && res.monthly_rent && res.bedrooms != null && resPhotos.length >= 4) return res;
 
     // Tier 2: Live DOM Scraper (accurate for client-side rendered listings)
     const dom = extractZillowFromDom(doc, url);

@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v33.0.0] - 2026-11-14
+### 4+ Photo Threshold Support Across Chromium, Orion & Pipeline Ingestion
+- **Tier-1 Zillow Extraction at 4+ Photos**: Lowered `resPhotos.length >= 6` to `resPhotos.length >= 4` in `src/extractors/shared-extractors.js` (`extractZillow`) so Zillow listings with 4 or 5 photos resolve directly via Tier-1 NextData without falling through to noisy DOM image scraping or unstable hydration signature refreshes.
+- **HUD Photo Status Parity (Chromium & Orion)**: Updated `chrome-extension/content.js` and `.pages-orion/live-content.js` + `.pages-orion/content.css` so listings with 4 or more photos display the verified green `.cp-chip-photos` badge (`>= 4`) and deduplicated photo counts, while fewer than 4 photos display `.cp-chip-warn` without blocking saves.
+- **Pipeline Quality Scoring Alignment**: Updated `supabase/functions/_shared/pipeline-record.ts` so properties imported with 4 or more photos receive the full 6/6 photo quality score.
+- **Regression Tests & Dual Packages**: Added 4-photo Tier-1 extraction regression tests in both `chrome-extension/test-extractors.js` and `.pages-orion/test-extractors.js`, rebuilt all synchronized extractor bundles, and repackaged `choice-properties-extension.zip` + `choice-properties-orion-extension.zip` (`v33.0.0`).
+
+---
+
 ## [v32.0.0] - 2026-11-13
 ### Complete Lossless Zillow Extraction & Platform-Wide Preservation
 - **Complete `resoFacts` & Zillow GraphQL Extraction**: Captures architectural subtypes, lot size, stories/floors, EV charging, appliances, flooring, interior/exterior/foundation/roof/fireplace/pool details, HOA fee + frequency, annual tax disclosures, utility service hookups, `listed_at`, unit numbers, counties, neighborhoods, and listing-reported school data alongside complete `original_data`, `source_raw_payload`, and `field_provenance`.

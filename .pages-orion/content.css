@@ -206,6 +206,12 @@
   color: #6ee7b7;
 }
 
+.cp-chip-warn {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 .cp-accordion-toggle {
   font-size: 11px;
   color: #818cf8;

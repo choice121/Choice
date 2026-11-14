@@ -44,6 +44,7 @@ The shared property details experience can now display cached Geoapify nearby-pl
 
 - **Multi-site support** — Zillow, Realtor.com, Apartments.com, Redfin, Opendoor, Progress Residential, CJ Real Estate, and Invitation Homes (per-site extractors in `shared-extractors.js`)
 - **Offline queue** — if a network failure prevents a save, the listing can be queued in extension local storage and retried when connectivity returns
+- **4+ photo support (v33.0.0)** — properties with 4 or more photos resolve via Tier-1 extraction and display a green HUD photo badge (`>= 4`), with no save blocking.
 - **Settings** — enable/disable Download-to-PC and Offline queue from the popup
 
 ---

@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v32.0.0)
+# Choice Properties — Universal Chrome Extension (v33.0.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -23,7 +23,7 @@ A browser extension that allows Choice Properties agents to save rental listings
 
 - **Instant 0ms SPA Mount**: Detects client-side navigations and transitions immediately without lag.
 - **Smart Pre-Flight HUD**:
-  - Shows the detected photo count; listings are not blocked based on photo count.
+  - Shows the detected photo count (green badge for 4+ photos, red warning indicator under 4); properties with 4 or more photos resolve cleanly via Tier-1 extraction and save without photo-count blocking.
   - Exact detected photo total shown for the current listing (no ambiguous `+N` remainder).
   - Mini photo thumbnail ribbon for instant visual preview.
   - Detected architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.) for review.

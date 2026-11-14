@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v32.0.0
+// Choice Properties — Live Content Script v33.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '32.0.0-live';
+  var VERSION  = '33.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -373,6 +373,11 @@
       .cp-chip-photos {
         background: rgba(16, 185, 129, 0.18);
         color: #6ee7b7;
+      }
+      .cp-chip-warn {
+        background: rgba(239, 68, 68, 0.18);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.3);
       }
       .cp-accordion-toggle {
         font-size: 11px;
@@ -924,6 +929,10 @@
     if (sqft) specs += (specs ? ' • ' : '') + Number(sqft).toLocaleString() + ' sqft';
     var photos = extractPhotoUrls(data.original_image_urls);
     if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    photos = dedupePhotoUrls(photos);
+    var photoCount = photos.length;
+    var photoBadgeClass = photoCount >= 4 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
     var compactSummary = activeWidget.querySelector('#cp-mini-summary');
     var addressLine = activeWidget.querySelector('#cp-address-line');
     var rentChip = activeWidget.querySelector('#cp-rent-chip');
@@ -936,7 +945,10 @@
     }
     if (rentChip) rentChip.textContent = rentText;
     if (specsChip) specsChip.textContent = specs || 'Listing details';
-    if (photosChip) photosChip.textContent = '📸 ' + photos.length + ' photos';
+    if (photosChip) {
+      photosChip.className = 'cp-chip ' + photoBadgeClass;
+      photosChip.textContent = photoBadgeText;
+    }
   }
 
   function scheduleListingRefresh(delay) {
@@ -1070,7 +1082,10 @@
         photoUrls = extracted.photo_urls;
       }
     }
+    photoUrls = dedupePhotoUrls(photoUrls);
     var photoCount = photoUrls.length;
+    var photoBadgeClass = photoCount >= 4 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
     var sourceLabel = extracted && extracted.source ? String(extracted.source).replace(/_/g, ' ') : 'Listing';
 
     var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
@@ -1123,7 +1138,7 @@
             <div class="cp-chips-row">
               <span class="cp-chip cp-chip-price" id="cp-rent-chip">${escapeHtml(rentStr)}</span>
               <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
-              <span class="cp-chip cp-chip-photos" id="cp-photos-chip">📸 ${escapeHtml(photoCount)} photos</span>
+              <span class="cp-chip ${photoBadgeClass}" id="cp-photos-chip">${escapeHtml(photoBadgeText)}</span>
             </div>
             <button class="cp-accordion-toggle" id="cp-toggle-tray">
               <span>View details breakdown</span> <span id="cp-chevron">▾</span>

@@ -374,6 +374,48 @@ t('Zillow dispatcher merges without null overwrite and keeps >2000 char DOM desc
   assert.strictEqual(p.description.length, longDesc.trim().length, 'DOM description must not truncate at 2000 chars');
 });
 
+t('Zillow accepts 4+ photos in Tier-1 NextData without noisy DOM image scraping', () => {
+  const fourPhotoDoc = {
+    body: { innerText: '3 bd 2 ba 1,500 sqft' },
+    getElementById: (id) => id === '__NEXT_DATA__' ? {
+      textContent: JSON.stringify(cache({
+        zpid: 77889900,
+        address: { streetAddress: '400 Four Photo Way', city: 'Charlotte', state: 'NC', zipcode: '28202' },
+        price: 1650,
+        bedrooms: 3,
+        bathrooms: 2,
+        livingArea: 1500,
+        homeType: 'SINGLE_FAMILY',
+        responsivePhotos: [
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/11111111111111111111111111111111-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/22222222222222222222222222222222-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/33333333333333333333333333333333-cc_ft_1536.jpg' }] } },
+          { mixedSources: { jpeg: [{ width: 1536, url: 'https://photos.zillowstatic.com/fp/44444444444444444444444444444444-cc_ft_1536.jpg' }] } },
+        ],
+      }))
+    } : null,
+    querySelector: () => null,
+    querySelectorAll: (sel) => {
+      if (String(sel).includes('zillowstatic.com')) {
+        return [
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999991-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999992-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999993-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999994-cc_ft_1536.jpg', getAttribute: () => null },
+          { src: 'https://photos.zillowstatic.com/fp/99999999999999999999999999999995-cc_ft_1536.jpg', getAttribute: () => null },
+        ];
+      }
+      return [];
+    },
+  };
+  const p = api.extractZillow(fourPhotoDoc, 'https://www.zillow.com/homedetails/400-Four-Photo-Way-Charlotte-NC-28202/77889900_zpid/');
+  assert.ok(p);
+  const urls = JSON.parse(p.original_image_urls);
+  assert.strictEqual(urls.length, 4);
+  assert.ok(urls[0].includes('11111111111111111111111111111111'));
+  assert.ok(!urls.some(u => u.includes('9999999999999999999999999999999')), 'must not fall back to unrelated DOM photos when 4 NextData photos exist');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail > 0 ? 1 : 0);
 

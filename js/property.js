@@ -2619,12 +2619,82 @@ function initAdminPropertyPanel(prop) {
 function buildAdminEditDrawer(prop) {
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
-  const PROP_TYPES = ['apartment','house','condo','townhouse','studio','room','duplex','triplex','loft','mobile_home','commercial','other'];
+  const PROP_TYPE_OPTIONS = [
+    { value: '',             label: '— Select Type —' },
+    { value: 'SINGLE_FAMILY',label: 'Single Family' },
+    { value: 'APARTMENT',    label: 'Apartment' },
+    { value: 'TOWNHOUSE',    label: 'Townhouse' },
+    { value: 'CONDO',        label: 'Condo' },
+    { value: 'DUPLEX',       label: 'Duplex' },
+    { value: 'MULTI_FAMILY', label: 'Multi-Family' },
+    { value: 'STUDIO',       label: 'Studio' },
+    { value: 'MOBILE_HOME',  label: 'Mobile Home' },
+    { value: 'TRIPLEX',      label: 'Triplex' },
+    { value: 'LOFT',         label: 'Loft' },
+    { value: 'ROOM',         label: 'Room' },
+    { value: 'LAND',         label: 'Land' },
+    { value: 'COMMERCIAL',   label: 'Commercial' },
+    { value: 'OTHER',        label: 'Other' },
+  ];
+  const _canonicalizePropType = (val) => {
+    if (val == null || val === '') return '';
+    const norm = String(val).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const aliases = {
+      single_family: 'SINGLE_FAMILY',
+      single_family_residence: 'SINGLE_FAMILY',
+      singlefamily: 'SINGLE_FAMILY',
+      house: 'SINGLE_FAMILY',
+      apartment: 'APARTMENT',
+      apartments: 'APARTMENT',
+      flat: 'APARTMENT',
+      townhouse: 'TOWNHOUSE',
+      townhome: 'TOWNHOUSE',
+      townhomes: 'TOWNHOUSE',
+      rowhouse: 'TOWNHOUSE',
+      row_home: 'TOWNHOUSE',
+      condo: 'CONDO',
+      condos: 'CONDO',
+      condominium: 'CONDO',
+      duplex: 'DUPLEX',
+      half_duplex: 'DUPLEX',
+      '1/2_duplex': 'DUPLEX',
+      multi_family: 'MULTI_FAMILY',
+      multifamily: 'MULTI_FAMILY',
+      fourplex: 'MULTI_FAMILY',
+      four_plex: 'MULTI_FAMILY',
+      quadplex: 'MULTI_FAMILY',
+      studio: 'STUDIO',
+      mobile_home: 'MOBILE_HOME',
+      manufactured: 'MOBILE_HOME',
+      triplex: 'TRIPLEX',
+      loft: 'LOFT',
+      room: 'ROOM',
+      land: 'LAND',
+      commercial: 'COMMERCIAL',
+      other: 'OTHER',
+    };
+    return aliases[norm] || String(val).trim();
+  };
   const STATUSES   = ['active','private_placement','rented','inactive','maintenance','draft','paused','archived'];
   const LAUNDRY    = ['','In-unit','Washer/Dryer Hookups','Shared (On-site)','Laundromat Nearby','None'];
   const HEATING    = ['','Central','Forced Air','Baseboard','Radiant','Heat Pump','Wall Unit','None'];
   const COOLING    = ['','Central AC','Window Units','Mini-Split','None'];
   const fmtStatusLabel = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const _buildPreservingOptions = (items, currentRaw, emptyLabel = '— None —', labelFn = null) => {
+    const cur = currentRaw == null ? '' : String(currentRaw);
+    const hasExact = items.some(item => (typeof item === 'object' ? item.value : item) === cur);
+    const list = items.slice();
+    if (cur && !hasExact) {
+      const insertAt = list.length && (typeof list[0] === 'object' ? list[0].value === '' : list[0] === '') ? 1 : 0;
+      list.splice(insertAt, 0, { value: cur, label: labelFn ? labelFn(cur) : cur });
+    }
+    return list.map(item => {
+      const val = typeof item === 'object' ? item.value : item;
+      const lbl = typeof item === 'object' ? item.label : (val ? (labelFn ? labelFn(val) : val) : emptyLabel);
+      return `<option value="${esc(val)}"${cur === val ? ' selected' : ''}>${esc(lbl)}</option>`;
+    }).join('');
+  };
 
   // Working photo array (sorted by display_order)
   let _photos = Array.isArray(prop.property_photos)
@@ -2659,12 +2729,12 @@ function buildAdminEditDrawer(prop) {
   drawer.id = 'adminEditDrawer';
 
   const p = prop;
-  const stateOpts   = ['<option value="">— State —</option>',...US_STATES.map(s => `<option value="${s}"${p.state===s?' selected':''}>${s}</option>`)].join('');
-  const typeOpts    = PROP_TYPES.map(t => `<option value="${t}"${p.property_type===t?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1).replace(/_/g,' ')}</option>`).join('');
-  const statusOpts  = STATUSES.map(s => `<option value="${s}"${p.status===s?' selected':''}>${fmtStatusLabel(s)}</option>`).join('');
-  const laundryOpts = LAUNDRY.map(v => `<option value="${v}"${p.laundry_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
-  const heatingOpts = HEATING.map(v => `<option value="${v}"${p.heating_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
-  const coolingOpts = COOLING.map(v => `<option value="${v}"${p.cooling_type===v?' selected':''}>${v||'— None —'}</option>`).join('');
+  const stateOpts   = _buildPreservingOptions(['', ...US_STATES], p.state || '', '— State —');
+  const typeOpts    = _buildPreservingOptions(PROP_TYPE_OPTIONS, _canonicalizePropType(p.property_type), '— Select Type —');
+  const statusOpts  = _buildPreservingOptions(STATUSES, p.status || '', '— Select Status —', fmtStatusLabel);
+  const laundryOpts = _buildPreservingOptions(LAUNDRY, p.laundry_type || '', '— None —');
+  const heatingOpts = _buildPreservingOptions(HEATING, p.heating_type || '', '— None —');
+  const coolingOpts = _buildPreservingOptions(COOLING, p.cooling_type || '', '— None —');
   const availDate   = p.available_date ? p.available_date.split('T')[0] : '';
 
   drawer.innerHTML = `
@@ -2934,6 +3004,55 @@ function buildAdminEditDrawer(prop) {
 
   document.body.appendChild(overlay);
   document.body.appendChild(drawer);
+
+  // Capture initial control states right after rendering so Save only updates genuinely changed fields
+  const _ADW_FIELD_MAP = [
+    ['adwTitle', 'title'],
+    ['adwStatus', 'status'],
+    ['adwPropType', 'property_type'],
+    ['adwSubtype', 'property_subtype'],
+    ['adwUnit', 'unit_number'],
+    ['adwRent', 'monthly_rent'],
+    ['adwDeposit', 'security_deposit'],
+    ['adwAppFee', 'application_fee'],
+    ['adwHoaFee', 'hoa_fee'],
+    ['adwHoaFreq', 'hoa_fee_frequency'],
+    ['adwTaxAnnual', 'tax_annual_amount'],
+    ['adwBeds', 'bedrooms'],
+    ['adwBaths', 'bathrooms'],
+    ['adwHalfBaths', 'half_bathrooms'],
+    ['adwSqft', 'square_footage'],
+    ['adwLotSize', 'lot_size_sqft'],
+    ['adwFloors', 'floors'],
+    ['adwYearBuilt', 'year_built'],
+    ['adwParking', 'parking'],
+    ['adwGarageSpaces', 'garage_spaces'],
+    ['adwLaundry', 'laundry_type'],
+    ['adwHeating', 'heating_type'],
+    ['adwCooling', 'cooling_type'],
+    ['adwEvCharging', 'ev_charging'],
+    ['adwAddress', 'address'],
+    ['adwCity', 'city'],
+    ['adwState', 'state'],
+    ['adwZip', 'zip'],
+    ['adwCounty', 'county'],
+    ['adwNeighborhood', 'neighborhood'],
+    ['adwAmenities', 'amenities'],
+    ['adwAppliances', 'appliances'],
+    ['adwFlooring', 'flooring'],
+    ['adwUtilities', 'utilities_included'],
+    ['adwAvailDate', 'available_date'],
+    ['adwDesc', 'description'],
+    ['adwAdminNotes', 'admin_notes'],
+    ['adwFeatured', 'featured'],
+  ];
+  const _readCtrlRaw = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    return el.type === 'checkbox' ? Boolean(el.checked) : String(el.value ?? '');
+  };
+  const _initialCtrlSnapshot = {};
+  _ADW_FIELD_MAP.forEach(([id]) => { _initialCtrlSnapshot[id] = _readCtrlRaw(id); });
 
   // ── Draft backup key (per-property, sessionStorage only) ──
   const _DRAFT_KEY = `adw_desc_${prop.id}`;
@@ -3264,7 +3383,7 @@ function buildAdminEditDrawer(prop) {
       return v.split(',').map(s => s.trim()).filter(Boolean);
     };
 
-    const payload = {
+    const allValues = {
       title:                str('adwTitle'),
       status:               document.getElementById('adwStatus')?.value || prop.status,
       property_type:        document.getElementById('adwPropType')?.value || null,
@@ -3303,25 +3422,37 @@ function buildAdminEditDrawer(prop) {
       description:          str('adwDesc'),
       admin_notes:          str('adwAdminNotes'),
       featured:             document.getElementById('adwFeatured')?.checked ?? false,
-      updated_at:           new Date().toISOString(),
     };
 
-    try {
-      const nowIso = new Date().toISOString();
-      const baseProv = (prop.field_provenance && typeof prop.field_provenance === 'object') ? { ...prop.field_provenance } : {};
-      Object.keys(payload).forEach((k) => {
-        if (k === 'updated_at') return;
-        const prev = JSON.stringify(prop[k] ?? null);
-        const next = JSON.stringify(payload[k] ?? null);
-        if (prev !== next) {
-          baseProv[k] = { origin: 'admin_edited', edited_at: nowIso };
-        }
-      });
-      payload.field_provenance = baseProv;
+    const payload = {};
+    _ADW_FIELD_MAP.forEach(([id, field]) => {
+      if (_readCtrlRaw(id) !== _initialCtrlSnapshot[id]) {
+        payload[field] = allValues[field];
+      }
+    });
 
-      // 1. Save core property fields
-      const res = await window.CP.Properties.update(prop.id, payload);
-      if (!res.ok) throw new Error(res.error || 'Property update failed');
+    try {
+      const changedFieldKeys = Object.keys(payload);
+      if (changedFieldKeys.length > 0) {
+        const nowIso = new Date().toISOString();
+        payload.updated_at = nowIso;
+        const baseProv = (prop.field_provenance && typeof prop.field_provenance === 'object') ? { ...prop.field_provenance } : {};
+        changedFieldKeys.forEach((k) => {
+          const prev = JSON.stringify(prop[k] ?? null);
+          const next = JSON.stringify(payload[k] ?? null);
+          if (prev !== next) {
+            baseProv[k] = { origin: 'admin_edited', edited_at: nowIso };
+          }
+        });
+        payload.field_provenance = baseProv;
+
+        // 1. Save only changed property fields
+        const res = await window.CP.Properties.update(prop.id, payload);
+        if (!res.ok) throw new Error(res.error || 'Property update failed');
+
+        // Keep initial snapshot synced in case Save is triggered again without reload
+        _ADW_FIELD_MAP.forEach(([id]) => { _initialCtrlSnapshot[id] = _readCtrlRaw(id); });
+      }
 
       // 2. Persist photo order. Photo deletions are applied immediately when
       // the X button is tapped, so Save Changes only needs to preserve order.
@@ -3427,7 +3558,7 @@ function buildAdminEditDrawer(prop) {
       const bannerSel = document.getElementById('adminStatusSelect');
       if (bannerSel && payload.status) bannerSel.value = payload.status;
       const notesField = document.getElementById('adminNotesField');
-      if (notesField) notesField.value = payload.admin_notes || '';
+      if (notesField && 'admin_notes' in payload) notesField.value = payload.admin_notes || '';
 
       // ── Live property page DOM patch (no refresh needed) ──
       const _esc2 = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
