@@ -18,7 +18,7 @@ Choice Properties is a modern rental listing platform with integrated client por
                     ▼                                                  ▼
      ┌────────────────────────────┐                     ┌───────────────────────────┐
      │ Universal Chrome Extension │                     │ Automated Python Pipeline │
-     │  (v33.0.0 — 1-click stage) │                     │ (HomeHarvest + Orchestrator)│
+     │  (v34.0.0 — 1-click stage) │                     │ (HomeHarvest + Orchestrator)│
      └──────────────┬─────────────┘                     └─────────────┬─────────────┘
                     │                                                 │
                     └─────────────────────────┬───────────────────────┘
@@ -54,7 +54,7 @@ Choice Properties is a modern rental listing platform with integrated client por
 ## Key Directories & Components
 
 - `admin/` — Admin management dashboards (Pipeline, Leases, Inspections, Applications, Watermark Sniper, Inquiry Assistant).
-- `chrome-extension/` — Chrome Extension source files (v33.0.0).
+- `chrome-extension/` — Chrome Extension source files (v34.0.0).
 - `lib/` — AI Inquiry Assistant engine, customer memory store, and mobile router.
 - `scraper/` — Python automated pipeline orchestrator and HomeHarvest scrapers.
 - `src/extractors/` — Single source-of-truth extractor logic (`shared-extractors.js`).

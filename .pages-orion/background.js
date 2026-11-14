@@ -157,6 +157,7 @@ async function postPayload(payload) {
     mode:    'cors',
     headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
     body:    serialized,
+    signal:  AbortSignal.timeout(22000),
   });
   let body;
   try {
@@ -588,6 +589,38 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           await chrome.storage.local.set({ cp_default_folder: folder });
         }
         sendResponse({ ok: true, defaultFolder: folder });
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === 'CHECK_LISTING') {
+    (async () => {
+      try {
+        const sourceId = msg.source_listing_id ? String(msg.source_listing_id) : '';
+        const source = msg.source ? String(msg.source) : 'zillow';
+        if (!sourceId) {
+          sendResponse({ ok: false, error: 'source_listing_id is required' });
+          return;
+        }
+        const checkUrl = EDGE_URL
+          + '?secret=' + encodeURIComponent(SECRET)
+          + '&action=check_listing'
+          + '&source=' + encodeURIComponent(source)
+          + '&source_listing_id=' + encodeURIComponent(sourceId);
+        const res = await fetch(checkUrl, {
+          method: 'GET',
+          headers: { 'x-import-secret': SECRET },
+          signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.ok) {
+          sendResponse(data);
+        } else {
+          sendResponse({ ok: false, error: (data && data.error) || 'Check failed' });
+        }
       } catch (err) {
         sendResponse({ ok: false, error: String(err) });
       }

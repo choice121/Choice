@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v33.0.0
+// Choice Properties — Live Content Script v34.0.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '33.0.0-live';
+  var VERSION  = '34.0.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -42,6 +42,162 @@
   var positionUpdateScheduled = false;
   var listingRefreshTimer = null;
   var hydrationRefreshTimers = [];
+  var errorResetTimer = null;
+  var savedListingsState = {};
+  var SAVED_STATE_STORAGE_KEY = 'cp_saved_listings_v1';
+
+  function loadSavedListingsCache() {
+    try {
+      var raw = sessionStorage.getItem(SAVED_STATE_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          savedListingsState = parsed;
+        }
+      }
+    } catch (_) {}
+  }
+  loadSavedListingsCache();
+
+  function canonicalListingPath(url) {
+    try {
+      var u = new URL(url, location.href);
+      return u.origin + u.pathname.replace(/\/+$/, '');
+    } catch (_) {
+      return String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '');
+    }
+  }
+
+  function getListingKey(data) {
+    if (!data) return canonicalListingPath(location.href);
+    var src = data.source || 'listing';
+    if (data.source_listing_id) return src + '|' + String(data.source_listing_id);
+    return src + '|' + canonicalListingPath(data.source_url || data.url || location.href);
+  }
+
+  function isSameListing(a, b) {
+    if (!a || !b) return false;
+    if (a.source === b.source && a.source_listing_id && b.source_listing_id) {
+      return String(a.source_listing_id) === String(b.source_listing_id);
+    }
+    return canonicalListingPath(a.source_url || a.url || '') === canonicalListingPath(b.source_url || b.url || '');
+  }
+
+  function getSavedState(data) {
+    if (!data) return null;
+    var key = getListingKey(data);
+    return savedListingsState[key] || null;
+  }
+
+  function setSavedState(data, state) {
+    if (!data || !state) return;
+    var key = getListingKey(data);
+    savedListingsState[key] = Object.assign({ updatedAt: Date.now() }, state);
+    try {
+      var keys = Object.keys(savedListingsState);
+      if (keys.length > 100) {
+        keys.sort(function (a, b) {
+          return (savedListingsState[a].updatedAt || 0) - (savedListingsState[b].updatedAt || 0);
+        });
+        keys.slice(0, keys.length - 100).forEach(function (k) { delete savedListingsState[k]; });
+      }
+      sessionStorage.setItem(SAVED_STATE_STORAGE_KEY, JSON.stringify(savedListingsState));
+    } catch (_) {}
+  }
+
+  function generateSaveNonce() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function buildSaveBtnDefaultHtml() {
+    return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
+  }
+
+  function applySavedStateToWidget(container, extracted, forceReapply) {
+    var root = container || activeWidget;
+    if (!root || !extracted) return;
+    var state = getSavedState(extracted);
+    var saveBtn = root.querySelector('#cp-btn-save');
+    var miniSaveBtn = root.querySelector('#cp-mini-save-btn');
+    var successBox = root.querySelector('#cp-success-box');
+    var successText = root.querySelector('#cp-success-text');
+    var successBanner = root.querySelector('.cp-success-banner');
+    var miniTrigger = root.querySelector('#cp-expand-trigger');
+
+    if (!state) {
+      if (forceReapply) {
+        if (saveBtn) {
+          saveBtn.style.display = 'flex';
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = buildSaveBtnDefaultHtml();
+          saveBtn.style.background = '';
+        }
+        if (miniSaveBtn) {
+          miniSaveBtn.disabled = false;
+          miniSaveBtn.textContent = 'Save';
+          miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+        }
+        if (successBox) successBox.style.display = 'none';
+        if (miniTrigger) miniTrigger.classList.remove('cp-mini-trigger-saved');
+      }
+      return;
+    }
+
+    var currentDef = getDefaultFolderSync();
+    var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
+    var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+    var stateFolderId = state.folderId ? String(state.folderId) : '';
+    var stateFolderName = state.folderName != null ? String(state.folderName) : '';
+    var folderChanged = Boolean(
+      (currentFolderId || currentFolderName) &&
+      (currentFolderId !== stateFolderId || currentFolderName !== stateFolderName)
+    );
+
+    if (saveBtn) {
+      if (folderChanged && (state.status === 'saved' || state.status === 'duplicate')) {
+        saveBtn.style.display = 'flex';
+        saveBtn.disabled = false;
+        saveBtn.style.background = 'linear-gradient(135deg, #059669 0%, #4f46e5 100%)';
+        saveBtn.innerHTML = '<span>Move to ' + escapeHtml(currentFolderName.slice(0, 18)) + '</span>';
+      } else {
+        saveBtn.style.display = 'none';
+      }
+    }
+
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = false;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+      if (folderChanged && (state.status === 'saved' || state.status === 'duplicate')) {
+        miniSaveBtn.textContent = 'Move';
+      } else if (state.status === 'queued') {
+        miniSaveBtn.textContent = 'Queued ✓';
+        miniSaveBtn.classList.add('cp-mini-queued');
+      } else if (state.status === 'duplicate') {
+        miniSaveBtn.textContent = 'In Pipeline ✓';
+        miniSaveBtn.classList.add('cp-mini-duplicate');
+      } else {
+        miniSaveBtn.textContent = 'Saved ✓';
+        miniSaveBtn.classList.add('cp-mini-saved');
+      }
+    }
+
+    if (successBox) {
+      successBox.style.display = 'flex';
+    }
+    if (successBanner) {
+      successBanner.classList.toggle('cp-banner-duplicate', state.status === 'duplicate');
+    }
+    if (successText) {
+      successText.textContent = state.text || (state.status === 'queued'
+        ? 'Queued for pipeline sync'
+        : state.status === 'duplicate'
+          ? 'Already in Pipeline'
+          : 'Saved to Choice Pipeline!');
+    }
+    if (miniTrigger) {
+      miniTrigger.classList.add('cp-mini-trigger-saved');
+    }
+  }
 
   // ── Fast In-Memory, Extension Storage & LocalStorage Folder Cache ───────────────
   function getCachedFolders() {
@@ -243,6 +399,27 @@
       }
       #cp-mini-save-btn:disabled {
         opacity: 0.75;
+      }
+      #cp-mini-save-btn.cp-mini-saved {
+        background: linear-gradient(135deg, #059669, #047857);
+        box-shadow: 0 0 0 1px rgba(167, 243, 208, 0.45) inset;
+        opacity: 1;
+      }
+      #cp-mini-save-btn.cp-mini-duplicate {
+        background: linear-gradient(135deg, #b45309, #d97706);
+        box-shadow: 0 0 0 1px rgba(253, 230, 138, 0.4) inset;
+        opacity: 1;
+      }
+      #cp-mini-save-btn.cp-mini-queued {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        opacity: 1;
+      }
+      .cp-success-banner.cp-banner-duplicate {
+        color: #fbbf24;
+      }
+      .cp-mini-trigger-saved {
+        border: 1px solid rgba(52, 211, 153, 0.45);
+        border-radius: 28px;
       }
       #cp-widget-container.cp-mobile-save-compact #cp-mini-save-btn {
         display: inline-flex;
@@ -1387,6 +1564,7 @@
           updateFolderPillDisplay();
           renderFolderList();
           closeFolderPopover();
+          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
         });
       });
     }
@@ -1476,6 +1654,7 @@
           if (newFolderNameInput) newFolderNameInput.value = '';
           if (newFolderDescInput) newFolderDescInput.value = '';
           closeFolderPopover();
+          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
         } catch (err) {
           var fallbackObj = { id: null, name: rawName, description: rawDesc, icon: '📁' };
           var list = getCachedFolders();
@@ -1485,6 +1664,7 @@
           updateFolderPillDisplay();
           renderFolderList();
           closeFolderPopover();
+          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
         } finally {
           folderBtnCreate.disabled = false;
           folderBtnCreate.textContent = 'Create & Set Default';
@@ -1523,6 +1703,21 @@
     if (miniSaveBtn) {
       miniSaveBtn.addEventListener('click', function (event) {
         event.stopPropagation();
+        var existingState = currentExtractedData ? getSavedState(currentExtractedData) : null;
+        var currentDef = getDefaultFolderSync();
+        var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
+        var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+        var folderChanged = Boolean(
+          existingState &&
+          (currentFolderId || currentFolderName) &&
+          (currentFolderId !== (existingState.folderId || '') || currentFolderName !== (existingState.folderName || ''))
+        );
+        // If already saved/in-pipeline in this folder, tapping badge expands card so user sees banner & Open Pipeline
+        if (existingState && !folderChanged) {
+          container.classList.remove('cp-minimized');
+          isMinimized = false;
+          return;
+        }
         handleSave();
       });
     }
@@ -1571,11 +1766,81 @@
         }
       } catch (e) {}
     })();
+
+    // Restore saved/duplicate state immediately, or quietly check pipeline
+    if (extracted) {
+      applySavedStateToWidget(container, extracted);
+      if (!getSavedState(extracted) && extracted.source_listing_id) {
+        checkExistingInPipeline(extracted, listingGeneration);
+      }
+    }
+  }
+
+  async function checkExistingInPipeline(extracted, expectedGen) {
+    if (!extracted || !extracted.source_listing_id) return;
+    try {
+      var res = null;
+      if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+        res = await new Promise(function (resolve) {
+          var t = setTimeout(function () { resolve(null); }, 4500);
+          try {
+            EXTENSION_API.runtime.sendMessage({
+              type: 'CHECK_LISTING',
+              source: extracted.source || 'zillow',
+              source_listing_id: extracted.source_listing_id
+            }, function (resp) {
+              clearTimeout(t);
+              resolve(EXTENSION_API.runtime.lastError ? null : resp);
+            });
+          } catch (_) {
+            clearTimeout(t);
+            resolve(null);
+          }
+        });
+      }
+      if (!res) {
+        var checkUrl = EDGE_URL
+          + '?secret=' + encodeURIComponent(SECRET)
+          + '&action=check_listing'
+          + '&source=' + encodeURIComponent(extracted.source || 'zillow')
+          + '&source_listing_id=' + encodeURIComponent(extracted.source_listing_id);
+        var fRes = await fetch(checkUrl, {
+          method: 'GET',
+          headers: { 'x-import-secret': SECRET },
+          signal: AbortSignal.timeout ? AbortSignal.timeout(4500) : undefined
+        });
+        if (fRes.ok) res = await fRes.json().catch(function () { return null; });
+      }
+      if (!res || !res.ok || !res.exists) return;
+      if (expectedGen !== listingGeneration || isSaving || getSavedState(extracted)) return;
+      var folderName = res.folder && res.folder.name ? String(res.folder.name) : '';
+      var folderId = res.folder && res.folder.folder_id ? String(res.folder.folder_id) : '';
+      var serial = res.folder && res.folder.serial ? ' (#' + res.folder.serial + ')' : '';
+      var statusLabel = res.status === 'published'
+        ? 'Already in Pipeline (Published)'
+        : res.status === 'archived'
+          ? 'Already in Pipeline (Archived)'
+          : folderName
+            ? ('In Folder: ' + folderName + serial)
+            : 'Already in Choice Pipeline';
+      setSavedState(extracted, {
+        status: 'duplicate',
+        text: statusLabel,
+        folderId: folderId,
+        folderName: folderName,
+        duplicateStatus: res.status || 'scraped'
+      });
+      if (activeWidget) applySavedStateToWidget(activeWidget, extracted);
+    } catch (_) {}
   }
 
   // ── Save Execution Flow ─────────────────────────────────────
   async function handleSave() {
     if (isSaving) return;
+    if (errorResetTimer) {
+      clearTimeout(errorResetTimer);
+      errorResetTimer = null;
+    }
     var saveBtn = document.querySelector('#cp-btn-save');
     var successBox = document.querySelector('#cp-success-box');
     var successText = document.querySelector('#cp-success-text');
@@ -1585,6 +1850,7 @@
     var miniSaveBtn = activeWidget && activeWidget.querySelector('#cp-mini-save-btn');
     if (miniSaveBtn) {
       miniSaveBtn.disabled = true;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
       miniSaveBtn.textContent = 'Saving…';
     }
 
@@ -1620,10 +1886,7 @@
       // The page may hydrate facts after the widget appears. Accept fresher
       // data for the same listing, but never submit data after SPA navigation.
       if (currentExtractedData && extractionSignature(currentExtractedData) !== extractionSignature(extracted)) {
-        var sameListing = currentExtractedData.source === extracted.source
-          && currentExtractedData.source_listing_id
-          && currentExtractedData.source_listing_id === extracted.source_listing_id;
-        if (!sameListing) {
+        if (!isSameListing(currentExtractedData, extracted)) {
           currentExtractedData = extracted;
           injectWidget(extracted);
           setError('Listing changed; refreshed');
@@ -1755,6 +2018,7 @@
           source: extracted.source || 'zillow',
           extractor_version: 'v' + VERSION,
           captured_at: new Date().toISOString(),
+          save_nonce: generateSaveNonce(),
           normalized_defaults: ['application_fee']
         },
         _import: 'browser-extension-v' + VERSION,
@@ -1769,61 +2033,83 @@
         return;
       }
 
-      // ── Step 1: Save property record first (Instant < 2s) ───
+      // ── Step 1: Save property record first ───────────────────
       var resp = await submitPayload(payload);
 
       if (resp && resp.queued) {
-        saveBtn.style.display = 'none';
-        if (miniSaveBtn) miniSaveBtn.textContent = 'Queued';
-        if (successText) successText.textContent = 'Queued for pipeline sync';
-        successBox.style.display = 'flex';
+        setSavedState(extracted, {
+          status: 'queued',
+          text: 'Queued for pipeline sync',
+          folderId: selectedFolderId || '',
+          folderName: selectedFolderName || ''
+        });
+        applySavedStateToWidget(activeWidget, extracted);
         isSaving = false;
       } else if (resp && resp.ok) {
-        saveBtn.style.display = 'none';
-        if (miniSaveBtn) miniSaveBtn.textContent = 'Saved ✓';
+        try {
+          if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+            EXTENSION_API.runtime.sendMessage({ type: 'SAVED' });
+          }
+        } catch (_) {}
+
+        var savedFolderName = selectedFolderName || '';
+        var savedFolderId = selectedFolderId || '';
+        var savedLabel = 'Saved to Choice Pipeline!';
         if (resp.folder && resp.folder.name != null) {
+          savedFolderName = String(resp.folder.name);
           if (resp.folder.folder_id) {
+            savedFolderId = String(resp.folder.folder_id);
             setDefaultFolder({
               id: resp.folder.folder_id,
-              name: String(resp.folder.name),
+              name: savedFolderName,
               description: (defaultFolder && defaultFolder.description) || ''
             });
           }
-          if (successText) {
-            successText.textContent = 'Saved to ' + resp.folder.name + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
-          }
+          savedLabel = 'Saved to ' + savedFolderName + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
         }
-        if (resp.photos_queued && successText) {
-          successText.textContent = (successText.textContent || 'Saved to Choice Pipeline') + ' • Photos processing';
+        if (resp.photos_queued) {
+          savedLabel += ' • Photos processing';
         }
-        successBox.style.display = 'flex';
+
+        setSavedState(extracted, {
+          status: 'saved',
+          text: savedLabel,
+          folderId: savedFolderId,
+          folderName: savedFolderName
+        });
+        applySavedStateToWidget(activeWidget, extracted);
         isSaving = false;
       } else if (resp && resp.duplicate) {
         isSaving = false;
-        if (miniSaveBtn) {
-          miniSaveBtn.disabled = false;
-          miniSaveBtn.textContent = 'Already saved';
-        }
-        if (resp.folder && resp.folder.folder) {
-          if (resp.folder.folder_id) {
+        var dupFolderName = '';
+        var dupFolderId = '';
+        var dupLabel = resp.message || 'Already in Pipeline';
+
+        if (resp.folder && (resp.folder.folder || resp.folder.name)) {
+          dupFolderName = String(resp.folder.folder || resp.folder.name);
+          dupFolderId = resp.folder.folder_id ? String(resp.folder.folder_id) : '';
+          if (resp.folder_updated && dupFolderId) {
             setDefaultFolder({
-              id: resp.folder.folder_id,
-              name: String(resp.folder.folder),
+              id: dupFolderId,
+              name: dupFolderName,
               description: (defaultFolder && defaultFolder.description) || ''
             });
           }
-          saveBtn.innerHTML = '<span>Updated Folder (' + escapeHtml(String(resp.folder.folder).slice(0, 14)) + ')</span>';
-          saveBtn.style.background = '#059669';
-        } else {
-          saveBtn.innerHTML = '<span>Already in Pipeline</span>';
-          saveBtn.style.background = '#b45309';
+          if (resp.folder_updated) {
+            dupLabel = 'Moved to ' + dupFolderName + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+          } else {
+            dupLabel = (resp.message || 'Already in Pipeline') + ' • ' + dupFolderName;
+          }
         }
-        setTimeout(function () {
-          saveBtn.innerHTML = '<span>Save to Pipeline</span>';
-          saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
-          saveBtn.disabled = false;
-          if (miniSaveBtn) miniSaveBtn.textContent = 'Save';
-        }, 4000);
+
+        setSavedState(extracted, {
+          status: 'duplicate',
+          text: dupLabel,
+          folderId: dupFolderId,
+          folderName: dupFolderName,
+          duplicateStatus: resp.status || 'scraped'
+        });
+        applySavedStateToWidget(activeWidget, extracted);
       } else {
         isSaving = false;
         setError(resp && resp.error ? resp.error.slice(0, 45) : 'Save failed');
@@ -1840,12 +2126,12 @@
     var bridgeError = null;
 
     if (canMessageBackground) {
-      for (var attempt = 0; attempt < 3; attempt++) {
+      for (var attempt = 0; attempt < 2; attempt++) {
         try {
           var response = await new Promise(function (resolve, reject) {
             var responseTimer = setTimeout(function () {
               resolve({ ok: false, error: 'Background save timed out', bridgeFailure: true });
-            }, 8000);
+            }, 18000);
             try {
               EXTENSION_API.runtime.sendMessage({
                 type: 'UPLOAD_PAYLOAD',
@@ -1875,7 +2161,7 @@
             return response;
           }
           bridgeError = response.error || 'Background save failed';
-          if (attempt < 2) await new Promise(function (resolve) { setTimeout(resolve, 600 * (attempt + 1)); });
+          if (attempt < 1) await new Promise(function (resolve) { setTimeout(resolve, 700); });
         } catch (err) {
           bridgeError = err && err.message ? err.message : 'Background save failed';
           break;
@@ -1912,6 +2198,10 @@
   function setError(msg) {
     var saveBtn = document.querySelector('#cp-btn-save');
     if (!saveBtn) return;
+    if (errorResetTimer) {
+      clearTimeout(errorResetTimer);
+      errorResetTimer = null;
+    }
     var miniSaveBtn = document.querySelector('#cp-mini-save-btn');
     if (IS_MOBILE && activeWidget && activeWidget.classList.contains('cp-minimized')) {
       activeWidget.classList.remove('cp-minimized');
@@ -1922,17 +2212,25 @@
     saveBtn.disabled = false;
     if (miniSaveBtn) {
       miniSaveBtn.disabled = false;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
       miniSaveBtn.textContent = 'Retry';
       miniSaveBtn.title = msg;
     }
-    setTimeout(function () {
-      if (saveBtn) {
-        saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
-        saveBtn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
+    errorResetTimer = setTimeout(function () {
+      errorResetTimer = null;
+      var btn = document.querySelector('#cp-btn-save');
+      var miniBtn = document.querySelector('#cp-mini-save-btn');
+      if (getSavedState(currentExtractedData)) {
+        if (activeWidget) applySavedStateToWidget(activeWidget, currentExtractedData);
+        return;
       }
-      if (miniSaveBtn && miniSaveBtn.textContent === 'Retry') {
-        miniSaveBtn.textContent = 'Save';
-        miniSaveBtn.title = '';
+      if (btn) {
+        btn.innerHTML = buildSaveBtnDefaultHtml();
+        btn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
+      }
+      if (miniBtn && miniBtn.textContent === 'Retry') {
+        miniBtn.textContent = 'Save';
+        miniBtn.title = '';
       }
     }, 4000);
   }
@@ -1957,7 +2255,22 @@
 
   function onPageChange() {
     if (location.href !== lastUrl) {
+      var prevPath = canonicalListingPath(lastUrl);
+      var nextPath = canonicalListingPath(location.href);
       lastUrl = location.href;
+      if (activeWidget && isDetailPage(location.href)) {
+        if (prevPath === nextPath) {
+          scheduleListingRefresh(120);
+          scheduleWidgetPositionUpdate();
+          return;
+        }
+        var nextCandidate = extractCurrentListing();
+        if (nextCandidate && isSameListing(currentExtractedData, nextCandidate)) {
+          scheduleListingRefresh(120);
+          scheduleWidgetPositionUpdate();
+          return;
+        }
+      }
       listingGeneration += 1;
       currentExtractedData = null;
       removeWidget();

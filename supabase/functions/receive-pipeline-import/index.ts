@@ -260,6 +260,63 @@ Deno.serve(async (req) => {
     return permissiveJsonOk({ ok: true, property_id: propertyId }, req);
   }
 
+  // 5. CHECK IF LISTING ALREADY EXISTS IN PIPELINE
+  if (action === 'check_listing') {
+    const checkSourceId = safeStr(body.source_listing_id) || safeStr(url.searchParams.get('source_listing_id'));
+    const rawSource = safeStr(body.source) || safeStr(url.searchParams.get('source'));
+    if (!checkSourceId) {
+      return permissiveJsonErr(400, 'source_listing_id is required', req);
+    }
+    let checkSource = 'zillow';
+    try {
+      checkSource = normalizeSource(rawSource);
+    } catch {
+      checkSource = (rawSource || 'zillow').toLowerCase();
+    }
+
+    const { data: matchRows } = await adminClient
+      .schema('pipeline')
+      .from('pipeline_properties')
+      .select('id, title, status, folder_id, folder_serial, choice_property_id, imported_at')
+      .eq('source_listing_id', checkSourceId)
+      .eq('source', checkSource)
+      .order('imported_at', { ascending: false })
+      .limit(1);
+    const match = matchRows?.[0] ?? null;
+
+    if (!match) {
+      return permissiveJsonOk({ ok: true, exists: false }, req);
+    }
+
+    let folderMeta: Record<string, unknown> | null = null;
+    if (match.folder_id) {
+      const { data: fRow } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .select('id, name')
+        .eq('id', match.folder_id)
+        .maybeSingle();
+      if (fRow) {
+        folderMeta = {
+          folder_id: fRow.id,
+          name: fRow.name,
+          serial: match.folder_serial ?? null,
+        };
+      }
+    }
+
+    return permissiveJsonOk({
+      ok: true,
+      exists: true,
+      id: match.id,
+      title: match.title,
+      status: match.status,
+      choice_property_id: match.choice_property_id,
+      imported_at: match.imported_at,
+      folder: folderMeta,
+    }, req);
+  }
+
   // ── DEFAULT: LISTING IMPORT ──────────────────────────────────
   if (req.method !== 'POST') {
     return permissiveJsonErr(405, 'Method not allowed', req);
@@ -277,11 +334,16 @@ Deno.serve(async (req) => {
     return permissiveJsonErr(400, err instanceof Error ? err.message : 'Unsupported source', req);
   }
 
+  const reqProvenance = (body.field_provenance && typeof body.field_provenance === 'object')
+    ? (body.field_provenance as Record<string, unknown>)
+    : null;
+  const incomingSaveNonce = safeStr(reqProvenance?.save_nonce);
+
   // Duplicate check
   const { data: existingRows } = await adminClient
     .schema('pipeline')
     .from('pipeline_properties')
-    .select('id, title, folder_id, folder_serial')
+    .select('id, title, status, folder_id, folder_serial, choice_property_id, imported_at, field_provenance')
     .eq('source_listing_id', sourceListingId)
     .eq('source', source)
     .order('imported_at', { ascending: false })
@@ -289,6 +351,41 @@ Deno.serve(async (req) => {
   const existing = existingRows?.[0] ?? null;
 
   if (existing) {
+    const existingProvenance = (existing.field_provenance && typeof existing.field_provenance === 'object')
+      ? (existing.field_provenance as Record<string, unknown>)
+      : null;
+    const existingSaveNonce = safeStr(existingProvenance?.save_nonce);
+
+    // If this request has the exact same save_nonce as the existing row,
+    // an earlier background/retry attempt from the SAME save click already landed.
+    // Treat as an idempotent success rather than a confusing "Already in pipeline" failure.
+    if (incomingSaveNonce && existingSaveNonce && incomingSaveNonce === existingSaveNonce) {
+      let sameSaveFolder: Record<string, unknown> | null = null;
+      if (existing.folder_id) {
+        const { data: fRow } = await adminClient
+          .schema('pipeline')
+          .from('pipeline_folders')
+          .select('id, name')
+          .eq('id', existing.folder_id)
+          .maybeSingle();
+        sameSaveFolder = {
+          folder_id: existing.folder_id,
+          name: fRow?.name || safeStr(body.folder_name) || 'Folder',
+          serial: existing.folder_serial ?? null,
+        };
+      }
+      return permissiveJsonOk({
+        ok: true,
+        deduped_retry: true,
+        id: existing.id,
+        title: String(existing.title || ''),
+        status: existing.status,
+        choice_property_id: existing.choice_property_id,
+        photos_queued: false,
+        folder: sameSaveFolder,
+      }, req);
+    }
+
     // If folder was specified (by folder_id or folder_name), assign/update it
     const reqFolderId = safeStr(body.folder_id);
     const reqFolder = body.folder_name !== undefined && body.folder_name !== null ? String(body.folder_name) : '';
@@ -327,7 +424,7 @@ Deno.serve(async (req) => {
           });
           const addObj = typeof addData === 'string' ? JSON.parse(addData) : addData;
           if (addObj?.ok) {
-            updatedFolderInfo = { folder: fName, serial: addObj.serial, folder_id: fId };
+            updatedFolderInfo = { folder: fName, name: fName, serial: addObj.serial, folder_id: fId, folder_updated: true };
           }
         }
       } catch (e) {
@@ -335,13 +432,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    let existingFolderInfo: Record<string, unknown> | null = updatedFolderInfo;
+    if (!existingFolderInfo && existing.folder_id) {
+      const { data: fRow } = await adminClient
+        .schema('pipeline')
+        .from('pipeline_folders')
+        .select('id, name')
+        .eq('id', existing.folder_id)
+        .maybeSingle();
+      if (fRow) {
+        existingFolderInfo = {
+          folder_id: fRow.id,
+          name: fRow.name,
+          serial: existing.folder_serial ?? null,
+        };
+      }
+    }
+
+    const dupStatus = existing.status ? String(existing.status) : 'scraped';
+    const dupMessage = dupStatus === 'published'
+      ? 'Already in pipeline (Published)'
+      : dupStatus === 'archived'
+        ? 'Already in pipeline (Archived)'
+        : 'Already in pipeline';
+
     return permissiveJsonOk({
       ok: false,
       duplicate: true,
+      folder_updated: Boolean(updatedFolderInfo),
       id: existing.id,
       title: existing.title,
-      folder: updatedFolderInfo,
-      message: 'Already in pipeline',
+      status: dupStatus,
+      choice_property_id: existing.choice_property_id,
+      imported_at: existing.imported_at,
+      folder: existingFolderInfo,
+      message: dupMessage,
     }, req);
   }
 
@@ -355,7 +480,10 @@ Deno.serve(async (req) => {
     const actualKey = Deno.env.get('GEOAPIFY_API_KEY');
     if (actualKey) {
       try {
-        const res = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${actualKey}`);
+        const res = await fetch(
+          `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${actualKey}`,
+          { signal: AbortSignal.timeout(2500) }
+        );
         if (res.ok) {
           const json = await res.json();
           const props = json?.features?.[0]?.properties;

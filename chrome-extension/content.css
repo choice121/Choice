@@ -735,6 +735,16 @@
   font-weight: 700;
 }
 
+.cp-success-banner.cp-banner-duplicate {
+  color: #fbbf24;
+}
+
+.cp-mini-trigger-saved {
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 28px;
+  color: #6ee7b7;
+}
+
 .cp-success-actions {
   display: flex;
   gap: 8px;

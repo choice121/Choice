@@ -3055,6 +3055,27 @@ function wirePanelPhotoActions(){
       load(false);
       loadFolders();
       updateRecoveryBadge();
+
+      // Auto-refresh when returning to the Pipeline tab after saving in another tab
+      let _lastFocusRefresh = Date.now();
+      const refreshOnFocus = () => {
+        if (document.hidden || _loading || _current) return;
+        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-relocate-modal, #pl-bulk-relocate-modal, #pl-desc-compare-modal');
+        if (hasOpenModal) return;
+        const now = Date.now();
+        if (now - _lastFocusRefresh < 2500) return;
+        _lastFocusRefresh = now;
+        _cClear();
+        fetchCounts().catch(() => {});
+        loadFolders().catch(() => {});
+        if (_activeFolder) {
+          selectFolder(_activeFolder).catch(() => {});
+        } else if (_page === 0) {
+          load(false).catch(() => {});
+        }
+      };
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshOnFocus(); });
+      window.addEventListener('focus', refreshOnFocus);
     })
     .catch(err => console.error('[pipeline] boot failed', err));
 

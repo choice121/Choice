@@ -4,6 +4,14 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v34.0.0] - 2026-11-14
+### Reliable Save Confirmation, Idempotent Retries & Instant Pipeline Visibility
+- **Eliminated Double-POST "Already in Pipeline" False Duplicates**: Fixed the 8s bridge timeout race where a slow Geoapify reverse-geocode could cause the extension to fire a duplicate fallback `POST` right after the first request succeeded. Added a 2.5s timeout on Geoapify calls in `receive-pipeline-import`, raised the extension bridge wait to 18s (22s worker fetch timeout), and introduced a per-tap `save_nonce` matched against `field_provenance.save_nonce` so retried/fallback requests for the same save tap return `{ ok: true, deduped_retry: true }` cleanly instead of flagging `duplicate: true`.
+- **Preserved Saved & Duplicate Confirmation States Across Hydration & SPA URL Updates**: Replaced destructive DOM teardown on same-listing hydration and `history.replaceState` query/hash changes with in-place snapshots (`isSameListing`), added `sessionStorage`-backed `savedListingsState` (`cp_saved_listings_v1`), removed the 4s button revert timer, and added non-blocking `CHECK_LISTING` pre-flight lookup on page mount so listings already in the pipeline show `In Pipeline ✓` (with status & folder info and a direct `Open Pipeline ↗` link) immediately and persistently across both Chromium and Orion builds.
+- **Immediate Top-of-Pipeline Ordering & Admin Tab-Return Auto-Refresh**: Updated `public.pipeline_list` (`20261114000001_pipeline_list_sort_by_imported_at.sql`) to sort by `COALESCE(imported_at, scraped_at::timestamptz) DESC` rather than old portal `listed_at` dates, ensuring newly saved listings appear at the very top of page 1. Added throttled `visibilitychange` / `focus` auto-refresh in `js/admin/pipeline.js` so switching back to the Admin Pipeline tab automatically clears stale 30s cache and shows newly saved listings right away.
+
+---
+
 ## [v33.0.0] - 2026-11-14
 ### 4+ Photo Threshold Support Across Chromium, Orion & Pipeline Ingestion
 - **Tier-1 Zillow Extraction at 4+ Photos**: Lowered `resPhotos.length >= 6` to `resPhotos.length >= 4` in `src/extractors/shared-extractors.js` (`extractZillow`) so Zillow listings with 4 or 5 photos resolve directly via Tier-1 NextData without falling through to noisy DOM image scraping or unstable hydration signature refreshes.
