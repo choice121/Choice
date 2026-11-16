@@ -2,7 +2,7 @@
  * Automated verification suite for the Enhanced Application Payment & Alternative Method Workflow.
  * Verifies:
  *   1. Preservation of /apply/index.html -> /apply/pay.html?app_id=... handoff and removal of legacy 3-option form controls
- *   2. Presence & structure of /apply/pay.html, /apply/css/pay.css, /apply/js/pay.js (7-state banner, card unavailable panel, alternative grid, instructions, external verification, cancelled view)
+ *   2. Presence & structure of /apply/pay.html, /apply/css/pay.css, /apply/js/pay.js (card checkout, multi-stage processing overlay, failure modal popup, inline notice, confirmation/assistance views)
  *   3. Cloudflare Pages /api/payments/[[path]].js parity with Node router
  *   4. Payment API endpoints (/api/payments/*):
  *        - GET  /api/payments/config (default mode: 'alternative_workflow', cardProcessing.available === false, 7 states, Apple Pay unconfigured)
@@ -88,15 +88,16 @@ async function run() {
     'id="paymentStatusBanner"',
     'id="cardPaymentForm"',
     'id="cardholderName"',
-    'id="cardUnavailableOptionView"',
-    'id="cardUnavailablePanel"',
-    'id="proceedToAlternativesBtn"',
-    'id="altPaymentPanel"',
-    'id="altMethodGrid"',
-    'id="altInstructionsView"',
-    'id="returnToAltGridBtn"',
-    'id="externalVerifyForm"',
-    'id="extConfirmCheckbox"',
+    'id="cardNumberInput"',
+    'id="cardExpiryInput"',
+    'id="cardCvvInput"',
+    'id="billingZipInput"',
+    'id="processingOverlay"',
+    'id="inlineCardNotice"',
+    'id="dismissInlineNoticeBtn"',
+    'id="cardErrorModal"',
+    'id="closeCardErrorModalBtn"',
+    'id="dismissCardErrorModalBtn"',
     'id="verificationPendingPanel"',
     'id="cancelledPanel"',
     'id="resumePaymentBtn"',
@@ -105,19 +106,28 @@ async function run() {
   ]) {
     assert(payHtml.includes(requiredId), `pay.html missing expected element ${requiredId}`);
   }
-  for (const unwanted of ['Demonstration Mode', 'presetValidBtn', 'presetDeclineBtn', 'js.stripe.com', 'stripeElements']) {
+  for (const unwanted of [
+    'Demonstration Mode',
+    'presetValidBtn',
+    'presetDeclineBtn',
+    'js.stripe.com',
+    'stripeElements',
+    'cardUnavailableOptionView',
+    'switchToAltFooterBtn',
+    'switchToAlternativesQuickBtn',
+  ]) {
     assert(!payHtml.includes(unwanted), `pay.html should not contain ${unwanted}`);
-    assert(!payJs.includes(unwanted), `pay.js should not contain ${unwanted}`);
+  }
+  for (const unwantedJs of ['Demonstration Mode', 'presetValidBtn', 'presetDeclineBtn', 'js.stripe.com', 'stripeElements']) {
+    assert(!payJs.includes(unwantedJs), `pay.js should not contain ${unwantedJs}`);
   }
   assert(payCss.includes('tabular-nums'), 'pay.css missing tabular-nums financial formatting');
-  assert(payCss.includes('.alt-method-grid'), 'pay.css missing alternative method grid styling');
+  assert(payCss.includes('.cp-modal-card'), 'pay.css missing failure modal styling');
+  assert(payCss.includes('.inline-card-notice'), 'pay.css missing inline card notice styling');
   assert(payJs.includes('Payment Submitted for Verification'), 'pay.js missing verification state label');
   assert(payJs.includes('Payment Method Selected'), 'pay.js missing method selected state label');
 
-  // Verify complete card payment interface always renders first & validates/processes transparently
-  for (const cardId of ['id="cardNumberInput"', 'id="cardExpiryInput"', 'id="cardCvvInput"', 'id="extSenderHandleInput"', 'id="extReferenceInput"']) {
-    assert(payHtml.includes(cardId), `pay.html missing expected input ${cardId}`);
-  }
+  // Verify complete card payment interface always renders first & displays transparent failure modal on 503/402
   assert(
     payHtml.includes('Card Payment Could Not Be Completed') && payHtml.includes('Not a Bank Decline'),
     'pay.html must transparently communicate disabled card checkout as not a bank decline'
@@ -129,13 +139,9 @@ async function run() {
   );
   assert(
     payJs.includes("cardForm.style.display = 'block'") &&
-      payJs.includes("if (targetView === 'unavailable')") &&
-      payJs.includes("$('altPaymentPanel').style.display = 'block'"),
-    'pay.js must show the card form first and automatically display alternative payment options after the unavailable error'
-  );
-  assert(
-    payJs.includes('getAlternativeInputSpecs') && payJs.includes('if (senderHandle.length < 2)') && payJs.includes('if (externalRef.length < 3)'),
-    'pay.js must tailor and enforce required alternative payment details fields'
+      payJs.includes("if ($('altPaymentPanel')) $('altPaymentPanel').style.display = 'none'") &&
+      payJs.includes('showCardErrorModal('),
+    'pay.js must show the card form first, keep #altPaymentPanel hidden, and show the failure modal popup when card checkout is disabled'
   );
 
   console.log('2b. Checking Cloudflare Pages /api/payments/[[path]].js parity...');

@@ -1207,12 +1207,12 @@ body {
     line-height: 1.45;
 }
 
-.pay-status-banner--required { background: #FFFBEB; border-color: #FDE68A; }
-.pay-status-banner--required .pay-status-title { color: #B45309; border-color: #FCD34D; }
+.pay-status-banner--required { background: #F8FAFC; border-color: #E2E8F0; }
+.pay-status-banner--required .pay-status-title { color: #1B3A5C; border-color: #CBD5E1; }
 .pay-status-banner--method { background: #EFF6FF; border-color: #BFDBFE; }
 .pay-status-banner--method .pay-status-title { color: #1D4ED8; border-color: #93C5FD; }
-.pay-status-banner--awaiting { background: #FFFBEB; border-color: #FDE68A; }
-.pay-status-banner--awaiting .pay-status-title { color: #92400E; border-color: #FCD34D; }
+.pay-status-banner--awaiting { background: #F8FAFC; border-color: #E2E8F0; }
+.pay-status-banner--awaiting .pay-status-title { color: #0F172A; border-color: #CBD5E1; }
 .pay-status-banner--verify { background: #EEF2FF; border-color: #C7D2FE; }
 .pay-status-banner--verify .pay-status-title { color: #3730A3; border-color: #A5B4FC; }
 .pay-status-banner--success { background: #F0FDF4; border-color: #BBF7D0; }
@@ -1221,6 +1221,231 @@ body {
 .pay-status-banner--failed .pay-status-title { color: #B91C1C; border-color: #FCA5A5; }
 .pay-status-banner--cancelled { background: #F8FAFC; border-color: #CBD5E1; }
 .pay-status-banner--cancelled .pay-status-title { color: #334155; border-color: #CBD5E1; }
+
+/* ── Inline Card Notice & Premium Failure Modal ── */
+.inline-card-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 13px 14px;
+    margin-bottom: 16px;
+    border-radius: var(--cp-radius-sm);
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #7F1D1D;
+}
+
+.inline-card-notice-icon {
+    width: 20px;
+    height: 20px;
+    color: #DC2626;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.inline-card-notice-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.inline-card-notice-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.inline-card-notice-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #991B1B;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.inline-card-notice-copy {
+    font-size: 0.81rem;
+    color: #7F1D1D;
+    line-height: 1.48;
+}
+
+.inline-card-notice-close {
+    background: none;
+    border: none;
+    color: #991B1B;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0.72;
+    transition: opacity var(--cp-transition), background-color var(--cp-transition);
+}
+
+.inline-card-notice-close:hover {
+    opacity: 1;
+    background-color: rgba(220, 38, 38, 0.08);
+}
+
+.inline-card-notice-close svg {
+    width: 15px;
+    height: 15px;
+}
+
+.cp-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(10, 27, 46, 0.56);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: cpModalFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cp-modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 452px;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(10, 27, 46, 0.28), 0 4px 16px rgba(15, 23, 42, 0.08);
+    padding: 24px;
+    text-align: left;
+    animation: cpModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+}
+
+@keyframes cpModalFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes cpModalPop {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cp-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--cp-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--cp-transition), color var(--cp-transition);
+}
+
+.cp-modal-close:hover {
+    background: var(--cp-surface-muted);
+    color: var(--cp-navy);
+}
+
+.cp-modal-close svg {
+    width: 18px;
+    height: 18px;
+}
+
+.cp-modal-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #DC2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.cp-modal-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.cp-modal-kicker {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #B91C1C;
+    margin-bottom: 4px;
+}
+
+.cp-modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--cp-navy);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 10px;
+    padding-right: 28px;
+}
+
+.cp-modal-body {
+    font-size: 0.9rem;
+    color: var(--cp-text-secondary);
+    line-height: 1.58;
+    margin-bottom: 16px;
+}
+
+.cp-modal-meta {
+    border-top: 1px solid var(--cp-border);
+    border-bottom: 1px solid var(--cp-border);
+    padding: 12px 0;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cp-modal-meta-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.84rem;
+    color: var(--cp-text-secondary);
+}
+
+.cp-modal-meta-row strong {
+    color: var(--cp-navy);
+    font-weight: 700;
+    text-align: right;
+}
+
+.cp-modal-support {
+    font-size: 0.81rem;
+    color: var(--cp-text-muted);
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.cp-modal-support a {
+    color: var(--cp-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.cp-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
 .feedback-panel--unavailable {
     background-color: #FFFBEB;

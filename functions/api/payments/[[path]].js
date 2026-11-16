@@ -81,7 +81,7 @@ export const RECOMMENDED_FAILURE_MESSAGE =
   'We were unable to finalize your payment at this time due to a verification issue. Please check your payment details and try another debit or credit card, or select an available alternative payment method. If you continue experiencing difficulties, please contact our support team for assistance.';
 
 export const CARD_UNAVAILABLE_MESSAGE =
-  'Your card payment could not be completed because online debit and credit card checkout is currently disabled on this portal. This is a checkout configuration notice — not a bank decline or an issue with your card. No charge was made, and your submitted application and balance remain saved. Please select an alternative payment method below to complete your fee.';
+  'Your card payment could not be completed because online debit and credit card checkout is currently disabled on this portal. This is a portal checkout restriction — not a bank decline or an issue with your card. No charge was made, and your submitted application and balance remain saved. Please contact our Leasing Desk at 707-706-3137 or choiceproperties404@gmail.com for assistance completing your fee.';
 
 const SUPPORT_INFO = {
   phone: '707-706-3137',

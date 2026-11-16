@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/js/cp-error-reporter.js?v=1794833058774"></script>
+    <script src="/js/cp-error-reporter.js?v=1794836431642"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Complete your Choice Properties rental application fee securely by debit or credit card.">
@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/apply/css/pay.css?v=1794836800000_card_flow">
+    <link rel="stylesheet" href="/apply/css/pay.css?v=1794836431642_card_modal">
 </head>
 <body>
 
@@ -49,7 +49,7 @@
                 <span>3. Screening &amp; Review</span>
             </div>
             <h1 class="pay-heading">Complete Application Fee Payment</h1>
-            <p class="pay-subheading">Review your outstanding screening fee balance and select an available payment option below to advance your application.</p>
+            <p class="pay-subheading">Review your screening fee summary and submit your debit or credit card details securely below.</p>
         </div>
 
         <!-- Shimmer Skeleton Loading State -->
@@ -124,8 +124,8 @@
                             <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/>
                         </svg>
                     </div>
-                    <h2 class="processing-title" id="processingTitle">Validating &amp; Processing Card</h2>
-                    <p class="processing-subtitle" id="processingSubtitle">Please keep this window open while we validate your card details and verify checkout availability.</p>
+                    <h2 class="processing-title" id="processingTitle">Processing Card Payment</h2>
+                    <p class="processing-subtitle" id="processingSubtitle">Please keep this window open while we validate your card and confirm checkout status.</p>
                     <ol class="processing-steps" id="processingSteps">
                         <li class="proc-step is-active" data-step="0">
                             <span class="proc-step-dot" aria-hidden="true"></span>
@@ -133,15 +133,15 @@
                         </li>
                         <li class="proc-step" data-step="1">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Encrypting &amp; tokenizing card details</span>
+                            <span>Encrypting &amp; tokenizing payment credentials</span>
                         </li>
                         <li class="proc-step" data-step="2">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Checking online card checkout gateway status</span>
+                            <span>Verifying payment gateway availability</span>
                         </li>
                         <li class="proc-step" data-step="3">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Finalizing payment routing status</span>
+                            <span>Finalizing checkout response</span>
                         </li>
                     </ol>
                 </div>
@@ -491,26 +491,20 @@
                         </div>
                     </div>
 
-                    <!-- Shown ONLY when live card processing is NOT configured -->
-                    <div id="cardUnavailableOptionView" class="card-unavailable-option" style="display:none;">
-                        <p class="card-unavailable-intro">
-                            Continue with debit or credit card checkout, or switch directly to an alternative payment option. Your application details and balance due remain preserved either way.
-                        </p>
-                        <div class="card-unavailable-notice-inline">
-                            <i class="fas fa-shield-alt" aria-hidden="true"></i>
-                            <span>Live card gateway status is checked before collecting card credentials so you are never charged or misled by an inactive processor.</span>
+                    <!-- Persistent inline notice shown after closing the checkout notice modal -->
+                    <div id="inlineCardNotice" class="inline-card-notice" style="display:none;" role="alert">
+                        <div class="inline-card-notice-icon" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>
                         </div>
-                        <button type="button" id="continueWithCardBtn" class="btn-primary-pay">
-                            <svg class="btn-lock-svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/></svg>
-                            <span id="continueWithCardBtnText">Continue with Debit or Credit Card</span>
-                        </button>
-                        <div class="card-alt-divider"><span>OR</span></div>
-                        <button type="button" id="switchToAlternativesQuickBtn" class="btn-secondary" style="width:100%;">
-                            <i class="fas fa-wallet" aria-hidden="true"></i> Pay with Cash App, PayPal, or Venmo
+                        <div class="inline-card-notice-body">
+                            <div class="inline-card-notice-title">Card Payment Could Not Be Completed</div>
+                            <p id="inlineCardNoticeText" class="inline-card-notice-copy">Online debit and credit card checkout is currently disabled on this portal (not a bank decline). No charge was made, and your application remains saved.</p>
+                        </div>
+                        <button type="button" id="dismissInlineNoticeBtn" class="inline-card-notice-close" aria-label="Dismiss notice">
+                            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06z"/></svg>
                         </button>
                     </div>
 
-                    <!-- Shown ONLY when an actual live card payment provider IS configured -->
                     <form id="cardPaymentForm" novalidate autocomplete="on">
                         <div class="field-group">
                             <label for="cardholderName" class="field-label">Cardholder Name</label>
@@ -590,11 +584,8 @@
                     </form>
 
                     <div class="checkout-help-row">
-                        <button type="button" id="switchToAltFooterBtn" class="btn-link-muted" style="margin-right:12px;">
-                            Switch to Alternative Payment Method
-                        </button>
                         <button type="button" id="needHelpInlineBtn" class="btn-link-muted">
-                            Need help? Contact Support
+                            Need assistance with your payment? Contact Leasing Desk
                         </button>
                     </div>
                 </div>
@@ -666,7 +657,58 @@
         </div>
     </footer>
 
+    <!-- Modern Payment Failure / Checkout Notice Modal -->
+    <div id="cardErrorModal" class="cp-modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cardErrorModalTitle">
+        <div class="cp-modal-card">
+            <button type="button" id="closeCardErrorModalBtn" class="cp-modal-close" aria-label="Close payment notice">
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z"/></svg>
+            </button>
+
+            <div class="cp-modal-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2.5"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                    <circle cx="17.5" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
+                </svg>
+            </div>
+
+            <div class="cp-modal-kicker">Checkout Notice · No Charge Made</div>
+            <h2 id="cardErrorModalTitle" class="cp-modal-title">Card Payment Could Not Be Completed</h2>
+            <p id="cardErrorModalMessage" class="cp-modal-body">
+                Online debit and credit card checkout is currently unavailable for this payment portal. This is a portal checkout restriction rather than a bank decline or an issue with your card, and no charge was made.
+            </p>
+
+            <div class="cp-modal-meta">
+                <div class="cp-modal-meta-row">
+                    <span>Application Reference</span>
+                    <strong id="modalAppIdEcho" class="font-mono">—</strong>
+                </div>
+                <div id="modalCardMetaRow" class="cp-modal-meta-row" style="display:none;">
+                    <span>Card Checked</span>
+                    <strong id="modalCardMetaEcho">—</strong>
+                </div>
+                <div class="cp-modal-meta-row">
+                    <span>Fee Balance Due</span>
+                    <strong id="modalAmountEcho" class="tabular-nums">$0.00</strong>
+                </div>
+            </div>
+
+            <p class="cp-modal-support">
+                Your rental application remains saved. For help finalizing your application fee, contact our Leasing Desk at <a href="tel:7077063137">707-706-3137</a> or <a href="mailto:choiceproperties404@gmail.com">choiceproperties404@gmail.com</a>.
+            </p>
+
+            <div class="cp-modal-actions">
+                <button type="button" id="dismissCardErrorModalBtn" class="btn-primary-pay">
+                    Return to Payment Screen
+                </button>
+                <a href="/tenant/portal.html" id="modalPortalLink" class="btn-secondary">
+                    Open Tenant Portal
+                </a>
+            </div>
+        </div>
+    </div>
+
     <script src="/config.js"></script>
-    <script src="/apply/js/pay.js?v=1794836800000_card_flow"></script>
+    <script src="/apply/js/pay.js?v=1794836431642_card_modal"></script>
 </body>
 </html>

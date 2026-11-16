@@ -18,14 +18,9 @@
    - Real-time validation checks format, Luhn checksum, and expiration.
    - Submitting the card triggers a multi-stage processing animation (*Encrypting & tokenizing card details*, *Connecting to card network*, *Verifying billing & issuing bank*, *Finalizing processing*).
 
-3. **Transparent Card Payment Error Notice (Not a Bank Decline)**:
-   - Following processing validation, the system displays a clear, transparent error message explaining that the card payment could not be completed because online card checkout is disabled on the portal — explicitly clarifying this is a checkout configuration notice and **not** a bank decline or card issue. No charges are made.
+3. **Transparent Card Payment Failure Pop-Up Right on Payment Screen**:
+   - Following processing validation, the applicant stays on the credit card payment screen and a modern modal dialog appears directly over the payment form explaining that the card payment could not be completed because online card checkout is disabled on the portal — explicitly clarifying this is a portal checkout restriction and **not** a bank decline or card issue. No charges are made.
+   - Dismissing the modal keeps the applicant cleanly on the card checkout screen with a subtle, dismissible inline notice banner and Leasing Desk contact details.
 
-4. **Automatic Guided Transition to Alternative Payment Methods**:
-   - Following the error notice, the interface automatically reveals and guides the applicant to select an available alternative payment method right below.
-   - Prominent actions guide the applicant to Cash App, PayPal, Apple Pay (when configured), or Venmo.
-
-5. **Alternative Payment Method Selection & Verification**:
-   - The applicant selects an alternative payment method (Cash App, PayPal, Apple Pay, Venmo).
-   - The interface displays official recipient handles, exact amount due, application reference ID, and step-by-step instructions.
-   - Applicant submits their external transfer reference (transaction ID, confirmation #, or sender handle) for Leasing Desk verification.
+4. **Professional Institutional Checkout Experience**:
+   - The applicant-facing payment screen remains a clean, high-trust debit/credit card checkout page paired with the application fee summary sidebar and does not expose informal peer-to-peer payment grids.

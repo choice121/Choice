@@ -10,7 +10,7 @@
     'use strict';
 
     const RECOMMENDED_FAILURE_MESSAGE =
-        'Card payment could not be completed at this time due to card network gateway verification limitations. Your card was not charged. Please select an available alternative payment method below to complete your fee.';
+        'Card payment could not be completed at this time due to card network gateway verification limitations. Your card was not charged. Please review your details or contact our Leasing Desk at 707-706-3137 for assistance.';
 
     const PAYMENT_STATES = {
         REQUIRED: 'Payment Required',
@@ -31,7 +31,9 @@
         session: null,
         selectedMethod: null,
         lastRenderedMethod: null,
-        viewMode: 'auto', // 'auto' | 'card' | 'unavailable' | 'alt_grid' | 'alt_instructions' | 'verify_pending' | 'cancelled' | 'failure' | 'assistance' | 'confirmed'
+        lastAttemptedCardMeta: null,
+        showCardErrorNotice: false,
+        viewMode: 'auto', // 'auto' | 'card' | 'verify_pending' | 'cancelled' | 'failure' | 'assistance' | 'confirmed'
         isProcessing: false,
         summaryExpandedMobile: false,
     };
@@ -294,17 +296,17 @@
             case PAYMENT_STATES.AWAITING:
                 return {
                     cls: 'pay-status-banner--awaiting',
-                    copy: 'Online card checkout could not be completed. Select an available alternative payment method below to finish your fee.',
+                    copy: 'Online card checkout is currently disabled on this portal (not a bank decline). No charge was made and your application remains saved.',
                 };
             case PAYMENT_STATES.UNSUCCESSFUL:
                 return {
                     cls: 'pay-status-banner--failed',
-                    copy: 'Your prior payment attempt could not be completed. Select a payment option below — your application remains saved.',
+                    copy: 'Your prior card payment attempt could not be completed. Review your details below — your application remains saved.',
                 };
             case PAYMENT_STATES.CANCELLED:
                 return {
                     cls: 'pay-status-banner--cancelled',
-                    copy: 'Payment selection was cancelled. No charge was made and your application remains saved whenever you resume.',
+                    copy: 'Checkout was paused before completing your fee. No charge was made and your application remains saved.',
                 };
             case PAYMENT_STATES.ASSISTANCE:
                 return {
@@ -314,7 +316,7 @@
             default:
                 return {
                     cls: 'pay-status-banner--required',
-                    copy: 'Application fee payment is required to complete screening. Choose an available payment method below.',
+                    copy: 'Submit your debit or credit card details below to complete your application screening fee.',
                 };
         }
     }
@@ -671,22 +673,70 @@
         }
     }
 
+    function showCardErrorModal({ title, message, cardMeta } = {}) {
+        const modal = $('cardErrorModal');
+        if (!modal) return;
+
+        const session = state.session || {};
+        const appId = session.app_id || state.appId || '—';
+        const amountDue = Number(session.amount_due_now ?? session.application_fee ?? 0);
+
+        if ($('cardErrorModalTitle')) {
+            $('cardErrorModalTitle').textContent = title || 'Card Payment Could Not Be Completed';
+        }
+        const resolvedMessage = message
+            || state.config?.cardProcessing?.reason
+            || 'Online debit and credit card checkout is currently disabled on this portal. This is a portal checkout restriction — not a bank decline or an issue with your card. No charge was made, and your submitted application remains saved.';
+        if ($('cardErrorModalMessage')) {
+            $('cardErrorModalMessage').textContent = resolvedMessage;
+        }
+        if ($('modalAppIdEcho')) $('modalAppIdEcho').textContent = appId;
+        if ($('modalAmountEcho')) $('modalAmountEcho').textContent = formatCurrency(amountDue);
+
+        const metaRow = $('modalCardMetaRow');
+        const metaEcho = $('modalCardMetaEcho');
+        if (metaRow && metaEcho) {
+            if (cardMeta && cardMeta.last4) {
+                metaEcho.textContent = `${cardMeta.brand || 'Card'} •••• ${cardMeta.last4}`;
+                metaRow.style.display = 'flex';
+            } else {
+                metaRow.style.display = 'none';
+            }
+        }
+
+        if ($('inlineCardNoticeText')) {
+            $('inlineCardNoticeText').textContent = resolvedMessage;
+        }
+        if ($('inlineCardNotice')) {
+            $('inlineCardNotice').style.display = 'flex';
+        }
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        const dismissBtn = $('dismissCardErrorModalBtn');
+        if (dismissBtn) dismissBtn.focus();
+    }
+
+    function closeCardErrorModal() {
+        const modal = $('cardErrorModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        if ($('cardNumberInput')) {
+            $('cardNumberInput').focus();
+        }
+    }
+
     function configureCardCheckoutView() {
         const cardForm = $('cardPaymentForm');
         const unavailOption = $('cardUnavailableOptionView');
         const subtitle = $('cardCheckoutSubtitle');
+        const inlineNotice = $('inlineCardNotice');
 
-        // Always render the complete credit card payment interface first so the applicant can
-        // enter card details and experience real-time validation & checkout verification.
         if (cardForm) cardForm.style.display = 'block';
         if (unavailOption) unavailOption.style.display = 'none';
         if (subtitle) subtitle.textContent = 'Encrypted & tokenized checkout';
-
-        const amountDueNow = Number(state.session?.amount_due_now ?? state.session?.application_fee ?? 0);
-        if ($('continueWithCardBtnText')) {
-            $('continueWithCardBtnText').textContent = amountDueNow > 0
-                ? `Continue with Debit or Credit Card (${formatCurrency(amountDueNow)})`
-                : 'Confirm Application Fee ($0.00)';
+        if (inlineNotice) {
+            inlineNotice.style.display = state.showCardErrorNotice ? 'flex' : 'none';
         }
     }
 
@@ -743,10 +793,6 @@
                 targetView = 'verify_pending';
             } else if (paymentState === PAYMENT_STATES.CANCELLED) {
                 targetView = 'cancelled';
-            } else if (paymentState === PAYMENT_STATES.METHOD_SELECTED && state.selectedMethod && findAltMethod(state.selectedMethod)?.available) {
-                targetView = 'alt_instructions';
-            } else if (paymentState === PAYMENT_STATES.UNSUCCESSFUL) {
-                targetView = 'failure';
             } else {
                 targetView = 'card';
             }
@@ -779,68 +825,14 @@
             return;
         }
 
-        if (targetView === 'unavailable') {
-            syncStatusIndicators(PAYMENT_STATES.AWAITING);
-            const unavailPanel = $('cardUnavailablePanel');
-            unavailPanel.style.display = 'block';
-            if ($('unavailableAppIdEcho')) $('unavailableAppIdEcho').textContent = appId;
-            if ($('unavailableAmountEcho')) $('unavailableAmountEcho').textContent = formatCurrency(amountDueNow);
-            if ($('cardUnavailableReasonText')) {
-                $('cardUnavailableReasonText').textContent =
-                    state.config?.cardProcessing?.reason
-                    || 'Your card payment could not be completed because online debit and credit card checkout is currently disabled on this portal. This is a checkout configuration notice — not a bank decline or an issue with your card. No charge was made, and your submitted application and balance remain saved.';
-            }
-            // Automatically guide the applicant directly into selecting an alternative payment method below.
-            $('altPaymentPanel').style.display = 'block';
-            $('altMethodGridView').style.display = 'block';
-            $('altInstructionsView').style.display = 'none';
-            if ($('backToCardOverviewBtn')) {
-                $('backToCardOverviewBtn').style.display = 'inline-flex';
-            }
-            renderAlternativeMethodGrid();
-            try {
-                unavailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } catch (_) {}
-            return;
-        }
+        // Keep applicant on the sleek Credit / Debit Card checkout screen (never show alternative payment options grid)
+        if ($('cardUnavailablePanel')) $('cardUnavailablePanel').style.display = 'none';
+        if ($('altPaymentPanel')) $('altPaymentPanel').style.display = 'none';
 
-        if (targetView === 'alt_grid') {
-            syncStatusIndicators(paymentState === PAYMENT_STATES.UNSUCCESSFUL ? PAYMENT_STATES.UNSUCCESSFUL : PAYMENT_STATES.AWAITING);
-            $('altPaymentPanel').style.display = 'block';
-            $('altMethodGridView').style.display = 'block';
-            $('altInstructionsView').style.display = 'none';
-            if ($('backToCardOverviewBtn')) {
-                $('backToCardOverviewBtn').style.display = 'inline-flex';
-            }
-            renderAlternativeMethodGrid();
-            return;
-        }
-
-        if (targetView === 'alt_instructions') {
-            const methodObj = findAltMethod(state.selectedMethod || session.selected_payment_method);
-            if (!methodObj || !methodObj.available) {
-                state.viewMode = 'alt_grid';
-                renderActiveView();
-                return;
-            }
-            syncStatusIndicators(PAYMENT_STATES.METHOD_SELECTED);
-            $('altPaymentPanel').style.display = 'block';
-            $('altMethodGridView').style.display = 'none';
-            $('altInstructionsView').style.display = 'block';
-            renderAlternativeInstructions(methodObj);
-            return;
-        }
-
-        if (targetView === 'failure') {
-            syncStatusIndicators(PAYMENT_STATES.UNSUCCESSFUL);
-            $('failurePanel').style.display = 'block';
-            $('failureMessageText').textContent = session.payment_failure_reason || RECOMMENDED_FAILURE_MESSAGE;
-            $('failureAppIdEcho').textContent = appId;
-            return;
-        }
-
-        // Default: card option / checkout view
-        syncStatusIndicators(paymentState);
+        const displayBannerState = (paymentState === PAYMENT_STATES.AWAITING && state.showCardErrorNotice)
+            ? PAYMENT_STATES.AWAITING
+            : (paymentState === PAYMENT_STATES.UNSUCCESSFUL ? PAYMENT_STATES.UNSUCCESSFUL : PAYMENT_STATES.REQUIRED);
+        syncStatusIndicators(displayBannerState);
         configureCardCheckoutView();
         $('checkoutFormSection').style.display = 'block';
     }
@@ -881,6 +873,7 @@
         if ($('successPortalBtn')) $('successPortalBtn').href = portalUrl;
         if ($('verifyPortalBtn')) $('verifyPortalBtn').href = portalUrl;
         if ($('cancelledPortalBtn')) $('cancelledPortalBtn').href = portalUrl;
+        if ($('modalPortalLink')) $('modalPortalLink').href = portalUrl;
 
         if ($('successReceiptBtn')) {
             const rUrl = session.receipt_id
@@ -1443,6 +1436,11 @@
         const tokenized = tokenizeCardInputs();
         if (!tokenized) return;
 
+        state.lastAttemptedCardMeta = {
+            brand: tokenized.card_meta?.brand || 'Card',
+            last4: tokenized.card_meta?.last4 || '',
+        };
+
         const processPayload = {
             app_id: state.appId,
             ...(state.applicantId ? { applicant_id: state.applicantId } : {}),
@@ -1472,28 +1470,43 @@
                     state.config.cardProcessing.available = false;
                     if (data?.message) state.config.cardProcessing.reason = data.message;
                 }
-                if (data?.alternativeMethods && state.config) {
-                    state.config.alternativeMethods = data.alternativeMethods;
-                }
-                state.viewMode = 'unavailable';
+                state.showCardErrorNotice = true;
+                state.viewMode = 'card';
                 if (data.session) {
                     renderSession(data.session);
                 } else {
                     renderActiveView();
                 }
+                showCardErrorModal({
+                    title: 'Card Payment Could Not Be Completed',
+                    message: data?.message || state.config?.cardProcessing?.reason,
+                    cardMeta: state.lastAttemptedCardMeta,
+                });
+                return;
+            }
+
+            if (status === 402) {
+                setProcessingState(false, PAYMENT_STATES.UNSUCCESSFUL);
+                state.showCardErrorNotice = true;
+                state.viewMode = 'card';
+                if (data.session) {
+                    renderSession(data.session);
+                } else {
+                    renderActiveView();
+                }
+                showCardErrorModal({
+                    title: 'Card Payment Unsuccessful',
+                    message: data?.message || RECOMMENDED_FAILURE_MESSAGE,
+                    cardMeta: state.lastAttemptedCardMeta,
+                });
                 return;
             }
 
             if (data.session) {
+                state.showCardErrorNotice = false;
                 setProcessingState(false);
                 state.viewMode = 'auto';
                 renderSession(data.session);
-            } else if (status === 402) {
-                setProcessingState(false, PAYMENT_STATES.UNSUCCESSFUL);
-                state.viewMode = 'failure';
-                renderActiveView();
-                $('failureMessageText').textContent = data.message || RECOMMENDED_FAILURE_MESSAGE;
-                $('failureAppIdEcho').textContent = state.appId;
             } else if (!ok) {
                 setProcessingState(false, state.session?.application_payment_state || PAYMENT_STATES.REQUIRED);
                 $('checkoutFormSection').style.display = 'block';
@@ -1788,7 +1801,7 @@
         const resumeBtn = $('resumePaymentBtn');
         if (resumeBtn) {
             resumeBtn.addEventListener('click', () => {
-                state.viewMode = 'alt_grid';
+                state.viewMode = 'card';
                 renderActiveView();
             });
         }
@@ -1842,12 +1855,38 @@
         const helpAltGridBtn = $('helpFromAltGridBtn');
         if (helpAltGridBtn) helpAltGridBtn.addEventListener('click', requestPaymentAssistance);
 
+        const closeModalBtn = $('closeCardErrorModalBtn');
+        if (closeModalBtn) closeModalBtn.addEventListener('click', closeCardErrorModal);
+
+        const dismissModalBtn = $('dismissCardErrorModalBtn');
+        if (dismissModalBtn) dismissModalBtn.addEventListener('click', closeCardErrorModal);
+
+        const cardErrorModal = $('cardErrorModal');
+        if (cardErrorModal) {
+            cardErrorModal.addEventListener('click', (ev) => {
+                if (ev.target === cardErrorModal) closeCardErrorModal();
+            });
+        }
+        document.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Escape' && $('cardErrorModal')?.style.display !== 'none') {
+                closeCardErrorModal();
+            }
+        });
+
+        const dismissInlineBtn = $('dismissInlineNoticeBtn');
+        if (dismissInlineBtn) {
+            dismissInlineBtn.addEventListener('click', () => {
+                state.showCardErrorNotice = false;
+                if ($('inlineCardNotice')) $('inlineCardNotice').style.display = 'none';
+            });
+        }
+
         const retryFromAssist = $('retryFromAssistanceBtn');
         if (retryFromAssist) {
             retryFromAssist.addEventListener('click', () => {
                 wipeCardInputs();
                 clearAllFieldErrors();
-                state.viewMode = state.config?.cardProcessing?.available ? 'card' : 'alt_grid';
+                state.viewMode = 'card';
                 renderActiveView();
             });
         }
