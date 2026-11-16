@@ -5035,7 +5035,7 @@ class RentalApplication {
         if (applicantType === 'co_signer') {
             return 'Co-Signer (Financial Support): Provides separate financial backing for the application without inflating household occupant count or occupant income. Classified distinctly from occupying co-applicants and guarantors. Screening fee: $50.';
         }
-        return 'Co-Applicant (Occupying Adult): Adult (18+) who will reside at the property. Counts toward household occupancy & combined household income. Your 1st occupying Co-Applicant is $0 (Free); each additional Co-Applicant is $50.';
+        return 'Co-Applicant (Occupying Adult): Adult (18+) who will reside at the property. Counts toward household occupancy & combined household income. Each adult applicant and co-applicant pays $50.';
     }
 
     _syncCardFieldVisibility(card) {
@@ -6048,7 +6048,7 @@ class RentalApplication {
             } else if (feeSummary.additionalCount > 0) {
                 feeDesc.textContent = lang === 'es'
                     ? 'Desglose del hogar: $50 Solicitante Principal; el 1.er Co-Solicitante ocupante es $0 (Gratis); $50 por cada Co-Solicitante adicional, Garante o Co-Firmante. Nuestro equipo coordinará el pago dentro de 24 horas.'
-                    : 'Household schedule: $50 Primary Applicant; 1st occupying Co-Applicant is $0 (Free); $50 each additional Co-Applicant, Guarantor, or Co-Signer. Our team will coordinate payment within 24 hours via your preferred method.';
+                    : 'Household schedule: $50 per adult applicant, co-applicant, guarantor, or co-signer. Our team will coordinate payment within 24 hours via your preferred method.';
             } else {
                 feeDesc.textContent = lang === 'es'
                     ? 'Requerida antes de iniciar la verificación ($50.00). Dentro de 24 horas tras enviar, nuestro equipo le contactará para coordinar el pago con su método elegido.'
@@ -6100,7 +6100,7 @@ class RentalApplication {
                 : '';
             const policyHint = lang === 'es'
                 ? 'Tarifa del hogar: $50 Principal; 1.er Co-Solicitante ocupante $0 (Gratis); $50 cada Co-Solicitante adicional, Garante o Co-Firmante.'
-                : 'Household policy: $50 Primary Applicant; 1st occupying Co-Applicant $0 (Free); $50 each additional Co-Applicant, Guarantor, or Co-Signer.';
+                : 'Household policy: $50 per adult applicant, co-applicant, guarantor, or co-signer.';
             const pillText = `${lang === 'es' ? 'Total' : 'Total'}: $${total.toFixed(0)}`;
             this._setTrustedHtml(step1Preview, this._html`
                 <div class="step1-fee-preview-head">

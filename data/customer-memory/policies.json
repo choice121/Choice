@@ -1,6 +1,6 @@
 {
   "application_fee": 50,
-  "household_fee_policy": "$50 primary applicant, $0 (included free) first occupying co-applicant, $50 each additional co-applicant, guarantor, or co-signer",
+  "household_fee_policy": "$50 per adult applicant, co-applicant, guarantor, or co-signer",
   "review_window_hours": "24–48 hours",
   "reapplication_days": 30,
   "reapplication_count": 2,

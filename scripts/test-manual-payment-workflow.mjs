@@ -52,7 +52,7 @@ test('302 redirects exist for legacy /apply/pay routes in _redirects and serve.j
   assert.match(serve, /res\.writeHead\(302,\s*\{\s*Location:\s*`\/tenant\/portal\.html\$\{qs\}`/);
 });
 
-test('Frontend HouseholdRules calculates $50 Primary, $0 1st Co-Applicant, $50 additional', () => {
+test('Frontend HouseholdRules calculates $50 Primary, $50 Co-Applicant, $50 additional', () => {
   const cpApiSrc = read('js/cp-api.js');
   const sandbox = {
     window: { location: { origin: 'https://choice-properties-site.pages.dev' }, addEventListener: () => {} },
@@ -70,17 +70,17 @@ test('Frontend HouseholdRules calculates $50 Primary, $0 1st Co-Applicant, $50 a
   assert.equal(rules.calculateHouseholdApplicationFee([
     { applicant_type: 'primary' },
     { applicant_type: 'co_applicant' },
-  ]).totalFee, 50, '1st occupying co-applicant must be $0 (Free)');
+  ]).totalFee, 100, 'Occupying co-applicant is $50');
   assert.equal(rules.calculateHouseholdApplicationFee([
     { applicant_type: 'primary' },
     { applicant_type: 'co_applicant' },
     { applicant_type: 'co_applicant' },
-  ]).totalFee, 100, '2nd occupying co-applicant adds $50');
+  ]).totalFee, 150, '2 occupying co-applicants plus primary equals $150');
   assert.equal(rules.calculateHouseholdApplicationFee([
     { applicant_type: 'primary' },
     { applicant_type: 'co_applicant' },
     { applicant_type: 'guarantor' },
-  ]).totalFee, 100, 'Guarantor adds $50 while 1st co-applicant stays $0');
+  ]).totalFee, 150, 'Primary + co-applicant + guarantor equals $150');
   assert.equal(rules.calculateHouseholdApplicationFee([
     { applicant_type: 'primary' },
     { applicant_type: 'co_applicant' },
@@ -88,10 +88,9 @@ test('Frontend HouseholdRules calculates $50 Primary, $0 1st Co-Applicant, $50 a
   ], { creditApplied: true }).totalFee, 0, 'Credit waives household total');
 });
 
-test('Backend _shared/application-rules.ts matches $50/$0/$50 fee rules', () => {
+test('Backend _shared/application-rules.ts matches $50 per adult fee rules', () => {
   const rulesTs = read('supabase/functions/_shared/application-rules.ts');
-  assert.match(rulesTs, /if \(coApplicantCount === 1\) \{\s*itemStandardFee = 0;/);
-  assert.match(rulesTs, /First occupying co-applicant \(\$0 — Free\)/);
+  assert.match(rulesTs, /Occupying co-applicant screening \(\$50\)/);
 });
 
 test('Application form preserves manual payment dropdowns AND Nov 15-16 non-payment improvements', () => {
