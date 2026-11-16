@@ -187,41 +187,37 @@ function calculatePortalFee(app, applicants){
     const total=app.application_fee!=null ? Number(app.application_fee) : app.fee_breakdown.reduce((s,r)=>s+(Number(r?.fee)||0),0);
     return { total, items:app.fee_breakdown };
   }
-  if(!list){
+   if(!list){
     const extraCo=Math.max(0, Number(app?.co_applicant_count||(app?.has_co_applicant?1:0)));
     const primaryFee = creditApplied ? 0 : 50;
     const items=[{ label:'Primary Applicant', role:'primary', fee:primaryFee, note: creditApplied ? 'Application credit applied ($0)' : 'Primary applicant screening ($50)' }];
     let calc = primaryFee;
     for(let i=0;i<extraCo;i++){
-      const fee = creditApplied ? 0 : (i === 0 ? 0 : 50);
+      const fee = creditApplied ? 0 : 50;
       calc += fee;
       items.push({
         label:'Co-Applicant #'+(i+1),
         role:'co_applicant',
         fee,
-        note: creditApplied ? 'Application credit applied ($0)' : (i === 0 ? '1st occupying co-applicant included free ($0)' : 'Additional adult screening ($50)')
+        note: creditApplied ? 'Application credit applied ($0)' : 'Occupying co-applicant screening ($50)'
       });
     }
     const total=app?.application_fee!=null ? Number(app.application_fee) : calc;
     return { total, items };
   }
   let total=0;
-  let occupyingCoCount=0;
   const items=[];
   list.forEach((a,idx)=>{
     const norm=normalizePortalRole(a);
-    if(norm==='co_applicant') occupyingCoCount++;
     const name=[a.first_name,a.last_name].filter(Boolean).join(' ').trim()||formatPortalRole(norm,a.role);
     const explicitFee = a.screening_fee_amount != null ? Number(a.screening_fee_amount) : null;
-    const defaultFee = (norm==='co_applicant' && occupyingCoCount===1) ? 0 : 50;
+    const defaultFee = 50;
     const fee = creditApplied ? 0 : (Number.isFinite(explicitFee) ? explicitFee : defaultFee);
     const note = creditApplied
       ? 'Application credit applied ($0)'
       : (idx===0||norm==='primary'
           ? 'Primary applicant screening ($50)'
-          : (norm==='co_applicant' && occupyingCoCount===1
-              ? '1st occupying co-applicant included free ($0)'
-              : formatPortalRole(norm,a.role)+' screening ($50)'));
+          : formatPortalRole(norm,a.role)+' screening ($50)');
     total+=fee;
     items.push({ applicant_id:a.id||null, label:name, role:norm, roleLabel:formatPortalRole(norm,a.role), fee, note, payment_status:a.payment_status||null });
   });
@@ -690,7 +686,7 @@ function renderPaymentStatus(app){
 
   const breakdownHtml = feeCalc.items.length > 0
     ? `<div style="margin:10px 0 12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:var(--r-sm);font-size:.77rem">
-        <div style="font-weight:700;margin-bottom:6px;color:var(--text)">Household Screening Fee Schedule ($50 Primary · $0 1st Co-Applicant · $50 Each Additional)</div>
+        <div style="font-weight:700;margin-bottom:6px;color:var(--text)">Household Screening Fee Schedule ($50 per adult applicant, co-applicant, guarantor, or co-signer)</div>
         ${feeCalc.items.map((it,idx)=>{
           const appRow = Array.isArray(_portalApplicants) ? (_portalApplicants.find(a=>a.id===it.applicant_id) || _portalApplicants[idx]) : null;
           const mFee = Number(it.fee || 0);
@@ -767,7 +763,7 @@ function renderPaymentStatus(app){
     blocks.push(`<div class="section"><div class="section-label">Payment</div>
       <div class="pay-unpaid-card">
         <div class="pay-unpaid-title">Application Fee Pending — ${fmtMoney(rollup.remaining || fee)}</div>
-        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px;line-height:1.55">Screening fees are <strong>$50.00 for the Primary Applicant</strong>, <strong>$0.00 (Free) for the 1st occupying Co-Applicant</strong>, and <strong>$50.00 for each additional Co-Applicant, Guarantor, or Co-Signer</strong>. Total household fee: <strong>${fmtMoney(fee)}</strong>.</p>
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:8px;line-height:1.55">Screening fees are <strong>$50.00 per adult applicant, co-applicant, guarantor, or co-signer</strong>. Total household fee: <strong>${fmtMoney(fee)}</strong>.</p>
         ${prefsHtml}
         ${breakdownHtml}
         <p style="color:var(--text);font-size:.82rem;line-height:1.55;margin-bottom:10px">A Choice Properties leasing coordinator will text or call you within <strong>24 hours</strong> to arrange payment using your preferred method — or text us directly at <a href="sms:+17077063137" style="color:#1d4ed8;font-weight:700;text-decoration:none">707-706-3137</a>.</p>

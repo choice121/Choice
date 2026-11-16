@@ -17,7 +17,7 @@
   var EN = {
     // ── Fee & payment ─────────────────────────────────────────────────────
     feeStatement:
-      'A $50.00 application fee applies to the Primary Applicant, $0.00 (Free) for the 1st occupying Co-Applicant, and $50.00 for each additional Co-Applicant, Guarantor, or Co-Signer. Select your preferred payment methods on the application form and our leasing team will contact you within 24 hours to arrange payment.',
+      'A $50.00 application fee applies to each adult applicant, co-applicant, guarantor, or co-signer. Select your preferred payment methods on the application form and our leasing team will contact you within 24 hours to arrange payment.',
     feeReinforcement: 'Applications advance to review once payment is confirmed.',
 
     // ── Review timing ─────────────────────────────────────────────────────
@@ -82,7 +82,7 @@
 
   var ES = {
     feeStatement:
-      'Se aplica un cargo de solicitud de $50.00 para el Solicitante Principal, $0.00 (Gratis) para el primer Co-Solicitante ocupante y $50.00 por cada Co-Solicitante adicional, Garante o Co-Firmante. Seleccione sus métodos de pago preferidos en la solicitud y nuestro equipo se comunicará con usted dentro de las 24 horas para coordinar el pago.',
+      'Se aplica un cargo de solicitud de $50.00 para cada solicitante adulto, co-solicitante, garante o co-firmante. Seleccione sus métodos de pago preferidos en la solicitud y nuestro equipo se comunicará con usted dentro de las 24 horas para coordinar el pago.',
     feeReinforcement: 'Las solicitudes pasan a revisión una vez que se confirma el pago.',
 
     reviewTime:

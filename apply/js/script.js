@@ -1262,17 +1262,9 @@ class RentalApplication {
             if (type === 'co_applicant') {
                 coApplicantCount += 1;
                 occupyingAdultCount += 1;
-                if (coApplicantCount === 1) {
-                    itemStd = 0;
-                    includedFree = true;
-                    note = lang === 'es'
-                        ? '1.er co-solicitante ocupante ($0 — Incluido sin costo)'
-                        : 'First occupying co-applicant ($0 — Free)';
-                } else {
-                    note = lang === 'es'
-                        ? 'Evaluación de co-solicitante adicional'
-                        : 'Additional adult co-applicant screening';
-                }
+                note = lang === 'es'
+                    ? 'Evaluación de co-solicitante ocupante ($50)'
+                    : 'Occupying co-applicant screening ($50)';
             } else if (type === 'guarantor') {
                 guarantorCount += 1;
                 note = lang === 'es' ? 'Evaluación financiera de garante' : 'Guarantor financial screening';
@@ -3527,7 +3519,7 @@ class RentalApplication {
                 errPhone: 'Invalid format',
                 dobLabel: 'Date of Birth (18+)',
                 householdStepHeader: 'Household Members & Financial Supporters',
-                householdStepIntro: 'Every adult (18+) who will reside at the property or act as a guarantor/co-signer must be listed here ($50 Primary Applicant; 1st occupying Co-Applicant is $0 Free; $50 for each additional Co-Applicant, Guarantor, or Co-Signer). If you are applying alone, simply confirm below and continue.',
+                 householdStepIntro: 'Every adult (18+) who will reside at the property or act as a guarantor/co-signer must be listed here ($50 per adult applicant, co-applicant, guarantor, or co-signer). If you are applying alone, simply confirm below and continue.',
                 identityDisclosuresHeader: 'Identity, Disclosures & Contacts',
                 identityVerificationHeading: 'Identity Verification',
                 ssnModeLabel: 'Select Verification Method',
@@ -3541,7 +3533,7 @@ class RentalApplication {
                 govIdTypeLabel: 'Government ID Type (Optional)',
                 govIdNumberLabel: 'Government ID Number (Optional)',
                 coApplicantCheckbox: 'Include additional adult applicant(s), guarantor(s), or co-signer(s)',
-                coApplicantSectionHint: 'Add all adults (18+) who will reside in the home (Co-Applicants — your 1st occupying Co-Applicant is $0 Free) or provide financial support (Guarantors / Co-Signers — $50 each). For each person, choose whether you enter their details & authorize screening on their behalf now (Method A — no private link sent to them) or send them a private email link to finish their own details & consent (Method B).',
+                coApplicantSectionHint: 'Add all adults (18+) who will reside in the home or provide financial support ($50 application fee per person). For each person, choose whether you enter their details & authorize screening on their behalf now (Method A — no private link sent to them) or send them a private email link to finish their own details & consent (Method B).',
                 addAnotherApplicant: 'Add Another Co-Applicant / Guarantor / Co-Signer',
                 coApplicantInfo: 'Additional Household Member / Supporter',
                 coRoleLabel: 'Role Classification',
@@ -3681,7 +3673,7 @@ class RentalApplication {
                 preferencesNote: '',
                 paymentPrefsHeader: 'Application Fee Payment Preferences',
                 paymentPrefsIntro: 'Select your preferred payment method(s) for the application fee below. We do not charge a card on this form — once submitted, our leasing team will contact you within 24 hours to coordinate fee payment safely using your chosen method.',
-                paymentPrefsImportant: 'Primary Applicant is $50; your 1st occupying Co-Applicant is $0 (Free); each additional adult Co-Applicant (2nd+), Guarantor, or Co-Signer is $50.',
+                paymentPrefsImportant: 'Application fee is $50 per adult applicant, co-applicant, guarantor, or co-signer.',
                 paymentPrimaryBadge: 'Required — 1st Choice',
                 paymentPrimaryTitle: 'Primary Payment Method',
                 paymentPrimarySub: 'Choose the payment app or method you prefer to use first.',
@@ -3703,7 +3695,7 @@ class RentalApplication {
                 paymentReminderDesc: 'You will not be asked for card or bank credentials on this form. Within 24 hours of submission, our team reaches out via your preferred contact method to arrange fee payment.',
                 reviewHeader: 'Documents, Review & Submit',
                 feeTitle: 'Application Fee: $50.00',
-                feeDesc: 'Required before screening begins ($50 Primary; 1st occupying Co-Applicant $0 Free; $50 each additional adult). Within 24 hours of submitting, our team will contact you via your preferred method to coordinate payment.',
+                feeDesc: 'Required before screening begins ($50 per adult applicant, co-applicant, guarantor, or co-signer). Within 24 hours of submitting, our team will contact you via your preferred method to coordinate payment.',
                 reapplicationPolicyTextShort: 'If denied after payment, you receive application credits covering the fee on a future application for 30 days.',
                 summaryPropertyApplicant: 'Property & Primary Applicant',
                 summaryCoApplicant: 'Household Members & Supporters',
@@ -3974,7 +3966,7 @@ class RentalApplication {
                 preferencesNote: '',
                 paymentPrefsHeader: 'Preferencias de Pago de Tarifa',
                 paymentPrefsIntro: 'Seleccione sus métodos de pago preferidos a continuación. No solicitamos ni cobramos tarjetas en este formulario — al enviarlo, nuestro equipo le contactará dentro de 24 horas para coordinar el pago de forma segura.',
-                paymentPrefsImportant: 'Solicitante Principal: $50; 1.er Co-Solicitante ocupante: $0 (Gratis); cada Co-Solicitante adicional (2.º+), Garante o Co-Firmante: $50.',
+                paymentPrefsImportant: 'La tarifa de solicitud es de $50 por cada solicitante adulto, co-solicitante, garante o co-firmante.',
                 paymentPrimaryBadge: 'Requerido — 1.ª Opción',
                 paymentPrimaryTitle: 'Método de Pago Principal',
                 paymentPrimarySub: 'Elija la aplicación o método de pago que prefiere usar primero.',
@@ -3996,7 +3988,7 @@ class RentalApplication {
                 paymentReminderDesc: 'No se le pedirán datos de tarjeta ni banco en este formulario. Dentro de 24 horas de enviarlo, nuestro equipo se comunicará por su método preferido para coordinar el pago.',
                 reviewHeader: 'Documentos, Revisión y Envío',
                 feeTitle: 'Tarifa de Solicitud: $50.00',
-                feeDesc: 'Requerida antes de iniciar la verificación ($50 Principal; 1.er Co-Solicitante ocupante $0 Gratis; $50 cada adulto adicional). Dentro de 24 horas tras enviar, nuestro equipo le contactará para coordinar el pago.',
+                feeDesc: 'Requerida antes de iniciar la verificación ($50 por cada solicitante adulto, co-solicitante, garante o co-firmante). Dentro de 24 horas tras enviar, nuestro equipo le contactará para coordinar el pago.',
                 reapplicationPolicyTextShort: 'Si es denegado tras el pago, recibe créditos para cubrir la tarifa de futuras solicitudes por 30 días.',
                 summaryPropertyApplicant: 'Propiedad y Solicitante Principal',
                 summaryCoApplicant: 'Miembros del Hogar y Respaldos',

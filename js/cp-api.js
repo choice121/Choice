@@ -1587,17 +1587,9 @@ async function updateNav() {
         } else if (m.type === 'co_applicant') {
           coApplicantCount += 1;
           occupyingAdultCount += 1;
-          if (coApplicantCount === 1) {
-            itemStandardFee = 0;
-            includedFree = true;
-            note = locale === 'es'
-              ? '1.er co-solicitante ocupante ($0 — Incluido sin costo)'
-              : 'First occupying co-applicant ($0 — Free)';
-          } else {
-            note = locale === 'es'
-              ? 'Evaluación de co-solicitante adulto adicional ($50)'
-              : 'Additional occupying adult co-applicant screening ($50)';
-          }
+          note = locale === 'es'
+            ? 'Evaluación de co-solicitante ocupante ($50)'
+            : 'Occupying co-applicant screening ($50)';
         } else if (m.type === 'guarantor') {
           guarantorCount += 1;
           note = locale === 'es' ? 'Evaluación financiera de garante ($50)' : 'Guarantor financial screening ($50)';
