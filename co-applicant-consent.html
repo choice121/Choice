@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1794847075572"></script>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Household Screening &amp; Consent — Choice Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1794847075572">
+  <script defer src="/config.js"></script>
+  <script defer src="/js/tenant/co-applicant-consent.js?v=1794847075572"></script>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    .skip-link{position:absolute;top:-100%;left:0;z-index:9999;padding:10px 18px;background:#1d4ed8;color:#fff;font-size:.88rem;font-weight:700;border-radius:0 0 8px 0;text-decoration:none;transition:top .1s}
+    .skip-link:focus{top:0;outline:3px solid #fff;outline-offset:2px}
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:100}
+    .header-brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .header-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0}
+    .header-logo{color:var(--text);font-size:.95rem;font-weight:700}
+    .header-sub{color:var(--muted);font-size:.7rem;margin-top:1px}
+    .lang-toggle-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:border-color .15s,background .15s}
+    .lang-toggle-btn:hover{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
+    .container{max-width:760px;margin:20px auto;padding:0 14px 60px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.04);overflow:hidden}
+    .card-header{background:var(--surface-2);border-bottom:1px solid var(--border);padding:18px 20px}
+    .card-header h2{font-size:1.05rem;font-weight:700;color:var(--text);margin:0}
+    .card-header p{font-size:.82rem;color:var(--muted);margin:4px 0 0;line-height:1.45}
+    .card-body{padding:18px 20px}
+    @media(min-width:640px){
+      .header{padding:14px 24px}
+      .container{margin:28px auto;padding:0 16px 60px}
+      .card-header{padding:20px 24px}
+      .card-body{padding:22px 24px}
+    }
+    .role-pill{display:inline-flex;align-items:center;padding:4px 11px;border-radius:999px;font-size:.72rem;font-weight:700;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;white-space:nowrap}
+    .role-pill--guarantor{background:#f5f3ff;color:#5b21b6;border-color:#ddd6fe}
+    .role-pill--cosigner{background:#ecfeff;color:#155e75;border-color:#a5f3fc}
+    .role-banner{padding:12px 15px;border-radius:10px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:.8rem;line-height:1.5;margin-bottom:16px}
+    .role-banner--guarantor{background:#f5f3ff;border-color:#ddd6fe;color:#4c1d95}
+    .role-banner--cosigner{background:#ecfeff;border-color:#a5f3fc;color:#164e63}
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px 18px;margin-bottom:20px;padding:14px 16px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border)}
+    .info-item{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .info-label{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+    .info-val{font-size:.85rem;font-weight:600;color:var(--text);word-break:break-word}
+    .section-block{border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px;background:var(--surface)}
+    .section-block-title{font-size:.9rem;font-weight:700;color:var(--text);margin:0 0 4px}
+    .section-block-sub{font-size:.78rem;color:var(--muted);margin:0 0 14px;line-height:1.45}
+    .form-grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:600px){
+      .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .form-col-full{grid-column:1/-1}
+    }
+    .fg{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .fg label{font-size:.78rem;font-weight:600;color:var(--text)}
+    .req-star{color:#dc2626;margin-left:2px}
+    .fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:.86rem;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .fg input.input-invalid,.fg select.input-invalid,.fg textarea.input-invalid{border-color:#dc2626;background:#fef2f2}
+    .field-hint{font-size:.72rem;color:var(--muted);line-height:1.4}
+    .ssn-wrap{position:relative;display:flex;align-items:center}
+    .ssn-wrap input{padding-right:66px}
+    .ssn-toggle{position:absolute;right:8px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .ssn-onfile{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:.8rem;font-weight:600}
+    .radio-row{display:flex;gap:16px;flex-wrap:wrap;padding:6px 0}
+    .radio-pill{display:inline-flex;align-items:center;gap:7px;font-size:.84rem;font-weight:600;cursor:pointer}
+    .radio-pill input{width:17px;height:17px;accent-color:#1d4ed8;cursor:pointer}
+    .upload-box{border:1px solid var(--border);border-radius:12px;background:#f8fafc;padding:14px}
+    .doc-slots-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:600px){.doc-slots-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .doc-slot-card{background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .doc-slot-card.is-filled{border-style:solid;border-color:#86efac;background:#f0fdf4}
+    .doc-slot-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .doc-slot-title{font-size:.82rem;font-weight:700;color:var(--text)}
+    .doc-slot-sub{font-size:.73rem;color:var(--muted);line-height:1.35}
+    .btn-upload{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:9px 14px;border-radius:8px;border:1px solid #1d4ed8;background:#eff6ff;color:#1d4ed8;font-size:.81rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%}
+    .btn-upload:hover:not(:disabled){background:#dbeafe}
+    .btn-upload:disabled{opacity:.6;cursor:not-allowed}
+    .doc-slot-thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0}
+    .doc-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+    .doc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:.8rem}
+    .doc-item-name{font-weight:600;color:var(--text);word-break:break-word}
+    .doc-item-badge{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;white-space:nowrap}
+    .upload-status{font-size:.78rem;margin-top:8px;min-height:1.1em}
+    .upload-status--err{color:#b91c1c;font-weight:600}
+    .upload-status--ok{color:#15803d;font-weight:600}
+    .ssn-mode-row{display:grid;grid-template-columns:1fr;gap:8px;margin-top:4px}
+    @media(min-width:600px){.ssn-mode-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .ssn-mode-pill{display:flex;align-items:flex-start;gap:8px;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;font-size:.78rem;line-height:1.35}
+    .ssn-mode-pill.active{border-color:#2563eb;background:#eff6ff;color:#1e3a8a}
+    .ssn-mode-pill input{width:16px;height:16px;margin-top:2px;accent-color:#1d4ed8;flex-shrink:0}
+    .disclosure-box{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:15px 17px;margin-bottom:16px;font-size:.81rem;line-height:1.6;color:var(--text)}
+    .disclosure-box h3{font-size:.88rem;font-weight:700;margin:0 0 8px;color:var(--text)}
+    .consent-check-card{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;cursor:pointer;transition:border-color .15s,background .15s}
+    .consent-check-card.checked{background:#f0fdf4;border-color:#86efac}
+    .consent-check-card input{width:19px;height:19px;flex-shrink:0;margin-top:2px;accent-color:#1d4ed8;cursor:pointer}
+    .consent-check-card.checked input{accent-color:#15803d}
+    .consent-check-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:3px}
+    .consent-check-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
+    .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:.94rem;font-weight:700;cursor:pointer;margin-top:10px;box-shadow:0 4px 14px rgba(29,78,216,.24);font-family:inherit;transition:opacity .15s}
+    .btn-submit:hover:not(:disabled){opacity:.92}
+    .btn-submit:disabled{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);box-shadow:none;cursor:not-allowed}
+    .state-box{text-align:center;padding:50px 20px}
+    .state-box h3{font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text)}
+    .state-box p{font-size:.86rem;color:var(--muted);margin:0;line-height:1.6}
+    .state-error h3{color:#b91c1c}
+    .state-success h3{color:#15803d}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:#1d4ed8;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:#b91c1c;font-size:.82rem;margin-top:12px;display:none}
+    .btn-link{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:10px;font-size:.85rem;font-weight:700;text-decoration:none;margin-top:18px}
+    .footer-line{text-align:center;font-size:.74rem;color:var(--muted);margin-top:18px;line-height:1.7}
+    .footer-line a{color:#1d4ed8;text-decoration:none}
+  </style>
+</head>
+<body data-portal="tenant" data-page-title="Household Screening & Consent">
+  <a href="#main-content" class="skip-link" data-i18n="skip">Skip to main content</a>
+
+  <header class="header" role="banner">
+    <div class="header-brand">
+      <div class="header-mark" aria-hidden="true">CP</div>
+      <div>
+        <div class="header-logo">Choice Properties</div>
+        <div class="header-sub" id="hdr-sub" data-i18n="headerSub">Household Application &amp; Screening Authorization</div>
+      </div>
+    </div>
+    <button type="button" class="lang-toggle-btn" id="lang-toggle-btn" aria-label="Switch language">
+      <span id="lang-toggle-label">Español</span>
+    </button>
+  </header>
+
+  <main id="main-content" class="container">
+    <div class="card" id="state-loading" role="status" aria-live="polite">
+      <div class="card-body state-box">
+        <div class="spinner" aria-hidden="true"></div>
+        <h3 data-i18n="loadingTitle">Verifying your private application link…</h3>
+        <p data-i18n="loadingSub">Please wait a moment while we retrieve your household application details.</p>
+      </div>
+    </div>
+
+    <div class="card" id="state-error" style="display:none" role="alert">
+      <div class="card-body state-box state-error">
+        <h3 id="err-title">Consent Link Unavailable</h3>
+        <p id="err-message">This link is invalid, expired, or has already been confirmed.</p>
+        <div>
+          <a href="/tenant/portal.html" class="btn-link" id="err-portal-btn" data-i18n="goPortal">Go to Tenant Portal &rarr;</a>
+        </div>
+        <p style="margin-top:16px;font-size:.78rem" data-i18n="needFresh">Need a fresh link? Contact Choice Properties at <strong>707-706-3137 (Text Only)</strong> or ask the primary applicant.</p>
+      </div>
+    </div>
+
+    <div class="card" id="state-success" style="display:none" role="region" aria-label="Screening consent confirmed">
+      <div class="card-body state-box state-success">
+        <div style="font-size:44px;margin-bottom:12px" aria-hidden="true">&#10003;</div>
+        <h3 id="success-title" data-i18n="successTitle">Screening Consent Confirmed</h3>
+        <p id="success-message">Thank you! Your information and authorization have been recorded for application <strong id="success-app-id">—</strong>.</p>
+        <div id="success-actions" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;margin-top:18px;">
+          <a id="success-portal-link" href="/tenant/portal.html" class="btn-link" style="margin-top:0;" data-i18n="signInPortal">Open Tenant Portal &rarr;</a>
+        </div>
+        <p style="margin-top:16px;font-size:.78rem" data-i18n="questionsLine">Questions? Call or text <a href="tel:+17077063137" style="color:#1d4ed8">707-706-3137</a>.</p>
+      </div>
+    </div>
+
+    <div id="state-form" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <h2 id="form-main-title">Tenant Screening Authorization</h2>
+            <span class="role-pill" id="applicant-role-pill">Co-Applicant</span>
+          </div>
+          <p id="form-main-sub">Required before Choice Properties can process your household rental application.</p>
+        </div>
+        <div class="card-body">
+          <div class="role-banner" id="role-banner"></div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblName">Your Name</span>
+              <span class="info-val" id="info-applicant-name">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblEmail">Email Address</span>
+              <span class="info-val" id="info-applicant-email">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblProperty">Property</span>
+              <span class="info-val" id="info-property">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblPrimary">Primary Applicant</span>
+              <span class="info-val" id="info-primary-name">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblAppId">Application ID</span>
+              <span class="info-val" id="info-app-id">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="lblExpires">Link Expires</span>
+              <span class="info-val" id="info-expires">—</span>
+            </div>
+          </div>
+
+          <!-- Method A: Read-only verification summary -->
+          <div class="section-block" id="method-a-summary-block" style="display:none">
+            <h3 class="section-block-title" data-i18n="methodATitle">Details Submitted On Your Behalf</h3>
+            <p class="section-block-sub" data-i18n="methodASub">The primary applicant provided your initial profile details below. Review them before authorizing screening.</p>
+            <div class="info-grid" id="method-a-grid" style="margin-bottom:0"></div>
+          </div>
+
+          <!-- Method B: Self-completion form for invited members -->
+          <div class="section-block" id="method-b-section" style="display:none">
+            <h3 class="section-block-title" id="method-b-title" data-i18n="methodBTitle">Complete Your Confidential Information</h3>
+            <p class="section-block-sub" id="method-b-sub" data-i18n="methodBSub">Complete your required details privately below. Your Social Security Number is encrypted and never shared with other household members.</p>
+
+            <div class="form-grid">
+              <div class="fg">
+                <label for="mb-phone"><span data-i18n="fPhone">Phone Number</span></label>
+                <input type="tel" id="mb-phone" autocomplete="tel" placeholder="(555) 555-5555">
+              </div>
+
+              <div class="fg">
+                <label for="mb-dob"><span data-i18n="fDob">Date of Birth</span><span class="req-star">*</span></label>
+                <input type="date" id="mb-dob" autocomplete="bday">
+                <span class="field-hint" data-i18n="fDobHint">Must be at least 18 years of age.</span>
+              </div>
+
+              <div class="fg form-col-full" id="mb-ssn-mode-group">
+                <label><span data-i18n="fSsnMode">Identity Verification Method</span><span class="req-star">*</span></label>
+                <div class="ssn-mode-row" id="mb-ssn-mode-row">
+                  <label class="ssn-mode-pill active">
+                    <input type="radio" name="mb-ssn-mode" value="last4" checked>
+                    <span><strong data-i18n="ssnModeLast4">Last 4 Digits of SSN</strong><br><small data-i18n="ssnModeLast4Desc">Standard identity verification</small></span>
+                  </label>
+                  <label class="ssn-mode-pill">
+                    <input type="radio" name="mb-ssn-mode" value="alternative_id">
+                    <span><strong data-i18n="ssnModeAlt">No SSN — Alternative ID</strong><br><small data-i18n="ssnModeAltDesc">Passport / ITIN / Gov ID</small></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="fg form-col-full" id="mb-ssn-group">
+                <label for="mb-ssn" id="mb-ssn-label"><span data-i18n="fSsn">Social Security Number (Last 4 Digits)</span><span class="req-star" id="mb-ssn-star">*</span></label>
+                <div class="ssn-onfile" id="mb-ssn-onfile" style="display:none">
+                  <span id="mb-ssn-onfile-text">SSN on file (•••-••-0000)</span>
+                </div>
+                <div class="ssn-wrap" id="mb-ssn-input-wrap">
+                  <input type="password" id="mb-ssn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1234">
+                  <button type="button" class="ssn-toggle" id="mb-ssn-toggle">Show</button>
+                </div>
+                <span class="field-hint" id="mb-ssn-hint" data-i18n="fSsnHint">Last 4 digits only (XXXX) — encrypted in transit and never shared with other household members.</span>
+              </div>
+
+              <div class="fg">
+                <label for="mb-id-type"><span id="mb-id-type-label" data-i18n="fIdType">Government ID Type (Optional)</span><span class="req-star" id="mb-id-type-star" style="display:none">*</span></label>
+                <select id="mb-id-type">
+                  <option value="">Select ID type…</option>
+                  <option value="Driver's License">Driver's License</option>
+                  <option value="State ID">State ID</option>
+                  <option value="U.S. Passport">U.S. Passport</option>
+                  <option value="Foreign Passport / Visa">Foreign Passport / Visa</option>
+                  <option value="ITIN Letter">ITIN Letter</option>
+                  <option value="Military ID">Military ID</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="fg">
+                <label for="mb-id-number"><span id="mb-id-num-label" data-i18n="fIdNum">Government ID Number (Optional)</span><span class="req-star" id="mb-id-num-star" style="display:none">*</span></label>
+                <input type="text" id="mb-id-number" autocomplete="off">
+              </div>
+
+              <div class="fg form-col-full">
+                <label for="mb-address"><span data-i18n="fAddress">Current Residential Address</span><span class="req-star">*</span></label>
+                <input type="text" id="mb-address" autocomplete="street-address" placeholder="Street, City, State ZIP">
+              </div>
+
+              <!-- All Roles housing status -->
+              <div class="fg" id="mb-housing-status-group">
+                <label for="mb-housing-status"><span data-i18n="fHousingStatus">Current Housing Status</span><span class="req-star">*</span></label>
+                <select id="mb-housing-status">
+                  <option value="" data-i18n="optSelectHousing">Select housing status…</option>
+                  <option value="Rent" data-i18n="optHousingRent">Rent</option>
+                  <option value="Own" data-i18n="optHousingOwn">Own (No Mortgage)</option>
+                  <option value="Mortgage" data-i18n="optHousingMortgage">Own (With Mortgage)</option>
+                  <option value="Living with Family" data-i18n="optHousingFamily">Living with Family / Friends</option>
+                  <option value="Other" data-i18n="optHousingOther">Other</option>
+                </select>
+              </div>
+
+              <!-- Occupying Co-Applicant residency history -->
+              <div class="fg mb-occupant-only">
+                <label for="mb-residency-duration"><span data-i18n="fResDuration">Time at Current Address</span></label>
+                <input type="text" id="mb-residency-duration" placeholder="e.g. 2 years">
+              </div>
+
+              <div class="fg mb-occupant-only" id="mb-rent-group">
+                <label for="mb-current-rent"><span id="mb-rent-label" data-i18n="fCurrentRent">Current Monthly Rent</span></label>
+                <input type="text" id="mb-current-rent" inputmode="decimal" placeholder="$0.00">
+                <span class="field-hint" id="mb-rent-hint" style="display:none"></span>
+              </div>
+
+              <div class="fg mb-occupant-only" id="mb-landlord-name-group">
+                <label for="mb-landlord-name"><span id="mb-landlord-name-label" data-i18n="fLandlordName">Current Landlord / Property Name</span></label>
+                <input type="text" id="mb-landlord-name">
+              </div>
+
+              <div class="fg mb-occupant-only" id="mb-landlord-phone-group">
+                <label for="mb-landlord-phone"><span id="mb-landlord-phone-label" data-i18n="fLandlordPhone">Landlord Phone</span></label>
+                <input type="tel" id="mb-landlord-phone">
+              </div>
+
+              <div class="fg form-col-full mb-occupant-only" id="mb-reason-leaving-group">
+                <label for="mb-reason-leaving"><span id="mb-reason-leaving-label" data-i18n="fReasonLeaving">Reason for Moving</span></label>
+                <input type="text" id="mb-reason-leaving">
+                <span class="field-hint" id="mb-reason-hint" style="display:none"></span>
+              </div>
+
+              <div class="fg form-col-full mb-occupant-only" id="mb-prior-residence-wrap" style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);">
+                <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:8px;" data-i18n="fPriorTitle">Previous Residence (If Less Than 24 Months at Current Address)</div>
+                <div class="form-grid">
+                  <div class="fg">
+                    <label for="mb-prev-housing-status"><span data-i18n="fPrevHousingStatus">Previous Housing Status</span></label>
+                    <select id="mb-prev-housing-status">
+                      <option value="" data-i18n="optSelectHousing">Select housing status…</option>
+                      <option value="Rent" data-i18n="optHousingRent">Rent</option>
+                      <option value="Own" data-i18n="optHousingOwn">Own (No Mortgage)</option>
+                      <option value="Mortgage" data-i18n="optHousingMortgage">Own (With Mortgage)</option>
+                      <option value="Living with Family" data-i18n="optHousingFamily">Living with Family / Friends</option>
+                      <option value="Other" data-i18n="optHousingOther">Other</option>
+                    </select>
+                  </div>
+                  <div class="fg">
+                    <label for="mb-prev-address"><span data-i18n="fPrevAddress">Previous Street Address</span></label>
+                    <input type="text" id="mb-prev-address" placeholder="Street, Unit, City, State ZIP">
+                  </div>
+                  <div class="fg">
+                    <label for="mb-prev-res-duration"><span data-i18n="fPrevDuration">Time at Previous Address</span></label>
+                    <input type="text" id="mb-prev-res-duration" placeholder="e.g., 2 years">
+                  </div>
+                  <div class="fg" id="mb-prev-landlord-name-group">
+                    <label for="mb-prev-landlord-name"><span id="mb-prev-landlord-name-label" data-i18n="fPrevLandlordName">Previous Landlord Name</span></label>
+                    <input type="text" id="mb-prev-landlord-name">
+                  </div>
+                  <div class="fg" id="mb-prev-landlord-phone-group">
+                    <label for="mb-prev-landlord-phone"><span id="mb-prev-landlord-phone-label" data-i18n="fPrevLandlordPhone">Previous Landlord Phone</span></label>
+                    <input type="tel" id="mb-prev-landlord-phone">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Employment & Income (All Roles) -->
+              <div class="fg">
+                <label for="mb-emp-status"><span data-i18n="fEmpStatus">Employment / Income Status</span><span class="req-star">*</span></label>
+                <select id="mb-emp-status">
+                  <option value="">Select status…</option>
+                  <option value="Employed Full-Time">Employed Full-Time</option>
+                  <option value="Employed Part-Time">Employed Part-Time</option>
+                  <option value="Self-Employed">Self-Employed</option>
+                  <option value="Retired">Retired / Pension</option>
+                  <option value="Student">Student</option>
+                  <option value="Fixed Income / Benefits">Fixed Income / Benefits</option>
+                  <option value="Unemployed">Unemployed</option>
+                  <option value="Other">Other Income Source</option>
+                </select>
+              </div>
+
+              <div class="fg" id="mb-employer-group">
+                <label for="mb-employer"><span id="mb-employer-label" data-i18n="fEmployer">Employer or Income Source</span></label>
+                <input type="text" id="mb-employer" autocomplete="organization">
+              </div>
+
+              <div class="fg form-col-full" id="mb-employer-address-group">
+                <label for="mb-employer-address"><span id="mb-employer-address-label" data-i18n="fEmployerAddress">Employer / Work Address</span></label>
+                <input type="text" id="mb-employer-address" placeholder="Street, City, State ZIP">
+              </div>
+
+              <div class="fg" id="mb-job-title-group">
+                <label for="mb-job-title"><span id="mb-job-title-label" data-i18n="fJobTitle">Job Title / Occupation</span></label>
+                <input type="text" id="mb-job-title">
+              </div>
+
+              <div class="fg" id="mb-emp-start-date-group">
+                <label for="mb-emp-start-date"><span id="mb-emp-start-date-label" data-i18n="fEmpStartDate">Employment Start Date</span></label>
+                <input type="date" id="mb-emp-start-date">
+              </div>
+
+              <div class="fg" id="mb-emp-duration-group">
+                <label for="mb-emp-duration"><span id="mb-emp-duration-label" data-i18n="fEmpDuration">Time with Employer</span></label>
+                <input type="text" id="mb-emp-duration" placeholder="e.g. 3 years">
+              </div>
+
+              <div class="fg" id="mb-monthly-income-group">
+                <label for="mb-monthly-income"><span id="mb-monthly-income-label" data-i18n="fMonthlyIncome">Monthly Gross Income ($)</span><span class="req-star">*</span></label>
+                <input type="number" id="mb-monthly-income" min="0" step="1" placeholder="5000">
+                <span class="field-hint" id="mb-income-hint" style="display:none"></span>
+              </div>
+
+              <div class="fg" id="mb-other-income-group">
+                <label for="mb-other-income"><span id="mb-other-income-label" data-i18n="fOtherIncome">Additional Monthly Income ($)</span></label>
+                <input type="number" id="mb-other-income" min="0" step="1" placeholder="0">
+                <span class="field-hint" id="mb-other-income-hint" style="display:none"></span>
+              </div>
+
+              <div class="fg form-col-full mb-supporter-only" style="display:none">
+                <label for="mb-support-notes"><span data-i18n="fSupportNotes">Financial Support Notes (Optional)</span></label>
+                <textarea id="mb-support-notes" rows="2" placeholder="Optional details on savings, assets, or how you are supporting this household…"></textarea>
+              </div>
+
+              <div class="fg mb-occupant-only">
+                <label><span data-i18n="fEvicted">Any prior evictions?</span></label>
+                <div class="radio-row">
+                  <label class="radio-pill"><input type="radio" name="mb-ever-evicted" value="no" checked> <span data-i18n="optNo">No</span></label>
+                  <label class="radio-pill"><input type="radio" name="mb-ever-evicted" value="yes"> <span data-i18n="optYes">Yes</span></label>
+                </div>
+              </div>
+
+              <div class="fg mb-occupant-only">
+                <label><span data-i18n="fSmoker">Do you smoke?</span></label>
+                <div class="radio-row">
+                  <label class="radio-pill"><input type="radio" name="mb-smoker" value="no" checked> <span data-i18n="optNo">No</span></label>
+                  <label class="radio-pill"><input type="radio" name="mb-smoker" value="yes"> <span data-i18n="optYes">Yes</span></label>
+                </div>
+              </div>
+
+              <div class="fg mb-occupant-only">
+                <label><span data-i18n="fBankruptcy">Any bankruptcy filings in the past 7 years?</span></label>
+                <div class="radio-row">
+                  <label class="radio-pill"><input type="radio" name="mb-has-bankruptcy" value="no" checked> <span data-i18n="optNo">No</span></label>
+                  <label class="radio-pill"><input type="radio" name="mb-has-bankruptcy" value="yes"> <span data-i18n="optYes">Yes</span></label>
+                </div>
+              </div>
+
+              <div class="fg mb-occupant-only">
+                <label><span data-i18n="fCriminal">Any felony or relevant criminal history?</span></label>
+                <div class="radio-row">
+                  <label class="radio-pill"><input type="radio" name="mb-has-criminal" value="no" checked> <span data-i18n="optNo">No</span></label>
+                  <label class="radio-pill"><input type="radio" name="mb-has-criminal" value="yes"> <span data-i18n="optYes">Yes</span></label>
+                </div>
+              </div>
+
+              <div class="fg form-col-full mb-occupant-only" id="mb-bankruptcy-explain-group" style="display:none">
+                <label for="mb-bankruptcy-explain"><span data-i18n="fBankruptcyExplain">Bankruptcy Explanation &amp; Discharge Status</span><span class="req-star">*</span></label>
+                <textarea id="mb-bankruptcy-explain" rows="2" placeholder="Briefly provide year, chapter, and current discharge status…"></textarea>
+              </div>
+
+              <div class="fg form-col-full mb-occupant-only" id="mb-criminal-explain-group" style="display:none">
+                <label for="mb-criminal-explain"><span data-i18n="fCriminalExplain">Criminal History Explanation &amp; Date</span><span class="req-star">*</span></label>
+                <textarea id="mb-criminal-explain" rows="2" placeholder="Briefly describe offense, year, and resolution…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Supporting Document Uploader (Method B primary, optional on Method A) -->
+          <div class="section-block" id="doc-upload-section">
+            <h3 class="section-block-title" data-i18n="docsTitle">Supporting Documents</h3>
+            <p class="section-block-sub" id="docs-sub" data-i18n="docsSub">Upload front and back of your government ID and proof of income or financial support (PDF, JPG, PNG, or WEBP).</p>
+            <div class="upload-box">
+              <div class="doc-slots-grid" id="doc-slots-grid"></div>
+              <input type="file" id="doc-file-input" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none">
+              <div class="upload-status" id="doc-upload-status" aria-live="polite"></div>
+              <ul class="doc-list" id="doc-uploaded-list"></ul>
+            </div>
+          </div>
+
+          <div class="disclosure-box">
+            <h3 data-i18n="fcraTitle">Authorization &amp; Disclosure (FCRA Compliance)</h3>
+            <p style="margin:0 0 8px" id="fcra-p1">By checking the boxes below and confirming consent, you authorize Choice Properties and its designated consumer reporting agencies to obtain and verify consumer reports, credit history, rental and eviction history, employment and income verification, and public background records in connection with your rental application.</p>
+            <p style="margin:0" id="fcra-p2" data-i18n="fcraP2">You certify that all information provided on your portion of the application is true, accurate, and complete. Knowingly providing false or misleading information is grounds for denial or lease termination.</p>
+          </div>
+
+          <label class="consent-check-card" for="chk-identity">
+            <input type="checkbox" id="chk-identity" aria-required="true">
+            <div>
+              <div class="consent-check-title" data-i18n="chk1Title">1. Identity &amp; Application Accuracy</div>
+              <div class="consent-check-desc" id="chk1-desc">I confirm that I am <strong id="chk-applicant-name">the named applicant</strong> and that the personal, residential, employment, and financial details submitted under my name are accurate.</div>
+            </div>
+          </label>
+
+          <label class="consent-check-card" for="chk-screening">
+            <input type="checkbox" id="chk-screening" aria-required="true">
+            <div>
+              <div class="consent-check-title" data-i18n="chk2Title">2. Background &amp; Credit Screening Consent</div>
+              <div class="consent-check-desc" id="chk2-desc">I authorize Choice Properties to perform credit, background, and income/reference checks for this rental application and to communicate status updates to me electronically.</div>
+            </div>
+          </label>
+
+          <div class="error-msg" id="consent-error" role="alert" aria-live="assertive"></div>
+
+          <button type="button" class="btn-submit" id="btn-confirm-consent" disabled aria-disabled="true" data-i18n="btnSubmit">
+            Confirm Screening Consent
+          </button>
+        </div>
+      </div>
+
+      <p class="footer-line">
+        Choice Properties &middot; 2265 Livernois Suite 500, Troy MI 48083 &middot; <a href="tel:+17077063137">707-706-3137</a>
+      </p>
+    </div>
+  </main>
+</body>
+</html>
