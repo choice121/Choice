@@ -405,15 +405,9 @@ class RentalApplication {
         
         const savedAppId = sessionStorage.getItem('lastSuccessAppId');
         if (savedAppId) {
-            document.getElementById('rentalApplication').style.display = 'none';
-            const rb = document.getElementById('resumeBanner');
-            if (rb) rb.remove();
-            let savedExtra = null;
-            try {
-                const rawExtra = sessionStorage.getItem('lastSuccessExtra_' + savedAppId);
-                if (rawExtra) savedExtra = JSON.parse(rawExtra);
-            } catch (_) {}
-            this.showSuccessState(savedAppId, sessionStorage.getItem('lastSuccessPortalUrl') || '', savedExtra);
+            const langParam = this.state.language === 'es' ? '&lang=es' : '';
+            window.location.replace('/apply/success.html?app_id=' + encodeURIComponent(savedAppId) + langParam);
+            return;
         }
         
         this.setupDevTools();
@@ -4723,23 +4717,11 @@ class RentalApplication {
 
     // ---------- showSuccessState ----------
     showSuccessState(appId, portalLoginUrl, extra = null) {
-        const successState = document.getElementById('successState');
-        if (!successState) return;
-
-        const t = this.getTranslations();
         const lang = this.state.language || 'en';
-
         const getSelectedCheckboxValues = (name) => {
             const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
             return Array.from(checkboxes).map(cb => cb.value);
         };
-
-        const contactMethods = getSelectedCheckboxValues('Preferred Contact Method');
-        const contactMethodsDisplay = contactMethods.length > 0 ? contactMethods.join(', ') : t.notSpecified;
-
-        const contactTimes = getSelectedCheckboxValues('Preferred Time');
-        const contactTimesDisplay = contactTimes.length > 0 ? contactTimes.join(', ') : t.notSpecified;
-
         const readSelectLabel = (selId, otherId) => {
             const val = document.getElementById(selId)?.value?.trim() || '';
             if (!val) return '';
@@ -4749,9 +4731,12 @@ class RentalApplication {
             }
             return val;
         };
-        const primaryPayPref = readSelectLabel('primaryPaymentMethod', 'primaryPaymentOther') || (t.notSpecified || 'Not specified');
+
+        const contactMethods = getSelectedCheckboxValues('Preferred Contact Method');
+        const primaryPayPref = readSelectLabel('primaryPaymentMethod', 'primaryPaymentOther');
         const altPayPref = readSelectLabel('alternativePaymentMethod', 'alternativePaymentOther');
         const thirdPayPref = readSelectLabel('thirdChoicePaymentMethod', 'thirdChoicePaymentOther');
+        const paymentPrefs = [primaryPayPref, altPayPref, thirdPayPref].filter(Boolean);
 
         const email = document.getElementById('email')?.value?.trim() || '';
         const propertyAddressInput = document.getElementById('propertyAddress')?.value?.trim() || '';
@@ -4763,234 +4748,55 @@ class RentalApplication {
             : (savedPortalUrl && !/tenant\/login\.html|\/auth\/v1\/verify/i.test(savedPortalUrl) ? savedPortalUrl : '');
         const trackUrl = candidateUrl
             || ('/tenant/portal.html?app_id=' + encodeURIComponent(appId) + (email ? '&email=' + encodeURIComponent(email) : ''));
-        try {
-            sessionStorage.setItem('pendingPortalAppId', appId);
-            localStorage.removeItem('cpLastSubmittedApplication');
-        } catch (_) {}
 
-        const feeSummary = this._calculateHouseholdFee();
+        const feeSummary = this._calculateHouseholdFee ? this._calculateHouseholdFee() : { totalFee: 50 };
         const coListSuccess = this._collectCoApplicants ? this._collectCoApplicants() : [];
         const invitedMembers = coListSuccess.filter(c => this._normalizeSubmissionMethod(c.submission_method) === 'invited');
-        const methodAMembers = coListSuccess.filter(c => this._normalizeSubmissionMethod(c.submission_method) !== 'invited');
-
-        const totalFeeDue = feeSummary.totalFee;
-        const requiresFeeCoordination = totalFeeDue > 0;
 
         const ctx = this.state.propertyContext;
-        const resolvedPropertyAddress = propertyAddressInput || (ctx && (ctx.name || [ctx.city, ctx.state].filter(Boolean).join(', '))) || 'Selected Rental Property';
+        const resolvedPropertyAddress = propertyAddressInput
+            || (ctx && (ctx.name || [ctx.city, ctx.state].filter(Boolean).join(', ')))
+            || '';
 
-        const feeAmtDisplay = totalFeeDue > 0 ? '$' + Number(totalFeeDue).toFixed(2) : '$0.00 (Waived)';
-        const methodANoticeHtml = methodAMembers.length > 0
-            ? `<div style="margin:12px 0;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:0.9rem;color:#14532d;line-height:1.5;">
-                <i class="fas fa-check-circle" style="margin-right:6px;"></i>
-                <strong>${lang === 'es' ? 'Miembros autorizados por el solicitante principal (Método A):' : 'Household Screening Authorized on Behalf (Method A):'}</strong>
-                ${methodAMembers.map(m => `${this._escHtml([m.first_name, m.last_name].filter(Boolean).join(' '))}`).join(', ')}
-                — ${lang === 'es' ? 'no se requiere enlace privado ni acción adicional de su parte.' : 'no private link or separate action is required from them.'}
-               </div>`
-            : '';
-        const invitedNoticeHtml = invitedMembers.length > 0
-            ? `<div style="margin:12px 0;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:0.9rem;color:#1e3a8a;line-height:1.5;">
-                <i class="fas fa-envelope-open-text" style="margin-right:6px;"></i>
-                <strong>${lang === 'es' ? 'Enlaces privados enviados (Método B):' : 'Private Self-Complete Links Dispatched (Method B):'}</strong>
-                ${invitedMembers.map(m => `${this._escHtml([m.first_name, m.last_name].filter(Boolean).join(' '))} (${this._escHtml(m.email)})`).join(', ')}
-                — ${lang === 'es' ? 'completar sus datos mediante el enlace no genera registros duplicados.' : 'completing their info via email does not create any duplicate application.'}
-               </div>`
-            : '';
+        const docSummary = extra && extra.docUploadSummary ? {
+            uploadedCount: Number(extra.docUploadSummary.uploadedCount) || 0,
+            total: Number(extra.docUploadSummary.total) || 0
+        } : null;
 
-        const propertyLine = (ctx && (ctx.name || ctx.city)) || propertyAddressInput
-            ? '<div class="success-property-line"><i class="fas fa-home"></i><span>' +
-              this._escHtml(resolvedPropertyAddress) +
-              '</span></div>'
-            : '';
+        const summary = {
+            appId,
+            trackUrl,
+            propertyAddress: resolvedPropertyAddress,
+            sourceUrl: this.state.sourceUrl || '',
+            totalFeeDue: Number(feeSummary.totalFee) || 0,
+            paymentPrefs,
+            contactMethods,
+            email,
+            lang,
+            docSummary,
+            invitedCount: invitedMembers.length
+        };
 
-        const backLink = this.state.sourceUrl
-            ? '<div style="margin-top:8px;"><a href="' + this._escHtml(this.state.sourceUrl) + '" style="display:inline-block;font-size:0.9rem;color:#1a5276;text-decoration:none;font-weight:500;">← Back to this listing</a></div>'
-            : '';
-
-        const feeBreakdownLines = (feeSummary.feeBreakdown || []).map(item => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:0.88rem;color:#1e293b;">
-                <span>${this._escHtml(item.name)} <span style="color:#64748b;">(${this._escHtml(item.role_label)})</span>${item.included_free ? ` <span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:10px;background:#dcfce7;color:#166534;font-size:11px;font-weight:700;">${lang === 'es' ? 'GRATIS' : 'FREE'}</span>` : ''}</span>
-                <strong style="font-variant-numeric:tabular-nums;">${item.included_free ? '$0.00' : ('$' + Number(item.fee || 0).toFixed(2))}</strong>
-            </div>
-        `).join('');
-
-        const docSummary = extra && extra.docUploadSummary;
-        let docUploadNoticeHtml = '';
-        if (docSummary && docSummary.total > 0) {
-            if (docSummary.failedNames && docSummary.failedNames.length > 0) {
-                const failedList = docSummary.failedNames.map(n => this._escHtml(n)).join(', ');
-                docUploadNoticeHtml = `<div style="margin:12px 0;padding:12px 14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;font-size:0.88rem;color:#92400e;line-height:1.5;">
-                    <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
-                    <strong>${lang === 'es' ? 'Carga parcial de documentos:' : 'Partial Document Upload:'}</strong>
-                    ${docSummary.uploadedCount}/${docSummary.total} ${lang === 'es' ? 'archivo(s) subidos. Por favor suba los faltantes en su Portal de Inquilino:' : 'file(s) uploaded. Please retry remaining file(s) inside your Tenant Portal:'} ${failedList}
-                </div>`;
-            } else {
-                docUploadNoticeHtml = `<div style="margin:12px 0;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:0.88rem;color:#14532d;line-height:1.5;">
-                    <i class="fas fa-cloud-upload-alt" style="margin-right:6px;"></i>
-                    <strong>${lang === 'es' ? 'Documentos adjuntos recibidos:' : 'Supporting Documents Received:'}</strong>
-                    ${docSummary.uploadedCount}/${docSummary.total} ${lang === 'es' ? 'archivo(s) almacenados de forma segura en Choice Properties.' : 'file(s) encrypted & stored in Choice Properties Storage.'}
-                </div>`;
-            }
-        }
-
-        const payPills = [
-            `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:#0d2137;color:#fff;font-size:13px;font-weight:700;">1. ${this._escHtml(primaryPayPref)}</span>`,
-            altPayPref ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:#e2e8f0;color:#1e293b;font-size:13px;font-weight:600;">2. ${this._escHtml(altPayPref)}</span>` : '',
-            thirdPayPref ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;">3. ${this._escHtml(thirdPayPref)}</span>` : '',
-        ].filter(Boolean).join('');
-
-        const startOverBtn = document.getElementById('startOverBtn');
-        if (startOverBtn) startOverBtn.classList.remove('visible');
-        const devTestFillBtn = document.getElementById('devTestFillBtn');
-        if (devTestFillBtn) devTestFillBtn.style.setProperty('display', 'none', 'important');
-
-        successState.style.display = 'block';
-        this._setTrustedHtml(successState, this._html`
-            <div class="success-card">
-                <div class="success-header">
-                    <i class="fas fa-check-circle"></i>
-                    <h2>${t.successTitle}</h2>
-                    <p class="success-subtitle">${t.successText}</p>
-                    ${this._safeHtml(propertyLine)}
-                    ${this._safeHtml(backLink)}
-                </div>
-
-                <div class="id-section">
-                    <div class="id-label">${t.appId}</div>
-                    <div class="id-number" id="successAppId">${appId}</div>
-                    <button class="copy-btn" type="button">
-                        <i class="fas fa-copy"></i> ${t.clickToCopy}
-                    </button>
-                    <p style="font-size:12px;color:#64748b;margin:8px 0 0;"><i class="fas fa-info-circle"></i> Save this reference number — it links your payment and application status.</p>
-                </div>
-
-                ${requiresFeeCoordination ? this._safeHtml(this._html`
-                <div class="urgent-notice" style="background:#eff6ff;border:1px solid #93c5fd;color:#0f172a;margin-top:16px;">
-                    <i class="fas fa-wallet" style="color:#2563eb;"></i>
-                    <div style="flex:1;min-width:0;">
-                        <p style="margin:0 0 6px;"><strong>${t.importantNote}</strong> ${t.paymentUrgentText}</p>
-                        <div style="margin-top:8px;">
-                            ${this._safeHtml(feeBreakdownLines)}
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;font-size:0.95rem;color:#0f172a;">
-                                <strong>${lang === 'es' ? 'Tarifa Total del Hogar' : 'Household Application Fee'}</strong>
-                                <strong style="font-size:1.1rem;font-variant-numeric:tabular-nums;color:#0d2137;">${feeAmtDisplay}</strong>
-                            </div>
-                        </div>
-                        <div style="margin-top:12px;padding-top:10px;border-top:1px solid #bfdbfe;">
-                            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#1e3a8a;margin-bottom:8px;">${t.selectedPayPrefs || 'Selected Payment Preferences'}</div>
-                            <div style="display:flex;flex-wrap:wrap;gap:8px;">${this._safeHtml(payPills)}</div>
-                        </div>
-                    </div>
-                </div>
-                `) : this._safeHtml(this._html`
-                <div class="urgent-notice" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#14532d;margin-top:16px;">
-                    <i class="fas fa-check-circle" style="color:#16a34a;"></i>
-                    <p><strong>${t.importantNote}</strong> ${t.paymentUrgentText}</p>
-                </div>
-                `)}
-
-                ${this._safeHtml(docUploadNoticeHtml)}
-
-                <div class="divider"></div>
-
-                <div class="next-steps-box">
-                    <h3><i class="fas fa-shield-alt"></i> ${t.immediateNextSteps}</h3>
-
-                    <div class="step-row">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <strong>${t.paymentRequiredTitle}</strong>
-                            <p>${t.paymentRequiredDesc}</p>
-                        </div>
-                    </div>
-
-                    <div class="step-row">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <strong>${t.completePaymentTitle}</strong>
-                            <p>${t.completePaymentDesc}</p>
-                        </div>
-                    </div>
-
-                    <div class="step-row">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <strong>${t.reviewBeginsTitle}</strong>
-                            <p>${t.reviewBeginsDesc}</p>
-                        </div>
-                    </div>
-                </div>
-
-                ${this._safeHtml(methodANoticeHtml)}
-                ${this._safeHtml(invitedNoticeHtml)}
-
-                <div class="preference-summary">
-                    <h4><i class="fas fa-phone-alt"></i> ${t.yourPreferences}</h4>
-                    <div class="preference-grid">
-                        <div class="pref-item">
-                            <span class="pref-label">${t.contactMethod}</span>
-                            <span class="pref-value">${contactMethodsDisplay}</span>
-                        </div>
-                        <div class="pref-item">
-                            <span class="pref-label">${t.bestTimes}</span>
-                            <span class="pref-value">${contactTimesDisplay}</span>
-                        </div>
-                        <div class="pref-item">
-                            <span class="pref-label">${t.primaryPayShort || '1st Choice Payment'}:</span>
-                            <span class="pref-value">${primaryPayPref}</span>
-                        </div>
-                        ${altPayPref ? this._safeHtml(this._html`
-                        <div class="pref-item">
-                            <span class="pref-label">${t.altPayShort || '2nd Choice Payment'}:</span>
-                            <span class="pref-value">${altPayPref}</span>
-                        </div>`) : ''}
-                        ${thirdPayPref ? this._safeHtml(this._html`
-                        <div class="pref-item">
-                            <span class="pref-label">${t.thirdPayShort || '3rd Choice Payment'}:</span>
-                            <span class="pref-value">${thirdPayPref}</span>
-                        </div>`) : ''}
-                    </div>
-                    <p class="pref-note">${t.preferenceNote}</p>
-                </div>
-
-                <div class="policy-box">
-                    <i class="fas fa-gem"></i>
-                    <div>
-                        <strong>${t.reapplicationPolicyTitle}</strong>
-                        <p>${t.reapplicationPolicyText}</p>
-                    </div>
-                </div>
-
-                <div class="action-buttons">
-                    <a href="${trackUrl}" class="btn-track">
-                        <i class="fas fa-folder-open"></i> ${t.trackStatus}
-                    </a>
-                    <a href="/listings.html" class="btn-new" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;">
-                        <i class="fas fa-home"></i> ${t.browseListings}
-                    </a>
-                </div>
-
-                <div class="spam-warning-notice" style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:13.5px;color:#5d4037;line-height:1.5;">
-                    ${this._safeHtml(t.spamWarning)}
-                </div>
-
-                <div class="help-line">
-                    ${t.questions} <strong>707-706-3137</strong> — ${t.helpText}
-                </div>
-            </div>
-        `);
-
-        const copyButton = successState.querySelector('.copy-btn');
-        sessionStorage.setItem('lastSuccessAppId', appId);
-        sessionStorage.setItem('pendingPortalAppId', appId);
-        if (copyButton) copyButton.addEventListener('click', () => window.copyAppId());
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+            sessionStorage.setItem('lastSuccessAppId', appId);
+            sessionStorage.setItem('pendingPortalAppId', appId);
+            sessionStorage.setItem('lastSuccessSummary', JSON.stringify(summary));
+            localStorage.removeItem('cpLastSubmittedApplication');
+        } catch (_) {}
 
         if (this._redirectInterval) {
             clearInterval(this._redirectInterval);
             this._redirectInterval = null;
         }
+
+        const startOverBtn = document.getElementById('startOverBtn');
+        if (startOverBtn) startOverBtn.classList.remove('visible');
+
+        const qs = new URLSearchParams();
+        qs.set('app_id', appId);
+        if (email) qs.set('email', email);
+        if (lang === 'es') qs.set('lang', 'es');
+        window.location.replace('/apply/success.html?' + qs.toString());
     }
 
     getTranslations() {
