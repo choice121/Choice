@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1794828906196"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0D2137">
+  <title>Before You Apply — Choice Properties</title>
+  <meta name="description" content="Review what to expect, application fees, accepted payment options, and required details before starting your Choice Properties rental application.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/apply/css/start.css?v=1794828906196">
+</head>
+<body>
+  <div class="start-shell">
+    <header class="start-header" role="banner">
+      <div class="start-header-top">
+        <a href="/index.html" class="brand-link" aria-label="Choice Properties Home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.92"/>
+              <circle cx="12" cy="11" r="2.5" fill="#C9A04A"/>
+            </svg>
+          </span>
+          <span class="brand-name">Choice Properties</span>
+        </a>
+        <button type="button" class="lang-btn" id="startLangToggle" aria-label="Switch language">
+          <i class="fas fa-language" aria-hidden="true"></i>
+          <span id="startLangLabel">Español</span>
+        </button>
+      </div>
+
+      <div class="start-hero">
+        <div class="hero-eyebrow" id="heroEyebrow">Application Guide</div>
+        <h1 id="heroTitle">What to Expect Before You Apply</h1>
+        <p id="heroSubtitle">Review our transparent fees, payment options, and screening guidelines before beginning your rental application. Your progress saves automatically as you move through each section.</p>
+      </div>
+    </header>
+
+    <main class="start-main" id="mainContent">
+      <!-- Selected Property Summary -->
+      <section class="property-summary-card" id="propertySummaryCard" aria-labelledby="propCardHeading">
+        <div class="prop-summary-icon" aria-hidden="true"><i class="fas fa-home"></i></div>
+        <div class="prop-summary-body">
+          <div class="prop-summary-label" id="propCardHeading">Applying For</div>
+          <div class="prop-summary-title" id="propTitle">Selected Choice Properties Rental</div>
+          <div class="prop-summary-meta" id="propMeta"></div>
+          <div class="prop-summary-actions">
+            <a href="/listings.html" class="text-link" id="backToListingLink">
+              <i class="fas fa-arrow-left" aria-hidden="true"></i> <span id="backToListingLabel">Browse Listings</span>
+            </a>
+            <a href="/tenant/portal.html" class="text-link" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-search" aria-hidden="true"></i> <span id="trackAppLabel">Already Applied? Track Status</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Warning when opened without a property -->
+      <div class="no-prop-alert" id="noPropAlert" style="display:none;" role="status">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <div>
+          <strong id="noPropTitle">No specific property selected yet</strong>
+          <p id="noPropDesc">We recommend choosing a listing first so your rent, lease terms, and property address carry over automatically — or you can enter the property address directly on Step 1.</p>
+        </div>
+      </div>
+
+      <!-- 4-Step Application Roadmap -->
+      <section class="info-card" aria-labelledby="roadmapHeading">
+        <h2 class="card-heading" id="roadmapHeading">
+          <i class="fas fa-route" aria-hidden="true"></i>
+          <span id="roadmapTitle">How the Application Process Works</span>
+        </h2>
+        <div class="roadmap-grid">
+          <article class="roadmap-item">
+            <div class="step-num">01</div>
+            <h3 id="step1Title">Complete Your Application</h3>
+            <p id="step1Body">Estimated time: 15–20 minutes across 6 organized sections. Your answers save automatically in your browser while you complete the form.</p>
+          </article>
+          <article class="roadmap-item">
+            <div class="step-num">02</div>
+            <h3 id="step2Title">Transparent Per-Adult Fee</h3>
+            <p id="step2Body">$50.00 per screened adult (18+), including occupying co-applicants, guarantors, and co-signers — subject to state fee limits where applicable.</p>
+          </article>
+          <article class="roadmap-item">
+            <div class="step-num">03</div>
+            <h3 id="step3Title">Flexible Payment Checkout</h3>
+            <p id="step3Body">Immediately after submitting, complete your fee by Debit/Credit Card where active, or via supported alternative methods: Cash App, PayPal, Apple Pay, or Venmo.</p>
+          </article>
+          <article class="roadmap-item">
+            <div class="step-num">04</div>
+            <h3 id="step4Title">Review &amp; Resident Portal</h3>
+            <p id="step4Body">Underwriting begins once fee payment is confirmed (typically 24–48 hours). Track updates and upload additional files anytime in your Tenant Portal.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Two-Column Details: Fee Structure + Preparation Checklist -->
+      <div class="two-col-grid">
+        <section class="info-card" aria-labelledby="feesHeading">
+          <h2 class="card-heading" id="feesHeading">
+            <i class="fas fa-receipt" aria-hidden="true"></i>
+            <span id="feesTitle">Fee &amp; Household Rules</span>
+          </h2>
+          <ul class="detail-list" id="feesList">
+            <li><i class="fas fa-check-circle" aria-hidden="true"></i> <span><strong>$50.00 per screened adult:</strong> Primary applicant, each occupying adult co-applicant (18+), guarantor, and co-signer.</span></li>
+            <li><i class="fas fa-check-circle" aria-hidden="true"></i> <span><strong>Method A or Method B:</strong> Enter household members' details yourself or send them a private self-completion invitation link (never creates a duplicate application).</span></li>
+            <li><i class="fas fa-check-circle" aria-hidden="true"></i> <span><strong>Option A or Option B Payment:</strong> Pay the combined total at once, or let each invited member pay their own $50.00 share privately.</span></li>
+            <li><i class="fas fa-check-circle" aria-hidden="true"></i> <span><strong>30-Day Credit Protection:</strong> If an application is not approved after payment, fee credits remain valid for 30 days toward another Choice Properties home (<a href="/application-credit-policy.html" target="_blank" rel="noopener">Credit Policy</a>).</span></li>
+          </ul>
+        </section>
+
+        <section class="info-card" aria-labelledby="prepHeading">
+          <h2 class="card-heading" id="prepHeading">
+            <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+            <span id="prepTitle">What Helpful Details to Have Ready</span>
+          </h2>
+          <ul class="detail-list" id="prepList">
+            <li><i class="fas fa-id-card" aria-hidden="true"></i> <span><strong>Identity Verification:</strong> Last 4 digits of SSN, or Alternative Government ID / ITIN / Passport option.</span></li>
+            <li><i class="fas fa-house-user" aria-hidden="true"></i> <span><strong>24 Months of Residency:</strong> Current address and landlord contact (plus prior address if less than 24 months at your current home).</span></li>
+            <li><i class="fas fa-briefcase" aria-hidden="true"></i> <span><strong>Income &amp; Contacts:</strong> Employer address, start date, supervisor contact, gross monthly income, two references, and an emergency contact.</span></li>
+            <li><i class="fas fa-paperclip" aria-hidden="true"></i> <span><strong>Non-Blocking Uploads:</strong> Photos or PDFs of your ID (front/back) and income proof can be attached on Step 6 or uploaded later in your portal — skipping uploads never blocks submission.</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- Privacy & Security Honest Disclosure -->
+      <section class="security-banner" aria-labelledby="privacyHeading">
+        <div class="sec-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></div>
+        <div>
+          <h2 id="privacyHeading">How Your Information Is Protected</h2>
+          <p id="privacyBody">All data is transmitted over HTTPS. We collect only the last 4 digits of your Social Security Number (never full 9-digit SSNs) or an accepted alternative government ID, and uploaded documents are stored in private access-controlled buckets (never cached as unencrypted browser drafts). Read our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/rental-application-policy.html" target="_blank" rel="noopener">Rental Application Policy</a>.</p>
+        </div>
+      </section>
+
+      <!-- Bottom Action Bar -->
+      <div class="start-cta-bar">
+        <div class="cta-note" id="ctaNote">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          <span>Average completion time: 15–20 minutes · Drafts auto-save in your browser</span>
+        </div>
+        <div class="cta-buttons">
+          <a href="/listings.html" class="btn-secondary" id="secondaryBrowseBtn">Browse Listings</a>
+          <a href="/apply/index.html?ack=1" class="btn-primary" id="continueApplyBtn">
+            <span id="continueBtnLabel">I Understand — Continue to Application</span>
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="start-footer">
+      <p>Questions? Call or text <strong><a href="tel:+17077063137">707-706-3137</a></strong> · <a href="mailto:choiceproperties404@gmail.com">choiceproperties404@gmail.com</a></p>
+      <p class="legal-links">
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> ·
+        <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> ·
+        <a href="/fair-housing.html" target="_blank" rel="noopener">Equal Housing Opportunity</a>
+      </p>
+    </footer>
+  </div>
+
+  <script defer src="/apply/js/start.js?v=1794828906196"></script>
+</body>
+</html>

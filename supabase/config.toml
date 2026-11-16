@@ -1,0 +1,29 @@
+[functions.property-location]
+verify_jwt = false
+
+[functions.receive-pipeline-import]
+verify_jwt = false
+
+[functions.purge-expired-pipeline-recovery]
+verify_jwt = false
+
+[functions.pipeline-recovery]
+verify_jwt = false
+
+[functions.confirm-card-payment]
+verify_jwt = false
+
+[functions.request-upload-url]
+verify_jwt = false
+
+[functions.download-payment-receipt]
+verify_jwt = false
+
+[functions.get-tenant-portal-app]
+verify_jwt = false
+
+[functions.receive-application]
+verify_jwt = false
+
+[functions.confirm-co-applicant-screening]
+verify_jwt = false

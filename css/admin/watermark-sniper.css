@@ -1,0 +1,1825 @@
+/* ==========================================================================
+   Choice Properties — Watermark Sniper Moderation Workspace CSS
+   Modern, High-Density, Dedicated Full-Screen Layout
+   ========================================================================== */
+
+:root {
+  /* Choice Properties Theme Architecture Integration */
+  --sniper-bg: var(--bg, #0a0f1e);
+  --sniper-surface: var(--surface, #111827);
+  --sniper-surface-2: var(--surface-2, #1e293b);
+  --sniper-surface-3: var(--surface-3, #26334d);
+  --sniper-border: var(--border, rgba(255, 255, 255, 0.08));
+  --sniper-border-bright: var(--border-strong, rgba(255, 255, 255, 0.16));
+  --sniper-text: var(--text, #f8fafc);
+  --sniper-text-muted: var(--muted, #94a3b8);
+  --sniper-primary: var(--primary, #006aff);
+  --sniper-primary-hover: var(--primary-hover, #0056d6);
+  --sniper-danger: var(--danger, #ef4444);
+  --sniper-danger-hover: var(--danger-hover, #dc2626);
+  --sniper-danger-bg: rgba(239, 68, 68, 0.14);
+  --sniper-warning: var(--warning, #f59e0b);
+  --sniper-warning-bg: rgba(245, 158, 11, 0.14);
+  --sniper-success: var(--success, #10b981);
+  --sniper-radius: 8px;
+  --sniper-radius-lg: 12px;
+
+  /* Workspace Themed Elements */
+  --sniper-card-bg: var(--surface, #111827);
+  --sniper-card-overlay-bg: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(10, 15, 30, 0.94) 100%);
+  --sniper-card-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  --sniper-stat-bg: var(--surface-2, #1e293b);
+  --sniper-input-bg: var(--surface-2, #1e293b);
+  --sniper-input-border: var(--border, rgba(255, 255, 255, 0.08));
+  --sniper-modal-bg: var(--surface, #111827);
+  --sniper-modal-backdrop: rgba(0, 0, 0, 0.75);
+  --sniper-scroll-thumb: rgba(255, 255, 255, 0.16);
+  --sniper-zero-bg: #151c2e;
+  --sniper-zero-radial: radial-gradient(circle at center, rgba(239, 68, 68, 0.08) 0%, rgba(17, 24, 39, 0.95) 80%);
+  --sniper-zero-title: #fca5a5;
+  --sniper-error-bg: #161b2a;
+}
+
+[data-theme="light"] {
+  --sniper-bg: #f8fafc;
+  --sniper-surface: #ffffff;
+  --sniper-surface-2: #f1f5f9;
+  --sniper-surface-3: #e2e8f0;
+  --sniper-border: rgba(15, 23, 42, 0.08);
+  --sniper-border-bright: rgba(15, 23, 42, 0.18);
+  --sniper-text: #0f172a;
+  --sniper-text-muted: #64748b;
+  --sniper-card-bg: #ffffff;
+  --sniper-card-overlay-bg: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(15, 23, 42, 0.90) 100%);
+  --sniper-card-hover-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --sniper-stat-bg: #f1f5f9;
+  --sniper-input-bg: #ffffff;
+  --sniper-input-border: rgba(15, 23, 42, 0.14);
+  --sniper-modal-bg: #ffffff;
+  --sniper-modal-backdrop: rgba(15, 23, 42, 0.60);
+  --sniper-danger-bg: rgba(239, 68, 68, 0.08);
+  --sniper-warning-bg: rgba(245, 158, 11, 0.10);
+  --sniper-scroll-thumb: rgba(15, 23, 42, 0.16);
+  --sniper-zero-bg: #fffbfb;
+  --sniper-zero-radial: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, #ffffff 80%);
+  --sniper-zero-title: #dc2626;
+  --sniper-error-bg: #f8fafc;
+}
+
+html, body.sniper-standalone-body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--sniper-bg);
+  color: var(--sniper-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Workspace Root ─────────────────────────────────────────────────────── */
+.sniper-workspace-root {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Top Bar ────────────────────────────────────────────────────────────── */
+.sniper-topbar {
+  height: 56px;
+  min-height: 56px;
+  background: var(--sniper-surface);
+  border-bottom: 1px solid var(--sniper-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 50;
+  flex-shrink: 0;
+}
+
+.sniper-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sniper-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sniper-text-muted);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--sniper-radius);
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  transition: all 0.15s ease;
+}
+
+.sniper-back-btn:hover {
+  color: var(--sniper-text);
+  background: var(--sniper-surface-3);
+  border-color: var(--sniper-border-bright);
+}
+
+.sniper-topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--sniper-border);
+}
+
+.sniper-brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-brand-logo {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 1.05rem;
+  color: var(--sniper-text);
+}
+
+.sniper-brand-sub {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--sniper-primary);
+  letter-spacing: -0.01em;
+}
+
+.sniper-mode-pill {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0, 106, 255, 0.12);
+  color: var(--sniper-primary);
+  border: 1px solid rgba(0, 106, 255, 0.28);
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+.sniper-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sniper-live-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--sniper-stat-bg);
+  border: 1px solid var(--sniper-border);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-live-stat-pill strong {
+  color: var(--sniper-text);
+  font-weight: 700;
+}
+
+.sniper-stat-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--sniper-success);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.sniper-staged-pill {
+  background: var(--sniper-danger-bg);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.sniper-staged-pill strong {
+  color: var(--sniper-danger);
+}
+
+.sniper-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Integrated Theme Segmented Toggle ──────────────────────────────────── */
+.sniper-topbar .theme-toggle {
+  position: static;
+  margin: 0;
+  box-shadow: none;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.sniper-topbar .theme-toggle button {
+  background: transparent;
+  border: 0;
+  color: var(--sniper-text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.sniper-topbar .theme-toggle button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sniper-topbar .theme-toggle button:hover {
+  color: var(--sniper-text);
+}
+
+.sniper-topbar .theme-toggle button[data-active="1"] {
+  background: var(--sniper-surface);
+  color: var(--sniper-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.sniper-btn-primary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sniper-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--sniper-radius);
+  padding: 7px 14px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.sniper-btn-primary-action:hover {
+  background: var(--sniper-primary-hover);
+}
+
+.sniper-scan-badge {
+  background: #fff;
+  color: var(--sniper-primary);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 2px;
+}
+
+.sniper-btn-icon-toggle {
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  color: var(--sniper-text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--sniper-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.sniper-btn-icon-toggle:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-staged-btn {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.sniper-staged-btn:hover {
+  background: var(--sniper-danger-bg);
+  border-color: var(--sniper-danger);
+  transform: translateY(-1px);
+}
+
+.sniper-btn-queue-toggle.active {
+  background: var(--sniper-danger-bg);
+  border-color: var(--sniper-danger);
+  color: var(--sniper-danger);
+}
+
+.sniper-topbar-queue-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--sniper-danger);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--sniper-surface);
+  line-height: 1;
+}
+
+/* ─── Main Workspace Layout ──────────────────────────────────────────────── */
+.sniper-main-layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Gallery Column ─────────────────────────────────────────────────────── */
+.sniper-gallery-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sniper-bg);
+}
+
+/* ─── Toolbar & Filters Panel ────────────────────────────────────────────── */
+.sniper-toolbar-panel {
+  background: var(--sniper-surface);
+  border-bottom: 1px solid var(--sniper-border);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+.sniper-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Search Box */
+.sniper-search-box {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+}
+
+.sniper-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--sniper-text-muted);
+  pointer-events: none;
+}
+
+.sniper-search-box input {
+  width: 100%;
+  height: 34px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text);
+  font-size: 0.8125rem;
+  padding: 0 32px 0 32px;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.sniper-search-box input:focus {
+  border-color: var(--sniper-primary);
+  background: var(--sniper-surface);
+  box-shadow: 0 0 0 2px rgba(0, 106, 255, 0.15);
+}
+
+.sniper-search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 4px;
+}
+
+.sniper-search-clear-btn:hover {
+  color: var(--sniper-text);
+}
+
+/* Select dropdowns */
+.sniper-select-wrap {
+  position: relative;
+}
+
+.sniper-select-wrap select {
+  height: 34px;
+  background: var(--sniper-input-bg);
+  border: 1px solid var(--sniper-input-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text);
+  font-size: 0.8125rem;
+  padding: 0 10px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  min-width: 110px;
+}
+
+.sniper-select-wrap select:focus {
+  border-color: var(--sniper-primary);
+}
+
+.sniper-compliance-wrap select {
+  min-width: 180px;
+  font-weight: 500;
+}
+
+.sniper-btn-reset-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-reset-filters:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+/* Photo Grid Sizing / Density Switcher */
+.sniper-density-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.sniper-density-btn {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: transparent;
+  border: none;
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sniper-density-btn:hover {
+  color: var(--sniper-text);
+}
+
+.sniper-density-btn.active {
+  background: var(--sniper-surface);
+  color: var(--sniper-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  font-weight: 700;
+}
+
+/* Focus / Zen Mode Button */
+.sniper-btn-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-focus:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-btn-focus.active {
+  background: var(--sniper-primary);
+  border-color: var(--sniper-primary);
+  color: #fff;
+}
+
+/* Focus Mode State */
+.sniper-gallery-column.focus-mode .sniper-filters-row > :not(.sniper-btn-focus):not(.sniper-density-toggle) {
+  display: none !important;
+}
+
+.sniper-gallery-column.focus-mode .sniper-toolbar-panel {
+  padding: 6px 16px;
+  background: var(--sniper-surface-2);
+}
+
+.sniper-gallery-column.focus-mode .sniper-scan-banner,
+.sniper-gallery-column.focus-mode .sniper-priority-banner {
+  display: none !important;
+}
+
+/* ─── Notification Banners ───────────────────────────────────────────────── */
+.sniper-scan-banner, .sniper-priority-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: var(--sniper-radius);
+  font-size: 0.8125rem;
+  flex-wrap: wrap;
+  animation: sniperFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sniper-scan-banner {
+  background: var(--sniper-danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--sniper-text);
+}
+
+.sniper-priority-banner {
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-primary);
+  color: var(--sniper-text);
+}
+
+.sniper-banner-info, .sniper-priority-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-banner-actions, .sniper-priority-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-btn-banner-action {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.sniper-btn-banner-action.danger {
+  background: var(--sniper-danger);
+  color: #fff;
+}
+
+.sniper-btn-banner-dismiss, .sniper-btn-reset-prio {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background: var(--sniper-surface);
+  color: var(--sniper-text-muted);
+  border: 1px solid var(--sniper-border);
+  cursor: pointer;
+}
+
+.sniper-btn-banner-dismiss:hover, .sniper-btn-reset-prio:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+}
+
+.sniper-btn-stage-matches {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--sniper-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+/* ─── Pagination Bar ─────────────────────────────────────────────────────── */
+.sniper-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-page-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-page-info strong {
+  color: var(--sniper-text);
+}
+
+.sniper-bullet-sep {
+  opacity: 0.4;
+}
+
+.sniper-hint-txt {
+  font-size: 0.75rem;
+  color: var(--sniper-primary);
+  font-weight: 600;
+}
+
+.sniper-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sniper-page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sniper-page-size-lbl {
+  font-size: 0.75rem;
+}
+
+.sniper-page-size-wrap select {
+  height: 28px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: 6px;
+  color: var(--sniper-text);
+  font-size: 0.75rem;
+  padding: 0 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.sniper-nav-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-page-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 7px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: 6px;
+  color: var(--sniper-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-page-btn:hover:not(:disabled) {
+  background: var(--sniper-surface-3);
+  border-color: var(--sniper-border-bright);
+}
+
+.sniper-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sniper-page-btn.active {
+  background: var(--sniper-primary);
+  border-color: var(--sniper-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.sniper-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-page-ellipsis {
+  padding: 0 4px;
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+}
+
+.sniper-jump-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-jump-wrap input {
+  width: 48px;
+  height: 28px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: 6px;
+  color: var(--sniper-text);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0 4px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sniper-jump-wrap input:focus {
+  border-color: var(--sniper-primary);
+}
+
+.sniper-jump-go {
+  padding: 0 8px;
+}
+
+/* Bottom Pagination */
+.sniper-pagination-bottom {
+  padding: 16px 20px 24px;
+  border-top: 1px solid var(--sniper-border);
+  background: var(--sniper-surface);
+  margin-top: 12px;
+}
+
+/* ─── Grid Viewport & Cards ──────────────────────────────────────────────── */
+.sniper-grid-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sniper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  align-content: start;
+  transition: all 0.2s ease;
+}
+
+/* Grid Density Modifiers */
+.sniper-grid.density-medium {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.sniper-grid.density-compact {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.sniper-grid.density-large {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+}
+
+/* Property Card */
+.sniper-card {
+  position: relative;
+  background: var(--sniper-surface);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.sniper-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--sniper-border-bright);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Staged highlight state */
+.sniper-card.staged {
+  border: 2px solid var(--sniper-danger);
+  box-shadow: 0 0 0 1px var(--sniper-danger), 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.sniper-card.staged .sniper-card-footer {
+  background: var(--sniper-danger-bg);
+}
+
+.sniper-card.staged .sniper-stage-checkbox {
+  background: var(--sniper-danger);
+  border-color: var(--sniper-danger);
+  color: #fff;
+}
+
+/* ─── Unobstructed Photo Canvas (Media Wrap) ────────────────────────────── */
+.sniper-card-media-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #060911;
+  overflow: hidden;
+  display: block;
+}
+
+.sniper-grid.density-compact .sniper-card-media-wrap {
+  aspect-ratio: 4 / 3;
+}
+
+.sniper-card-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sniper-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #060911;
+  transition: transform 0.25s ease;
+}
+
+.sniper-card:hover .sniper-card-img {
+  transform: scale(1.025);
+}
+
+/* Card Badges (Top Row) */
+.sniper-card-top-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.sniper-stage-checkbox {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+}
+
+.sniper-card-top-right-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sniper-badge-photo-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(6px);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 3px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-badge-photo-count.alert {
+  background: rgba(245, 158, 11, 0.92);
+  color: #111827;
+  font-weight: 800;
+}
+
+.sniper-badge-flagged {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  background: var(--sniper-danger);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Card Footer (Clean Metadata below Photo) ──────────────────────────── */
+.sniper-card-footer {
+  padding: 10px 12px;
+  background: var(--sniper-surface);
+  border-top: 1px solid var(--sniper-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.sniper-grid.density-compact .sniper-card-footer {
+  padding: 7px 9px;
+  gap: 2px;
+}
+
+.sniper-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sniper-card-address {
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--sniper-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.sniper-grid.density-compact .sniper-card-address {
+  font-size: 0.78rem;
+}
+
+.sniper-card-ext-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--sniper-text-muted);
+  background: transparent;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.sniper-card-ext-btn:hover {
+  color: var(--sniper-primary);
+  background: var(--sniper-surface-2);
+}
+
+.sniper-card-city {
+  font-size: 0.75rem;
+  color: var(--sniper-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sniper-card-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.sniper-card-price {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--sniper-primary);
+}
+
+.sniper-card-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sniper-card-beds {
+  font-size: 0.6875rem;
+  color: var(--sniper-text-muted);
+  background: var(--sniper-surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sniper-card-type {
+  font-size: 0.625rem;
+  text-transform: capitalize;
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text-muted);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ─── Zero Photos Card ───────────────────────────────────────────────────── */
+.sniper-card.zero-photos {
+  background: var(--sniper-zero-bg);
+  border: 1px dashed rgba(239, 68, 68, 0.4);
+}
+
+.sniper-card.zero-photos:hover {
+  border-color: var(--sniper-danger);
+}
+
+.sniper-zero-photos-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  background: var(--sniper-zero-radial);
+}
+
+.sniper-zero-icon {
+  width: 38px;
+  height: 38px;
+  color: var(--sniper-danger);
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.sniper-zero-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--sniper-zero-title);
+  margin-bottom: 2px;
+}
+
+.sniper-zero-sub {
+  font-size: 0.75rem;
+  color: var(--sniper-text-muted);
+  margin-bottom: 8px;
+}
+
+.sniper-zero-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--sniper-danger-bg);
+  color: var(--sniper-danger);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 4px;
+}
+
+/* ─── Image Error Fallback Card ─────────────────────────────────────────── */
+.sniper-card.img-error {
+  background: var(--sniper-error-bg);
+}
+
+.sniper-error-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  background: var(--sniper-surface-2);
+}
+
+.sniper-error-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--sniper-warning);
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.sniper-error-txt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sniper-text);
+}
+
+/* ─── Staging Queue Sidebar / Slide-out Drawer ───────────────────────────── */
+.sniper-sidebar {
+  width: 380px;
+  min-width: 380px;
+  background: var(--sniper-surface);
+  border-left: 1px solid var(--sniper-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  z-index: 40;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease,
+              margin-right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sniper-sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left-width: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(100%) !important;
+  margin-right: -380px !important;
+}
+
+.sniper-sidebar-header {
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sniper-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--sniper-surface-2);
+}
+
+.sniper-sidebar-close-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-sidebar-close-btn:hover {
+  background: var(--sniper-surface-3);
+  color: var(--sniper-text);
+  border-color: var(--sniper-border);
+}
+
+.sniper-queue-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--sniper-text);
+}
+
+.sniper-queue-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--sniper-danger);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.sniper-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  display: none;
+}
+
+.sniper-queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sniper-empty-queue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-empty-icon {
+  width: 44px;
+  height: 44px;
+  opacity: 0.25;
+  margin-bottom: 12px;
+}
+
+.sniper-empty-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--sniper-text);
+  margin-bottom: 4px;
+}
+
+.sniper-empty-sub {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* Staged Item Card */
+.sniper-queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  transition: all 0.15s ease;
+}
+
+.sniper-queue-item:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-queue-thumb-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sniper-queue-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sniper-queue-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sniper-queue-addr {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--sniper-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sniper-queue-city {
+  font-size: 0.6875rem;
+  color: var(--sniper-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sniper-queue-reason {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.sniper-queue-reason.watermark {
+  background: var(--sniper-danger-bg);
+  color: var(--sniper-danger);
+}
+
+.sniper-queue-reason.zero {
+  background: var(--sniper-warning-bg);
+  color: var(--sniper-warning);
+}
+
+.sniper-queue-remove-btn {
+  background: none;
+  border: none;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.sniper-queue-remove-btn:hover {
+  color: var(--sniper-danger);
+  background: var(--sniper-danger-bg);
+}
+
+/* Sidebar Footer */
+.sniper-sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--sniper-border);
+  background: var(--sniper-surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sniper-delete-btn {
+  width: 100%;
+  height: 40px;
+  background: var(--sniper-danger);
+  color: #fff;
+  border: none;
+  border-radius: var(--sniper-radius);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+}
+
+.sniper-delete-btn:hover:not(:disabled) {
+  background: var(--sniper-danger-hover);
+}
+
+.sniper-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.sniper-clear-btn {
+  width: 100%;
+  height: 32px;
+  background: transparent;
+  color: var(--sniper-text-muted);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-clear-btn:hover:not(:disabled) {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-clear-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Loading Overlay ────────────────────────────────────────────────────── */
+.sniper-loading {
+  position: absolute;
+  inset: 0;
+  background: var(--sniper-modal-backdrop);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 100;
+  display: none;
+}
+
+.sniper-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--sniper-primary);
+  border-radius: 50%;
+  animation: sniperSpin 0.7s linear infinite;
+}
+
+.sniper-loading-txt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sniper-text);
+}
+
+/* ─── Modal Dialogs ──────────────────────────────────────────────────────── */
+.sniper-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--sniper-modal-backdrop);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+  animation: sniperFadeIn 0.15s ease;
+}
+
+.sniper-modal-box {
+  background: var(--sniper-modal-bg);
+  border: 1px solid var(--sniper-border-bright);
+  border-radius: var(--sniper-radius-lg);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--sniper-card-hover-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sniper-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--sniper-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--sniper-surface);
+}
+
+.sniper-modal-danger-badge {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--sniper-danger);
+}
+
+.sniper-modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--sniper-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.sniper-modal-close-btn:hover {
+  color: var(--sniper-text);
+}
+
+.sniper-modal-body {
+  padding: 20px;
+  background: var(--sniper-modal-bg);
+}
+
+.sniper-modal-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--sniper-text);
+  margin: 0 0 8px;
+}
+
+.sniper-modal-desc {
+  font-size: 0.8125rem;
+  color: var(--sniper-text-muted);
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.sniper-modal-prop-preview {
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--sniper-text);
+}
+
+.sniper-modal-footer {
+  padding: 14px 20px;
+  background: var(--sniper-surface-2);
+  border-top: 1px solid var(--sniper-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sniper-btn-modal-cancel {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sniper-btn-modal-cancel:hover {
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+  background: var(--sniper-surface-3);
+}
+
+.sniper-btn-modal-confirm {
+  padding: 8px 18px;
+  background: var(--sniper-danger);
+  border: none;
+  border-radius: var(--sniper-radius);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sniper-btn-modal-confirm:hover {
+  background: var(--sniper-danger-hover);
+}
+
+/* Shortcuts Dialog */
+.sniper-shortcuts-box {
+  max-width: 420px;
+}
+
+.sniper-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sniper-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--sniper-border);
+  font-size: 0.8125rem;
+}
+
+.sniper-key {
+  font-family: monospace;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  color: var(--sniper-primary);
+  font-weight: 700;
+}
+
+.sniper-shortcut-desc {
+  color: var(--sniper-text-muted);
+}
+
+/* ─── Scrollbars ─────────────────────────────────────────────────────────── */
+.sniper-grid-viewport::-webkit-scrollbar,
+.sniper-queue-list::-webkit-scrollbar,
+.sniper-modal-prop-preview::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-track,
+.sniper-queue-list::-webkit-scrollbar-track,
+.sniper-modal-prop-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-thumb,
+.sniper-queue-list::-webkit-scrollbar-thumb,
+.sniper-modal-prop-preview::-webkit-scrollbar-thumb {
+  background: var(--sniper-scroll-thumb);
+  border-radius: 999px;
+}
+
+.sniper-grid-viewport,
+.sniper-queue-list,
+.sniper-modal-prop-preview {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sniper-scroll-thumb) transparent;
+}
+
+/* ─── Vector Icons & Utilities ───────────────────────────────────────────── */
+.sniper-icon-14 { width: 14px; height: 14px; }
+.sniper-icon-16 { width: 16px; height: 16px; }
+.sniper-icon-18 { width: 18px; height: 18px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes sniperSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sniperFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Responsive Adjustments ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sniper-main-layout {
+    flex-direction: column;
+  }
+
+  .sniper-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid var(--sniper-border);
+  }
+
+  .sniper-toggle-btn {
+    display: block;
+  }
+
+  .sniper-sidebar.collapsed .sniper-queue-list,
+  .sniper-sidebar.collapsed .sniper-sidebar-footer {
+    display: none;
+  }
+
+  .sniper-topbar-center {
+    display: none;
+  }
+
+  .sniper-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+/* ─── Sleek Scrollbar & Viewport Enhancements ───────────────────────────── */
+.sniper-grid-viewport {
+  scroll-behavior: smooth;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-thumb {
+  background: var(--sniper-border-bright);
+  border-radius: 4px;
+}
+
+.sniper-grid-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--sniper-text-muted);
+}
+
+/* ─── Viewport Top Shimmer Loading Bar ──────────────────────────────────── */
+.sniper-grid-loading-bar {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--sniper-primary), transparent);
+  background-size: 200% 100%;
+  animation: sniperShimmer 1.2s infinite linear;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-radius: 2px;
+  margin-bottom: 6px;
+}
+
+@keyframes sniperShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Floating Scroll to Top Button ─────────────────────────────────────── */
+.sniper-scroll-top-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 36px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text);
+  border: 1px solid var(--sniper-border-bright);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.sniper-scroll-top-btn:hover {
+  background: var(--sniper-primary);
+  color: #fff;
+  border-color: var(--sniper-primary);
+  transform: translateY(-2px);
+}
+
+/* ─── Stage Page Button in Toolbar ──────────────────────────────────────── */
+.sniper-btn-stage-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  color: var(--sniper-text-muted);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-stage-page:hover {
+  background: var(--sniper-surface-3);
+  color: var(--sniper-text);
+  border-color: var(--sniper-border-bright);
+}
+
+.sniper-btn-stage-page.all-staged {
+  background: var(--sniper-danger-bg);
+  border-color: var(--sniper-danger);
+  color: var(--sniper-danger);
+}
+

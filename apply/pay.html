@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/js/cp-error-reporter.js?v=1794828906196"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Complete your Choice Properties rental application fee securely by debit or credit card.">
+    <title>Application Fee Payment — Choice Properties</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/apply/css/pay.css?v=1794828906196_pay_e2e">
+</head>
+<body>
+
+    <header class="pay-header">
+        <div class="pay-header-inner">
+            <a href="/index.html" class="pay-brand">
+                <span class="pay-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.95"/>
+                        <circle cx="12" cy="11" r="2.4" fill="#006aff"/>
+                    </svg>
+                </span>
+                <span>Choice Properties</span>
+            </a>
+            <nav class="pay-nav" aria-label="Primary Navigation">
+                <a href="/listings.html">Browse Rentals</a>
+                <a href="/how-to-apply.html">How to Apply</a>
+                <a href="/application-credit-policy.html">Credit Policy</a>
+                <a href="/tenant/portal.html">Tenant Portal</a>
+            </nav>
+            <a href="/tenant/portal.html" id="headerPortalLink" class="pay-header-action">Tenant Portal</a>
+        </div>
+    </header>
+
+    <main class="pay-main">
+        <div class="pay-stage-header">
+            <div class="pay-breadcrumb" aria-label="Application Progress">
+                <span class="stage-done">
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                    1. Application Submitted
+                </span>
+                <span class="pay-breadcrumb-sep" aria-hidden="true">/</span>
+                <span class="stage-active">2. Application Fee Payment</span>
+                <span class="pay-breadcrumb-sep" aria-hidden="true">/</span>
+                <span>3. Screening &amp; Review</span>
+            </div>
+            <h1 class="pay-heading">Complete Application Fee Payment</h1>
+            <p class="pay-subheading">Review your outstanding screening fee balance and select an available payment option below to advance your application.</p>
+        </div>
+
+        <!-- Shimmer Skeleton Loading State -->
+        <div id="payLoadingState" class="pay-skeleton-grid" aria-busy="true" aria-label="Loading application payment summary">
+            <div class="pay-card pay-skeleton-card">
+                <div class="skeleton-line skeleton-line--lg"></div>
+                <div class="skeleton-line skeleton-line--md"></div>
+                <div class="skeleton-box"></div>
+                <div class="skeleton-row">
+                    <div class="skeleton-box"></div>
+                    <div class="skeleton-box"></div>
+                </div>
+                <div class="skeleton-btn"></div>
+            </div>
+            <div class="pay-card pay-skeleton-card pay-skeleton-card--side">
+                <div class="skeleton-line skeleton-line--md"></div>
+                <div class="skeleton-line skeleton-line--sm"></div>
+                <div class="skeleton-line skeleton-line--sm"></div>
+                <div class="skeleton-line skeleton-line--lg"></div>
+            </div>
+        </div>
+
+        <!-- Reference Lookup State (when app_id query parameter is missing or unfound) -->
+        <section id="payLookupState" class="pay-card lookup-card" style="display:none;">
+            <div id="lookupTitle" class="pay-card-title">Find Your Application</div>
+            <p id="lookupMessage" style="font-size:0.9rem;color:var(--cp-text-secondary);">Enter your Application Reference ID (found in your confirmation screen or email) to load your application fee balance.</p>
+            <form id="lookupForm" class="lookup-form-row" novalidate>
+                <input type="text" id="lookupAppIdInput" class="field-input field-input--mono" placeholder="CP-YYYYMMDD-XXXXXX" required aria-label="Application Reference Number">
+                <button type="submit" class="btn-primary-pay" style="width:auto;">Continue</button>
+                <button type="button" id="lookupRetryBtn" class="btn-secondary" style="display:none;">Retry</button>
+            </form>
+        </section>
+
+        <!-- Compact Mobile Summary Strip (visible < 880px so Checkout stays above the fold) -->
+        <div id="mobileSummaryStrip" class="mobile-summary-strip" style="display:none;">
+            <div class="mobile-summary-top">
+                <div class="mobile-summary-meta">
+                    <span class="mobile-summary-ref font-mono" id="mobileSummaryRef">—</span>
+                    <span id="mobileSummaryStatus" class="status-pill status-pill--required">Payment Required</span>
+                </div>
+                <div class="mobile-summary-total tabular-nums" id="mobileSummaryTotal">$0.00</div>
+            </div>
+            <div class="mobile-summary-bottom">
+                <span class="mobile-summary-prop" id="mobileSummaryProp">Selected Rental Property</span>
+                <button type="button" id="mobileSummaryToggleBtn" class="mobile-summary-toggle" aria-expanded="false" aria-controls="paySummaryColumn">
+                    <span>Fee details</span>
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Payment Workspace -->
+        <div id="payWorkspace" class="pay-grid" style="display:none;">
+
+            <!-- Left/Main Column: Payment Checkout, Fallback, Alternative Methods & Transaction States -->
+            <section class="pay-card pay-checkout-column" aria-label="Application Fee Payment Checkout">
+
+                <!-- Clear Lifecycle Payment Status Banner -->
+                <div id="paymentStatusBanner" class="pay-status-banner pay-status-banner--required" role="status" aria-live="polite">
+                    <div class="pay-status-banner-left">
+                        <span class="pay-status-kicker">Current Payment Status</span>
+                        <span id="bannerStatusTitle" class="pay-status-title">Payment Required</span>
+                    </div>
+                    <p id="bannerStatusCopy" class="pay-status-copy">Select a payment option below to submit your application fee.</p>
+                </div>
+
+                <!-- Multi-Stage Processing Overlay -->
+                <div id="processingOverlay" class="processing-overlay" style="display:none;" role="status" aria-live="polite">
+                    <div class="processing-spinner-wrap" aria-hidden="true">
+                        <div class="processing-ring"></div>
+                        <svg class="processing-lock-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h2 class="processing-title" id="processingTitle">Authorizing Payment</h2>
+                    <p class="processing-subtitle" id="processingSubtitle">Please keep this window open while we verify your card.</p>
+                    <ol class="processing-steps" id="processingSteps">
+                        <li class="proc-step is-active" data-step="0">
+                            <span class="proc-step-dot" aria-hidden="true"></span>
+                            <span>Encrypting &amp; tokenizing card details</span>
+                        </li>
+                        <li class="proc-step" data-step="1">
+                            <span class="proc-step-dot" aria-hidden="true"></span>
+                            <span>Connecting to card network</span>
+                        </li>
+                        <li class="proc-step" data-step="2">
+                            <span class="proc-step-dot" aria-hidden="true"></span>
+                            <span>Verifying billing &amp; issuing bank</span>
+                        </li>
+                        <li class="proc-step" data-step="3">
+                            <span class="proc-step-dot" aria-hidden="true"></span>
+                            <span>Finalizing screening activation</span>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Card Payment Unavailable Notification & Immediate Transition Panel -->
+                <div id="cardUnavailablePanel" class="feedback-panel feedback-panel--unavailable" style="display:none;" role="alert">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--warn" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title">Online Card Payment Currently Unavailable</div>
+                            <div class="feedback-ref-tag">
+                                Application <span id="unavailableAppIdEcho" class="font-mono">—</span> · Balance Preserved (<span id="unavailableAmountEcho" class="tabular-nums">$0.00</span>)
+                            </div>
+                        </div>
+                    </div>
+                    <p id="cardUnavailableReasonText" class="feedback-body">Online debit and credit card processing is currently unavailable for this checkout. No charge was made, and no transaction record was created.</p>
+                    <p class="feedback-reassurance">Your rental application remains saved and active. You do not need to restart your application — select an available alternative payment method below to complete your fee.</p>
+                    <div class="feedback-actions">
+                        <button type="button" id="proceedToAlternativesBtn" class="btn-primary-pay" style="min-height:46px;font-size:0.95rem;">
+                            <i class="fas fa-arrow-right" aria-hidden="true"></i> Choose Alternative Payment Method
+                        </button>
+                        <button type="button" id="cancelFromUnavailableBtn" class="btn-secondary">
+                            Cancel / Pay Later
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alternative Payment Workflow Panel (Cash App, PayPal, Apple Pay, Venmo) -->
+                <div id="altPaymentPanel" class="alt-payment-panel" style="display:none;">
+                    <!-- Sub-view 1: Method Selection Grid -->
+                    <div id="altMethodGridView">
+                        <div class="pay-card-title pay-card-title--checkout">
+                            <div>
+                                <span>Alternative Payment Methods</span>
+                                <span class="checkout-secure-sub">Select an available payment method below. External payments require verification before marking paid.</span>
+                            </div>
+                            <button type="button" id="backToCardOverviewBtn" class="btn-secondary btn-compact" style="display:none;">
+                                <i class="fas fa-arrow-left" aria-hidden="true"></i> Card Option
+                            </button>
+                        </div>
+
+                        <div id="altMethodGrid" class="alt-method-grid" role="list"></div>
+
+                        <div class="alt-footer-actions">
+                            <button type="button" id="cancelFromAltGridBtn" class="btn-secondary btn-compact">Cancel Payment</button>
+                            <button type="button" id="helpFromAltGridBtn" class="btn-link-muted">Need assistance? Contact Leasing Desk</button>
+                        </div>
+                    </div>
+
+                    <!-- Sub-view 2: Selected Method External Instructions & Verification Submission -->
+                    <div id="altInstructionsView" style="display:none;">
+                        <div class="alt-inst-topbar">
+                            <button type="button" id="returnToAltGridBtn" class="btn-secondary btn-compact">
+                                <i class="fas fa-arrow-left" aria-hidden="true"></i> Return to Payment Methods
+                            </button>
+                            <span id="selectedMethodStateBadge" class="status-pill status-pill--method">Payment Method Selected</span>
+                        </div>
+
+                        <div class="alt-inst-header" id="altInstHeader">
+                            <div id="altInstIconWrap" class="alt-inst-icon-wrap" aria-hidden="true"></div>
+                            <div>
+                                <div class="alt-inst-title-row">
+                                    <h2 id="altInstTitle" class="alt-inst-title">—</h2>
+                                    <span id="altInstModeBadge" class="arrangement-pill">—</span>
+                                </div>
+                                <p id="altInstSubtitle" class="alt-inst-subtitle">Follow the external completion steps below, then submit your transfer reference for verification.</p>
+                            </div>
+                        </div>
+
+                        <div class="alt-external-warning" role="note">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                            <span id="altInstExternalNotice">This payment must be completed externally. Submitting your details below marks your application <strong>Payment Submitted for Verification</strong> until confirmed by Choice Properties.</span>
+                        </div>
+
+                        <div class="alt-preserv-bar">
+                            <div class="alt-preserv-item">
+                                <span class="alt-preserv-label">Application Reference</span>
+                                <div class="alt-preserv-val-row">
+                                    <strong id="altInstAppId" class="font-mono">—</strong>
+                                    <button type="button" id="copyAppRefBtn" class="btn-copy-inline" title="Copy Application Reference">Copy</button>
+                                </div>
+                            </div>
+                            <div class="alt-preserv-item">
+                                <span class="alt-preserv-label">Exact Amount Due</span>
+                                <strong id="altInstAmountDue" class="alt-preserv-amount tabular-nums">$0.00</strong>
+                            </div>
+                        </div>
+
+                        <!-- Direct Handle Box (shown when direct env recipient handle is configured) -->
+                        <div id="altDirectHandleBox" class="alt-direct-box" style="display:none;">
+                            <div class="alt-direct-row">
+                                <div>
+                                    <div class="alt-direct-label">Official Recipient Handle</div>
+                                    <div id="altDirectHandleValue" class="alt-direct-handle font-mono">—</div>
+                                </div>
+                                <button type="button" id="copyDirectHandleBtn" class="btn-secondary btn-compact">Copy Handle</button>
+                            </div>
+                            <a id="altDirectLaunchLink" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary btn-compact" style="display:none;margin-top:10px;">
+                                Open Payment Link <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                            </a>
+                        </div>
+
+                        <!-- Coordinator Routing Box (shown for Leasing Desk dynamic routing) -->
+                        <div id="altCoordinatorBox" class="alt-coordinator-box" style="display:none;">
+                            <div class="alt-coord-grid">
+                                <div class="alt-coord-channel">
+                                    <span class="alt-coord-label">Text / Call Leasing Desk</span>
+                                    <a href="tel:7077063137" id="altCoordPhoneLink" class="alt-coord-link font-mono">707-706-3137</a>
+                                </div>
+                                <div class="alt-coord-channel">
+                                    <span class="alt-coord-label">Email Leasing Desk</span>
+                                    <a href="mailto:choiceproperties404@gmail.com" id="altCoordEmailLink" class="alt-coord-link">choiceproperties404@gmail.com</a>
+                                </div>
+                            </div>
+                            <div class="alt-coord-template-wrap">
+                                <div class="alt-coord-template-head">
+                                    <span>Ready-to-send message to request active recipient tag:</span>
+                                    <button type="button" id="copyCoordTemplateBtn" class="btn-copy-inline">Copy Message</button>
+                                </div>
+                                <div id="altCoordTemplateText" class="alt-coord-template font-mono"></div>
+                            </div>
+                        </div>
+
+                        <ol id="altInstStepsList" class="alt-steps-list"></ol>
+
+                        <form id="externalVerifyForm" class="ext-verify-form" novalidate>
+                            <div class="ext-verify-heading">Submit External Payment for Verification</div>
+                            <p class="ext-verify-sub">Once you have completed the transfer in <span id="extFormMethodName">your payment app</span>, submit your transfer details so our team can verify and confirm your fee.</p>
+
+                            <div class="ext-verify-grid">
+                                <div class="field-group">
+                                    <label for="extReferenceInput" class="field-label">
+                                        Transaction / Confirmation Reference
+                                        <span class="field-hint-tag">Recommended</span>
+                                    </label>
+                                    <input type="text" id="extReferenceInput" class="field-input field-input--mono" maxlength="120" placeholder="e.g., transfer ID, confirmation #, or receipt code">
+                                </div>
+                                <div class="field-group">
+                                    <label for="extSenderHandleInput" class="field-label">
+                                        Sender Handle / Account Name
+                                        <span class="field-hint-tag">Optional</span>
+                                    </label>
+                                    <input type="text" id="extSenderHandleInput" class="field-input" maxlength="120" placeholder="e.g., $yourtag, @username, or payer name">
+                                </div>
+                            </div>
+
+                            <div class="field-group">
+                                <label for="extNoteInput" class="field-label">
+                                    Verification Note
+                                    <span class="field-hint-tag">Optional</span>
+                                </label>
+                                <input type="text" id="extNoteInput" class="field-input" maxlength="300" placeholder="Optional note for Leasing Desk">
+                            </div>
+
+                            <label class="ext-confirm-check">
+                                <input type="checkbox" id="extConfirmCheckbox" required>
+                                <span>I confirm that I completed this external payment for the exact amount shown above, and understand my payment status will remain <strong>Payment Submitted for Verification</strong> until manually confirmed by Choice Properties.</span>
+                            </label>
+
+                            <div id="extVerifyError" class="field-error" style="margin-bottom:12px;" role="alert"></div>
+
+                            <div class="ext-verify-actions">
+                                <button type="submit" id="submitExternalVerifyBtn" class="btn-primary-pay">
+                                    <i class="fas fa-check-circle" aria-hidden="true"></i>
+                                    <span id="submitExternalVerifyText">Submit Payment for Verification</span>
+                                </button>
+                                <button type="button" id="cancelFromInstructionsBtn" class="btn-secondary">Cancel Payment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Payment Submitted for Verification Panel (Explicitly distinguishes Submitted from Confirmed) -->
+                <div id="verificationPendingPanel" class="feedback-panel feedback-panel--verify" style="display:none;" role="status">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--verify" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title">Payment Submitted for Verification</div>
+                            <div class="feedback-ref-tag">Pending Leasing Desk Confirmation · Balance Still Unpaid Until Verified</div>
+                        </div>
+                    </div>
+                    <p class="feedback-body">Thank you. Your external payment submission has been logged with your application. Because external transfers occur outside our card processor, our Leasing Desk will verify receipt of your funds before confirming your payment and activating screening.</p>
+                    <div class="verify-meta-grid">
+                        <div class="receipt-meta-row">
+                            <span>Application Reference</span>
+                            <strong id="verifyAppIdEcho" class="font-mono">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Selected Method</span>
+                            <strong id="verifyMethodEcho">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Submitted External Reference</span>
+                            <strong id="verifyRefEcho" class="font-mono">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Submission Timestamp</span>
+                            <strong id="verifySubmittedAtEcho" class="tabular-nums">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Amount Submitted</span>
+                            <strong id="verifyAmountEcho" class="tabular-nums">—</strong>
+                        </div>
+                    </div>
+                    <div class="feedback-actions">
+                        <a href="/tenant/portal.html" id="verifyPortalBtn" class="btn-primary-pay" style="width:auto;text-decoration:none;">
+                            <i class="fas fa-folder-open" aria-hidden="true"></i> Track Status in Tenant Portal
+                        </a>
+                        <button type="button" id="changeMethodFromVerifyBtn" class="btn-secondary">
+                            Update Reference / Switch Method
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payment Cancelled Panel -->
+                <div id="cancelledPanel" class="feedback-panel feedback-panel--cancelled" style="display:none;" role="status">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--muted" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title">Payment Cancelled</div>
+                            <div class="feedback-ref-tag">Application <span id="cancelAppIdEcho" class="font-mono">—</span> · Saved &amp; Unpaid (<span id="cancelAmountEcho" class="tabular-nums">$0.00</span>)</div>
+                        </div>
+                    </div>
+                    <p class="feedback-body">You exited payment selection before completing your fee. No payment was charged or submitted. Your submitted application remains safely saved under your reference number whenever you are ready to resume.</p>
+                    <div class="feedback-actions">
+                        <button type="button" id="resumePaymentBtn" class="btn-primary-pay" style="width:auto;">
+                            <i class="fas fa-redo" aria-hidden="true"></i> Resume Payment Selection
+                        </button>
+                        <a href="/tenant/portal.html" id="cancelledPortalBtn" class="btn-secondary">Open Tenant Portal</a>
+                    </div>
+                </div>
+
+                <!-- Payment Failed / Unsuccessful Recovery Banner -->
+                <div id="failurePanel" class="feedback-panel feedback-panel--failure" style="display:none;" role="alert">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--warn" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title">Payment Unsuccessful — Action Required</div>
+                            <div class="feedback-ref-tag">Application <span id="failureAppIdEcho" class="font-mono"></span> · Saved</div>
+                        </div>
+                    </div>
+                    <p id="failureMessageText" class="feedback-body">We were unable to finalize your payment at this time due to a verification issue. Please check your payment details and try another debit or credit card, or choose an available alternative payment method.</p>
+                    <p class="feedback-reassurance">Your application remains saved. You do not need to submit the rental application again.</p>
+                    <div class="feedback-actions">
+                        <button type="button" id="tryAnotherCardBtn" class="btn-primary-pay" style="min-height:46px;font-size:0.95rem;">
+                            <i class="fas fa-credit-card" aria-hidden="true"></i> Try Payment Again
+                        </button>
+                        <button type="button" id="switchToAltFromFailureBtn" class="btn-secondary">
+                            Use Alternative Payment Method
+                        </button>
+                        <button type="button" id="contactSupportBtn" class="btn-secondary">
+                            <i class="fas fa-headset" aria-hidden="true"></i> Contact Support
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payment Assistance Requested Banner -->
+                <div id="assistancePanel" class="feedback-panel feedback-panel--assistance" style="display:none;" role="status">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--info" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title">Payment Assistance Requested</div>
+                            <div class="feedback-ref-tag">Reference <span id="assistRefEcho" class="font-mono"></span> · Active</div>
+                        </div>
+                    </div>
+                    <p class="feedback-body">Our leasing support team has been notified that you requested payment assistance. Your submitted application remains active and preserved while we assist you.</p>
+                    <div class="support-contact-box">
+                        <div><strong>Support Phone / Text:</strong> <a href="tel:7077063137">707-706-3137</a></div>
+                        <div><strong>Email:</strong> <a href="mailto:choiceproperties404@gmail.com">choiceproperties404@gmail.com</a></div>
+                    </div>
+                    <div class="feedback-actions" style="margin-top:16px;">
+                        <button type="button" id="retryFromAssistanceBtn" class="btn-secondary">Return to Payment Options</button>
+                        <a href="/tenant/portal.html" id="assistPortalLink" class="btn-secondary">View Application Status</a>
+                    </div>
+                </div>
+
+                <!-- Payment Confirmed Confirmation Panel (Strictly for paid or $0 waived status) -->
+                <div id="successPanel" class="feedback-panel feedback-panel--success" style="display:none;" role="status">
+                    <div class="feedback-header-row">
+                        <span class="feedback-icon-badge feedback-icon-badge--success" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                        </span>
+                        <div>
+                            <div class="feedback-title" id="successHeadline">Payment Confirmed</div>
+                            <div class="feedback-ref-tag">Screening Review Activated</div>
+                        </div>
+                    </div>
+                    <p id="successSubcopy" class="feedback-body">Your application fee payment has been verified and confirmed. Your application is now moving into active screening review.</p>
+                    <div class="receipt-meta-grid">
+                        <div class="receipt-meta-row">
+                            <span>Application Reference</span>
+                            <strong id="receiptAppId" class="font-mono">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Transaction Reference</span>
+                            <strong id="receiptTxRef" class="font-mono">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Payment Method</span>
+                            <strong id="receiptCardLabel">—</strong>
+                        </div>
+                        <div class="receipt-meta-row">
+                            <span>Amount Confirmed</span>
+                            <strong id="receiptAmountPaid" class="tabular-nums">—</strong>
+                        </div>
+                    </div>
+                    <div class="feedback-actions">
+                        <a href="/tenant/portal.html" id="successPortalBtn" class="btn-primary-pay" style="width:auto;text-decoration:none;">
+                            <i class="fas fa-folder-open" aria-hidden="true"></i> Open Tenant Portal
+                        </a>
+                        <a href="/receipt.html" id="successReceiptBtn" class="btn-secondary">
+                            <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> View Receipt
+                        </a>
+                        <a href="/listings.html" class="btn-secondary">Browse Rentals</a>
+                    </div>
+                </div>
+
+                <!-- Card Payment Checkout Section -->
+                <div id="checkoutFormSection">
+                    <div class="pay-card-title pay-card-title--checkout">
+                        <div>
+                            <span>Debit or Credit Card</span>
+                            <span id="cardCheckoutSubtitle" class="checkout-secure-sub">Encrypted &amp; tokenized checkout</span>
+                        </div>
+                        <div class="card-network-badges" id="cardNetworkBadges" aria-label="Accepted card networks: Visa, Mastercard, American Express, Discover">
+                            <span class="network-chip" data-brand="Visa" title="Visa">VISA</span>
+                            <span class="network-chip" data-brand="Mastercard" title="Mastercard">
+                                <span class="mc-dots" aria-hidden="true"><i></i><i></i></span>
+                            </span>
+                            <span class="network-chip" data-brand="American Express" title="American Express">AMEX</span>
+                            <span class="network-chip" data-brand="Discover" title="Discover">DISC</span>
+                        </div>
+                    </div>
+
+                    <!-- Shown ONLY when live card processing is NOT configured -->
+                    <div id="cardUnavailableOptionView" class="card-unavailable-option" style="display:none;">
+                        <p class="card-unavailable-intro">
+                            Continue with debit or credit card checkout, or switch directly to an alternative payment option. Your application details and balance due remain preserved either way.
+                        </p>
+                        <div class="card-unavailable-notice-inline">
+                            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                            <span>Live card gateway status is checked before collecting card credentials so you are never charged or misled by an inactive processor.</span>
+                        </div>
+                        <button type="button" id="continueWithCardBtn" class="btn-primary-pay">
+                            <svg class="btn-lock-svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/></svg>
+                            <span id="continueWithCardBtnText">Continue with Debit or Credit Card</span>
+                        </button>
+                        <div class="card-alt-divider"><span>OR</span></div>
+                        <button type="button" id="switchToAlternativesQuickBtn" class="btn-secondary" style="width:100%;">
+                            <i class="fas fa-wallet" aria-hidden="true"></i> Pay with Cash App, PayPal, or Venmo
+                        </button>
+                    </div>
+
+                    <!-- Shown ONLY when an actual live card payment provider IS configured -->
+                    <form id="cardPaymentForm" novalidate autocomplete="on">
+                        <div class="field-group">
+                            <label for="cardholderName" class="field-label">Cardholder Name</label>
+                            <div class="field-input-wrap">
+                                <input type="text" id="cardholderName" class="field-input" autocomplete="cc-name" placeholder="Name as it appears on card" required>
+                                <span class="field-valid-check" aria-hidden="true">
+                                    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                                </span>
+                            </div>
+                            <div id="errCardholder" class="field-error" role="alert"></div>
+                        </div>
+
+                        <!-- Tokenized Card Inputs (no name attrs; tokenized client-side, never sent raw) -->
+                        <div id="cardFieldsContainer">
+                            <div class="field-group">
+                                <label for="cardNumberInput" class="field-label">Card Number</label>
+                                <div class="field-input-wrap">
+                                    <input type="text" id="cardNumberInput" class="field-input field-input--mono field-input--with-badge" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000" enterkeyhint="next" required>
+                                    <span id="detectedCardBrand" class="card-brand-indicator" aria-live="polite">Card</span>
+                                </div>
+                                <div id="errCardNumber" class="field-error" role="alert"></div>
+                            </div>
+
+                            <div class="field-row-3">
+                                <div class="field-group">
+                                    <label for="cardExpiryInput" class="field-label">Expiration</label>
+                                    <div class="field-input-wrap">
+                                        <input type="text" id="cardExpiryInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / YY" enterkeyhint="next" required>
+                                    </div>
+                                    <div id="errCardExpiry" class="field-error" role="alert"></div>
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="cardCvvInput" class="field-label">
+                                        Security Code
+                                        <span id="cvvHintBadge" class="field-hint-tag">3 digits</span>
+                                    </label>
+                                    <div class="field-input-wrap">
+                                        <input type="password" id="cardCvvInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" enterkeyhint="next" required>
+                                    </div>
+                                    <div id="errCardCvv" class="field-error" role="alert"></div>
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="billingZipInput" class="field-label">Billing ZIP</label>
+                                    <div class="field-input-wrap">
+                                        <input type="text" id="billingZipInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="postal-code" maxlength="10" placeholder="12345" enterkeyhint="done">
+                                    </div>
+                                    <div id="errBillingZip" class="field-error" role="alert"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="formGeneralError" class="field-error" style="margin-bottom:14px;" role="alert"></div>
+
+                        <button type="submit" id="submitPayBtn" class="btn-primary-pay">
+                            <svg class="btn-lock-svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/></svg>
+                            <span id="submitPayBtnText">Pay Application Fee</span>
+                        </button>
+
+                        <div class="security-reassurance">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/></svg>
+                            <span>256-bit TLS encrypted &amp; tokenized at submission. Choice Properties never stores full card numbers or security codes.</span>
+                        </div>
+                    </form>
+
+                    <div class="checkout-help-row">
+                        <button type="button" id="switchToAltFooterBtn" class="btn-link-muted" style="margin-right:12px;">
+                            Switch to Alternative Payment Method
+                        </button>
+                        <button type="button" id="needHelpInlineBtn" class="btn-link-muted">
+                            Need help? Contact Support
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right/Bottom Column: Application Summary & Fee Breakdown -->
+            <aside id="paySummaryColumn" class="pay-card pay-summary-column" aria-label="Application Fee Summary">
+                <div class="pay-card-title">
+                    <span>Application Summary</span>
+                    <span id="summaryStatusLabel" class="status-text status-text--awaiting">Awaiting Payment</span>
+                </div>
+
+                <div class="summary-meta-list">
+                    <div class="summary-meta-row">
+                        <span class="summary-meta-label">Reference Number</span>
+                        <span class="summary-meta-value font-mono" id="summaryAppId">—</span>
+                    </div>
+                    <div class="summary-meta-row">
+                        <span class="summary-meta-label">Applicant</span>
+                        <span class="summary-meta-value" id="summaryApplicantName">—</span>
+                    </div>
+                    <div class="summary-meta-row">
+                        <span class="summary-meta-label">Property</span>
+                        <span class="summary-meta-value" id="summaryPropertyAddress">—</span>
+                    </div>
+                    <div class="summary-meta-row">
+                        <span class="summary-meta-label">Submitted</span>
+                        <span class="summary-meta-value tabular-nums" id="summarySubmittedAt">—</span>
+                    </div>
+                    <div class="summary-meta-row" id="summaryArrangementRow" style="display:none;">
+                        <span class="summary-meta-label">Arrangement</span>
+                        <span class="summary-meta-value" id="summaryArrangementBadge">—</span>
+                    </div>
+                </div>
+
+                <div class="fee-lines" id="feeBreakdownList"></div>
+
+                <div id="householdProgressBox" class="household-progress-box" style="display:none;">
+                    <div class="household-progress-row">
+                        <span>Household Fee Progress</span>
+                        <strong id="householdProgressText" class="tabular-nums">$0.00 / $0.00</strong>
+                    </div>
+                    <div class="household-progress-track">
+                        <div id="householdProgressFill" class="household-progress-fill" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <div class="fee-total-bar">
+                    <span class="fee-total-label" id="summaryTotalLabel">Total Amount Due</span>
+                    <span class="fee-total-value tabular-nums" id="summaryTotalDue">$0.00</span>
+                </div>
+
+                <p class="fee-policy-footnote">
+                    Per-screening fee policy: $50.00 per screened adult (primary applicant, every co-applicant, guarantor, and co-signer). Protected by our <a href="/application-credit-policy.html" style="color:var(--cp-primary);">Application Credit Policy</a>.
+                </p>
+            </aside>
+        </div>
+    </main>
+
+    <footer class="pay-footer">
+        <div class="pay-footer-inner">
+            <span>&copy; 2026 Choice Properties. Equal Housing Opportunity.</span>
+            <div class="pay-footer-links">
+                <a href="/application-credit-policy.html">Application Credit Policy</a>
+                <a href="/privacy.html">Privacy Policy</a>
+                <a href="/terms.html">Terms of Service</a>
+                <a href="tel:7077063137">Support: 707-706-3137</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/config.js"></script>
+    <script src="/apply/js/pay.js?v=1794828906196_pay_e2e"></script>
+</body>
+</html>
