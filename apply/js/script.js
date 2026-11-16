@@ -405,8 +405,20 @@ class RentalApplication {
         
         const savedAppId = sessionStorage.getItem('lastSuccessAppId');
         if (savedAppId) {
+            let savedSummary = null;
+            try { savedSummary = JSON.parse(sessionStorage.getItem('lastSuccessSummary') || 'null'); } catch (_) {}
+            const isPrivate = Boolean(
+                (savedSummary && (savedSummary.isPrivatePlacement || savedSummary.shareToken)) ||
+                (this.state.propertyContext && (this.state.propertyContext.isPrivatePlacement || this.state.propertyContext.shareToken)) ||
+                (function () { try { return sessionStorage.getItem('cp_is_private_placement') === '1'; } catch (_) { return false; } })()
+            );
+            const shareTok = (savedSummary && savedSummary.shareToken)
+                || (this.state.propertyContext && this.state.propertyContext.shareToken)
+                || (function () { try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch (_) { return ''; } })();
             const langParam = this.state.language === 'es' ? '&lang=es' : '';
-            window.location.replace('/apply/success.html?app_id=' + encodeURIComponent(savedAppId) + langParam);
+            const ppParam = isPrivate ? '&pp=1' : '';
+            const shareHash = shareTok ? '#share=' + encodeURIComponent(shareTok) : '';
+            window.location.replace('/apply/success.html?app_id=' + encodeURIComponent(savedAppId) + langParam + ppParam + shareHash);
             return;
         }
         
@@ -524,16 +536,40 @@ class RentalApplication {
             const city  = p.get('city') || '';
             const state = p.get('state') || '';
             const rent  = p.get('rent') || '';
-            const shareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || p.get('share') || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() || '';
+            const rawShareToken = new URLSearchParams(window.location.hash.slice(1)).get('share') || p.get('share') || '';
+            let storedPropCtx = null;
+            try { storedPropCtx = JSON.parse(sessionStorage.getItem('cp_property_context') || 'null'); } catch (_) {}
+            const explicitPublic = p.get('pp') !== '1'
+                && !rawShareToken
+                && !(storedPropCtx && storedPropCtx.share_token)
+                && Boolean(storedPropCtx && storedPropCtx.id === id && storedPropCtx.status && storedPropCtx.status !== 'private_placement');
+            if (explicitPublic) {
+              try {
+                sessionStorage.removeItem('cp_is_private_placement');
+                sessionStorage.removeItem('cp_active_share_token');
+              } catch (_) {}
+            }
+            const shareToken = rawShareToken
+                || (storedPropCtx && storedPropCtx.share_token)
+                || (!explicitPublic ? (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })() : '')
+                || '';
+            const isPrivatePlacement = p.get('pp') === '1'
+                || Boolean(shareToken)
+                || Boolean(storedPropCtx && storedPropCtx.status === 'private_placement')
+                || (!explicitPublic && (function(){ try { return sessionStorage.getItem('cp_is_private_placement') === '1'; } catch(_){ return false; } })());
+
             if (shareToken) {
               try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
+            }
+            if (isPrivatePlacement) {
+              try { sessionStorage.setItem('cp_is_private_placement', '1'); } catch (_) {}
             }
 
             // Nothing useful in the URL — show manual-entry prompt and return
             if (!id && !name && !addr && !city) { this._showNoContextPrompt(); return; }
 
             // Store context on instance for later use (success page, etc.)
-            this.state.propertyContext = { id, name, addr, city, state, rent, shareToken };
+            this.state.propertyContext = { id, name, addr, city, state, rent, shareToken, isPrivatePlacement };
 
             // Populate hidden inputs so FormData serialises them automatically
             const setHidden = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -673,7 +709,13 @@ class RentalApplication {
                           }
                       }
                   } catch (_) { /* invalid URL — drop it */ }
+                  if (safeSource && shareToken && !safeSource.includes('#share=') && safeSource.includes('property')) {
+                      safeSource += `#share=${encodeURIComponent(shareToken)}`;
+                  }
                   if (safeSource) this.state.sourceUrl = safeSource;
+              }
+              if (!this.state.sourceUrl && id) {
+                  this.state.sourceUrl = '/property.html?id=' + encodeURIComponent(id) + (shareToken ? `#share=${encodeURIComponent(shareToken)}` : '');
               }
 
               setHidden('hiddenPetsAllowed',     pets);
@@ -768,8 +810,12 @@ class RentalApplication {
         const chipsHtml = chips.length ? '<div class="pcb-chips">' + chips.join('') + '</div>' : '';
 
         // Back-to-listing link — only shown when a property ID was passed
+        const activeToken = (this.state.propertyContext && this.state.propertyContext.shareToken) || '';
+        const backHref = (window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev')
+            + '/property.html?id=' + encodeURIComponent(id)
+            + (activeToken ? '#share=' + encodeURIComponent(activeToken) : '');
         const backLinkHtml = id
-            ? '<a href="' + this._escHtml((window.CP_CONFIG && window.CP_CONFIG.LISTING_SITE_URL ? window.CP_CONFIG.LISTING_SITE_URL : 'https://choice-properties-site.pages.dev') + '/property.html?id=' + encodeURIComponent(id)) + '" class="pcb-back-link" target="_blank" rel="noopener">' +
+            ? '<a href="' + this._escHtml(backHref) + '" class="pcb-back-link" target="_blank" rel="noopener">' +
                   '<i class="fas fa-arrow-left"></i> <span data-i18n="viewListing">View listing</span>' +
               '</a>'
             : '';
@@ -4763,11 +4809,29 @@ class RentalApplication {
             total: Number(extra.docUploadSummary.total) || 0
         } : null;
 
+        const shareToken = (ctx && ctx.shareToken)
+            || (function(){ try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch(_){ return ''; } })();
+        const isPrivatePlacement = Boolean(
+            (ctx && (ctx.isPrivatePlacement || ctx.shareToken)) ||
+            shareToken ||
+            (function(){ try { return sessionStorage.getItem('cp_is_private_placement') === '1'; } catch(_){ return false; } })()
+        );
+        const fallbackSourceUrl = (ctx && ctx.id)
+            ? ('/property.html?id=' + encodeURIComponent(ctx.id) + (shareToken ? '#share=' + encodeURIComponent(shareToken) : ''))
+            : '';
+        let resolvedSourceUrl = this.state.sourceUrl || fallbackSourceUrl;
+        if (resolvedSourceUrl && shareToken && !resolvedSourceUrl.includes('#share=') && resolvedSourceUrl.includes('property')) {
+            resolvedSourceUrl += '#share=' + encodeURIComponent(shareToken);
+        }
+
         const summary = {
             appId,
             trackUrl,
+            propertyId: (ctx && ctx.id) || '',
             propertyAddress: resolvedPropertyAddress,
-            sourceUrl: this.state.sourceUrl || '',
+            sourceUrl: resolvedSourceUrl,
+            shareToken,
+            isPrivatePlacement,
             totalFeeDue: Number(feeSummary.totalFee) || 0,
             paymentPrefs,
             contactMethods,
@@ -4781,6 +4845,7 @@ class RentalApplication {
             sessionStorage.setItem('lastSuccessAppId', appId);
             sessionStorage.setItem('pendingPortalAppId', appId);
             sessionStorage.setItem('lastSuccessSummary', JSON.stringify(summary));
+            if (isPrivatePlacement) sessionStorage.setItem('cp_is_private_placement', '1');
             localStorage.removeItem('cpLastSubmittedApplication');
         } catch (_) {}
 
@@ -4796,7 +4861,9 @@ class RentalApplication {
         qs.set('app_id', appId);
         if (email) qs.set('email', email);
         if (lang === 'es') qs.set('lang', 'es');
-        window.location.replace('/apply/success.html?' + qs.toString());
+        if (isPrivatePlacement) qs.set('pp', '1');
+        const hashPart = shareToken ? '#share=' + encodeURIComponent(shareToken) : '';
+        window.location.replace('/apply/success.html?' + qs.toString() + hashPart);
     }
 
     getTranslations() {

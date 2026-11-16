@@ -1287,6 +1287,8 @@ function buildApplyURL(property, shareToken = '') {
       last_months_rent: property.last_months_rent || null,
       admin_fee:        property.admin_fee        || null,
       move_in_special:  property.move_in_special  || null,
+      status:           property.status           || null,
+      share_token:      shareToken                || null,
     }));
   } catch (_) {
     // sessionStorage unavailable (private browsing) - URL params are the fallback.
@@ -1390,18 +1392,26 @@ function buildApplyURL(property, shareToken = '') {
     ? '/apply/start.html'
     : rawBase;
 
-  // 9C-2: pass current page URL so apply form can show 'Back to listing' link
+  if (property.status === 'private_placement' || Boolean(shareToken)) {
+    p.set('pp', '1');
+  }
+
+  // 9C-2: pass current page URL so apply form & success screen can link back to the original listing
   try {
     const sourceUrl = new URL(window.location.href);
-    sourceUrl.hash = '';
-    p.set('source', sourceUrl.toString().substring(0, 300));
+    if (shareToken && !sourceUrl.hash.includes('share=')) {
+      sourceUrl.hash = `share=${encodeURIComponent(shareToken)}`;
+    } else if (!shareToken) {
+      sourceUrl.hash = '';
+    }
+    p.set('source', sourceUrl.toString().substring(0, 380));
   } catch (_) {}
 
     // B2: Guard URL length — if over 7000 chars, drop optional free-text fields and retry
       let _finalUrl = `${base}?${p.toString()}`;
       if (_finalUrl.length > 7000) {
         console.warn('[buildApplyURL] URL length ' + _finalUrl.length + ' chars — dropping optional params to reduce size');
-        ['pet_details', 'move_in_special', 'source', 'utilities', 'parking', 'laundry_type', 'heating_type', 'cooling_type'].forEach(k => p.delete(k));
+        ['pet_details', 'move_in_special', 'utilities', 'parking', 'laundry_type', 'heating_type', 'cooling_type'].forEach(k => p.delete(k));
         _finalUrl = `${base}?${p.toString()}`;
         if (_finalUrl.length > 7000) {
           console.warn('[buildApplyURL] URL still ' + _finalUrl.length + ' chars after reduction — may truncate on some browsers');

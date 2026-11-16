@@ -78,6 +78,39 @@
     var beds = params.get('beds') || (stored && stored.bedrooms) || '';
     var baths = params.get('baths') || (stored && stored.bathrooms) || '';
     var source = params.get('source') || '';
+    var rawShareToken = new URLSearchParams(window.location.hash.slice(1)).get('share')
+      || params.get('share')
+      || (stored && stored.share_token)
+      || '';
+    var explicitPublic = params.get('pp') !== '1'
+      && !rawShareToken
+      && Boolean(stored && stored.id === id && stored.status && stored.status !== 'private_placement');
+    if (explicitPublic) {
+      try {
+        sessionStorage.removeItem('cp_is_private_placement');
+        sessionStorage.removeItem('cp_active_share_token');
+      } catch (_) {}
+    }
+    var shareToken = (rawShareToken
+      || (!explicitPublic ? (function () { try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch (_) { return ''; } })() : '')
+    ).trim();
+    var isPrivatePlacement = params.get('pp') === '1'
+      || Boolean(shareToken)
+      || Boolean(stored && stored.status === 'private_placement')
+      || (!explicitPublic && (function () { try { return sessionStorage.getItem('cp_is_private_placement') === '1'; } catch (_) { return false; } })());
+
+    if (shareToken) {
+      try { sessionStorage.setItem('cp_active_share_token', shareToken); } catch (_) {}
+    }
+    if (isPrivatePlacement) {
+      try { sessionStorage.setItem('cp_is_private_placement', '1'); } catch (_) {}
+    }
+
+    if (!source && id) {
+      source = '/property.html?id=' + encodeURIComponent(id) + (shareToken ? '#share=' + encodeURIComponent(shareToken) : '');
+    } else if (source && shareToken && source.indexOf('#share=') === -1 && source.indexOf('property') !== -1) {
+      source += '#share=' + encodeURIComponent(shareToken);
+    }
 
     return {
       params: params,
@@ -88,7 +121,9 @@
       fee: fee,
       beds: beds,
       baths: baths,
-      source: source
+      source: source,
+      shareToken: shareToken,
+      isPrivatePlacement: isPrivatePlacement
     };
   }
 
@@ -141,12 +176,21 @@
     if (!ctx.title) setText('propTitle', s.fallbackPropTitle);
     var backLabel = document.getElementById('backToListingLabel');
     if (backLabel) {
-      backLabel.textContent = ctx.source ? s.backToProperty : s.browseListings;
+      backLabel.textContent = ctx.source ? s.backToProperty : (ctx.isPrivatePlacement ? '' : s.browseListings);
+    }
+    var backLinkTop = document.getElementById('backToListingLink');
+    if (backLinkTop && ctx.isPrivatePlacement && !ctx.source) {
+      backLinkTop.style.display = 'none';
     }
     var secondaryBtn = document.getElementById('secondaryBrowseBtn');
     if (secondaryBtn) {
-      secondaryBtn.textContent = ctx.source ? s.backToProperty : s.browseListings;
-      secondaryBtn.href = ctx.source || '/listings.html';
+      if (ctx.isPrivatePlacement && !ctx.source) {
+        secondaryBtn.style.display = 'none';
+      } else {
+        secondaryBtn.style.display = '';
+        secondaryBtn.textContent = ctx.source ? s.backToProperty : s.browseListings;
+        secondaryBtn.href = ctx.source || '/listings.html';
+      }
     }
     var continueBtn = document.getElementById('continueApplyBtn');
     if (continueBtn) {
@@ -186,6 +230,15 @@
     var backLink = document.getElementById('backToListingLink');
     if (backLink && ctx.source) {
       backLink.href = ctx.source;
+    } else if (backLink && ctx.isPrivatePlacement) {
+      backLink.style.display = 'none';
+    }
+    if (ctx.isPrivatePlacement) {
+      var brand = document.querySelector('.brand-link');
+      if (brand) {
+        brand.removeAttribute('href');
+        brand.style.cursor = 'default';
+      }
     }
 
     var noPropAlert = document.getElementById('noPropAlert');

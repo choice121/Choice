@@ -21,6 +21,7 @@
       portalCta: 'Open Tenant Portal',
       browseListings: 'Browse Listings',
       viewListing: 'View Listing',
+      backToListing: 'Back to Listing',
       docsUploaded: function (ok, total) {
         return ok + '/' + total + ' supporting document(s) attached';
       },
@@ -47,6 +48,7 @@
       portalCta: 'Abrir Portal del Inquilino',
       browseListings: 'Ver Propiedades',
       viewListing: 'Ver Anuncio',
+      backToListing: 'Volver al Anuncio',
       docsUploaded: function (ok, total) {
         return ok + '/' + total + ' documento(s) de respaldo adjuntos';
       },
@@ -85,14 +87,51 @@
     }
 
     var lang = ((params.get('lang') || (summary && summary.lang) || 'en')).toLowerCase().startsWith('es') ? 'es' : 'en';
+    var hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    var shareToken = (
+      hashParams.get('share') ||
+      params.get('share') ||
+      (summary && summary.shareToken) ||
+      (function () { try { return sessionStorage.getItem('cp_active_share_token') || ''; } catch (_) { return ''; } })() ||
+      ''
+    ).trim();
+
+    var storedPropCtx = null;
+    try { storedPropCtx = safeParse(sessionStorage.getItem('cp_property_context')); } catch (_) {}
+
+    var propertyId = (
+      (summary && summary.propertyId) ||
+      params.get('property_id') ||
+      (storedPropCtx && storedPropCtx.id) ||
+      ''
+    ).trim();
+
+    var isPrivatePlacement = (
+      params.get('pp') === '1' ||
+      Boolean(shareToken) ||
+      Boolean(summary && summary.isPrivatePlacement) ||
+      Boolean(storedPropCtx && storedPropCtx.status === 'private_placement') ||
+      (function () { try { return sessionStorage.getItem('cp_is_private_placement') === '1'; } catch (_) { return false; } })()
+    );
+
+    var sourceUrl = (summary && summary.sourceUrl) || '';
+    if (!sourceUrl && propertyId) {
+      sourceUrl = '/property.html?id=' + encodeURIComponent(propertyId);
+    }
+    if (sourceUrl && shareToken && sourceUrl.indexOf('#share=') === -1 && sourceUrl.indexOf('property') !== -1) {
+      sourceUrl += '#share=' + encodeURIComponent(shareToken);
+    }
 
     return {
       appId: appId || 'CP-SUBMITTED',
       hasRealId: Boolean(appId),
       email: email,
       trackUrl: trackUrl,
+      propertyId: propertyId,
       propertyAddress: (summary && summary.propertyAddress) || '',
-      sourceUrl: (summary && summary.sourceUrl) || '',
+      sourceUrl: sourceUrl,
+      shareToken: shareToken,
+      isPrivatePlacement: isPrivatePlacement,
       totalFeeDue: summary && typeof summary.totalFeeDue === 'number' ? summary.totalFeeDue : 50,
       paymentPrefs: Array.isArray(summary && summary.paymentPrefs) ? summary.paymentPrefs.filter(Boolean) : [],
       contactMethods: Array.isArray(summary && summary.contactMethods) ? summary.contactMethods.filter(Boolean) : [],
@@ -129,7 +168,22 @@
     setText('prefsCaption', t.preferred);
     setText('portalCtaText', t.portalCta);
     setText('browseListingsText', t.browseListings);
-    setText('backToListingText', t.viewListing);
+    setText('backToListingText', ctx.isPrivatePlacement ? t.backToListing : t.viewListing);
+
+    var brandLink = document.getElementById('brandLink');
+    if (brandLink && ctx.isPrivatePlacement) {
+      brandLink.removeAttribute('href');
+      brandLink.setAttribute('aria-label', 'Choice Properties');
+      brandLink.style.cursor = 'default';
+    }
+
+    var browseLink = document.getElementById('browseListingsLink');
+    var browseSep = document.getElementById('browseListingsSep');
+    if (browseLink && browseSep) {
+      var hideBrowse = Boolean(ctx.isPrivatePlacement);
+      browseLink.hidden = hideBrowse;
+      browseSep.hidden = hideBrowse;
+    }
 
     var propPill = document.getElementById('propertyPill');
     var propAddrEl = document.getElementById('propertyAddressText');
