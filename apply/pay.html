@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/apply/css/pay.css?v=1794833058774_pay_e2e">
+    <link rel="stylesheet" href="/apply/css/pay.css?v=1794836800000_card_flow">
 </head>
 <body>
 
@@ -124,46 +124,49 @@
                             <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"/>
                         </svg>
                     </div>
-                    <h2 class="processing-title" id="processingTitle">Authorizing Payment</h2>
-                    <p class="processing-subtitle" id="processingSubtitle">Please keep this window open while we verify your card.</p>
+                    <h2 class="processing-title" id="processingTitle">Validating &amp; Processing Card</h2>
+                    <p class="processing-subtitle" id="processingSubtitle">Please keep this window open while we validate your card details and verify checkout availability.</p>
                     <ol class="processing-steps" id="processingSteps">
                         <li class="proc-step is-active" data-step="0">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Encrypting &amp; tokenizing card details</span>
+                            <span>Validating card format, expiration &amp; security code</span>
                         </li>
                         <li class="proc-step" data-step="1">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Connecting to card network</span>
+                            <span>Encrypting &amp; tokenizing card details</span>
                         </li>
                         <li class="proc-step" data-step="2">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Verifying billing &amp; issuing bank</span>
+                            <span>Checking online card checkout gateway status</span>
                         </li>
                         <li class="proc-step" data-step="3">
                             <span class="proc-step-dot" aria-hidden="true"></span>
-                            <span>Finalizing screening activation</span>
+                            <span>Finalizing payment routing status</span>
                         </li>
                     </ol>
                 </div>
 
-                <!-- Card Payment Unavailable Notification & Immediate Transition Panel -->
+                <!-- Card Payment Unavailable Notification & Immediate Guided Transition Panel -->
                 <div id="cardUnavailablePanel" class="feedback-panel feedback-panel--unavailable" style="display:none;" role="alert">
                     <div class="feedback-header-row">
                         <span class="feedback-icon-badge feedback-icon-badge--warn" aria-hidden="true">
                             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>
                         </span>
                         <div>
-                            <div class="feedback-title">Online Card Payment Currently Unavailable</div>
+                            <div class="feedback-title">Card Payment Could Not Be Completed</div>
                             <div class="feedback-ref-tag">
-                                Application <span id="unavailableAppIdEcho" class="font-mono">—</span> · Balance Preserved (<span id="unavailableAmountEcho" class="tabular-nums">$0.00</span>)
+                                Online Card Checkout Disabled · Not a Bank Decline · No Charge Made (<span id="unavailableAppIdEcho" class="font-mono">—</span> · <span id="unavailableAmountEcho" class="tabular-nums">$0.00</span> Due)
                             </div>
                         </div>
                     </div>
-                    <p id="cardUnavailableReasonText" class="feedback-body">Online debit and credit card processing is currently unavailable for this checkout. No charge was made, and no transaction record was created.</p>
-                    <p class="feedback-reassurance">Your rental application remains saved and active. You do not need to restart your application — select an available alternative payment method below to complete your fee.</p>
+                    <p id="cardUnavailableReasonText" class="feedback-body">Your card payment could not be completed because online debit and credit card checkout is currently disabled on this portal. This is a checkout configuration notice — not a bank decline or an issue with your card. No charge was made.</p>
+                    <div class="feedback-reassurance guided-alt-step-banner">
+                        <i class="fas fa-route" aria-hidden="true"></i>
+                        <span><strong>Next Step — Select an Alternative Payment Method Below:</strong> Your rental application and fee balance remain saved. Choose one of the available payment options below and enter your payment details to finish.</span>
+                    </div>
                     <div class="feedback-actions">
-                        <button type="button" id="proceedToAlternativesBtn" class="btn-primary-pay" style="min-height:46px;font-size:0.95rem;">
-                            <i class="fas fa-arrow-right" aria-hidden="true"></i> Choose Alternative Payment Method
+                        <button type="button" id="proceedToAlternativesBtn" class="btn-primary-pay" style="min-height:44px;font-size:0.92rem;">
+                            <i class="fas fa-arrow-down" aria-hidden="true"></i> Select Alternative Payment Method Below
                         </button>
                         <button type="button" id="cancelFromUnavailableBtn" class="btn-secondary">
                             Cancel / Pay Later
@@ -270,23 +273,25 @@
                         <ol id="altInstStepsList" class="alt-steps-list"></ol>
 
                         <form id="externalVerifyForm" class="ext-verify-form" novalidate>
-                            <div class="ext-verify-heading">Submit External Payment for Verification</div>
-                            <p class="ext-verify-sub">Once you have completed the transfer in <span id="extFormMethodName">your payment app</span>, submit your transfer details so our team can verify and confirm your fee.</p>
+                            <div class="ext-verify-heading">Enter Your <span id="extFormMethodHeading">Alternative</span> Payment Details</div>
+                            <p class="ext-verify-sub">Once you have completed the transfer in <span id="extFormMethodName">your payment app</span>, enter your required payment details below so our team can verify and confirm your fee.</p>
 
                             <div class="ext-verify-grid">
                                 <div class="field-group">
-                                    <label for="extReferenceInput" class="field-label">
-                                        Transaction / Confirmation Reference
-                                        <span class="field-hint-tag">Recommended</span>
+                                    <label for="extSenderHandleInput" class="field-label">
+                                        <span id="extSenderHandleLabel">Sender Handle / Account Name</span>
+                                        <span class="field-required-tag">Required</span>
                                     </label>
-                                    <input type="text" id="extReferenceInput" class="field-input field-input--mono" maxlength="120" placeholder="e.g., transfer ID, confirmation #, or receipt code">
+                                    <input type="text" id="extSenderHandleInput" class="field-input" maxlength="120" placeholder="e.g., $yourtag, @username, or payer name" required>
+                                    <div id="errExtSenderHandle" class="field-error" role="alert"></div>
                                 </div>
                                 <div class="field-group">
-                                    <label for="extSenderHandleInput" class="field-label">
-                                        Sender Handle / Account Name
-                                        <span class="field-hint-tag">Optional</span>
+                                    <label for="extReferenceInput" class="field-label">
+                                        <span id="extReferenceLabel">Transaction / Confirmation Reference</span>
+                                        <span class="field-required-tag">Required</span>
                                     </label>
-                                    <input type="text" id="extSenderHandleInput" class="field-input" maxlength="120" placeholder="e.g., $yourtag, @username, or payer name">
+                                    <input type="text" id="extReferenceInput" class="field-input field-input--mono" maxlength="120" placeholder="e.g., transfer ID, confirmation #, or receipt code" required>
+                                    <div id="errExtReference" class="field-error" role="alert"></div>
                                 </div>
                             </div>
 
@@ -524,6 +529,9 @@
                                 <label for="cardNumberInput" class="field-label">Card Number</label>
                                 <div class="field-input-wrap">
                                     <input type="text" id="cardNumberInput" class="field-input field-input--mono field-input--with-badge" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000" enterkeyhint="next" required>
+                                    <span class="field-valid-check field-valid-check--with-badge" aria-hidden="true">
+                                        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                                    </span>
                                     <span id="detectedCardBrand" class="card-brand-indicator" aria-live="polite">Card</span>
                                 </div>
                                 <div id="errCardNumber" class="field-error" role="alert"></div>
@@ -531,20 +539,26 @@
 
                             <div class="field-row-3">
                                 <div class="field-group">
-                                    <label for="cardExpiryInput" class="field-label">Expiration</label>
+                                    <label for="cardExpiryInput" class="field-label">Expiration Date</label>
                                     <div class="field-input-wrap">
-                                        <input type="text" id="cardExpiryInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / YY" enterkeyhint="next" required>
+                                        <input type="text" id="cardExpiryInput" class="field-input field-input--mono field-input--with-check" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / YY" enterkeyhint="next" required>
+                                        <span class="field-valid-check" aria-hidden="true">
+                                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                                        </span>
                                     </div>
                                     <div id="errCardExpiry" class="field-error" role="alert"></div>
                                 </div>
 
                                 <div class="field-group">
                                     <label for="cardCvvInput" class="field-label">
-                                        Security Code
+                                        CVV / Security Code
                                         <span id="cvvHintBadge" class="field-hint-tag">3 digits</span>
                                     </label>
                                     <div class="field-input-wrap">
-                                        <input type="password" id="cardCvvInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" enterkeyhint="next" required>
+                                        <input type="password" id="cardCvvInput" class="field-input field-input--mono field-input--with-check" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" enterkeyhint="next" required>
+                                        <span class="field-valid-check" aria-hidden="true">
+                                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                                        </span>
                                     </div>
                                     <div id="errCardCvv" class="field-error" role="alert"></div>
                                 </div>
@@ -552,7 +566,10 @@
                                 <div class="field-group">
                                     <label for="billingZipInput" class="field-label">Billing ZIP</label>
                                     <div class="field-input-wrap">
-                                        <input type="text" id="billingZipInput" class="field-input field-input--mono" inputmode="numeric" autocomplete="postal-code" maxlength="10" placeholder="12345" enterkeyhint="done">
+                                        <input type="text" id="billingZipInput" class="field-input field-input--mono field-input--with-check" inputmode="numeric" autocomplete="postal-code" maxlength="10" placeholder="12345" enterkeyhint="done">
+                                        <span class="field-valid-check" aria-hidden="true">
+                                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                                        </span>
                                     </div>
                                     <div id="errBillingZip" class="field-error" role="alert"></div>
                                 </div>
@@ -650,6 +667,6 @@
     </footer>
 
     <script src="/config.js"></script>
-    <script src="/apply/js/pay.js?v=1794833058774_pay_e2e"></script>
+    <script src="/apply/js/pay.js?v=1794836800000_card_flow"></script>
 </body>
 </html>

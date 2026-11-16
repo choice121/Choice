@@ -114,6 +114,30 @@ async function run() {
   assert(payJs.includes('Payment Submitted for Verification'), 'pay.js missing verification state label');
   assert(payJs.includes('Payment Method Selected'), 'pay.js missing method selected state label');
 
+  // Verify complete card payment interface always renders first & validates/processes transparently
+  for (const cardId of ['id="cardNumberInput"', 'id="cardExpiryInput"', 'id="cardCvvInput"', 'id="extSenderHandleInput"', 'id="extReferenceInput"']) {
+    assert(payHtml.includes(cardId), `pay.html missing expected input ${cardId}`);
+  }
+  assert(
+    payHtml.includes('Card Payment Could Not Be Completed') && payHtml.includes('Not a Bank Decline'),
+    'pay.html must transparently communicate disabled card checkout as not a bank decline'
+  );
+  assert(
+    CARD_UNAVAILABLE_MESSAGE.toLowerCase().includes('not a bank decline') &&
+      CARD_UNAVAILABLE_MESSAGE.toLowerCase().includes('disabled'),
+    'CARD_UNAVAILABLE_MESSAGE must transparently state online card checkout is disabled and not a bank decline'
+  );
+  assert(
+    payJs.includes("cardForm.style.display = 'block'") &&
+      payJs.includes("if (targetView === 'unavailable')") &&
+      payJs.includes("$('altPaymentPanel').style.display = 'block'"),
+    'pay.js must show the card form first and automatically display alternative payment options after the unavailable error'
+  );
+  assert(
+    payJs.includes('getAlternativeInputSpecs') && payJs.includes('if (senderHandle.length < 2)') && payJs.includes('if (externalRef.length < 3)'),
+    'pay.js must tailor and enforce required alternative payment details fields'
+  );
+
   console.log('2b. Checking Cloudflare Pages /api/payments/[[path]].js parity...');
   const cfMod = await import(path.join(ROOT, 'functions', 'api', 'payments', '[[path]].js'));
   assert.strictEqual(typeof cfMod.onRequest, 'function', 'CF payments function must export onRequest');

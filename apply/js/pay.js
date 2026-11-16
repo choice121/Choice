@@ -30,6 +30,7 @@
         config: null,
         session: null,
         selectedMethod: null,
+        lastRenderedMethod: null,
         viewMode: 'auto', // 'auto' | 'card' | 'unavailable' | 'alt_grid' | 'alt_instructions' | 'verify_pending' | 'cancelled' | 'failure' | 'assistance' | 'confirmed'
         isProcessing: false,
         summaryExpandedMobile: false,
@@ -293,7 +294,7 @@
             case PAYMENT_STATES.AWAITING:
                 return {
                     cls: 'pay-status-banner--awaiting',
-                    copy: 'Awaiting payment completion. Select an available alternative method below to finish your fee.',
+                    copy: 'Online card checkout could not be completed. Select an available alternative payment method below to finish your fee.',
                 };
             case PAYMENT_STATES.UNSUCCESSFUL:
                 return {
@@ -500,7 +501,11 @@
                 : `${m.name} Unavailable`;
 
             if (isAvailable) {
-                btn.addEventListener('click', () => handleSelectAlternativeMethod(m.id));
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleSelectAlternativeMethod(m.id);
+                });
+                card.addEventListener('click', () => handleSelectAlternativeMethod(m.id));
             }
 
             card.appendChild(top);
@@ -508,6 +513,56 @@
             card.appendChild(btn);
             grid.appendChild(card);
         });
+    }
+
+    function getAlternativeInputSpecs(methodId) {
+        switch (methodId) {
+            case 'cash_app':
+                return {
+                    senderLabel: 'Your Cash App $Cashtag or Sender Name',
+                    senderPlaceholder: 'e.g., $yourcashtag or Jordan Rivera',
+                    senderError: 'Enter your Cash App $Cashtag or sender name.',
+                    refLabel: 'Cash App Transaction / Receipt ID',
+                    refPlaceholder: 'e.g., #A1B2C3D4 or transfer confirmation ID',
+                    refError: 'Enter your Cash App transaction or confirmation ID.',
+                };
+            case 'paypal':
+                return {
+                    senderLabel: 'Your PayPal Email or @Username',
+                    senderPlaceholder: 'e.g., name@example.com or @username',
+                    senderError: 'Enter the PayPal email or @username used for your payment.',
+                    refLabel: 'PayPal Transaction ID',
+                    refPlaceholder: 'e.g., 1AB23456CD789012E',
+                    refError: 'Enter your PayPal transaction ID.',
+                };
+            case 'venmo':
+                return {
+                    senderLabel: 'Your Venmo @Username or Account Name',
+                    senderPlaceholder: 'e.g., @your-venmo or Jordan Rivera',
+                    senderError: 'Enter your Venmo @username or account name.',
+                    refLabel: 'Venmo Payment / Transaction ID',
+                    refPlaceholder: 'e.g., 394810294810 or confirmation #',
+                    refError: 'Enter your Venmo payment or confirmation ID.',
+                };
+            case 'apple_pay':
+                return {
+                    senderLabel: 'Apple Pay Sender Name or Phone / Email',
+                    senderPlaceholder: 'e.g., Jordan Rivera or 555-123-4567',
+                    senderError: 'Enter the sender name, phone, or email used for Apple Pay.',
+                    refLabel: 'Apple Pay Confirmation / Reference ID',
+                    refPlaceholder: 'e.g., transfer confirmation #',
+                    refError: 'Enter your Apple Pay confirmation or reference ID.',
+                };
+            default:
+                return {
+                    senderLabel: 'Sender Handle / Account Name',
+                    senderPlaceholder: 'e.g., $yourtag, @username, or payer name',
+                    senderError: 'Enter the sender handle or account name used for this payment.',
+                    refLabel: 'Transaction / Confirmation Reference',
+                    refPlaceholder: 'e.g., transfer ID, confirmation #, or receipt code',
+                    refError: 'Enter your transaction or confirmation reference.',
+                };
+        }
     }
 
     function renderAlternativeInstructions(methodObj) {
@@ -519,6 +574,7 @@
         const session = state.session || {};
         const appId = session.app_id || state.appId || '—';
         const amountDue = Number(session.amount_due_now ?? session.application_fee ?? 0);
+        const specs = getAlternativeInputSpecs(methodObj.id);
 
         const iconWrap = $('altInstIconWrap');
         if (iconWrap) {
@@ -534,7 +590,12 @@
         }
         if ($('altInstAppId')) $('altInstAppId').textContent = appId;
         if ($('altInstAmountDue')) $('altInstAmountDue').textContent = formatCurrency(amountDue);
+        if ($('extFormMethodHeading')) $('extFormMethodHeading').textContent = methodObj.name;
         if ($('extFormMethodName')) $('extFormMethodName').textContent = methodObj.name;
+        if ($('extSenderHandleLabel')) $('extSenderHandleLabel').textContent = specs.senderLabel;
+        if ($('extSenderHandleInput')) $('extSenderHandleInput').placeholder = specs.senderPlaceholder;
+        if ($('extReferenceLabel')) $('extReferenceLabel').textContent = specs.refLabel;
+        if ($('extReferenceInput')) $('extReferenceInput').placeholder = specs.refPlaceholder;
 
         const stateBadge = $('selectedMethodStateBadge');
         if (stateBadge) {
@@ -587,6 +648,22 @@
             });
         }
 
+        if (state.lastRenderedMethod !== methodObj.id) {
+            if ($('extSenderHandleInput')) {
+                $('extSenderHandleInput').value = '';
+                $('extSenderHandleInput').classList.remove('is-field-valid');
+            }
+            if ($('extReferenceInput')) {
+                $('extReferenceInput').value = '';
+                $('extReferenceInput').classList.remove('is-field-valid');
+            }
+            if ($('extNoteInput')) $('extNoteInput').value = '';
+            if ($('extConfirmCheckbox')) $('extConfirmCheckbox').checked = false;
+            state.lastRenderedMethod = methodObj.id;
+        }
+
+        setFieldError($('extSenderHandleInput'), $('errExtSenderHandle'), '');
+        setFieldError($('extReferenceInput'), $('errExtReference'), '');
         const errEl = $('extVerifyError');
         if (errEl) {
             errEl.textContent = '';
@@ -595,20 +672,15 @@
     }
 
     function configureCardCheckoutView() {
-        const cardAvailable = Boolean(state.config?.cardProcessing?.available);
         const cardForm = $('cardPaymentForm');
         const unavailOption = $('cardUnavailableOptionView');
         const subtitle = $('cardCheckoutSubtitle');
 
-        if (cardAvailable) {
-            if (cardForm) cardForm.style.display = 'block';
-            if (unavailOption) unavailOption.style.display = 'none';
-            if (subtitle) subtitle.textContent = 'Encrypted & tokenized checkout';
-        } else {
-            if (cardForm) cardForm.style.display = 'none';
-            if (unavailOption) unavailOption.style.display = 'flex';
-            if (subtitle) subtitle.textContent = 'Card gateway status check required';
-        }
+        // Always render the complete credit card payment interface first so the applicant can
+        // enter card details and experience real-time validation & checkout verification.
+        if (cardForm) cardForm.style.display = 'block';
+        if (unavailOption) unavailOption.style.display = 'none';
+        if (subtitle) subtitle.textContent = 'Encrypted & tokenized checkout';
 
         const amountDueNow = Number(state.session?.amount_due_now ?? state.session?.application_fee ?? 0);
         if ($('continueWithCardBtnText')) {
@@ -709,14 +781,26 @@
 
         if (targetView === 'unavailable') {
             syncStatusIndicators(PAYMENT_STATES.AWAITING);
-            $('cardUnavailablePanel').style.display = 'block';
+            const unavailPanel = $('cardUnavailablePanel');
+            unavailPanel.style.display = 'block';
             if ($('unavailableAppIdEcho')) $('unavailableAppIdEcho').textContent = appId;
             if ($('unavailableAmountEcho')) $('unavailableAmountEcho').textContent = formatCurrency(amountDueNow);
             if ($('cardUnavailableReasonText')) {
                 $('cardUnavailableReasonText').textContent =
                     state.config?.cardProcessing?.reason
-                    || 'Online debit and credit card processing is currently unavailable for this checkout. No charge was made, and no transaction record was created.';
+                    || 'Your card payment could not be completed because online debit and credit card checkout is currently disabled on this portal. This is a checkout configuration notice — not a bank decline or an issue with your card. No charge was made, and your submitted application and balance remain saved.';
             }
+            // Automatically guide the applicant directly into selecting an alternative payment method below.
+            $('altPaymentPanel').style.display = 'block';
+            $('altMethodGridView').style.display = 'block';
+            $('altInstructionsView').style.display = 'none';
+            if ($('backToCardOverviewBtn')) {
+                $('backToCardOverviewBtn').style.display = 'inline-flex';
+            }
+            renderAlternativeMethodGrid();
+            try {
+                unavailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch (_) {}
             return;
         }
 
@@ -1259,15 +1343,36 @@
         if (!state.appId || !state.selectedMethod) return;
 
         const errEl = $('extVerifyError');
+        const senderInput = $('extSenderHandleInput');
+        const refInput = $('extReferenceInput');
+        const specs = getAlternativeInputSpecs(state.selectedMethod);
+
+        setFieldError(senderInput, $('errExtSenderHandle'), '');
+        setFieldError(refInput, $('errExtReference'), '');
         if (errEl) {
             errEl.textContent = '';
             errEl.classList.remove('visible');
         }
 
         const confirmed = Boolean($('extConfirmCheckbox')?.checked);
-        const externalRef = ($('extReferenceInput')?.value || '').trim();
-        const senderHandle = ($('extSenderHandleInput')?.value || '').trim();
+        const externalRef = (refInput?.value || '').trim();
+        const senderHandle = (senderInput?.value || '').trim();
         const note = ($('extNoteInput')?.value || '').trim();
+
+        let hasFieldError = false;
+        if (senderHandle.length < 2) {
+            setFieldError(senderInput, $('errExtSenderHandle'), specs.senderError);
+            hasFieldError = true;
+        }
+        if (externalRef.length < 3) {
+            setFieldError(refInput, $('errExtReference'), specs.refError);
+            hasFieldError = true;
+        }
+        if (hasFieldError) {
+            if (senderHandle.length < 2) senderInput?.focus();
+            else refInput?.focus();
+            return;
+        }
 
         if (!confirmed) {
             if (errEl) {
@@ -1333,11 +1438,6 @@
     async function handlePaymentSubmit(e) {
         e.preventDefault();
         if (state.isProcessing || !state.session) return;
-
-        if (!state.config?.cardProcessing?.available) {
-            handleContinueWithCardUnavailable();
-            return;
-        }
 
         clearAllFieldErrors();
         const tokenized = tokenizeCardInputs();
@@ -1477,8 +1577,22 @@
         if (expInput) {
             expInput.addEventListener('input', (e) => {
                 e.target.value = formatExpiryDisplay(e.target.value);
+                const digits = e.target.value.replace(/\D/g, '');
+                if (digits.length >= 2) {
+                    const monthNum = parseInt(digits.slice(0, 2), 10);
+                    if (monthNum < 1 || monthNum > 12) {
+                        setFieldError(expInput, $('errCardExpiry'), 'Enter a valid expiration month (01–12).');
+                        setFieldValid(expInput, false);
+                        return;
+                    }
+                }
                 setFieldError(expInput, $('errCardExpiry'), '');
                 const parsed = parseExpiry(e.target.value);
+                if (parsed && parsed.expired) {
+                    setFieldError(expInput, $('errCardExpiry'), 'This card appears to be expired.');
+                    setFieldValid(expInput, false);
+                    return;
+                }
                 const isValidExp = Boolean(parsed && !parsed.expired);
                 setFieldValid(expInput, isValidExp);
                 if (isValidExp) {
@@ -1503,12 +1617,20 @@
             cvvInput.addEventListener('input', (e) => {
                 const brand = detectCardBrand(($('cardNumberInput')?.value || '').replace(/\D/g, ''));
                 const maxLen = brand === 'American Express' ? 4 : 3;
-                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, maxLen);
                 setFieldError(cvvInput, $('errCardCvv'), '');
                 const isValidCvv = e.target.value.length === maxLen || (brand === 'Card' && e.target.value.length >= 3);
                 setFieldValid(cvvInput, isValidCvv);
                 if (e.target.value.length === maxLen && brand !== 'Card') {
                     $('billingZipInput')?.focus();
+                }
+            });
+            cvvInput.addEventListener('blur', () => {
+                const digits = cvvInput.value.replace(/\D/g, '');
+                const brand = detectCardBrand(($('cardNumberInput')?.value || '').replace(/\D/g, ''));
+                const expectedLen = brand === 'American Express' ? 4 : 3;
+                if (digits.length > 0 && (digits.length < 3 || (brand === 'American Express' && digits.length !== 4))) {
+                    setFieldError(cvvInput, $('errCardCvv'), `Enter the ${expectedLen}-digit security code.`);
                 }
             });
         }
@@ -1518,7 +1640,13 @@
             zipInput.addEventListener('input', (e) => {
                 e.target.value = e.target.value.replace(/[^A-Za-z0-9\s-]/g, '').slice(0, 10);
                 setFieldError(zipInput, $('errBillingZip'), '');
-                setFieldValid(zipInput, /^\d{5}(-\d{4})?$/.test(zipInput.value.trim()));
+                setFieldValid(zipInput, /^[A-Za-z0-9\s-]{5,10}$/.test(zipInput.value.trim()));
+            });
+            zipInput.addEventListener('blur', () => {
+                const val = zipInput.value.trim();
+                if (val && !/^[A-Za-z0-9\s-]{3,10}$/.test(val)) {
+                    setFieldError(zipInput, $('errBillingZip'), 'Enter a valid billing postal code.');
+                }
             });
         }
 
@@ -1527,6 +1655,12 @@
             holderInput.addEventListener('input', () => {
                 setFieldError(holderInput, $('errCardholder'), '');
                 setFieldValid(holderInput, holderInput.value.trim().length >= 2);
+            });
+            holderInput.addEventListener('blur', () => {
+                const val = holderInput.value.trim();
+                if (val.length > 0 && val.length < 2) {
+                    setFieldError(holderInput, $('errCardholder'), 'Enter the cardholder name shown on your card.');
+                }
             });
         }
 
@@ -1555,8 +1689,17 @@
         const proceedToAltBtn = $('proceedToAlternativesBtn');
         if (proceedToAltBtn) {
             proceedToAltBtn.addEventListener('click', () => {
-                state.viewMode = 'alt_grid';
-                renderActiveView();
+                const altPanel = $('altPaymentPanel');
+                if (altPanel && altPanel.style.display !== 'none') {
+                    try {
+                        altPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } catch (_) {}
+                    const firstMethodBtn = altPanel.querySelector('.alt-method-btn:not(:disabled)');
+                    if (firstMethodBtn) firstMethodBtn.focus();
+                } else {
+                    state.viewMode = 'alt_grid';
+                    renderActiveView();
+                }
             });
         }
 
@@ -1594,6 +1737,31 @@
         if (copyCoordBtn) {
             copyCoordBtn.addEventListener('click', () => {
                 copyTextWithFeedback($('altCoordTemplateText')?.textContent || '', copyCoordBtn, 'Copy Message');
+            });
+        }
+
+        const extSenderInput = $('extSenderHandleInput');
+        if (extSenderInput) {
+            extSenderInput.addEventListener('input', () => {
+                setFieldError(extSenderInput, $('errExtSenderHandle'), '');
+                setFieldValid(extSenderInput, extSenderInput.value.trim().length >= 2);
+            });
+        }
+        const extRefInput = $('extReferenceInput');
+        if (extRefInput) {
+            extRefInput.addEventListener('input', () => {
+                setFieldError(extRefInput, $('errExtReference'), '');
+                setFieldValid(extRefInput, extRefInput.value.trim().length >= 3);
+            });
+        }
+        const extConfirmCb = $('extConfirmCheckbox');
+        if (extConfirmCb) {
+            extConfirmCb.addEventListener('change', () => {
+                const errEl = $('extVerifyError');
+                if (errEl && extConfirmCb.checked) {
+                    errEl.textContent = '';
+                    errEl.classList.remove('visible');
+                }
             });
         }
 
@@ -1659,7 +1827,7 @@
                 clearAllFieldErrors();
                 state.viewMode = 'card';
                 renderActiveView();
-                if ($('cardNumberInput') && state.config?.cardProcessing?.available) {
+                if ($('cardNumberInput')) {
                     $('cardNumberInput').focus();
                 }
             });
