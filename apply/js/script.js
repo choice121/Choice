@@ -4804,7 +4804,7 @@ class RentalApplication {
             : '';
 
         const backLink = this.state.sourceUrl
-            ? '<a href="' + this._escHtml(this.state.sourceUrl) + '" style="display:inline-block;margin-top:8px;font-size:0.9rem;color:#1a5276;text-decoration:none;">← Back to this listing</a>'
+            ? '<div style="margin-top:8px;"><a href="' + this._escHtml(this.state.sourceUrl) + '" style="display:inline-block;font-size:0.9rem;color:#1a5276;text-decoration:none;font-weight:500;">← Back to this listing</a></div>'
             : '';
 
         const feeBreakdownLines = (feeSummary.feeBreakdown || []).map(item => `
@@ -4839,6 +4839,11 @@ class RentalApplication {
             thirdPayPref ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;">3. ${this._escHtml(thirdPayPref)}</span>` : '',
         ].filter(Boolean).join('');
 
+        const startOverBtn = document.getElementById('startOverBtn');
+        if (startOverBtn) startOverBtn.classList.remove('visible');
+        const devTestFillBtn = document.getElementById('devTestFillBtn');
+        if (devTestFillBtn) devTestFillBtn.style.setProperty('display', 'none', 'important');
+
         successState.style.display = 'block';
         this._setTrustedHtml(successState, this._html`
             <div class="success-card">
@@ -4859,10 +4864,10 @@ class RentalApplication {
                     <p style="font-size:12px;color:#64748b;margin:8px 0 0;"><i class="fas fa-info-circle"></i> Save this reference number — it links your payment and application status.</p>
                 </div>
 
-                ${requiresFeeCoordination ? this._html`
+                ${requiresFeeCoordination ? this._safeHtml(this._html`
                 <div class="urgent-notice" style="background:#eff6ff;border:1px solid #93c5fd;color:#0f172a;margin-top:16px;">
                     <i class="fas fa-wallet" style="color:#2563eb;"></i>
-                    <div style="flex:1;">
+                    <div style="flex:1;min-width:0;">
                         <p style="margin:0 0 6px;"><strong>${t.importantNote}</strong> ${t.paymentUrgentText}</p>
                         <div style="margin-top:8px;">
                             ${this._safeHtml(feeBreakdownLines)}
@@ -4877,12 +4882,12 @@ class RentalApplication {
                         </div>
                     </div>
                 </div>
-                ` : this._html`
+                `) : this._safeHtml(this._html`
                 <div class="urgent-notice" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#14532d;margin-top:16px;">
                     <i class="fas fa-check-circle" style="color:#16a34a;"></i>
                     <p><strong>${t.importantNote}</strong> ${t.paymentUrgentText}</p>
                 </div>
-                `}
+                `)}
 
                 ${this._safeHtml(docUploadNoticeHtml)}
 
@@ -4934,16 +4939,16 @@ class RentalApplication {
                             <span class="pref-label">${t.primaryPayShort || '1st Choice Payment'}:</span>
                             <span class="pref-value">${primaryPayPref}</span>
                         </div>
-                        ${altPayPref ? this._html`
+                        ${altPayPref ? this._safeHtml(this._html`
                         <div class="pref-item">
                             <span class="pref-label">${t.altPayShort || '2nd Choice Payment'}:</span>
                             <span class="pref-value">${altPayPref}</span>
-                        </div>` : ''}
-                        ${thirdPayPref ? this._html`
+                        </div>`) : ''}
+                        ${thirdPayPref ? this._safeHtml(this._html`
                         <div class="pref-item">
                             <span class="pref-label">${t.thirdPayShort || '3rd Choice Payment'}:</span>
                             <span class="pref-value">${thirdPayPref}</span>
-                        </div>` : ''}
+                        </div>`) : ''}
                     </div>
                     <p class="pref-note">${t.preferenceNote}</p>
                 </div>
