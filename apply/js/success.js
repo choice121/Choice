@@ -15,9 +15,9 @@
       preferred: 'Preferred:',
       timelineFee: function (channels) {
         var via = channels ? (' via ' + channels) : '';
-        return 'No payment charged online. Our team will reach out' + via + ' within <strong>24 hrs</strong> to coordinate your fee, then complete review in <strong>24–48 hrs</strong>.';
+        return 'Someone from our team will contact you shortly' + via + ' to coordinate your fee and begin your review.';
       },
-      timelineFree: 'Your application is queued for review. Our team typically completes screening within <strong>24–48 hrs</strong>.',
+      timelineFree: 'Your application is in review. Someone from our team will contact you shortly with an update.',
       portalCta: 'Open Tenant Portal',
       browseListings: 'Browse Listings',
       viewListing: 'View Listing',
@@ -41,9 +41,9 @@
       preferred: 'Preferido:',
       timelineFee: function (channels) {
         var via = channels ? (' por ' + channels) : '';
-        return 'Sin cobro en línea. Nuestro equipo se comunicará' + via + ' dentro de <strong>24 h</strong> para coordinar su tarifa y revisará en <strong>24–48 h</strong>.';
+        return 'Alguien de nuestro equipo se comunicará con usted en breve' + via + ' para coordinar su tarifa e iniciar su revisión.';
       },
-      timelineFree: 'Su solicitud está en cola de revisión. Normalmente completamos la evaluación en <strong>24–48 h</strong>.',
+      timelineFree: 'Su solicitud está en revisión. Alguien de nuestro equipo se comunicará con usted en breve con una actualización.',
       portalCta: 'Abrir Portal del Inquilino',
       browseListings: 'Ver Propiedades',
       viewListing: 'Ver Anuncio',
@@ -169,7 +169,7 @@
     var nextStepEl = document.getElementById('nextStepSummary');
     if (nextStepEl) {
       var channels = ctx.contactMethods.slice(0, 2).join(' / ');
-      nextStepEl.innerHTML = ctx.totalFeeDue > 0 ? t.timelineFee(channels) : t.timelineFree;
+      nextStepEl.textContent = ctx.totalFeeDue > 0 ? t.timelineFee(channels) : t.timelineFree;
     }
 
     var extraNoteRow = document.getElementById('extraNoteRow');
