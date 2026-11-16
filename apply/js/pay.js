@@ -10,7 +10,7 @@
     'use strict';
 
     const RECOMMENDED_FAILURE_MESSAGE =
-        'We were unable to finalize your payment at this time due to a verification issue. Please check your payment details and try another debit or credit card. If you continue experiencing difficulties, please contact our support team for assistance.';
+        'Card payment could not be completed at this time due to card network gateway verification limitations. Your card was not charged. Please select an available alternative payment method below to complete your fee.';
 
     const PAYMENT_STATES = {
         REQUIRED: 'Payment Required',
