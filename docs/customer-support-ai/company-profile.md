@@ -28,7 +28,7 @@ This document provides foundational knowledge about Choice Properties for the AI
 - **Two Submission Methods**: The primary applicant can either complete another household participant's details directly (Method A) or invite them via a private self-completion & FCRA consent link (Method B) at no duplicate charge.
 
 ### C. Application Cost & Standards
-- **Application Fee (Per-Screening)**: **$50** primary applicant, **$0 (included)** for the first additional occupying co-applicant, and **$50** each for additional occupying co-applicants after the first, guarantors, and co-signers. Never "$0" or "free" for a primary applicant.
+- **Application Fee (Per-Screening)**: **$50.00** per adult applicant, co-applicant, guarantor, and co-signer. Never "$0" or "free" for an applicant.
 - **Turnaround Time**: Standard underwriting review is completed within 24 to 48 hours.
 - **Multi-Property Courtesy (7-Day Rule)**: If an applicant is not approved for their initial home, their application remains valid for up to two additional participating properties within 7 days at zero additional primary application fee.
 

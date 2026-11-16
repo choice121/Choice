@@ -8,7 +8,7 @@ This document outlines the standard 11-step customer journey from initial inquir
 3. **Link Sharing**: Provide verified listing links or a single client Master Magic Link (`/listings.html#share=token`).
 4. **Property Review & Selection**: The customer reviews options and identifies their top candidate property.
 5. **Application Guidance**: Guide the applicant to the online application form (`/apply`).
-6. **Application Fee Collection**: The applicable screening fee ($50 primary, $0 first occupying co-applicant, $50 each additional co-applicant/guarantor/co-signer) is arranged via the applicant's selected manual payment preference (Zelle, Cash App, Venmo, PayPal, Apple Pay, Chime, Credit/Debit Card, or Other) with leasing coordinator outreach within 24 hours.
+6. **Application Fee Collection**: The applicable screening fee ($50 per adult applicant, co-applicant, guarantor, or co-signer) is arranged via the applicant's selected manual payment preference (Zelle, Cash App, Venmo, PayPal, Apple Pay, Chime, Credit/Debit Card, or Other) with leasing coordinator outreach within 24 hours.
 7. **Underwriting & Review**: Application enters underwriting review (typically 24–48 hours).
 8. **Document Follow-Up**: If proof of income (pay stubs, bank statements, offer letters) or photo ID is needed, staff contacts the applicant directly.
 9. **Outcome Communication**: Staff communicates approval or decision. If denied, the 30-day 2-reapplication credit policy applies.

@@ -4,13 +4,9 @@ This document serves as the single source of truth for business policies used by
 
 ## 1. Core Financial Policies
 - **Application Fee (Per-Screening Policy)**:
-  - **Primary applicant**: **$50**.
-  - **First additional occupying co-applicant**: **$0 (included)**.
-  - **Each additional occupying co-applicant after the first**: **$50**.
-  - **Each guarantor (non-occupying financial supporter)**: **$50**.
-  - **Each co-signer**: **$50**.
+  - **$50.00** per adult applicant, co-applicant, guarantor, and co-signer.
   - Completing an invited member's details via a private self-completion link never adds a duplicate charge.
-  - Never state "$0 fee for primary applicant", "free application", or "fee is waived" unless referring specifically to the included first occupying co-applicant or active application credits.
+  - Never state "$0 fee", "free application", or "fee is waived" unless referring specifically to active application credits.
   - If the application fee policy is modified centrally, this document and `policies.json` are updated simultaneously.
 - **Security Deposit**: Exactly **1x monthly rent** in structured database records.
   - **Zero Mentions Policy**: Deposit amounts, terms, and quotes must NEVER be volunteered or quoted in initial customer inquiry messages or listing descriptions.
