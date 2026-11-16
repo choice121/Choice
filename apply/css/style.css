@@ -1095,39 +1095,59 @@ input.error, select.error, textarea.error {
 
 .summary-item {
     display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
     margin-bottom: 10px;
     font-size: 14px;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .summary-label {
-    width: 120px;
-    color: #6c757d;
+    width: 130px;
+    flex-shrink: 0;
+    color: #64748b;
     font-weight: 500;
 }
 
 .summary-value {
     flex: 1;
-    color: #2d3748;
+    min-width: 0;
+    color: #1e293b;
     font-weight: 600;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 .summary-group {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     cursor: pointer;
-    transition: background 0.2s ease;
-    padding: 12px;
-    border-radius: 12px;
+    transition: all 0.2s ease;
 }
 
 .summary-group:hover {
-    background-color: var(--light);
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
 }
 
 .summary-group .summary-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    font-weight: 600;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #edf2f7;
+    font-weight: 700;
+    color: var(--primary);
 }
 
 /* Edit Section button styling */

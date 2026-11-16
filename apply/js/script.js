@@ -1366,8 +1366,6 @@ class RentalApplication {
             coSignerCount,
             pendingInvitedIncomeCount,
             listedRent: rent > 0 ? rent : null,
-            householdRentRatio: rent > 0 ? householdMonthlyIncome / rent : null,
-            combinedSupportRentRatio: rent > 0 ? totalFinancialSupport / rent : null,
         };
     }
 
@@ -6296,12 +6294,8 @@ class RentalApplication {
         const fin = this._calculateHouseholdFinancials();
         if (finBox) {
             finBox.style.display = 'block';
-            const rentText = fin.listedRent
-                ? (fin.householdRentRatio ? `${fin.householdRentRatio.toFixed(1)}× ${lang === 'es' ? 'renta mensual' : 'monthly rent'}` : '')
-                : (lang === 'es' ? 'Ingreso combinado de ocupantes' : 'Occupants only (guarantors excluded)');
-            const supportRatioText = (fin.listedRent && fin.combinedSupportRentRatio)
-                ? `${fin.combinedSupportRentRatio.toFixed(1)}× ${lang === 'es' ? 'renta mensual con respaldo' : 'rent w/ support'}`
-                : (lang === 'es' ? 'Ocupantes + garantes/co-firmantes' : 'Household + guarantor/co-signer');
+            const rentText = lang === 'es' ? 'Ingreso combinado de ocupantes' : 'Occupants only (guarantors excluded)';
+            const supportRatioText = lang === 'es' ? 'Ocupantes + garantes/co-firmantes' : 'Household + guarantor/co-signer';
 
             finBox.innerHTML = '';
             this._setTrustedHtml(finBox, this._html`
