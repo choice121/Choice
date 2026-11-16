@@ -8,7 +8,6 @@
 /apply.html                 /apply/                                      302
 /apply/login.html           /tenant/portal.html                          302
 /apply/dashboard.html       /tenant/portal.html                          302
-/apply/success.html         /tenant/portal.html                          302
 /apply/lease.html           /apply/                                      302
 /apply/pay.html             /tenant/portal.html                          302
 /apply/pay                  /tenant/portal.html                          302
