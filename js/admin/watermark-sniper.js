@@ -43,22 +43,28 @@
   let activeSimilarityProfile = null;
   let scannedViolations = [];
 
-  // ─── Batch Moderation & 24h Recovery State ──────────────────────────────
+  // ─── Scope, Batch Moderation & 24h Recovery State ─────────────────────────
+  let sniperMode = 'public'; // 'public' | 'private'
   let isBatchMode = false;
   let batchId = null;
   let shareToken = null;
+  let shareId = null;
+  let deepLinkPropertyId = null;
+  let batchScope = null;
   let batchData = null;
   let batchProperties = [];
   let batchPhotos = [];
   let batchRecoverable = [];
+  let privateCollectionsCache = null;
   let selectedBatchPropId = '';
   let activeInspectedPhoto = null;
   let activeInspectedProperty = null;
-  let isEdgeContain = true; // Contain (Edges Clear) enabled by default
+  let isEdgeContain = false;
   let activeSidebarTab = 'inspector';
   let trashCountdownTimer = null;
   let pendingDeletePhoto = null;
   let pendingDeleteListing = null;
+  let toggleSidebarRef = null;
 
   // ─── URL Signature Helpers ────────────────────────────────────────────────
   function extractUrlSignature(url){
@@ -136,10 +142,12 @@
     }
   }
 
-  // ─── Filter Options Loader ────────────────────────────────────────────────
+  // ─── Filter Options Loader (Scoped to Public Active Inventory) ────────────
   async function loadFilterOptions(){
     try {
-      const { data, error } = await CP.sb().rpc('get_watermark_sniper_filter_options');
+      const { data, error } = await CP.sb().rpc('get_watermark_sniper_filter_options', {
+        p_status: 'active'
+      });
       if(error) throw error;
       if(!data) return;
 
@@ -271,7 +279,8 @@
       p_date_filter: filterDate !== 'all' ? filterDate : null,
       p_date_from: null,
       p_date_to: null,
-      p_search: searchQuery ? searchQuery.trim() : null
+      p_search: searchQuery ? searchQuery.trim() : null,
+      p_status: 'active'
     };
 
     try {
@@ -289,7 +298,7 @@
       // Direct Supabase fallback if RPC ever errors
       if(error || !Array.isArray(data)){
         console.warn('[watermark-sniper] RPC call failed, trying direct Supabase fallback query:', error);
-        let q = CP.sb().from('properties').select('id, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, property_type, landlord_id, status, created_at, updated_at, property_photos(id, url, file_id, display_order, watermark_status, is_hero)', { count: 'exact' });
+        let q = CP.sb().from('properties').select('id, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, property_type, landlord_id, status, created_at, updated_at, property_photos(id, url, file_id, display_order, watermark_status, is_hero)', { count: 'exact' }).eq('status', 'active');
         if(filterState) q = q.eq('state', filterState);
         if(filterCity) q = q.eq('city', filterCity);
         if(filterType) q = q.eq('property_type', filterType);
@@ -478,7 +487,7 @@
         mediaHtml = `
           <div class="sniper-card-media-wrap">
             <div class="sniper-card-media">
-              <img class="sniper-card-img" src="${displayPhotoUrl}" alt="${escSafe(p.address)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <img class="sniper-card-img" src="${displayPhotoUrl}" alt="${escSafe(p.address)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
               <div class="sniper-error-fallback" style="display:none">
                 <svg class="sniper-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                 <div class="sniper-error-txt">Photo Unavailable</div>
@@ -507,9 +516,14 @@
         <div class="sniper-card-footer">
           <div class="sniper-card-title-row">
             <div class="sniper-card-address" title="${escSafe(p.address)}">${escSafe(p.address || 'Unknown Address')}</div>
-            <a href="/property.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
+            <div class="sniper-card-title-actions">
+              <button type="button" class="sniper-card-inspect-btn" title="Inspect all photos & edge watermarks of this listing" aria-label="Inspect photos">
+                <span>Photos</span>
+              </button>
+              <a href="/property.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
           </div>
           <div class="sniper-card-city">${escSafe(p.city || '')}${p.state ? ', ' + escSafe(p.state) : ''} ${escSafe(p.zip || '')}</div>
           <div class="sniper-card-bottom-row">
@@ -524,8 +538,18 @@
 
       card.innerHTML = mediaHtml + footerHtml;
 
+      // Inspect button opens single-property Photo Sniper view directly
+      const inspectBtn = card.querySelector('.sniper-card-inspect-btn');
+      if(inspectBtn){
+        inspectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadBatchMode({ pPropertyId: p.id, pScope: 'public' });
+        });
+      }
+
       // Card Click Handler (stages/unstages listing)
       card.addEventListener('click', (e) => {
+        if(e.target.closest('.sniper-card-ext-btn') || e.target.closest('.sniper-card-inspect-btn')) return;
         e.preventDefault();
         toggleStage(p);
       });
@@ -565,18 +589,224 @@
     }
   }
 
-  // ─── Batch Mode Loader & Gallery Controller ────────────────────────────────
-  async function loadBatchMode(pBatchId, pShareToken){
-    isBatchMode = true;
-    batchId = pBatchId || null;
-    shareToken = pShareToken || null;
+  // ─── Scope & Mode Switcher (Public vs Private Placements) ──────────────────
+  function syncModeStripUI(){
+    const tabPub = document.getElementById('mode-tab-public');
+    const tabPriv = document.getElementById('mode-tab-private');
+    const picker = document.getElementById('sniper-private-picker');
+    if(tabPub) tabPub.classList.toggle('active', sniperMode === 'public');
+    if(tabPriv) tabPriv.classList.toggle('active', sniperMode === 'private');
+    if(picker) picker.style.display = sniperMode === 'private' ? 'block' : 'none';
+  }
 
-    setLoading(true, 'Querying private placement batch photos & metadata…');
+  function toggleCatalogFilterControls(showFullCatalogFilters){
+    const row = document.getElementById('sniper-filters-row');
+    if(!row) return;
+    Array.from(row.children).forEach(el => {
+      const keepInBatch = el.classList.contains('sniper-search-box')
+        || el.classList.contains('sniper-density-toggle')
+        || el.classList.contains('sniper-btn-focus');
+      if(showFullCatalogFilters || keepInBatch){
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+  }
+
+  async function loadPrivateCollections(forceRefresh = false){
+    const select = document.getElementById('sniper-private-source-select');
+    if(privateCollectionsCache && !forceRefresh){
+      return privateCollectionsCache;
+    }
+    try {
+      const { data, error } = await CP.sb().rpc('get_private_placement_batches_for_sniper');
+      if(error) throw error;
+      if(!data || !data.ok) throw new Error(data?.error || 'Could not load private placements');
+
+      privateCollectionsCache = data;
+
+      // Sync global 24h recoverable count early
+      const totalRec = Number(data.total_recoverable || 0);
+      if(!isBatchMode){
+        const stripTrash = document.getElementById('strip-trash-count');
+        const sidebarTrash = document.getElementById('sidebar-trash-count');
+        const statTrash = document.getElementById('stat-trash-count');
+        if(stripTrash) stripTrash.textContent = totalRec;
+        if(sidebarTrash) sidebarTrash.textContent = totalRec;
+        if(statTrash) statTrash.textContent = totalRec;
+      }
+
+      if(select){
+        const curVal = select.value;
+        select.innerHTML = '';
+
+        const allOpt = document.createElement('option');
+        allOpt.value = 'scope:private_placement';
+        allOpt.textContent = `All Private Placements (${data.total_private_properties || 0} props · ${data.total_private_photos || 0} photos)`;
+        select.appendChild(allOpt);
+
+        const batches = Array.isArray(data.batches) ? data.batches : [];
+        if(batches.length){
+          const grpB = document.createElement('optgroup');
+          grpB.label = `Publishing Batches (${batches.length})`;
+          batches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = `batch:${b.batch_id}`;
+            const recNote = b.recoverable_count > 0 ? ` · ${b.recoverable_count} in trash` : '';
+            opt.textContent = `${b.batch_id} · ${b.target_market || 'Private Batch'} (${b.property_count} props · ${b.photo_count} photos${recNote})`;
+            grpB.appendChild(opt);
+          });
+          select.appendChild(grpB);
+        }
+
+        const shares = Array.isArray(data.shares) ? data.shares : [];
+        if(shares.length){
+          const grpS = document.createElement('optgroup');
+          grpS.label = `Curated Client Magic Links (${shares.length})`;
+          shares.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = `share_id:${s.share_id}`;
+            const label = s.share_alias || s.target_market || s.sample_market || 'Client Magic Link';
+            const batchHint = s.pub_batch_id ? ` · ${s.pub_batch_id}` : '';
+            opt.textContent = `${label} (${s.property_count} props · ${s.photo_count} photos${batchHint})`;
+            grpS.appendChild(opt);
+          });
+          select.appendChild(grpS);
+        }
+
+        if(curVal && Array.from(select.options).some(o => o.value === curVal)){
+          select.value = curVal;
+        }
+      }
+      return data;
+    } catch(err){
+      console.warn('[watermark-sniper] Could not load private placement collections:', err);
+      if(select && select.options.length <= 1){
+        select.innerHTML = '<option value="scope:private_placement">All Private Placements</option>';
+      }
+      return null;
+    }
+  }
+
+  function syncPrivatePickerSelection(){
+    const select = document.getElementById('sniper-private-source-select');
+    if(!select) return;
+    const candidates = [];
+    if(shareId) candidates.push(`share_id:${shareId}`);
+    if(batchId) candidates.push(`batch:${batchId}`);
+    if(batchScope === 'private_placement') candidates.push('scope:private_placement');
+
+    for(const val of candidates){
+      if(Array.from(select.options).some(o => o.value === val)){
+        select.value = val;
+        return;
+      }
+    }
+    if(shareToken){
+      const existing = select.querySelector('option[data-dynamic-share="1"]');
+      if(existing) existing.remove();
+      const opt = document.createElement('option');
+      opt.value = `share_token:${shareToken}`;
+      opt.dataset.dynamicShare = '1';
+      opt.textContent = `Active Magic Link (${batchProperties.length} props · ${batchPhotos.length} photos)`;
+      select.insertBefore(opt, select.firstChild);
+      select.value = opt.value;
+    }
+  }
+
+  async function switchSniperMode(mode, opts = {}){
+    if(mode === 'public'){
+      sniperMode = 'public';
+      isBatchMode = false;
+      batchId = null;
+      shareToken = null;
+      shareId = null;
+      deepLinkPropertyId = null;
+      batchScope = null;
+      selectedBatchPropId = '';
+      activeInspectedPhoto = null;
+      activeInspectedProperty = null;
+
+      syncModeStripUI();
+      toggleCatalogFilterControls(true);
+      toggleEdgeContainMode(false);
+
+      const batchBanner = document.getElementById('sniper-batch-banner');
+      if(batchBanner) batchBanner.style.display = 'none';
+
+      const topPaging = document.getElementById('sniper-pagination-top');
+      const bottomPaging = document.getElementById('sniper-pagination-bottom');
+      if(topPaging) topPaging.style.display = '';
+      if(bottomPaging) bottomPaging.style.display = '';
+
+      const modePill = document.getElementById('sniper-mode-pill');
+      if(modePill) modePill.textContent = 'Public Inventory';
+      const invLabel = document.getElementById('stat-inventory-label');
+      if(invLabel) invLabel.textContent = 'Public:';
+      const photosCountEl = document.getElementById('stat-photos-catalog');
+      if(photosCountEl) photosCountEl.style.display = 'none';
+
+      if(window.history && window.history.replaceState){
+        window.history.replaceState(null, '', '/admin/watermark-sniper.html?scope=public');
+      }
+
+      await loadFilterOptions();
+      await loadPage(1);
+      await fetchRecoverableTrash();
+      startTrashTimer();
+      return;
+    }
+
+    // Switch to Private Placements mode
+    sniperMode = 'private';
+    syncModeStripUI();
+    const collections = await loadPrivateCollections();
+    const targetBatch = opts.batchId || (collections?.batches?.[0]?.batch_id) || null;
+    const targetShareId = opts.shareId || (!targetBatch ? collections?.shares?.[0]?.share_id : null) || null;
+
+    await loadBatchMode({
+      pBatchId: targetBatch,
+      pShareId: targetShareId,
+      pScope: (!targetBatch && !targetShareId) ? 'private_placement' : null
+    });
+  }
+
+  // ─── Batch Mode Loader & Gallery Controller ────────────────────────────────
+  async function loadBatchMode(arg1, arg2, arg3, arg4, arg5){
+    const opts = (arg1 && typeof arg1 === 'object' && !Array.isArray(arg1))
+      ? arg1
+      : {
+          pBatchId: arg1 || null,
+          pShareToken: arg2 || null,
+          pShareId: arg3 || null,
+          pPropertyId: arg4 || null,
+          pScope: arg5 || null
+        };
+
+    isBatchMode = true;
+    batchId = opts.pBatchId || null;
+    shareToken = opts.pShareToken || null;
+    shareId = opts.pShareId || null;
+    deepLinkPropertyId = opts.pPropertyId || null;
+    batchScope = opts.pScope || null;
+    sniperMode = (batchScope === 'public') ? 'public' : 'private';
+    selectedBatchPropId = '';
+
+    syncModeStripUI();
+    if(sniperMode === 'private'){
+      loadPrivateCollections().catch(() => {});
+    }
+
+    setLoading(true, 'Querying photos, edges & parent listings…');
 
     try {
       const { data, error } = await CP.sb().rpc('get_batch_photos_for_sniper', {
         p_batch_id: batchId,
-        p_share_token: shareToken
+        p_share_token: shareToken,
+        p_share_id: shareId,
+        p_property_id: deepLinkPropertyId,
+        p_scope: batchScope
       });
 
       if(error) throw error;
@@ -589,16 +819,17 @@
       batchPhotos = Array.isArray(data.photos) ? data.photos : [];
       batchRecoverable = Array.isArray(data.recoverable) ? data.recoverable : [];
 
-      if(data.batch_id && !batchId) {
-        batchId = data.batch_id;
-      }
+      if(data.batch_id && !batchId) batchId = data.batch_id;
+      if(data.share_id && !shareId) shareId = data.share_id;
 
       // 1. Update Topbar Indicators
       const modePill = document.getElementById('sniper-mode-pill');
-      if(modePill) modePill.textContent = 'Batch Moderation';
+      if(modePill){
+        modePill.textContent = sniperMode === 'public' ? 'Listing Photo Audit' : 'Private Placement Sniper';
+      }
 
       const invLabel = document.getElementById('stat-inventory-label');
-      if(invLabel) invLabel.textContent = 'Batch:';
+      if(invLabel) invLabel.textContent = sniperMode === 'public' ? 'Listing:' : 'Batch:';
 
       const invCount = document.getElementById('stat-total-catalog');
       if(invCount) invCount.textContent = `${batchProperties.length} listings`;
@@ -609,7 +840,6 @@
         photosCountEl.style.display = 'inline';
       }
 
-      // Update 24h Trash pill in topbar
       const trashStatBtn = document.getElementById('sniper-trash-stat');
       const trashCountEl = document.getElementById('stat-trash-count');
       if(trashStatBtn && trashCountEl){
@@ -624,15 +854,27 @@
       const batchCountsText = document.getElementById('sniper-batch-counts');
       const batchTrashPill = document.getElementById('batch-trash-pill-count');
 
+      const info = data.batch_info || {};
       if(batchBanner) batchBanner.style.display = 'flex';
-      if(batchIdText) batchIdText.textContent = batchId || (shareToken ? 'Curated Magic Link' : 'Private Placement Batch');
+      if(batchIdText){
+        if(data.mode === 'property' && batchProperties[0]){
+          batchIdText.textContent = batchProperties[0].address || batchProperties[0].id;
+        } else if(batchId){
+          batchIdText.textContent = batchId;
+        } else if(info.share_alias){
+          batchIdText.textContent = info.share_alias;
+        } else if(shareToken || shareId){
+          batchIdText.textContent = 'Curated Magic Link';
+        } else {
+          batchIdText.textContent = 'All Private Placements';
+        }
+      }
       if(batchMarketBadge){
-        const info = data.batch_info || {};
-        const market = [info.target_city, info.target_state].filter(Boolean).join(', ');
-        batchMarketBadge.textContent = market || 'Private Placement';
+        const market = info.target_market || info.share_alias || (data.mode === 'property' && batchProperties[0]?.status === 'active' ? 'Public Active Listing' : 'Private Placement');
+        batchMarketBadge.textContent = market;
       }
       if(batchCountsText){
-        batchCountsText.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+        batchCountsText.textContent = `${batchProperties.length} propert${batchProperties.length === 1 ? 'y' : 'ies'} · ${batchPhotos.length} total photos`;
       }
       if(batchTrashPill){
         batchTrashPill.textContent = batchRecoverable.length;
@@ -641,41 +883,54 @@
       // 3. Populate Property Selector Dropdown inside Batch
       const batchPropSelect = document.getElementById('sniper-batch-prop-select');
       if(batchPropSelect){
-        batchPropSelect.innerHTML = `<option value="">All Properties in Batch (${batchProperties.length})</option>`;
+        batchPropSelect.innerHTML = `<option value="">All Properties in List (${batchProperties.length})</option>`;
         batchProperties.forEach(p => {
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.address} (${p.photo_count || 0} photos · $${Number(p.monthly_rent || 0).toLocaleString()}/mo)`;
+          opt.textContent = `${p.address || p.id} (${p.photo_count || 0} photos · $${Number(p.monthly_rent || 0).toLocaleString()}/mo)`;
           batchPropSelect.appendChild(opt);
         });
       }
 
-      // 4. Enforce Edge Contain Mode by default so watermarks on edges are visible
+      syncPrivatePickerSelection();
+
+      // 4. Enforce Edge Contain Mode by default so watermarks on edges stand out
       toggleEdgeContainMode(true);
 
-      // 5. Hide general catalog pagination and compliance filters (batch photos are inspected all-together)
+      // 5. Hide catalog-only filters & pagination in photo-inspection grid
+      toggleCatalogFilterControls(false);
       const topPaging = document.getElementById('sniper-pagination-top');
       const bottomPaging = document.getElementById('sniper-pagination-bottom');
       if(topPaging) topPaging.style.display = 'none';
       if(bottomPaging) bottomPaging.style.display = 'none';
 
-      // 6. Render the batch photo grid
+      // 6. Render all photos with uncropped edges
       renderBatchGrid();
 
       // 7. Render 24h Recoverable Trash and start live countdown
       renderTrashList();
       startTrashTimer();
 
-      // 8. Open Sidebar to Inspector Tab
-      switchSidebarTab('inspector');
-      toggleSidebar(true);
+      // 8. Inspector / Drawer UX: desktop opens side-by-side; mobile stays clear for browsing unless explicitly requested
+      const requestedTab = opts.autoOpenTab;
+      const isMobile = window.innerWidth <= 900;
+      if(requestedTab === 'trash'){
+        switchSidebarTab('trash');
+        if(toggleSidebarRef) toggleSidebarRef(true);
+      } else if(deepLinkPropertyId && batchPhotos.length > 0){
+        const firstPhoto = batchPhotos.find(p => p.property_id === deepLinkPropertyId) || batchPhotos[0];
+        selectPhotoForInspection(firstPhoto, !isMobile || requestedTab === 'inspector');
+      } else {
+        switchSidebarTab('inspector');
+        if(toggleSidebarRef) toggleSidebarRef(!isMobile);
+      }
 
-      toastSafe(`Batch loaded: ${batchProperties.length} properties with ${batchPhotos.length} total photos.`, 'success', 4000);
+      toastSafe(`Loaded ${batchProperties.length} propert${batchProperties.length === 1 ? 'y' : 'ies'} · ${batchPhotos.length} photos (Edges Clear).`, 'success', 3500);
 
     } catch(err){
       console.error('[watermark-sniper] Error loading batch mode:', err);
-      toastSafe('Failed to load batch: ' + (err.message || 'Unknown error'), 'error', 6000);
-      renderGridEmpty('Could not load batch photos. Check your connection or share token and try again.');
+      toastSafe('Failed to load photos: ' + (err.message || 'Unknown error'), 'error', 6000);
+      renderGridEmpty('Could not load photos. Ensure you are signed in as admin and try again.');
     } finally {
       setLoading(false);
     }
@@ -700,13 +955,23 @@
       });
     }
 
-    if(filteredPhotos.length === 0){
+    // Also collect zero-photo properties matching current filter so admin can still inspect & delete them
+    let zeroPhotoProps = batchProperties.filter(p => Number(p.photo_count || 0) === 0);
+    if(selectedBatchPropId){
+      zeroPhotoProps = zeroPhotoProps.filter(p => p.id === selectedBatchPropId);
+    }
+    if(searchQuery){
+      const q = searchQuery.toLowerCase().trim();
+      zeroPhotoProps = zeroPhotoProps.filter(p => `${p.address || ''} ${p.city || ''} ${p.state || ''} ${p.zip || ''} ${p.id || ''}`.toLowerCase().includes(q));
+    }
+
+    if(filteredPhotos.length === 0 && zeroPhotoProps.length === 0){
       grid.innerHTML = `
         <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: var(--sniper-text-muted);">
           <svg style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 8px;">No Photos Match Current Filter</h3>
-          <p style="font-size: 0.875rem; max-width: 420px; margin: 0 0 16px;">Try clearing your search or selecting "All Properties in Batch".</p>
-          <button id="sniper-batch-reset-filter-btn" style="padding: 8px 16px; background: var(--sniper-surface-2); border: 1px solid var(--sniper-border); border-radius: 6px; color: #fff; font-size: 0.8125rem; font-weight: 600; cursor: pointer;">Show All Batch Photos</button>
+          <h3 style="font-size: 1.1rem; color: var(--sniper-text); margin: 0 0 8px;">No Photos Match Current Filter</h3>
+          <p style="font-size: 0.875rem; max-width: 420px; margin: 0 0 16px;">Try clearing your search or selecting "All Properties in List".</p>
+          <button id="sniper-batch-reset-filter-btn" style="padding: 8px 16px; background: var(--sniper-surface-2); border: 1px solid var(--sniper-border); border-radius: 6px; color: var(--sniper-text); font-size: 0.8125rem; font-weight: 600; cursor: pointer;">Show All List Photos</button>
         </div>
       `;
       const btn = document.getElementById('sniper-batch-reset-filter-btn');
@@ -717,12 +982,43 @@
           if(sel) sel.value = '';
           const inp = document.getElementById('sniper-search-input');
           if(inp) inp.value = '';
+          const clr = document.getElementById('sniper-search-clear');
+          if(clr) clr.style.display = 'none';
           searchQuery = '';
           renderBatchGrid();
         });
       }
       return;
     }
+
+    // Render zero-photo properties first so missing-media properties are immediately actionable
+    zeroPhotoProps.forEach(prop => {
+      const card = document.createElement('div');
+      card.className = 'sniper-card batch-photo-card zero-photos';
+      card.dataset.propId = prop.id;
+      card.tabIndex = 0;
+      card.innerHTML = `
+        <div class="sniper-card-media-wrap">
+          <div class="sniper-zero-photos-body">
+            <svg class="sniper-zero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            <div class="sniper-zero-title">0 Photos on Listing</div>
+            <div class="sniper-zero-sub">Tap to inspect or delete listing</div>
+          </div>
+        </div>
+        <div class="sniper-card-footer">
+          <div class="sniper-card-address" title="${escSafe(prop.address)}">${escSafe(prop.address || 'Unknown Address')}</div>
+          <div class="sniper-card-city">${escSafe(prop.city || '')}${prop.state ? ', ' + escSafe(prop.state) : ''} ${escSafe(prop.zip || '')}</div>
+          <div class="sniper-card-bottom-row">
+            <span class="sniper-card-price">${prop.monthly_rent ? '$' + Number(prop.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</span>
+            <span class="sniper-card-beds">0 photos</span>
+          </div>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        selectPhotoForInspection({ id: `zero-${prop.id}`, property_id: prop.id, url: '', display_order: 0, is_hero: false, ...prop }, true);
+      });
+      grid.appendChild(card);
+    });
 
     // Render every photo card in the batch
     filteredPhotos.forEach(photo => {
@@ -744,25 +1040,26 @@
       } else {
         badgeHtml += `<span class="sniper-badge-photo-count">#${photo.display_order || 1}</span>`;
       }
-      if(photo.watermark_status === 'flagged'){
+      if(['branding', 'watermark', 'flagged'].includes(photo.watermark_status)){
         badgeHtml += '<span class="sniper-badge-flagged">🚨 Flagged</span>';
       }
 
       card.innerHTML = `
         <div class="sniper-card-media-wrap">
           <div class="sniper-card-media">
-            <img class="sniper-card-img" src="${thumbUrl}" alt="${escSafe(photo.address)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <img class="sniper-card-img" src="${thumbUrl}" alt="${escSafe(photo.address)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="sniper-error-fallback" style="display:none">
               <svg class="sniper-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               <div class="sniper-error-txt">Photo Unavailable</div>
             </div>
-            <!-- Delete Single Photo Hover/Touch Button -->
-            <button class="sniper-photo-delete-btn" title="Delete single photo from listing" aria-label="Delete photo" type="button" data-photo-id="${photo.id}">
+            <!-- Delete Single Photo Hover/Touch Button (Top-Right corner) -->
+            <button class="sniper-photo-delete-btn" title="Delete only this single photo" aria-label="Delete photo" type="button" data-photo-id="${photo.id}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
             </button>
           </div>
+          <!-- Badges strictly Top-Left so top-right Delete button never overlaps -->
           <div class="sniper-card-top-badges">
-            <div class="sniper-card-top-right-badges" style="margin-left:auto">
+            <div class="sniper-card-top-right-badges">
               ${badgeHtml}
             </div>
           </div>
@@ -786,15 +1083,14 @@
 
       // Click photo -> completely identify parent listing in sidebar
       card.addEventListener('click', (e) => {
-        // Prevent if clicking on external link or delete button
         if(e.target.closest('.sniper-card-ext-btn') || e.target.closest('.sniper-photo-delete-btn')) return;
-        selectPhotoForInspection(photo);
+        selectPhotoForInspection(photo, true);
       });
 
       card.addEventListener('keydown', (e) => {
         if(e.key === 'Enter' || e.key === ' '){
           e.preventDefault();
-          selectPhotoForInspection(photo);
+          selectPhotoForInspection(photo, true);
         }
       });
 
@@ -812,7 +1108,7 @@
   }
 
   // ─── Photo Inspection & Listing Identification ────────────────────────────
-  function selectPhotoForInspection(photo){
+  function selectPhotoForInspection(photo, shouldOpenDrawer = true){
     activeInspectedPhoto = photo;
     activeInspectedProperty = batchProperties.find(p => p.id === photo.property_id) || {
       id: photo.property_id,
@@ -822,7 +1118,11 @@
       zip: photo.zip,
       monthly_rent: photo.monthly_rent,
       bedrooms: photo.bedrooms,
-      bathrooms: photo.bathrooms
+      bathrooms: photo.bathrooms,
+      square_footage: photo.square_footage,
+      property_type: photo.property_type,
+      status: photo.status,
+      batch_id: photo.batch_id
     };
 
     // Update active highlight ring across batch cards
@@ -832,9 +1132,11 @@
       curCard.classList.add('selected');
     }
 
-    // Switch to Inspector tab and show panel content
+    // Switch to Inspector tab and optionally open drawer/sheet
     switchSidebarTab('inspector');
-    toggleSidebar(true);
+    if(shouldOpenDrawer && toggleSidebarRef){
+      toggleSidebarRef(true);
+    }
 
     const emptyView = document.getElementById('sniper-empty-inspector');
     const contentView = document.getElementById('sniper-inspector-content');
@@ -848,32 +1150,52 @@
     const specsEl = document.getElementById('inspector-specs');
     const badgesEl = document.getElementById('inspector-badges');
     const linkLive = document.getElementById('inspector-link-live');
+    const linkEdit = document.getElementById('inspector-link-admin-edit');
 
     if(addrEl) addrEl.textContent = activeInspectedProperty.address || 'Unknown Address';
     if(cityEl) cityEl.textContent = `${activeInspectedProperty.city || ''}${activeInspectedProperty.state ? ', ' + activeInspectedProperty.state : ''} ${activeInspectedProperty.zip || ''}`;
     if(rentEl) rentEl.textContent = activeInspectedProperty.monthly_rent ? `$${Number(activeInspectedProperty.monthly_rent).toLocaleString()}/month` : 'Contact for Rent';
     if(specsEl){
-      const sqft = activeInspectedProperty.square_footage ? ` · ${activeInspectedProperty.square_footage.toLocaleString()} sqft` : '';
+      const sqft = activeInspectedProperty.square_footage ? ` · ${Number(activeInspectedProperty.square_footage).toLocaleString()} sqft` : '';
       specsEl.textContent = `${activeInspectedProperty.bedrooms || 0} Beds · ${activeInspectedProperty.bathrooms || 0} Baths${sqft} · ${activeInspectedProperty.property_type || 'Single Family'}`;
     }
     if(badgesEl){
+      const isPrivate = activeInspectedProperty.status === 'private_placement';
+      const statusBadge = isPrivate
+        ? '<span class="sniper-prop-badge private">Private Placement</span>'
+        : `<span class="sniper-prop-badge active-listing">${escSafe((activeInspectedProperty.status || 'active').toUpperCase())}</span>`;
+      const batchBadge = activeInspectedProperty.batch_id
+        ? `<span class="sniper-prop-badge">Batch: ${escSafe(activeInspectedProperty.batch_id)}</span>`
+        : '';
       badgesEl.innerHTML = `
-        <span class="sniper-prop-badge private">Private Placement</span>
+        ${statusBadge}
+        ${batchBadge}
         <span class="sniper-prop-badge">ID: ${escSafe(activeInspectedProperty.id)}</span>
       `;
     }
     if(linkLive){
       linkLive.href = `/property.html?id=${encodeURIComponent(activeInspectedProperty.id)}${shareToken ? '#share=' + encodeURIComponent(shareToken) : ''}`;
     }
+    if(linkEdit){
+      linkEdit.href = `/admin/property-detail.html?id=${encodeURIComponent(activeInspectedProperty.id)}`;
+    }
 
     // Populate Active Photo Details
     const photoMetaEl = document.getElementById('inspector-photo-meta');
     const activeImgEl = document.getElementById('inspector-active-img');
+    const delActiveBtn = document.getElementById('inspector-btn-del-active-photo');
+    const hasPhoto = Boolean(photo && photo.url && !String(photo.id || '').startsWith('zero-'));
+
     if(photoMetaEl){
-      photoMetaEl.textContent = `#${photo.display_order || 1} ${photo.is_hero ? '(Cover Photo)' : ''}`;
+      photoMetaEl.textContent = hasPhoto
+        ? `#${photo.display_order || 1} ${photo.is_hero ? '(Cover Photo)' : ''}`
+        : '0 photos';
     }
     if(activeImgEl){
-      activeImgEl.src = photo.url;
+      activeImgEl.src = hasPhoto ? photo.url : '/assets/placeholder-property.svg';
+    }
+    if(delActiveBtn){
+      delActiveBtn.style.display = hasPhoto ? 'inline-flex' : 'none';
     }
 
     // Populate Thumbnail Strip for all photos in this specific house
@@ -894,10 +1216,10 @@
       const thumb = document.createElement('div');
       thumb.className = 'sniper-thumb-item' + (isCur ? ' active' : '');
       thumb.title = `Photo #${p.display_order || 1}`;
-      thumb.innerHTML = `<img src="${getSmallThumb(p.url)}" alt="" loading="lazy">`;
+      thumb.innerHTML = `<img src="${getSmallThumb(p.url)}" alt="" referrerpolicy="no-referrer" loading="lazy">`;
 
       thumb.addEventListener('click', () => {
-        selectPhotoForInspection(p);
+        selectPhotoForInspection(p, true);
         const targetCard = document.getElementById(`batch-photo-card-${p.id}`);
         if(targetCard){
           targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -972,13 +1294,20 @@
         }).catch(e => console.warn('[watermark-sniper] Remote ImageKit purge error:', e));
       }
 
-      // Update in-memory collections
+      // Update in-memory collections + invalidate private list cache
+      privateCollectionsCache = null;
       batchPhotos = batchPhotos.filter(p => p.id !== photoToDelete.id);
 
       // Decrement photo count on parent property
       const parentProp = batchProperties.find(p => p.id === photoToDelete.property_id);
       if(parentProp && parentProp.photo_count > 0){
         parentProp.photo_count--;
+      }
+
+      // If hero was deleted, promote next photo in-memory to stay synced with DB
+      if(photoToDelete.is_hero){
+        const nextHero = batchPhotos.find(p => p.property_id === photoToDelete.property_id);
+        if(nextHero) nextHero.is_hero = true;
       }
 
       // Smoothly remove card from DOM
@@ -993,7 +1322,7 @@
       // Update header banner counts
       const countsEl = document.getElementById('sniper-batch-counts');
       if(countsEl){
-        countsEl.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+        countsEl.textContent = `${batchProperties.length} propert${batchProperties.length === 1 ? 'y' : 'ies'} · ${batchPhotos.length} total photos`;
       }
       const photosCountTop = document.getElementById('stat-photos-catalog');
       if(photosCountTop){
@@ -1004,9 +1333,8 @@
       if(activeInspectedPhoto && activeInspectedPhoto.id === photoToDelete.id){
         const remaining = batchPhotos.filter(p => p.property_id === photoToDelete.property_id);
         if(remaining.length > 0){
-          selectPhotoForInspection(remaining[0]);
+          selectPhotoForInspection(remaining[0], true);
         } else {
-          // No more photos for this property
           const emptyView = document.getElementById('sniper-empty-inspector');
           const contentView = document.getElementById('sniper-inspector-content');
           if(emptyView) emptyView.style.display = 'flex';
@@ -1055,7 +1383,6 @@
     const propToDelete = pendingDeleteListing;
     closeDeleteListingModal();
 
-    // Check admin authentication
     if(window.CP && CP.Auth && typeof CP.Auth.isAdmin === 'function'){
       const isAdm = await CP.Auth.isAdmin().catch(() => false);
       if(!isAdm){
@@ -1069,13 +1396,15 @@
     try {
       const { data, error } = await CP.sb().rpc('archive_and_delete_property', {
         p_property_id: propToDelete.id,
-        p_reason: 'Watermark sniper batch moderation'
+        p_reason: 'Watermark sniper listing moderation'
       });
 
       if(error) throw error;
       if(!data || !data.ok){
         throw new Error(data?.error || 'Database rejected listing deletion');
       }
+
+      privateCollectionsCache = null;
 
       // Remove property and its photos from in-memory arrays
       batchProperties = batchProperties.filter(p => p.id !== propToDelete.id);
@@ -1084,24 +1413,21 @@
       // Remove all photo cards belonging to this property from the DOM
       document.querySelectorAll(`.batch-photo-card[data-prop-id="${propToDelete.id}"]`).forEach(c => c.remove());
 
-      // Update property dropdown inside batch
       const propSel = document.getElementById('sniper-batch-prop-select');
       if(propSel){
         const opt = propSel.querySelector(`option[value="${propToDelete.id}"]`);
         if(opt) opt.remove();
       }
 
-      // Update Topbar and Banner counts
       const countsEl = document.getElementById('sniper-batch-counts');
       if(countsEl){
-        countsEl.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+        countsEl.textContent = `${batchProperties.length} propert${batchProperties.length === 1 ? 'y' : 'ies'} · ${batchPhotos.length} total photos`;
       }
       const invCount = document.getElementById('stat-total-catalog');
       if(invCount) invCount.textContent = `${batchProperties.length} listings`;
       const photosCountTop = document.getElementById('stat-photos-catalog');
       if(photosCountTop) photosCountTop.textContent = `(${batchPhotos.length} photos)`;
 
-      // Reset inspector to empty state
       const emptyView = document.getElementById('sniper-empty-inspector');
       const contentView = document.getElementById('sniper-inspector-content');
       if(emptyView) emptyView.style.display = 'flex';
@@ -1109,11 +1435,10 @@
       activeInspectedPhoto = null;
       activeInspectedProperty = null;
 
-      // Re-fetch 24h recoverable list and switch to Trash tab so admin can see restoration option
       await fetchRecoverableTrash();
       switchSidebarTab('trash');
 
-      toastSafe(`Deleted ${propToDelete.address}. Listing is restorable for 24 hours in the 24h Trash tab.`, 'warning', 6000);
+      toastSafe(`Deleted ${propToDelete.address}. Restorable for 24 hours in 24h Trash.`, 'warning', 6000);
 
     } catch(err){
       console.error('[watermark-sniper] Listing deletion failed:', err);
@@ -1127,7 +1452,8 @@
   async function fetchRecoverableTrash(){
     try {
       const { data, error } = await CP.sb().rpc('get_recoverable_properties', {
-        p_batch_id: batchId
+        p_batch_id: isBatchMode ? batchId : null,
+        p_share_id: isBatchMode ? shareId : null
       });
       if(error) throw error;
       if(data && data.ok && Array.isArray(data.items)){
@@ -1145,22 +1471,27 @@
     const trashPillTop = document.getElementById('stat-trash-count');
     const trashPillBatch = document.getElementById('batch-trash-pill-count');
     const trashPillSidebar = document.getElementById('sidebar-trash-count');
+    const trashPillStrip = document.getElementById('strip-trash-count');
 
     const count = batchRecoverable.length;
     if(trashPillTop) trashPillTop.textContent = count;
     if(trashPillBatch) trashPillBatch.textContent = count;
     if(trashPillSidebar) trashPillSidebar.textContent = count;
+    if(trashPillStrip) trashPillStrip.textContent = count;
 
     if(!listEl) return;
 
     if(count === 0){
-      if(emptyEl) emptyEl.style.display = 'flex';
       Array.from(listEl.querySelectorAll('.sniper-trash-card')).forEach(el => el.remove());
+      if(emptyEl){
+        emptyEl.style.display = 'flex';
+        if(!emptyEl.parentElement) listEl.appendChild(emptyEl);
+      }
       return;
     }
 
     if(emptyEl) emptyEl.style.display = 'none';
-    listEl.innerHTML = '';
+    Array.from(listEl.querySelectorAll('.sniper-trash-card')).forEach(el => el.remove());
 
     const nowMs = Date.now();
     batchRecoverable.forEach(item => {
@@ -1244,10 +1575,22 @@
         throw new Error(data?.error || 'Database rejected listing restoration');
       }
 
+      privateCollectionsCache = null;
       toastSafe(`Successfully restored ${address} with all photos!`, 'success', 5000);
 
-      // Re-load batch mode to fetch the restored listing and photos into live view
-      await loadBatchMode(batchId, shareToken);
+      if(isBatchMode){
+        await loadBatchMode({
+          pBatchId: batchId,
+          pShareToken: shareToken,
+          pShareId: shareId,
+          pPropertyId: deepLinkPropertyId,
+          pScope: batchScope
+        });
+      } else {
+        await fetchRecoverableTrash();
+        await loadFilterOptions();
+        await loadPage(currentPage);
+      }
 
     } catch(err){
       console.error('[watermark-sniper] Restoration failed:', err);
@@ -1283,12 +1626,14 @@
     const grid = document.getElementById('sniper-grid');
     const btn = document.getElementById('sniper-btn-edge-mode');
     const txt = document.getElementById('sniper-edge-mode-txt');
+    const stripBtn = document.getElementById('sniper-strip-edge-btn');
     if(!grid) return;
 
     isEdgeContain = forceState !== undefined ? forceState : !grid.classList.contains('edge-contain');
     grid.classList.toggle('edge-contain', isEdgeContain);
 
     if(btn) btn.classList.toggle('active', isEdgeContain);
+    if(stripBtn) stripBtn.classList.toggle('active', isEdgeContain);
     if(txt) txt.textContent = isEdgeContain ? 'Contain (Edges Clear)' : 'Cover (Fill Grid)';
   }
 
@@ -1481,7 +1826,7 @@
       } else {
         thumbHtml = `
           <div class="sniper-queue-thumb-wrap">
-            <img class="sniper-queue-thumb" src="${getSmallThumb(item.coverUrl)}" alt="" onerror="this.style.display='none'">
+            <img class="sniper-queue-thumb" src="${getSmallThumb(item.coverUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">
           </div>
         `;
       }
@@ -1594,7 +1939,9 @@
     }
 
     try {
-      const { data, error } = await CP.sb().rpc('scan_watermark_sniper_system');
+      const { data, error } = await CP.sb().rpc('scan_watermark_sniper_system', {
+        p_status: sniperMode === 'private' ? 'private_placement' : 'active'
+      });
       if(error) throw error;
 
       scannedViolations = Array.isArray(data) ? data : [];
@@ -1611,8 +1958,8 @@
 
       if(scanBanner && scanTitle && scanMsg){
         scanBanner.style.display = 'flex';
-        scanTitle.textContent = `Full System Scan Complete:`;
-        scanMsg.textContent = `Identified ${scannedViolations.length} properties with watermarks or compliance violations across the entire database.`;
+        scanTitle.textContent = `${sniperMode === 'private' ? 'Private Placement' : 'Public Inventory'} Scan Complete:`;
+        scanMsg.textContent = `Identified ${scannedViolations.length} properties with watermarks or compliance violations.`;
       }
 
       toastSafe(`Scan complete: found ${scannedViolations.length} non-compliant properties.`, 'warning', 5000);
@@ -1636,6 +1983,7 @@
     let added = 0;
     scannedViolations.forEach(v => {
       if(!queuedProperties.has(v.property_id)){
+        const reasonTxt = v.flag_reason || v.flagged_reason;
         queuedProperties.set(v.property_id, {
           id: v.property_id,
           title: v.address || 'Listing ' + v.property_id.slice(0, 8),
@@ -1644,8 +1992,8 @@
           state: v.state || '',
           zip: v.zip || '',
           coverUrl: v.flagged_photo_url || '',
-          photoCount: 1,
-          reason: v.flagged_reason ? 'Watermark: ' + v.flagged_reason : 'System Scan Violation',
+          photoCount: Number(v.photo_count || 1),
+          reason: reasonTxt ? reasonTxt : 'System Scan Violation',
           fileId: v.flagged_photo_file_id || null
         });
         added++;
@@ -1660,6 +2008,8 @@
       }
     });
 
+    switchSidebarTab('queue');
+    if(toggleSidebarRef) toggleSidebarRef(true);
     renderQueue();
     toastSafe(`Staged all ${added} scanned violations into deletion queue.`, 'success');
   }
@@ -2071,7 +2421,7 @@
 
     // Jump to Page
     const jumpInput = document.getElementById('sniper-jump-input');
-    const jumpBtn = document.getElementById('sniper-jump-go');
+    const jumpBtn = document.getElementById('sniper-jump-btn');
     const handleJump = () => {
       const pageVal = parseInt(jumpInput?.value, 10);
       if(!isNaN(pageVal) && pageVal >= 1 && pageVal <= totalPages){
@@ -2155,7 +2505,41 @@
     const modalCloseBtn = document.getElementById('sniper-modal-close-btn');
     if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeDeleteConfirmationModal);
 
-    // ─── Batch Moderation & Recovery UI Listeners ───────────────────────────
+    // ─── Batch & Mode Switcher Listeners ────────────────────────────────────
+    const tabModePublic = document.getElementById('mode-tab-public');
+    if(tabModePublic){
+      tabModePublic.addEventListener('click', () => switchSniperMode('public'));
+    }
+
+    const tabModePrivate = document.getElementById('mode-tab-private');
+    if(tabModePrivate){
+      tabModePrivate.addEventListener('click', () => switchSniperMode('private'));
+    }
+
+    const privateSourceSelect = document.getElementById('sniper-private-source-select');
+    if(privateSourceSelect){
+      privateSourceSelect.addEventListener('change', () => {
+        const val = privateSourceSelect.value || '';
+        if(val.startsWith('batch:')){
+          loadBatchMode({ pBatchId: val.slice(6) });
+        } else if(val.startsWith('share_id:')){
+          loadBatchMode({ pShareId: val.slice(9) });
+        } else if(val.startsWith('share_token:')){
+          loadBatchMode({ pShareToken: val.slice(12) });
+        } else {
+          loadBatchMode({ pScope: 'private_placement' });
+        }
+      });
+    }
+
+    const batchExitLink = document.getElementById('sniper-batch-exit-link');
+    if(batchExitLink){
+      batchExitLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchSniperMode('public');
+      });
+    }
+
     const batchPropSelect = document.getElementById('sniper-batch-prop-select');
     if(batchPropSelect){
       batchPropSelect.addEventListener('change', () => {
@@ -2167,6 +2551,24 @@
     const edgeBtn = document.getElementById('sniper-btn-edge-mode');
     if(edgeBtn){
       edgeBtn.addEventListener('click', () => toggleEdgeContainMode());
+    }
+
+    const stripEdgeBtn = document.getElementById('sniper-strip-edge-btn');
+    if(stripEdgeBtn){
+      stripEdgeBtn.addEventListener('click', () => toggleEdgeContainMode());
+    }
+
+    const stripTrashBtn = document.getElementById('sniper-strip-trash-btn');
+    if(stripTrashBtn){
+      stripTrashBtn.addEventListener('click', () => {
+        switchSidebarTab('trash');
+        toggleSidebar(true);
+      });
+    }
+
+    const stripDrawerBtn = document.getElementById('sniper-strip-drawer-btn');
+    if(stripDrawerBtn){
+      stripDrawerBtn.addEventListener('click', () => toggleSidebar());
     }
 
     const batchTrashBtn = document.getElementById('sniper-btn-batch-trash');
@@ -2234,7 +2636,7 @@
     // 7. Grid Density Switcher (Medium by default)
     function setGridDensity(density){
       const grid = document.getElementById('sniper-grid');
-      const buttons = document.querySelectorAll('.sniper-density-btn');
+      const buttons = document.querySelectorAll('.sniper-density-btn[data-density]');
       if(!grid) return;
       grid.classList.remove('density-large', 'density-medium', 'density-compact');
       grid.classList.add(`density-${density}`);
@@ -2246,7 +2648,7 @@
       } catch(_) {}
     }
 
-    const densityButtons = document.querySelectorAll('.sniper-density-btn');
+    const densityButtons = document.querySelectorAll('.sniper-density-btn[data-density]');
     densityButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const d = btn.dataset.density || 'medium';
@@ -2276,32 +2678,48 @@
       focusBtn.addEventListener('click', () => toggleFocusMode());
     }
 
-    // 9. Staging Queue Drawer Toggle
+    // 9. Staging Queue / Inspector Drawer Toggle (+ Mobile Bottom Sheet Backdrop)
     function toggleSidebar(forceOpen){
       const sidebar = document.getElementById('sniper-sidebar');
       const queueBtn = document.getElementById('sniper-btn-queue-toggle');
+      const mobileBackdrop = document.getElementById('sniper-mobile-backdrop');
       if(!sidebar) return;
       const shouldOpen = forceOpen !== undefined ? forceOpen : sidebar.classList.contains('collapsed');
       if(shouldOpen){
         sidebar.classList.remove('collapsed');
         if(queueBtn) queueBtn.classList.add('active');
+        if(mobileBackdrop && window.innerWidth <= 900){
+          mobileBackdrop.classList.add('visible');
+        }
       } else {
         sidebar.classList.add('collapsed');
         if(queueBtn) queueBtn.classList.remove('active');
+        if(mobileBackdrop){
+          mobileBackdrop.classList.remove('visible');
+        }
       }
       try {
-        localStorage.setItem('sniper_drawer_open', shouldOpen ? '1' : '0');
+        if(!isBatchMode){
+          localStorage.setItem('sniper_drawer_open', shouldOpen ? '1' : '0');
+        }
       } catch(_) {}
     }
+    toggleSidebarRef = toggleSidebar;
 
     const queueToggleBtn = document.getElementById('sniper-btn-queue-toggle');
     if(queueToggleBtn){
-      queueToggleBtn.addEventListener('click', () => toggleSidebar());
+      queueToggleBtn.addEventListener('click', () => {
+        if(!isBatchMode) switchSidebarTab('queue');
+        toggleSidebar();
+      });
     }
 
     const stagedStatPill = document.getElementById('sniper-staged-stat');
     if(stagedStatPill){
-      stagedStatPill.addEventListener('click', () => toggleSidebar(true));
+      stagedStatPill.addEventListener('click', () => {
+        switchSidebarTab('queue');
+        toggleSidebar(true);
+      });
     }
 
     const sidebarCloseBtn = document.getElementById('sniper-sidebar-close-btn');
@@ -2309,14 +2727,24 @@
       sidebarCloseBtn.addEventListener('click', () => toggleSidebar(false));
     }
 
+    const mobileBackdrop = document.getElementById('sniper-mobile-backdrop');
+    if(mobileBackdrop){
+      mobileBackdrop.addEventListener('click', () => toggleSidebar(false));
+    }
+
+    const sheetHandle = document.querySelector('.sniper-sheet-handle');
+    if(sheetHandle){
+      sheetHandle.addEventListener('click', () => toggleSidebar(false));
+    }
+
     const drawerToggle = document.getElementById('sniper-toggle-drawer');
     if(drawerToggle){
       drawerToggle.addEventListener('click', () => toggleSidebar());
     }
 
-    // Initial Drawer State: Default collapsed to maximize inspection space
+    // Initial Drawer State: collapsed by default on mobile / catalog to maximize photo canvas
     const initialDrawerOpen = localStorage.getItem('sniper_drawer_open');
-    if(initialDrawerOpen === '1'){
+    if(initialDrawerOpen === '1' && window.innerWidth > 900){
       toggleSidebar(true);
     } else {
       toggleSidebar(false);
@@ -2348,16 +2776,15 @@
 
     // Global Key Bindings
     window.addEventListener('keydown', (e) => {
-      // Ignore if user is typing in an input or select
       if(['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
         if(e.key === 'Escape') e.target.blur();
         return;
       }
 
       if(e.key === 'ArrowLeft' || e.key === 'PageUp'){
-        if(currentPage > 1) loadPage(currentPage - 1);
+        if(!isBatchMode && currentPage > 1) loadPage(currentPage - 1);
       } else if(e.key === 'ArrowRight' || e.key === 'PageDown'){
-        if(currentPage < totalPages) loadPage(currentPage + 1);
+        if(!isBatchMode && currentPage < totalPages) loadPage(currentPage + 1);
       } else if(e.key === 's' || e.key === 'S'){
         e.preventDefault();
         toggleSidebar();
@@ -2394,38 +2821,101 @@
     });
   }
 
+  // ─── URL Scope Router ─────────────────────────────────────────────────────
+  function parseSniperRoute(){
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashStr = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hashStr);
+    return {
+      urlParams,
+      paramShare: urlParams.get('share') || hashParams.get('share') || (hashStr.startsWith('share=') ? hashStr.slice(6) : null),
+      paramShareId: urlParams.get('share_id') || hashParams.get('share_id') || null,
+      paramBatch: urlParams.get('batch') || hashParams.get('batch') || (hashStr.startsWith('batch=') ? hashStr.slice(6) : null),
+      paramPropertyId: urlParams.get('property_id') || hashParams.get('property_id') || null,
+      paramScope: urlParams.get('scope') || hashParams.get('scope') || null,
+      paramTab: urlParams.get('tab') || hashParams.get('tab') || null
+    };
+  }
+
   // ─── Boot Sequence ─────────────────────────────────────────────────────────
   async function boot(){
     await waitReady(12000);
     S = window.AdminShell || window.CPShell;
 
-    // Gracefully populate admin info if user has an active session without bouncing unauthenticated viewers away
+    let isAdminUser = false;
     try {
-      if(window.CP && CP.Auth && typeof CP.Auth.getUser === 'function'){
-        const user = await CP.Auth.getUser().catch(() => null);
-        const nameEl = document.getElementById('admin-name');
-        if(nameEl && user?.email) nameEl.textContent = user.email;
+      if(window.CP && CP.Auth){
+        if(typeof CP.Auth.isAdmin === 'function'){
+          isAdminUser = await CP.Auth.isAdmin().catch(() => false);
+        }
+        if(typeof CP.Auth.getUser === 'function'){
+          const user = await CP.Auth.getUser().catch(() => null);
+          const nameEl = document.getElementById('admin-name');
+          if(nameEl && user?.email) nameEl.textContent = user.email;
+        }
       }
     } catch(_) {}
 
     initUI();
 
-    // Check if URL specifies Batch Moderation Mode (#share=... or ?share=... or ?batch=...)
-    const urlParams = new URLSearchParams(window.location.search);
-    let hashStr = window.location.hash.replace(/^#/, '');
-    const hashParams = new URLSearchParams(hashStr);
-
-    const paramShare = urlParams.get('share') || hashParams.get('share') || (hashStr.startsWith('share=') ? hashStr.slice(6) : null);
-    const paramBatch = urlParams.get('batch') || hashParams.get('batch') || (hashStr.startsWith('batch=') ? hashStr.slice(6) : null);
-
-    if(paramShare || paramBatch){
-      await loadBatchMode(paramBatch, paramShare);
+    if(!isAdminUser){
+      const returnTo = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+      const grid = document.getElementById('sniper-grid');
+      if(grid){
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 20px;text-align:center;color:var(--sniper-text-muted);">
+            <div style="font-size:2.2rem;margin-bottom:10px">🔒</div>
+            <h2 style="font-size:1.15rem;color:var(--sniper-text);margin:0 0 8px">Admin Sign-In Required</h2>
+            <p style="font-size:0.875rem;max-width:420px;margin:0 0 18px;line-height:1.5">
+              Sign in with your Choice Properties admin account to inspect private placement photos, delete individual images, or restore listings from 24h Trash.
+            </p>
+            <a href="/admin/login.html?returnTo=${returnTo}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--sniper-primary);color:#fff;border-radius:8px;font-size:0.875rem;font-weight:700;text-decoration:none;box-shadow:0 4px 12px rgba(0,106,255,0.35);">
+              Sign In to Admin Console →
+            </a>
+          </div>
+        `;
+      }
+      const statTotal = document.getElementById('stat-total-catalog');
+      if(statTotal) statTotal.textContent = 'Sign-In Required';
       return;
     }
 
+    window.addEventListener('hashchange', () => {
+      const r = parseSniperRoute();
+      if(r.paramShare || r.paramBatch || r.paramShareId){
+        loadBatchMode({
+          pBatchId: r.paramBatch,
+          pShareToken: r.paramShare,
+          pShareId: r.paramShareId,
+          pPropertyId: r.paramPropertyId,
+          pScope: r.paramScope,
+          autoOpenTab: r.paramTab
+        });
+      }
+    });
+
+    const route = parseSniperRoute();
+    const { urlParams, paramShare, paramShareId, paramBatch, paramPropertyId, paramScope, paramTab } = route;
+
+    // Preload private placement switcher options in background
+    loadPrivateCollections().catch(() => {});
+
+    if(paramShare || paramShareId || paramBatch || paramPropertyId || paramScope === 'private_placement'){
+      await loadBatchMode({
+        pBatchId: paramBatch,
+        pShareToken: paramShare,
+        pShareId: paramShareId,
+        pPropertyId: paramPropertyId,
+        pScope: paramScope,
+        autoOpenTab: paramTab
+      });
+      return;
+    }
+
+    sniperMode = 'public';
+    syncModeStripUI();
     await loadFilterOptions();
 
-    // Check if query params specify initial filters (e.g. ?city=Columbus or ?state=OH or ?compliance=zero_photos)
     if(urlParams.has('state')) {
       filterState = urlParams.get('state');
       const el = document.getElementById('sniper-state-select');
@@ -2454,6 +2944,13 @@
     }
 
     await loadPage(1);
+    await fetchRecoverableTrash();
+    startTrashTimer();
+
+    if(paramTab){
+      switchSidebarTab(paramTab);
+      if(toggleSidebarRef) toggleSidebarRef(true);
+    }
   }
 
   if(document.readyState !== 'loading'){

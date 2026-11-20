@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794849238206"></script>
+  <script src="/js/cp-error-reporter.js?v=1795213885930"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0f1e">
@@ -15,12 +15,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/cp-design.css?v=1794849238206">
-<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1794849238206">
+<link rel="stylesheet" href="/css/cp-design.css?v=1795213885930">
+<link rel="stylesheet" href="/css/admin/watermark-sniper.css?v=1795213885930">
 <script defer src="/config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
-<script defer src="/js/cp-api.js?v=1794849238206" type="module"></script>
-<script defer src="/js/cp-shell.js?v=1794849238206"></script>
+<script defer src="/js/cp-api.js?v=1795213885930" type="module"></script>
+<script defer src="/js/cp-shell.js?v=1795213885930"></script>
 </head>
 <body class="sniper-standalone-body" data-page-title="Watermark Sniper">
 
@@ -92,6 +92,37 @@
       </div>
     </header>
 
+    <!-- 1b. Scope Mode & Private Placement Switcher Strip (Desktop + Mobile) -->
+    <div class="sniper-mode-strip" id="sniper-mode-strip">
+      <div class="sniper-mode-tabs" role="tablist" aria-label="Moderation Scope">
+        <button type="button" class="sniper-mode-tab active" id="mode-tab-public" data-mode="public">
+          <span>🌐 Public Listings</span>
+        </button>
+        <button type="button" class="sniper-mode-tab" id="mode-tab-private" data-mode="private">
+          <span>🔒 Private Placements</span>
+        </button>
+      </div>
+
+      <div class="sniper-private-picker" id="sniper-private-picker" style="display:none">
+        <label for="sniper-private-source-select" class="sr-only">Choose Private Placement Batch or Magic Link</label>
+        <select id="sniper-private-source-select" aria-label="Select Private Placement Batch or Magic Link">
+          <option value="">Loading private placement lists…</option>
+        </select>
+      </div>
+
+      <div class="sniper-mode-strip-right">
+        <button type="button" class="sniper-mini-pill-btn active" id="sniper-strip-edge-btn" title="Toggle uncropped clear edges (Contain vs Cover)">
+          <span>Contain Edges</span>
+        </button>
+        <button type="button" class="sniper-mini-pill-btn warn" id="sniper-strip-trash-btn" title="Open 24h Recoverable Trash">
+          <span>24h Trash (<strong id="strip-trash-count">0</strong>)</span>
+        </button>
+        <button type="button" class="sniper-mini-pill-btn primary" id="sniper-strip-drawer-btn" title="Open Inspector / Drawer">
+          <span>Inspector</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 2. Main Workspace Layout: Filter Bar + Main Gallery + Staging Sidebar -->
     <div class="sniper-main-layout">
 
@@ -114,9 +145,9 @@
                 <div class="sniper-batch-sub-row">
                   <span id="sniper-batch-counts">Loading batch photos…</span>
                   <span class="sniper-bullet-sep">•</span>
-                  <span>Click any photo to identify entire listing</span>
+                  <span>Tap any photo to inspect full listing</span>
                   <span class="sniper-bullet-sep">•</span>
-                  <a href="/admin/watermark-sniper.html" class="sniper-batch-exit-link" title="Exit to full catalog view">Exit Batch Mode</a>
+                  <a href="/admin/watermark-sniper.html?scope=public" class="sniper-batch-exit-link" id="sniper-batch-exit-link" title="Switch to Public Listings catalog">Switch to Public</a>
                 </div>
               </div>
             </div>
@@ -126,7 +157,7 @@
               <div class="sniper-select-wrap sniper-batch-select-wrap">
                 <label for="sniper-batch-prop-select" class="sr-only">Filter by Property</label>
                 <select id="sniper-batch-prop-select" aria-label="Filter batch by property">
-                  <option value="">All Properties in Batch</option>
+                  <option value="">All Properties in List</option>
                 </select>
               </div>
 
@@ -344,8 +375,12 @@
 
       </main>
 
+      <!-- Mobile Bottom Sheet Backdrop -->
+      <div class="sniper-mobile-backdrop" id="sniper-mobile-backdrop" aria-hidden="true"></div>
+
       <!-- 3. Dynamic Moderation Sidebar (Inspector / 24h Trash / Staging Queue) -->
       <aside class="sniper-sidebar" id="sniper-sidebar" aria-label="Moderation Inspector">
+        <div class="sniper-sheet-handle" aria-hidden="true"><span></span></div>
         <!-- Sidebar Navigation Tabs -->
         <div class="sniper-sidebar-tabs" role="tablist">
           <button type="button" class="sniper-sidebar-tab active" id="tab-btn-inspector" role="tab" aria-selected="true" data-tab="inspector">
@@ -370,7 +405,7 @@
           <div class="sniper-empty-inspector" id="sniper-empty-inspector">
             <svg class="sniper-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><circle cx="11" cy="11" r="3"/></svg>
             <div class="sniper-empty-title">Select a Photo to Inspect</div>
-            <div class="sniper-empty-sub">Click any photo in the batch to identify its full parent listing, browse all related images, or delete the entire listing with 24h recovery protection.</div>
+            <div class="sniper-empty-sub">Tap any photo in the grid to identify its complete parent listing, review all photos of that home, delete individual images, or wipe the entire listing with 24-hour restore protection.</div>
           </div>
 
           <div class="sniper-inspector-content" id="sniper-inspector-content" style="display:none">
@@ -394,7 +429,7 @@
                 </button>
               </div>
               <div class="sniper-inspector-active-preview">
-                <img id="inspector-active-img" src="" alt="" loading="lazy">
+                <img id="inspector-active-img" src="" alt="" referrerpolicy="no-referrer" loading="lazy">
               </div>
             </div>
 
@@ -411,10 +446,16 @@
 
             <!-- Property Actions Footer -->
             <div class="sniper-inspector-actions">
-              <a href="#" target="_blank" rel="noopener noreferrer" class="sniper-btn-open-prop" id="inspector-link-live">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                <span>View Live Listing</span>
-              </a>
+              <div class="sniper-inspector-links-row">
+                <a href="#" target="_blank" rel="noopener noreferrer" class="sniper-btn-open-prop" id="inspector-link-live">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span>Live Listing</span>
+                </a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="sniper-btn-open-prop" id="inspector-link-admin-edit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <span>Admin Edit</span>
+                </a>
+              </div>
               <button type="button" class="sniper-btn-delete-listing" id="inspector-btn-delete-listing">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-16"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 <span>Delete Entire Listing (24h Restorable)</span>
@@ -486,7 +527,7 @@
             This will permanently remove this individual photo from <strong id="modal-del-photo-address">—</strong>. The rest of the listing and other photos will remain intact.
           </p>
           <div class="sniper-modal-photo-preview">
-            <img id="modal-del-photo-img" src="" alt="Photo to delete" style="max-height:180px;border-radius:8px;object-fit:contain;background:#090d16">
+            <img id="modal-del-photo-img" src="" alt="Photo to delete" referrerpolicy="no-referrer" style="max-height:180px;border-radius:8px;object-fit:contain;background:#090d16">
           </div>
         </div>
         <div class="sniper-modal-footer">
@@ -590,6 +631,6 @@
 
   </div>
 
-  <script defer src="/js/admin/watermark-sniper.js?v=1794849238206"></script>
+  <script defer src="/js/admin/watermark-sniper.js?v=1795213885930"></script>
 </body>
 </html>

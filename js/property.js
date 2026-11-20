@@ -2493,13 +2493,24 @@ function initAdminPropertyPanel(prop) {
     document.head.appendChild(style);
   }
 
+  // ── Smart Watermark Sniper URL (share list -> batch -> single property) ──
+  const _uSearch = new URLSearchParams(window.location.search);
+  const _uHash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const _shareTok = _uSearch.get('share') || _uHash.get('share') || '';
+  const _sniperUrl = _shareTok
+    ? `/admin/watermark-sniper.html?property_id=${encodeURIComponent(prop.id)}#share=${encodeURIComponent(_shareTok)}`
+    : (prop.batch_id
+      ? `/admin/watermark-sniper.html?batch=${encodeURIComponent(prop.batch_id)}&property_id=${encodeURIComponent(prop.id)}`
+      : `/admin/watermark-sniper.html?property_id=${encodeURIComponent(prop.id)}&scope=${prop.status === 'private_placement' ? 'private_placement' : 'public'}`);
+  const _sniperLabel = _shareTok ? 'Snipe List' : (prop.batch_id ? 'Snipe Batch' : 'Snipe Photos');
+
   // ── Admin banner ──
   const banner = document.createElement('div');
   banner.id = 'adminPropBanner';
-  banner.style.cssText = 'background:#0a1628;color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:3px solid #006aff;z-index:90;position:relative';
+  banner.style.cssText = 'background:#0a1628;color:#e2e8f0;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:3px solid #006aff;z-index:90;position:relative;max-width:100%;box-sizing:border-box';
   banner.innerHTML = `
     <span style="background:#006aff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em;flex-shrink:0">ADMIN</span>
-    <span id="adminBannerTitle" style="font-size:13px;font-weight:600;flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(prop.title||'')}">${esc(prop.title||'Untitled')}</span>
+    <span id="adminBannerTitle" style="font-size:13px;font-weight:600;flex:1 1 120px;min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(prop.title||'')}">${esc(prop.title||'Untitled')}</span>
     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
       <span style="font-size:11px;color:#64748b">Status:</span>
       <select id="adminStatusSelect" style="background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer">
@@ -2508,7 +2519,10 @@ function initAdminPropertyPanel(prop) {
       <button id="adminStatusSaveBtn" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;display:none">Save</button>
       <span id="adminStatusSpinner" style="color:#64748b;font-size:12px;display:none"><i class="fas fa-spinner fa-spin"></i></span>
     </div>
-    <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;margin-left:auto;flex:1 1 auto;min-width:0;max-width:100%;flex-wrap:wrap">
+      <a href="${_sniperUrl}" id="adminPropSniperBtn" style="background:rgba(220,38,38,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.45);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:5px" title="Open Watermark Sniper for this listing / batch">
+        <i class="fas fa-crosshairs"></i> 🎯 ${esc(_sniperLabel)}
+      </a>
       <button id="adminQuickEditBtn" style="background:#006aff;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
         <i class="fas fa-pen"></i> Edit
       </button>
@@ -2613,6 +2627,8 @@ function initAdminPropertyPanel(prop) {
       </div>
     </div>
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--m-border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a href="${_sniperUrl}" style="font-size:12px;color:#dc2626;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:700"><i class="fas fa-crosshairs"></i> Watermark Sniper (${esc(_sniperLabel)})</a>
+      <span style="color:var(--m-border)">·</span>
       <a href="/admin/applications.html?property=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-file-alt"></i> Applications</a>
       <span style="color:var(--m-border)">·</span>
       <a href="/admin/audit-log.html?target=${esc(prop.id)}" style="font-size:12px;color:var(--m-brand);text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:600"><i class="fas fa-history"></i> Audit Log</a>

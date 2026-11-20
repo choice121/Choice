@@ -219,7 +219,7 @@ function syncAdminToolbarUI() {
   toolbar.querySelectorAll('[data-admin-status]').forEach(b => {
     const s = b.dataset.adminStatus;
     const col = chipsCls(s);
-    const active = s === adminStatusFilter;
+    const active = !activeShareToken && s === adminStatusFilter;
     b.style.border = '2px solid ' + (active ? col : '#d1d5db');
     b.style.background = active ? col + '1a' : '#fff';
     b.style.color = active ? col : '#374151';
@@ -227,8 +227,137 @@ function syncAdminToolbarUI() {
   });
   const scopeLabel = document.getElementById('adminScopeLabel');
   if (scopeLabel) {
-    scopeLabel.textContent = ADMIN_STATUS_LABELS[adminStatusFilter] || adminStatusFilter;
+    if (activeShareToken) {
+      scopeLabel.textContent = 'Private Placement Magic Link (Admin Preview)';
+    } else {
+      scopeLabel.textContent = ADMIN_STATUS_LABELS[adminStatusFilter] || adminStatusFilter;
+    }
   }
+  const sniperBtn = document.getElementById('adminSniperBtn');
+  if (sniperBtn) {
+    if (activeShareToken) {
+      sniperBtn.href = `/admin/watermark-sniper.html#share=${encodeURIComponent(activeShareToken)}`;
+      sniperBtn.innerHTML = '<i class="fas fa-crosshairs"></i> 🎯 Snipe This List';
+    } else if (adminStatusFilter === 'private_placement') {
+      sniperBtn.href = '/admin/watermark-sniper.html?scope=private_placement';
+      sniperBtn.innerHTML = '<i class="fas fa-crosshairs"></i> 🎯 Snipe Private Placements';
+    } else {
+      sniperBtn.href = '/admin/watermark-sniper.html?scope=public';
+      sniperBtn.innerHTML = '<i class="fas fa-crosshairs"></i> 🎯 Public Watermark Sniper';
+    }
+  }
+  renderAdminShareSniperBanner();
+  renderAdminPrivateBatchesBar();
+}
+
+function getSniperHrefForCurrentContext() {
+  if (activeShareToken) return `/admin/watermark-sniper.html#share=${encodeURIComponent(activeShareToken)}`;
+  if (adminStatusFilter === 'private_placement') return '/admin/watermark-sniper.html?scope=private_placement';
+  return '/admin/watermark-sniper.html?scope=public';
+}
+
+function renderAdminShareSniperBanner() {
+  let banner = document.getElementById('adminShareSniperBanner');
+  if (!isAdminMode || !activeShareToken) {
+    if (banner) banner.remove();
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'adminShareSniperBanner';
+    const toolbar = document.getElementById('adminListingsToolbar');
+    if (toolbar) toolbar.insertAdjacentElement('afterend', banner);
+    else document.body.prepend(banner);
+  }
+  const safeTok = encodeURIComponent(activeShareToken);
+  const countTxt = totalCount > 0 ? `${totalCount} listing${totalCount === 1 ? '' : 's'} in this magic link` : 'All listings in this magic link';
+  banner.innerHTML = `
+    <div class="cp-admin-share-banner-inner">
+      <div class="cp-admin-share-banner-meta">
+        <span class="cp-admin-share-pill">🔒 ADMIN PRIVATE PLACEMENT</span>
+        <div class="cp-admin-share-title">Batch Watermark Sniper Ready · <span id="adminShareCountTxt">${esc(countTxt)}</span></div>
+        <div class="cp-admin-share-sub">Visible only while signed in as admin. Clients never see this bar or private badges.</div>
+      </div>
+      <div class="cp-admin-share-actions">
+        <a href="/admin/watermark-sniper.html#share=${safeTok}" class="cp-admin-sniper-cta">
+          <i class="fas fa-crosshairs"></i> Open Watermark Sniper for This List
+        </a>
+        <a href="/admin/watermark-sniper.html?tab=trash#share=${safeTok}" class="cp-admin-trash-cta">
+          <i class="fas fa-clock-rotate-left"></i> 24h Trash
+        </a>
+      </div>
+    </div>`;
+}
+
+let _privateBatchesCache = null;
+let _privateBatchesLoading = false;
+
+async function renderAdminPrivateBatchesBar() {
+  let panel = document.getElementById('adminPrivateBatchesPanel');
+  if (!isAdminMode || activeShareToken || adminStatusFilter !== 'private_placement') {
+    if (panel) panel.remove();
+    return;
+  }
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'adminPrivateBatchesPanel';
+    const toolbar = document.getElementById('adminListingsToolbar');
+    if (toolbar) toolbar.insertAdjacentElement('afterend', panel);
+    else document.body.prepend(panel);
+  }
+
+  if (!_privateBatchesCache && !_privateBatchesLoading && window.CP?.sb) {
+    _privateBatchesLoading = true;
+    panel.innerHTML = `<div class="cp-admin-batch-bar-inner"><span style="color:#94a3b8;font-size:12px"><i class="fas fa-spinner fa-spin"></i> Loading existing &amp; new private placement batches…</span></div>`;
+    try {
+      const { data, error } = await window.CP.sb().rpc('get_private_placement_batches_for_sniper');
+      if (!error && data?.ok) _privateBatchesCache = data;
+    } catch (_) {}
+    _privateBatchesLoading = false;
+  }
+
+  const data = _privateBatchesCache;
+  const batches = Array.isArray(data?.batches) ? data.batches : [];
+  const shares = Array.isArray(data?.shares) ? data.shares : [];
+
+  const optionsHtml = [
+    ...batches.map(b => {
+      const mkt = b.target_market ? ` · ${b.target_market}` : '';
+      return `<option value="batch:${esc(b.batch_id)}" data-magic="${esc(b.magic_link_url || '')}">Batch ${esc(b.batch_id)}${esc(mkt)} (${b.property_count} props · ${b.photo_count || 0} photos)</option>`;
+    }),
+    ...shares.filter(s => !s.pub_batch_id).map(s => {
+      const lbl = s.share_alias || s.sample_market || `Client Link ${String(s.share_id).slice(0, 8)}`;
+      return `<option value="share_id:${esc(s.share_id)}">${esc(lbl)} (${s.property_count} props · ${s.photo_count || 0} photos)</option>`;
+    })
+  ].join('');
+
+  panel.innerHTML = `
+    <div class="cp-admin-batch-bar-inner">
+      <div class="cp-admin-batch-bar-left">
+        <span class="cp-admin-share-pill" style="background:rgba(139,92,246,0.2);color:#c4b5fd;border-color:rgba(139,92,246,0.4)">PRIVATE PLACEMENT SNIPER</span>
+        <span style="font-size:12.5px;color:#cbd5e1">${batches.length} batch${batches.length === 1 ? '' : 'es'} · ${shares.length} active magic link${shares.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="cp-admin-batch-bar-controls">
+        <select id="adminBatchLauncherSel" class="cp-admin-batch-select" aria-label="Select Private Placement Batch or Magic Link">
+          <option value="scope:private_placement">All Private Placements (Latest 200)</option>
+          ${optionsHtml}
+        </select>
+        <button type="button" id="adminLaunchSelectedBatchSniperBtn" class="cp-admin-sniper-cta">
+          <i class="fas fa-crosshairs"></i> Open in Sniper
+        </button>
+      </div>
+    </div>`;
+
+  panel.querySelector('#adminLaunchSelectedBatchSniperBtn')?.addEventListener('click', () => {
+    const val = panel.querySelector('#adminBatchLauncherSel')?.value || 'scope:private_placement';
+    if (val.startsWith('batch:')) {
+      window.location.href = `/admin/watermark-sniper.html?batch=${encodeURIComponent(val.slice(6))}`;
+    } else if (val.startsWith('share_id:')) {
+      window.location.href = `/admin/watermark-sniper.html?share_id=${encodeURIComponent(val.slice(9))}`;
+    } else {
+      window.location.href = '/admin/watermark-sniper.html?scope=private_placement';
+    }
+  });
 }
 
 function injectAdminToolbar() {
@@ -270,33 +399,63 @@ function injectAdminToolbar() {
        </div>`
     : '';
 
+  if (!document.getElementById('adminToolbarResponsiveCSS')) {
+    const st = document.createElement('style');
+    st.id = 'adminToolbarResponsiveCSS';
+    st.textContent = `
+      #adminStatusChips { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+      #adminShareSniperBanner { background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%); border-bottom:2px solid #8b5cf6; color:#f8fafc; padding:10px 0; }
+      .cp-admin-share-banner-inner { max-width:1280px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      .cp-admin-share-banner-meta { display:flex; flex-direction:column; gap:3px; min-width:0; }
+      .cp-admin-share-pill { display:inline-flex; align-items:center; width:fit-content; font-size:10px; font-weight:800; letter-spacing:.06em; background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.35); border-radius:999px; padding:2px 8px; }
+      .cp-admin-share-title { font-size:14px; font-weight:700; color:#fff; }
+      .cp-admin-share-sub { font-size:12px; color:#cbd5e1; }
+      .cp-admin-share-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .cp-admin-sniper-cta { background:#dc2626; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:9px 14px; font-size:13px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:7px; cursor:pointer; min-height:38px; box-shadow:0 3px 12px rgba(220,38,38,0.35); white-space:nowrap; }
+      .cp-admin-sniper-cta:hover { background:#ef4444; color:#fff; }
+      .cp-admin-trash-cta { background:rgba(245,158,11,0.14); color:#fbbf24; border:1px solid rgba(245,158,11,0.35); border-radius:8px; padding:9px 12px; font-size:12.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; min-height:38px; white-space:nowrap; }
+      #adminPrivateBatchesPanel { background:#0f172a; border-bottom:1px solid #334155; color:#f8fafc; padding:10px 0; }
+      .cp-admin-batch-bar-inner { max-width:1280px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+      .cp-admin-batch-bar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      .cp-admin-batch-bar-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; justify-content:flex-end; }
+      .cp-admin-batch-select { background:#1e293b; color:#f8fafc; border:1px solid #475569; border-radius:8px; padding:8px 10px; font-size:13px; min-height:38px; max-width:440px; width:100%; }
+      @media (max-width:640px) {
+        #adminStatusChips { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+        .cp-admin-share-actions, .cp-admin-batch-bar-controls { width:100%; justify-content:stretch; }
+        .cp-admin-sniper-cta { flex:1; justify-content:center; }
+        .cp-admin-batch-select { max-width:100%; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
   const toolbar = document.createElement('div');
   toolbar.id = 'adminListingsToolbar';
   toolbar.style.cssText = 'background:#0a1628;padding:12px 0;border-bottom:3px solid #006aff;position:sticky;top:0;z-index:100;';
   toolbar.innerHTML = `
     <div style="max-width:1280px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="background:#006aff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em">ADMIN</span>
-          <span id="adminScopeLabel" style="color:#e2e8f0;font-size:13px;font-weight:500">${ADMIN_STATUS_LABELS[adminStatusFilter] || 'Public Active Only'}</span>
+          <span id="adminScopeLabel" style="color:#e2e8f0;font-size:13px;font-weight:500">${activeShareToken ? 'Private Placement Magic Link (Admin Preview)' : (ADMIN_STATUS_LABELS[adminStatusFilter] || 'Public Active Only')}</span>
           <span style="color:#64748b;font-size:12px" id="adminPropCount">Loading…</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <a id="adminSniperBtn" href="/admin/watermark-sniper.html${activeShareToken ? '#share=' + encodeURIComponent(activeShareToken) : ''}"
-            style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;transition:all 150ms ease">
-            <i class="fas fa-crosshairs"></i> 🎯 Watermark Sniper${activeShareToken ? ' (Batch)' : ''}
+          <a id="adminSniperBtn" href="${getSniperHrefForCurrentContext()}"
+            style="background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.45);color:#fca5a5;border-radius:6px;padding:7px 12px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;transition:all 150ms ease">
+            <i class="fas fa-crosshairs"></i> 🎯 ${activeShareToken ? 'Snipe This List' : (adminStatusFilter === 'private_placement' ? 'Snipe Private Placements' : 'Public Watermark Sniper')}
           </a>
           <button id="adminCsvExportBtn"
-            style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+            style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:34px">
             <i class="fas fa-download"></i> Export CSV
           </button>
           <button id="adminNewPropBtn"
-            style="background:#006aff;color:#fff;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:6px">
+            style="background:#006aff;color:#fff;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:34px">
             <i class="fas fa-plus"></i> New Property
           </button>
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center" id="adminStatusChips">
+      <div id="adminStatusChips">
         ${chips}
       </div>
       ${landlordBanner ? '<div>'+landlordBanner+'</div>' : ''}
@@ -306,6 +465,9 @@ function injectAdminToolbar() {
   const pageHeader = document.querySelector('.listings-page-header');
   if (pageHeader) pageHeader.parentNode.insertBefore(toolbar, pageHeader);
   else document.body.prepend(toolbar);
+
+  renderAdminShareSniperBanner();
+  renderAdminPrivateBatchesBar();
 
   // Bulk action bar (hidden until cards are selected)
   const bulkBar = document.createElement('div');
@@ -710,7 +872,10 @@ async function _bulkCreateMatch() {
         </button>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;gap:10px">
+      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+        <a href="/admin/watermark-sniper.html#share=${encodeURIComponent(shareToken)}" target="_blank" rel="noopener" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-crosshairs"></i> Open in Sniper
+        </a>
         <a href="${url}" target="_blank" rel="noopener" style="background:transparent;border:1.5px solid #cbd5e1;color:#334155;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
           <i class="fas fa-external-link-alt"></i> Preview Link
         </a>
@@ -866,6 +1031,8 @@ async function adminCSVExport() {
 (async () => {
   try {
     await waitForCP();
+    // Parse URL first so activeShareToken / status params are available when admin toolbar injects
+    readURL();
     // Admin mode detection (non-blocking — runs before first fetch)
     await initAdminMode();
     // Refresh saved IDs from Supabase for authenticated users (non-blocking)
@@ -874,6 +1041,7 @@ async function adminCSVExport() {
     setupGridDelegation(); // P1-A: wire delegated listeners once at boot
     readURL();
     syncControls();
+    if (isAdminMode) syncAdminToolbarUI();
     setupFilters();
     // Restore filter dropdown state from sessionStorage (for mobile progressive disclosure)
     const filterDropdown = document.getElementById('moreFiltersDropdown');
@@ -881,12 +1049,14 @@ async function adminCSVExport() {
       filterDropdown.classList.add('open');
     }
     await fetchAndRender();
-    window.addEventListener('popstate', async () => {
+    const onUrlChange = async () => {
       readURL();
       syncControls();
       if (isAdminMode) syncAdminToolbarUI();
       await fetchAndRender();
-    });
+    };
+    window.addEventListener('popstate', onUrlChange);
+    window.addEventListener('hashchange', onUrlChange);
   } catch (err) {
     console.error('Listings boot error:', err);
     renderError(err.message || 'Failed to load listings');
@@ -982,6 +1152,8 @@ async function fetchAndRender() {
     if (isAdminMode) {
       const countEl = document.getElementById('adminPropCount');
       if (countEl) countEl.textContent = `${total.toLocaleString()} propert${total === 1 ? 'y' : 'ies'}`;
+      const shareCountEl = document.getElementById('adminShareCountTxt');
+      if (shareCountEl) shareCountEl.textContent = `${total.toLocaleString()} listing${total === 1 ? '' : 's'} in this magic link`;
     }
   } catch (err) {
     console.error('fetchAndRender error:', err);
